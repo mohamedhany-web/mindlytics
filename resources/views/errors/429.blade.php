@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
+    <title>429 - طلبات كثيرة جداً | Mindlytics</title>
+    
+    <!-- خط عربي أصيل -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            font-family: 'Cairo', 'Noto Sans Arabic', sans-serif;
+        }
+
+        body {
+            overflow-x: hidden;
+            background: #f8fafc;
+            width: 100%;
+            max-width: 100vw;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        /* Hero Section - نفس تصميم المسارات التعليمية */
+        .hero-section {
+            background: linear-gradient(to bottom, #f0f9ff, #e0f2fe, #ffffff);
+            position: relative;
+            overflow: hidden;
+            min-h-screen;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .animated-background {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Floating Circles - نفس تصميم المسارات */
+        .floating-circle {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(40px);
+            animation: floatCircle 20s ease-in-out infinite;
+            will-change: transform, opacity;
+        }
+
+        .floating-circle.circle-1 {
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, rgba(147, 51, 234, 0.3), rgba(168, 85, 247, 0.2));
+            top: 10%;
+            right: 10%;
+            animation-delay: 0s;
+        }
+
+        .floating-circle.circle-2 {
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(192, 132, 252, 0.2));
+            bottom: 20%;
+            left: 15%;
+            animation-delay: 5s;
+        }
+
+        .floating-circle.circle-3 {
+            width: 250px;
+            height: 250px;
+            background: linear-gradient(135deg, rgba(192, 132, 252, 0.3), rgba(147, 51, 234, 0.2));
+            top: 50%;
+            right: 50%;
+            animation-delay: 10s;
+        }
+
+        @keyframes floatCircle {
+            0%, 100% {
+                transform: translate(0, 0) scale(1);
+                opacity: 0.6;
+            }
+            25% {
+                transform: translate(30px, -30px) scale(1.1);
+                opacity: 0.8;
+            }
+            50% {
+                transform: translate(-20px, 20px) scale(0.9);
+                opacity: 0.7;
+            }
+            75% {
+                transform: translate(20px, 30px) scale(1.05);
+                opacity: 0.75;
+            }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.5s ease-out forwards;
+            opacity: 0;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .slide-in-left {
+            animation: slideInLeft 0.6s ease-out forwards;
+            opacity: 0;
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .animate-pulse-slow {
+            animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero-section relative overflow-hidden">
+        <!-- Animated Background -->
+        <div class="animated-background absolute inset-0 overflow-hidden">
+            <!-- Floating Circles -->
+            <div class="floating-circle circle-1"></div>
+            <div class="floating-circle circle-2"></div>
+            <div class="floating-circle circle-3"></div>
+        </div>
+        
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full py-16 lg:py-20">
+            <div class="text-center">
+                <!-- Badge -->
+                <div class="inline-flex items-center gap-1 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-lg mb-6 fade-in-up">
+                    <i class="fas fa-clock text-white text-sm"></i>
+                    <span class="text-white font-bold text-sm">معدل الطلبات</span>
+                </div>
+
+                <!-- رمز الخطأ -->
+                <h1 class="text-8xl md:text-9xl font-black mb-6 leading-tight text-gray-900 fade-in-up animate-pulse-slow" style="animation-delay: 0.1s;">
+                    429
+                </h1>
+                
+                <!-- العنوان -->
+                <h2 class="text-3xl md:text-4xl lg:text-5xl font-black mb-4 text-gray-900 fade-in-up" style="animation-delay: 0.2s;">
+                    طلبات كثيرة جداً
+                </h2>
+                
+                <!-- الرسالة -->
+                <p class="text-lg md:text-xl text-gray-600 mb-8 leading-relaxed fade-in-up max-w-2xl mx-auto" style="animation-delay: 0.3s;">
+                    عذراً، لقد قمت بإرسال عدد كبير جداً من الطلبات في وقت قصير.
+                    <br class="hidden md:block">
+                    يرجى الانتظار قليلاً ثم المحاولة مرة أخرى.
+                </p>
+
+                <!-- معلومات إضافية -->
+                <div class="bg-white rounded-2xl p-6 md:p-8 mb-8 border border-gray-200 shadow-xl fade-in-up max-w-2xl mx-auto" style="animation-delay: 0.4s;">
+                    <div class="flex items-center justify-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600">
+                            <i class="fas fa-info-circle text-lg"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900">معلومات إضافية</h3>
+                    </div>
+                    <div class="text-gray-700 text-right space-y-3">
+                        <div class="flex items-start justify-center gap-3 bg-purple-50 rounded-xl p-4">
+                            <i class="fas fa-shield-alt text-purple-600 mt-0.5"></i>
+                            <span class="text-sm">هذا الإجراء لحماية الخادم من الإفراط في الاستخدام</span>
+                        </div>
+                        <div class="flex items-start justify-center gap-3 bg-purple-50 rounded-xl p-4">
+                            <i class="fas fa-hourglass-half text-purple-600 mt-0.5"></i>
+                            <span class="text-sm">عادة ما يكون وقت الانتظار بين 15-60 ثانية</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- الأزرار -->
+                <div class="flex flex-col sm:flex-row gap-4 justify-center fade-in-up" style="animation-delay: 0.5s;">
+                    <button onclick="window.location.reload()" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-500 text-white px-8 py-4 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                        <i class="fas fa-redo"></i>
+                        <span>إعادة المحاولة</span>
+                    </button>
+                    <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center justify-center gap-2 bg-white text-purple-600 px-8 py-4 rounded-full font-bold text-base border-2 border-purple-600 hover:bg-purple-50 transition-all duration-300">
+                        <i class="fas fa-home"></i>
+                        <span>العودة للوحة التحكم</span>
+                    </a>
+                </div>
+
+                <!-- عداد تنازلي -->
+                <div id="countdown" class="mt-8 text-gray-600 text-sm fade-in-up hidden" style="animation-delay: 0.6s;">
+                    <div class="inline-flex items-center gap-2 bg-white rounded-full px-4 py-2 shadow-md">
+                        <i class="fas fa-clock text-purple-600"></i>
+                        <span>يمكنك المحاولة مرة أخرى خلال <strong id="timer" class="text-purple-600 font-bold">60</strong> ثانية</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // محاولة استخراج وقت الانتظار من البيانات المرسلة من Laravel أو URL
+        @if(isset($retry_after) && $retry_after)
+            const retryAfter = {{ $retry_after }};
+        @else
+            const urlParams = new URLSearchParams(window.location.search);
+            const retryAfter = urlParams.get('retry_after') || localStorage.getItem('retry_after');
+        @endif
+        
+        if (retryAfter) {
+            const countdownEl = document.getElementById('countdown');
+            const timerEl = document.getElementById('timer');
+            countdownEl.classList.remove('hidden');
+            
+            let timeLeft = parseInt(retryAfter);
+            timerEl.textContent = timeLeft;
+            
+            const interval = setInterval(() => {
+                timeLeft--;
+                timerEl.textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    countdownEl.innerHTML = '<div class="inline-flex items-center gap-2 bg-green-50 rounded-full px-4 py-2 shadow-md"><i class="fas fa-check-circle text-green-600"></i><span class="text-green-700 font-bold">يمكنك المحاولة الآن!</span></div>';
+                }
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
+

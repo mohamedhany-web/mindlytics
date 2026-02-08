@@ -1,0 +1,340 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Wallet;
+use App\Models\User;
+use App\Models\WalletReport;
+use App\Models\WalletTransaction;
+use App\Models\ActivityLog;
+use Illuminate\Http\Request;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\DB;
+
+class WalletController extends Controller
+{
+    /**
+     * عرض قائمة المحافظ
+     * محمي من: XSS, SQL Injection, Brute Force
+     */
+    public function index(Request $request)
+    {
+        try {
+            // التحقق من الصلاحيات
+            if (!\Illuminate\Support\Facades\Auth::check() || !\Illuminate\Support\Facades\Auth::user()->isSuperAdmin()) {
+                abort(403, 'غير مصرح لك بالوصول لهذه الصفحة');
+            }
+
+            $query = Wallet::with('user')
+                ->orderBy('created_at', 'desc');
+
+            // فلترة حسب الحالة - حماية من SQL Injection
+            if ($request->filled('status')) {
+                $status = strip_tags(trim($request->status));
+                $status = preg_replace('/[^a-z]/', '', $status);
+                if (in_array($status, ['active', 'inactive'])) {
+                    $query->where('is_active', $status === 'active');
+                }
+            }
+
+            // البحث - حماية من XSS و SQL Injection
+            if ($request->filled('search')) {
+                $search = strip_tags(trim($request->search));
+                $search = preg_replace('/[^a-zA-Z0-9\u0600-\u06FF\s@.-]/', '', $search);
+                if (strlen($search) > 0 && strlen($search) <= 255) {
+                    $query->whereHas('user', function($uq) use ($search) {
+                        $uq->where('name', 'like', "%{$search}%")
+                          ->orWhere('phone', 'like', "%{$search}%");
+                    });
+                }
+            }
+
+            $wallets = $query->paginate(12);
+
+            $stats = [
+                'total' => Wallet::count(),
+                'active' => Wallet::where('is_active', true)->count(),
+                'inactive' => Wallet::where('is_active', false)->count(),
+                'total_balance' => (float) Wallet::sum('balance'),
+                'pending_balance' => (float) Wallet::sum('pending_balance'),
+            ];
+
+            $totalTransactions = WalletTransaction::count();
+
+            $currentMonthRange = [
+                Carbon::now()->startOfMonth(),
+                Carbon::now()->endOfMonth(),
+            ];
+
+            $currentMonthDeposits = WalletTransaction::where('type', 'deposit')
+                ->whereBetween('created_at', $currentMonthRange)
+                ->sum('amount');
+
+            $currentMonthWithdrawals = WalletTransaction::where('type', 'withdrawal')
+                ->whereBetween('created_at', $currentMonthRange)
+                ->sum('amount');
+
+            $typeDistribution = collect();
+            if (Schema::hasColumn('wallets', 'type')) {
+                $typeDistribution = Wallet::selectRaw('type, COUNT(*) as wallets_count, SUM(balance) as total_balance')
+                    ->groupBy('type')
+                    ->get()
+                    ->map(function ($row) {
+                        return [
+                            'type' => $row->type,
+                            'label' => Wallet::typeLabel($row->type),
+                            'wallets_count' => (int) $row->wallets_count,
+                            'total_balance' => (float) $row->total_balance,
+                        ];
+                    });
+            }
+
+            $recentWallets = Wallet::with('user')
+                ->latest()
+                ->take(5)
+                ->get();
+
+            return view('admin.wallets.index', compact(
+                'wallets',
+                'stats',
+                'totalTransactions',
+                'currentMonthDeposits',
+                'currentMonthWithdrawals',
+                'typeDistribution',
+                'recentWallets'
+            ));
+        } catch (\Exception $e) {
+            Log::error('Error in WalletController@index: ' . $e->getMessage());
+            abort(500, 'حدث خطأ أثناء تحميل الصفحة');
+        }
+    }
+
+    public function show(Wallet $wallet)
+    {
+        $wallet->load(['user']);
+
+        $transactionsQuery = $wallet->transactions();
+
+        $totalDeposits = (clone $transactionsQuery)->where('type', 'deposit')->sum('amount');
+        $totalWithdrawals = (clone $transactionsQuery)->where('type', 'withdrawal')->sum('amount');
+        $transactionsCount = (clone $transactionsQuery)->count();
+        $lastTransaction = (clone $transactionsQuery)->latest()->first();
+
+        $currentMonthRange = [
+            Carbon::now()->startOfMonth(),
+            Carbon::now()->endOfMonth(),
+        ];
+
+        $currentMonthDeposits = (clone $transactionsQuery)
+            ->where('type', 'deposit')
+            ->whereBetween('created_at', $currentMonthRange)
+            ->sum('amount');
+
+        $currentMonthWithdrawals = (clone $transactionsQuery)
+            ->where('type', 'withdrawal')
+            ->whereBetween('created_at', $currentMonthRange)
+            ->sum('amount');
+
+        $recentTransactions = (clone $transactionsQuery)
+            ->latest()
+            ->take(8)
+            ->get();
+
+        $netFlow = $totalDeposits - $totalWithdrawals;
+
+        $metrics = [
+            'total_deposits' => (float) $totalDeposits,
+            'total_withdrawals' => (float) $totalWithdrawals,
+            'net_flow' => (float) $netFlow,
+            'transactions_count' => $transactionsCount,
+            'current_month_deposits' => (float) $currentMonthDeposits,
+            'current_month_withdrawals' => (float) $currentMonthWithdrawals,
+            'last_transaction_at' => $lastTransaction?->created_at,
+            'last_transaction_type' => $lastTransaction?->type,
+        ];
+
+        return view('admin.wallets.show', [
+            'wallet' => $wallet,
+            'metrics' => $metrics,
+            'recentTransactions' => $recentTransactions,
+        ]);
+    }
+
+    public function transactions(Wallet $wallet)
+    {
+        $wallet->load(['user', 'transactions' => function ($query) {
+            $query->latest();
+        }]);
+
+        return view('admin.wallets.transactions', [
+            'wallet' => $wallet,
+            'transactions' => $wallet->transactions,
+        ]);
+    }
+
+    public function reports(Wallet $wallet)
+    {
+        $wallet->load(['user', 'reports' => function ($query) {
+            $query->latest();
+        }]);
+
+        return view('admin.wallets.reports', [
+            'wallet' => $wallet,
+            'reports' => $wallet->reports,
+        ]);
+    }
+
+    public function generateReport(Request $request, Wallet $wallet)
+    {
+        $data = $request->validate([
+            'from' => 'nullable|date',
+            'to' => 'nullable|date|after_or_equal:from',
+        ]);
+
+        $defaultStart = $wallet->transactions()->oldest('created_at')->value('created_at');
+        $from = isset($data['from'])
+            ? Carbon::parse($data['from'])->startOfDay()
+            : ($defaultStart ? Carbon::parse($defaultStart)->startOfDay() : Carbon::now()->startOfMonth());
+
+        $to = isset($data['to'])
+            ? Carbon::parse($data['to'])->endOfDay()
+            : Carbon::now()->endOfDay();
+
+        if ($from->greaterThan($to)) {
+            [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
+        }
+
+        $transactions = $wallet->transactions()
+            ->whereBetween('created_at', [$from, $to])
+            ->orderBy('created_at')
+            ->get();
+
+        $previousTransaction = $wallet->transactions()
+            ->where('created_at', '<', $from)
+            ->latest('created_at')
+            ->first();
+
+        $openingBalance = $previousTransaction?->balance_after;
+
+        if (is_null($openingBalance) && $transactions->isNotEmpty()) {
+            $first = $transactions->first();
+            $openingBalance = $first->type === 'deposit'
+                ? $first->balance_after - $first->amount
+                : $first->balance_after + $first->amount;
+        }
+
+        $openingBalance ??= (float) $wallet->balance;
+
+        $totalDeposits = (float) $transactions->where('type', 'deposit')->sum('amount');
+        $totalWithdrawals = (float) $transactions->where('type', 'withdrawal')->sum('amount');
+        $transactionsCount = $transactions->count();
+
+        $latestInRange = $transactions->last();
+        $latestUpToPeriod = $wallet->transactions()
+            ->where('created_at', '<=', $to)
+            ->latest('created_at')
+            ->first();
+
+        $closingBalance = $latestInRange?->balance_after
+            ?? $latestUpToPeriod?->balance_after
+            ?? (float) $wallet->balance;
+
+        $expectedClosing = $openingBalance + $totalDeposits - $totalWithdrawals;
+        $difference = round($expectedClosing - $closingBalance, 2);
+
+        $reportKey = $from->copy()->format('Y-m');
+        if ($from->format('Y-m') !== $to->format('Y-m')) {
+            $reportKey .= '_'.$to->format('Y-m');
+        }
+
+        WalletReport::updateOrCreate(
+            [
+                'wallet_id' => $wallet->id,
+                'report_month' => $reportKey,
+            ],
+            [
+                'opening_balance' => $openingBalance,
+                'closing_balance' => $closingBalance,
+                'total_deposits' => $totalDeposits,
+                'total_withdrawals' => $totalWithdrawals,
+                'transactions_count' => $transactionsCount,
+                'expected_amounts' => null,
+                'actual_amounts' => null,
+                'difference' => $difference,
+                'notes' => "تقرير عن الفترة من {$from->format('Y-m-d')} إلى {$to->format('Y-m-d')}",
+            ]
+        );
+
+        return back()->with('success', 'تم إنشاء التقرير بنجاح!');
+    }
+
+    public function create()
+    {
+        $users = User::where('role', 'student')->where('is_active', true)
+            ->whereDoesntHave('wallet')
+            ->get();
+        return view('admin.wallets.create', compact('users'));
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id|unique:wallets,user_id',
+            'balance' => 'nullable|numeric|min:0',
+        ]);
+
+        Wallet::create([
+            'user_id' => $validated['user_id'],
+            'balance' => $validated['balance'] ?? 0,
+            'pending_balance' => 0,
+            'currency' => 'EGP',
+            'is_active' => true,
+        ]);
+
+        return redirect()->route('admin.wallets.index')
+            ->with('success', 'تم إنشاء المحفظة بنجاح');
+    }
+
+    public function edit(Wallet $wallet)
+    {
+        return view('admin.wallets.edit', compact('wallet'));
+    }
+
+    public function update(Request $request, Wallet $wallet)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'type' => 'required|in:vodafone_cash,instapay,bank_transfer,cash,other',
+            'account_number' => 'nullable|string|max:255',
+            'bank_name' => 'nullable|string|max:255',
+            'account_holder' => 'nullable|string|max:255',
+            'notes' => 'nullable|string',
+            'is_active' => 'nullable|boolean',
+        ]);
+
+        $wallet->update([
+            'name' => $validated['name'],
+            'type' => $validated['type'],
+            'account_number' => $validated['account_number'] ?? null,
+            'bank_name' => $validated['bank_name'] ?? null,
+            'account_holder' => $validated['account_holder'] ?? null,
+            'notes' => $validated['notes'] ?? null,
+            'is_active' => $request->boolean('is_active'),
+        ]);
+
+        return redirect()->route('admin.wallets.show', $wallet)
+            ->with('success', 'تم تحديث المحفظة بنجاح');
+    }
+
+    public function destroy(Wallet $wallet)
+    {
+        $wallet->delete();
+        return redirect()->route('admin.wallets.index')
+            ->with('success', 'تم حذف المحفظة بنجاح');
+    }
+}
