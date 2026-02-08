@@ -23,7 +23,7 @@ git commit -m "Initial commit - Mindlytics Laravel"
 
 ```bash
 # استبدل الرابط بمستودعك الفعلي
-git remote add origin https://github.com/YOUR_USERNAME/mindlytics.git
+git remote add origin https://github.com/mohamedhany-web/mindlytics.git
 git branch -M main
 git push -u origin main
 ```
