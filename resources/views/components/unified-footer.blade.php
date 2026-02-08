@@ -28,25 +28,21 @@
                 </p>
                 
                 <!-- Social Media Icons - Enhanced -->
-                <div class="flex gap-2 md:gap-3">
-                    <a href="#" class="social-icon group relative w-8 h-8 md:w-9 md:h-9 lg:w-10 lg:h-10 rounded-lg bg-white border border-gray-300 hover:bg-blue-600 hover:border-blue-600 shadow-sm hover:shadow-lg flex items-center justify-center transition-all duration-300 transform hover:scale-110 hover:rotate-5" title="Facebook">
+                <div class="flex gap-2 md:gap-3 flex-wrap">
+                    <a href="https://www.facebook.com/profile.php?id=100094977003910" target="_blank" rel="noopener noreferrer" class="social-icon group relative w-8 h-8 md:w-9 md:h-9 lg:w-10 lg:h-10 rounded-lg bg-white border border-gray-300 hover:bg-blue-600 hover:border-blue-600 shadow-sm hover:shadow-lg flex items-center justify-center transition-all duration-300 transform hover:scale-110 hover:rotate-5" title="Facebook">
                         <i class="fab fa-facebook-f text-gray-600 group-hover:text-white transition-colors text-sm md:text-base"></i>
                         <span class="absolute -top-1 -right-1 w-2 h-2 md:w-3 md:h-3 bg-green-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
                     </a>
-                    <a href="#" class="social-icon group relative w-8 h-8 md:w-9 md:h-9 lg:w-10 lg:h-10 rounded-lg bg-white border border-gray-300 hover:bg-blue-400 hover:border-blue-400 shadow-sm hover:shadow-lg flex items-center justify-center transition-all duration-300 transform hover:scale-110 hover:rotate-5" title="Twitter">
-                        <i class="fab fa-twitter text-gray-600 group-hover:text-white transition-colors text-sm md:text-base"></i>
-                        <span class="absolute -top-1 -right-1 w-2 h-2 md:w-3 md:h-3 bg-green-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                    </a>
-                    <a href="#" class="social-icon group relative w-8 h-8 md:w-9 md:h-9 lg:w-10 lg:h-10 rounded-lg bg-white border border-gray-300 hover:bg-blue-700 hover:border-blue-700 shadow-sm hover:shadow-lg flex items-center justify-center transition-all duration-300 transform hover:scale-110 hover:rotate-5" title="LinkedIn">
-                        <i class="fab fa-linkedin-in text-gray-600 group-hover:text-white transition-colors text-sm md:text-base"></i>
-                        <span class="absolute -top-1 -right-1 w-2 h-2 md:w-3 md:h-3 bg-green-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                    </a>
-                    <a href="#" class="social-icon group relative w-8 h-8 md:w-9 md:h-9 lg:w-10 lg:h-10 rounded-lg bg-white border border-gray-300 hover:bg-pink-600 hover:border-pink-600 shadow-sm hover:shadow-lg flex items-center justify-center transition-all duration-300 transform hover:scale-110 hover:rotate-5" title="Instagram">
+                    <a href="https://www.instagram.com/mindlytics_eg/" target="_blank" rel="noopener noreferrer" class="social-icon group relative w-8 h-8 md:w-9 md:h-9 lg:w-10 lg:h-10 rounded-lg bg-white border border-gray-300 hover:bg-pink-600 hover:border-pink-600 shadow-sm hover:shadow-lg flex items-center justify-center transition-all duration-300 transform hover:scale-110 hover:rotate-5" title="Instagram">
                         <i class="fab fa-instagram text-gray-600 group-hover:text-white transition-colors text-sm md:text-base"></i>
                         <span class="absolute -top-1 -right-1 w-2 h-2 md:w-3 md:h-3 bg-green-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
                     </a>
-                    <a href="#" class="social-icon group relative w-8 h-8 md:w-9 md:h-9 lg:w-10 lg:h-10 rounded-lg bg-white border border-gray-300 hover:bg-red-600 hover:border-red-600 shadow-sm hover:shadow-lg flex items-center justify-center transition-all duration-300 transform hover:scale-110 hover:rotate-5" title="YouTube">
-                        <i class="fab fa-youtube text-gray-600 group-hover:text-white transition-colors text-sm md:text-base"></i>
+                    <a href="https://www.linkedin.com/company/mindlytic/?viewAsMember=true" target="_blank" rel="noopener noreferrer" class="social-icon group relative w-8 h-8 md:w-9 md:h-9 lg:w-10 lg:h-10 rounded-lg bg-white border border-gray-300 hover:bg-blue-700 hover:border-blue-700 shadow-sm hover:shadow-lg flex items-center justify-center transition-all duration-300 transform hover:scale-110 hover:rotate-5" title="LinkedIn">
+                        <i class="fab fa-linkedin-in text-gray-600 group-hover:text-white transition-colors text-sm md:text-base"></i>
+                        <span class="absolute -top-1 -right-1 w-2 h-2 md:w-3 md:h-3 bg-green-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    </a>
+                    <a href="https://wa.me/201044610507" target="_blank" rel="noopener noreferrer" class="social-icon group relative w-8 h-8 md:w-9 md:h-9 lg:w-10 lg:h-10 rounded-lg bg-white border border-gray-300 hover:bg-green-500 hover:border-green-500 shadow-sm hover:shadow-lg flex items-center justify-center transition-all duration-300 transform hover:scale-110 hover:rotate-5" title="WhatsApp - تواصل معنا">
+                        <i class="fab fa-whatsapp text-gray-600 group-hover:text-white transition-colors text-sm md:text-base"></i>
                         <span class="absolute -top-1 -right-1 w-2 h-2 md:w-3 md:h-3 bg-green-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
                     </a>
                 </div>
@@ -174,8 +170,8 @@
                             <a href="mailto:info@mindlytics-academy.com" class="hover:text-blue-600 transition-colors">info@mindlytics-academy.com</a>
                         </div>
                         <div class="flex items-center gap-2">
-                            <i class="fas fa-phone text-green-600 text-xs"></i>
-                            <span>+966 50 123 4567</span>
+                            <i class="fab fa-whatsapp text-green-600 text-xs"></i>
+                            <a href="https://wa.me/201044610507" target="_blank" rel="noopener noreferrer" class="hover:text-green-600 transition-colors">01044610507</a>
                         </div>
                     </div>
                 </div>
