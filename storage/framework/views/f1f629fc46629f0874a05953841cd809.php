@@ -3,13 +3,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title', 'Mindlytics - أكاديمية البرمجة')</title>
+    <title><?php echo $__env->yieldContent('title', 'Mindlytics - أكاديمية البرمجة'); ?></title>
 
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('logo-removebg-preview.png') }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('logo-removebg-preview.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('logo-removebg-preview.png') }}">
+    <link rel="icon" type="image/x-icon" href="<?php echo e(asset('favicon.ico')); ?>">
+    <link rel="apple-touch-icon" sizes="180x180" href="<?php echo e(asset('logo-removebg-preview.png')); ?>">
+    <link rel="icon" type="image/png" sizes="32x32" href="<?php echo e(asset('logo-removebg-preview.png')); ?>">
+    <link rel="icon" type="image/png" sizes="16x16" href="<?php echo e(asset('logo-removebg-preview.png')); ?>">
 
     <!-- الخطوط العربية - موحّد مع الصفحة الرئيسية -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -32,7 +32,7 @@
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
 
     <!-- Custom Styles from welcome.blade.php -->
-    @include('layouts.public-styles')
+    <?php echo $__env->make('layouts.public-styles', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 </head>
 
 <body class="bg-gray-50 text-gray-900"
@@ -40,17 +40,17 @@
       :class="{ 'overflow-hidden': mobileMenu }">
     
     <!-- Navigation Header - نفس الناف بار من الصفحة الرئيسية -->
-    @include('components.unified-navbar')
+    <?php echo $__env->make('components.unified-navbar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
     <!-- Main Content -->
     <main>
-        @yield('content')
+        <?php echo $__env->yieldContent('content'); ?>
     </main>
 
     <!-- Footer - نفس فوتر الصفحة الرئيسية -->
-    @include('components.unified-footer')
+    <?php echo $__env->make('components.unified-footer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
-    @stack('scripts')
+    <?php echo $__env->yieldPushContent('scripts'); ?>
 
     <script>
         // تأثير الناف بار عند السكرول - محسّن للأداء
@@ -88,3 +88,4 @@
 </body>
 </html>
 
+<?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/layouts/public.blade.php ENDPATH**/ ?>

@@ -1,9 +1,7 @@
-@extends('layouts.admin')
+<?php $__env->startSection('title', 'إدارة المستخدمين - Mindlytics'); ?>
+<?php $__env->startSection('header', 'إدارة المستخدمين'); ?>
 
-@section('title', 'إدارة المستخدمين - Mindlytics')
-@section('header', 'إدارة المستخدمين')
-
-@push('styles')
+<?php $__env->startPush('styles'); ?>
 <style>
     .user-card {
         transition: all 0.2s ease;
@@ -28,10 +26,10 @@
         background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     }
 </style>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@section('content')
-@php
+<?php $__env->startSection('content'); ?>
+<?php
     // التأكد من وجود المتغيرات
     $stats = $stats ?? [];
     $trends = $trends ?? [];
@@ -126,7 +124,7 @@
             'hover' => 'from-purple-100/60 via-purple-100/40 to-violet-50/30',
         ],
     ];
-@endphp
+?>
 
 <div class="space-y-6">
     <!-- الهيدر المحسن -->
@@ -141,7 +139,7 @@
                     <p class="text-sm sm:text-base text-slate-600 font-medium">متابعة الحسابات، الصلاحيات، وحالة النشاط عبر المنصة</p>
                 </div>
             </div>
-            <a href="{{ route('admin.users.create') }}" 
+            <a href="<?php echo e(route('admin.users.create')); ?>" 
                class="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-6 py-3 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-200">
                 <i class="fas fa-user-plus"></i>
                 <span>إضافة مستخدم جديد</span>
@@ -151,44 +149,45 @@
 
     <!-- إحصائيات سريعة -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        @foreach ($statsCards as $stat)
-            @php $config = $colorConfigs[$stat['color']]; @endphp
+        <?php $__currentLoopData = $statsCards; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $stat): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <?php $config = $colorConfigs[$stat['color']]; ?>
             <div class="rounded-2xl p-5 sm:p-6 relative overflow-hidden border border-slate-200 bg-white shadow-md hover:shadow-lg transition-all duration-200 w-full">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm font-semibold text-slate-700 mb-2">{{ $stat['label'] }}</p>
-                        <p class="text-4xl sm:text-3xl font-black text-slate-900">{{ $stat['value'] }}</p>
+                        <p class="text-sm font-semibold text-slate-700 mb-2"><?php echo e($stat['label']); ?></p>
+                        <p class="text-4xl sm:text-3xl font-black text-slate-900"><?php echo e($stat['value']); ?></p>
                     </div>
                     <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md flex-shrink-0 mr-3 sm:mr-0">
-                        <i class="{{ $stat['icon'] }} text-white text-xl"></i>
+                        <i class="<?php echo e($stat['icon']); ?> text-white text-xl"></i>
                     </div>
                 </div>
-                @if(isset($stat['new_this_month']))
+                <?php if(isset($stat['new_this_month'])): ?>
                     <p class="text-xs font-medium text-slate-600 mb-2">
-                        {{ $stat['label'] == 'إجمالي المستخدمين' ? 'مستخدمون' : ($stat['label'] == 'المدرسون' ? 'مدربون' : 'طلاب') }} جدد هذا الشهر: 
-                        <span class="font-bold text-blue-600">{{ number_format($stat['new_this_month']) }}</span>
+                        <?php echo e($stat['label'] == 'إجمالي المستخدمين' ? 'مستخدمون' : ($stat['label'] == 'المدرسون' ? 'مدربون' : 'طلاب')); ?> جدد هذا الشهر: 
+                        <span class="font-bold text-blue-600"><?php echo e(number_format($stat['new_this_month'])); ?></span>
                     </p>
-                @else
-                    <p class="text-xs font-medium text-slate-600 mb-2">{{ $stat['description'] }}</p>
-                @endif
-                @if(isset($stat['trend']) && $stat['trend'])
-                    @php
+                <?php else: ?>
+                    <p class="text-xs font-medium text-slate-600 mb-2"><?php echo e($stat['description']); ?></p>
+                <?php endif; ?>
+                <?php if(isset($stat['trend']) && $stat['trend']): ?>
+                    <?php
                         $diff = (int) round($stat['trend']['difference']);
                         $percent = $stat['trend']['percent'];
                         $positive = $diff >= 0;
-                    @endphp
+                    ?>
                     <div class="mt-2 flex items-center gap-2 text-sm flex-wrap">
-                        <span class="font-bold {{ $positive ? 'text-emerald-600' : 'text-rose-600' }}">
-                            {{ $positive ? '+' : '' }}{{ number_format($diff) }}
+                        <span class="font-bold <?php echo e($positive ? 'text-emerald-600' : 'text-rose-600'); ?>">
+                            <?php echo e($positive ? '+' : ''); ?><?php echo e(number_format($diff)); ?>
+
                         </span>
                         <span class="text-slate-600">عن الشهر الماضي</span>
-                        <span class="inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold {{ $positive ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-rose-100 text-rose-700 border border-rose-200' }}">
-                            {{ $percent >= 0 ? '+' : '' }}{{ number_format($percent, 1) }}%
+                        <span class="inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold <?php echo e($positive ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-rose-100 text-rose-700 border border-rose-200'); ?>">
+                            <?php echo e($percent >= 0 ? '+' : ''); ?><?php echo e(number_format($percent, 1)); ?>%
                         </span>
                     </div>
-                @endif
+                <?php endif; ?>
             </div>
-        @endforeach
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
     </div>
 
     <!-- البحث والفلترة -->
@@ -205,7 +204,7 @@
             </div>
         </div>
         <div class="px-6 py-5">
-            <form method="GET" action="{{ route('admin.users.index') }}" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <form method="GET" action="<?php echo e(route('admin.users.index')); ?>" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
                         <i class="fas fa-search text-blue-600 text-sm"></i>
@@ -215,7 +214,7 @@
                         <span class="absolute inset-y-0 left-3 flex items-center text-blue-500">
                             <i class="fas fa-search"></i>
                         </span>
-                        <input type="text" name="search" value="{{ request('search') }}" 
+                        <input type="text" name="search" value="<?php echo e(request('search')); ?>" 
                                placeholder="الاسم، البريد الإلكتروني، رقم الهاتف" 
                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 pr-10 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
                     </div>
@@ -228,13 +227,13 @@
                     <select name="role" 
                             class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
                         <option value="">جميع الأدوار</option>
-                        <option value="super_admin" {{ request('role') == 'super_admin' ? 'selected' : '' }}>مدير عام</option>
-                        <option value="admin" {{ request('role') == 'admin' ? 'selected' : '' }}>إداري</option>
-                        <option value="instructor" {{ request('role') == 'instructor' ? 'selected' : '' }}>مدرب</option>
-                        <option value="teacher" {{ request('role') == 'teacher' ? 'selected' : '' }}>مدرس</option>
-                        <option value="student" {{ request('role') == 'student' ? 'selected' : '' }}>طالب</option>
-                        <option value="parent" {{ request('role') == 'parent' ? 'selected' : '' }}>ولي أمر</option>
-                        <option value="employee" {{ request('role') == 'employee' ? 'selected' : '' }}>موظف</option>
+                        <option value="super_admin" <?php echo e(request('role') == 'super_admin' ? 'selected' : ''); ?>>مدير عام</option>
+                        <option value="admin" <?php echo e(request('role') == 'admin' ? 'selected' : ''); ?>>إداري</option>
+                        <option value="instructor" <?php echo e(request('role') == 'instructor' ? 'selected' : ''); ?>>مدرب</option>
+                        <option value="teacher" <?php echo e(request('role') == 'teacher' ? 'selected' : ''); ?>>مدرس</option>
+                        <option value="student" <?php echo e(request('role') == 'student' ? 'selected' : ''); ?>>طالب</option>
+                        <option value="parent" <?php echo e(request('role') == 'parent' ? 'selected' : ''); ?>>ولي أمر</option>
+                        <option value="employee" <?php echo e(request('role') == 'employee' ? 'selected' : ''); ?>>موظف</option>
                     </select>
                 </div>
                 <div>
@@ -245,8 +244,8 @@
                     <select name="status" 
                             class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
                         <option value="">جميع الحالات</option>
-                        <option value="1" {{ request('status') == '1' ? 'selected' : '' }}>نشط</option>
-                        <option value="0" {{ request('status') == '0' ? 'selected' : '' }}>غير نشط</option>
+                        <option value="1" <?php echo e(request('status') == '1' ? 'selected' : ''); ?>>نشط</option>
+                        <option value="0" <?php echo e(request('status') == '0' ? 'selected' : ''); ?>>غير نشط</option>
                     </select>
                 </div>
                 <div class="flex items-end gap-2">
@@ -255,13 +254,13 @@
                         <i class="fas fa-search"></i>
                         <span>بحث</span>
                     </button>
-                    @if(request()->anyFilled(['search', 'role', 'status']))
-                    <a href="{{ route('admin.users.index') }}" 
+                    <?php if(request()->anyFilled(['search', 'role', 'status'])): ?>
+                    <a href="<?php echo e(route('admin.users.index')); ?>" 
                        class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors" 
                        title="مسح الفلتر">
                         <i class="fas fa-times"></i>
                     </a>
-                    @endif
+                    <?php endif; ?>
                 </div>
             </form>
         </div>
@@ -277,7 +276,7 @@
                 <div>
                     <h3 class="text-lg font-black text-slate-900">قائمة المستخدمين</h3>
                     <p class="text-xs text-slate-600 font-medium mt-1">
-                        <span class="font-bold text-blue-600">{{ $users->total() }}</span> مستخدم
+                        <span class="font-bold text-blue-600"><?php echo e($users->total()); ?></span> مستخدم
                     </p>
                 </div>
             </div>
@@ -320,28 +319,31 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 bg-white text-sm">
-                    @forelse ($users as $user)
+                    <?php $__empty_1 = true; $__currentLoopData = $users; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $user): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                         <tr class="table-row">
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-4">
                                     <div class="avatar-gradient w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-md">
-                                        {{ mb_substr($user->name, 0, 1, 'UTF-8') }}
+                                        <?php echo e(mb_substr($user->name, 0, 1, 'UTF-8')); ?>
+
                                     </div>
                                     <div class="space-y-1">
-                                        <p class="font-bold text-slate-900 text-base">{{ $user->name }}</p>
+                                        <p class="font-bold text-slate-900 text-base"><?php echo e($user->name); ?></p>
                                         <p class="text-xs text-slate-600 font-medium flex items-center gap-2">
                                             <i class="fas fa-envelope text-blue-500 text-xs"></i>
-                                            {{ $user->email ?: 'لا يوجد بريد إلكتروني' }}
+                                            <?php echo e($user->email ?: 'لا يوجد بريد إلكتروني'); ?>
+
                                         </p>
                                         <p class="text-xs text-slate-600 font-medium flex items-center gap-2">
                                             <i class="fas fa-phone text-blue-500 text-xs"></i>
-                                            {{ $user->phone }}
+                                            <?php echo e($user->phone); ?>
+
                                         </p>
                                     </div>
                                 </div>
                             </td>
                             <td class="px-6 py-4">
-                                @php
+                                <?php
                                     // التحقق من كون المستخدم موظف أولاً
                                     if ($user->is_employee) {
                                         $roleKey = 'employee';
@@ -349,42 +351,44 @@
                                         $roleKey = $user->role;
                                     }
                                     $roleMeta = $roles[$roleKey] ?? $roles['student'];
-                                @endphp
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold {{ $roleMeta['badge'] }}">
+                                ?>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold <?php echo e($roleMeta['badge']); ?>">
                                     <span class="h-1.5 w-1.5 rounded-full bg-current"></span>
-                                    {{ $roleMeta['label'] }}
+                                    <?php echo e($roleMeta['label']); ?>
+
                                 </span>
                             </td>
                             <td class="px-6 py-4">
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold {{ $user->is_active ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-rose-100 text-rose-700 border border-rose-200' }}">
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold <?php echo e($user->is_active ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-rose-100 text-rose-700 border border-rose-200'); ?>">
                                     <span class="h-1.5 w-1.5 rounded-full bg-current"></span>
-                                    {{ $user->is_active ? 'نشط' : 'غير نشط' }}
+                                    <?php echo e($user->is_active ? 'نشط' : 'غير نشط'); ?>
+
                                 </span>
                             </td>
                             <td class="px-6 py-4">
                                 <div class="space-y-1">
-                                    <div class="text-sm font-semibold text-slate-900">{{ $user->created_at->format('Y-m-d') }}</div>
-                                    <div class="text-xs text-slate-600 font-medium">{{ $user->created_at->format('H:i') }}</div>
+                                    <div class="text-sm font-semibold text-slate-900"><?php echo e($user->created_at->format('Y-m-d')); ?></div>
+                                    <div class="text-xs text-slate-600 font-medium"><?php echo e($user->created_at->format('H:i')); ?></div>
                                 </div>
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-center gap-2">
-                                    <button type="button" onclick="editUser({{ $user->id }})" 
+                                    <button type="button" onclick="editUser(<?php echo e($user->id); ?>)" 
                                             class="w-9 h-9 flex items-center justify-center bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg font-semibold transition-colors shadow-sm hover:shadow-md"
                                             title="تعديل">
                                         <i class="fas fa-edit text-sm"></i>
                                     </button>
-                                    @if ($user->id !== auth()->id())
-                                        <button type="button" onclick="deleteUser({{ $user->id }})" 
+                                    <?php if($user->id !== auth()->id()): ?>
+                                        <button type="button" onclick="deleteUser(<?php echo e($user->id); ?>)" 
                                                 class="w-9 h-9 flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg font-semibold transition-colors shadow-sm hover:shadow-md"
                                                 title="حذف">
                                             <i class="fas fa-trash text-sm"></i>
                                         </button>
-                                    @endif
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
-                    @empty
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                         <tr>
                             <td colspan="5" class="px-6 py-16 text-center">
                                 <div class="flex flex-col items-center gap-4">
@@ -398,16 +402,17 @@
                                 </div>
                             </td>
                         </tr>
-                    @endforelse
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>
 
-        @if ($users->hasPages())
+        <?php if($users->hasPages()): ?>
             <div class="px-6 py-4 border-t border-slate-200 bg-slate-50">
-                {{ $users->appends(request()->query())->links() }}
+                <?php echo e($users->appends(request()->query())->links()); ?>
+
             </div>
-        @endif
+        <?php endif; ?>
     </section>
 
     <!-- آخر المستخدمين والمستخدمين النشطون -->
@@ -426,37 +431,40 @@
                 </div>
             </div>
             <div class="p-6 space-y-3 max-h-96 overflow-y-auto">
-                @forelse($recentUsers as $recentUser)
+                <?php $__empty_1 = true; $__currentLoopData = $recentUsers; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $recentUser): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                 <div class="flex items-center gap-4 p-3 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200">
                     <div class="avatar-gradient w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-md">
-                        {{ mb_substr($recentUser->name, 0, 1, 'UTF-8') }}
+                        <?php echo e(mb_substr($recentUser->name, 0, 1, 'UTF-8')); ?>
+
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="font-bold text-slate-900 truncate">{{ $recentUser->name }}</p>
+                        <p class="font-bold text-slate-900 truncate"><?php echo e($recentUser->name); ?></p>
                         <div class="flex items-center gap-3 mt-1 flex-wrap">
-                            @php
+                            <?php
                                 $recentRoleKey = $recentUser->is_employee ? 'employee' : ($recentUser->role ?? 'student');
-                            @endphp
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold {{ ($roles[$recentRoleKey] ?? $roles['student'])['badge'] }}">
+                            ?>
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold <?php echo e(($roles[$recentRoleKey] ?? $roles['student'])['badge']); ?>">
                                 <span class="h-1.5 w-1.5 rounded-full bg-current"></span>
-                                {{ ($roles[$recentRoleKey] ?? $roles['student'])['label'] }}
+                                <?php echo e(($roles[$recentRoleKey] ?? $roles['student'])['label']); ?>
+
                             </span>
-                            <span class="text-xs text-slate-600 font-medium">{{ $recentUser->created_at->diffForHumans() }}</span>
+                            <span class="text-xs text-slate-600 font-medium"><?php echo e($recentUser->created_at->diffForHumans()); ?></span>
                         </div>
                     </div>
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold {{ $recentUser->is_active ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-rose-100 text-rose-700 border border-rose-200' }}">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold <?php echo e($recentUser->is_active ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-rose-100 text-rose-700 border border-rose-200'); ?>">
                         <span class="h-1.5 w-1.5 rounded-full bg-current"></span>
-                        {{ $recentUser->is_active ? 'نشط' : 'غير نشط' }}
+                        <?php echo e($recentUser->is_active ? 'نشط' : 'غير نشط'); ?>
+
                     </span>
                 </div>
-                @empty
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                 <div class="text-center py-8">
                     <div class="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
                         <i class="fas fa-users text-2xl text-blue-600"></i>
                     </div>
                     <p class="text-slate-600 font-medium">لا توجد مستخدمين بعد</p>
                 </div>
-                @endforelse
+                <?php endif; ?>
             </div>
         </section>
 
@@ -474,34 +482,36 @@
                 </div>
             </div>
             <div class="p-6 space-y-3 max-h-96 overflow-y-auto">
-                @forelse($recentlyActiveUsers as $activeUser)
+                <?php $__empty_1 = true; $__currentLoopData = $recentlyActiveUsers; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $activeUser): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                 <div class="flex items-center gap-4 p-3 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200">
                     <div class="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-md">
-                        {{ mb_substr($activeUser->name, 0, 1, 'UTF-8') }}
+                        <?php echo e(mb_substr($activeUser->name, 0, 1, 'UTF-8')); ?>
+
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="font-bold text-slate-900 truncate">{{ $activeUser->name }}</p>
+                        <p class="font-bold text-slate-900 truncate"><?php echo e($activeUser->name); ?></p>
                         <div class="flex items-center gap-3 mt-1 flex-wrap">
-                            @php
+                            <?php
                                 $activeRoleKey = $activeUser->is_employee ? 'employee' : ($activeUser->role ?? 'student');
-                            @endphp
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold {{ ($roles[$activeRoleKey] ?? $roles['student'])['badge'] }}">
+                            ?>
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold <?php echo e(($roles[$activeRoleKey] ?? $roles['student'])['badge']); ?>">
                                 <span class="h-1.5 w-1.5 rounded-full bg-current"></span>
-                                {{ ($roles[$activeRoleKey] ?? $roles['student'])['label'] }}
+                                <?php echo e(($roles[$activeRoleKey] ?? $roles['student'])['label']); ?>
+
                             </span>
-                            <span class="text-xs text-slate-600 font-medium">آخر نشاط: {{ $activeUser->updated_at->diffForHumans() }}</span>
+                            <span class="text-xs text-slate-600 font-medium">آخر نشاط: <?php echo e($activeUser->updated_at->diffForHumans()); ?></span>
                         </div>
                     </div>
                     <div class="w-2.5 h-2.5 bg-emerald-500 rounded-full shadow-md"></div>
                 </div>
-                @empty
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                 <div class="text-center py-8">
                     <div class="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
                         <i class="fas fa-user-check text-2xl text-emerald-600"></i>
                     </div>
                     <p class="text-slate-600 font-medium">لا يوجد مستخدمين نشطون مؤخراً</p>
                 </div>
-                @endforelse
+                <?php endif; ?>
             </div>
         </section>
     </div>
@@ -523,7 +533,7 @@
             </div>
             <div class="p-6">
                 <div class="space-y-3">
-                    @php
+                    <?php
                         $totalForPercentage = $stats['total'] > 0 ? $stats['total'] : 1;
                         $roleDistribution = [
                             'super_admin' => ['count' => $usersByRole['super_admin'] ?? 0, 'label' => 'مدير عام', 'color' => 'rose', 'icon' => 'fas fa-user-shield'],
@@ -545,9 +555,9 @@
                             $roleDistribution['instructor']['label'] = 'مدرسون';
                             unset($roleDistribution['teacher']);
                         }
-                    @endphp
-                    @foreach($roleDistribution as $roleKey => $roleData)
-                        @php
+                    ?>
+                    <?php $__currentLoopData = $roleDistribution; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $roleKey => $roleData): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <?php
                             $percentage = ($roleData['count'] / $totalForPercentage) * 100;
                             $colorClasses = [
                                 'rose' => ['bg' => 'bg-rose-500', 'text' => 'text-rose-600', 'light' => 'bg-rose-100', 'border' => 'border-rose-200'],
@@ -557,25 +567,25 @@
                                 'amber' => ['bg' => 'bg-amber-500', 'text' => 'text-amber-600', 'light' => 'bg-amber-100', 'border' => 'border-amber-200'],
                             ];
                             $color = $colorClasses[$roleData['color']] ?? $colorClasses['sky'];
-                        @endphp
-                        <div class="p-3 rounded-lg border border-slate-200 hover:border-{{ $color['text'] }}/30 hover:shadow-md transition-all">
+                        ?>
+                        <div class="p-3 rounded-lg border border-slate-200 hover:border-<?php echo e($color['text']); ?>/30 hover:shadow-md transition-all">
                             <div class="flex items-center justify-between mb-2">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 {{ $color['light'] }} rounded-lg flex items-center justify-center">
-                                        <i class="{{ $roleData['icon'] }} {{ $color['text'] }} text-base"></i>
+                                    <div class="w-10 h-10 <?php echo e($color['light']); ?> rounded-lg flex items-center justify-center">
+                                        <i class="<?php echo e($roleData['icon']); ?> <?php echo e($color['text']); ?> text-base"></i>
                                     </div>
                                     <div>
-                                        <p class="font-bold text-slate-900 text-sm">{{ $roleData['label'] }}</p>
-                                        <p class="text-xs text-slate-600 font-medium">{{ number_format($roleData['count']) }} مستخدم</p>
+                                        <p class="font-bold text-slate-900 text-sm"><?php echo e($roleData['label']); ?></p>
+                                        <p class="text-xs text-slate-600 font-medium"><?php echo e(number_format($roleData['count'])); ?> مستخدم</p>
                                     </div>
                                 </div>
-                                <span class="text-base font-bold {{ $color['text'] }}">{{ number_format($percentage, 1) }}%</span>
+                                <span class="text-base font-bold <?php echo e($color['text']); ?>"><?php echo e(number_format($percentage, 1)); ?>%</span>
                             </div>
                             <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                                <div class="{{ $color['bg'] }} h-2 rounded-full transition-all duration-300" style="width: {{ $percentage }}%"></div>
+                                <div class="<?php echo e($color['bg']); ?> h-2 rounded-full transition-all duration-300" style="width: <?php echo e($percentage); ?>%"></div>
                             </div>
                         </div>
-                    @endforeach
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </div>
             </div>
         </section>
@@ -594,40 +604,40 @@
                 </div>
             </div>
             <div class="p-6">
-                @if($usersByMonth->count() > 0)
-                    @php
+                <?php if($usersByMonth->count() > 0): ?>
+                    <?php
                         $maxCount = $usersByMonth->max('count') ?: 1;
                         $monthNames = [
                             1 => 'يناير', 2 => 'فبراير', 3 => 'مارس', 4 => 'أبريل',
                             5 => 'مايو', 6 => 'يونيو', 7 => 'يوليو', 8 => 'أغسطس',
                             9 => 'سبتمبر', 10 => 'أكتوبر', 11 => 'نوفمبر', 12 => 'ديسمبر'
                         ];
-                    @endphp
+                    ?>
                     <div class="space-y-3">
-                        @foreach($usersByMonth->reverse() as $monthData)
-                            @php
+                        <?php $__currentLoopData = $usersByMonth->reverse(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $monthData): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <?php
                                 $barHeight = ($monthData->count / $maxCount) * 100;
                                 $monthName = $monthNames[$monthData->month] ?? $monthData->month;
-                            @endphp
+                            ?>
                             <div class="p-3 rounded-lg border border-slate-200 hover:shadow-md transition-all">
                                 <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm font-semibold text-slate-900">{{ $monthName }} {{ $monthData->year }}</span>
-                                    <span class="text-base font-bold text-purple-600">{{ number_format($monthData->count) }}</span>
+                                    <span class="text-sm font-semibold text-slate-900"><?php echo e($monthName); ?> <?php echo e($monthData->year); ?></span>
+                                    <span class="text-base font-bold text-purple-600"><?php echo e(number_format($monthData->count)); ?></span>
                                 </div>
                                 <div class="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
-                                    <div class="bg-gradient-to-r from-purple-500 to-purple-600 h-3 rounded-full transition-all duration-300" style="width: {{ $barHeight }}%"></div>
+                                    <div class="bg-gradient-to-r from-purple-500 to-purple-600 h-3 rounded-full transition-all duration-300" style="width: <?php echo e($barHeight); ?>%"></div>
                                 </div>
                             </div>
-                        @endforeach
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </div>
-                @else
+                <?php else: ?>
                     <div class="text-center py-8">
                         <div class="w-16 h-16 bg-purple-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
                             <i class="fas fa-chart-line text-2xl text-purple-600"></i>
                         </div>
                         <p class="text-slate-600 font-medium">لا توجد بيانات شهرية متاحة</p>
                     </div>
-                @endif
+                <?php endif; ?>
             </div>
         </section>
     </div>
@@ -650,7 +660,7 @@
             </span>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 p-6">
-            <a href="{{ route('admin.roles.index') }}" 
+            <a href="<?php echo e(route('admin.roles.index')); ?>" 
                class="group rounded-xl border border-slate-200 bg-white p-5 hover:border-blue-300 hover:shadow-md transition-all duration-200 user-card">
                 <div class="flex items-center justify-between mb-3">
                     <div class="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 shadow-sm">
@@ -660,7 +670,7 @@
                 <h4 class="text-sm font-bold text-slate-900 mb-2">إدارة الأدوار</h4>
                 <p class="text-xs text-slate-600 font-medium leading-relaxed">تعريف الصلاحيات وتوزيعها حسب الفريق</p>
             </a>
-            <a href="{{ route('admin.permissions.index') }}" 
+            <a href="<?php echo e(route('admin.permissions.index')); ?>" 
                class="group rounded-xl border border-slate-200 bg-white p-5 hover:border-blue-300 hover:shadow-md transition-all duration-200 user-card">
                 <div class="flex items-center justify-between mb-3">
                     <div class="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 shadow-sm">
@@ -670,7 +680,7 @@
                 <h4 class="text-sm font-bold text-slate-900 mb-2">مصفوفة الصلاحيات</h4>
                 <p class="text-xs text-slate-600 font-medium leading-relaxed">إدارة الصلاحيات الدقيقة لكل مستخدم</p>
             </a>
-            <a href="{{ route('admin.users.create') }}" 
+            <a href="<?php echo e(route('admin.users.create')); ?>" 
                class="group rounded-xl border border-slate-200 bg-white p-5 hover:border-blue-300 hover:shadow-md transition-all duration-200 user-card">
                 <div class="flex items-center justify-between mb-3">
                     <div class="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm">
@@ -680,7 +690,7 @@
                 <h4 class="text-sm font-bold text-slate-900 mb-2">إضافة حساب جديد</h4>
                 <p class="text-xs text-slate-600 font-medium leading-relaxed">إنشاء حسابات للمدرسين أو الطلاب الجدد</p>
             </a>
-            <a href="{{ route('admin.activity-log') }}" 
+            <a href="<?php echo e(route('admin.activity-log')); ?>" 
                class="group rounded-xl border border-slate-200 bg-white p-5 hover:border-blue-300 hover:shadow-md transition-all duration-200 user-card">
                 <div class="flex items-center justify-between mb-3">
                     <div class="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 shadow-sm">
@@ -710,8 +720,8 @@
             </button>
         </div>
         <form id="editUserForm" method="POST" class="space-y-5 px-6 py-5">
-            @csrf
-            @method('PUT')
+            <?php echo csrf_field(); ?>
+            <?php echo method_field('PUT'); ?>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
@@ -789,7 +799,7 @@
     </div>
 </div>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
     const editModal = document.getElementById('editUserModal');
     const editForm = document.getElementById('editUserForm');
@@ -923,7 +933,7 @@
         }
     }
 
-    // معالج submit — إرسال كـ application/x-www-form-urlencoded حتى يملأ PHP $_POST
+    // معالج submit — بناء FormData يدوياً لضمان إرسال كل الحقول
     editForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const csrfToken = document.querySelector('meta[name="csrf-token"]');
@@ -931,22 +941,21 @@
             alert('خطأ: لم يتم العثور على رمز الأمان. حدّث الصفحة وحاول مرة أخرى.');
             return;
         }
-        const params = new URLSearchParams();
-        params.append('_token', csrfToken.getAttribute('content'));
-        params.append('_method', 'PUT');
-        params.append('name', (document.getElementById('edit_name') && document.getElementById('edit_name').value) || '');
-        params.append('email', (document.getElementById('edit_email') && document.getElementById('edit_email').value) || '');
-        params.append('phone', (document.getElementById('edit_phone') && document.getElementById('edit_phone').value) || '');
-        params.append('role', (document.getElementById('edit_role') && document.getElementById('edit_role').value) || 'student');
-        params.append('is_active', (document.getElementById('edit_is_active') && document.getElementById('edit_is_active').value) || '1');
+        const formData = new FormData();
+        formData.append('_token', csrfToken.getAttribute('content'));
+        formData.append('_method', 'PUT');
+        formData.append('name', (document.getElementById('edit_name') && document.getElementById('edit_name').value) || '');
+        formData.append('email', (document.getElementById('edit_email') && document.getElementById('edit_email').value) || '');
+        formData.append('phone', (document.getElementById('edit_phone') && document.getElementById('edit_phone').value) || '');
+        formData.append('role', (document.getElementById('edit_role') && document.getElementById('edit_role').value) || 'student');
+        formData.append('is_active', (document.getElementById('edit_is_active') && document.getElementById('edit_is_active').value) || '1');
         const pwd = document.getElementById('edit_password') && document.getElementById('edit_password').value;
-        if (pwd) params.append('password', pwd);
+        if (pwd) formData.append('password', pwd);
 
         fetch(editForm.action, {
             method: 'POST',
-            body: params.toString(),
+            body: formData,
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
                 'Accept': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
                 'X-CSRF-TOKEN': csrfToken.getAttribute('content'),
@@ -964,12 +973,9 @@
             if (response.ok) {
                 return { success: true, data };
             }
-            let msg = (data && data.message) || '';
-            if (!msg && data && data.errors && typeof data.errors === 'object') {
-                const list = Object.values(data.errors).flat().filter(Boolean);
-                msg = list.length ? list.join('\n') : '';
-            }
-            if (!msg) msg = 'حدث خطأ في التحقق. تأكد من تعبئة الاسم ورقم الهاتف والدور وحالة الحساب.';
+            const msg = data.message || (data.errors && typeof data.errors === 'object'
+                ? Object.values(data.errors).flat().filter(Boolean).join('\n')
+                : '') || 'البيانات المرسلة غير صحيحة. راجع الحقول وحاول مرة أخرى.';
             throw new Error(msg);
         })
         .then(result => {
@@ -988,5 +994,7 @@
     });
 
 </script>
-@endpush
-@endsection
+<?php $__env->stopPush(); ?>
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.admin', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/admin/users/index.blade.php ENDPATH**/ ?>

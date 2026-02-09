@@ -7,10 +7,10 @@
         <meta name="apple-mobile-web-app-capable" content="yes">
         <title>المسارات التعليمية - Mindlytics - أكاديمية البرمجة</title>
 
-        <!-- خط عربي أصيل -->
+        <!-- خط عربي موحّد مع الصفحة الرئيسية -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
         
         <!-- Tailwind CSS -->
         <script src="https://cdn.tailwindcss.com"></script>
@@ -25,7 +25,7 @@
         
         <style>
             * {
-                font-family: 'Cairo', 'Noto Sans Arabic', sans-serif;
+                font-family: 'Tajawal', 'Cairo', sans-serif;
             }
 
             body {
@@ -60,18 +60,26 @@
                 box-sizing: border-box;
             }
 
-            /* Enhanced Navbar Styles - Same as welcome page */
+            /* Navbar موحّد مع الصفحة الرئيسية */
             .navbar-gradient {
-                background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%);
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1), 0 0 40px rgba(59, 130, 246, 0.2);
+                background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 45%, #1d4ed8 100%);
+                box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
                 position: fixed;
                 top: 0;
                 left: 0;
                 right: 0;
                 z-index: 1000;
-                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-                backdrop-filter: blur(20px) saturate(180%);
-                border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+                transition: box-shadow 0.25s ease, background 0.25s ease;
+                backdrop-filter: blur(12px) saturate(140%);
+                -webkit-backdrop-filter: blur(12px) saturate(140%);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            }
+            .navbar-gradient.scrolled {
+                box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.06);
+                background: linear-gradient(135deg, rgba(30, 64, 175, 0.97) 0%, rgba(30, 58, 138, 0.98) 50%, rgba(29, 78, 216, 0.97) 100%);
+                backdrop-filter: blur(16px) saturate(150%);
+                -webkit-backdrop-filter: blur(16px) saturate(150%);
+                border-bottom-color: rgba(255, 255, 255, 0.1);
             }
 
             /* Enhanced Hero Section - Matches courses page */
@@ -966,5 +974,16 @@
     
     <!-- Unified Footer -->
     @include('components.unified-footer')
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var navbar = document.getElementById('navbar');
+            if (navbar) {
+                window.addEventListener('scroll', function() {
+                    navbar.classList.toggle('scrolled', window.pageYOffset > 100);
+                }, { passive: true });
+            }
+        });
+    </script>
 </body>
 </html>

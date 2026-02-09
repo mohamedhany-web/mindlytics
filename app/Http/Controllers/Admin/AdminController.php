@@ -685,37 +685,92 @@ class AdminController extends Controller
      */
     public function updateUser(Request $request, $id)
     {
-        $user = User::findOrFail($id);
-        $oldValues = $user->toArray();
+        $isAjax = $request->wantsJson() || $request->ajax()
+            || str_contains($request->header('Accept', ''), 'application/json');
 
-        $validator = Validator::make($request->all(), [
+        try {
+            $user = User::findOrFail($id);
+            $oldValues = $user->toArray();
+        } catch (\Throwable $e) {
+            if ($isAjax) {
+                return response()->json(['success' => false, 'message' => 'المستخدم غير موجود.'], 404);
+            }
+            throw $e;
+        }
+
+        // قراءة البيانات من الطلب — POST (application/x-www-form-urlencoded) يملأ $request->all()
+        $raw = $request->all();
+        if (empty($raw) && $request->getContent()) {
+            $decoded = json_decode($request->getContent(), true);
+            if (is_array($decoded)) {
+                $raw = $decoded;
+            }
+        }
+        if ($isAjax && empty($raw)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لم تصل بيانات النموذج. حدّث الصفحة (F5) وحاول مرة أخرى.',
+            ], 400);
+        }
+
+        $name = trim((string) ($raw['name'] ?? $request->input('name') ?? ''));
+        $email = $request->filled('email') ? trim((string) $request->input('email')) : (trim((string) ($raw['email'] ?? '')) ?: null);
+        $phone = $request->filled('phone') ? trim((string) $request->input('phone')) : (trim((string) ($raw['phone'] ?? '')) ?: null);
+        $role = (string) ($raw['role'] ?? $request->input('role') ?? 'student');
+        $isActiveRaw = $raw['is_active'] ?? $request->input('is_active');
+        $is_active = in_array($isActiveRaw, [true, '1', 1, 'true', 'on'], true);
+
+        $input = [
+            'name' => $name,
+            'email' => $email ?: null,
+            'phone' => $phone ?: null,
+            'role' => $role,
+            'is_active' => $is_active,
+        ];
+
+        $validator = Validator::make($input, [
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|unique:users,email,' . $id,
-            'phone' => 'required|string|unique:users,phone,' . $id,
+            'phone' => 'nullable|string|max:50|unique:users,phone,' . $id,
             'role' => 'required|in:super_admin,admin,instructor,teacher,student,parent,employee',
             'is_active' => 'required|boolean',
+        ], [
+            'name.required' => 'الاسم مطلوب.',
+            'name.max' => 'الاسم يجب ألا يتجاوز 255 حرفاً.',
+            'email.email' => 'البريد الإلكتروني غير صالح.',
+            'email.unique' => 'البريد الإلكتروني مستخدم من قبل مستخدم آخر.',
+            'phone.unique' => 'رقم الهاتف مستخدم من قبل مستخدم آخر.',
+            'role.required' => 'الدور مطلوب.',
+            'role.in' => 'الدور المحدد غير صالح.',
+            'is_active.required' => 'حالة الحساب مطلوبة.',
+            'is_active.boolean' => 'حالة الحساب غير صالحة.',
         ]);
 
         if ($validator->fails()) {
-            // إرجاع JSON للـ AJAX request
-            if ($request->wantsJson() || $request->ajax()) {
+            $allMessages = $validator->errors()->all();
+            $firstError = !empty($allMessages) ? $allMessages[0] : 'يرجى تعبئة جميع الحقول المطلوبة (الاسم، الدور، حالة الحساب).';
+            if ($isAjax) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'التحقق من البيانات فشل',
-                    'errors' => $validator->errors()
+                    'message' => $firstError,
+                    'errors' => $validator->errors()->toArray(),
                 ], 422);
             }
             return back()->withErrors($validator)->withInput();
         }
+
+        $request->merge($input);
 
         $updateData = [
             'name' => $request->name,
             'email' => $request->email,
             'phone' => $request->phone,
             'role' => $request->role,
-            'is_active' => $request->is_active,
-            'bio' => $request->bio,
+            'is_active' => (bool) $request->is_active,
         ];
+        if ($request->filled('bio')) {
+            $updateData['bio'] = $request->bio;
+        }
 
         if ($request->password) {
             $updateData['password'] = Hash::make($request->password);
@@ -729,25 +784,39 @@ class AdminController extends Controller
             $updateData['is_employee'] = false;
         }
 
-        $user->update($updateData);
+        try {
+            $user->update($updateData);
+        } catch (\Throwable $e) {
+            \Log::error('User update failed', ['user_id' => $id, 'error' => $e->getMessage()]);
+            if ($isAjax) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'حدث خطأ أثناء حفظ التعديلات: ' . (config('app.debug') ? $e->getMessage() : 'يرجى المحاولة مرة أخرى.'),
+                ], 500);
+            }
+            throw $e;
+        }
 
-        // تسجيل النشاط
-        ActivityLog::create([
-            'user_id' => Auth::id(),
-            'action' => 'user_updated',
-            'model_type' => 'User',
-            'model_id' => $user->id,
-            'old_values' => $oldValues,
-            'new_values' => $user->fresh()->toArray(),
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-        ]);
+        // تسجيل النشاط (لا نوقف الاستجابة إذا فشل التسجيل)
+        try {
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'action' => 'user_updated',
+                'model_type' => 'User',
+                'model_id' => $user->id,
+                'old_values' => $oldValues,
+                'new_values' => $user->fresh()->toArray(),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+        } catch (\Throwable $e) {
+            \Log::warning('ActivityLog failed after user update', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+        }
 
-        // إرجاع JSON للـ AJAX request
-        if ($request->wantsJson() || $request->ajax()) {
+        if ($isAjax) {
             return response()->json([
                 'success' => true,
-                'message' => 'تم تحديث بيانات المستخدم بنجاح'
+                'message' => 'تم تحديث بيانات المستخدم بنجاح',
             ]);
         }
 

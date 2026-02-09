@@ -1,80 +1,39 @@
 <style>
+/* خط وألوان موحّدة مع الصفحة الرئيسية */
 * {
-    font-family: 'Cairo', system-ui, sans-serif;
+    font-family: 'Tajawal', 'Cairo', 'Noto Sans Arabic', sans-serif;
 }
 
-/* Navbar - نفس الصفحة الرئيسية (unified) */
+/* Navbar - مطابق للصفحة الرئيسية */
 .navbar-gradient {
-    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 50%, #1e3a8a 100%);
-    background-image: linear-gradient(135deg, #1e40af 0%, #1e3a8a 50%, #1e3a8a 100%),
-        repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 255, 255, 0.02) 10px, rgba(255, 255, 255, 0.02) 20px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2), 0 0 40px rgba(30, 58, 138, 0.3);
+    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 45%, #1d4ed8 100%);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     width: 100%;
     z-index: 1000;
-    transition: background 0.3s ease, box-shadow 0.3s ease;
-    backdrop-filter: blur(10px) saturate(150%);
-    -webkit-backdrop-filter: blur(10px) saturate(150%);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    will-change: auto;
-    transform: translateZ(0);
-    contain: layout style paint;
+    transition: box-shadow 0.25s ease, background 0.25s ease;
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     max-width: 100vw;
     overflow-x: hidden;
+    transform: translateZ(0);
 }
 @media (max-width: 768px) {
     .navbar-gradient {
-        backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
     }
 }
-.navbar-gradient::before {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), rgba(59, 130, 246, 0.6), rgba(255, 255, 255, 0.4), transparent);
-    opacity: 0.8;
-    transition: all 0.5s ease;
-    animation: navbarShimmer 3s ease-in-out infinite;
-}
-.navbar-gradient::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
-                radial-gradient(circle at 80% 70%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
-    pointer-events: none;
-    animation: navbarPulse 4s ease-in-out infinite;
-}
 .navbar-gradient.scrolled {
-    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.25), 0 0 50px rgba(30, 58, 138, 0.4);
-    background: linear-gradient(135deg, rgba(30, 64, 175, 0.98) 0%, rgba(30, 58, 138, 0.98) 50%, rgba(30, 58, 138, 0.98) 100%);
-    backdrop-filter: blur(12px) saturate(150%);
-    -webkit-backdrop-filter: blur(12px) saturate(150%);
-    border-bottom-width: 1px;
-    border-bottom-color: rgba(255, 255, 255, 0.15);
-}
-.navbar-gradient.scrolled::before {
-    opacity: 1;
-    height: 3px;
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
-}
-@keyframes navbarShimmer {
-    0%, 100% { opacity: 0.7; }
-    50% { opacity: 1; }
-}
-@keyframes navbarPulse {
-    0%, 100% { opacity: 0.1; }
-    50% { opacity: 0.2; }
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.06);
+    background: linear-gradient(135deg, rgba(30, 64, 175, 0.97) 0%, rgba(30, 58, 138, 0.98) 50%, rgba(29, 78, 216, 0.97) 100%);
+    backdrop-filter: blur(16px) saturate(150%);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 
 .hero-gradient {

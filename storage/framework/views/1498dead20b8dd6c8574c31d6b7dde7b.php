@@ -9,7 +9,7 @@
     <!-- خط عربي أصيل -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Tajawal:wght@400;500;700;800&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -33,12 +33,10 @@
             padding: 0;
         }
 
-        /* Navbar Styles */
+        /* النافبار الموحد - ألوان الأكاديمية */
         .navbar-gradient {
-            background: linear-gradient(to bottom, rgba(240, 249, 255, 0.95), rgba(224, 242, 254, 0.9));
-            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 45%, #1d4ed8 100%);
+            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
             position: fixed;
             top: 0;
             left: 0;
@@ -46,12 +44,17 @@
             z-index: 1000;
         }
 
-        /* Login Container */
+        /* Login Container - شاشة كاملة على الديسكتوب */
         .login-wrapper {
             height: 100vh;
             display: flex;
             width: 100%;
             overflow: hidden;
+        }
+
+        /* النافبار يظهر على الهاتف فقط */
+        .login-nav-mobile-only {
+            display: none;
         }
 
         .login-container {
@@ -288,13 +291,14 @@
             }
         }
 
+        /* ─── هواتف: ترحيب أصغر وصفحة منظمة ─── */
         @media (max-width: 640px) {
             .login-wrapper {
                 padding-top: 0;
             }
 
             .login-visual-section {
-                padding: 40px 20px;
+                padding: 1.25rem 1rem 1rem;
                 min-height: auto;
                 width: 100%;
                 display: block;
@@ -308,7 +312,7 @@
             }
 
             .login-form-section {
-                padding: 40px 20px;
+                padding: 1.25rem 1rem 1.5rem;
                 min-height: auto;
                 width: 100%;
                 display: block;
@@ -331,96 +335,416 @@
                 width: 100%;
             }
 
-            .visual-content h1 {
-                font-size: 1.75rem !important;
+            /* رسالة الترحيب: أصغر ومنظمة على الهاتف */
+            .visual-logo-wrap {
+                margin-bottom: 0.35rem !important;
+            }
+
+            .visual-logo-wrap .w-12,
+            .visual-logo-wrap [class*="w-12"],
+            .visual-logo-wrap [class*="w-16"],
+            .visual-logo-wrap [class*="w-20"] {
+                width: 2rem !important;
+                height: 2rem !important;
+                min-width: 2rem !important;
+                min-height: 2rem !important;
+            }
+
+            .visual-title {
+                font-size: 1rem !important;
+                line-height: 1.35 !important;
+                margin-bottom: 0.25rem !important;
+            }
+
+            .visual-desc {
+                font-size: 0.7rem !important;
+                margin-bottom: 0.4rem !important;
+                line-height: 1.35 !important;
+            }
+
+            .visual-badges {
+                gap: 0.35rem !important;
+                margin-top: 0.4rem !important;
+            }
+
+            .visual-badges > div {
+                padding: 0.3rem 0.45rem !important;
+            }
+
+            .visual-badges span {
+                font-size: 0.6rem !important;
+            }
+
+            .visual-badges i {
+                font-size: 0.6rem !important;
+            }
+
+            .login-form-wrapper .text-center.mb-8 {
                 margin-bottom: 1rem !important;
             }
 
-            .visual-content p {
-                font-size: 0.9rem !important;
-                margin-bottom: 1.5rem !important;
-            }
-
-            .visual-content .mb-8 {
-                margin-bottom: 1.5rem !important;
-            }
-
-            .login-form-wrapper .mb-8 {
-                margin-bottom: 1.5rem !important;
-            }
-
-            .login-form-wrapper h2 {
-                font-size: 1.75rem !important;
+            .login-form-wrapper .text-center .mb-4 {
                 margin-bottom: 0.5rem !important;
             }
 
-            .login-form-wrapper p {
-                font-size: 0.875rem !important;
+            .login-form-wrapper .text-center .w-16 {
+                width: 2.5rem !important;
+                height: 2.5rem !important;
+            }
+
+            .login-form-wrapper .text-center .md\:w-20 {
+                width: 2.5rem !important;
+                height: 2.5rem !important;
+            }
+
+            .login-form-wrapper h2 {
+                font-size: 1.25rem !important;
+                margin-bottom: 0.25rem !important;
+            }
+
+            .login-form-wrapper .text-center p {
+                font-size: 0.8rem !important;
+            }
+
+            .login-form-wrapper .mb-8 {
+                margin-bottom: 1rem !important;
             }
 
             .form-input {
+                padding: 0.65rem 0.75rem !important;
+                font-size: 0.9375rem !important;
+            }
+
+            .btn-login {
                 padding: 0.75rem 1rem !important;
                 font-size: 0.9rem !important;
             }
 
-            .btn-login {
-                padding: 0.875rem 1rem !important;
-                font-size: 0.95rem !important;
-            }
-
             .shape-1 {
-                width: 150px;
-                height: 150px;
+                width: 100px;
+                height: 100px;
             }
 
             .shape-2 {
-                width: 120px;
-                height: 120px;
-            }
-
-            .shape-3 {
                 width: 80px;
                 height: 80px;
             }
 
+            .shape-3 {
+                width: 60px;
+                height: 60px;
+            }
+
             form.space-y-5 > * + * {
+                margin-top: 0.85rem !important;
+            }
+
+            form .border-t-2.pt-6 {
+                padding-top: 1rem !important;
                 margin-top: 1rem !important;
             }
         }
 
         @media (max-width: 480px) {
             .login-visual-section {
-                padding: 35px 18px;
-                width: 100%;
+                padding: 0.75rem 0.6rem 0.6rem;
             }
 
             .login-form-section {
-                padding: 35px 18px;
-                width: 100%;
+                padding: 0.75rem 0.6rem 1rem;
             }
 
-            .visual-content h1 {
-                font-size: 1.5rem !important;
+            .visual-title {
+                font-size: 0.9rem !important;
+            }
+
+            .visual-desc {
+                font-size: 0.65rem !important;
+            }
+
+            .visual-badges > div {
+                padding: 0.25rem 0.35rem !important;
+            }
+
+            .visual-badges span,
+            .visual-badges i {
+                font-size: 0.55rem !important;
             }
 
             .login-form-wrapper h2 {
-                font-size: 1.5rem !important;
+                font-size: 1.05rem !important;
             }
 
-            .visual-content .flex {
-                flex-direction: column;
-                gap: 0.75rem !important;
+            .login-form-wrapper .text-center p {
+                font-size: 0.7rem !important;
+            }
+        }
+
+        /* ─── تصميم الهاتف: نافبار موحد + بطاقة ترحيب + نموذج في بطاقة ─── */
+        .login-mobile-wrap {
+            display: none;
+            min-height: 100vh;
+            background: linear-gradient(to bottom, #f0f9ff, #e0f2fe);
+            padding-bottom: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .login-nav-mobile-only {
+                display: block !important;
             }
 
-            .visual-content .flex > div {
-                width: 100%;
+            .login-wrapper {
+                padding-top: 5rem;
+                height: auto;
+                min-height: 100vh;
             }
+
+            .login-container {
+                display: none !important;
+            }
+
+            .login-mobile-wrap {
+                display: block;
+            }
+
+            body {
+                overflow-y: auto;
+            }
+        }
+
+        /* النافبار الموحد: المسافة من .login-wrapper كافية */
+
+        /* بطاقة الترحيب - ألواننا (أزرق/أخضر) وطول أوضح */
+        .login-mobile-welcome {
+            margin: 0.5rem 1rem 0;
+            padding: 2rem 1.25rem 2rem;
+            min-height: 9rem;
+            background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 45%, #059669 100%);
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 24px rgba(30, 64, 175, 0.25), 0 2px 12px rgba(16, 185, 129, 0.15);
+        }
+
+        .login-mobile-welcome::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            right: -10%;
+            width: 120px;
+            height: 120px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+
+        .login-mobile-welcome::after {
+            content: '';
+            position: absolute;
+            bottom: -15%;
+            left: -5%;
+            width: 80px;
+            height: 80px;
+            background: rgba(16, 185, 129, 0.2);
+            border-radius: 50%;
+        }
+
+        .login-mobile-welcome .welcome-title {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #fff;
+            margin: 0 0 0.5rem 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .login-mobile-welcome .welcome-desc {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.95);
+            line-height: 1.5;
+            margin: 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .login-mobile-welcome .welcome-icon {
+            position: absolute;
+            top: 1.25rem;
+            left: 1.25rem;
+            width: 3rem;
+            height: 3rem;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 1.25rem;
+            z-index: 1;
+        }
+
+        /* قسم تسجيل الدخول - ألواننا */
+        .login-mobile-form-wrap {
+            padding: 1.5rem 1rem 0;
+        }
+
+        .login-mobile-form-wrap .section-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #1e40af;
+            text-align: center;
+            margin: 0 0 0.25rem 0;
+        }
+
+        .login-mobile-form-wrap .section-subtitle {
+            font-size: 0.85rem;
+            color: #3b82f6;
+            text-align: center;
+            margin: 0 0 1.25rem 0;
+        }
+
+        .login-mobile-form-card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 1.25rem 1rem;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+        }
+
+        .login-mobile-form-card .form-input {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 12px;
+            padding: 0.75rem 2.5rem 0.75rem 1rem;
+            font-size: 0.9375rem;
+        }
+
+        .login-mobile-form-card .form-input:focus {
+            background: #fff;
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .login-mobile-form-card .form-input.pl-12 {
+            padding-left: 2.75rem;
+        }
+
+        .login-mobile-form-card label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 0.4rem;
+            display: block;
+        }
+
+        .login-mobile-form-card .input-wrap {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .login-mobile-form-card .input-wrap .input-icon {
+            position: absolute;
+            right: 0.85rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 0.9rem;
+            pointer-events: none;
         }
     </style>
 </head>
 <body x-data="{ showPassword: false }">
+    <div class="login-nav-mobile-only">
+        <?php echo $__env->make('components.unified-navbar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+    </div>
+
     <!-- Login Wrapper -->
     <div class="login-wrapper">
+        <!-- تصميم الهاتف فقط -->
+        <div class="login-mobile-wrap">
+            <!-- بطاقة الترحيب -->
+            <div class="login-mobile-welcome">
+                <div class="welcome-icon">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <h1 class="welcome-title">مرحباً بعودتك!</h1>
+                <p class="welcome-desc">سجل دخولك للوصول إلى حسابك ومتابعة كورساتك وإنجازاتك</p>
+            </div>
+
+            <!-- تسجيل الدخول: عنوان + بطاقة بيضاء -->
+            <div class="login-mobile-form-wrap">
+                <h2 class="section-title">تسجيل الدخول</h2>
+                <p class="section-subtitle">أدخل بياناتك للوصول إلى حسابك</p>
+
+                <div class="login-mobile-form-card">
+                    <form action="<?php echo e(route('login')); ?>" method="POST">
+                        <?php echo csrf_field(); ?>
+                        <div class="input-wrap">
+                            <label for="email_mobile">البريد الإلكتروني</label>
+                            <div class="relative">
+                                <i class="input-icon fas fa-envelope"></i>
+                                <input type="email" name="email" id="email_mobile" value="<?php echo e(old('email')); ?>" required autocomplete="email"
+                                       class="form-input w-full" placeholder="example@email.com" dir="ltr">
+                            </div>
+                            <?php $__errorArgs = ['email'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                <p class="mt-1 text-xs text-red-600"><?php echo e($message); ?></p>
+                            <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                        </div>
+                        <div style="display:none;" aria-hidden="true">
+                            <input type="text" name="website" tabindex="-1" autocomplete="off">
+                        </div>
+                        <div class="input-wrap">
+                            <label for="password_mobile">كلمة المرور</label>
+                            <div class="relative">
+                                <i class="input-icon fas fa-lock"></i>
+                                <input :type="showPassword ? 'text' : 'password'" name="password" id="password_mobile" required
+                                       class="form-input w-full pl-12" placeholder=".........">
+                                <button type="button" @click="showPassword = !showPassword" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                    <i x-show="!showPassword" class="fas fa-eye text-sm"></i>
+                                    <i x-show="showPassword" class="fas fa-eye-slash text-sm"></i>
+                                </button>
+                            </div>
+                            <?php $__errorArgs = ['password'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                <p class="mt-1 text-xs text-red-600"><?php echo e($message); ?></p>
+                            <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                        </div>
+                        <div class="flex items-center justify-between text-sm mt-3 mb-4">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" name="remember" class="w-4 h-4 text-blue-600 rounded">
+                                <span class="text-gray-600">تذكرني</span>
+                            </label>
+                            <a href="#" class="text-blue-600 font-semibold">نسيت كلمة المرور؟</a>
+                        </div>
+                        <button type="submit" class="btn-login w-full py-3 rounded-xl text-white font-bold text-base flex items-center justify-center gap-2">
+                            <i class="fas fa-sign-in-alt"></i>
+                            <span>تسجيل الدخول</span>
+                        </button>
+                        <div class="text-center pt-4 mt-4 border-t border-gray-200">
+                            <p class="text-sm text-gray-600 mb-1">ليس لديك حساب؟</p>
+                            <a href="<?php echo e(route('register')); ?>" class="text-blue-600 font-bold text-sm inline-flex items-center gap-1">
+                                <i class="fas fa-user-plus"></i>
+                                <span>سجل الآن</span>
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- تصميم الديسكتوب/تابلت -->
         <div class="login-container">
             <!-- Right Section: Visual Content -->
             <div class="login-visual-section">
@@ -430,33 +754,32 @@
                     <div class="shape shape-3"></div>
                 </div>
                 <div class="visual-content">
-                    <div class="mb-8 md:mb-10">
+                    <div class="visual-logo-wrap mb-4 md:mb-8">
                         <div class="relative inline-flex items-center justify-center">
                             <div class="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl blur-xl opacity-50"></div>
-                            <div class="relative inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-2xl shadow-2xl overflow-hidden bg-white/10 backdrop-blur-md border-2 border-white/20">
-                                <img src="<?php echo e(asset('logo-removebg-preview.png')); ?>" alt="Mindlytics Logo" class="w-full h-full object-contain rounded-2xl">
+                            <div class="relative inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-xl md:rounded-2xl shadow-2xl overflow-hidden bg-white/10 backdrop-blur-md border-2 border-white/20">
+                                <img src="<?php echo e(asset('logo-removebg-preview.png')); ?>" alt="Mindlytics Logo" class="w-full h-full object-contain rounded-xl md:rounded-2xl">
                             </div>
                         </div>
                     </div>
-                    <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black mb-4 md:mb-6 leading-tight text-white drop-shadow-lg">
-                        مرحباً بك في<br>
-                        <span class="text-blue-200">Mindlytics</span>
+                    <h1 class="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-black mb-2 md:mb-6 leading-tight text-white drop-shadow-lg visual-title">
+                        مرحباً بك في <span class="text-blue-200">Mindlytics</span>
                     </h1>
-                    <p class="text-sm sm:text-base md:text-lg lg:text-xl text-white/90 mb-6 md:mb-10 leading-relaxed font-bold px-2 drop-shadow-md">
+                    <p class="text-xs sm:text-sm md:text-lg lg:text-xl text-white/90 mb-3 md:mb-10 leading-relaxed font-bold px-1 md:px-2 drop-shadow-md visual-desc">
                         منصة متكاملة لإدارة وتطوير قدراتك الذهنية والتعليمية
                     </p>
-                    <div class="flex flex-wrap justify-center gap-3 md:gap-4 px-2">
-                        <div class="flex items-center gap-2 bg-white/10 backdrop-filter backdrop-blur-md px-3 py-2 md:px-5 md:py-3 rounded-lg md:rounded-xl border-2 border-white/30 shadow-xl hover:bg-white/20 transition-all">
-                            <i class="fas fa-check-circle text-blue-200 text-sm md:text-base"></i>
-                            <span class="font-black text-xs md:text-sm text-white">سهولة الاستخدام</span>
+                    <div class="flex flex-wrap justify-center gap-2 md:gap-4 px-1 md:px-2 visual-badges">
+                        <div class="flex items-center gap-1.5 md:gap-2 bg-white/10 backdrop-blur-md px-2 py-1.5 md:px-5 md:py-3 rounded-lg md:rounded-xl border-2 border-white/30 shadow-xl hover:bg-white/20 transition-all">
+                            <i class="fas fa-check-circle text-blue-200 text-xs md:text-base"></i>
+                            <span class="font-bold text-[10px] md:text-sm text-white">سهولة الاستخدام</span>
                         </div>
-                        <div class="flex items-center gap-2 bg-white/10 backdrop-filter backdrop-blur-md px-3 py-2 md:px-5 md:py-3 rounded-lg md:rounded-xl border-2 border-white/30 shadow-xl hover:bg-white/20 transition-all">
-                            <i class="fas fa-shield-alt text-blue-200 text-sm md:text-base"></i>
-                            <span class="font-black text-xs md:text-sm text-white">أمان عالي</span>
+                        <div class="flex items-center gap-1.5 md:gap-2 bg-white/10 backdrop-blur-md px-2 py-1.5 md:px-5 md:py-3 rounded-lg md:rounded-xl border-2 border-white/30 shadow-xl hover:bg-white/20 transition-all">
+                            <i class="fas fa-shield-alt text-blue-200 text-xs md:text-base"></i>
+                            <span class="font-bold text-[10px] md:text-sm text-white">أمان عالي</span>
                         </div>
-                        <div class="flex items-center gap-2 bg-white/10 backdrop-filter backdrop-blur-md px-3 py-2 md:px-5 md:py-3 rounded-lg md:rounded-xl border-2 border-white/30 shadow-xl hover:bg-white/20 transition-all">
-                            <i class="fas fa-headset text-blue-200 text-sm md:text-base"></i>
-                            <span class="font-black text-xs md:text-sm text-white">دعم فني متواصل</span>
+                        <div class="flex items-center gap-1.5 md:gap-2 bg-white/10 backdrop-blur-md px-2 py-1.5 md:px-5 md:py-3 rounded-lg md:rounded-xl border-2 border-white/30 shadow-xl hover:bg-white/20 transition-all">
+                            <i class="fas fa-headset text-blue-200 text-xs md:text-base"></i>
+                            <span class="font-bold text-[10px] md:text-sm text-white">دعم فني متواصل</span>
                         </div>
                     </div>
                 </div>

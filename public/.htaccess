@@ -54,8 +54,6 @@ Options -Indexes
 # Block access to Laravel directories
 RedirectMatch 404 /\..*$
 RedirectMatch 404 ^/(app|bootstrap|config|database|resources|routes|tests|vendor)/.*$
-# Allow access to storage symlink (public/storage)
-RewriteCond %{REQUEST_URI} !^/storage/
 
 # Enable Gzip Compression - محسّن
 <IfModule mod_deflate.c>

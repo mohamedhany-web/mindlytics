@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
     <title>إنشاء حساب - Mindlytics</title>
 
     <!-- خط عربي أصيل -->
@@ -641,7 +641,7 @@
 </head>
 <body x-data="{ showPassword: false, showPasswordConfirm: false }">
     <div class="register-nav-mobile-only">
-        @include('components.unified-navbar')
+        <?php echo $__env->make('components.unified-navbar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     </div>
 
     <!-- Register Wrapper -->
@@ -661,12 +661,12 @@
                 <p class="section-subtitle">أدخل بياناتك لإنشاء حسابك الجديد</p>
 
                 <div class="register-mobile-form-card">
-                    <form action="{{ route('register') }}" method="POST">
-                        @csrf
-                        @php
+                    <form action="<?php echo e(route('register')); ?>" method="POST">
+                        <?php echo csrf_field(); ?>
+                        <?php
                             $phoneCountries = $phoneCountries ?? config('phone_countries.countries', []);
                             $defaultCountry = $defaultCountry ?? collect($phoneCountries)->firstWhere('code', config('phone_countries.default_country', 'SA'));
-                        @endphp
+                        ?>
 
                         <div class="bg-blue-50 border border-blue-200 rounded-lg p-2.5 mb-3">
                             <p class="text-xs font-bold text-blue-900">تسجيل الطلاب فقط</p>
@@ -676,38 +676,59 @@
                             <label for="name_m">الاسم الكامل</label>
                             <div class="relative">
                                 <i class="input-icon fas fa-user"></i>
-                                <input type="text" name="name" id="name_m" value="{{ old('name') }}" required class="form-input w-full" placeholder="الاسم الكامل">
+                                <input type="text" name="name" id="name_m" value="<?php echo e(old('name')); ?>" required class="form-input w-full" placeholder="الاسم الكامل">
                             </div>
-                            @error('name')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                            <?php $__errorArgs = ['name'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="mt-1 text-xs text-red-600"><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                         </div>
 
                         <div class="input-wrap">
                             <label>رقم الهاتف</label>
                             <div class="phone-country-row flex rounded-xl overflow-hidden border border-[#bae6fd] bg-[#f0f9ff] focus-within:border-blue-500">
                                 <select name="country_code" required class="form-input shrink-0 py-2.5 rounded-none border-0 border-l border-gray-200 text-sm min-w-[5rem]" dir="ltr">
-                                    @foreach($phoneCountries ?? [] as $c)
-                                        <option value="{{ $c['dial_code'] }}" {{ old('country_code', $defaultCountry['dial_code'] ?? '+966') === $c['dial_code'] ? 'selected' : '' }}>{{ $c['dial_code'] }} {{ $c['name_ar'] }}</option>
-                                    @endforeach
+                                    <?php $__currentLoopData = $phoneCountries ?? []; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $c): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                        <option value="<?php echo e($c['dial_code']); ?>" <?php echo e(old('country_code', $defaultCountry['dial_code'] ?? '+966') === $c['dial_code'] ? 'selected' : ''); ?>><?php echo e($c['dial_code']); ?> <?php echo e($c['name_ar']); ?></option>
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                 </select>
-                                <input type="tel" name="phone" value="{{ old('phone') }}" required class="form-input flex-1 min-w-0 py-2.5 px-3 border-0 text-sm" placeholder="xxxxxxxx" dir="ltr">
+                                <input type="tel" name="phone" value="<?php echo e(old('phone')); ?>" required class="form-input flex-1 min-w-0 py-2.5 px-3 border-0 text-sm" placeholder="xxxxxxxx" dir="ltr">
                             </div>
-                            @error('phone')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                            <?php $__errorArgs = ['phone'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="mt-1 text-xs text-red-600"><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                         </div>
 
                         <div class="input-wrap">
                             <label for="email_m">البريد الإلكتروني (اختياري)</label>
                             <div class="relative">
                                 <i class="input-icon fas fa-envelope"></i>
-                                <input type="email" name="email" id="email_m" value="{{ old('email') }}" class="form-input w-full" placeholder="example@email.com" dir="ltr">
+                                <input type="email" name="email" id="email_m" value="<?php echo e(old('email')); ?>" class="form-input w-full" placeholder="example@email.com" dir="ltr">
                             </div>
-                            @error('email')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                            <?php $__errorArgs = ['email'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="mt-1 text-xs text-red-600"><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                         </div>
 
                         <div class="input-wrap">
                             <label for="referral_m">كود الإحالة (اختياري)</label>
                             <div class="relative">
                                 <i class="input-icon fas fa-gift"></i>
-                                <input type="text" name="referral_code" id="referral_m" value="{{ request()->get('ref') ?? old('referral_code') }}" class="form-input w-full" placeholder="REF123456" dir="ltr">
+                                <input type="text" name="referral_code" id="referral_m" value="<?php echo e(request()->get('ref') ?? old('referral_code')); ?>" class="form-input w-full" placeholder="REF123456" dir="ltr">
                             </div>
                         </div>
 
@@ -718,7 +739,14 @@
                                 <input :type="showPassword ? 'text' : 'password'" name="password" id="password_m" required class="form-input w-full pl-12" placeholder=".........">
                                 <button type="button" @click="showPassword = !showPassword" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><i x-show="!showPassword" class="fas fa-eye text-sm"></i><i x-show="showPassword" class="fas fa-eye-slash text-sm"></i></button>
                             </div>
-                            @error('password')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                            <?php $__errorArgs = ['password'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="mt-1 text-xs text-red-600"><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                         </div>
 
                         <div class="input-wrap">
@@ -742,7 +770,7 @@
 
                         <div class="text-center pt-4 mt-4 border-t border-gray-200">
                             <p class="text-sm text-gray-600 mb-1">لديك حساب بالفعل؟</p>
-                            <a href="{{ route('login') }}" class="text-blue-600 font-bold text-sm inline-flex items-center gap-1">
+                            <a href="<?php echo e(route('login')); ?>" class="text-blue-600 font-bold text-sm inline-flex items-center gap-1">
                                 <i class="fas fa-sign-in-alt"></i>
                                 <span>سجل الدخول</span>
                             </a>
@@ -765,7 +793,7 @@
                         <div class="relative inline-flex items-center justify-center">
                             <div class="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl blur-xl opacity-50"></div>
                             <div class="relative inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-2xl shadow-2xl overflow-hidden bg-white/10 backdrop-blur-md border-2 border-white/20">
-                                <img src="{{ asset('logo-removebg-preview.png') }}" alt="Mindlytics Logo" class="w-full h-full object-contain rounded-2xl">
+                                <img src="<?php echo e(asset('logo-removebg-preview.png')); ?>" alt="Mindlytics Logo" class="w-full h-full object-contain rounded-2xl">
                             </div>
                         </div>
                     </div>
@@ -809,8 +837,8 @@
                     </div>
 
                     <!-- Register Form -->
-                    <form action="{{ route('register') }}" method="POST" class="space-y-2.5 md:space-y-3">
-                        @csrf
+                    <form action="<?php echo e(route('register')); ?>" method="POST" class="space-y-2.5 md:space-y-3">
+                        <?php echo csrf_field(); ?>
                         
                         <!-- Student Notice -->
                         <div class="bg-gradient-to-r from-blue-50/90 to-blue-100/70 border-2 border-blue-200/60 rounded-lg p-3 mb-3 shadow-lg">
@@ -826,10 +854,10 @@
                         </div>
 
                         <!-- Form Grid -->
-                        @php
+                        <?php
                             $phoneCountries = $phoneCountries ?? config('phone_countries.countries', []);
                             $defaultCountry = $defaultCountry ?? collect($phoneCountries)->firstWhere('code', config('phone_countries.default_country', 'SA'));
-                        @endphp
+                        ?>
                         <div class="form-grid">
                             <!-- الاسم الكامل -->
                             <div>
@@ -840,13 +868,27 @@
                                 <input type="text" 
                                        name="name" 
                                        id="name" 
-                                       value="{{ old('name') }}"
+                                       value="<?php echo e(old('name')); ?>"
                                        required 
-                                       class="form-input w-full px-3 py-2.5 rounded-lg text-gray-900 font-medium text-sm @error('name') border-red-500 @enderror" 
+                                       class="form-input w-full px-3 py-2.5 rounded-lg text-gray-900 font-medium text-sm <?php $__errorArgs = ['name'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> border-red-500 <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" 
                                        placeholder="أدخل اسمك الكامل">
-                                @error('name')
-                                    <p class="mt-1 text-xs text-red-600 font-medium">{{ $message }}</p>
-                                @enderror
+                                <?php $__errorArgs = ['name'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                    <p class="mt-1 text-xs text-red-600 font-medium"><?php echo e($message); ?></p>
+                                <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                             </div>
 
                             <!-- رقم الهاتف مع كود الدولة -->
@@ -855,32 +897,54 @@
                                     <i class="fas fa-phone text-blue-700 ml-1 text-xs"></i>
                                     رقم الهاتف
                                 </label>
-                                <div class="phone-country-row flex rounded-lg overflow-hidden border-2 border-[#bae6fd] bg-gradient-to-b transition-all focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/20 focus-within:shadow-[0_0_0_4px_rgba(59,130,246,0.2)] hover:border-[#7dd3fc] @error('phone') border-red-500 @enderror" style="background: linear-gradient(to bottom, #f0f9ff 0%, #e0f2fe 100%);">
+                                <div class="phone-country-row flex rounded-lg overflow-hidden border-2 border-[#bae6fd] bg-gradient-to-b transition-all focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/20 focus-within:shadow-[0_0_0_4px_rgba(59,130,246,0.2)] hover:border-[#7dd3fc] <?php $__errorArgs = ['phone'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> border-red-500 <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" style="background: linear-gradient(to bottom, #f0f9ff 0%, #e0f2fe 100%);">
                                     <select name="country_code" 
                                             id="country_code" 
                                             required
                                             class="form-input shrink-0 py-2.5 rounded-l-lg rounded-r-none border-0 border-l-2 border-[#bae6fd] text-gray-900 font-medium text-sm bg-transparent focus:ring-0 focus:border-blue-500"
                                             dir="ltr"
                                             aria-label="كود الدولة">
-                                        @foreach($phoneCountries ?? [] as $c)
-                                            <option value="{{ $c['dial_code'] }}" {{ old('country_code', $defaultCountry['dial_code'] ?? '+966') === $c['dial_code'] ? 'selected' : '' }}>
-                                                {{ $c['dial_code'] }} {{ $c['name_ar'] }}
+                                        <?php $__currentLoopData = $phoneCountries ?? []; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $c): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                            <option value="<?php echo e($c['dial_code']); ?>" <?php echo e(old('country_code', $defaultCountry['dial_code'] ?? '+966') === $c['dial_code'] ? 'selected' : ''); ?>>
+                                                <?php echo e($c['dial_code']); ?> <?php echo e($c['name_ar']); ?>
+
                                             </option>
-                                        @endforeach
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                     </select>
                                     <input type="tel" 
                                            name="phone" 
                                            id="phone" 
-                                           value="{{ old('phone') }}"
+                                           value="<?php echo e(old('phone')); ?>"
                                            required 
-                                           class="form-input flex-1 min-w-0 px-3 py-2.5 rounded-r-lg rounded-l-none border-0 text-gray-900 font-medium text-sm bg-transparent focus:ring-0 focus:border-0 @error('phone') border-red-500 @enderror" 
+                                           class="form-input flex-1 min-w-0 px-3 py-2.5 rounded-r-lg rounded-l-none border-0 text-gray-900 font-medium text-sm bg-transparent focus:ring-0 focus:border-0 <?php $__errorArgs = ['phone'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> border-red-500 <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" 
                                            placeholder="xxxxxxxx" 
                                            dir="ltr"
                                            aria-label="رقم الهاتف">
                                 </div>
-                                @error('phone')
-                                    <p class="mt-1 text-xs text-red-600 font-medium">{{ $message }}</p>
-                                @enderror
+                                <?php $__errorArgs = ['phone'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                    <p class="mt-1 text-xs text-red-600 font-medium"><?php echo e($message); ?></p>
+                                <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                             </div>
 
                             <!-- البريد الإلكتروني -->
@@ -892,19 +956,33 @@
                                 <input type="email" 
                                        name="email" 
                                        id="email" 
-                                       value="{{ old('email') }}"
-                                       class="form-input w-full px-3 py-2.5 rounded-lg text-gray-900 font-medium text-sm @error('email') border-red-500 @enderror" 
+                                       value="<?php echo e(old('email')); ?>"
+                                       class="form-input w-full px-3 py-2.5 rounded-lg text-gray-900 font-medium text-sm <?php $__errorArgs = ['email'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> border-red-500 <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" 
                                        placeholder="example@email.com"
                                        dir="ltr">
-                                @error('email')
-                                    <p class="mt-1 text-xs text-red-600 font-medium">{{ $message }}</p>
-                                @enderror
+                                <?php $__errorArgs = ['email'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                    <p class="mt-1 text-xs text-red-600 font-medium"><?php echo e($message); ?></p>
+                                <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                             </div>
 
                             <!-- كود الإحالة -->
-                            @php
+                            <?php
                                 $referralCode = request()->get('ref') ?? old('referral_code');
-                            @endphp
+                            ?>
                             <div>
                                 <label for="referral_code" class="block text-xs font-black text-blue-900 mb-1.5">
                                     <i class="fas fa-gift text-blue-700 ml-1 text-xs"></i>
@@ -913,7 +991,7 @@
                                 <input type="text" 
                                        name="referral_code" 
                                        id="referral_code" 
-                                       value="{{ $referralCode }}"
+                                       value="<?php echo e($referralCode); ?>"
                                        class="form-input w-full px-3 py-2.5 rounded-lg text-gray-900 font-medium text-sm uppercase" 
                                        placeholder="REF123456"
                                        dir="ltr">
@@ -930,7 +1008,14 @@
                                            name="password" 
                                            id="password" 
                                            required 
-                                           class="form-input w-full px-3 py-2.5 pr-9 pl-10 rounded-lg text-gray-900 font-medium text-sm @error('password') border-red-500 @enderror" 
+                                           class="form-input w-full px-3 py-2.5 pr-9 pl-10 rounded-lg text-gray-900 font-medium text-sm <?php $__errorArgs = ['password'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> border-red-500 <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" 
                                            placeholder="أدخل كلمة مرور قوية">
                                     <button type="button" 
                                             @click="showPassword = !showPassword" 
@@ -939,9 +1024,16 @@
                                         <i x-show="showPassword" class="fas fa-eye-slash text-xs"></i>
                                     </button>
                                 </div>
-                                @error('password')
-                                    <p class="mt-1 text-xs text-red-600 font-medium">{{ $message }}</p>
-                                @enderror
+                                <?php $__errorArgs = ['password'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                    <p class="mt-1 text-xs text-red-600 font-medium"><?php echo e($message); ?></p>
+                                <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                             </div>
 
                             <!-- تأكيد كلمة المرور -->
@@ -993,7 +1085,7 @@
                             <p class="text-xs text-gray-600 mb-2 font-semibold">
                                 لديك حساب بالفعل؟
                             </p>
-                            <a href="{{ route('login') }}" 
+                            <a href="<?php echo e(route('login')); ?>" 
                                class="inline-flex items-center gap-2 text-blue-700 hover:text-blue-900 font-black transition-colors text-sm">
                                 <i class="fas fa-sign-in-alt text-base"></i>
                                 <span>سجل الدخول</span>
@@ -1006,3 +1098,4 @@
     </div>
 </body>
 </html>
+<?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/auth/register.blade.php ENDPATH**/ ?>

@@ -149,7 +149,7 @@
     <!-- خط عربي أصيل - محسّن للأداء -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     
     <!-- Resource Hints للأداء -->
     <link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
@@ -173,7 +173,7 @@
         }
         
         * {
-            font-family: 'Cairo', 'Noto Sans Arabic', sans-serif;
+            font-family: 'Tajawal', 'Cairo', 'Noto Sans Arabic', sans-serif;
         }
 
         /* إصلاح التمرير - الصفحة الرئيسية قابلة للتمرير افتراضياً */
@@ -325,33 +325,26 @@
 
         /* Enhanced Navbar */
         .navbar-gradient {
-            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 50%, #1e3a8a 100%);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2), 0 0 40px rgba(30, 58, 138, 0.3);
+            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 45%, #1d4ed8 100%);
+            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             width: 100%;
             z-index: 1000;
-            transition: background 0.3s ease, box-shadow 0.3s ease;
-            /* تحسين backdrop-filter للأداء */
-            backdrop-filter: blur(10px) saturate(150%);
-            -webkit-backdrop-filter: blur(10px) saturate(150%);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            /* تحسين الأداء */
-            will-change: auto;
-            transform: translateZ(0);
-            contain: layout style paint;
-            /* Prevent horizontal scroll */
+            transition: box-shadow 0.25s ease, background 0.25s ease;
+            backdrop-filter: blur(12px) saturate(140%);
+            -webkit-backdrop-filter: blur(12px) saturate(140%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             max-width: 100vw;
             overflow-x: hidden;
+            transform: translateZ(0);
         }
-        
-        /* تقليل backdrop-filter على الموبايل */
         @media (max-width: 768px) {
             .navbar-gradient {
-                backdrop-filter: blur(5px);
-                -webkit-backdrop-filter: blur(5px);
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
             }
         }
         
@@ -386,70 +379,18 @@
             background: rgba(255, 255, 255, 0.1);
         }
 
-        .navbar-gradient::before {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), rgba(59, 130, 246, 0.6), rgba(255, 255, 255, 0.4), transparent);
-            opacity: 0.8;
-            transition: all 0.5s ease;
-            animation: shimmerLine 3s ease-in-out infinite;
-        }
-
-        .navbar-gradient::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 70%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
-            pointer-events: none;
-            animation: pulseGlow 4s ease-in-out infinite;
-        }
-
         .navbar-gradient.scrolled {
-            box-shadow: 0 6px 30px rgba(0, 0, 0, 0.25), 0 0 50px rgba(30, 58, 138, 0.4);
-            background: linear-gradient(135deg, rgba(30, 64, 175, 0.98) 0%, rgba(30, 58, 138, 0.98) 50%, rgba(30, 58, 138, 0.98) 100%);
-            backdrop-filter: blur(12px) saturate(150%);
-            -webkit-backdrop-filter: blur(12px) saturate(150%);
-            border-bottom-width: 1px;
-            border-bottom-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.06);
+            background: linear-gradient(135deg, rgba(30, 64, 175, 0.97) 0%, rgba(30, 58, 138, 0.98) 50%, rgba(29, 78, 216, 0.97) 100%);
+            backdrop-filter: blur(16px) saturate(150%);
+            -webkit-backdrop-filter: blur(16px) saturate(150%);
+            border-bottom-color: rgba(255, 255, 255, 0.1);
         }
-
-        .navbar-gradient.scrolled::before {
-            opacity: 1;
-            height: 3px;
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+        .nav-modern .nav-link-modern:hover {
+            background: rgba(255, 255, 255, 0.12);
         }
-
-        @keyframes shimmerLine {
-            0%, 100% {
-                opacity: 0.7;
-            }
-            50% {
-                opacity: 1;
-            }
-        }
-
-        @keyframes pulseGlow {
-            0%, 100% {
-                opacity: 0.1;
-            }
-            50% {
-                opacity: 0.2;
-            }
-        }
-        
-        /* Subtle Programming Pattern in Navbar */
-        .navbar-gradient {
-            background-image: 
-                linear-gradient(135deg, #1e40af 0%, #1e3a8a 50%, #1e3a8a 100%),
-                repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 255, 255, 0.02) 10px, rgba(255, 255, 255, 0.02) 20px);
+        .nav-cta-btn:hover {
+            transform: translateY(-1px);
         }
         
         /* Enhanced Search Bar Styles */
@@ -1748,6 +1689,105 @@
             animation: gradientShift 5s ease infinite;
         }
 
+        /* Featured Courses Section - عنوان بألوان الأكاديمية وخط عربي أصيل */
+        .featured-courses-title {
+            font-family: 'Tajawal', 'Cairo', 'Noto Sans Arabic', sans-serif;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            line-height: 1.35;
+            position: relative;
+        }
+        /* النص يظهر وكأنه يُرسم من اليمين لليسار */
+        .featured-courses-title-draw {
+            display: inline-block;
+            clip-path: inset(0 0 0 100%);
+            animation: featuredDrawReveal 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+        @keyframes featuredDrawReveal {
+            to {
+                clip-path: inset(0 0 0 0);
+            }
+        }
+        /* خط زخرفي بألوان الأكاديمية (أزرق → أخضر) */
+        .featured-courses-title-line {
+            display: block;
+            height: 4px;
+            width: 100%;
+            max-width: 100%;
+            margin-top: 0.4em;
+            background: linear-gradient(90deg, #1e40af 0%, #3b82f6 35%, #10b981 70%, #059669 100%);
+            border-radius: 2px;
+            transform: scaleX(0);
+            transform-origin: right;
+            animation: featuredLineDraw 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.5s forwards;
+        }
+        @keyframes featuredLineDraw {
+            to {
+                transform: scaleX(1);
+            }
+        }
+        .featured-courses-title-main {
+            color: #1e3a8a;
+            font-weight: 800;
+            text-shadow: 0 1px 2px rgba(30, 58, 138, 0.08);
+        }
+        .featured-courses-title-highlight {
+            background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 40%, #10b981 70%, #059669 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            padding: 0 4px;
+            letter-spacing: 0.02em;
+            font-weight: 800;
+        }
+        .featured-courses-badge {
+            font-family: 'Tajawal', 'Cairo', 'Noto Sans Arabic', sans-serif;
+            font-weight: 700;
+        }
+        .featured-courses-scroll {
+            width: 100vw;
+            position: relative;
+            left: 50%;
+            right: 50%;
+            margin-left: -50vw;
+            margin-right: -50vw;
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
+            box-sizing: border-box;
+            -webkit-overflow-scrolling: touch;
+            contain: layout style paint;
+        }
+        #featured-courses-track {
+            contain: layout style;
+        }
+        @media (min-width: 640px) {
+            .featured-courses-scroll {
+                padding-left: 2.5rem;
+                padding-right: 2.5rem;
+            }
+        }
+        @media (min-width: 1024px) {
+            .featured-courses-scroll {
+                padding-left: 3rem;
+                padding-right: 3rem;
+            }
+        }
+        .scrollbar-featured::-webkit-scrollbar {
+            height: 8px;
+        }
+        .scrollbar-featured::-webkit-scrollbar-track {
+            background: rgba(243, 244, 246, 0.8);
+            border-radius: 10px;
+        }
+        .scrollbar-featured::-webkit-scrollbar-thumb {
+            background: linear-gradient(90deg, #3b82f6, #10b981);
+            border-radius: 10px;
+        }
+        .scrollbar-featured::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(90deg, #2563eb, #059669);
+        }
+
         /* Enhanced Section Titles */
         .section-title-wrapper {
             position: relative;
@@ -1967,7 +2007,7 @@
     </style>
     </head>
 
-<body class="bg-gray-50 text-gray-900 transition-all duration-300" 
+<body class="bg-gray-50 text-gray-900" 
       style="overflow-y: auto !important; overflow-x: hidden !important; position: relative !important; height: auto !important; min-height: 100vh !important;">
     <script>
         // حل فوري وقوي للتمرير بالماوس - يجب أن يكون في بداية body
@@ -2049,10 +2089,16 @@
                 setTimeout(forceEnableScrolling, 500);
             });
             
-            // مراقبة مستمرة
-            setInterval(function() {
+            // مراقبة عند تغيير الحجم أو الرؤية فقط (تقليل التقطيع)
+            var lastCheck = 0;
+            function throttleScrollFix() {
+                var now = Date.now();
+                if (now - lastCheck < 2000) return;
+                lastCheck = now;
                 forceEnableScrolling();
-            }, 200);
+            }
+            window.addEventListener('resize', throttleScrollFix);
+            document.addEventListener('visibilitychange', function() { if (document.visibilityState === 'visible') forceEnableScrolling(); });
         })();
     </script>
     <script>
@@ -2272,14 +2318,13 @@
 
         <div class="max-w-7xl mx-auto text-center relative z-10">
             <!-- Main Headline -->
-            <h1 class="text-6xl sm:text-7xl md:text-8xl lg:text-9xl xl:text-[12rem] 2xl:text-[14rem] font-black text-blue-900 mb-6 sm:mb-8 md:mb-10 leading-tight fade-in-up">
+            <h1 class="hero-headline text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-extrabold text-blue-900 mb-6 sm:mb-8 md:mb-10 leading-tight fade-in-up" style="font-family: 'Tajawal', 'Cairo', sans-serif;">
                 استعد لمستقبل البرمجة والذكاء الاصطناعي
-                    </h1>
-                    
+            </h1>
             <!-- Sub-headline -->
-            <p class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl text-blue-700 mb-8 sm:mb-10 md:mb-14 font-semibold fade-in-up">
-                - تعلم التقنيات الأحدث في البرمجة والذكاء الاصطناعي "وكن جزءاً من الثورة التقنية" -
-                    </p>
+            <p class="text-xl sm:text-2xl md:text-3xl lg:text-4xl text-blue-700/95 mb-8 sm:mb-10 md:mb-14 font-bold fade-in-up max-w-4xl mx-auto leading-relaxed" style="font-family: 'Tajawal', 'Cairo', sans-serif;">
+                تعلم التقنيات الأحدث في البرمجة والذكاء الاصطناعي وكن جزءاً من الثورة التقنية
+            </p>
 
             <!-- CTA Buttons -->
             <div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-10 sm:mb-12 md:mb-16 fade-in-up">
@@ -2335,84 +2380,70 @@
     </section>
 
     <!-- Featured Courses Section -->
-    <section class="py-16 md:py-20 lg:py-24 bg-gradient-to-b from-white via-blue-50/40 to-white content-wrapper relative parallax-section">
+    <section class="py-16 md:py-20 lg:py-24 bg-gradient-to-b from-white via-blue-50/40 to-white content-wrapper relative parallax-section overflow-hidden">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16 fade-in-up">
+            <div class="text-center mb-12 fade-in-up">
                 <div class="inline-block mb-4">
-                    <span class="bg-gradient-to-r from-blue-100 to-green-100 text-blue-700 px-4 py-2 rounded-full text-sm font-bold inline-flex items-center gap-2">
-                        <i class="fas fa-star text-yellow-500"></i>
+                    <span class="featured-courses-badge bg-gradient-to-r from-blue-50 via-green-50/80 to-blue-50 text-blue-800 px-4 py-2 rounded-full text-sm font-bold inline-flex items-center gap-2 shadow-sm border border-blue-200/60">
+                        <i class="fas fa-star text-blue-600"></i>
                         <span>أفضل الدورات التدريبية</span>
                     </span>
                 </div>
-                <h2 class="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-5 section-title-wrapper">
-                    الكورسات <span class="gradient-text">المميزة</span>
+                <h2 class="featured-courses-title text-4xl md:text-5xl lg:text-6xl font-black mb-5 inline-block">
+                    <span class="featured-courses-title-draw">
+                        <span class="featured-courses-title-main">الكورسات</span><span class="featured-courses-title-highlight"> المميزة</span>
+                    </span>
+                    <span class="featured-courses-title-line" aria-hidden="true"></span>
                 </h2>
                 <p class="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
                     اكتشف أفضل الكورسات البرمجية المصممة خصيصاً لمساعدتك على النجاح وتحقيق أهدافك
                 </p>
             </div>
+        </div>
 
-            @php
-                $featuredCourses = \App\Models\AdvancedCourse::where('is_active', true)
-                    ->where('is_featured', true)
-                    ->with(['academicSubject', 'instructor'])
-                    ->withCount('lessons')
-                    ->limit(6)
-                    ->get();
-            @endphp
+        @php
+            $featuredCourses = \App\Models\AdvancedCourse::where('is_active', true)
+                ->where('is_featured', true)
+                ->with(['academicSubject', 'instructor'])
+                ->withCount('lessons')
+                ->limit(12)
+                ->get();
+        @endphp
 
-            @if($featuredCourses->count() > 0)
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-12">
+        @if($featuredCourses->count() > 0)
+            <div class="featured-courses-scroll w-full">
+                <div id="featured-courses-track" class="flex gap-4 lg:gap-6 overflow-x-auto overflow-y-hidden pb-4 scroll-smooth snap-x snap-mandatory scrollbar-featured" style="scrollbar-gutter: stable;">
                     @foreach($featuredCourses as $index => $course)
-                        <div class="group relative fade-in-up bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-blue-200" style="animation-delay: {{ $index * 0.1 }}s;">
+                        <div class="group relative flex-shrink-0 w-[280px] sm:w-[320px] lg:w-[340px] snap-center fade-in-up bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-blue-200" style="animation-delay: {{ $index * 0.05 }}s;">
                             <!-- Animated Background Glow -->
                             <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-400 via-green-400 to-purple-400 rounded-2xl blur opacity-0 group-hover:opacity-20 transition-opacity duration-500 -z-10"></div>
                             
                             <!-- Header with Enhanced Gradient -->
                             <div class="relative h-32 bg-gradient-to-br from-blue-600 via-blue-500 to-green-500 overflow-hidden">
-                                <!-- Animated Background Pattern -->
-                                <div class="absolute inset-0 opacity-10" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px); animation: patternMove 20s linear infinite;"></div>
+                                <!-- Background Pattern (ثابت - بدون حركة للأداء) -->
+                                <div class="absolute inset-0 opacity-10" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px);"></div>
                                 
-                                <!-- Shimmer Effect -->
-                                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 group-hover:animate-shimmer transition-opacity duration-500"></div>
-                                
-                                <!-- Radial Glow -->
-                                <div class="absolute inset-0 bg-radial-gradient from-white/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                <!-- Shimmer على الهوفر فقط -->
+                                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                                 
                                 <div class="absolute inset-0 bg-gradient-to-t from-black/20 via-black/5 to-transparent"></div>
                                 
-                                <!-- Floating Particles -->
-                                <div class="absolute top-2 left-4 w-1 h-1 bg-white/40 rounded-full animate-float" style="animation: floatParticle 3s ease-in-out infinite;"></div>
-                                <div class="absolute top-8 right-6 w-1.5 h-1.5 bg-white/30 rounded-full animate-float" style="animation: floatParticle 4s ease-in-out infinite; animation-delay: 1s;"></div>
-                                <div class="absolute bottom-6 left-8 w-1 h-1 bg-white/35 rounded-full animate-float" style="animation: floatParticle 3.5s ease-in-out infinite; animation-delay: 2s;"></div>
-                                
-                                <!-- Logo - Letter M with Enhanced Effects -->
+                                <!-- Logo - Letter M -->
                                 <div class="absolute inset-0 flex items-center justify-center">
-                                    <div class="relative z-10 transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
-                                        <div class="relative">
-                                            <!-- Glow behind M -->
-                                            <div class="absolute inset-0 bg-white/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                                            
-                                            <!-- M Letter with enhanced gradient and shadow -->
-                                            <div class="text-white font-black text-5xl lg:text-6xl relative" style="font-family: 'Cairo', 'Noto Sans Arabic', sans-serif; text-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 40px rgba(255,255,255,0.3), 0 0 60px rgba(59, 130, 246, 0.3); letter-spacing: -2px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));">
-                                                M
-                                            </div>
-                                            
-                                            <!-- Enhanced Decorative accents -->
-                                            <div class="absolute -top-1 -right-1 w-3 h-3 bg-white/40 rounded-full blur-sm animate-pulse"></div>
-                                            <div class="absolute -bottom-1 -left-1 w-2 h-2 bg-white/30 rounded-full blur-sm animate-pulse" style="animation-delay: 0.5s;"></div>
-                                            <div class="absolute top-1/2 -right-2 w-1.5 h-1.5 bg-white/25 rounded-full blur-sm animate-pulse" style="animation-delay: 1s;"></div>
+                                    <div class="relative z-10 transform group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
+                                        <div class="text-white font-black text-5xl lg:text-6xl relative" style="font-family: 'Cairo', 'Noto Sans Arabic', sans-serif; text-shadow: 0 4px 20px rgba(0,0,0,0.4); letter-spacing: -2px;">
+                                            M
                                         </div>
                                     </div>
                                 </div>
                                 
-                                <!-- Featured Badge with Enhanced Design -->
+                                <!-- Featured Badge -->
                                 @if($course->is_featured)
                                     <div class="absolute top-2 left-2 z-20">
-                                        <span class="bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 text-yellow-900 px-2.5 py-1 rounded-full text-[10px] font-bold shadow-lg flex items-center gap-1 border border-yellow-300/50 backdrop-blur-sm animate-pulse-slow">
-                                            <i class="fas fa-star text-[8px] animate-spin-slow"></i>
-                                        <span>مميز</span>
-                                    </span>
+                                        <span class="bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 text-yellow-900 px-2.5 py-1 rounded-full text-[10px] font-bold shadow-lg flex items-center gap-1 border border-yellow-300/50 backdrop-blur-sm">
+                                            <i class="fas fa-star text-[8px]"></i>
+                                            <span>مميز</span>
+                                        </span>
                                     </div>
                                 @endif
                                 
@@ -2485,6 +2516,8 @@
                         </div>
                     @endforeach
                 </div>
+            </div>
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
                 <div class="text-center fade-in-up">
                     <a href="{{ route('public.courses') }}" class="inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-green-500 text-white px-10 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-110 relative overflow-hidden group">
                         <span class="relative z-10 flex items-center gap-2">
@@ -2495,7 +2528,9 @@
                         <span class="absolute inset-0 bg-gradient-to-r from-green-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
                     </a>
                 </div>
-            @else
+            </div>
+        @else
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="text-center py-12 fade-in-up">
                     <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <i class="fas fa-book text-gray-400 text-4xl"></i>
@@ -2506,9 +2541,41 @@
                         <span class="relative z-10">اشترك للحصول على التحديثات</span>
                     </a>
                 </div>
-            @endif
-        </div>
+            </div>
+        @endif
     </section>
+
+    @if(isset($featuredCourses) && $featuredCourses->count() > 0)
+    <script>
+    (function() {
+        var track = document.getElementById('featured-courses-track');
+        if (!track) return;
+        var stepMs = 5000;
+        var isPaused = false;
+        track.addEventListener('mouseenter', function() { isPaused = true; });
+        track.addEventListener('mouseleave', function() { isPaused = false; });
+        track.addEventListener('touchstart', function() { isPaused = true; }, { passive: true });
+        track.addEventListener('touchend', function() { setTimeout(function() { isPaused = false; }, 3000); }, { passive: true });
+        setInterval(function() {
+            if (isPaused) return;
+            var card = track.querySelector('.flex-shrink-0');
+            var gap = 16;
+            if (window.matchMedia('(min-width: 1024px)').matches) gap = 24;
+            var step = (card ? card.offsetWidth : 320) + gap;
+            var maxScroll = track.scrollWidth - track.clientWidth;
+            if (maxScroll <= 0) return;
+            var isRtl = document.documentElement.getAttribute('dir') === 'rtl';
+            if (isRtl) {
+                track.scrollBy({ left: -step, behavior: 'auto' });
+                if (track.scrollLeft <= -maxScroll || track.scrollLeft >= maxScroll) track.scrollLeft = 0;
+            } else {
+                track.scrollBy({ left: step, behavior: 'auto' });
+                if (track.scrollLeft >= maxScroll - 10) track.scrollLeft = 0;
+            }
+        }, stepMs);
+    })();
+    </script>
+    @endif
 
     <!-- Features Section -->
     <section class="py-12 md:py-16 lg:py-20 bg-gradient-to-b from-white via-gray-50 to-white relative">
@@ -2520,7 +2587,7 @@
                 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div class="text-center mb-12 fade-in-up">
-                <h2 class="text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 mb-4 section-title">
+                <h2 class="text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 mb-4 section-title" style="font-family: 'Tajawal', 'Cairo', sans-serif;">
                     لماذا <span class="gradient-text">Mindlytics</span>؟
                 </h2>
                 <p class="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
@@ -2646,7 +2713,7 @@
         </div>
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div class="text-center mb-12 fade-in-up">
-                <h2 class="text-3xl md:text-4xl font-black text-gray-900 mb-4 section-title">
+                <h2 class="text-3xl md:text-4xl font-black text-gray-900 mb-4 section-title" style="font-family: 'Tajawal', 'Cairo', sans-serif;">
                     <span class="gradient-text">Mindlytics</span> Portfolio
                 </h2>
                 <p class="text-lg text-gray-600 max-w-2xl mx-auto">

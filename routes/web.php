@@ -95,31 +95,79 @@ Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
-// Route لعرض الملفات من storage (بديل للرابط الرمزي على الاستضافة)
+// Route لعرض الملفات من storage (بديل للرابط الرمزي على الاستضافة - يمنع 404 على الصور والـ PDF)
 Route::get('/storage/{path}', function ($path) {
-    $fullPath = storage_path('app/public/' . $path);
-    
-    // التحقق من وجود الملف
-    if (!file_exists($fullPath)) {
-        abort(404);
+    try {
+        $path = str_replace('..', '', $path);
+        $path = ltrim($path, '/');
+
+        $basePath = storage_path('app/public');
+        $filePath = $basePath . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
+        $filePath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $filePath);
+
+        \Log::info('Storage route accessed', [
+            'requested_path' => $path,
+            'file_path' => $filePath,
+            'file_exists' => @file_exists($filePath),
+            'is_file' => @is_file($filePath),
+            'storage_path' => $basePath,
+        ]);
+
+        if (!@file_exists($filePath)) {
+            \Log::warning('Storage file not found', ['requested_path' => $path, 'file_path' => $filePath]);
+            abort(404, 'File not found');
+        }
+
+        if (!@is_file($filePath)) {
+            \Log::warning('Storage path is not a file', ['requested_path' => $path, 'file_path' => $filePath]);
+            abort(404, 'Not a file');
+        }
+
+        $realPath = @realpath($filePath) ?: $filePath;
+        $allowedPath = @realpath($basePath) ?: $basePath;
+        $normalizedRealPath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $realPath);
+        $normalizedAllowedPath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $allowedPath);
+
+        if (strpos($normalizedRealPath, $normalizedAllowedPath) !== 0) {
+            \Log::warning('Storage access denied - path outside allowed directory', [
+                'requested_path' => $path, 'file_path' => $filePath, 'real_path' => $realPath, 'allowed_path' => $allowedPath,
+            ]);
+            abort(404, 'Access denied');
+        }
+
+        if (!@is_readable($realPath)) {
+            \Log::warning('Storage file is not readable', ['requested_path' => $path, 'real_path' => $realPath]);
+            abort(403, 'File not readable');
+        }
+
+        $mimeType = @mime_content_type($realPath);
+        if (!$mimeType) {
+            $extension = strtolower(pathinfo($realPath, PATHINFO_EXTENSION));
+            $mimeTypes = [
+                'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'gif' => 'image/gif',
+                'webp' => 'image/webp', 'svg' => 'image/svg+xml', 'pdf' => 'application/pdf',
+                'doc' => 'application/msword', 'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            ];
+            $mimeType = $mimeTypes[$extension] ?? 'application/octet-stream';
+        }
+
+        $headers = ['Content-Type' => $mimeType, 'Cache-Control' => 'public, max-age=31536000'];
+        if ($mimeType === 'application/pdf') {
+            $headers['Content-Disposition'] = 'inline; filename="' . basename($realPath) . '"';
+        }
+
+        \Log::info('Storage file served successfully', ['requested_path' => $path, 'real_path' => $realPath, 'mime_type' => $mimeType]);
+
+        return response()->file($realPath, $headers);
+    } catch (\Exception $e) {
+        \Log::error('Storage route error', [
+            'path' => $path ?? 'unknown',
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+        ]);
+        abort(404, 'File not found');
     }
-    
-    // التحقق من أن الملف ضمن المجلد العام فقط (أمان)
-    $realPath = realpath($fullPath);
-    $storagePath = realpath(storage_path('app/public'));
-    
-    if (strpos($realPath, $storagePath) !== 0) {
-        abort(403, 'Access denied');
-    }
-    
-    // تحديد نوع الملف
-    $mimeType = mime_content_type($fullPath);
-    
-    return response()->file($fullPath, [
-        'Content-Type' => $mimeType,
-        'Cache-Control' => 'public, max-age=31536000', // كاش لمدة سنة
-    ]);
-})->where('path', '.*')->name('storage.file');
+})->where('path', '.*')->name('storage.file')->middleware('web');
 
 // الصفحات العامة
 Route::get('/about', [\App\Http\Controllers\Public\PageController::class, 'about'])->name('public.about');

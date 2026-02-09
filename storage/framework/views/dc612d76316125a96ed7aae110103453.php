@@ -713,7 +713,7 @@
       x-data="{ mobileMenu: false, searchQuery: '' }"
       :class="{ 'overflow-hidden': mobileMenu }">
 
-    @include('components.unified-navbar')
+    <?php echo $__env->make('components.unified-navbar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     
     <main>
 
@@ -884,15 +884,15 @@
             <div class="mt-20 pt-16 border-t border-gray-200">
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center reveal-stagger">
                     <div>
-                        <div class="text-3xl md:text-4xl font-black text-blue-600 counter" data-target="{{ $stats['courses'] ?? 50 }}">{{ $stats['courses'] ?? 50 }}+</div>
+                        <div class="text-3xl md:text-4xl font-black text-blue-600 counter" data-target="<?php echo e($stats['courses'] ?? 50); ?>"><?php echo e($stats['courses'] ?? 50); ?>+</div>
                         <div class="text-gray-600 font-medium mt-1">كورس متاح</div>
                     </div>
                     <div>
-                        <div class="text-3xl md:text-4xl font-black text-blue-600 counter" data-target="{{ $stats['students'] ?? 1000 }}">{{ $stats['students'] ?? 1000 }}+</div>
+                        <div class="text-3xl md:text-4xl font-black text-blue-600 counter" data-target="<?php echo e($stats['students'] ?? 1000); ?>"><?php echo e($stats['students'] ?? 1000); ?>+</div>
                         <div class="text-gray-600 font-medium mt-1">طالب نشط</div>
                     </div>
                     <div>
-                        <div class="text-3xl md:text-4xl font-black text-green-600 counter" data-target="{{ $stats['instructors'] ?? 20 }}">{{ $stats['instructors'] ?? 20 }}+</div>
+                        <div class="text-3xl md:text-4xl font-black text-green-600 counter" data-target="<?php echo e($stats['instructors'] ?? 20); ?>"><?php echo e($stats['instructors'] ?? 20); ?>+</div>
                         <div class="text-gray-600 font-medium mt-1">مدرّس محترف</div>
                     </div>
                     <div>
@@ -921,14 +921,14 @@
                 انضم إلى آلاف الطلاب الذين حققوا التميز في البرمجة مع Mindlytics
             </p>
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                <a href="{{ route('register') }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-8 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 relative overflow-hidden group">
+                <a href="<?php echo e(route('register')); ?>" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-8 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 relative overflow-hidden group">
                     <span class="relative z-10 flex items-center gap-2">
                         <i class="fas fa-user-plus"></i>
                         <span>سجل مجاناً الآن</span>
                     </span>
                     <span class="absolute inset-0 bg-gradient-to-r from-green-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
                 </a>
-                <a href="{{ route('public.courses') }}" class="inline-flex items-center justify-center gap-2 bg-white text-blue-600 px-8 py-4 rounded-full font-bold text-lg border-2 border-blue-600 hover:bg-blue-50 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl relative">
+                <a href="<?php echo e(route('public.courses')); ?>" class="inline-flex items-center justify-center gap-2 bg-white text-blue-600 px-8 py-4 rounded-full font-bold text-lg border-2 border-blue-600 hover:bg-blue-50 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl relative">
                     <span class="flex items-center gap-2">
                         <span>استعرض جميع الكورسات</span>
                         <i class="fas fa-arrow-left"></i>
@@ -941,7 +941,7 @@
     </main>
     
     <!-- Unified Footer -->
-    @include('components.unified-footer')
+    <?php echo $__env->make('components.unified-footer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
     <script>
         // Counter Animation
@@ -1007,3 +1007,4 @@
     </script>
 </body>
 </html>
+<?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/public/about.blade.php ENDPATH**/ ?>
