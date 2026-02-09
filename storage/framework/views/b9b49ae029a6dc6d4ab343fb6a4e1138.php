@@ -1,10 +1,10 @@
-@extends('layouts.admin')
 
-@section('title', 'المهام - Mindlytics')
-@section('header', 'المهام')
 
-@section('content')
-@php
+<?php $__env->startSection('title', 'المهام - Mindlytics'); ?>
+<?php $__env->startSection('header', 'المهام'); ?>
+
+<?php $__env->startSection('content'); ?>
+<?php
     $statCards = [
         [
             'label' => 'إجمالي المهام',
@@ -49,7 +49,7 @@
         'pending' => ['label' => 'في الانتظار', 'classes' => 'bg-amber-100 text-amber-700'],
         'cancelled' => ['label' => 'ملغاة', 'classes' => 'bg-rose-100 text-rose-700'],
     ];
-@endphp
+?>
 
 <div class="space-y-6 sm:space-y-10">
     <!-- Header Section -->
@@ -59,7 +59,7 @@
                 <h2 class="text-2xl font-bold text-slate-900">مهام المدربين</h2>
                 <p class="text-sm text-slate-500 mt-2">إدارة المهام المسندة من الإدارة للمدربين</p>
             </div>
-            <a href="{{ route('admin.tasks.create') }}" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-sky-600 rounded-xl shadow hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-all">
+            <a href="<?php echo e(route('admin.tasks.create')); ?>" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-sky-600 rounded-xl shadow hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-all">
                 <i class="fas fa-plus"></i>
                 إضافة مهمة جديدة
             </a>
@@ -67,20 +67,20 @@
         
         <!-- Statistics Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 p-5 sm:p-8">
-            @foreach ($statCards as $card)
+            <?php $__currentLoopData = $statCards; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $card): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                 <div class="rounded-2xl border border-slate-200 bg-white/70 p-5 flex flex-col gap-4 card-hover-effect">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">{{ $card['label'] }}</p>
-                            <p class="mt-3 text-2xl font-bold text-slate-900">{{ $card['value'] }}</p>
+                            <p class="text-xs font-semibold uppercase tracking-widest text-slate-500"><?php echo e($card['label']); ?></p>
+                            <p class="mt-3 text-2xl font-bold text-slate-900"><?php echo e($card['value']); ?></p>
                         </div>
-                        <span class="flex h-12 w-12 items-center justify-center rounded-2xl {{ $card['color'] }}">
-                            <i class="{{ $card['icon'] }} text-xl"></i>
+                        <span class="flex h-12 w-12 items-center justify-center rounded-2xl <?php echo e($card['color']); ?>">
+                            <i class="<?php echo e($card['icon']); ?> text-xl"></i>
                         </span>
                     </div>
-                    <p class="text-xs text-slate-500">{{ $card['description'] }}</p>
+                    <p class="text-xs text-slate-500"><?php echo e($card['description']); ?></p>
                 </div>
-            @endforeach
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
         </div>
     </section>
 
@@ -100,7 +100,7 @@
                         <span class="absolute inset-y-0 left-3 flex items-center text-slate-400">
                             <i class="fas fa-search"></i>
                         </span>
-                        <input type="text" name="search" value="{{ request('search') }}" placeholder="ابحث في المهام..."
+                        <input type="text" name="search" value="<?php echo e(request('search')); ?>" placeholder="ابحث في المهام..."
                                class="w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-2.5 pr-10 text-sm text-slate-900 focus:ring-2 focus:ring-sky-500 focus:border-sky-400 transition-all">
                     </div>
                 </div>
@@ -108,29 +108,29 @@
                     <label class="block text-xs font-semibold text-slate-500 mb-2">المدرب</label>
                     <select name="user_id" class="w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-sky-500 focus:border-sky-400 transition-all">
                         <option value="">جميع المدربين</option>
-                        @foreach(($instructors ?? collect()) as $inst)
-                            <option value="{{ $inst->id }}" {{ request('user_id') == $inst->id ? 'selected' : '' }}>{{ $inst->name }}</option>
-                        @endforeach
+                        <?php $__currentLoopData = ($instructors ?? collect()); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $inst): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($inst->id); ?>" <?php echo e(request('user_id') == $inst->id ? 'selected' : ''); ?>><?php echo e($inst->name); ?></option>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </select>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-500 mb-2">الحالة</label>
                     <select name="status" class="w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-sky-500 focus:border-sky-400 transition-all">
                         <option value="">جميع الحالات</option>
-                        <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>في الانتظار</option>
-                        <option value="in_progress" {{ request('status') == 'in_progress' ? 'selected' : '' }}>قيد التنفيذ</option>
-                        <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>مكتملة</option>
-                        <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>ملغاة</option>
+                        <option value="pending" <?php echo e(request('status') == 'pending' ? 'selected' : ''); ?>>في الانتظار</option>
+                        <option value="in_progress" <?php echo e(request('status') == 'in_progress' ? 'selected' : ''); ?>>قيد التنفيذ</option>
+                        <option value="completed" <?php echo e(request('status') == 'completed' ? 'selected' : ''); ?>>مكتملة</option>
+                        <option value="cancelled" <?php echo e(request('status') == 'cancelled' ? 'selected' : ''); ?>>ملغاة</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-500 mb-2">الأولوية</label>
                     <select name="priority" class="w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-sky-500 focus:border-sky-400 transition-all">
                         <option value="">جميع الأولويات</option>
-                        <option value="low" {{ request('priority') == 'low' ? 'selected' : '' }}>منخفضة</option>
-                        <option value="medium" {{ request('priority') == 'medium' ? 'selected' : '' }}>متوسطة</option>
-                        <option value="high" {{ request('priority') == 'high' ? 'selected' : '' }}>عالية</option>
-                        <option value="urgent" {{ request('priority') == 'urgent' ? 'selected' : '' }}>عاجلة</option>
+                        <option value="low" <?php echo e(request('priority') == 'low' ? 'selected' : ''); ?>>منخفضة</option>
+                        <option value="medium" <?php echo e(request('priority') == 'medium' ? 'selected' : ''); ?>>متوسطة</option>
+                        <option value="high" <?php echo e(request('priority') == 'high' ? 'selected' : ''); ?>>عالية</option>
+                        <option value="urgent" <?php echo e(request('priority') == 'urgent' ? 'selected' : ''); ?>>عاجلة</option>
                     </select>
                 </div>
                 <div class="flex items-end">
@@ -164,58 +164,61 @@
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-slate-200">
-                    @forelse($tasks as $task)
+                    <?php $__empty_1 = true; $__currentLoopData = $tasks; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $task): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                     <tr class="hover:bg-slate-50 transition-colors">
                         <td class="px-6 py-4">
-                            <div class="text-sm font-medium text-slate-900">{{ $task->title }}</div>
-                            @if($task->description)
-                                <div class="text-xs text-slate-500 mt-1">{{ Str::limit($task->description, 50) }}</div>
-                            @endif
+                            <div class="text-sm font-medium text-slate-900"><?php echo e($task->title); ?></div>
+                            <?php if($task->description): ?>
+                                <div class="text-xs text-slate-500 mt-1"><?php echo e(Str::limit($task->description, 50)); ?></div>
+                            <?php endif; ?>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
                             <div class="flex items-center gap-3">
                                 <div class="w-8 h-8 bg-gradient-to-br from-sky-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xs">
-                                    {{ mb_substr($task->user->name, 0, 1, 'UTF-8') }}
+                                    <?php echo e(mb_substr($task->user->name, 0, 1, 'UTF-8')); ?>
+
                                 </div>
-                                <span>{{ $task->user->name }}</span>
+                                <span><?php echo e($task->user->name); ?></span>
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            @php $priorityBadge = $priorityBadges[$task->priority] ?? null; @endphp
-                            @if($priorityBadge)
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold {{ $priorityBadge['classes'] }}">
+                            <?php $priorityBadge = $priorityBadges[$task->priority] ?? null; ?>
+                            <?php if($priorityBadge): ?>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold <?php echo e($priorityBadge['classes']); ?>">
                                     <span class="h-2 w-2 rounded-full bg-current"></span>
-                                    {{ $priorityBadge['label'] }}
+                                    <?php echo e($priorityBadge['label']); ?>
+
                                 </span>
-                            @endif
+                            <?php endif; ?>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            @php $statusBadge = $statusBadges[$task->status] ?? null; @endphp
-                            @if($statusBadge)
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold {{ $statusBadge['classes'] }}">
+                            <?php $statusBadge = $statusBadges[$task->status] ?? null; ?>
+                            <?php if($statusBadge): ?>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold <?php echo e($statusBadge['classes']); ?>">
                                     <span class="h-2 w-2 rounded-full bg-current"></span>
-                                    {{ $statusBadge['label'] }}
+                                    <?php echo e($statusBadge['label']); ?>
+
                                 </span>
-                            @endif
+                            <?php endif; ?>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
-                            @if($task->due_date)
-                                <div class="font-medium">{{ $task->due_date->format('Y-m-d') }}</div>
-                                @if($task->due_date->isPast() && $task->status != 'completed')
+                            <?php if($task->due_date): ?>
+                                <div class="font-medium"><?php echo e($task->due_date->format('Y-m-d')); ?></div>
+                                <?php if($task->due_date->isPast() && $task->status != 'completed'): ?>
                                     <span class="text-xs text-rose-600">متأخرة</span>
-                                @endif
-                            @else
+                                <?php endif; ?>
+                            <?php else: ?>
                                 <span class="text-slate-400">-</span>
-                            @endif
+                            <?php endif; ?>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center justify-center gap-2">
-                                <a href="{{ route('admin.tasks.show', $task) }}" 
+                                <a href="<?php echo e(route('admin.tasks.show', $task)); ?>" 
                                    class="w-9 h-9 flex items-center justify-center bg-sky-50 hover:bg-sky-100 text-sky-600 rounded-xl transition-colors"
                                    title="عرض التفاصيل">
                                     <i class="fas fa-eye text-sm"></i>
                                 </a>
-                                <a href="{{ route('admin.tasks.edit', $task) }}" 
+                                <a href="<?php echo e(route('admin.tasks.edit', $task)); ?>" 
                                    class="w-9 h-9 flex items-center justify-center bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl transition-colors"
                                    title="تعديل">
                                     <i class="fas fa-edit text-sm"></i>
@@ -223,7 +226,7 @@
                             </div>
                         </td>
                     </tr>
-                    @empty
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                     <tr>
                         <td colspan="6" class="px-6 py-12 text-center text-slate-500">
                             <div class="flex flex-col items-center gap-4">
@@ -234,15 +237,18 @@
                             </div>
                         </td>
                     </tr>
-                    @endforelse
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>
-        @if($tasks->hasPages())
+        <?php if($tasks->hasPages()): ?>
         <div class="px-6 py-4 border-t border-slate-200 bg-slate-50">
-            {{ $tasks->appends(request()->query())->links() }}
+            <?php echo e($tasks->appends(request()->query())->links()); ?>
+
         </div>
-        @endif
+        <?php endif; ?>
     </section>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.admin', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/admin/tasks/index.blade.php ENDPATH**/ ?>

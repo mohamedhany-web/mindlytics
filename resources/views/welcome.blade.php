@@ -146,23 +146,24 @@
         {!! json_encode($schema3, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
         </script>
 
-    <!-- خط عربي أصيل - محسّن للأداء -->
+    <!-- خط عربي - تحميل غير معطل للرسم (تحسين FCP/LCP) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Tajawal:wght@400;500;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Tajawal:wght@400;500;700;800&display=swap"></noscript>
     
-    <!-- Resource Hints للأداء -->
+    <!-- Resource Hints -->
     <link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
     
-    <!-- Tailwind CSS -->
+    <!-- Tailwind CSS (بدون defer لتجنب FOUC) -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
-    <!-- Font Awesome - محسّن -->
+    <!-- Font Awesome - تحميل غير معطل -->
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
 
@@ -433,6 +434,14 @@
         img, video, iframe {
             max-width: 100%;
             height: auto;
+        }
+
+        /* تحسين السرعة: تأجيل رسم الأقسام تحت الطية (موبايل) */
+        @media (max-width: 1023px) {
+            section:not(.hero-section) {
+                content-visibility: auto;
+                contain-intrinsic-size: auto 400px;
+            }
         }
 
         /* Mobile Only Adjustments - لا تؤثر على الكومبيوتر */

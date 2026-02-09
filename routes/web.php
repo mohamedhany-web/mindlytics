@@ -788,6 +788,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::resource('tasks', \App\Http\Controllers\Admin\TaskController::class);
         Route::post('/tasks/{task}/complete', [\App\Http\Controllers\Admin\TaskController::class, 'complete'])->name('tasks.complete');
         Route::post('/tasks/{task}/comments', [\App\Http\Controllers\Admin\TaskController::class, 'addComment'])->name('tasks.add-comment');
+        Route::post('/tasks/{task}/deliverables/{deliverable}/review', [\App\Http\Controllers\Admin\TaskController::class, 'reviewDeliverable'])->name('tasks.review-deliverable');
 
         // إدارة الصفحات الخارجية
         Route::resource('blog', \App\Http\Controllers\Admin\BlogController::class);
@@ -927,6 +928,13 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('/leaves/{leave}', [\App\Http\Controllers\Admin\AdminLeaveController::class, 'show'])->name('leaves.show');
         Route::post('/leaves/{leave}/approve', [\App\Http\Controllers\Admin\AdminLeaveController::class, 'approve'])->name('leaves.approve');
         Route::post('/leaves/{leave}/reject', [\App\Http\Controllers\Admin\AdminLeaveController::class, 'reject'])->name('leaves.reject');
+
+        // طلبات المدربين للإدارة
+        Route::prefix('instructor-requests')->name('instructor-requests.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\InstructorRequestController::class, 'index'])->name('index');
+            Route::get('/{instructorRequest}', [\App\Http\Controllers\Admin\InstructorRequestController::class, 'show'])->name('show');
+            Route::post('/{instructorRequest}/respond', [\App\Http\Controllers\Admin\InstructorRequestController::class, 'respond'])->name('respond');
+        });
 
         // الرقابة والجودة
         Route::prefix('quality-control')->name('quality-control.')->group(function () {
@@ -1238,6 +1246,16 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('/attendance/lecture/{lecture}', [\App\Http\Controllers\Instructor\AttendanceController::class, 'showLecture'])->name('attendance.lecture');
         Route::resource('tasks', \App\Http\Controllers\Instructor\TaskController::class);
         Route::get('/tasks/lectures', [\App\Http\Controllers\Instructor\TaskController::class, 'getLectures'])->name('tasks.lectures');
+        Route::post('/tasks/{task}/deliverables', [\App\Http\Controllers\Instructor\TaskController::class, 'submitDeliverable'])->name('tasks.submit-deliverable');
+        Route::put('/tasks/{task}/progress', [\App\Http\Controllers\Instructor\TaskController::class, 'updateProgress'])->name('tasks.update-progress');
+
+        // تقديم طلبات للإدارة
+        Route::prefix('management-requests')->name('management-requests.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Instructor\ManagementRequestController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Instructor\ManagementRequestController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Instructor\ManagementRequestController::class, 'store'])->name('store');
+            Route::get('/{managementRequest}', [\App\Http\Controllers\Instructor\ManagementRequestController::class, 'show'])->name('show');
+        });
         
         // نظام الاتفاقيات للمدرب
         Route::prefix('agreements')->name('agreements.')->group(function () {

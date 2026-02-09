@@ -11,10 +11,12 @@ class Task extends Model
 
     protected $fillable = [
         'user_id',
+        'assigned_by',
         'title',
         'description',
         'priority',
         'status',
+        'progress',
         'due_date',
         'completed_at',
         'related_course_id',
@@ -40,6 +42,11 @@ class Task extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function assigner()
+    {
+        return $this->belongsTo(User::class, 'assigned_by');
+    }
+
     public function relatedCourse()
     {
         return $this->belongsTo(AdvancedCourse::class, 'related_course_id');
@@ -53,6 +60,17 @@ class Task extends Model
     public function comments()
     {
         return $this->hasMany(TaskComment::class);
+    }
+
+    public function deliverables()
+    {
+        return $this->hasMany(TaskDeliverable::class)->orderBy('submitted_at', 'desc');
+    }
+
+    /** مهمة مسندة من الإدارة (لا يعدلها المدرب) */
+    public function isAssignedByAdmin(): bool
+    {
+        return $this->assigned_by !== null;
     }
 
     public function notifications()

@@ -571,7 +571,7 @@
 
             <!-- إدارة الموظفين -->
             <?php
-                $employeesOpen = request()->routeIs('admin.employees.*') || request()->routeIs('admin.employee-jobs.*') || request()->routeIs('admin.employee-tasks.*') || request()->routeIs('admin.leaves.*');
+                $employeesOpen = request()->routeIs('admin.employees.*') || request()->routeIs('admin.employee-jobs.*') || request()->routeIs('admin.employee-tasks.*') || request()->routeIs('admin.leaves.*') || request()->routeIs('admin.tasks.*') || request()->routeIs('admin.instructor-requests.*');
             ?>
             <li x-data="{ open: <?php echo e($employeesOpen ? 'true' : 'false'); ?> }">
                 <button @click="open = !open" 
@@ -604,7 +604,7 @@
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.employee-tasks.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : ''); ?>">
                             <i class="fas fa-tasks w-4"></i>
-                            <span>المهام</span>
+                            <span>مهام الموظفين</span>
                             <?php
                                 try {
                                     $pendingTasks = \App\Models\EmployeeTask::where('status', 'pending')->count();
@@ -614,6 +614,42 @@
                             ?>
                             <?php if($pendingTasks > 0): ?>
                                 <span class="mr-auto bg-yellow-500 text-white text-xs font-bold rounded-full px-2 py-0.5 shadow-lg"><?php echo e($pendingTasks); ?></span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="<?php echo e(route('admin.tasks.index')); ?>" 
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.tasks.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : ''); ?>">
+                            <i class="fas fa-chalkboard-teacher w-4"></i>
+                            <span>مهام المدربين</span>
+                            <?php
+                                try {
+                                    $pendingInstructorTasks = \App\Models\Task::whereIn('user_id', \App\Models\User::whereIn('role', ['instructor', 'teacher'])->pluck('id'))->where('status', 'pending')->count();
+                                } catch (\Exception $e) {
+                                    $pendingInstructorTasks = 0;
+                                }
+                            ?>
+                            <?php if($pendingInstructorTasks > 0): ?>
+                                <span class="mr-auto bg-amber-500 text-white text-xs font-bold rounded-full px-2 py-0.5 shadow-lg"><?php echo e($pendingInstructorTasks); ?></span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="<?php echo e(route('admin.instructor-requests.index')); ?>" 
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.instructor-requests.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : ''); ?>">
+                            <i class="fas fa-inbox w-4"></i>
+                            <span>طلبات المدربين</span>
+                            <?php
+                                try {
+                                    $pendingInstructorRequests = \App\Models\InstructorRequest::where('status', 'pending')->count();
+                                } catch (\Exception $e) {
+                                    $pendingInstructorRequests = 0;
+                                }
+                            ?>
+                            <?php if($pendingInstructorRequests > 0): ?>
+                                <span class="mr-auto bg-amber-500 text-white text-xs font-bold rounded-full px-2 py-0.5 shadow-lg"><?php echo e($pendingInstructorRequests); ?></span>
                             <?php endif; ?>
                         </a>
                     </li>

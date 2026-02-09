@@ -127,9 +127,9 @@ class SecurityService
             }
         }
 
-        // التحقق من اسم الملف
+        // التحقق من اسم الملف (السماح بحروف إنجليزية وأرقام ونقاط وشرطات ومسافات فقط - منع مسار أو أحرف خطيرة)
         $fileName = $file->getClientOriginalName();
-        if (preg_match('/[^a-zA-Z0-9._-]/', $fileName)) {
+        if (preg_match('/[\\\\\/<>:"|?*\x00-\x1f]/', $fileName) || preg_match('/\.\./', $fileName)) {
             $errors[] = 'اسم الملف يحتوي على أحرف غير مسموحة';
         }
 

@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
 use App\Models\Task;
+use App\Models\TaskDeliverable;
 use App\Models\AdvancedCourse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class TaskController extends Controller
 {
@@ -16,10 +18,11 @@ class TaskController extends Controller
     public function index(Request $request)
     {
         $instructor = Auth::user();
-        
-        // جلب المهام الخاصة بالمدرب
+
+        // المهام من الإدارة فقط (المسندة من الأدمن)
         $query = Task::where('user_id', $instructor->id)
-            ->with(['relatedCourse', 'relatedLecture']);
+            ->whereNotNull('assigned_by')
+            ->with(['relatedCourse', 'relatedLecture', 'assigner']);
 
         // فلترة حسب الحالة
         if ($request->filled('status')) {
@@ -42,12 +45,13 @@ class TaskController extends Controller
 
         $tasks = $query->orderBy('due_date', 'asc')->paginate(20);
 
-        // إحصائيات
+        // إحصائيات (مهام من الإدارة فقط)
+        $baseQuery = Task::where('user_id', $instructor->id)->whereNotNull('assigned_by');
         $stats = [
-            'total' => Task::where('user_id', $instructor->id)->count(),
-            'pending' => Task::where('user_id', $instructor->id)->where('status', 'pending')->count(),
-            'in_progress' => Task::where('user_id', $instructor->id)->where('status', 'in_progress')->count(),
-            'completed' => Task::where('user_id', $instructor->id)->where('status', 'completed')->count(),
+            'total' => (clone $baseQuery)->count(),
+            'pending' => (clone $baseQuery)->where('status', 'pending')->count(),
+            'in_progress' => (clone $baseQuery)->where('status', 'in_progress')->count(),
+            'completed' => (clone $baseQuery)->where('status', 'completed')->count(),
         ];
 
         return view('instructor.tasks.index', compact('tasks', 'stats'));
@@ -104,24 +108,25 @@ class TaskController extends Controller
      */
     public function show(Task $task)
     {
-        // التحقق من أن المهمة تخص المدرب
         if ($task->user_id !== Auth::id()) {
             abort(403);
         }
-
-        $task->load(['relatedCourse', 'relatedLecture']);
-
+        $task->load(['relatedCourse', 'relatedLecture', 'assigner', 'deliverables.reviewer']);
         return view('instructor.tasks.show', compact('task'));
     }
 
     /**
      * Show the form for editing the specified resource.
+     * المهام المسندة من الإدارة لا يمكن تعديلها من المدرب.
      */
     public function edit(Task $task)
     {
-        // التحقق من أن المهمة تخص المدرب
         if ($task->user_id !== Auth::id()) {
             abort(403);
+        }
+        if ($task->isAssignedByAdmin()) {
+            return redirect()->route('instructor.tasks.show', $task)
+                ->with('info', 'لا يمكن تعديل المهمة المسندة من الإدارة. استخدم التسليمات وتحديث التقدم.');
         }
 
         $instructor = Auth::user();
@@ -144,12 +149,16 @@ class TaskController extends Controller
 
     /**
      * Update the specified resource in storage.
+     * المهام المسندة من الإدارة لا يمكن تعديلها من المدرب.
      */
     public function update(Request $request, Task $task)
     {
-        // التحقق من أن المهمة تخص المدرب
         if ($task->user_id !== Auth::id()) {
             abort(403);
+        }
+        if ($task->isAssignedByAdmin()) {
+            return redirect()->route('instructor.tasks.show', $task)
+                ->with('info', 'لا يمكن تعديل المهمة المسندة من الإدارة.');
         }
 
         $validated = $request->validate([
@@ -175,12 +184,16 @@ class TaskController extends Controller
 
     /**
      * Remove the specified resource from storage.
+     * المهام المسندة من الإدارة لا يمكن حذفها من المدرب.
      */
     public function destroy(Task $task)
     {
-        // التحقق من أن المهمة تخص المدرب
         if ($task->user_id !== Auth::id()) {
             abort(403);
+        }
+        if ($task->isAssignedByAdmin()) {
+            return redirect()->route('instructor.tasks.index')
+                ->with('info', 'لا يمكن حذف المهمة المسندة من الإدارة.');
         }
 
         $task->delete();
@@ -202,5 +215,87 @@ class TaskController extends Controller
             ->get(['id', 'title', 'scheduled_at']);
         
         return response()->json($lectures);
+    }
+
+    /**
+     * تسليم عمل على مهمة مسندة من الإدارة
+     */
+    public function submitDeliverable(Request $request, Task $task)
+    {
+        if ($task->user_id !== Auth::id() || !$task->isAssignedByAdmin()) {
+            abort(403, 'غير مصرح لك بتسليم هذه المهمة');
+        }
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'delivery_type' => 'required|in:file,image,link',
+            'file' => 'nullable|file|max:10240|required_if:delivery_type,file,image',
+            'link_url' => 'nullable|url|required_if:delivery_type,link',
+        ]);
+
+        $filePath = null;
+        $fileName = null;
+        $fileType = null;
+        $fileSize = null;
+        $linkUrl = null;
+
+        if (in_array($validated['delivery_type'], ['file', 'image']) && $request->hasFile('file')) {
+            $file = $request->file('file');
+            $fileName = $file->getClientOriginalName();
+            $fileType = $file->getClientMimeType();
+            $fileSize = $file->getSize();
+            $folder = $validated['delivery_type'] === 'image' ? 'task-deliverables/images' : 'task-deliverables/files';
+            $filePath = $file->store($folder, 'public');
+        }
+        if ($validated['delivery_type'] === 'link') {
+            $linkUrl = $validated['link_url'];
+        }
+
+        TaskDeliverable::create([
+            'task_id' => $task->id,
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'delivery_type' => $validated['delivery_type'],
+            'link_url' => $linkUrl,
+            'file_path' => $filePath,
+            'file_name' => $fileName,
+            'file_type' => $fileType,
+            'file_size' => $fileSize,
+            'status' => 'submitted',
+            'submitted_at' => now(),
+        ]);
+
+        if ($task->status === 'pending') {
+            $task->update(['status' => 'in_progress']);
+        }
+
+        return back()->with('success', 'تم تسليم العمل بنجاح');
+    }
+
+    /**
+     * تحديث التقدم على مهمة مسندة من الإدارة
+     */
+    public function updateProgress(Request $request, Task $task)
+    {
+        if ($task->user_id !== Auth::id() || !$task->isAssignedByAdmin()) {
+            abort(403, 'غير مصرح لك بتحديث هذه المهمة');
+        }
+
+        $validated = $request->validate([
+            'status' => 'required|in:pending,in_progress,completed',
+            'progress' => 'nullable|integer|min:0|max:100',
+        ]);
+
+        $data = [
+            'status' => $validated['status'],
+            'progress' => (int) ($validated['progress'] ?? $task->progress),
+        ];
+        if ($validated['status'] === 'completed') {
+            $data['completed_at'] = $task->completed_at ?: now();
+        }
+        $task->update($data);
+
+        return back()->with('success', 'تم تحديث التقدم بنجاح');
     }
 }

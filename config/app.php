@@ -124,8 +124,9 @@ return [
     ],
 
     /*
-    | إلزام الإدمن بالمصادقة الثنائية (2FA). عند false يمكن للأدمن الدخول دون 2FA (للمرونة عند فقدان الرمز).
+    | إلزام الإدمن بالمصادقة الثنائية (2FA). عند false يمكن للأدمن الدخول دون 2FA.
+    | القيمة الافتراضية false = غير مطلوبة. لتفعيلها ضع ADMIN_2FA_REQUIRED=true في .env
     */
-    'admin_2fa_required' => env('ADMIN_2FA_REQUIRED', true),
+    'admin_2fa_required' => env('ADMIN_2FA_REQUIRED', false),
 
 ];

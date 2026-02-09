@@ -166,7 +166,16 @@
             <a href="{{ route('instructor.tasks.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
                class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('instructor.tasks.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent' }}">
                 <div class="w-9 h-9 rounded-lg bg-rose-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-check-square text-sm"></i></div>
-                <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">المهام</div><div class="text-xs text-slate-500 mt-0.5">إدارة المهام</div></div>
+                <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">المهام من الإدارة</div><div class="text-xs text-slate-500 mt-0.5">مهام مسندة من الإدارة</div></div>
+                <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
+            </a>
+            @endif
+
+            @if(($isInstructor || $user->hasPermission('instructor.view.tasks')) && Route::has('instructor.management-requests.index'))
+            <a href="{{ route('instructor.management-requests.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('instructor.management-requests.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent' }}">
+                <div class="w-9 h-9 rounded-lg bg-indigo-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-paper-plane text-sm"></i></div>
+                <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">تقديم طلبات للإدارة</div><div class="text-xs text-slate-500 mt-0.5">طلباتي للإدارة</div></div>
                 <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
             </a>
             @endif
