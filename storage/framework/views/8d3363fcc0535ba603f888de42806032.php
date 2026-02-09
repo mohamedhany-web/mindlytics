@@ -1,9 +1,7 @@
-@extends('layouts.admin')
+<?php $__env->startSection('title', 'إضافة مستخدم جديد - Mindlytics'); ?>
+<?php $__env->startSection('header', 'إضافة مستخدم جديد'); ?>
 
-@section('title', 'إضافة مستخدم جديد - Mindlytics')
-@section('header', 'إضافة مستخدم جديد')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="space-y-6">
     <!-- الهيدر -->
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
@@ -14,9 +12,9 @@
                 </div>
                 <div>
                     <nav class="text-xs font-medium text-slate-500 flex flex-wrap items-center gap-2 mb-1">
-                        <a href="{{ route('admin.dashboard') }}" class="text-blue-600 hover:text-blue-700">لوحة التحكم</a>
+                        <a href="<?php echo e(route('admin.dashboard')); ?>" class="text-blue-600 hover:text-blue-700">لوحة التحكم</a>
                         <span>/</span>
-                        <a href="{{ route('admin.users.index') }}" class="text-blue-600 hover:text-blue-700">إدارة المستخدمين</a>
+                        <a href="<?php echo e(route('admin.users.index')); ?>" class="text-blue-600 hover:text-blue-700">إدارة المستخدمين</a>
                         <span>/</span>
                         <span class="text-slate-600">إضافة مستخدم</span>
                     </nav>
@@ -24,7 +22,7 @@
                     <p class="text-sm text-slate-600 mt-1">أدخل بيانات المستخدم الأساسية، حدد دوره، واضبط حالة الحساب قبل الحفظ.</p>
                 </div>
             </div>
-            <a href="{{ route('admin.users.index') }}" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+            <a href="<?php echo e(route('admin.users.index')); ?>" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
                 <i class="fas fa-arrow-right"></i>
                 العودة للقائمة
             </a>
@@ -32,8 +30,8 @@
     </section>
 
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
-        <form method="POST" action="{{ route('admin.users.store') }}" id="createUserForm" class="space-y-6">
-            @csrf
+        <form method="POST" action="<?php echo e(route('admin.users.store')); ?>" id="createUserForm" class="space-y-6">
+            <?php echo csrf_field(); ?>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
                 <div class="lg:col-span-2 space-y-6">
                     <div class="rounded-xl border border-slate-200 bg-white p-6 space-y-5">
@@ -46,19 +44,26 @@
                                 <p class="text-xs text-slate-600 mt-1">بيانات الهوية والتواصل يتم استخدامها في التنبيهات وتسجيل الدخول.</p>
                             </div>
                         </div>
-                        @php
+                        <?php
                             $phoneCountries = $phoneCountries ?? config('phone_countries.countries', []);
                             $defaultCountry = $defaultCountry ?? collect($phoneCountries)->firstWhere('code', config('phone_countries.default_country', 'SA'));
                             $defaultDialCode = (is_array($defaultCountry) && isset($defaultCountry['dial_code'])) ? $defaultCountry['dial_code'] : '+966';
-                        @endphp
+                        ?>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div class="space-y-1">
                                 <label for="name" class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
                                     <i class="fas fa-user text-blue-600 text-sm"></i>
                                     الاسم الكامل <span class="text-rose-500">*</span>
                                 </label>
-                                <input type="text" name="name" id="name" value="{{ old('name', '') }}" required maxlength="255" pattern="^[\p{Arabic}\s\p{N}]+$" title="الرجاء إدخال اسم صحيح (عربي فقط)" placeholder="أدخل الاسم الكامل" class="w-full rounded-xl border-2 border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-slate-400" />
-                                @error('name')<p class="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1"><i class="fas fa-exclamation-circle"></i>{{ $message }}</p>@enderror
+                                <input type="text" name="name" id="name" value="<?php echo e(old('name', '')); ?>" required maxlength="255" pattern="^[\p{Arabic}\s\p{N}]+$" title="الرجاء إدخال اسم صحيح (عربي فقط)" placeholder="أدخل الاسم الكامل" class="w-full rounded-xl border-2 border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-slate-400" />
+                                <?php $__errorArgs = ['name'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1"><i class="fas fa-exclamation-circle"></i><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                             </div>
                             <div class="space-y-1">
                                 <label for="phone" class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
@@ -67,21 +72,28 @@
                                 </label>
                                 <div class="flex rounded-xl overflow-hidden border-2 border-slate-300 bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 hover:border-slate-400 transition-all" dir="ltr">
                                     <select name="country_code" id="country_code" required aria-label="كود الدولة" class="shrink-0 w-32 md:w-36 rounded-l-xl border-0 border-l-0 border-r-2 border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-900 focus:ring-0 focus:border-slate-300 cursor-pointer">
-                                        @if(empty($phoneCountries))
+                                        <?php if(empty($phoneCountries)): ?>
                                             <option value="+966" selected>+966 السعودية</option>
-                                        @endif
-                                        @foreach($phoneCountries as $c)
-                                            @php
+                                        <?php endif; ?>
+                                        <?php $__currentLoopData = $phoneCountries; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $c): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                            <?php
                                                 $optValue = ($c['dial_code'] ?? '') === '' ? 'OTHER' : $c['dial_code'];
                                                 $current = old('country_code', $defaultDialCode);
                                                 $selected = ($current === ($c['dial_code'] ?? '')) || (($c['dial_code'] ?? '') === '' && $current === 'OTHER');
-                                            @endphp
-                                            <option value="{{ $optValue }}" {{ $selected ? 'selected' : '' }}>{{ $c['dial_code'] ?: '—' }} {{ $c['name_ar'] }}</option>
-                                        @endforeach
+                                            ?>
+                                            <option value="<?php echo e($optValue); ?>" <?php echo e($selected ? 'selected' : ''); ?>><?php echo e($c['dial_code'] ?: '—'); ?> <?php echo e($c['name_ar']); ?></option>
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                     </select>
-                                    <input type="tel" name="phone" id="phone" value="{{ old('phone', '') }}" required placeholder="xxxxxxxx" maxlength="15" dir="ltr" aria-label="رقم الهاتف" class="flex-1 min-w-0 rounded-r-xl border-0 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-0 focus:border-0" />
+                                    <input type="tel" name="phone" id="phone" value="<?php echo e(old('phone', '')); ?>" required placeholder="xxxxxxxx" maxlength="15" dir="ltr" aria-label="رقم الهاتف" class="flex-1 min-w-0 rounded-r-xl border-0 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-0 focus:border-0" />
                                 </div>
-                                @error('phone')<p class="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1"><i class="fas fa-exclamation-circle"></i>{{ $message }}</p>@enderror
+                                <?php $__errorArgs = ['phone'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1"><i class="fas fa-exclamation-circle"></i><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                             </div>
                             <div class="space-y-1 md:col-span-2">
                                 <label for="email" class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
@@ -89,10 +101,17 @@
                                     البريد الإلكتروني <span class="text-rose-500">*</span>
                                 </label>
                                 <div class="relative">
-                                    <input type="email" name="email" id="email" value="{{ old('email', '') }}" required maxlength="255" placeholder="example@mindlytics.com" class="w-full rounded-xl border-2 border-slate-300 bg-white px-4 py-3 pr-10 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-slate-400" />
+                                    <input type="email" name="email" id="email" value="<?php echo e(old('email', '')); ?>" required maxlength="255" placeholder="example@mindlytics.com" class="w-full rounded-xl border-2 border-slate-300 bg-white px-4 py-3 pr-10 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-slate-400" />
                                     <i class="fas fa-envelope absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
                                 </div>
-                                @error('email')<p class="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1"><i class="fas fa-exclamation-circle"></i>{{ $message }}</p>@enderror
+                                <?php $__errorArgs = ['email'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1"><i class="fas fa-exclamation-circle"></i><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                                 <p class="mt-1.5 text-xs text-slate-500 flex items-center gap-1"><i class="fas fa-info-circle text-blue-500"></i>سيتم استخدام البريد الإلكتروني في إرسال الإشعارات والتنبيهات.</p>
                             </div>
                             <div class="space-y-1 md:col-span-2">
@@ -106,7 +125,14 @@
                                         <i class="fas fa-eye" id="password-eye"></i>
                                     </button>
                                 </div>
-                                @error('password')<p class="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1"><i class="fas fa-exclamation-circle"></i>{{ $message }}</p>@enderror
+                                <?php $__errorArgs = ['password'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1"><i class="fas fa-exclamation-circle"></i><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                                 <p class="mt-1.5 text-xs text-slate-600 flex items-center gap-1"><i class="fas fa-shield-alt text-emerald-500"></i>يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل.</p>
                             </div>
                         </div>
@@ -130,11 +156,18 @@
                                 </label>
                                 <select name="role" id="role" required class="w-full rounded-xl border-2 border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all hover:border-slate-400 cursor-pointer">
                                     <option value="">اختر الدور</option>
-                                    <option value="super_admin" {{ old('role') == 'super_admin' ? 'selected' : '' }}>إداري</option>
-                                    <option value="instructor" {{ old('role') == 'instructor' ? 'selected' : '' }}>مدرس</option>
-                                    <option value="student" {{ old('role') == 'student' ? 'selected' : '' }}>طالب</option>
+                                    <option value="super_admin" <?php echo e(old('role') == 'super_admin' ? 'selected' : ''); ?>>إداري</option>
+                                    <option value="instructor" <?php echo e(old('role') == 'instructor' ? 'selected' : ''); ?>>مدرس</option>
+                                    <option value="student" <?php echo e(old('role') == 'student' ? 'selected' : ''); ?>>طالب</option>
                                 </select>
-                                @error('role')<p class="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1"><i class="fas fa-exclamation-circle"></i>{{ $message }}</p>@enderror
+                                <?php $__errorArgs = ['role'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1"><i class="fas fa-exclamation-circle"></i><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                             </div>
                             <div class="space-y-1">
                                 <label for="is_active" class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
@@ -142,10 +175,17 @@
                                     حالة الحساب <span class="text-rose-500">*</span>
                                 </label>
                                 <select name="is_active" id="is_active" required class="w-full rounded-xl border-2 border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all hover:border-slate-400 cursor-pointer">
-                                    <option value="1" {{ old('is_active', '1') == '1' ? 'selected' : '' }}>نشط</option>
-                                    <option value="0" {{ old('is_active') == '0' ? 'selected' : '' }}>غير نشط</option>
+                                    <option value="1" <?php echo e(old('is_active', '1') == '1' ? 'selected' : ''); ?>>نشط</option>
+                                    <option value="0" <?php echo e(old('is_active') == '0' ? 'selected' : ''); ?>>غير نشط</option>
                                 </select>
-                                @error('is_active')<p class="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1"><i class="fas fa-exclamation-circle"></i>{{ $message }}</p>@enderror
+                                <?php $__errorArgs = ['is_active'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1"><i class="fas fa-exclamation-circle"></i><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                             </div>
                         </div>
                         <div class="rounded-xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-blue-50 p-5 text-sm text-indigo-900 shadow-sm">
@@ -185,9 +225,16 @@
                                 <i class="fas fa-align-right text-purple-600 text-sm"></i>
                                 نبذة تعريفية (اختياري)
                             </label>
-                            <textarea name="bio" id="bio" rows="4" maxlength="1000" placeholder="اكتب ملخصاً عن خبرات المستخدم أو ملاحظات داخلية..." class="w-full rounded-xl border-2 border-slate-300 bg-white px-4 py-3 text-sm leading-6 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all resize-none hover:border-slate-400">{{ old('bio', '') }}</textarea>
+                            <textarea name="bio" id="bio" rows="4" maxlength="1000" placeholder="اكتب ملخصاً عن خبرات المستخدم أو ملاحظات داخلية..." class="w-full rounded-xl border-2 border-slate-300 bg-white px-4 py-3 text-sm leading-6 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all resize-none hover:border-slate-400"><?php echo e(old('bio', '')); ?></textarea>
                             <p class="mt-1.5 text-xs text-slate-500 flex items-center gap-1"><i class="fas fa-info-circle text-purple-500"></i>الحد الأقصى 1000 حرف. سيتم تنقية HTML تلقائياً.</p>
-                            @error('bio')<p class="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1"><i class="fas fa-exclamation-circle"></i>{{ $message }}</p>@enderror
+                            <?php $__errorArgs = ['bio'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1"><i class="fas fa-exclamation-circle"></i><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                         </div>
                     </div>
                 </div>
@@ -225,7 +272,7 @@
                                 <i class="fas fa-save"></i>
                                 <span>إنشاء المستخدم</span>
                             </button>
-                            <a href="{{ route('admin.users.index') }}" class="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-slate-300 px-6 py-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-all">
+                            <a href="<?php echo e(route('admin.users.index')); ?>" class="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-slate-300 px-6 py-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-all">
                                 <i class="fas fa-times"></i>
                                 <span>إلغاء والعودة</span>
                             </a>
@@ -237,7 +284,7 @@
     </section>
 </div>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
     // حماية من XSS - تنقية البيانات قبل الإرسال
     function sanitizeInput(input) {
@@ -315,5 +362,7 @@
     });
 
 </script>
-@endpush
-@endsection
+<?php $__env->stopPush(); ?>
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.admin', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/admin/users/create.blade.php ENDPATH**/ ?>

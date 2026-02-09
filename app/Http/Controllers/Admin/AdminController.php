@@ -315,6 +315,26 @@ class AdminController extends Controller
     public function users(Request $request)
     {
         try {
+            // بعد إضافة مستخدم نوجّه بـ created=1 — عرض نسخة مبسطة لتجنب 500
+            if ($request->get('created') == '1') {
+                $users = User::query()->latest()->paginate(20)->appends(['created' => '1']);
+                $stats = [
+                    'total' => User::count(),
+                    'active' => User::where('is_active', true)->count(),
+                    'teachers' => User::whereIn('role', ['teacher', 'instructor'])->count(),
+                    'students' => User::where('role', 'student')->count(),
+                    'new_this_month' => 0,
+                    'new_teachers_this_month' => 0,
+                    'new_students_this_month' => 0,
+                ];
+                $trends = ['users' => null, 'teachers' => null, 'students' => null];
+                $recentUsers = collect();
+                $recentlyActiveUsers = collect();
+                $usersByRole = collect();
+                $usersByMonth = collect();
+                return view('admin.users.index', compact('users', 'stats', 'trends', 'recentUsers', 'recentlyActiveUsers', 'usersByRole', 'usersByMonth'));
+            }
+
             $now = now();
             $currentPeriodStart = $now->copy()->startOfMonth();
             $currentPeriodEnd = $now;
@@ -430,29 +450,42 @@ class AdminController extends Controller
                         DB::raw('COUNT(*) as count')
                     )
                     ->where('created_at', '>=', now()->subMonths(6))
-                    ->groupBy('year', 'month')
+                    ->groupBy(DB::raw('YEAR(created_at)'), DB::raw('MONTH(created_at)'))
                     ->orderBy('year', 'desc')
                     ->orderBy('month', 'desc')
                     ->get();
             }
 
-            Log::info('Loading users index page', [
-                'users_count' => $users->total(),
-                'stats' => $stats,
-            ]);
-
             return view('admin.users.index', compact('users', 'stats', 'trends', 'recentUsers', 'recentlyActiveUsers', 'usersByRole', 'usersByMonth'));
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error loading users index: ' . $e->getMessage(), [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
                 'request_url' => $request->fullUrl(),
-                'request_method' => $request->method(),
             ]);
-            
-            // إعادة رمي الـ exception ليتم التعامل معه من قبل الـ exception handler
-            throw $e;
+            // عرض صفحة مبسطة بالقائمة فقط حتى لا يظهر 500 بعد إضافة مستخدم
+            try {
+                $users = User::query()->latest()->paginate(20);
+                $stats = [
+                    'total' => User::count(),
+                    'active' => User::where('is_active', true)->count(),
+                    'teachers' => User::whereIn('role', ['teacher', 'instructor'])->count(),
+                    'students' => User::where('role', 'student')->count(),
+                    'new_this_month' => 0,
+                    'new_teachers_this_month' => 0,
+                    'new_students_this_month' => 0,
+                ];
+                $trends = ['users' => null, 'teachers' => null, 'students' => null];
+                $recentUsers = collect();
+                $recentlyActiveUsers = collect();
+                $usersByRole = collect();
+                $usersByMonth = collect();
+                return view('admin.users.index', compact('users', 'stats', 'trends', 'recentUsers', 'recentlyActiveUsers', 'usersByRole', 'usersByMonth'))
+                    ->with('warning', 'تم تحميل القائمة بشكل مبسط بسبب خطأ تقني.');
+            } catch (\Throwable $e2) {
+                throw $e;
+            }
         }
     }
 
@@ -463,6 +496,10 @@ class AdminController extends Controller
     {
         $phoneCountries = config('phone_countries.countries', []);
         $defaultCountry = collect($phoneCountries)->firstWhere('code', config('phone_countries.default_country', 'SA'));
+        // ضمان وجود قيمة افتراضية آمنة إذا لم يُحمّل الإعداد أو كانت القائمة فارغة
+        if (!$defaultCountry || !is_array($defaultCountry)) {
+            $defaultCountry = ['code' => 'SA', 'dial_code' => '+966', 'name_ar' => 'السعودية', 'name_en' => 'Saudi Arabia'];
+        }
         return view('admin.users.create', compact('phoneCountries', 'defaultCountry'));
     }
 
@@ -489,6 +526,9 @@ class AdminController extends Controller
 
         $phoneCountries = config('phone_countries.countries', []);
         $defaultCountry = collect($phoneCountries)->firstWhere('code', config('phone_countries.default_country', 'SA'));
+        if (!$defaultCountry || !is_array($defaultCountry)) {
+            $defaultCountry = ['code' => 'SA', 'dial_code' => '+966', 'name_ar' => 'السعودية', 'name_en' => 'Saudi Arabia'];
+        }
 
         $sanitizedData = [
             'name' => strip_tags(trim($request->input('name', ''))),
@@ -593,16 +633,18 @@ class AdminController extends Controller
 
             Log::info('User created successfully', ['user_id' => $user->id]);
 
-            // تسجيل النشاط (بدون كلمة المرور) - مع معالجة الأخطاء
-            try {
-                $userData = $user->toArray();
-                unset($userData['password']); // إزالة كلمة المرور من السجل
-                
-                // تنظيف البيانات الكبيرة جداً
-                if (isset($userData['remember_token'])) {
-                    unset($userData['remember_token']);
-                }
+            DB::commit();
 
+            // أي خطأ بعد الـ commit لا يلغي الحفظ — نوجّه دائماً للقائمة مع رسالة نجاح
+            try {
+                $userData = [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'phone' => $user->phone,
+                    'role' => $user->role,
+                    'is_active' => $user->is_active,
+                ];
                 ActivityLog::create([
                     'user_id' => Auth::id(),
                     'action' => 'user_created',
@@ -610,33 +652,17 @@ class AdminController extends Controller
                     'model_id' => $user->id,
                     'new_values' => $userData,
                     'ip_address' => $request->ip(),
-                    'user_agent' => substr($request->userAgent(), 0, 255), // حماية من overflow
+                    'user_agent' => substr((string) $request->userAgent(), 0, 255),
                 ]);
-            } catch (\Exception $logException) {
-                // إذا فشل تسجيل النشاط، لا نوقف العملية
-                Log::warning('Failed to log user creation activity: ' . $logException->getMessage(), [
-                    'user_id' => $user->id,
-                    'error' => $logException->getMessage(),
-                ]);
+            } catch (\Throwable $logException) {
+                Log::warning('Failed to log user creation activity: ' . $logException->getMessage(), ['user_id' => $user->id]);
             }
 
-            DB::commit();
-
-            Log::info('User creation completed successfully', [
-                'user_id' => $user->id,
-                'user_email' => $user->email,
-                'user_name' => $user->name,
-            ]);
-
-            // Redirect مباشرة بدون try-catch لأن redirect لا يرمي exceptions
-            // استخدام session flash message للتأكد من وصول الرسالة
-            session()->flash('success', 'تم إنشاء المستخدم بنجاح');
-            
-            return redirect('/admin/users');
-        } catch (\Exception $e) {
+            // استخدام query param بدل session لتجنب 500 إن فشل حفظ الجلسة
+            return redirect()->route('admin.users.index', ['created' => 1]);
+        } catch (\Throwable $e) {
             DB::rollBack();
             
-            // Log الخطأ مع تفاصيل أكثر للمساعدة في التشخيص
             Log::error('Error creating user: ' . $e->getMessage(), [
                 'user_id' => Auth::id(),
                 'ip' => $request->ip(),
@@ -645,8 +671,7 @@ class AdminController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            // عرض رسالة الخطأ الفعلية في بيئة التطوير
-            $errorMessage = config('app.debug') 
+            $errorMessage = config('app.debug')
                 ? 'حدث خطأ أثناء إنشاء المستخدم: ' . $e->getMessage()
                 : 'حدث خطأ أثناء إنشاء المستخدم. يرجى المحاولة مرة أخرى.';
 
@@ -830,68 +855,67 @@ class AdminController extends Controller
     {
         try {
             $user = User::findOrFail($id);
-            
-            // منع حذف المدير الحالي
+
             if ($user->id === Auth::id()) {
-                // إرجاع JSON للـ AJAX request
-                if ($request->wantsJson() || $request->ajax()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'لا يمكنك حذف حسابك الخاص'
-                    ], 403);
-                }
-                return back()->with('error', 'لا يمكنك حذف حسابك الخاص');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'لا يمكنك حذف حسابك الخاص'
+                ], 403);
             }
 
-            $oldValues = $user->toArray();
+            // حفظ بيانات بسيطة للتسجيل فقط (تجنب toArray() الذي قد يسبب مشاكل)
+            $oldValues = [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+            ];
+
             $user->delete();
 
-            // تسجيل النشاط
             try {
                 ActivityLog::create([
                     'user_id' => Auth::id(),
                     'action' => 'user_deleted',
                     'model_type' => 'User',
-                    'model_id' => $id,
+                    'model_id' => (int) $id,
                     'old_values' => $oldValues,
                     'ip_address' => $request->ip(),
-                    'user_agent' => $request->userAgent(),
+                    'user_agent' => substr((string) $request->userAgent(), 0, 255),
                 ]);
-            } catch (\Exception $e) {
-                // تجاهل خطأ تسجيل النشاط إذا فشل
+            } catch (\Throwable $e) {
                 Log::warning('Failed to log user deletion activity: ' . $e->getMessage());
             }
 
-            // إرجاع JSON للـ AJAX request
-            if ($request->wantsJson() || $request->ajax()) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'تم حذف المستخدم بنجاح'
-                ]);
-            }
-
-            return back()->with('success', 'تم حذف المستخدم بنجاح');
+            return response()->json([
+                'success' => true,
+                'message' => 'تم حذف المستخدم بنجاح'
+            ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            if ($request->wantsJson() || $request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'المستخدم غير موجود'
-                ], 404);
-            }
-            return back()->with('error', 'المستخدم غير موجود');
-        } catch (\Exception $e) {
-            Log::error('Error deleting user: ' . $e->getMessage(), [
+            return response()->json([
+                'success' => false,
+                'message' => 'المستخدم غير موجود'
+            ], 404);
+        } catch (\Illuminate\Database\QueryException $e) {
+            Log::warning('Query error deleting user: ' . $e->getMessage(), [
                 'user_id' => $id,
                 'admin_id' => Auth::id(),
             ]);
-
-            if ($request->wantsJson() || $request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'حدث خطأ أثناء حذف المستخدم: ' . $e->getMessage()
-                ], 500);
-            }
-            return back()->with('error', 'حدث خطأ أثناء حذف المستخدم');
+            return response()->json([
+                'success' => false,
+                'message' => 'لا يمكن حذف المستخدم لوجود بيانات مرتبطة به (طلبات، تسجيلات، مهام). يمكنك تعطيل الحساب بدلاً من الحذف.'
+            ], 422);
+        } catch (\Throwable $e) {
+            Log::error('Error deleting user: ' . $e->getMessage(), [
+                'user_id' => $id,
+                'admin_id' => Auth::id(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => config('app.debug') ? ('خطأ: ' . $e->getMessage()) : 'حدث خطأ أثناء حذف المستخدم. جرّب تحديث الصفحة أو تحقق من صلاحياتك.'
+            ], 500);
         }
     }
 
