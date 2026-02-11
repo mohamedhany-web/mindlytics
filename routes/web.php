@@ -348,6 +348,9 @@ Route::middleware(['guest', 'guest-only'])->group(function () {
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
     // Rate limiting للتسجيل: 5 محاولات في الدقيقة من نفس IP
     Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
+    // تسجيل الدخول بـ Google (إنشاء أو ربط حساب طالب)
+    Route::get('/auth/google', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'redirect'])->name('auth.google.redirect');
+    Route::get('/auth/google/callback', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'callback'])->name('auth.google.callback');
 });
 
 // المصادقة الثنائية (2FA) - بعد إدخال البريد وكلمة المرور للمدربين/الإدمن/الموظفين

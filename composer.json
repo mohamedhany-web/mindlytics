@@ -9,6 +9,7 @@
         "php": "^8.2",
         "bacon/bacon-qr-code": "*",
         "laravel/framework": "^12.0",
+        "laravel/socialite": "^5.24",
         "laravel/tinker": "^2.10.1",
         "phpoffice/phpspreadsheet": "^5.4",
         "pragmarx/google2fa": "*"

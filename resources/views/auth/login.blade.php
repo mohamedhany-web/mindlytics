@@ -23,30 +23,45 @@
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
 
     <style>
+        :root {
+            --color-primary: #2563eb;
+            --color-primary-hover: #1d4ed8;
+            --color-primary-light: rgba(37, 99, 235, 0.12);
+            --input-bg: #f3f4f6;
+            --input-border: #e5e7eb;
+            --text-dark: #1f2937;
+            --text-muted: #6b7280;
+        }
+
         * {
             font-family: 'Cairo', 'Noto Sans Arabic', sans-serif;
         }
 
         body {
             overflow: hidden;
-            background: linear-gradient(to bottom, #f0f9ff, #e0f2fe, #ffffff);
+            background: #f9fafb;
             height: 100vh;
             margin: 0;
             padding: 0;
         }
 
-        /* النافبار الموحد - ألوان الأكاديمية */
+        .login-nav-mobile-only {
+            display: none;
+        }
+
+        /* النافبار على الهاتف - نفس ألوان النافبار الرئيسية */
         .navbar-gradient {
-            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 45%, #1d4ed8 100%);
+            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 45%, #1d4ed8 100%) !important;
             box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
+            width: 100%;
             z-index: 1000;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
 
-        /* Login Container - شاشة كاملة على الديسكتوب */
         .login-wrapper {
             height: 100vh;
             display: flex;
@@ -54,60 +69,63 @@
             overflow: hidden;
         }
 
-        /* النافبار يظهر على الهاتف فقط */
-        .login-nav-mobile-only {
-            display: none;
-        }
-
+        /* RTL: القسم الأيمن = النموذج الأبيض، الأيسر = الخلفية الملونة */
         .login-container {
             display: flex;
             width: 100%;
             height: 100%;
             align-items: stretch;
             position: relative;
+            flex-direction: row-reverse;
         }
 
+        /* لوحة النموذج - بيضاء نظيفة */
         .login-form-section {
             flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 60px 50px;
-            background: linear-gradient(to bottom, #f0f9ff, #e0f2fe, #ffffff);
+            padding: 48px 56px;
+            background: #ffffff;
             position: relative;
             height: 100%;
             overflow-y: auto;
             z-index: 1;
-        }
-
-        .login-form-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 70%, rgba(16, 185, 129, 0.06) 0%, transparent 50%);
-            pointer-events: none;
+            box-shadow: -4px 0 24px rgba(0, 0, 0, 0.06);
         }
 
         .login-form-wrapper {
             width: 100%;
-            max-width: 480px;
+            max-width: 420px;
             position: relative;
             z-index: 1;
         }
 
+        .login-form-wrapper h2 {
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .login-page-title {
+            user-select: none;
+            caret-color: transparent;
+        }
+
+        .btn-google:hover {
+            border-color: #dadce0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        /* قسم خلفية الترحيب - صورة brainstorm-meeting */
         .login-visual-section {
-            flex: 1;
+            flex: 1.1;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             padding: 40px;
-            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 50%, #1e3a8a 100%);
+            background: url('{{ asset("images/brainstorm-meeting.jpg") }}') center center / cover no-repeat;
             position: relative;
             overflow: hidden;
             height: 100%;
@@ -117,12 +135,9 @@
         .login-visual-section::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M 100 0 L 0 0 0 100" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
-            opacity: 0.3;
+            inset: 0;
+            background: linear-gradient(160deg, rgba(30, 64, 175, 0.75) 0%, rgba(37, 99, 235, 0.7) 30%, rgba(59, 130, 246, 0.65) 100%);
+            z-index: 0;
         }
 
         .visual-content {
@@ -131,7 +146,7 @@
             text-align: center;
             color: white;
             width: 100%;
-            max-width: 500px;
+            max-width: 480px;
             margin: 0 auto;
         }
 
@@ -146,151 +161,122 @@
         .shape {
             position: absolute;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.1);
             animation: float 20s infinite ease-in-out;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(8px);
         }
 
         .shape-1 {
-            width: 300px;
-            height: 300px;
-            top: -100px;
-            right: -100px;
+            width: 280px;
+            height: 280px;
+            top: -80px;
+            left: -80px;
             animation-delay: 0s;
         }
 
         .shape-2 {
-            width: 200px;
-            height: 200px;
-            bottom: -50px;
-            left: -50px;
+            width: 180px;
+            height: 180px;
+            bottom: -40px;
+            right: -40px;
             animation-delay: 5s;
         }
 
         .shape-3 {
-            width: 150px;
-            height: 150px;
-            top: 50%;
-            left: 10%;
+            width: 120px;
+            height: 120px;
+            top: 45%;
+            right: 15%;
             animation-delay: 10s;
         }
 
         @keyframes float {
-            0%, 100% {
-                transform: translate(0, 0) rotate(0deg);
-            }
-            33% {
-                transform: translate(30px, -30px) rotate(120deg);
-            }
-            66% {
-                transform: translate(-20px, 20px) rotate(240deg);
-            }
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(20px, -20px) rotate(120deg); }
+            66% { transform: translate(-15px, 15px) rotate(240deg); }
         }
 
-        /* Input Styles */
+        /* حقول الإدخال - رمادي فاتح، زوايا دائرية */
         .form-input {
-            background: linear-gradient(to bottom, #f0f9ff 0%, #e0f2fe 100%);
-            border: 2px solid #bae6fd;
-            transition: all 0.3s ease;
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            border-radius: 12px;
+            transition: all 0.2s ease;
         }
 
         .form-input:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2), 0 4px 12px rgba(59, 130, 246, 0.1);
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px var(--color-primary-light);
             outline: none;
-            background: linear-gradient(to bottom, #ffffff 0%, #f0f9ff 100%);
-            transform: translateY(-1px);
+            background: #fff;
         }
 
         .form-input:hover {
-            border-color: #7dd3fc;
-            background: linear-gradient(to bottom, #ffffff 0%, #f0f9ff 100%);
+            border-color: #d1d5db;
+            background: #f9fafb;
         }
 
         .form-input::placeholder {
-            color: #9ca3af;
+            color: var(--text-muted);
         }
 
-        /* Button */
+        /* زر تسجيل الدخول - ألوان المنصة */
         .btn-login {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
-            transition: all 0.3s ease;
+            background: var(--color-primary);
+            transition: all 0.2s ease;
         }
 
         .btn-login:hover {
-            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4), 0 4px 12px rgba(37, 99, 235, 0.3);
+            background: var(--color-primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
         }
 
-        /* Responsive */
+        /* أزرار تسجيل الدخول الاجتماعي */
+        .btn-social {
+            background: #fff;
+            border: 1px solid var(--input-border);
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-weight: 700;
+            color: var(--text-dark);
+            transition: all 0.2s;
+        }
+
+        .btn-social:hover {
+            background: #f9fafb;
+            border-color: #d1d5db;
+        }
+
+        .link-primary {
+            color: var(--color-primary);
+            font-weight: 700;
+            text-decoration: underline;
+        }
+
+        .link-primary:hover {
+            color: var(--color-primary-hover);
+        }
+
         @media (max-width: 1024px) {
-            body {
-                overflow-y: auto;
-            }
-
-            .login-wrapper {
-                height: auto;
-                min-height: 100vh;
-            }
-
+            body { overflow-y: auto; }
+            .login-wrapper { height: auto; min-height: 100vh; }
             .login-container {
                 flex-direction: column;
                 height: auto;
                 min-height: 100vh;
             }
-
-            .login-visual-section {
-                padding: 50px 30px;
-                height: auto;
-                min-height: auto;
-                width: 100%;
-                position: relative;
-                margin-bottom: 0;
-            }
-
-            .login-visual-section::after {
-                content: '';
-                position: absolute;
-                bottom: 0;
-                left: 5%;
-                right: 5%;
-                height: 4px;
-                background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 20%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0.4) 80%, transparent 100%);
-                border-radius: 2px;
-            }
-
             .login-form-section {
-                padding: 50px 30px;
+                padding: 40px 24px;
+                box-shadow: none;
+            }
+            .login-visual-section {
+                padding: 40px 24px;
                 height: auto;
-                min-height: auto;
-                width: 100%;
-                position: relative;
-                margin-top: 0;
+                min-height: 280px;
             }
-
-            .login-form-section::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 5%;
-                right: 5%;
-                height: 4px;
-                background: linear-gradient(90deg, transparent 0%, rgba(44, 169, 189, 0.3) 20%, rgba(44, 169, 189, 0.5) 50%, rgba(44, 169, 189, 0.3) 80%, transparent 100%);
-                border-radius: 2px;
-            }
-
-            .login-form-section::before {
-                display: none;
-            }
-
-            .login-form-wrapper {
-                max-width: 100%;
-            }
-
-            .visual-content {
-                max-width: 100%;
-            }
+            .login-form-wrapper { max-width: 100%; }
+            .visual-content { max-width: 100%; }
         }
 
         /* ─── هواتف: ترحيب أصغر وصفحة منظمة ─── */
@@ -338,20 +324,6 @@
             }
 
             /* رسالة الترحيب: أصغر ومنظمة على الهاتف */
-            .visual-logo-wrap {
-                margin-bottom: 0.35rem !important;
-            }
-
-            .visual-logo-wrap .w-12,
-            .visual-logo-wrap [class*="w-12"],
-            .visual-logo-wrap [class*="w-16"],
-            .visual-logo-wrap [class*="w-20"] {
-                width: 2rem !important;
-                height: 2rem !important;
-                min-width: 2rem !important;
-                min-height: 2rem !important;
-            }
-
             .visual-title {
                 font-size: 1rem !important;
                 line-height: 1.35 !important;
@@ -382,44 +354,34 @@
             }
 
             .login-form-wrapper .text-center.mb-8 {
-                margin-bottom: 1rem !important;
+                margin-bottom: 1.5rem !important;
             }
 
             .login-form-wrapper .text-center .mb-4 {
-                margin-bottom: 0.5rem !important;
-            }
-
-            .login-form-wrapper .text-center .w-16 {
-                width: 2.5rem !important;
-                height: 2.5rem !important;
-            }
-
-            .login-form-wrapper .text-center .md\:w-20 {
-                width: 2.5rem !important;
-                height: 2.5rem !important;
+                margin-bottom: 0.75rem !important;
             }
 
             .login-form-wrapper h2 {
-                font-size: 1.25rem !important;
-                margin-bottom: 0.25rem !important;
+                font-size: 1.5rem !important;
+                margin-bottom: 0.5rem !important;
             }
 
             .login-form-wrapper .text-center p {
-                font-size: 0.8rem !important;
+                font-size: 0.9rem !important;
             }
 
             .login-form-wrapper .mb-8 {
-                margin-bottom: 1rem !important;
+                margin-bottom: 1.5rem !important;
             }
 
             .form-input {
-                padding: 0.65rem 0.75rem !important;
-                font-size: 0.9375rem !important;
+                padding: 0.75rem 1rem !important;
+                font-size: 1rem !important;
             }
 
             .btn-login {
-                padding: 0.75rem 1rem !important;
-                font-size: 0.9rem !important;
+                padding: 0.875rem 1.25rem !important;
+                font-size: 1rem !important;
             }
 
             .shape-1 {
@@ -438,56 +400,68 @@
             }
 
             form.space-y-5 > * + * {
-                margin-top: 0.85rem !important;
+                margin-top: 1rem !important;
             }
 
             form .border-t-2.pt-6 {
-                padding-top: 1rem !important;
-                margin-top: 1rem !important;
+                padding-top: 1.25rem !important;
+                margin-top: 1.25rem !important;
             }
         }
 
         @media (max-width: 480px) {
             .login-visual-section {
-                padding: 0.75rem 0.6rem 0.6rem;
+                padding: 1rem 0.75rem 0.75rem;
             }
 
             .login-form-section {
-                padding: 0.75rem 0.6rem 1rem;
+                padding: 1rem 0.75rem 1.25rem;
             }
 
             .visual-title {
-                font-size: 0.9rem !important;
+                font-size: 1rem !important;
             }
 
             .visual-desc {
-                font-size: 0.65rem !important;
+                font-size: 0.75rem !important;
             }
 
             .visual-badges > div {
-                padding: 0.25rem 0.35rem !important;
+                padding: 0.35rem 0.5rem !important;
             }
 
             .visual-badges span,
             .visual-badges i {
-                font-size: 0.55rem !important;
+                font-size: 0.65rem !important;
             }
 
             .login-form-wrapper h2 {
-                font-size: 1.05rem !important;
+                font-size: 1.35rem !important;
             }
 
             .login-form-wrapper .text-center p {
-                font-size: 0.7rem !important;
+                font-size: 0.875rem !important;
+            }
+
+            .form-input {
+                padding: 0.75rem 1rem !important;
+                font-size: 1rem !important;
+            }
+
+            .btn-login {
+                padding: 0.875rem 1.25rem !important;
+                font-size: 1rem !important;
             }
         }
 
-        /* ─── تصميم الهاتف: نافبار موحد + بطاقة ترحيب + نموذج في بطاقة ─── */
+        /* ─── تصميم الهاتف: نافبار موحد + بطاقة ترحيب + نموذج بعرض كامل ─── */
         .login-mobile-wrap {
             display: none;
             min-height: 100vh;
-            background: linear-gradient(to bottom, #f0f9ff, #e0f2fe);
+            background: #f9fafb;
             padding-bottom: 2rem;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         @media (max-width: 768px) {
@@ -499,6 +473,7 @@
                 padding-top: 5rem;
                 height: auto;
                 min-height: 100vh;
+                width: 100%;
             }
 
             .login-container {
@@ -507,36 +482,83 @@
 
             .login-mobile-wrap {
                 display: block;
+                width: 100%;
+                padding: 0 0.75rem 2rem;
+                box-sizing: border-box;
+            }
+
+            .login-mobile-welcome {
+                margin: 0.5rem 0 0;
+                width: 100%;
+                box-sizing: border-box;
+            }
+
+            .login-mobile-form-wrap {
+                width: 100%;
+                padding: 1rem 0.75rem 0;
+                box-sizing: border-box;
+            }
+
+            .login-mobile-form-wrap .section-title,
+            .login-mobile-form-wrap .section-subtitle {
+                text-align: center;
+            }
+
+            .login-mobile-form-card {
+                width: 100%;
+                max-width: none;
+                box-sizing: border-box;
             }
 
             body {
                 overflow-y: auto;
+                overflow-x: hidden;
+                width: 100%;
+            }
+
+            html {
+                width: 100%;
+                overflow-x: hidden;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .login-mobile-wrap {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+
+            .login-mobile-form-wrap {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+
+            .login-mobile-form-card {
+                padding: 1.25rem 1rem;
             }
         }
 
         /* النافبار الموحد: المسافة من .login-wrapper كافية */
 
-        /* بطاقة الترحيب - ألواننا (أزرق/أخضر) وطول أوضح */
+        /* بطاقة الترحيب - صورة brainstorm-meeting */
         .login-mobile-welcome {
-            margin: 0.5rem 1rem 0;
-            padding: 2rem 1.25rem 2rem;
+            margin: 0.5rem 0 0;
+            padding: 2rem 1rem 2rem;
             min-height: 9rem;
-            background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 45%, #059669 100%);
+            background: url('{{ asset("images/brainstorm-meeting.jpg") }}') center center / cover no-repeat;
             border-radius: 20px;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 4px 24px rgba(30, 64, 175, 0.25), 0 2px 12px rgba(16, 185, 129, 0.15);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
         }
 
         .login-mobile-welcome::before {
             content: '';
             position: absolute;
-            top: -20%;
-            right: -10%;
-            width: 120px;
-            height: 120px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 50%;
+            inset: 0;
+            border-radius: 20px;
+            background: linear-gradient(135deg, rgba(30, 64, 175, 0.8) 0%, rgba(37, 99, 235, 0.75) 100%);
+            z-index: 0;
         }
 
         .login-mobile-welcome::after {
@@ -546,8 +568,9 @@
             left: -5%;
             width: 80px;
             height: 80px;
-            background: rgba(16, 185, 129, 0.2);
+            background: rgba(255, 255, 255, 0.08);
             border-radius: 50%;
+            z-index: 0;
         }
 
         .login-mobile-welcome .welcome-title {
@@ -568,38 +591,23 @@
             z-index: 1;
         }
 
-        .login-mobile-welcome .welcome-icon {
-            position: absolute;
-            top: 1.25rem;
-            left: 1.25rem;
-            width: 3rem;
-            height: 3rem;
-            border-radius: 14px;
-            background: rgba(255,255,255,0.25);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            font-size: 1.25rem;
-            z-index: 1;
-        }
-
-        /* قسم تسجيل الدخول - ألواننا */
         .login-mobile-form-wrap {
-            padding: 1.5rem 1rem 0;
+            padding: 1.5rem 0.75rem 0;
+            width: 100%;
+            max-width: 100%;
         }
 
         .login-mobile-form-wrap .section-title {
-            font-size: 1.4rem;
+            font-size: 1.5rem;
             font-weight: 800;
-            color: #1e40af;
+            color: var(--text-dark);
             text-align: center;
-            margin: 0 0 0.25rem 0;
+            margin: 0 0 0.35rem 0;
         }
 
         .login-mobile-form-wrap .section-subtitle {
-            font-size: 0.85rem;
-            color: #3b82f6;
+            font-size: 0.9rem;
+            color: var(--text-muted);
             text-align: center;
             margin: 0 0 1.25rem 0;
         }
@@ -607,23 +615,27 @@
         .login-mobile-form-card {
             background: #fff;
             border-radius: 20px;
-            padding: 1.25rem 1rem;
-            box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+            padding: 1.5rem 1.25rem;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04);
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
         }
 
         .login-mobile-form-card .form-input {
-            background: #f0f9ff;
-            border: 1px solid #bae6fd;
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
             border-radius: 12px;
             padding: 0.75rem 2.5rem 0.75rem 1rem;
-            font-size: 0.9375rem;
+            font-size: 1rem;
+            transition: all 0.2s ease;
         }
 
         .login-mobile-form-card .form-input:focus {
             background: #fff;
-            border-color: #3b82f6;
+            border-color: var(--color-primary);
             outline: none;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+            box-shadow: 0 0 0 3px var(--color-primary-light);
         }
 
         .login-mobile-form-card .form-input.pl-12 {
@@ -631,16 +643,16 @@
         }
 
         .login-mobile-form-card label {
-            font-size: 0.8rem;
+            font-size: 0.875rem;
             font-weight: 700;
-            color: #334155;
-            margin-bottom: 0.4rem;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
             display: block;
         }
 
         .login-mobile-form-card .input-wrap {
             position: relative;
-            margin-bottom: 1rem;
+            margin-bottom: 1.25rem;
         }
 
         .login-mobile-form-card .input-wrap .input-icon {
@@ -648,9 +660,15 @@
             right: 0.85rem;
             top: 50%;
             transform: translateY(-50%);
-            color: #94a3b8;
-            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-size: 0.95rem;
             pointer-events: none;
+        }
+
+        .login-mobile-form-card .btn-login {
+            padding: 0.875rem 1.25rem;
+            font-size: 1rem;
+            border-radius: 12px;
         }
     </style>
 </head>
@@ -665,11 +683,8 @@
         <div class="login-mobile-wrap">
             <!-- بطاقة الترحيب -->
             <div class="login-mobile-welcome">
-                <div class="welcome-icon">
-                    <i class="fas fa-graduation-cap"></i>
-                </div>
-                <h1 class="welcome-title">مرحباً بعودتك!</h1>
-                <p class="welcome-desc">سجل دخولك للوصول إلى حسابك ومتابعة كورساتك وإنجازاتك</p>
+                <h1 class="welcome-title">مرحباً بعودتك</h1>
+                <p class="welcome-desc">سجّل دخولك لمتابعة دوراتك وإنجازاتك</p>
             </div>
 
             <!-- تسجيل الدخول: عنوان + بطاقة بيضاء -->
@@ -711,21 +726,24 @@
                         </div>
                         <div class="flex items-center justify-between text-sm mt-3 mb-4">
                             <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" name="remember" class="w-4 h-4 text-blue-600 rounded">
-                                <span class="text-gray-600">تذكرني</span>
+                                <input type="checkbox" name="remember" class="w-4 h-4 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]">
+                                <span class="text-[var(--text-muted)]">تذكرني</span>
                             </label>
-                            <a href="#" class="text-blue-600 font-semibold">نسيت كلمة المرور؟</a>
+                            <a href="#" class="link-primary text-sm">نسيت كلمة المرور؟</a>
                         </div>
                         <button type="submit" class="btn-login w-full py-3 rounded-xl text-white font-bold text-base flex items-center justify-center gap-2">
-                            <i class="fas fa-sign-in-alt"></i>
                             <span>تسجيل الدخول</span>
                         </button>
-                        <div class="text-center pt-4 mt-4 border-t border-gray-200">
-                            <p class="text-sm text-gray-600 mb-1">ليس لديك حساب؟</p>
-                            <a href="{{ route('register') }}" class="text-blue-600 font-bold text-sm inline-flex items-center gap-1">
-                                <i class="fas fa-user-plus"></i>
-                                <span>سجل الآن</span>
-                            </a>
+                        <div class="relative my-4">
+                            <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-[var(--input-border)]"></div></div>
+                            <div class="relative flex justify-center text-sm"><span class="bg-white px-3 text-[var(--text-muted)]">أو</span></div>
+                        </div>
+                        <a href="{{ route('auth.google.redirect') }}" class="btn-social btn-google w-full flex items-center justify-center gap-3 py-3 rounded-xl" aria-label="تسجيل الدخول أو إنشاء حساب بـ Google">
+                            <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                            <span>متابعة بـ Google</span>
+                        </a>
+                        <div class="text-center pt-4 mt-4 border-t border-[var(--input-border)]">
+                            <p class="text-sm text-[var(--text-muted)]">ليس لديك حساب؟ <a href="{{ route('register') }}" class="link-primary font-bold">سجّل الآن</a></p>
                         </div>
                     </form>
                 </div>
@@ -742,151 +760,111 @@
                     <div class="shape shape-3"></div>
                 </div>
                 <div class="visual-content">
-                    <div class="visual-logo-wrap mb-4 md:mb-8">
-                        <div class="relative inline-flex items-center justify-center">
-                            <div class="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl blur-xl opacity-50"></div>
-                            <div class="relative inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-xl md:rounded-2xl shadow-2xl overflow-hidden bg-white/10 backdrop-blur-md border-2 border-white/20">
-                                <img src="{{ asset('logo-removebg-preview.png') }}" alt="Mindlytics Logo" class="w-full h-full object-contain rounded-xl md:rounded-2xl">
-                            </div>
-                        </div>
-                    </div>
                     <h1 class="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-black mb-2 md:mb-6 leading-tight text-white drop-shadow-lg visual-title">
-                        مرحباً بك في <span class="text-blue-200">Mindlytics</span>
+                        معاً نُطوّر مهاراتنا
                     </h1>
-                    <p class="text-xs sm:text-sm md:text-lg lg:text-xl text-white/90 mb-3 md:mb-10 leading-relaxed font-bold px-1 md:px-2 drop-shadow-md visual-desc">
-                        منصة متكاملة لإدارة وتطوير قدراتك الذهنية والتعليمية
+                    <p class="text-xs sm:text-sm md:text-lg lg:text-xl text-white/90 mb-3 md:mb-8 leading-relaxed font-bold px-1 md:px-2 drop-shadow-md visual-desc">
+                        تعلّم، تشارك، وتنمو في بيئة واحدة
                     </p>
                     <div class="flex flex-wrap justify-center gap-2 md:gap-4 px-1 md:px-2 visual-badges">
                         <div class="flex items-center gap-1.5 md:gap-2 bg-white/10 backdrop-blur-md px-2 py-1.5 md:px-5 md:py-3 rounded-lg md:rounded-xl border-2 border-white/30 shadow-xl hover:bg-white/20 transition-all">
-                            <i class="fas fa-check-circle text-blue-200 text-xs md:text-base"></i>
-                            <span class="font-bold text-[10px] md:text-sm text-white">سهولة الاستخدام</span>
+                            <i class="fas fa-check-circle text-white/90 text-xs md:text-base"></i>
+                            <span class="font-bold text-[10px] md:text-sm text-white">تعلم فعّال</span>
                         </div>
                         <div class="flex items-center gap-1.5 md:gap-2 bg-white/10 backdrop-blur-md px-2 py-1.5 md:px-5 md:py-3 rounded-lg md:rounded-xl border-2 border-white/30 shadow-xl hover:bg-white/20 transition-all">
-                            <i class="fas fa-shield-alt text-blue-200 text-xs md:text-base"></i>
-                            <span class="font-bold text-[10px] md:text-sm text-white">أمان عالي</span>
+                            <i class="fas fa-users text-white/90 text-xs md:text-base"></i>
+                            <span class="font-bold text-[10px] md:text-sm text-white">تعاون ومشاركة</span>
                         </div>
                         <div class="flex items-center gap-1.5 md:gap-2 bg-white/10 backdrop-blur-md px-2 py-1.5 md:px-5 md:py-3 rounded-lg md:rounded-xl border-2 border-white/30 shadow-xl hover:bg-white/20 transition-all">
-                            <i class="fas fa-headset text-blue-200 text-xs md:text-base"></i>
-                            <span class="font-bold text-[10px] md:text-sm text-white">دعم فني متواصل</span>
+                            <i class="fas fa-chart-line text-white/90 text-xs md:text-base"></i>
+                            <span class="font-bold text-[10px] md:text-sm text-white">نمو مستمر</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Left Section: Login Form -->
+            <!-- القسم الأيمن في RTL: لوحة النموذج البيضاء -->
             <div class="login-form-section">
                 <div class="login-form-wrapper">
-                    <!-- Header -->
-                    <div class="text-center mb-8 md:mb-12">
-                        <div class="relative inline-flex items-center justify-center mb-4 md:mb-6">
-                            <div class="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl blur-md opacity-40"></div>
-                            <div class="relative inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-blue-600 via-blue-500 to-blue-600 rounded-xl shadow-lg">
-                                <i class="fas fa-sign-in-alt text-white text-xl md:text-2xl"></i>
-                            </div>
-                        </div>
-                        <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-blue-900 mb-2 md:mb-3">مرحباً بك</h2>
-                        <p class="text-blue-700 text-sm md:text-base font-semibold">سجل دخولك للوصول إلى حسابك</p>
-                    </div>
+                    <h2 class="login-page-title text-2xl md:text-3xl font-black text-[var(--text-dark)] text-center mb-8">
+                        تسجيل الدخول إلى <span class="text-[var(--color-primary)]">Mindlytics</span>
+                    </h2>
 
-                    <!-- Login Form -->
-                    <form action="{{ route('login') }}" method="POST" class="space-y-5 md:space-y-6">
+                    <form action="{{ route('login') }}" method="POST" class="space-y-5">
                         @csrf
                         
-                        <!-- Email -->
                         <div>
-                            <label for="email" class="block text-sm font-black text-blue-900 mb-2.5">
-                                البريد الإلكتروني <span class="text-red-500">*</span>
-                            </label>
-                            <div class="relative">
-                                <div class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none">
-                                    <i class="fas fa-envelope text-sm"></i>
-                                </div>
-                                <input type="email" 
-                                       name="email" 
-                                       id="email" 
-                                       value="{{ old('email') }}"
-                                       required 
-                                       autocomplete="email"
-                                       class="form-input w-full px-4 py-3.5 pr-10 rounded-xl text-gray-900 font-medium @error('email') border-red-500 @enderror" 
-                                       placeholder="example@email.com" 
-                                       dir="ltr"
-                                       autofocus>
-                            </div>
+                            <input type="email" 
+                                   name="email" 
+                                   id="email" 
+                                   value="{{ old('email') }}"
+                                   required 
+                                   autocomplete="email"
+                                   class="form-input w-full px-4 py-3.5 rounded-xl text-[var(--text-dark)] font-medium @error('email') border-red-500 @enderror" 
+                                   placeholder="البريد الإلكتروني" 
+                                   dir="ltr"
+                                   autofocus>
                             @error('email')
-                                <p class="mt-1.5 text-xs text-red-600 font-medium">
-                                    {{ $message }}
-                                </p>
+                                <p class="mt-1.5 text-xs text-red-600 font-medium">{{ $message }}</p>
                             @enderror
                         </div>
                         
-                        <!-- Honeypot Field (حماية من البوتات) -->
                         <div style="display: none;" aria-hidden="true">
-                            <label for="website">الموقع الإلكتروني</label>
-                            <input type="text" name="website" id="website" tabindex="-1" autocomplete="off">
+                            <input type="text" name="website" tabindex="-1" autocomplete="off">
                         </div>
 
-                        <!-- Password -->
-                        <div>
-                            <label for="password" class="block text-sm font-black text-blue-900 mb-2.5">
-                                كلمة المرور
-                            </label>
-                            <div class="relative">
-                                <div class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none">
-                                    <i class="fas fa-lock text-sm"></i>
-                                </div>
-                                <input :type="showPassword ? 'text' : 'password'" 
-                                       name="password" 
-                                       id="password" 
-                                       required 
-                                       class="form-input w-full px-4 py-3.5 pr-10 pl-12 rounded-xl text-gray-900 font-medium @error('password') border-red-500 @enderror" 
-                                       placeholder="أدخل كلمة المرور">
-                                <button type="button" 
-                                        @click="showPassword = !showPassword" 
-                                        class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-600 transition-colors focus:outline-none">
-                                    <i x-show="!showPassword" class="fas fa-eye text-sm"></i>
-                                    <i x-show="showPassword" class="fas fa-eye-slash text-sm"></i>
-                                </button>
-                            </div>
-                            @error('password')
-                                <p class="mt-1.5 text-xs text-red-600 font-medium">
-                                    {{ $message }}
-                                </p>
-                            @enderror
+                        <div class="relative">
+                            <input :type="showPassword ? 'text' : 'password'" 
+                                   name="password" 
+                                   id="password" 
+                                   required 
+                                   class="form-input w-full px-4 py-3.5 pr-12 pl-4 rounded-xl text-[var(--text-dark)] font-medium @error('password') border-red-500 @enderror" 
+                                   placeholder="كلمة المرور">
+                            <button type="button" 
+                                    @click="showPassword = !showPassword" 
+                                    class="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--color-primary)] transition-colors focus:outline-none">
+                                <i x-show="!showPassword" class="fas fa-eye text-sm"></i>
+                                <i x-show="showPassword" class="fas fa-eye-slash text-sm"></i>
+                            </button>
                         </div>
+                        @error('password')
+                            <p class="mt-1.5 text-xs text-red-600 font-medium">{{ $message }}</p>
+                        @enderror
 
-                        <!-- Remember & Forgot Password -->
                         <div class="flex items-center justify-between text-sm">
-                            <label class="flex items-center cursor-pointer">
-                                <input type="checkbox" 
-                                       name="remember" 
-                                       id="remember" 
-                                       class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-600 focus:ring-2">
-                                <span class="mr-2 text-gray-600 font-medium">تذكرني</span>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" name="remember" id="remember" 
+                                       class="w-4 h-4 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]">
+                                <span class="text-[var(--text-muted)] font-medium">تذكرني</span>
                             </label>
-                            <a href="#" class="text-blue-600 hover:text-blue-800 font-bold transition-colors">
-                                نسيت كلمة المرور؟
-                            </a>
+                            <a href="#" class="link-primary text-sm">نسيت كلمة المرور؟</a>
                         </div>
 
-                        <!-- Submit Button -->
                         <button type="submit" 
-                                class="btn-login w-full py-3.5 md:py-4 rounded-xl text-white font-black text-base md:text-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 mt-6 md:mt-10">
-                            <i class="fas fa-sign-in-alt text-lg md:text-xl"></i>
-                            <span>تسجيل الدخول</span>
+                                class="btn-login w-full py-3.5 rounded-xl text-white font-bold text-base flex items-center justify-center gap-2">
+                            تسجيل الدخول
                         </button>
-
-                        <!-- Register Link -->
-                        <div class="text-center pt-6 md:pt-8 mt-6 md:mt-8 border-t-2 border-gray-200">
-                            <p class="text-sm md:text-base text-gray-600 mb-2 md:mb-3 font-semibold">
-                                ليس لديك حساب؟
-                            </p>
-                            <a href="{{ route('register') }}" 
-                               class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-black transition-colors text-sm md:text-base">
-                                <i class="fas fa-user-plus text-base md:text-lg"></i>
-                                <span>سجل الآن</span>
-                            </a>
-                        </div>
                     </form>
+
+                    <div class="relative my-6">
+                        <div class="absolute inset-0 flex items-center">
+                            <div class="w-full border-t border-[var(--input-border)]"></div>
+                        </div>
+                        <div class="relative flex justify-center text-sm">
+                            <span class="bg-white px-3 text-[var(--text-muted)]">أو سجّل الدخول باستخدام</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <a href="{{ route('auth.google.redirect') }}" class="btn-social btn-google w-full flex items-center justify-center gap-3" aria-label="تسجيل الدخول أو إنشاء حساب طالب بـ Google">
+                            <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                            <span>متابعة بـ Google</span>
+                        </a>
+                    </div>
+
+                    <p class="text-center text-sm text-[var(--text-muted)] mt-8">
+                        ليس لديك حساب؟ <a href="{{ route('register') }}" class="link-primary font-bold">سجّل الآن</a>
+                    </p>
                 </div>
             </div>
         </div>
