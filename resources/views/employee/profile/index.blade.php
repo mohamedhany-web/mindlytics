@@ -65,7 +65,7 @@
             <div class="flex flex-col sm:flex-row sm:items-center gap-5 w-full lg:w-auto">
                 <div class="profile-avatar flex items-center justify-center h-24 w-24 sm:h-28 sm:w-28 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 text-white overflow-hidden mx-auto sm:mx-0">
                     @if($user->profile_image)
-                        <img src="{{ asset($user->profile_image) }}" alt="صورة الملف الشخصي" class="w-full h-full object-cover">
+                        <img src="{{ $user->profile_image_url }}" alt="صورة الملف الشخصي" class="w-full h-full object-cover">
                     @else
                         <span class="text-4xl font-bold">{{ mb_substr($user->name, 0, 1, 'UTF-8') }}</span>
                     @endif
@@ -195,7 +195,7 @@
                 <div class="flex flex-col sm:flex-row sm:items-center gap-4">
                     <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden border-2 border-dashed border-blue-300 bg-gray-50 flex items-center justify-center">
                         @if($user->profile_image)
-                            <img src="{{ asset($user->profile_image) }}" alt="صورة الملف الشخصي" class="w-full h-full object-cover">
+                            <img src="{{ $user->profile_image_url }}" alt="صورة الملف الشخصي" class="w-full h-full object-cover">
                         @else
                             <i class="fas fa-camera text-blue-500 text-3xl"></i>
                         @endif

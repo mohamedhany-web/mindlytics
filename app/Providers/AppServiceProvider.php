@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,6 +21,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // إجبار روابط الموقع على HTTPS في الإنتاج (حل مشكلة عدم ظهور الصور عند Mixed Content)
+        if ($this->app->environment('production') && config('app.url')) {
+            URL::forceScheme('https');
+            $publicUrl = config('filesystems.disks.public.url');
+            if ($publicUrl && str_starts_with($publicUrl, 'http://')) {
+                config(['filesystems.disks.public.url' => 'https://' . substr($publicUrl, 7)]);
+            }
+        }
+
         // Observers للنماذج - مع تحسينات الأداء
         \App\Models\User::observe(\App\Observers\UserObserver::class);
         \App\Models\StudentCourseEnrollment::observe(\App\Observers\EnrollmentObserver::class);

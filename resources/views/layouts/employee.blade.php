@@ -116,7 +116,7 @@
                             <button @click="open = !open" class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
                                 @php
                                     $user = auth()->user();
-                                    $profileImage = $user->profile_image ? asset($user->profile_image) : null;
+                                    $profileImage = $user->profile_image_url;
                                 @endphp
                                 @if($profileImage)
                                     <img src="{{ $profileImage }}" alt="{{ $user->name }}" class="w-8 h-8 rounded-full object-cover border-2 border-blue-200">

@@ -83,6 +83,21 @@ class User extends Authenticatable
     }
 
     /**
+     * رابط صورة الملف الشخصي (دائماً عبر /storage/ ليعمل أونلاين بدون symlink)
+     */
+    public function getProfileImageUrlAttribute(): ?string
+    {
+        if (empty($this->profile_image)) {
+            return null;
+        }
+        $path = $this->profile_image;
+        if (str_starts_with($path, 'storage/')) {
+            return asset($path);
+        }
+        return asset('storage/' . $path);
+    }
+
+    /**
      * هل هذا المستخدم مطلوب له تفعيل المصادقة الثنائية (أدمن ومدير عام فقط)
      */
     public function requiresTwoFactor(): bool

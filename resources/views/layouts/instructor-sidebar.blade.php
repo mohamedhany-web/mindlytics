@@ -236,7 +236,7 @@
         <div class="flex items-center gap-3 p-2.5 rounded-xl bg-white border border-slate-200 shadow-sm">
             <div class="w-10 h-10 rounded-xl bg-sky-500 flex items-center justify-center text-white font-bold text-sm overflow-hidden flex-shrink-0">
                 @if(auth()->user()->profile_image)
-                    <img src="{{ asset(auth()->user()->profile_image) }}" alt="Profile" class="w-full h-full object-cover">
+                    <img src="{{ auth()->user()->profile_image_url }}" alt="Profile" class="w-full h-full object-cover">
                 @else
                     {{ mb_substr(auth()->user()->name, 0, 1) }}
                 @endif

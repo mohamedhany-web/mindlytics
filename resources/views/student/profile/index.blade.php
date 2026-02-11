@@ -45,8 +45,6 @@
         ['icon' => 'fa-bell', 'label' => 'الإشعارات', 'value' => $notificationsCount, 'color' => 'from-emerald-500 to-emerald-600'],
         ['icon' => 'fa-clock-rotate-left', 'label' => 'آخر تسجيل دخول', 'value' => $lastLogin ?: '—', 'color' => 'from-amber-400 to-amber-500'],
     ];
-
-    $profileImageUrl = $user->profile_image ? asset('storage/'.$user->profile_image) : null;
 @endphp
 
 <div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -56,7 +54,7 @@
             <div class="flex flex-col sm:flex-row sm:items-center gap-5 w-full lg:w-auto">
                 <div class="profile-avatar flex items-center justify-center h-24 w-24 sm:h-28 sm:w-28 rounded-2xl bg-gradient-to-br {{ $roleMeta['color'] }} text-white overflow-hidden mx-auto sm:mx-0">
                     @if($user->profile_image)
-                        <img src="{{ asset($user->profile_image) }}" alt="صورة الملف الشخصي" class="w-full h-full object-cover">
+                        <img src="{{ $user->profile_image_url }}" alt="صورة الملف الشخصي" class="w-full h-full object-cover">
                     @else
                         <span class="text-4xl sm:text-5xl font-black leading-none">{{ mb_substr($user->name, 0, 1) }}</span>
                     @endif
@@ -242,7 +240,7 @@
                         <div class="flex flex-col sm:flex-row sm:items-center gap-4">
                             <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden border-2 border-dashed border-sky-500/30 bg-gradient-to-br from-sky-500/5 to-sky-400/5 flex items-center justify-center">
                                 @if($user->profile_image)
-                                    <img src="{{ asset($user->profile_image) }}" alt="صورة الملف الشخصي" class="w-full h-full object-cover">
+                                    <img src="{{ $user->profile_image_url }}" alt="صورة الملف الشخصي" class="w-full h-full object-cover">
                                 @else
                                     <i class="fas fa-camera text-sky-500 text-3xl"></i>
                                 @endif

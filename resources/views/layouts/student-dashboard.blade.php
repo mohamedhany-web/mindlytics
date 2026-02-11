@@ -594,7 +594,7 @@ x-init="
                                     class="user-menu-btn flex items-center gap-1.5 sm:gap-2 md:gap-3 p-1 sm:p-1.5 md:p-2 rounded-xl">
                                 <div class="user-avatar flex-shrink-0">
                                     @if(auth()->user()->profile_image)
-                                        <img src="{{ asset(auth()->user()->profile_image) }}" alt="" class="w-full h-full rounded-lg object-cover">
+                                        <img src="{{ auth()->user()->profile_image_url }}" alt="" class="w-full h-full rounded-lg object-cover">
                                     @else
                                         {{ substr(auth()->user()->name, 0, 1) }}
                                     @endif
@@ -613,7 +613,7 @@ x-init="
                                     <div class="flex items-center gap-2 sm:gap-3">
                                         <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-sky-500 to-sky-400 flex items-center justify-center text-white font-bold text-sm sm:text-base shadow-lg flex-shrink-0">
                                             @if(auth()->user()->profile_image)
-                                                <img src="{{ asset(auth()->user()->profile_image) }}" alt="" class="w-full h-full rounded-xl object-cover">
+                                                <img src="{{ auth()->user()->profile_image_url }}" alt="" class="w-full h-full rounded-xl object-cover">
                                             @else
                                                 {{ substr(auth()->user()->name, 0, 1) }}
                                             @endif

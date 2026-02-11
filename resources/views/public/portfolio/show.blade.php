@@ -51,7 +51,7 @@
                 <!-- الطالب -->
                 <div class="mt-8 pt-8 border-t border-gray-200 flex items-center gap-4">
                     @if($project->user->profile_image)
-                        <img src="{{ asset($project->user->profile_image) }}" alt="" class="w-14 h-14 rounded-full object-cover border-2 border-blue-600/20">
+                        <img src="{{ $project->user->profile_image_url }}" alt="" class="w-14 h-14 rounded-full object-cover border-2 border-blue-600/20">
                     @else
                         <span class="w-14 h-14 rounded-full bg-gradient-to-br from-blue-600 to-green-500 text-white flex items-center justify-center text-xl font-black">{{ mb_substr($project->user->name ?? 'ط', 0, 1) }}</span>
                     @endif

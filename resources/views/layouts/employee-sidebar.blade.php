@@ -108,7 +108,7 @@
         <div class="flex items-center gap-3 mb-3">
             @php
                 $user = auth()->user();
-                $profileImage = $user->profile_image ? asset($user->profile_image) : null;
+                $profileImage = $user->profile_image_url;
             @endphp
             @if($profileImage)
                 <img src="{{ $profileImage }}" alt="{{ $user->name }}" class="w-10 h-10 rounded-full object-cover border-2 border-blue-400 flex-shrink-0">

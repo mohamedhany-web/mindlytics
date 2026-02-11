@@ -62,7 +62,7 @@
                                     <div class="flex items-center justify-between">
                                         <div class="flex items-center gap-2">
                                             @if($project->user->profile_image)
-                                                <img src="{{ asset($project->user->profile_image) }}" alt="" class="w-8 h-8 rounded-full object-cover">
+                                                <img src="{{ $project->user->profile_image_url }}" alt="" class="w-8 h-8 rounded-full object-cover">
                                             @else
                                                 <span class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold">{{ mb_substr($project->user->name ?? 'ط', 0, 1) }}</span>
                                             @endif
