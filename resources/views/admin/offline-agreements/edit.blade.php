@@ -49,6 +49,18 @@
                     </select>
                 </div>
 
+                <!-- نوع الاتفاقية -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">نوع الاتفاقية *</label>
+                    <select name="billing_type" id="billing_type" required 
+                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                        <option value="per_session" {{ old('billing_type', $agreement->billing_type ?? 'per_session') == 'per_session' ? 'selected' : '' }}>بالجلسة</option>
+                        <option value="monthly" {{ old('billing_type', $agreement->billing_type ?? '') == 'monthly' ? 'selected' : '' }}>راتب شهري</option>
+                        <option value="full_course" {{ old('billing_type', $agreement->billing_type ?? '') == 'full_course' ? 'selected' : '' }}>باكورس كامل</option>
+                    </select>
+                    @error('billing_type')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                </div>
+
                 <!-- العنوان -->
                 <div class="md:col-span-2">
                     <label class="block text-sm font-medium text-gray-700 mb-2">عنوان الاتفاقية *</label>
@@ -79,20 +91,44 @@
                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
                 </div>
 
-                <!-- الراتب لكل جلسة -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">الراتب لكل جلسة *</label>
-                    <input type="number" name="salary_per_session" value="{{ old('salary_per_session', $agreement->salary_per_session) }}" min="0" step="0.01" required 
-                           class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                    @error('salary_per_session')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                <!-- حقول نوع: بالجلسة -->
+                <div id="billing_per_session_fields" class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 billing-type-fields">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">الراتب لكل جلسة (ج.م) *</label>
+                        <input type="number" name="salary_per_session" id="salary_per_session" value="{{ old('salary_per_session', $agreement->salary_per_session) }}" min="0" step="0.01" 
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                        @error('salary_per_session')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">عدد الجلسات *</label>
+                        <input type="number" name="sessions_count" id="sessions_count" value="{{ old('sessions_count', $agreement->sessions_count) }}" min="0" step="1" 
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                        @error('sessions_count')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
                 </div>
 
-                <!-- عدد الجلسات -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">عدد الجلسات *</label>
-                    <input type="number" name="sessions_count" value="{{ old('sessions_count', $agreement->sessions_count) }}" min="1" required 
+                <!-- حقول نوع: راتب شهري -->
+                <div id="billing_monthly_fields" class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 billing-type-fields" style="display: none;">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">الراتب الشهري (ج.م) *</label>
+                        <input type="number" name="monthly_amount" id="monthly_amount" value="{{ old('monthly_amount', $agreement->monthly_amount) }}" min="0" step="0.01" 
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                        @error('monthly_amount')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">عدد الأشهر *</label>
+                        <input type="number" name="months_count" id="months_count" value="{{ old('months_count', $agreement->months_count) }}" min="1" step="1" 
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                        @error('months_count')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+
+                <!-- حقول نوع: باكورس كامل -->
+                <div id="billing_full_course_fields" class="md:col-span-2 billing-type-fields" style="display: none;">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">إجمالي قيمة الكورس (ج.م) *</label>
+                    <input type="number" name="total_amount" id="total_amount_input" value="{{ old('total_amount', $agreement->total_amount) }}" min="0" step="0.01" 
                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                    @error('sessions_count')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    @error('total_amount')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                 </div>
 
                 <!-- حالة الدفع -->
@@ -145,4 +181,36 @@
         </div>
     </form>
 </div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var billingType = document.getElementById('billing_type');
+    var perSession = document.getElementById('billing_per_session_fields');
+    var monthly = document.getElementById('billing_monthly_fields');
+    var fullCourse = document.getElementById('billing_full_course_fields');
+    var salaryPerSession = document.getElementById('salary_per_session');
+    var sessionsCount = document.getElementById('sessions_count');
+    var monthlyAmount = document.getElementById('monthly_amount');
+    var monthsCount = document.getElementById('months_count');
+    var totalAmountInput = document.getElementById('total_amount_input');
+
+    function toggleBillingFields() {
+        var v = billingType.value;
+        perSession.style.display = v === 'per_session' ? 'grid' : 'none';
+        monthly.style.display = v === 'monthly' ? 'grid' : 'none';
+        fullCourse.style.display = v === 'full_course' ? 'block' : 'none';
+
+        salaryPerSession.required = (v === 'per_session');
+        sessionsCount.required = (v === 'per_session');
+        monthlyAmount.required = (v === 'monthly');
+        monthsCount.required = (v === 'monthly');
+        totalAmountInput.required = (v === 'full_course');
+    }
+
+    billingType.addEventListener('change', toggleBillingFields);
+    toggleBillingFields();
+});
+</script>
+@endpush
 @endsection

@@ -713,14 +713,6 @@
                         </div>
 
                         <div class="input-wrap">
-                            <label for="referral_m">كود الإحالة (اختياري)</label>
-                            <div class="relative">
-                                <i class="input-icon fas fa-gift"></i>
-                                <input type="text" name="referral_code" id="referral_m" value="{{ request()->get('ref') ?? old('referral_code') }}" class="form-input w-full" placeholder="REF123456" dir="ltr">
-                            </div>
-                        </div>
-
-                        <div class="input-wrap">
                             <label for="password_m">كلمة المرور</label>
                             <div class="relative">
                                 <i class="input-icon fas fa-lock"></i>
@@ -880,23 +872,6 @@
                                 @error('email')
                                     <p class="mt-1 text-xs text-red-600 font-medium">{{ $message }}</p>
                                 @enderror
-                            </div>
-
-                            <!-- كود الإحالة -->
-                            @php
-                                $referralCode = request()->get('ref') ?? old('referral_code');
-                            @endphp
-                            <div>
-                                <label for="referral_code" class="block text-sm font-bold text-[var(--text-dark)] mb-1.5">
-                                    كود الإحالة (اختياري)
-                                </label>
-                                <input type="text" 
-                                       name="referral_code" 
-                                       id="referral_code" 
-                                       value="{{ $referralCode }}"
-                                       class="form-input w-full px-4 py-3 rounded-xl text-[var(--text-dark)] font-medium uppercase" 
-                                       placeholder="REF123456"
-                                       dir="ltr">
                             </div>
 
                             <!-- كلمة المرور -->

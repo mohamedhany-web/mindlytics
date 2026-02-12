@@ -9,13 +9,11 @@
 
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="<?php echo e(asset('favicon.ico')); ?>">
-    <link rel="apple-touch-icon" sizes="180x180" href="<?php echo e($platformLogoUrl ?? asset('logo-removebg-preview.png')); ?>">
-    <link rel="icon" type="image/png" sizes="32x32" href="<?php echo e($platformLogoUrl ?? asset('logo-removebg-preview.png')); ?>">
-    <link rel="icon" type="image/png" sizes="16x16" href="<?php echo e($platformLogoUrl ?? asset('logo-removebg-preview.png')); ?>">
+    <link rel="apple-touch-icon" sizes="180x180" href="<?php echo e(asset('logo-removebg-preview.png')); ?>">
+    <link rel="icon" type="image/png" sizes="32x32" href="<?php echo e(asset('logo-removebg-preview.png')); ?>">
+    <link rel="icon" type="image/png" sizes="16x16" href="<?php echo e(asset('logo-removebg-preview.png')); ?>">
 
-    <!-- خط عربي أصيل -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     
     <!-- Tailwind CSS -->
@@ -26,20 +24,6 @@
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <?php
-        $showContentProtection = !empty(trim((string) ($__env->yieldContent('enable-content-protection') ?? '')));
-    ?>
-    <?php if($showContentProtection): ?>
-    <script>
-        window.Laravel = {
-            user: {
-                name: '<?php echo e(auth()->check() ? auth()->user()->name : "زائر"); ?>'
-            }
-        };
-    </script>
-    <script src="<?php echo e(asset('js/platform-protection.js')); ?>"></script>
-    <?php endif; ?>
 
     <style>
         * {
@@ -47,24 +31,24 @@
         }
 
         body {
-            background: #f8fafc;
+            background: #f9fafb;
             overflow-x: hidden;
         }
 
-        /* Clean Sidebar */
+        /* Sidebar - يتناسب مع لوحة التحكم */
         .student-sidebar {
-            background: linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%);
-            border-left: 2px solid #e2e8f0;
+            background: #ffffff;
+            border-left: 1px solid rgb(226 232 240);
             width: 280px;
-            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.03);
+            box-shadow: -1px 0 6px rgba(0, 0, 0, 0.04);
         }
 
         .nav-card {
             background: transparent;
             border: none;
             border-radius: 12px;
-            padding: 12px 14px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 10px 12px;
+            transition: all 0.2s ease;
             cursor: pointer;
             position: relative;
             overflow: hidden;
@@ -77,19 +61,19 @@
             top: 0;
             bottom: 0;
             width: 3px;
-            background: linear-gradient(to bottom, #2CA9BD, #65DBE4);
+            background: rgb(14 165 233);
             opacity: 0;
-            transition: opacity 0.3s;
+            border-radius: 0 3px 3px 0;
+            transition: opacity 0.2s;
         }
 
         .nav-card:hover {
-            background: linear-gradient(to left, rgba(44, 169, 189, 0.08), rgba(101, 219, 228, 0.05));
-            transform: translateX(-2px);
+            background: rgb(241 245 249);
         }
 
         .nav-card.active {
-            background: linear-gradient(to left, rgba(44, 169, 189, 0.15), rgba(101, 219, 228, 0.08));
-            box-shadow: 0 2px 8px rgba(44, 169, 189, 0.15);
+            background: rgb(224 242 254);
+            box-shadow: none;
         }
 
         .nav-card.active::before {
@@ -97,32 +81,26 @@
         }
 
         .nav-card.active .nav-icon {
-            transform: scale(1.05);
-            box-shadow: 0 4px 12px rgba(44, 169, 189, 0.3);
+            transform: scale(1.02);
+            box-shadow: 0 2px 8px rgba(14, 165, 233, 0.2);
         }
 
-        .nav-card.active .font-black {
-            color: #1C2C39;
-        }
-
-        .nav-card.active .text-xs {
-            color: #1F3A56;
-        }
+        .nav-card.active .font-black { color: rgb(17 24 39); }
+        .nav-card.active .text-xs { color: rgb(75 85 99); }
 
         .nav-icon {
-            width: 38px;
-            height: 38px;
+            width: 36px;
+            height: 36px;
             border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 15px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 14px;
+            transition: all 0.2s ease;
             flex-shrink: 0;
             line-height: 1;
             text-align: center;
         }
-        
         .nav-icon i {
             display: inline-flex;
             align-items: center;
@@ -131,33 +109,44 @@
             margin: 0;
             padding: 0;
         }
+        .nav-card:hover .nav-icon { transform: scale(1.05); }
 
-        .nav-card:hover .nav-icon {
-            transform: scale(1.08) rotate(2deg);
-        }
-
-        /* النافبار - نفس أسلوب الكارد */
+        /* Navbar - يتناسب مع لوحة التحكم */
         .student-header {
-            background: white;
+            background: #ffffff;
             border-bottom: 1px solid rgb(226 232 240);
             min-height: 64px;
-            box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
         }
         @media (max-width: 640px) {
-            .student-header { min-height: 56px; padding-top: 0.5rem; padding-bottom: 0.5rem; }
+            .student-header {
+                min-height: 56px;
+                padding-top: 0.5rem;
+                padding-bottom: 0.5rem;
+            }
         }
+
         .search-command {
             background: rgb(248 250 252);
             border: 1px solid rgb(226 232 240);
-            border-radius: 12px;
+            border-radius: 10px;
             padding: 10px 14px;
-            transition: border-color 0.2s, box-shadow 0.2s;
+            transition: all 0.2s ease;
         }
+        
+        @media (max-width: 640px) {
+            .search-command {
+                padding: 8px 12px;
+                border-radius: 10px;
+            }
+        }
+
         .search-command:focus-within {
             border-color: rgb(14 165 233);
-            background: white;
-            box-shadow: 0 0 0 3px rgb(14 165 233 / 0.1);
+            background: #ffffff;
+            box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1), 0 2px 8px rgba(14, 165, 233, 0.12);
         }
+
         .quick-action-btn {
             width: 40px;
             height: 40px;
@@ -165,68 +154,147 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background 0.2s, border-color 0.2s, color 0.2s;
+            transition: all 0.2s ease;
             background: rgb(248 250 252);
             border: 1px solid rgb(226 232 240);
             color: rgb(100 116 139);
+            position: relative;
             line-height: 1;
+            text-align: center;
         }
         .quick-action-btn:hover {
-            background: rgb(241 245 249);
-            border-color: rgb(148 163 184);
+            background: rgb(224 242 254);
+            border-color: rgb(186 230 253);
             color: rgb(14 165 233);
         }
-        .quick-action-btn i { display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+
+        .quick-action-btn i {
+            position: relative;
+            z-index: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            margin: 0;
+            padding: 0;
+            vertical-align: middle;
+        }
+
         .notification-badge {
             position: absolute;
             top: -2px;
             right: -2px;
             min-width: 18px;
             height: 18px;
-            padding: 0 5px;
+            padding: 0 4px;
             background: rgb(239 68 68);
             border-radius: 9999px;
-            font-size: 10px;
-            color: white;
-            font-weight: 600;
-            border: 2px solid white;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 10px;
+            color: white;
+            font-weight: 700;
+            border: 2px solid white;
             line-height: 1;
+            text-align: center;
         }
-        .user-menu-btn { transition: background 0.2s; }
-        .user-menu-btn:hover { background: rgb(248 250 252); }
+        
+        .notification-badge span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            margin: 0;
+            padding: 0;
+            vertical-align: middle;
+        }
+
+        .user-menu-btn {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .user-menu-btn:hover {
+            background: rgb(248 250 252);
+        }
+
         .user-avatar {
             width: 36px;
             height: 36px;
             border-radius: 10px;
-            background: rgb(14 165 233);
+            background: linear-gradient(135deg, rgb(14 165 233), rgb(2 132 199));
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             font-weight: 700;
-            font-size: 14px;
-            transition: box-shadow 0.2s;
+            font-size: 13px;
+            box-shadow: 0 1px 4px rgba(14, 165, 233, 0.25);
+            transition: all 0.2s ease;
             line-height: 1;
+            text-align: center;
         }
-        .user-avatar img { object-fit: cover; border-radius: 10px; }
-        .user-menu-btn:hover .user-avatar { box-shadow: 0 2px 8px rgb(14 165 233 / 0.3); }
+        
+        .user-avatar img {
+            object-fit: cover;
+            object-position: center;
+        }
+        
+        .user-avatar:not(:has(img)) {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .user-menu-btn:hover .user-avatar {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+        }
+
+        /* Dropdown - نفس أسلوب بطاقات لوحة التحكم */
         .dropdown-menu {
             background: white;
             border: 1px solid rgb(226 232 240);
             border-radius: 12px;
-            box-shadow: 0 10px 25px rgb(0 0 0 / 0.08);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
             overflow: hidden;
         }
         .dropdown-item {
+            transition: all 0.15s ease;
             display: flex;
             align-items: center;
-            transition: background 0.15s;
         }
-        .dropdown-item:hover { background: rgb(248 250 252); }
-        .dropdown-item i { display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+        .dropdown-item:hover {
+            background: rgb(248 250 252);
+        }
+        
+        .dropdown-item i {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            margin: 0;
+            padding: 0;
+            vertical-align: middle;
+        }
+
+        /* Scrollbar */
+        .sidebar-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, rgb(14 165 233), rgb(2 132 199));
+            border-radius: 3px;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to bottom, rgb(2 132 199), rgb(14 165 233));
+        }
 
         .logo-section {
             background: rgb(248 250 252);
@@ -245,46 +313,145 @@
             margin: 0 auto !important;
         }
 
-        /* Stats Section Enhancement */
         .stats-card {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.2s ease;
         }
-
         .stats-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(44, 169, 189, 0.2);
+            box-shadow: 0 2px 8px rgba(14, 165, 233, 0.1);
         }
 
-        /* Scrollbar */
-        .sidebar-scroll::-webkit-scrollbar {
-            width: 6px;
+        .user-profile-card {
+            background: rgb(248 250 252);
+            border-top: 1px solid rgb(226 232 240);
+        }
+        .user-profile-inner {
+            transition: all 0.2s ease;
+        }
+        .user-profile-inner:hover {
+            border-color: rgb(186 230 253);
+            box-shadow: 0 2px 8px rgba(14, 165, 233, 0.08);
         }
 
-        .sidebar-scroll::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .sidebar-scroll::-webkit-scrollbar-thumb {
-            background: linear-gradient(to bottom, #2CA9BD, #65DBE4);
-            border-radius: 3px;
-        }
-
-        .sidebar-scroll::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(to bottom, #1F3A56, #2CA9BD);
-        }
-
-        /* Animations */
-        @keyframes slideInRight {
-            from {
-                transform: translateX(100%);
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .student-sidebar {
+                width: 320px;
+                max-width: 85vw;
+                min-width: 280px;
             }
-            to {
-                transform: translateX(0);
+
+            .nav-card {
+                padding: 12px 14px;
+            }
+
+            .nav-icon {
+                width: 36px;
+                height: 36px;
+                font-size: 14px;
             }
         }
 
-        .slide-in-right {
-            animation: slideInRight 0.3s ease-out;
+        @media (max-width: 768px) {
+            .student-sidebar {
+                width: 300px;
+                max-width: 80vw;
+                min-width: 260px;
+            }
+            
+            .student-header {
+                padding-left: 1rem;
+                padding-right: 1rem;
+                height: auto;
+                min-height: 64px;
+            }
+            
+            .search-command {
+                padding: 8px 12px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .student-sidebar {
+                width: 280px;
+                max-width: 85vw;
+                min-width: 0;
+            }
+
+            .logo-section {
+                padding: 0.875rem;
+            }
+
+            .logo-section .w-12 {
+                width: 2.5rem;
+                height: 2.5rem;
+            }
+
+            .stats-card {
+                padding: 0.625rem;
+            }
+
+            .stats-card .text-lg {
+                font-size: 1.125rem;
+            }
+
+            .nav-card {
+                padding: 10px 12px;
+                margin-bottom: 4px;
+            }
+
+            .nav-icon {
+                width: 32px;
+                height: 32px;
+                font-size: 13px;
+            }
+
+            .user-profile-card {
+                padding: 0.625rem;
+            }
+            
+            .student-header {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+                gap: 0.5rem;
+            }
+            
+            .quick-action-btn {
+                width: 38px;
+                height: 38px;
+            }
+            
+            .user-avatar {
+                width: 34px;
+                height: 34px;
+                font-size: 13px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .student-sidebar {
+                width: 260px;
+                max-width: 90vw;
+            }
+            
+            .student-header {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+            
+            .quick-action-btn {
+                width: 36px;
+                height: 36px;
+            }
+            
+            .quick-action-btn i {
+                font-size: 12px;
+            }
+            
+            .user-avatar {
+                width: 32px;
+                height: 32px;
+                font-size: 12px;
+            }
         }
     </style>
 
@@ -294,13 +461,11 @@
     sidebarOpen: window.innerWidth >= 1024
 }" 
 x-init="
-    // إزالة الوضع المظلم من النظام بشكل مستمر
     function removeDarkMode() {
         document.documentElement.classList.remove('dark');
     }
     removeDarkMode();
     
-    // مراقبة وإزالة الوضع المظلم بشكل مستمر
     const observer = new MutationObserver(function(mutations) {
         mutations.forEach(function(mutation) {
             if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
@@ -315,7 +480,6 @@ x-init="
         attributeFilter: ['class']
     });
     
-    // إزالة الوضع المظلم بشكل دوري
     setInterval(removeDarkMode, 100);
     
     window.addEventListener('resize', () => {
@@ -334,11 +498,7 @@ x-init="
                    x-transition:leave-end="opacity-0 translate-x-full"
                    class="student-sidebar flex-shrink-0 fixed lg:static inset-y-0 right-0 z-50 lg:z-auto"
                    style="will-change: transform, opacity;">
-                <?php if(auth()->user()->isInstructor() || auth()->user()->isTeacher()): ?>
-                    <?php echo $__env->make('layouts.instructor-sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
-                <?php else: ?>
-                    <?php echo $__env->make('layouts.student-sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
-                <?php endif; ?>
+                <?php echo $__env->make('layouts.student-sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
             </aside>
 
             <!-- Mobile Overlay -->
@@ -358,28 +518,35 @@ x-init="
         <div class="flex flex-col flex-1 min-w-0">
             <?php if(auth()->guard()->check()): ?>
                 <!-- Enhanced Header -->
-                <header class="student-header flex items-center justify-between px-3 sm:px-4 md:px-6 flex-shrink-0 sticky top-0 z-30">
-                    <div class="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0">
+                <header class="student-header flex items-center justify-between px-4 sm:px-6 lg:px-8 flex-shrink-0 sticky top-0 z-30">
+                    <div class="flex items-center gap-2 sm:gap-3 md:gap-5 flex-1 min-w-0">
                         <!-- Sidebar Toggle -->
                         <button @click="sidebarOpen = !sidebarOpen"
-                                class="lg:hidden p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 hover:bg-slate-200 hover:border-slate-300 flex-shrink-0 flex items-center justify-center transition-colors">
-                            <i class="fas fa-bars text-sm"></i>
+                                class="lg:hidden p-2 sm:p-2.5 rounded-xl bg-gradient-to-br from-sky-500/10 to-sky-400/10 hover:from-sky-500/20 hover:to-sky-400/20 transition-all duration-300 flex-shrink-0 flex items-center justify-center">
+                            <i class="fas fa-bars text-sky-500 text-sm sm:text-base"></i>
                         </button>
 
-                        <!-- Search - Mobile -->
+                        <!-- Enhanced Search - Mobile -->
                         <div class="flex md:hidden items-center flex-1 min-w-0 ml-2">
                             <div class="search-command flex items-center gap-2 w-full">
                                 <i class="fas fa-search text-sky-500 text-xs sm:text-sm flex-shrink-0"></i>
-                                <input type="text" placeholder="بحث..." class="flex-1 bg-transparent border-none outline-none text-xs sm:text-sm text-slate-700 placeholder-slate-400 font-medium min-w-0">
+                                <input type="text" 
+                                       placeholder="بحث..." 
+                                       class="flex-1 bg-transparent border-none outline-none text-xs sm:text-sm text-gray-700 placeholder-gray-400 font-medium min-w-0">
                             </div>
                         </div>
 
-                        <!-- Search - Desktop -->
-                        <div class="hidden md:flex items-center flex-1 max-w-xl min-w-0">
+                        <!-- Enhanced Search - Desktop -->
+                        <div class="hidden md:flex items-center flex-1 max-w-2xl min-w-0">
                             <div class="search-command flex items-center gap-3 w-full">
                                 <i class="fas fa-search text-sky-500 text-sm flex-shrink-0"></i>
-                                <input type="text" placeholder="ابحث عن كورسات، دروس، امتحانات..." class="flex-1 bg-transparent border-none outline-none text-sm text-slate-700 placeholder-slate-400 font-medium min-w-0">
-                                <kbd class="hidden lg:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-600">Ctrl K</kbd>
+                                <input type="text" 
+                                       placeholder="ابحث عن كورسات، دروس، امتحانات..." 
+                                       class="flex-1 bg-transparent border-none outline-none text-sm text-gray-700 placeholder-gray-400 font-medium min-w-0">
+                                <kbd class="hidden lg:flex items-center gap-1 px-2.5 py-1 bg-gradient-to-br from-sky-500/10 to-sky-400/10 rounded text-xs font-bold text-sky-500 border border-sky-500/20 flex-shrink-0">
+                                    <span>Ctrl</span>
+                                    <span>K</span>
+                                </kbd>
                             </div>
                         </div>
                     </div>
@@ -406,15 +573,15 @@ x-init="
                                  @click.away="open = false"
                                  x-transition
                                  class="absolute left-0 mt-3 w-72 sm:w-80 md:w-96 dropdown-menu z-50 overflow-hidden">
-                                <div class="p-3 sm:p-4 border-b border-slate-200 bg-slate-50">
-                                    <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
-                                        <i class="fas fa-bell text-sky-500"></i>
+                                <div class="p-3 sm:p-4 border-b border-gray-200 bg-gradient-to-r from-sky-400/10 to-sky-500/10">
+                                    <h3 class="font-bold text-gray-900 text-xs sm:text-sm flex items-center gap-2">
+                                        <i class="fas fa-bell text-sky-500 flex items-center justify-center"></i>
                                         <span>الإشعارات</span>
                                     </h3>
                                 </div>
                                 <div class="max-h-96 overflow-y-auto">
-                                    <div class="p-4 sm:p-6 text-center text-slate-500 text-sm">
-                                        <i class="fas fa-bell-slash text-2xl mb-2 text-slate-300 inline-block"></i>
+                                    <div class="p-4 sm:p-6 text-center text-gray-500 text-xs sm:text-sm">
+                                        <i class="fas fa-bell-slash text-xl sm:text-2xl mb-2 opacity-30 inline-flex items-center justify-center"></i>
                                         <p>لا توجد إشعارات جديدة</p>
                                     </div>
                                 </div>
@@ -434,12 +601,8 @@ x-init="
                                     <?php endif; ?>
                                 </div>
                                 <div class="hidden sm:block md:hidden lg:block text-right min-w-0">
-                                    <div class="text-xs sm:text-sm font-bold text-slate-800 truncate"><?php echo e(auth()->user()->name); ?></div>
-                                    <div class="text-[10px] sm:text-xs text-slate-500">
-                                        <?php if(auth()->user()->isInstructor() || auth()->user()->isTeacher() || in_array(strtolower(auth()->user()->role ?? ''), ['instructor', 'teacher'])): ?> مدرب
-                                        <?php else: ?> طالب
-                                        <?php endif; ?>
-                                    </div>
+                                    <div class="text-xs sm:text-sm font-bold text-gray-900 truncate"><?php echo e(auth()->user()->name); ?></div>
+                                    <div class="text-[10px] sm:text-xs text-gray-500">طالب</div>
                                 </div>
                                 <i class="fas fa-chevron-down text-[10px] sm:text-xs text-gray-400 hidden sm:block transition-transform flex-shrink-0" :class="{ 'rotate-180': open }"></i>
                             </button>
@@ -447,9 +610,9 @@ x-init="
                                  @click.away="open = false"
                                  x-transition
                                  class="absolute left-0 mt-3 w-56 sm:w-64 dropdown-menu z-50 overflow-hidden">
-                                <div class="p-3 sm:p-4 border-b border-slate-200 bg-slate-50">
-                                    <div class="flex items-center gap-3">
-                                        <div class="user-avatar w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
+                                <div class="p-3 sm:p-4 border-b border-gray-200 bg-gradient-to-r from-sky-400/10 to-sky-500/10">
+                                    <div class="flex items-center gap-2 sm:gap-3">
+                                        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-sky-500 to-sky-400 flex items-center justify-center text-white font-bold text-sm sm:text-base shadow-lg flex-shrink-0">
                                             <?php if(auth()->user()->profile_image): ?>
                                                 <img src="<?php echo e(auth()->user()->profile_image_url); ?>" alt="" class="w-full h-full rounded-xl object-cover">
                                             <?php else: ?>
@@ -457,30 +620,27 @@ x-init="
 
                                             <?php endif; ?>
                                         </div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="text-sm font-bold text-slate-800 truncate"><?php echo e(auth()->user()->name); ?></div>
-                                            <div class="text-xs text-slate-500 truncate"><?php echo e(auth()->user()->email ?? '—'); ?></div>
+                                        <div class="min-w-0 flex-1">
+                                            <div class="font-bold text-gray-900 text-xs sm:text-sm truncate"><?php echo e(auth()->user()->name); ?></div>
+                                            <div class="text-[10px] sm:text-xs text-gray-600 truncate"><?php echo e(auth()->user()->email); ?></div>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="p-2">
-                                    <?php
-                                        $profileRoute = (auth()->user()->isInstructor() || auth()->user()->isTeacher() || in_array(strtolower(auth()->user()->role ?? ''), ['instructor', 'teacher'])) ? route('instructor.profile') : route('profile');
-                                    ?>
-                                    <a href="<?php echo e($profileRoute); ?>" class="dropdown-item px-3 py-2.5 rounded-lg text-sm font-medium text-slate-700">
-                                        <i class="fas fa-user w-5 text-slate-400 mr-2"></i>
-                                        الملف الشخصي
+                                <div class="p-1.5 sm:p-2">
+                                    <a href="<?php echo e(route('profile')); ?>" class="dropdown-item flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm text-gray-700 font-medium">
+                                        <i class="fas fa-user w-4 sm:w-5 text-sky-500 flex-shrink-0"></i>
+                                        <span>الملف الشخصي</span>
                                     </a>
-                                    <a href="<?php echo e(route('settings')); ?>" class="dropdown-item px-3 py-2.5 rounded-lg text-sm font-medium text-slate-700">
-                                        <i class="fas fa-cog w-5 text-slate-400 mr-2"></i>
-                                        الإعدادات
+                                    <a href="<?php echo e(route('settings')); ?>" class="dropdown-item flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm text-gray-700 font-medium">
+                                        <i class="fas fa-cog w-4 sm:w-5 text-gray-500 flex-shrink-0"></i>
+                                        <span>الإعدادات</span>
                                     </a>
-                                    <hr class="my-2 border-slate-200">
+                                    <hr class="my-1.5 sm:my-2 border-gray-200">
                                     <form method="POST" action="<?php echo e(route('logout')); ?>">
                                         <?php echo csrf_field(); ?>
-                                        <button type="submit" class="w-full dropdown-item px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 text-right">
-                                            <i class="fas fa-sign-out-alt w-5 mr-2"></i>
-                                            تسجيل الخروج
+                                        <button type="submit" class="w-full dropdown-item flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm text-red-600 font-medium">
+                                            <i class="fas fa-sign-out-alt w-4 sm:w-5 flex-shrink-0"></i>
+                                            <span>تسجيل الخروج</span>
                                         </button>
                                     </form>
                                 </div>
@@ -491,17 +651,17 @@ x-init="
             <?php endif; ?>
 
             <!-- Main Content -->
-            <main class="flex-1 overflow-auto bg-gray-50">
-                <div class="p-6">
+            <main class="flex-1 overflow-auto bg-gray-50 min-w-0 w-full">
+                <div class="w-full max-w-full p-4 sm:p-6 lg:p-8">
                     <?php if(session('success')): ?>
-                        <div class="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl">
+                        <div class="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm font-medium">
                             <?php echo e(session('success')); ?>
 
                         </div>
                     <?php endif; ?>
 
                     <?php if(session('error')): ?>
-                        <div class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
+                        <div class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm font-medium">
                             <?php echo e(session('error')); ?>
 
                         </div>
@@ -516,15 +676,12 @@ x-init="
     <?php echo $__env->yieldPushContent('scripts'); ?>
     
     <script>
-        // إزالة الوضع المظلم من النظام بشكل مستمر
         function removeDarkMode() {
             document.documentElement.classList.remove('dark');
         }
         
-        // إزالة dark class فوراً
         removeDarkMode();
         
-        // مراقبة وإزالة الوضع المظلم بشكل مستمر
         const observer = new MutationObserver(function(mutations) {
             mutations.forEach(function(mutation) {
                 if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
@@ -539,13 +696,12 @@ x-init="
             attributeFilter: ['class']
         });
         
-        // إزالة الوضع المظلم بشكل دوري
         setInterval(removeDarkMode, 50);
         
-        // إزالة dark class عند تحميل الصفحة
         document.addEventListener('DOMContentLoaded', removeDarkMode);
         window.addEventListener('load', removeDarkMode);
         window.addEventListener('pageshow', removeDarkMode);
     </script>
 </body>
-</html><?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/layouts/app.blade.php ENDPATH**/ ?>
+</html>
+<?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/layouts/student-dashboard.blade.php ENDPATH**/ ?>

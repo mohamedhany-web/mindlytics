@@ -319,17 +319,15 @@ class AuthController extends Controller
             }
         }
 
-        // إرجاع المستخدم للصفحة التي حاول الوصول إليها أو للـ dashboard
-        // التحقق من الدور بالترتيب: موظف -> إداري -> dashboard عادي
+        // بعد إنشاء الحساب نوجّه مباشرة للداشبورد (بدون استخدام intended لتجنب التوجيه لرابط API أو صفحة قديمة)
+        session()->forget('url.intended');
         if ($user->isEmployee()) {
-            return redirect()->intended(route('employee.dashboard'));
+            return redirect()->route('employee.dashboard');
         }
-        
         if ($user->isAdmin()) {
-            return redirect()->intended(route('admin.dashboard'));
+            return redirect()->route('admin.dashboard');
         }
-        
-        return redirect()->intended(route('dashboard'));
+        return redirect()->route('dashboard');
     }
 
     public function logout(Request $request)

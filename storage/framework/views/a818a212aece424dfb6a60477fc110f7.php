@@ -7,7 +7,7 @@
         </button>
         <div class="flex items-center gap-2 md:gap-3 pr-8 lg:pr-0">
             <div class="w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center overflow-hidden bg-slate-100 border border-slate-200 flex-shrink-0">
-                <img src="<?php echo e(asset('logo-removebg-preview.png')); ?>" alt="Mindlytics Logo" class="w-full h-full object-contain" style="transform: none !important; object-position: center !important;">
+                <img src="<?php echo e($platformLogoUrl ?? asset('logo-removebg-preview.png')); ?>" alt="Mindlytics Logo" class="w-full h-full object-contain" style="transform: none !important; object-position: center !important;" onerror="this.onerror=null; this.src='<?php echo e(asset('logo-removebg-preview.png')); ?>';">
             </div>
             <div class="flex-1 min-w-0">
                 <h2 class="text-base md:text-lg font-bold text-slate-800 tracking-tight">Mindlytics</h2>
@@ -187,6 +187,13 @@
                 <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
             </a>
 
+            <a href="<?php echo e(route('instructor.transfer-account.index')); ?>" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.transfer-account.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
+                <div class="w-9 h-9 rounded-lg bg-indigo-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-university text-sm"></i></div>
+                <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">حساب التحويل</div><div class="text-xs text-slate-500 mt-0.5">بيانات استلام المستحقات</div></div>
+                <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
+            </a>
+
             <a href="<?php echo e(route('instructor.withdrawals.index')); ?>" @click="if (window.innerWidth < 1024) sidebarOpen = false"
                class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.withdrawals.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
                 <div class="w-9 h-9 rounded-lg bg-orange-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-money-bill-wave text-sm"></i></div>
@@ -234,9 +241,10 @@
     <!-- User profile at bottom -->
     <div class="p-3 md:p-4 border-t border-slate-200 bg-slate-50/50">
         <div class="flex items-center gap-3 p-2.5 rounded-xl bg-white border border-slate-200 shadow-sm">
-            <div class="w-10 h-10 rounded-xl bg-sky-500 flex items-center justify-center text-white font-bold text-sm overflow-hidden flex-shrink-0">
+            <div class="w-10 h-10 rounded-xl bg-sky-500 flex items-center justify-center text-white font-bold text-sm overflow-hidden flex-shrink-0 relative">
                 <?php if(auth()->user()->profile_image): ?>
-                    <img src="<?php echo e(asset(auth()->user()->profile_image)); ?>" alt="Profile" class="w-full h-full object-cover">
+                    <img src="<?php echo e(auth()->user()->profile_image_url); ?>" alt="Profile" class="w-full h-full object-cover absolute inset-0" onerror="this.classList.add('!hidden'); this.nextElementSibling?.classList.remove('hidden');">
+                    <span class="hidden absolute inset-0 flex items-center justify-center bg-sky-500 text-white font-bold text-sm"><?php echo e(mb_substr(auth()->user()->name, 0, 1)); ?></span>
                 <?php else: ?>
                     <?php echo e(mb_substr(auth()->user()->name, 0, 1)); ?>
 

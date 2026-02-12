@@ -23,6 +23,7 @@ class AgreementPayment extends Model
         'hours_count',
         'payment_date',
         'paid_at',
+        'transfer_receipt_path',
         'payment_id',
         'notes',
         'created_by',

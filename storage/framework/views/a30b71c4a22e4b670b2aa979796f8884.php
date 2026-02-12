@@ -32,7 +32,7 @@
             <div class="flex flex-col sm:flex-row sm:items-center gap-5">
                 <div class="flex items-center justify-center h-24 w-24 sm:h-28 sm:w-28 rounded-2xl bg-sky-100 border border-slate-200 overflow-hidden shrink-0 mx-auto sm:mx-0">
                     <?php if($user->profile_image): ?>
-                        <img src="<?php echo e(asset($user->profile_image)); ?>" alt="صورة الملف الشخصي" class="w-full h-full object-cover">
+                        <img src="<?php echo e($user->profile_image_url); ?>" alt="صورة الملف الشخصي" class="w-full h-full object-cover">
                     <?php else: ?>
                         <span class="text-4xl font-bold text-sky-600"><?php echo e(mb_substr($user->name, 0, 1)); ?></span>
                     <?php endif; ?>
@@ -226,7 +226,7 @@ unset($__errorArgs, $__bag); ?>
                         <div class="flex flex-col sm:flex-row sm:items-center gap-4">
                             <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center shrink-0">
                                 <?php if($user->profile_image): ?>
-                                    <img src="<?php echo e(asset($user->profile_image)); ?>" alt="صورة الملف الشخصي" class="w-full h-full object-cover">
+                                    <img src="<?php echo e($user->profile_image_url); ?>" alt="صورة الملف الشخصي" class="w-full h-full object-cover">
                                 <?php else: ?>
                                     <i class="fas fa-user text-slate-400 text-2xl"></i>
                                 <?php endif; ?>

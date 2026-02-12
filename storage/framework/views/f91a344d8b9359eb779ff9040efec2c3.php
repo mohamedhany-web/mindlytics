@@ -6,6 +6,9 @@
     <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
     <title>إنشاء حساب - Mindlytics</title>
 
+    
+    <link rel="preload" href="<?php echo e($authBackgroundUrl ?? asset('images/brainstorm-meeting.jpg')); ?>" as="image">
+
     <!-- خط عربي - تحميل غير معطل (تحسين FCP/LCP) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,9 +25,6 @@
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
 
-    <?php
-        $brainstormImage = file_exists(public_path('images/brainstorm-meeting.png')) ? 'images/brainstorm-meeting.png' : 'images/brainstorm-meeting.jpg';
-    ?>
     <style>
         :root {
             --color-primary: #2563eb;
@@ -123,7 +123,7 @@
             align-items: center;
             justify-content: center;
             padding: 40px;
-            background: url('<?php echo e(asset($brainstormImage)); ?>') center center / cover no-repeat;
+            background: url('<?php echo e($authBackgroundUrl ?? asset("images/brainstorm-meeting.jpg")); ?>') center center / cover no-repeat;
             position: relative;
             overflow: hidden;
             height: 100%;
@@ -538,7 +538,7 @@
             margin: 0.5rem 0 0;
             padding: 2rem 1rem 2rem;
             min-height: 9rem;
-            background: url('<?php echo e(asset($brainstormImage)); ?>') center center / cover no-repeat;
+            background: url('<?php echo e($authBackgroundUrl ?? asset("images/brainstorm-meeting.jpg")); ?>') center center / cover no-repeat;
             border-radius: 20px;
             position: relative;
             overflow: hidden;
@@ -731,14 +731,6 @@ $message = $__bag->first($__errorArgs[0]); ?><p class="mt-1 text-xs text-red-600
 if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
 unset($__errorArgs, $__bag); ?>
-                        </div>
-
-                        <div class="input-wrap">
-                            <label for="referral_m">كود الإحالة (اختياري)</label>
-                            <div class="relative">
-                                <i class="input-icon fas fa-gift"></i>
-                                <input type="text" name="referral_code" id="referral_m" value="<?php echo e(request()->get('ref') ?? old('referral_code')); ?>" class="form-input w-full" placeholder="REF123456" dir="ltr">
-                            </div>
                         </div>
 
                         <div class="input-wrap">
@@ -958,23 +950,6 @@ $message = $__bag->first($__errorArgs[0]); ?>
 if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
 unset($__errorArgs, $__bag); ?>
-                            </div>
-
-                            <!-- كود الإحالة -->
-                            <?php
-                                $referralCode = request()->get('ref') ?? old('referral_code');
-                            ?>
-                            <div>
-                                <label for="referral_code" class="block text-sm font-bold text-[var(--text-dark)] mb-1.5">
-                                    كود الإحالة (اختياري)
-                                </label>
-                                <input type="text" 
-                                       name="referral_code" 
-                                       id="referral_code" 
-                                       value="<?php echo e($referralCode); ?>"
-                                       class="form-input w-full px-4 py-3 rounded-xl text-[var(--text-dark)] font-medium uppercase" 
-                                       placeholder="REF123456"
-                                       dir="ltr">
                             </div>
 
                             <!-- كلمة المرور -->

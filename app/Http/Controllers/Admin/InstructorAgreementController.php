@@ -176,7 +176,10 @@ class InstructorAgreementController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $agreement->update($request->all());
+        $agreement->update($request->only([
+            'instructor_id', 'type', 'rate', 'title', 'description',
+            'start_date', 'end_date', 'status', 'terms', 'notes',
+        ]));
 
         return redirect()->route('admin.agreements.show', $agreement)
             ->with('success', 'تم تحديث الاتفاقية بنجاح');

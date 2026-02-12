@@ -63,24 +63,48 @@ class OfflineAgreementController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $rules = [
             'instructor_id' => 'required|exists:users,id',
             'offline_course_id' => 'nullable|exists:offline_courses,id',
+            'billing_type' => 'required|in:per_session,monthly,full_course',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'start_date' => 'required|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
-            'salary_per_session' => 'required|numeric|min:0',
-            'sessions_count' => 'required|integer|min:1',
+            'salary_per_session' => 'nullable|numeric|min:0',
+            'sessions_count' => 'nullable|integer|min:0',
+            'monthly_amount' => 'nullable|numeric|min:0',
+            'months_count' => 'nullable|integer|min:1',
+            'total_amount' => 'nullable|numeric|min:0',
             'status' => 'required|in:draft,active,completed,cancelled',
             'terms' => 'nullable|string',
             'notes' => 'nullable|string',
-        ]);
+        ];
 
-        // حساب المبلغ الإجمالي
-        $validated['total_amount'] = $validated['salary_per_session'] * $validated['sessions_count'];
-        
-        // إنشاء رقم اتفاقية
+        $validated = $request->validate($rules);
+
+        $billingType = $validated['billing_type'];
+
+        if ($billingType === 'per_session') {
+            $validated['salary_per_session'] = (float) ($request->input('salary_per_session', 0) ?: 0);
+            $validated['sessions_count'] = (int) ($request->input('sessions_count', 0) ?: 0);
+            $validated['total_amount'] = $validated['salary_per_session'] * max(1, $validated['sessions_count']);
+            $validated['monthly_amount'] = null;
+            $validated['months_count'] = null;
+        } elseif ($billingType === 'monthly') {
+            $validated['monthly_amount'] = (float) ($request->input('monthly_amount', 0) ?: 0);
+            $validated['months_count'] = (int) ($request->input('months_count', 1) ?: 1);
+            $validated['total_amount'] = $validated['monthly_amount'] * max(1, $validated['months_count']);
+            $validated['salary_per_session'] = 0;
+            $validated['sessions_count'] = 0;
+        } else {
+            $validated['total_amount'] = (float) ($request->input('total_amount', 0) ?: 0);
+            $validated['salary_per_session'] = 0;
+            $validated['sessions_count'] = 0;
+            $validated['monthly_amount'] = null;
+            $validated['months_count'] = null;
+        }
+
         $validated['agreement_number'] = InstructorAgreement::generateAgreementNumber();
 
         InstructorAgreement::create($validated);
@@ -115,23 +139,48 @@ class OfflineAgreementController extends Controller
      */
     public function update(Request $request, InstructorAgreement $agreement)
     {
-        $validated = $request->validate([
+        $rules = [
             'instructor_id' => 'required|exists:users,id',
             'offline_course_id' => 'nullable|exists:offline_courses,id',
+            'billing_type' => 'required|in:per_session,monthly,full_course',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'start_date' => 'required|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
-            'salary_per_session' => 'required|numeric|min:0',
-            'sessions_count' => 'required|integer|min:1',
+            'salary_per_session' => 'nullable|numeric|min:0',
+            'sessions_count' => 'nullable|integer|min:0',
+            'monthly_amount' => 'nullable|numeric|min:0',
+            'months_count' => 'nullable|integer|min:1',
+            'total_amount' => 'nullable|numeric|min:0',
             'payment_status' => 'required|in:pending,partial,paid,overdue',
             'status' => 'required|in:draft,active,completed,cancelled',
             'terms' => 'nullable|string',
             'notes' => 'nullable|string',
-        ]);
+        ];
 
-        // حساب المبلغ الإجمالي
-        $validated['total_amount'] = $validated['salary_per_session'] * $validated['sessions_count'];
+        $validated = $request->validate($rules);
+
+        $billingType = $validated['billing_type'];
+
+        if ($billingType === 'per_session') {
+            $validated['salary_per_session'] = (float) ($request->input('salary_per_session', 0) ?: 0);
+            $validated['sessions_count'] = (int) ($request->input('sessions_count', 0) ?: 0);
+            $validated['total_amount'] = $validated['salary_per_session'] * max(1, $validated['sessions_count']);
+            $validated['monthly_amount'] = null;
+            $validated['months_count'] = null;
+        } elseif ($billingType === 'monthly') {
+            $validated['monthly_amount'] = (float) ($request->input('monthly_amount', 0) ?: 0);
+            $validated['months_count'] = (int) ($request->input('months_count', 1) ?: 1);
+            $validated['total_amount'] = $validated['monthly_amount'] * max(1, $validated['months_count']);
+            $validated['salary_per_session'] = 0;
+            $validated['sessions_count'] = 0;
+        } else {
+            $validated['total_amount'] = (float) ($request->input('total_amount', 0) ?: 0);
+            $validated['salary_per_session'] = 0;
+            $validated['sessions_count'] = 0;
+            $validated['monthly_amount'] = null;
+            $validated['months_count'] = null;
+        }
 
         $agreement->update($validated);
 

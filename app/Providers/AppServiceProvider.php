@@ -57,7 +57,7 @@ class AppServiceProvider extends ServiceProvider
             }
         });
 
-        // لوجو المنصة: نسخ إلى التخزين إن لم يكن موجوداً ثم مشاركته مع كل الصفحات (لوحة المدرب، الأدمن، الطالب...)
+        // لوجو المنصة: نسخ إلى التخزين إن لم يكن موجوداً (نفس أسلوب صورة تسجيل الدخول)
         $logoPath = self::SITE_LOGO_STORAGE_PATH;
         if (!$disk->exists($logoPath)) {
             $logoSource = public_path('logo-removebg-preview.png');
@@ -69,7 +69,13 @@ class AppServiceProvider extends ServiceProvider
                 $disk->put($logoPath, File::get($logoSource));
             }
         }
-        View::share('platformLogoUrl', $disk->exists($logoPath) ? asset('storage/' . $logoPath) : asset('logo-removebg-preview.png'));
+        // حساب رابط اللوجو عند عرض الصفحة (مثل authBackgroundUrl) لضمان ظهور الصورة مع الطلب الحالي
+        View::composer(['layouts.instructor-sidebar', 'layouts.student-sidebar', 'layouts.app', 'layouts.admin'], function ($view) use ($disk, $logoPath) {
+            $url = $disk->exists($logoPath)
+                ? asset('storage/' . $logoPath)
+                : asset('logo-removebg-preview.png');
+            $view->with('platformLogoUrl', $url);
+        });
 
         // إجبار روابط الموقع على HTTPS في الإنتاج (حل مشكلة عدم ظهور الصور عند Mixed Content)
         if ($this->app->environment('production') && config('app.url')) {

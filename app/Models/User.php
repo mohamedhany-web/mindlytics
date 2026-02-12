@@ -84,25 +84,18 @@ class User extends Authenticatable
 
     /**
      * رابط صورة الملف الشخصي.
-     * الصور تُحفظ في storage/app/public/profile-photos/ (مثل صور الكورسات والمسارات)
-     * وتُعرض عبر asset('storage/'.$path). الصور القديمة في public/profile-photos/ ما زالت تعمل.
-     * يُضاف ?v= لتحديث الكاش بعد رفع صورة جديدة (لوحة المدرب وغيرها).
+     * نفس أسلوب صفحة تسجيل الدخول: الصور في storage/app/public تُعرض عبر asset('storage/'.$path).
+     * تطبيع المسار (backslash على Windows) وضمان URL كامل.
      */
     public function getProfileImageUrlAttribute(): ?string
     {
         if (empty($this->profile_image)) {
             return null;
         }
-        $path = $this->profile_image;
-        $base = null;
+        $path = str_replace('\\', '/', trim($this->profile_image));
+        $path = ltrim($path, '/');
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
             $base = $path;
-        } elseif (str_starts_with($path, 'profile-photos/')) {
-            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
-                $base = asset('storage/' . $path);
-            } else {
-                $base = asset($path);
-            }
         } elseif (str_starts_with($path, 'storage/')) {
             $base = asset($path);
         } else {
@@ -208,6 +201,16 @@ class User extends Authenticatable
     public function instructorAgreements()
     {
         return $this->hasMany(InstructorAgreement::class, 'instructor_id');
+    }
+
+    public function agreementPayments()
+    {
+        return $this->hasMany(AgreementPayment::class, 'instructor_id');
+    }
+
+    public function payoutDetail()
+    {
+        return $this->hasOne(InstructorPayoutDetail::class);
     }
 
     /**

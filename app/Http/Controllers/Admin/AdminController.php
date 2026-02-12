@@ -532,7 +532,7 @@ class AdminController extends Controller
 
         $sanitizedData = [
             'name' => strip_tags(trim($request->input('name', ''))),
-            'email' => filter_var($request->input('email'), FILTER_SANITIZE_EMAIL) ?: $request->input('email'),
+            'email' => is_scalar($request->input('email')) ? trim((string) $request->input('email')) : '',
             'country_code' => $request->input('country_code'),
             'phone' => preg_replace('/[^0-9]/', '', $request->input('phone', '')),
             'password' => $request->input('password'),
@@ -551,7 +551,7 @@ class AdminController extends Controller
             ],
             'email' => [
                 'required',
-                'email:rfc,dns',
+                'email:rfc',
                 'max:255',
                 'unique:users,email',
             ],
