@@ -7,7 +7,7 @@
         </button>
         <div class="flex items-center gap-2 md:gap-2.5 pr-8 lg:pr-0">
             <div class="w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center overflow-hidden bg-sky-100 border border-sky-200 flex-shrink-0">
-                <img src="{{ asset('logo-removebg-preview.png') }}" alt="Mindlytics Logo" class="w-full h-full object-contain" style="transform: none !important; object-position: center;">
+                <img src="{{ $platformLogoUrl ?? asset('logo-removebg-preview.png') }}" alt="Mindlytics Logo" class="w-full h-full object-contain" style="transform: none !important; object-position: center;" onerror="this.onerror=null; this.src='{{ asset('logo-removebg-preview.png') }}';">
             </div>
             <div class="flex-1 min-w-0">
                 <h2 class="text-sm md:text-base font-bold text-gray-900 tracking-tight leading-tight">Mindlytics</h2>

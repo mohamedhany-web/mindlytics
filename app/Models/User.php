@@ -86,6 +86,7 @@ class User extends Authenticatable
      * رابط صورة الملف الشخصي.
      * الصور تُحفظ في storage/app/public/profile-photos/ (مثل صور الكورسات والمسارات)
      * وتُعرض عبر asset('storage/'.$path). الصور القديمة في public/profile-photos/ ما زالت تعمل.
+     * يُضاف ?v= لتحديث الكاش بعد رفع صورة جديدة (لوحة المدرب وغيرها).
      */
     public function getProfileImageUrlAttribute(): ?string
     {
@@ -93,21 +94,22 @@ class User extends Authenticatable
             return null;
         }
         $path = $this->profile_image;
+        $base = null;
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-            return $path;
-        }
-        // مسار تحت التخزين: نعرض عبر storage
-        if (str_starts_with($path, 'profile-photos/')) {
+            $base = $path;
+        } elseif (str_starts_with($path, 'profile-photos/')) {
             if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
-                return asset('storage/' . $path);
+                $base = asset('storage/' . $path);
+            } else {
+                $base = asset($path);
             }
-            // صور قديمة في public/profile-photos/
-            return asset($path);
+        } elseif (str_starts_with($path, 'storage/')) {
+            $base = asset($path);
+        } else {
+            $base = asset('storage/' . $path);
         }
-        if (str_starts_with($path, 'storage/')) {
-            return asset($path);
-        }
-        return asset('storage/' . $path);
+        $ts = $this->updated_at ? $this->updated_at->timestamp : '';
+        return $base . (str_contains($base, '?') ? '&' : '?') . 'v=' . $ts;
     }
 
     /**

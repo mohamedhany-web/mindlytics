@@ -13,6 +13,9 @@ class AppServiceProvider extends ServiceProvider
 {
     /** مسار صورة خلفية صفحات تسجيل الدخول/إنشاء الحساب في التخزين (نفس أسلوب مسارات التعلم) */
     public const AUTH_BACKGROUND_STORAGE_PATH = 'auth-pages/brainstorm-meeting.jpg';
+
+    /** مسار لوجو المنصة في التخزين (يُعرض من /storage/ مثل الكورسات والصور) */
+    public const SITE_LOGO_STORAGE_PATH = 'site/logo.png';
     /**
      * Register any application services.
      */
@@ -53,6 +56,20 @@ class AppServiceProvider extends ServiceProvider
                 $view->with('authBackgroundUrl', asset('images/brainstorm-meeting.jpg'));
             }
         });
+
+        // لوجو المنصة: نسخ إلى التخزين إن لم يكن موجوداً ثم مشاركته مع كل الصفحات (لوحة المدرب، الأدمن، الطالب...)
+        $logoPath = self::SITE_LOGO_STORAGE_PATH;
+        if (!$disk->exists($logoPath)) {
+            $logoSource = public_path('logo-removebg-preview.png');
+            if (File::isFile($logoSource)) {
+                $dir = dirname($logoPath);
+                if (!$disk->exists($dir)) {
+                    $disk->makeDirectory($dir);
+                }
+                $disk->put($logoPath, File::get($logoSource));
+            }
+        }
+        View::share('platformLogoUrl', $disk->exists($logoPath) ? asset('storage/' . $logoPath) : asset('logo-removebg-preview.png'));
 
         // إجبار روابط الموقع على HTTPS في الإنتاج (حل مشكلة عدم ظهور الصور عند Mixed Content)
         if ($this->app->environment('production') && config('app.url')) {

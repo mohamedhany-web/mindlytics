@@ -7,7 +7,7 @@
         </button>
         <div class="flex items-center gap-2 md:gap-3 pr-8 lg:pr-0">
             <div class="w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center overflow-hidden bg-slate-100 border border-slate-200 flex-shrink-0">
-                <img src="{{ asset('logo-removebg-preview.png') }}" alt="Mindlytics Logo" class="w-full h-full object-contain" style="transform: none !important; object-position: center !important;">
+                <img src="{{ $platformLogoUrl ?? asset('logo-removebg-preview.png') }}" alt="Mindlytics Logo" class="w-full h-full object-contain" style="transform: none !important; object-position: center !important;" onerror="this.onerror=null; this.src='{{ asset('logo-removebg-preview.png') }}';">
             </div>
             <div class="flex-1 min-w-0">
                 <h2 class="text-base md:text-lg font-bold text-slate-800 tracking-tight">Mindlytics</h2>
@@ -234,9 +234,10 @@
     <!-- User profile at bottom -->
     <div class="p-3 md:p-4 border-t border-slate-200 bg-slate-50/50">
         <div class="flex items-center gap-3 p-2.5 rounded-xl bg-white border border-slate-200 shadow-sm">
-            <div class="w-10 h-10 rounded-xl bg-sky-500 flex items-center justify-center text-white font-bold text-sm overflow-hidden flex-shrink-0">
+            <div class="w-10 h-10 rounded-xl bg-sky-500 flex items-center justify-center text-white font-bold text-sm overflow-hidden flex-shrink-0 relative">
                 @if(auth()->user()->profile_image)
-                    <img src="{{ auth()->user()->profile_image_url }}" alt="Profile" class="w-full h-full object-cover">
+                    <img src="{{ auth()->user()->profile_image_url }}" alt="Profile" class="w-full h-full object-cover absolute inset-0" onerror="this.classList.add('!hidden'); this.nextElementSibling?.classList.remove('hidden');">
+                    <span class="hidden absolute inset-0 flex items-center justify-center bg-sky-500 text-white font-bold text-sm">{{ mb_substr(auth()->user()->name, 0, 1) }}</span>
                 @else
                     {{ mb_substr(auth()->user()->name, 0, 1) }}
                 @endif
