@@ -47,6 +47,10 @@ class CopyAuthPagesImage extends Command
         $this->line("  الرابط: " . asset('storage/' . $storagePath));
         $this->newLine();
         $this->info('صفحات تسجيل الدخول وإنشاء الحساب ستستخدم الصورة من التخزين (تعمل على السيرفر مثل صور المسارات).');
+        $size = File::size($publicPath);
+        if ($size > 500 * 1024) {
+            $this->warn('للتحميل الأسرع: يُفضّل أن تكون الصورة أقل من 500 كيلوبايت (الحالي: ' . round($size / 1024) . ' ك.ب). يمكنك ضغطها بأداة مثل TinyPNG أو تصغير أبعادها إلى 1920px عرض كحد أقصى.');
+        }
 
         return self::SUCCESS;
     }

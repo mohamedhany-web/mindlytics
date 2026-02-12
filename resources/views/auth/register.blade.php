@@ -6,6 +6,9 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>إنشاء حساب - Mindlytics</title>
 
+    {{-- تحميل صورة الخلفية مبكراً لسرعة الظهور --}}
+    <link rel="preload" href="{{ $authBackgroundUrl ?? asset('images/brainstorm-meeting.jpg') }}" as="image">
+
     <!-- خط عربي - تحميل غير معطل (تحسين FCP/LCP) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

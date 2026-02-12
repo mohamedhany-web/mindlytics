@@ -6,6 +6,9 @@
     <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
     <title>تسجيل الدخول - Mindlytics</title>
 
+    
+    <link rel="preload" href="<?php echo e($authBackgroundUrl ?? asset('images/brainstorm-meeting.jpg')); ?>" as="image">
+
     <!-- خط عربي - تحميل غير معطل (تحسين FCP/LCP) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
