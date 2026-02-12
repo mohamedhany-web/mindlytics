@@ -1,4 +1,4 @@
-﻿@extends('layouts.admin')
+@extends('layouts.admin')
 
 @section('title', 'صلاحيات المستخدمين - Mindlytics')
 @section('header', 'صلاحيات المستخدمين')
@@ -72,7 +72,7 @@
                                 <div class="flex items-center">
                                     <div class="flex-shrink-0 h-10 w-10">
                                         @if($user->profile_image)
-                                            <img class="h-10 w-10 rounded-full" src="{{ asset('storage/' . $user->profile_image) }}" alt="{{ $user->name }}">
+                                            <img class="h-10 w-10 rounded-full" src="{{ $user->profile_image_url }}" alt="{{ $user->name }}">
                                         @else
                                             <div class="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
                                                 {{ substr($user->name, 0, 1) }}

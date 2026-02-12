@@ -84,8 +84,8 @@ class User extends Authenticatable
 
     /**
      * رابط صورة الملف الشخصي.
-     * الصور المحفوظة عبر لوحة التحكم/الملف الشخصي تكون في public/profile-photos/
-     * والصور في التخزين تكون تحت storage/app/public وتربط عبر /storage/
+     * الصور تُحفظ في storage/app/public/profile-photos/ (مثل صور الكورسات والمسارات)
+     * وتُعرض عبر asset('storage/'.$path). الصور القديمة في public/profile-photos/ ما زالت تعمل.
      */
     public function getProfileImageUrlAttribute(): ?string
     {
@@ -93,8 +93,15 @@ class User extends Authenticatable
             return null;
         }
         $path = $this->profile_image;
-        // الصور في public/profile-photos/ (حفظها ProfileController) تُعرض مباشرة
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+        // مسار تحت التخزين: نعرض عبر storage
         if (str_starts_with($path, 'profile-photos/')) {
+            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+                return asset('storage/' . $path);
+            }
+            // صور قديمة في public/profile-photos/
             return asset($path);
         }
         if (str_starts_with($path, 'storage/')) {

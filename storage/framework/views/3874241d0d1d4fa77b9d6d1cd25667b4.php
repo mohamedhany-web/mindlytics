@@ -1,8 +1,8 @@
-@extends('layouts.public')
 
-@section('title', 'سياسة الخصوصية - Mindlytics')
 
-@push('styles')
+<?php $__env->startSection('title', 'سياسة الخصوصية - Mindlytics'); ?>
+
+<?php $__env->startPush('styles'); ?>
 <style>
     .hero-legal {
         background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 45%, #1d4ed8 100%);
@@ -31,9 +31,9 @@
         border-radius: 2px;
     }
 </style>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@section('content')
+<?php $__env->startSection('content'); ?>
 <section class="hero-legal min-h-[38vh] flex items-center relative pt-24 pb-14 lg:pt-28 lg:pb-16">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
         <h1 class="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight mb-4" style="text-shadow: 0 2px 12px rgba(0,0,0,0.3);">
@@ -119,10 +119,12 @@
     <div class="container mx-auto px-4 sm:px-6 lg:px-8 text-center max-w-2xl">
         <h3 class="text-2xl font-bold text-slate-800 mb-2">أسئلة حول الخصوصية؟</h3>
         <p class="text-slate-600 mb-6">تواصل معنا لأي استفسار متعلق ببياناتك</p>
-        <a href="{{ route('public.contact') }}" class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-blue-600 transition-all">
+        <a href="<?php echo e(route('public.contact')); ?>" class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-blue-600 transition-all">
             <i class="fas fa-envelope"></i>
             تواصل معنا
         </a>
     </div>
 </section>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.public', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/public/privacy.blade.php ENDPATH**/ ?>

@@ -1017,8 +1017,19 @@
             </div>
         </div>
     @endif
+    @php
+        $courseThumb = $course->thumbnail ? str_replace('\\', '/', $course->thumbnail) : null;
+        $courseImageUrl = $courseThumb ? asset('storage/' . $courseThumb) : null;
+    @endphp
     <!-- Hero Section -->
     <section class="hero-section relative overflow-hidden min-h-[70vh] flex items-center pt-16 lg:pt-20">
+        @if($courseImageUrl)
+        <!-- Course cover image (like learning paths) -->
+        <div class="absolute inset-0 z-0">
+            <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('{{ $courseImageUrl }}');"></div>
+            <div class="absolute inset-0 bg-gradient-to-b from-white/92 via-white/75 to-white"></div>
+        </div>
+        @endif
         <!-- Animated Background -->
         <div class="animated-background absolute inset-0 overflow-hidden">
             <!-- Floating Circles -->
@@ -1463,9 +1474,22 @@
                             <h3 class="text-xl font-black text-gray-900 mb-4">كورسات ذات صلة</h3>
                             <div class="space-y-4">
                                 @foreach($relatedCourses->take(3) as $index => $related)
-                                <a href="{{ route('public.course.show', $related->id) }}" class="block p-4 bg-gray-50 rounded-xl hover:bg-blue-50 transition-all duration-300 border border-gray-200 hover:border-blue-300 hover:shadow-md fade-in-up" style="animation-delay: {{ $index * 0.1 }}s;">
-                                    <h4 class="font-bold text-gray-900 mb-2 text-base">{{ $related->title }}</h4>
-                                    <p class="text-sm text-gray-600">{{ Str::limit($related->description ?? '', 60) }}</p>
+                                @php
+                                    $relThumb = $related->thumbnail ? str_replace('\\', '/', $related->thumbnail) : null;
+                                    $relImageUrl = $relThumb ? asset('storage/' . $relThumb) : null;
+                                @endphp
+                                <a href="{{ route('public.course.show', $related->id) }}" class="flex gap-4 p-0 bg-gray-50 rounded-xl hover:bg-blue-50 transition-all duration-300 border border-gray-200 hover:border-blue-300 hover:shadow-md overflow-hidden fade-in-up" style="animation-delay: {{ $index * 0.1 }}s;">
+                                    <div class="w-24 h-24 flex-shrink-0 bg-gradient-to-br from-blue-600 to-green-500 flex items-center justify-center">
+                                        @if($relImageUrl)
+                                            <img src="{{ $relImageUrl }}" alt="{{ $related->title }}" class="w-full h-full object-cover">
+                                        @else
+                                            <i class="fas fa-code text-white text-2xl"></i>
+                                        @endif
+                                    </div>
+                                    <div class="p-4 flex-1 min-w-0">
+                                        <h4 class="font-bold text-gray-900 mb-1 text-base">{{ $related->title }}</h4>
+                                        <p class="text-sm text-gray-600 line-clamp-2">{{ Str::limit($related->description ?? '', 60) }}</p>
+                                    </div>
                                 </a>
                                 @endforeach
                             </div>

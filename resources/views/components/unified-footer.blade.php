@@ -117,14 +117,6 @@
                         </a>
                     </li>
                     @endif
-                    @if(Route::has('public.pricing'))
-                    <li class="hidden md:block">
-                        <a href="{{ route('public.pricing') }}" class="footer-link group flex items-center gap-2 text-gray-700 hover:text-green-600 transition-all duration-300 text-xs md:text-sm py-1">
-                            <i class="fas fa-tags text-green-600 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] md:text-xs w-4"></i>
-                            <span class="group-hover:translate-x-[-3px] transition-transform">الأسعار</span>
-                        </a>
-                    </li>
-                    @endif
                 </ul>
             </div>
 
@@ -148,14 +140,6 @@
                         <a href="{{ route('public.privacy') }}" class="footer-link group flex items-center gap-2 text-gray-700 hover:text-gray-900 transition-all duration-300 text-xs md:text-sm py-1">
                             <i class="fas fa-shield-alt text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] md:text-xs w-4"></i>
                             <span class="group-hover:translate-x-[-3px] transition-transform">سياسة الخصوصية</span>
-                        </a>
-                    </li>
-                    @endif
-                    @if(Route::has('public.refund'))
-                    <li class="hidden sm:block">
-                        <a href="{{ route('public.refund') }}" class="footer-link group flex items-center gap-2 text-gray-700 hover:text-gray-900 transition-all duration-300 text-xs md:text-sm py-1">
-                            <i class="fas fa-undo text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] md:text-xs w-4"></i>
-                            <span class="group-hover:translate-x-[-3px] transition-transform">سياسة الاسترجاع</span>
                         </a>
                     </li>
                     @endif

@@ -8,6 +8,7 @@ use App\Models\StudentCourseEnrollment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ProfileController extends Controller
@@ -70,19 +71,15 @@ class ProfileController extends Controller
         }
 
         if ($request->hasFile('profile_image')) {
-            $uploadDir = public_path('profile-photos');
-            if (!File::exists($uploadDir)) {
-                File::makeDirectory($uploadDir, 0755, true);
+            if ($user->profile_image) {
+                if (Storage::disk('public')->exists($user->profile_image)) {
+                    Storage::disk('public')->delete($user->profile_image);
+                }
+                if (File::exists(public_path($user->profile_image))) {
+                    File::delete(public_path($user->profile_image));
+                }
             }
-
-            $filename = Str::uuid()->toString() . '.' . $request->file('profile_image')->getClientOriginalExtension();
-            $request->file('profile_image')->move($uploadDir, $filename);
-
-            if ($user->profile_image && File::exists(public_path($user->profile_image))) {
-                File::delete(public_path($user->profile_image));
-            }
-
-            $data['profile_image'] = 'profile-photos/' . $filename;
+            $data['profile_image'] = $request->file('profile_image')->store('profile-photos', 'public');
         }
 
         $user->update($data);

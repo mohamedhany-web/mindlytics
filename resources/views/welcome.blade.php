@@ -2423,28 +2423,33 @@
             <div class="featured-courses-scroll w-full">
                 <div id="featured-courses-track" class="flex gap-4 lg:gap-6 overflow-x-auto overflow-y-hidden pb-4 scroll-smooth snap-x snap-mandatory scrollbar-featured" style="scrollbar-gutter: stable;">
                     @foreach($featuredCourses as $index => $course)
+                        @php
+                            $fcThumb = $course->thumbnail ? str_replace('\\', '/', $course->thumbnail) : null;
+                            $fcImageUrl = $fcThumb ? asset('storage/' . $fcThumb) : null;
+                        @endphp
                         <div class="group relative flex-shrink-0 w-[280px] sm:w-[320px] lg:w-[340px] snap-center fade-in-up bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-blue-200" style="animation-delay: {{ $index * 0.05 }}s;">
                             <!-- Animated Background Glow -->
                             <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-400 via-green-400 to-purple-400 rounded-2xl blur opacity-0 group-hover:opacity-20 transition-opacity duration-500 -z-10"></div>
                             
-                            <!-- Header with Enhanced Gradient -->
+                            <!-- Header: course image (like learning paths) or gradient -->
                             <div class="relative h-32 bg-gradient-to-br from-blue-600 via-blue-500 to-green-500 overflow-hidden">
-                                <!-- Background Pattern (ثابت - بدون حركة للأداء) -->
-                                <div class="absolute inset-0 opacity-10" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px);"></div>
-                                
-                                <!-- Shimmer على الهوفر فقط -->
-                                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                                
-                                <div class="absolute inset-0 bg-gradient-to-t from-black/20 via-black/5 to-transparent"></div>
-                                
-                                <!-- Logo - Letter M -->
-                                <div class="absolute inset-0 flex items-center justify-center">
-                                    <div class="relative z-10 transform group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
-                                        <div class="text-white font-black text-5xl lg:text-6xl relative" style="font-family: 'Cairo', 'Noto Sans Arabic', sans-serif; text-shadow: 0 4px 20px rgba(0,0,0,0.4); letter-spacing: -2px;">
-                                            M
+                                @if($fcImageUrl)
+                                    <img src="{{ $fcImageUrl }}" alt="{{ $course->title }}" class="absolute inset-0 w-full h-full object-cover">
+                                @else
+                                    <!-- Background Pattern (ثابت - بدون حركة للأداء) -->
+                                    <div class="absolute inset-0 opacity-10" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px);"></div>
+                                    <!-- Logo - Letter M -->
+                                    <div class="absolute inset-0 flex items-center justify-center">
+                                        <div class="relative z-10 transform group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
+                                            <div class="text-white font-black text-5xl lg:text-6xl relative" style="font-family: 'Cairo', 'Noto Sans Arabic', sans-serif; text-shadow: 0 4px 20px rgba(0,0,0,0.4); letter-spacing: -2px;">
+                                                M
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+                                @endif
+                                <!-- Shimmer على الهوفر فقط -->
+                                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/20 via-black/5 to-transparent"></div>
                                 
                                 <!-- Featured Badge -->
                                 @if($course->is_featured)
