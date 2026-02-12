@@ -83,7 +83,9 @@ class User extends Authenticatable
     }
 
     /**
-     * رابط صورة الملف الشخصي (دائماً عبر /storage/ ليعمل أونلاين بدون symlink)
+     * رابط صورة الملف الشخصي.
+     * الصور المحفوظة عبر لوحة التحكم/الملف الشخصي تكون في public/profile-photos/
+     * والصور في التخزين تكون تحت storage/app/public وتربط عبر /storage/
      */
     public function getProfileImageUrlAttribute(): ?string
     {
@@ -91,6 +93,10 @@ class User extends Authenticatable
             return null;
         }
         $path = $this->profile_image;
+        // الصور في public/profile-photos/ (حفظها ProfileController) تُعرض مباشرة
+        if (str_starts_with($path, 'profile-photos/')) {
+            return asset($path);
+        }
         if (str_starts_with($path, 'storage/')) {
             return asset($path);
         }

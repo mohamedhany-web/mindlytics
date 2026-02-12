@@ -23,8 +23,8 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        // التحقق من الصلاحيات
-        if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
+        // التحقق من الصلاحيات (مدير عام أو من لديه صلاحية إدارة الطلبات)
+        if (!Auth::check() || !(Auth::user()->isSuperAdmin() || Auth::user()->can('manage.orders'))) {
             abort(403, 'غير مصرح لك بالوصول لهذه الصفحة');
         }
 
@@ -41,7 +41,7 @@ class OrderController extends Controller
         // فلترة حسب طريقة الدفع - حماية من SQL Injection
         if ($request->filled('payment_method')) {
             $paymentMethod = strip_tags(trim($request->payment_method));
-            if (in_array($paymentMethod, ['bank_transfer', 'cash', 'other'])) {
+            if (in_array($paymentMethod, ['bank_transfer', 'cash', 'online', 'other'])) {
                 $query->where('payment_method', $paymentMethod);
             }
         }
@@ -85,7 +85,7 @@ class OrderController extends Controller
     public function show(Order $order)
     {
         // التحقق من الصلاحيات
-        if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
+        if (!Auth::check() || !(Auth::user()->isSuperAdmin() || Auth::user()->can('manage.orders'))) {
             abort(403, 'غير مصرح لك بالوصول لهذه الصفحة');
         }
 
@@ -101,7 +101,7 @@ class OrderController extends Controller
     public function approve(Request $request, Order $order)
     {
         // التحقق من الصلاحيات
-        if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
+        if (!Auth::check() || !(Auth::user()->isSuperAdmin() || Auth::user()->can('manage.orders'))) {
             abort(403, 'غير مصرح لك بالموافقة على الطلبات');
         }
 
@@ -486,7 +486,7 @@ class OrderController extends Controller
     public function reject(Request $request, Order $order)
     {
         // التحقق من الصلاحيات
-        if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
+        if (!Auth::check() || !(Auth::user()->isSuperAdmin() || Auth::user()->can('manage.orders'))) {
             abort(403, 'غير مصرح لك برفض الطلبات');
         }
 

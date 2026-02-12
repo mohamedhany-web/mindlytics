@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>{{ $course->title ?? 'تفاصيل الكورس' }} - Mindlytics - أكاديمية البرمجة</title>
+    <title><?php echo e($course->title ?? 'تفاصيل الكورس'); ?> - Mindlytics - أكاديمية البرمجة</title>
 
     <!-- خط عربي أصيل -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -983,40 +983,40 @@
       x-data="{ mobileMenu: false, searchQuery: '' }"
       :class="{ 'overflow-hidden': mobileMenu }">
 
-    @include('components.unified-navbar')
+    <?php echo $__env->make('components.unified-navbar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     
     <main class="pt-0 mt-0">
-    {{-- رسائل النجاح / المعلومات / الأخطاء بعد إتمام الطلب أو أي إجراء --}}
-    @if(session('success'))
+    
+    <?php if(session('success')): ?>
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 lg:pt-24 pb-2" x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 8000)">
             <div class="rounded-xl border-2 border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 px-4 py-4 shadow-lg flex items-start gap-3">
                 <i class="fas fa-check-circle text-green-600 text-2xl flex-shrink-0 mt-0.5"></i>
                 <div class="flex-1">
-                    <p class="text-green-800 font-bold">{{ session('success') }}</p>
+                    <p class="text-green-800 font-bold"><?php echo e(session('success')); ?></p>
                     <p class="text-green-700 text-sm mt-1">يمكنك متابعة حالة الطلب من صفحة طلباتي في لوحة التحكم.</p>
                 </div>
                 <button type="button" @click="show = false" class="text-green-600 hover:text-green-800 p-1"><i class="fas fa-times"></i></button>
             </div>
         </div>
-    @endif
-    @if(session('info'))
+    <?php endif; ?>
+    <?php if(session('info')): ?>
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 lg:pt-24 pb-2" x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 6000)">
             <div class="rounded-xl border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-sky-50 px-4 py-4 shadow-lg flex items-start gap-3">
                 <i class="fas fa-info-circle text-blue-600 text-2xl flex-shrink-0 mt-0.5"></i>
-                <p class="text-blue-800 font-bold flex-1">{{ session('info') }}</p>
+                <p class="text-blue-800 font-bold flex-1"><?php echo e(session('info')); ?></p>
                 <button type="button" @click="show = false" class="text-blue-600 hover:text-blue-800 p-1"><i class="fas fa-times"></i></button>
             </div>
         </div>
-    @endif
-    @if(session('error'))
+    <?php endif; ?>
+    <?php if(session('error')): ?>
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 lg:pt-24 pb-2" x-data="{ show: true }" x-show="show">
             <div class="rounded-xl border-2 border-red-200 bg-gradient-to-r from-red-50 to-rose-50 px-4 py-4 shadow-lg flex items-start gap-3">
                 <i class="fas fa-exclamation-circle text-red-600 text-2xl flex-shrink-0 mt-0.5"></i>
-                <p class="text-red-800 font-bold flex-1">{{ session('error') }}</p>
+                <p class="text-red-800 font-bold flex-1"><?php echo e(session('error')); ?></p>
                 <button type="button" @click="show = false" class="text-red-600 hover:text-red-800 p-1"><i class="fas fa-times"></i></button>
             </div>
         </div>
-    @endif
+    <?php endif; ?>
     <!-- Hero Section -->
     <section class="hero-section relative overflow-hidden min-h-[70vh] flex items-center pt-16 lg:pt-20">
         <!-- Animated Background -->
@@ -1064,47 +1064,49 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full py-8 lg:py-10">
             <!-- Breadcrumb -->
             <nav class="mb-4 text-gray-600 text-sm flex items-center fade-in-up">
-                <a href="{{ url('/') }}" class="hover:text-blue-600 transition-colors">الرئيسية</a>
+                <a href="<?php echo e(url('/')); ?>" class="hover:text-blue-600 transition-colors">الرئيسية</a>
                 <span class="mx-2 text-gray-400">/</span>
-                <a href="{{ route('public.courses') }}" class="hover:text-blue-600 transition-colors">الكورسات</a>
+                <a href="<?php echo e(route('public.courses')); ?>" class="hover:text-blue-600 transition-colors">الكورسات</a>
                 <span class="mx-2 text-gray-400">/</span>
-                <span class="text-gray-900 font-medium">{{ Str::limit($course->title ?? 'الكورس', 30) }}</span>
+                <span class="text-gray-900 font-medium"><?php echo e(Str::limit($course->title ?? 'الكورس', 30)); ?></span>
             </nav>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
                 <!-- Course Info -->
                 <div class="slide-in-left">
-                    @if($course->is_featured ?? false)
+                    <?php if($course->is_featured ?? false): ?>
                         <div class="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full shadow-md mb-4 fade-in-up">
                             <i class="fas fa-star text-yellow-900 text-[8px]"></i>
                             <span class="text-yellow-900 font-bold text-[9px]">كورس مميز</span>
                         </div>
-                    @endif
+                    <?php endif; ?>
                     
                     <h1 class="text-3xl md:text-4xl lg:text-5xl font-black mb-3 leading-tight text-gray-900 fade-in-up" style="animation-delay: 0.1s;">
-                        {{ $course->title ?? 'اسم الكورس' }}
+                        <?php echo e($course->title ?? 'اسم الكورس'); ?>
+
                     </h1>
                     
                     <p class="text-base md:text-lg text-gray-600 mb-5 leading-relaxed fade-in-up" style="animation-delay: 0.2s;">
-                        {{ $course->description ?? 'كورس برمجي شامل ومتخصص' }}
+                        <?php echo e($course->description ?? 'كورس برمجي شامل ومتخصص'); ?>
+
                     </p>
 
                     <!-- Course Stats -->
                     <div class="grid grid-cols-3 gap-4 mb-6 fade-in-up" style="animation-delay: 0.1s;">
                         <div class="bg-white rounded-2xl p-4 text-center border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
-                            <div class="text-3xl font-black text-blue-600 mb-2">{{ $course->lessons_count ?? 0 }}</div>
+                            <div class="text-3xl font-black text-blue-600 mb-2"><?php echo e($course->lessons_count ?? 0); ?></div>
                             <div class="text-sm text-gray-600 font-medium">درس</div>
                         </div>
                         <div class="bg-white rounded-2xl p-4 text-center border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
-                            <div class="text-3xl font-black text-green-600 mb-2">{{ $course->duration_hours ?? 0 }}</div>
+                            <div class="text-3xl font-black text-green-600 mb-2"><?php echo e($course->duration_hours ?? 0); ?></div>
                             <div class="text-sm text-gray-600 font-medium">ساعة</div>
                         </div>
                         <div class="bg-white rounded-2xl p-4 text-center border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
                             <div class="text-xl font-black text-gray-700 mb-2">
-                                @if($course->level == 'beginner') مبتدئ
-                                @elseif($course->level == 'intermediate') متوسط
-                                @else متقدم
-                                @endif
+                                <?php if($course->level == 'beginner'): ?> مبتدئ
+                                <?php elseif($course->level == 'intermediate'): ?> متوسط
+                                <?php else: ?> متقدم
+                                <?php endif; ?>
                             </div>
                             <div class="text-sm text-gray-600 font-medium">المستوى</div>
                         </div>
@@ -1112,40 +1114,40 @@
 
                     <!-- CTA Buttons -->
                     <div class="flex flex-col sm:flex-row gap-4 fade-in-up" style="animation-delay: 0.3s;">
-                        @auth
-                            @if($isEnrolled ?? false)
-                                <a href="{{ route('courses.show', $course->id) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                        <?php if(auth()->guard()->check()): ?>
+                            <?php if($isEnrolled ?? false): ?>
+                                <a href="<?php echo e(route('courses.show', $course->id)); ?>" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
                                     <i class="fas fa-play-circle"></i>
                                     ابدأ التعلم الآن
                                 </a>
-                            @else
-                                @if(($course->price ?? 0) > 0 && !($course->is_free ?? false))
-                                    <a href="{{ route('public.course.checkout', $course->id) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                            <?php else: ?>
+                                <?php if(($course->price ?? 0) > 0 && !($course->is_free ?? false)): ?>
+                                    <a href="<?php echo e(route('public.course.checkout', $course->id)); ?>" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
                                         <i class="fas fa-shopping-cart"></i>
                                         شراء الآن
                                     </a>
-                                @else
-                                    <a href="{{ route('public.course.enroll.free', $course->id) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                                <?php else: ?>
+                                    <a href="<?php echo e(route('public.course.enroll.free', $course->id)); ?>" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
                                         <i class="fas fa-gift"></i>
                                         سجل مجاناً
                                     </a>
-                                @endif
-                            @endif
-                        @endauth
-                        @guest
-                            @if(($course->price ?? 0) > 0 && !($course->is_free ?? false))
-                                <a href="{{ route('register', ['redirect' => route('public.course.checkout', $course->id)]) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                                <?php endif; ?>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                        <?php if(auth()->guard()->guest()): ?>
+                            <?php if(($course->price ?? 0) > 0 && !($course->is_free ?? false)): ?>
+                                <a href="<?php echo e(route('register', ['redirect' => route('public.course.checkout', $course->id)])); ?>" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
                                     <i class="fas fa-shopping-cart"></i>
                                     شراء الآن
                                 </a>
-                            @else
-                                <a href="{{ route('register', ['redirect' => route('public.course.enroll.free', $course->id)]) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                            <?php else: ?>
+                                <a href="<?php echo e(route('register', ['redirect' => route('public.course.enroll.free', $course->id)])); ?>" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
                                     <i class="fas fa-gift"></i>
                                     سجل مجاناً
                                 </a>
-                            @endif
-                        @endguest
-                        <a href="{{ route('public.courses') }}" class="inline-flex items-center justify-center gap-2 bg-white text-blue-600 px-6 py-3 rounded-full font-bold text-base border-2 border-blue-600 hover:bg-blue-50 transition-all duration-300">
+                            <?php endif; ?>
+                        <?php endif; ?>
+                        <a href="<?php echo e(route('public.courses')); ?>" class="inline-flex items-center justify-center gap-2 bg-white text-blue-600 px-6 py-3 rounded-full font-bold text-base border-2 border-blue-600 hover:bg-blue-50 transition-all duration-300">
                             <i class="fas fa-arrow-right"></i>
                             جميع الكورسات
                         </a>
@@ -1162,11 +1164,11 @@
                             
                             <!-- Price -->
                             <div class="mb-6">
-                                @if(($course->price ?? 0) > 0)
-                                    <div class="text-4xl font-black text-blue-600 mb-2">{{ number_format($course->price, 2) }} <span class="text-xl text-gray-600">ج.م</span></div>
-                                @else
+                                <?php if(($course->price ?? 0) > 0): ?>
+                                    <div class="text-4xl font-black text-blue-600 mb-2"><?php echo e(number_format($course->price, 2)); ?> <span class="text-xl text-gray-600">ج.م</span></div>
+                                <?php else: ?>
                                     <div class="text-4xl font-black text-green-600 mb-2">مجاني</div>
-                                @endif
+                                <?php endif; ?>
                             </div>
 
                             <!-- Course Features -->
@@ -1189,45 +1191,45 @@
                                 </div>
                             </div>
 
-                            @auth
-                                @if($isEnrolled ?? false)
-                                    <a href="{{ route('courses.show', $course->id) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 w-full">
+                            <?php if(auth()->guard()->check()): ?>
+                                <?php if($isEnrolled ?? false): ?>
+                                    <a href="<?php echo e(route('courses.show', $course->id)); ?>" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 w-full">
                                         <i class="fas fa-play"></i>
                                         ابدأ الآن
                                     </a>
-                                @else
-                                    @if(($course->price ?? 0) > 0 && !($course->is_free ?? false))
-                                        <a href="{{ route('public.course.checkout', $course->id) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 w-full">
+                                <?php else: ?>
+                                    <?php if(($course->price ?? 0) > 0 && !($course->is_free ?? false)): ?>
+                                        <a href="<?php echo e(route('public.course.checkout', $course->id)); ?>" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 w-full">
                                             <i class="fas fa-shopping-cart"></i>
                                             شراء الآن
                                         </a>
-                                    @else
-                                        <a href="{{ route('public.course.enroll.free', $course->id) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 w-full">
+                                    <?php else: ?>
+                                        <a href="<?php echo e(route('public.course.enroll.free', $course->id)); ?>" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 w-full">
                                             <i class="fas fa-gift"></i>
                                             سجل مجاناً
                                         </a>
-                                    @endif
-                                @endif
-                            @endauth
-                            @guest
-                                @if(($course->price ?? 0) > 0 && !($course->is_free ?? false))
-                                    <a href="{{ route('register', ['redirect' => route('public.course.checkout', $course->id)]) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 w-full">
+                                    <?php endif; ?>
+                                <?php endif; ?>
+                            <?php endif; ?>
+                            <?php if(auth()->guard()->guest()): ?>
+                                <?php if(($course->price ?? 0) > 0 && !($course->is_free ?? false)): ?>
+                                    <a href="<?php echo e(route('register', ['redirect' => route('public.course.checkout', $course->id)])); ?>" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 w-full">
                                         <i class="fas fa-shopping-cart"></i>
                                         شراء الآن
                                     </a>
-                                @else
-                                    <a href="{{ route('register', ['redirect' => route('public.course.enroll.free', $course->id)]) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 w-full">
+                                <?php else: ?>
+                                    <a href="<?php echo e(route('register', ['redirect' => route('public.course.enroll.free', $course->id)])); ?>" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 w-full">
                                         <i class="fas fa-gift"></i>
                                         سجل مجاناً
                                     </a>
-                                @endif
-                            @endguest
+                                <?php endif; ?>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
 
                 <!-- Video Introduction Section -->
-                @if($course->video_url ?? null)
+                <?php if($course->video_url ?? null): ?>
                 <div class="relative fade-in-up" style="animation-delay: 0.3s;">
                     <div class="bg-white rounded-3xl p-6 lg:p-8 shadow-xl border border-gray-200 hover:shadow-2xl transition-all duration-300">
                         <div class="text-center mb-6">
@@ -1239,7 +1241,7 @@
                         </div>
                         
                         <div class="custom-video-player-wrapper">
-                            @php
+                            <?php
                                 $videoUrl = $course->video_url;
                                 $videoId = null;
                                 $videoType = null;
@@ -1260,31 +1262,31 @@
                                 } elseif (preg_match('/\.(mp4|webm|ogg|avi|mov)(\?.*)?$/i', $videoUrl)) {
                                     $videoType = 'html5';
                                 }
-                            @endphp
+                            ?>
                             
-                            @if($videoType === 'youtube' && $videoId)
+                            <?php if($videoType === 'youtube' && $videoId): ?>
                                 <!-- مشغل الفيديو المخصص - YouTube -->
                                 <div id="custom-video-player-container" class="custom-youtube-player-container">
                                     <div id="custom-video-player"></div>
                                 </div>
-                            @elseif($videoType === 'vimeo' && $videoId)
+                            <?php elseif($videoType === 'vimeo' && $videoId): ?>
                                 <!-- مشغل الفيديو المخصص - Vimeo -->
-                                <div class="plyr__video-embed" id="custom-video-player" data-plyr-provider="vimeo" data-plyr-embed-id="{{ $videoId }}"></div>
-                            @elseif($videoType === 'html5')
+                                <div class="plyr__video-embed" id="custom-video-player" data-plyr-provider="vimeo" data-plyr-embed-id="<?php echo e($videoId); ?>"></div>
+                            <?php elseif($videoType === 'html5'): ?>
                                 <!-- مشغل الفيديو المخصص - HTML5 -->
                                 <video id="custom-video-player" class="plyr__video" playsinline controls>
-                                    <source src="{{ $videoUrl }}" type="video/mp4">
+                                    <source src="<?php echo e($videoUrl); ?>" type="video/mp4">
                                 </video>
-                            @else
+                            <?php else: ?>
                                 <div class="bg-gray-100 rounded-lg p-8 text-center">
                                     <i class="fas fa-exclamation-triangle text-yellow-500 text-3xl mb-3"></i>
                                     <p class="text-gray-600">رابط الفيديو غير مدعوم</p>
                                 </div>
-                            @endif
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
-                @endif
+                <?php endif; ?>
             </div>
         </div>
     </section>
@@ -1302,53 +1304,53 @@
                             عن الكورس
                         </h2>
                         <div class="prose max-w-none text-gray-700 leading-relaxed">
-                            <p class="text-lg mb-4">{{ $course->description ?? 'كورس برمجي شامل ومتخصص' }}</p>
-                            @if($course->objectives)
+                            <p class="text-lg mb-4"><?php echo e($course->description ?? 'كورس برمجي شامل ومتخصص'); ?></p>
+                            <?php if($course->objectives): ?>
                                 <div class="mt-6">
                                     <h3 class="text-xl font-bold text-gray-900 mb-4">أهداف الكورس:</h3>
                                     <div class="bg-gradient-to-br from-blue-50 to-green-50 rounded-xl p-6 border border-blue-100">
-                                        <p class="text-gray-700 whitespace-pre-line leading-relaxed">{{ $course->objectives }}</p>
+                                        <p class="text-gray-700 whitespace-pre-line leading-relaxed"><?php echo e($course->objectives); ?></p>
                                     </div>
                                 </div>
-                            @endif
+                            <?php endif; ?>
                         </div>
                     </div>
 
                     <!-- What You'll Learn -->
-                    @if($course->what_you_learn)
+                    <?php if($course->what_you_learn): ?>
                     <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 lg:p-8 border border-gray-200 fade-in-up" style="animation-delay: 0.1s;">
                         <h2 class="text-2xl lg:text-3xl font-black text-gray-900 mb-6 flex items-center gap-3">
                             <i class="fas fa-graduation-cap text-blue-600"></i>
                             ما ستعلمه
                         </h2>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            @php
+                            <?php
                                 $learnPoints = explode("\n", $course->what_you_learn);
-                            @endphp
-                            @foreach($learnPoints as $point)
-                                @if(trim($point))
+                            ?>
+                            <?php $__currentLoopData = $learnPoints; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $point): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <?php if(trim($point)): ?>
                                     <div class="flex items-start gap-3 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-xl border border-blue-100 hover:border-blue-300 transition-all duration-300">
                                         <i class="fas fa-check-circle text-green-600 mt-1 flex-shrink-0"></i>
-                                        <span class="text-gray-700">{{ trim($point) }}</span>
+                                        <span class="text-gray-700"><?php echo e(trim($point)); ?></span>
                                     </div>
-                                @endif
-                            @endforeach
+                                <?php endif; ?>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </div>
                     </div>
-                    @endif
+                    <?php endif; ?>
 
                     <!-- Requirements -->
-                    @if($course->requirements)
+                    <?php if($course->requirements): ?>
                     <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 lg:p-8 border border-gray-200 fade-in-up" style="animation-delay: 0.2s;">
                         <h2 class="text-2xl lg:text-3xl font-black text-gray-900 mb-6 flex items-center gap-3">
                             <i class="fas fa-list-check text-blue-600"></i>
                             المتطلبات
                         </h2>
                         <div class="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-6 border border-gray-200">
-                            <p class="text-gray-700 whitespace-pre-line leading-relaxed">{{ $course->requirements }}</p>
+                            <p class="text-gray-700 whitespace-pre-line leading-relaxed"><?php echo e($course->requirements); ?></p>
                         </div>
                     </div>
-                    @endif
+                    <?php endif; ?>
                 </div>
 
                 <!-- Sidebar -->
@@ -1375,7 +1377,7 @@
                                             </div>
                                             <span>المدة</span>
                                     </span>
-                                        <span class="font-black text-gray-900 text-lg">{{ $course->duration_hours ?? 0 }} ساعة</span>
+                                        <span class="font-black text-gray-900 text-lg"><?php echo e($course->duration_hours ?? 0); ?> ساعة</span>
                                 </div>
                                 
                                     <div class="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border-2 border-green-100 hover:border-green-300 hover:shadow-md transition-all duration-300 group/item">
@@ -1385,7 +1387,7 @@
                                             </div>
                                             <span>عدد الدروس</span>
                                     </span>
-                                        <span class="font-black text-gray-900 text-lg">{{ $course->lessons_count ?? 0 }} درس</span>
+                                        <span class="font-black text-gray-900 text-lg"><?php echo e($course->lessons_count ?? 0); ?> درس</span>
                                 </div>
                                 
                                     <div class="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border-2 border-purple-100 hover:border-purple-300 hover:shadow-md transition-all duration-300 group/item">
@@ -1396,14 +1398,14 @@
                                             <span>المستوى</span>
                                     </span>
                                         <span class="font-black text-gray-900 text-lg">
-                                        @if($course->level == 'beginner') مبتدئ
-                                        @elseif($course->level == 'intermediate') متوسط
-                                        @else متقدم
-                                        @endif
+                                        <?php if($course->level == 'beginner'): ?> مبتدئ
+                                        <?php elseif($course->level == 'intermediate'): ?> متوسط
+                                        <?php else: ?> متقدم
+                                        <?php endif; ?>
                                     </span>
                                 </div>
                                 
-                                @if($course->academicSubject)
+                                <?php if($course->academicSubject): ?>
                                     <div class="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border-2 border-indigo-100 hover:border-indigo-300 hover:shadow-md transition-all duration-300 group/item">
                                         <span class="text-gray-700 font-semibold flex items-center gap-3">
                                             <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-md group-hover/item:scale-110 transition-transform duration-300">
@@ -1411,66 +1413,66 @@
                                             </div>
                                             <span>المادة</span>
                                     </span>
-                                        <span class="font-black text-gray-900 text-lg">{{ $course->academicSubject->name }}</span>
+                                        <span class="font-black text-gray-900 text-lg"><?php echo e($course->academicSubject->name); ?></span>
                                 </div>
-                                @endif
+                                <?php endif; ?>
                             </div>
 
                                 <div class="mt-8 pt-6 border-t-2 border-gray-200">
-                                @if(($course->price ?? 0) > 0)
+                                <?php if(($course->price ?? 0) > 0): ?>
                                         <div class="text-center mb-6 p-4 bg-gradient-to-br from-blue-50 to-green-50 rounded-xl border-2 border-blue-100">
-                                            <div class="text-4xl font-black text-blue-600 mb-1">{{ number_format($course->price, 0) }}</div>
+                                            <div class="text-4xl font-black text-blue-600 mb-1"><?php echo e(number_format($course->price, 0)); ?></div>
                                             <div class="text-sm text-gray-600 font-semibold">ج.م</div>
                                     </div>
-                                @else
+                                <?php else: ?>
                                         <div class="text-center mb-6 p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border-2 border-green-100">
                                             <div class="text-4xl font-black text-green-600 flex items-center justify-center gap-2 mb-1">
                                                 <i class="fas fa-gift text-2xl"></i>
                                             <span>مجاني</span>
                                         </div>
                                     </div>
-                                @endif
+                                <?php endif; ?>
                                 
-                                @auth
-                                        <a href="{{ route('courses.show', $course->id) }}" class="group/btn relative inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-6 py-4 rounded-xl font-bold text-base shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 w-full overflow-hidden">
+                                <?php if(auth()->guard()->check()): ?>
+                                        <a href="<?php echo e(route('courses.show', $course->id)); ?>" class="group/btn relative inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-6 py-4 rounded-xl font-bold text-base shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 w-full overflow-hidden">
                                             <div class="absolute inset-0 bg-gradient-to-r from-green-500 to-blue-500 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
                                             <i class="fas fa-play relative z-10"></i>
                                             <span class="relative z-10">ابدأ التعلم</span>
                                     </a>
-                                @endauth
-                                @guest
-                                        @if(($course->price ?? 0) > 0 && !($course->is_free ?? false))
-                                            <a href="{{ route('register', ['redirect' => route('public.course.checkout', $course->id)]) }}" class="group/btn relative inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-6 py-4 rounded-xl font-bold text-base shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 w-full overflow-hidden">
+                                <?php endif; ?>
+                                <?php if(auth()->guard()->guest()): ?>
+                                        <?php if(($course->price ?? 0) > 0 && !($course->is_free ?? false)): ?>
+                                            <a href="<?php echo e(route('register', ['redirect' => route('public.course.checkout', $course->id)])); ?>" class="group/btn relative inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-6 py-4 rounded-xl font-bold text-base shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 w-full overflow-hidden">
                                                 <div class="absolute inset-0 bg-gradient-to-r from-green-500 to-blue-500 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
                                                 <i class="fas fa-shopping-cart relative z-10"></i>
                                                 <span class="relative z-10">شراء الآن</span>
                                             </a>
-                                        @else
-                                            <a href="{{ route('register', ['redirect' => route('public.course.enroll.free', $course->id)]) }}" class="group/btn relative inline-flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 via-green-500 to-emerald-500 text-white px-6 py-4 rounded-xl font-bold text-base shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 w-full overflow-hidden">
+                                        <?php else: ?>
+                                            <a href="<?php echo e(route('register', ['redirect' => route('public.course.enroll.free', $course->id)])); ?>" class="group/btn relative inline-flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 via-green-500 to-emerald-500 text-white px-6 py-4 rounded-xl font-bold text-base shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 w-full overflow-hidden">
                                                 <div class="absolute inset-0 bg-gradient-to-r from-emerald-500 to-green-500 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
                                                 <i class="fas fa-gift relative z-10"></i>
                                                 <span class="relative z-10">سجل مجاناً</span>
                                     </a>
-                                        @endif
-                                @endguest
+                                        <?php endif; ?>
+                                <?php endif; ?>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Related Courses -->
-                        @if(isset($relatedCourses) && count($relatedCourses) > 0)
+                        <?php if(isset($relatedCourses) && count($relatedCourses) > 0): ?>
                         <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-200">
                             <h3 class="text-xl font-black text-gray-900 mb-4">كورسات ذات صلة</h3>
                             <div class="space-y-4">
-                                @foreach($relatedCourses->take(3) as $index => $related)
-                                <a href="{{ route('public.course.show', $related->id) }}" class="block p-4 bg-gray-50 rounded-xl hover:bg-blue-50 transition-all duration-300 border border-gray-200 hover:border-blue-300 hover:shadow-md fade-in-up" style="animation-delay: {{ $index * 0.1 }}s;">
-                                    <h4 class="font-bold text-gray-900 mb-2 text-base">{{ $related->title }}</h4>
-                                    <p class="text-sm text-gray-600">{{ Str::limit($related->description ?? '', 60) }}</p>
+                                <?php $__currentLoopData = $relatedCourses->take(3); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $related): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <a href="<?php echo e(route('public.course.show', $related->id)); ?>" class="block p-4 bg-gray-50 rounded-xl hover:bg-blue-50 transition-all duration-300 border border-gray-200 hover:border-blue-300 hover:shadow-md fade-in-up" style="animation-delay: <?php echo e($index * 0.1); ?>s;">
+                                    <h4 class="font-bold text-gray-900 mb-2 text-base"><?php echo e($related->title); ?></h4>
+                                    <p class="text-sm text-gray-600"><?php echo e(Str::limit($related->description ?? '', 60)); ?></p>
                                 </a>
-                                @endforeach
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </div>
                         </div>
-                        @endif
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -1494,25 +1496,25 @@
                 انضم إلى آلاف الطلاب الذين حققوا التميز في البرمجة مع Mindlytics
             </p>
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                @auth
-                    <a href="{{ route('courses.show', $course->id) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-8 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 relative overflow-hidden group">
+                <?php if(auth()->guard()->check()): ?>
+                    <a href="<?php echo e(route('courses.show', $course->id)); ?>" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-8 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 relative overflow-hidden group">
                         <span class="relative z-10 flex items-center gap-2">
                             <i class="fas fa-play"></i>
                             <span>ابدأ التعلم الآن</span>
                         </span>
                         <span class="absolute inset-0 bg-gradient-to-r from-green-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
                     </a>
-                @endauth
-                @guest
-                    <a href="{{ route('register') }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-8 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 relative overflow-hidden group">
+                <?php endif; ?>
+                <?php if(auth()->guard()->guest()): ?>
+                    <a href="<?php echo e(route('register')); ?>" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-8 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 relative overflow-hidden group">
                         <span class="relative z-10 flex items-center gap-2">
                             <i class="fas fa-user-plus"></i>
                             <span>سجل مجاناً الآن</span>
                         </span>
                         <span class="absolute inset-0 bg-gradient-to-r from-green-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
                     </a>
-                @endguest
-                <a href="{{ route('public.courses') }}" class="inline-flex items-center justify-center gap-2 bg-white text-blue-600 px-8 py-4 rounded-full font-bold text-lg border-2 border-blue-600 hover:bg-blue-50 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl relative">
+                <?php endif; ?>
+                <a href="<?php echo e(route('public.courses')); ?>" class="inline-flex items-center justify-center gap-2 bg-white text-blue-600 px-8 py-4 rounded-full font-bold text-lg border-2 border-blue-600 hover:bg-blue-50 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl relative">
                     <span class="flex items-center gap-2">
                         <span>استعرض جميع الكورسات</span>
                         <i class="fas fa-arrow-left"></i>
@@ -1525,7 +1527,7 @@
     </main>
     
     <!-- Unified Footer -->
-    @include('components.unified-footer')
+    <?php echo $__env->make('components.unified-footer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
     <!-- Dynamic JavaScript -->
     <script>
@@ -1582,8 +1584,8 @@
     
     <!-- Script لمشغل الفيديو المخصص -->
     <script>
-        @if(isset($course->video_url) && $course->video_url)
-        @php
+        <?php if(isset($course->video_url) && $course->video_url): ?>
+        <?php
             $videoUrl = $course->video_url;
             $videoId = null;
             $videoType = null;
@@ -1603,9 +1605,9 @@
             } elseif (preg_match('/\.(mp4|webm|ogg|avi|mov)(\?.*)?$/i', $videoUrl)) {
                 $videoType = 'html5';
             }
-        @endphp
+        ?>
         
-        @if($videoType === 'youtube' && $videoId)
+        <?php if($videoType === 'youtube' && $videoId): ?>
         let youtubePlayer;
         
         // تهيئة YouTube IFrame API
@@ -1613,7 +1615,7 @@
             youtubePlayer = new YT.Player('custom-video-player', {
                 height: '100%',
                 width: '100%',
-                videoId: '{{ $videoId }}',
+                videoId: '<?php echo e($videoId); ?>',
                 playerVars: {
                     'autoplay': 0,
                     'controls': 1,
@@ -1699,7 +1701,7 @@
         } else {
             window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
         }
-        @elseif($videoType === 'vimeo' && $videoId || $videoType === 'html5')
+        <?php elseif($videoType === 'vimeo' && $videoId || $videoType === 'html5'): ?>
         document.addEventListener('DOMContentLoaded', function() {
             // تهيئة مشغل الفيديو المخصص للـ Vimeo و HTML5
             const player = new Plyr('#custom-video-player', {
@@ -1747,9 +1749,10 @@
                 }
             });
         });
-        @endif
-        @endif
+        <?php endif; ?>
+        <?php endif; ?>
     </script>
 </body>
 </html>
 
+<?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/course-show.blade.php ENDPATH**/ ?>

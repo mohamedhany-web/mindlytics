@@ -74,6 +74,13 @@ Route::get('/storage/{path}', function ($path) {
         \Log::info('Storage file served successfully', ['requested_path' => $path, 'real_path' => $realPath, 'mime_type' => $mimeType]);
 
         return response()->file($realPath, $headers);
+    } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+        if ($e->getStatusCode() === 404) {
+            \Log::warning('Storage route: file not found or not allowed', ['path' => $path ?? 'unknown']);
+        } else {
+            \Log::error('Storage route error', ['path' => $path ?? 'unknown', 'error' => $e->getMessage()]);
+        }
+        throw $e;
     } catch (\Exception $e) {
         \Log::error('Storage route error', [
             'path' => $path ?? 'unknown',

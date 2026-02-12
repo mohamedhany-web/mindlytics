@@ -22,9 +22,6 @@
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
 
-    @php
-        $brainstormImage = file_exists(public_path('images/brainstorm-meeting.png')) ? 'images/brainstorm-meeting.png' : 'images/brainstorm-meeting.jpg';
-    @endphp
     <style>
         :root {
             --color-primary: #2563eb;
@@ -123,7 +120,7 @@
             align-items: center;
             justify-content: center;
             padding: 40px;
-            background: url('{{ asset($brainstormImage) }}') center center / cover no-repeat;
+            background: url('{{ $authBackgroundUrl ?? asset("images/brainstorm-meeting.jpg") }}') center center / cover no-repeat;
             position: relative;
             overflow: hidden;
             height: 100%;
@@ -538,7 +535,7 @@
             margin: 0.5rem 0 0;
             padding: 2rem 1rem 2rem;
             min-height: 9rem;
-            background: url('{{ asset($brainstormImage) }}') center center / cover no-repeat;
+            background: url('{{ $authBackgroundUrl ?? asset("images/brainstorm-meeting.jpg") }}') center center / cover no-repeat;
             border-radius: 20px;
             position: relative;
             overflow: hidden;

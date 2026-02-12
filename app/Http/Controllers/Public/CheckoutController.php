@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class CheckoutController extends Controller
 {
@@ -96,18 +97,36 @@ class CheckoutController extends Controller
                 ->with('info', 'أنت مسجل بالفعل في هذا الكورس');
         }
 
-        // التحقق من صحة البيانات
-        $request->validate([
+        // منع طلب مكرر: إذا كان هناك طلب قيد الانتظار لنفس الكورس
+        $existingPending = Order::where('user_id', Auth::id())
+            ->where('advanced_course_id', $course->id)
+            ->where('status', Order::STATUS_PENDING)
+            ->first();
+        if ($existingPending) {
+            return redirect()->route('public.course.show', $course->id)
+                ->with('info', 'لديك طلب قيد الانتظار لهذا الكورس. يرجى انتظار المراجعة.');
+        }
+
+        // التحقق من صحة البيانات (wallet_id: فقط محافظ نشطة ومعروضة في الصفحة)
+        $validated = $request->validate([
             'payment_method' => 'required|in:bank_transfer,wallet,online',
-            'wallet_id' => 'required_if:payment_method,wallet|exists:wallets,id',
+            'wallet_id' => [
+                'nullable',
+                'required_if:payment_method,wallet',
+                Rule::exists('wallets', 'id')->where('is_active', true)->whereIn('type', ['vodafone_cash', 'instapay', 'bank_transfer']),
+            ],
             'payment_proof' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+            'notes' => 'nullable|string|max:1000',
         ], [
             'payment_method.required' => 'طريقة الدفع مطلوبة',
+            'payment_method.in' => 'طريقة الدفع غير صحيحة',
             'wallet_id.required_if' => 'يجب اختيار محفظة للدفع',
+            'wallet_id.exists' => 'المحفظة المختارة غير صالحة أو غير متاحة. يرجى اختيار محفظة من القائمة.',
             'payment_proof.required' => 'صورة إيصال الدفع مطلوبة',
             'payment_proof.image' => 'يجب أن يكون الملف صورة',
             'payment_proof.mimes' => 'يجب أن تكون الصورة بصيغة jpeg, png أو jpg',
             'payment_proof.max' => 'حجم الصورة يجب ألا يتجاوز 2 ميجابايت',
+            'notes.max' => 'الملاحظات يجب ألا تتجاوز 1000 حرف',
         ]);
 
         DB::beginTransaction();
@@ -129,7 +148,7 @@ class CheckoutController extends Controller
                 'amount' => $finalAmount,
                 'payment_method' => $request->payment_method === 'wallet' ? 'bank_transfer' : $request->payment_method,
                 'payment_proof' => $paymentProofPath,
-                'wallet_id' => $request->wallet_id ?? null,
+                'wallet_id' => $request->payment_method === 'wallet' ? ($request->wallet_id ?: null) : null,
                 'notes' => $request->notes ?? '',
                 'status' => Order::STATUS_PENDING,
             ]);
@@ -137,10 +156,18 @@ class CheckoutController extends Controller
             DB::commit();
 
             return redirect()->route('public.course.show', $course->id)
-                ->with('success', 'تم إرسال طلبك بنجاح! سيتم مراجعته وتفعيل الكورس تلقائياً بعد الموافقة.');
+                ->with('success', 'تم استلام طلبك بنجاح. طلبك قيد المراجعة لهذا الكورس وسيتم تفعيله بعد الموافقة.');
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            return back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Checkout complete error: ' . $e->getMessage(), [
+                'user_id' => Auth::id(),
+                'course_id' => $courseId,
+                'trace' => $e->getTraceAsString(),
+            ]);
             return back()->with('error', 'حدث خطأ أثناء إتمام الطلب. يرجى المحاولة مرة أخرى.')
                 ->withInput();
         }
@@ -300,17 +327,21 @@ class CheckoutController extends Controller
                 ->with('info', 'أنت مسجل بالفعل في هذا المسار التعليمي');
         }
 
-        // التحقق من صحة البيانات
+        // التحقق من صحة البيانات (wallet_id: فقط محافظ نشطة ومعروضة في الصفحة)
         $validated = $request->validate([
             'payment_method' => 'required|in:bank_transfer,wallet,online',
-            'wallet_id' => 'nullable|required_if:payment_method,wallet|exists:wallets,id',
+            'wallet_id' => [
+                'nullable',
+                'required_if:payment_method,wallet',
+                Rule::exists('wallets', 'id')->where('is_active', true)->whereIn('type', ['vodafone_cash', 'instapay', 'bank_transfer']),
+            ],
             'payment_proof' => 'required|image|mimes:jpeg,png,jpg|max:2048',
             'notes' => 'nullable|string|max:1000',
         ], [
             'payment_method.required' => 'طريقة الدفع مطلوبة',
             'payment_method.in' => 'طريقة الدفع غير صحيحة',
             'wallet_id.required_if' => 'يجب اختيار محفظة للدفع',
-            'wallet_id.exists' => 'المحفظة المختارة غير موجودة',
+            'wallet_id.exists' => 'المحفظة المختارة غير صالحة أو غير متاحة. يرجى اختيار محفظة من القائمة.',
             'payment_proof.required' => 'صورة إيصال الدفع مطلوبة',
             'payment_proof.image' => 'يجب أن يكون الملف صورة',
             'payment_proof.mimes' => 'يجب أن تكون الصورة بصيغة jpeg, png أو jpg',

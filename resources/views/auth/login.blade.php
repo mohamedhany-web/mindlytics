@@ -125,7 +125,7 @@
             align-items: center;
             justify-content: center;
             padding: 40px;
-            background: url('{{ asset("images/brainstorm-meeting.jpg") }}') center center / cover no-repeat;
+            background: url('{{ $authBackgroundUrl ?? asset("images/brainstorm-meeting.jpg") }}') center center / cover no-repeat;
             position: relative;
             overflow: hidden;
             height: 100%;
@@ -545,7 +545,7 @@
             margin: 0.5rem 0 0;
             padding: 2rem 1rem 2rem;
             min-height: 9rem;
-            background: url('{{ asset("images/brainstorm-meeting.jpg") }}') center center / cover no-repeat;
+            background: url('{{ $authBackgroundUrl ?? asset("images/brainstorm-meeting.jpg") }}') center center / cover no-repeat;
             border-radius: 20px;
             position: relative;
             overflow: hidden;

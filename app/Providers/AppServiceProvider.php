@@ -5,9 +5,13 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\View;
 
 class AppServiceProvider extends ServiceProvider
 {
+    /** مسار صورة خلفية صفحات تسجيل الدخول/إنشاء الحساب في التخزين (نفس أسلوب مسارات التعلم) */
+    public const AUTH_BACKGROUND_STORAGE_PATH = 'auth-pages/brainstorm-meeting.jpg';
     /**
      * Register any application services.
      */
@@ -21,6 +25,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // صورة خلفية صفحات تسجيل الدخول وإنشاء الحساب: من التخزين (storage/app/public) مثل صور المسارات التعليمية لتعمل على السيرفر
+        View::composer(['auth.login', 'auth.register'], function ($view) {
+            $path = self::AUTH_BACKGROUND_STORAGE_PATH;
+            if (Storage::disk('public')->exists($path)) {
+                $view->with('authBackgroundUrl', asset('storage/' . $path));
+            } else {
+                $view->with('authBackgroundUrl', asset('images/brainstorm-meeting.jpg'));
+            }
+        });
+
         // إجبار روابط الموقع على HTTPS في الإنتاج (حل مشكلة عدم ظهور الصور عند Mixed Content)
         if ($this->app->environment('production') && config('app.url')) {
             URL::forceScheme('https');
