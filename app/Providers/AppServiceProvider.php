@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Storage;
@@ -25,7 +26,25 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // صورة خلفية صفحات تسجيل الدخول وإنشاء الحساب: من التخزين (storage/app/public) مثل صور المسارات التعليمية لتعمل على السيرفر
+        // ضمان وجود صورة الخلفية في التخزين (نفس مسار صور المسارات) لتعمل على السيرفر عبر /storage/
+        $authStoragePath = self::AUTH_BACKGROUND_STORAGE_PATH;
+        $disk = Storage::disk('public');
+        if (!$disk->exists($authStoragePath)) {
+            $sources = ['images/brainstorm-meeting.jpg', 'images/brainstorm-meeting.png'];
+            foreach ($sources as $source) {
+                $publicPath = public_path($source);
+                if (File::isFile($publicPath)) {
+                    $dir = dirname($authStoragePath);
+                    if (!$disk->exists($dir)) {
+                        $disk->makeDirectory($dir);
+                    }
+                    $disk->put($authStoragePath, File::get($publicPath));
+                    break;
+                }
+            }
+        }
+
+        // صورة خلفية صفحات تسجيل الدخول وإنشاء الحساب: دائماً من التخزين (نفس عرض صور المسارات)
         View::composer(['auth.login', 'auth.register'], function ($view) {
             $path = self::AUTH_BACKGROUND_STORAGE_PATH;
             if (Storage::disk('public')->exists($path)) {
