@@ -228,11 +228,15 @@ Route::get('/courses', function () {
     return view('courses', compact('courses', 'packages'));
 })->name('public.courses');
 
+// صفحة المدربين (الملفات التعريفية المعتمدة)
+Route::get('/instructors', [\App\Http\Controllers\Public\InstructorController::class, 'index'])->name('public.instructors.index');
+Route::get('/instructors/{instructor}', [\App\Http\Controllers\Public\InstructorController::class, 'show'])->name('public.instructors.show');
+
 // صفحة تفاصيل الكورس العامة
 Route::get('/course/{id}', function ($id) {
     $course = \App\Models\AdvancedCourse::where('id', $id)
         ->where('is_active', true)
-        ->with(['academicSubject', 'academicYear'])
+        ->with(['academicSubject', 'academicYear', 'instructor'])
         ->withCount('lessons')
         ->firstOrFail();
     
@@ -928,6 +932,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\QualityControlController::class, 'index'])->name('index');
             Route::get('/students', [\App\Http\Controllers\Admin\QualityControlController::class, 'students'])->name('students');
             Route::get('/instructors', [\App\Http\Controllers\Admin\QualityControlController::class, 'instructors'])->name('instructors');
+            Route::get('/instructors/{instructor}', [\App\Http\Controllers\Admin\QualityControlController::class, 'instructorShow'])->name('instructors.show');
+            Route::get('/instructors/{instructor}/export', [\App\Http\Controllers\Admin\QualityControlController::class, 'instructorExport'])->name('instructors.export');
             Route::get('/employees', [\App\Http\Controllers\Admin\QualityControlController::class, 'employees'])->name('employees');
             Route::get('/operations', [\App\Http\Controllers\Admin\QualityControlController::class, 'operations'])->name('operations');
         });
@@ -1088,6 +1094,11 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         });
 
         // إدارة التسويق
+        Route::get('/personal-branding', [\App\Http\Controllers\Admin\InstructorPersonalBrandingController::class, 'index'])->name('personal-branding.index');
+        Route::get('/personal-branding/{personal_branding}', [\App\Http\Controllers\Admin\InstructorPersonalBrandingController::class, 'show'])->name('personal-branding.show');
+        Route::post('/personal-branding/{personal_branding}/approve', [\App\Http\Controllers\Admin\InstructorPersonalBrandingController::class, 'approve'])->name('personal-branding.approve');
+        Route::post('/personal-branding/{personal_branding}/reject', [\App\Http\Controllers\Admin\InstructorPersonalBrandingController::class, 'reject'])->name('personal-branding.reject');
+        Route::post('/personal-branding/{personal_branding}/send-back', [\App\Http\Controllers\Admin\InstructorPersonalBrandingController::class, 'sendBackForReview'])->name('personal-branding.send-back');
         Route::resource('coupons', \App\Http\Controllers\Admin\CouponController::class);
         // إدارة برامج الإحالات
         Route::resource('referral-programs', \App\Http\Controllers\Admin\ReferralProgramController::class);
@@ -1171,6 +1182,11 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         // بروفايل المدرب
         Route::get('/profile', [\App\Http\Controllers\Instructor\ProfileController::class, 'index'])->name('profile');
         Route::put('/profile', [\App\Http\Controllers\Instructor\ProfileController::class, 'update'])->name('profile.update');
+
+        // التسويق الشخصي (البراندينغ) — ملف تعريفي للمدرب للمراجعة والنشر
+        Route::get('/personal-branding', [\App\Http\Controllers\Instructor\PersonalBrandingController::class, 'edit'])->name('personal-branding.edit');
+        Route::put('/personal-branding', [\App\Http\Controllers\Instructor\PersonalBrandingController::class, 'update'])->name('personal-branding.update');
+        Route::post('/personal-branding/submit', [\App\Http\Controllers\Instructor\PersonalBrandingController::class, 'submit'])->name('personal-branding.submit');
 
         Route::resource('courses', \App\Http\Controllers\Instructor\CourseController::class)->only(['index', 'show']);
         Route::resource('offline-courses', \App\Http\Controllers\Instructor\OfflineCourseController::class)->only(['index', 'show'])->parameters(['offline_course' => 'offlineCourse']);

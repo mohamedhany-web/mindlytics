@@ -7,8 +7,24 @@ use App\Models\User;
 use App\Models\StudentCourseEnrollment;
 use App\Models\OfflineCourseEnrollment;
 use App\Models\EmployeeTask;
+use App\Models\AdvancedCourse;
+use App\Models\Lecture;
+use App\Models\OfflineCourse;
+use App\Models\OfflineLecture;
+use App\Models\InstructorAgreement;
+use App\Models\Assignment;
+use App\Models\WithdrawalRequest;
+use App\Models\InstructorRequest;
+use App\Models\Certificate;
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class QualityControlController extends Controller
 {
@@ -126,6 +142,319 @@ class QualityControlController extends Controller
         });
 
         return view('admin.quality-control.instructors', compact('instructors'));
+    }
+
+    /**
+     * صفحة تفاصيل المدرب — رقابة شاملة: كل البيانات والتقارير
+     */
+    public function instructorShow(User $instructor)
+    {
+        if (!$instructor->isInstructor()) {
+            abort(404);
+        }
+
+        // البيانات الشخصية (محمّلة مسبقاً)
+        $instructor->load(['employeeJob']);
+
+        // الكورسات (أونلاين)
+        $advancedCourses = AdvancedCourse::where('instructor_id', $instructor->id)
+            ->with(['academicYear', 'academicSubject'])
+            ->orderByDesc('created_at')
+            ->get();
+
+        // المحاضرات (أونلاين) — من كورساته أو المنسوبة له
+        $lectures = Lecture::where('instructor_id', $instructor->id)
+            ->with(['course:id,title,instructor_id', 'lesson:id,title'])
+            ->orderByDesc('scheduled_at')
+            ->get();
+
+        // الكورسات الأوفلاين
+        $offlineCourses = OfflineCourse::where('instructor_id', $instructor->id)
+            ->orderByDesc('created_at')
+            ->get();
+
+        // محاضرات أوفلاين
+        $offlineLectures = OfflineLecture::where('instructor_id', $instructor->id)
+            ->with(['offlineCourse:id,title'])
+            ->orderByDesc('scheduled_at')
+            ->get();
+
+        // الاتفاقيات
+        $agreements = InstructorAgreement::where('instructor_id', $instructor->id)
+            ->with(['offlineCourse:id,title'])
+            ->orderByDesc('created_at')
+            ->get();
+
+        // الواجبات (teacher_id)
+        $assignments = Assignment::where('teacher_id', $instructor->id)
+            ->with(['course:id,title', 'group:id,name'])
+            ->orderByDesc('created_at')
+            ->get();
+
+        // طلبات السحب
+        $withdrawals = WithdrawalRequest::where('instructor_id', $instructor->id)
+            ->orderByDesc('created_at')
+            ->get();
+
+        // طلبات الانضمام كمدرب
+        $instructorRequests = InstructorRequest::where('instructor_id', $instructor->id)
+            ->orderByDesc('created_at')
+            ->get();
+
+        // إحصائيات التسجيل في كورساته (أونلاين)
+        $courseIds = $advancedCourses->pluck('id');
+
+        // شهادات صادرة: إما حسب instructor_id إن وُجد العمود، وإلا حسب كورسات المدرب
+        $certificates = collect();
+        if (\Illuminate\Support\Facades\Schema::hasColumn((new Certificate)->getTable(), 'instructor_id')) {
+            $certificates = Certificate::where('instructor_id', $instructor->id)->orderByDesc('created_at')->get();
+        } elseif ($courseIds->isNotEmpty()) {
+            $certificates = Certificate::whereIn('course_id', $courseIds)->orderByDesc('created_at')->get();
+        }
+        $enrollmentsCount = StudentCourseEnrollment::whereIn('advanced_course_id', $courseIds)->count();
+        $enrollmentsActive = StudentCourseEnrollment::whereIn('advanced_course_id', $courseIds)->where('status', 'active')->count();
+        $enrollmentsCompleted = StudentCourseEnrollment::whereIn('advanced_course_id', $courseIds)->where('status', 'completed')->count();
+
+        // سجل النشاطات للمدرب
+        $activityLogs = ActivityLog::where('user_id', $instructor->id)
+            ->orderByDesc('created_at')
+            ->limit(100)
+            ->get();
+
+        return view('admin.quality-control.instructor-show', compact(
+            'instructor',
+            'advancedCourses',
+            'lectures',
+            'offlineCourses',
+            'offlineLectures',
+            'agreements',
+            'assignments',
+            'withdrawals',
+            'instructorRequests',
+            'certificates',
+            'enrollmentsCount',
+            'enrollmentsActive',
+            'enrollmentsCompleted',
+            'activityLogs'
+        ));
+    }
+
+    /**
+     * تصدير تقرير المدرب إلى Excel — ملف مرتب ومنظم
+     */
+    public function instructorExport(User $instructor)
+    {
+        if (!$instructor->isInstructor()) {
+            abort(404);
+        }
+
+        $spreadsheet = new Spreadsheet();
+        $spreadsheet->getProperties()
+            ->setCreator('Mindlytics')
+            ->setTitle('تقرير رقابة المدرب - ' . $instructor->name)
+            ->setSubject('تقرير شامل عن المدرب وأنشطته');
+
+        $headerStyle = [
+            'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A5F']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER, 'wrapText' => true],
+        ];
+        $border = ['borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]]];
+
+        $this->writeInstructorSummarySheet($spreadsheet, $instructor, $headerStyle, $border);
+        $this->writeInstructorProfileSheet($spreadsheet, $instructor, $headerStyle, $border);
+        $this->writeInstructorCoursesSheet($spreadsheet, $instructor, $headerStyle, $border);
+        $this->writeInstructorLecturesSheet($spreadsheet, $instructor, $headerStyle, $border);
+        $this->writeInstructorAgreementsSheet($spreadsheet, $instructor, $headerStyle, $border);
+        $this->writeInstructorAssignmentsSheet($spreadsheet, $instructor, $headerStyle, $border);
+        $this->writeInstructorWithdrawalsSheet($spreadsheet, $instructor, $headerStyle, $border);
+        $this->writeInstructorActivitySheet($spreadsheet, $instructor, $headerStyle, $border);
+
+        $safeName = preg_replace('/[^\p{L}\p{N}\s\-_]/u', '_', $instructor->name);
+        $filename = 'تقرير_المدرب_' . $safeName . '_' . now()->format('Y-m-d') . '.xlsx';
+
+        return new StreamedResponse(function () use ($spreadsheet) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control' => 'max-age=0',
+        ]);
+    }
+
+    private function writeInstructorSummarySheet($spreadsheet, $instructor, $headerStyle, $border)
+    {
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('ملخص المدرب');
+        $sheet->setRightToLeft(true);
+
+        $coursesCount = AdvancedCourse::where('instructor_id', $instructor->id)->count();
+        $lecturesCount = Lecture::where('instructor_id', $instructor->id)->count();
+        $agreementsCount = InstructorAgreement::where('instructor_id', $instructor->id)->count();
+        $assignmentsCount = Assignment::where('teacher_id', $instructor->id)->count();
+        $withdrawalsCount = WithdrawalRequest::where('instructor_id', $instructor->id)->count();
+
+        $rows = [
+            ['البيان', 'القيمة'],
+            ['الاسم', $instructor->name],
+            ['البريد', $instructor->email ?? '—'],
+            ['الهاتف', $instructor->phone ?? '—'],
+            ['حالة الحساب', $instructor->is_active ? 'نشط' : 'معطّل'],
+            ['آخر دخول', $instructor->last_login_at ? $instructor->last_login_at->format('Y-m-d H:i') : '—'],
+            ['عدد الكورسات (أونلاين)', $coursesCount],
+            ['عدد المحاضرات', $lecturesCount],
+            ['عدد الاتفاقيات', $agreementsCount],
+            ['عدد الواجبات', $assignmentsCount],
+            ['عدد طلبات السحب', $withdrawalsCount],
+        ];
+        $this->writeSheetRows($sheet, $rows, $headerStyle, $border);
+    }
+
+    private function writeInstructorProfileSheet($spreadsheet, $instructor, $headerStyle, $border)
+    {
+        $sheet = $spreadsheet->createSheet();
+        $sheet->setTitle('البيانات الشخصية');
+        $sheet->setRightToLeft(true);
+        $rows = [
+            ['الحقل', 'القيمة'],
+            ['الاسم', $instructor->name],
+            ['البريد الإلكتروني', $instructor->email ?? '—'],
+            ['الهاتف', $instructor->phone ?? '—'],
+            ['تاريخ الميلاد', $instructor->birth_date ? $instructor->birth_date->format('Y-m-d') : '—'],
+            ['العنوان', $instructor->address ?? '—'],
+            ['النبذة', $instructor->bio ?? '—'],
+            ['نشط', $instructor->is_active ? 'نعم' : 'لا'],
+            ['تاريخ التسجيل', $instructor->created_at->format('Y-m-d H:i')],
+            ['آخر تحديث', $instructor->updated_at->format('Y-m-d H:i')],
+            ['آخر دخول', $instructor->last_login_at ? $instructor->last_login_at->format('Y-m-d H:i') : '—'],
+        ];
+        $this->writeSheetRows($sheet, $rows, $headerStyle, $border);
+    }
+
+    private function writeInstructorCoursesSheet($spreadsheet, $instructor, $headerStyle, $border)
+    {
+        $sheet = $spreadsheet->createSheet();
+        $sheet->setTitle('الكورسات');
+        $sheet->setRightToLeft(true);
+        $courses = AdvancedCourse::where('instructor_id', $instructor->id)->orderByDesc('created_at')->get();
+        $rows = [['المعرف', 'العنوان', 'السعر', 'نشط', 'تاريخ الإنشاء']];
+        foreach ($courses as $c) {
+            $rows[] = [$c->id, $c->title ?? '—', $c->price ?? 0, $c->is_active ? 'نعم' : 'لا', $c->created_at->format('Y-m-d')];
+        }
+        $this->writeSheetRows($sheet, $rows, $headerStyle, $border);
+    }
+
+    private function writeInstructorLecturesSheet($spreadsheet, $instructor, $headerStyle, $border)
+    {
+        $sheet = $spreadsheet->createSheet();
+        $sheet->setTitle('المحاضرات');
+        $sheet->setRightToLeft(true);
+        $lectures = Lecture::where('instructor_id', $instructor->id)->with('course:id,title')->orderByDesc('scheduled_at')->get();
+        $rows = [['المعرف', 'العنوان', 'الكورس', 'مجدولة في', 'الحالة', 'المدة (د)']];
+        foreach ($lectures as $l) {
+            $rows[] = [
+                $l->id,
+                $l->title ?? '—',
+                $l->course ? $l->course->title : '—',
+                $l->scheduled_at ? $l->scheduled_at->format('Y-m-d H:i') : '—',
+                $l->status ?? '—',
+                $l->duration_minutes ?? '—',
+            ];
+        }
+        $this->writeSheetRows($sheet, $rows, $headerStyle, $border);
+    }
+
+    private function writeInstructorAgreementsSheet($spreadsheet, $instructor, $headerStyle, $border)
+    {
+        $sheet = $spreadsheet->createSheet();
+        $sheet->setTitle('الاتفاقيات');
+        $sheet->setRightToLeft(true);
+        $agreements = InstructorAgreement::where('instructor_id', $instructor->id)->with('offlineCourse:id,title')->orderByDesc('created_at')->get();
+        $rows = [['رقم الاتفاقية', 'العنوان', 'نوع الفوترة', 'المبلغ الإجمالي', 'الحالة', 'من', 'إلى']];
+        foreach ($agreements as $a) {
+            $rows[] = [
+                $a->agreement_number ?? '—',
+                $a->title ?? '—',
+                $a->billing_type ?? '—',
+                $a->total_amount ?? $a->monthly_amount ?? '—',
+                $a->status ?? '—',
+                $a->start_date ? $a->start_date->format('Y-m-d') : '—',
+                $a->end_date ? $a->end_date->format('Y-m-d') : '—',
+            ];
+        }
+        $this->writeSheetRows($sheet, $rows, $headerStyle, $border);
+    }
+
+    private function writeInstructorAssignmentsSheet($spreadsheet, $instructor, $headerStyle, $border)
+    {
+        $sheet = $spreadsheet->createSheet();
+        $sheet->setTitle('الواجبات');
+        $sheet->setRightToLeft(true);
+        $assignments = Assignment::where('teacher_id', $instructor->id)->with('course:id,title')->orderByDesc('created_at')->get();
+        $rows = [['المعرف', 'العنوان', 'الكورس', 'الحد الأقصى للنقاط', 'الحالة', 'تاريخ الاستحقاق']];
+        foreach ($assignments as $a) {
+            $rows[] = [
+                $a->id,
+                $a->title ?? '—',
+                $a->course ? $a->course->title : '—',
+                $a->max_score ?? '—',
+                $a->status ?? '—',
+                $a->due_date ? $a->due_date->format('Y-m-d') : '—',
+            ];
+        }
+        $this->writeSheetRows($sheet, $rows, $headerStyle, $border);
+    }
+
+    private function writeInstructorWithdrawalsSheet($spreadsheet, $instructor, $headerStyle, $border)
+    {
+        $sheet = $spreadsheet->createSheet();
+        $sheet->setTitle('طلبات السحب');
+        $sheet->setRightToLeft(true);
+        $withdrawals = WithdrawalRequest::where('instructor_id', $instructor->id)->orderByDesc('created_at')->get();
+        $rows = [['المعرف', 'المبلغ', 'الحالة', 'تاريخ الطلب']];
+        foreach ($withdrawals as $w) {
+            $rows[] = [$w->id, $w->amount ?? 0, $w->status ?? '—', $w->created_at->format('Y-m-d H:i')];
+        }
+        $this->writeSheetRows($sheet, $rows, $headerStyle, $border);
+    }
+
+    private function writeInstructorActivitySheet($spreadsheet, $instructor, $headerStyle, $border)
+    {
+        $sheet = $spreadsheet->createSheet();
+        $sheet->setTitle('سجل النشاط');
+        $sheet->setRightToLeft(true);
+        $logs = ActivityLog::where('user_id', $instructor->id)->orderByDesc('created_at')->limit(500)->get();
+        $rows = [['التاريخ', 'الإجراء', 'الوصف', 'النموذج']];
+        foreach ($logs as $log) {
+            $rows[] = [
+                $log->created_at->format('Y-m-d H:i'),
+                $log->action ?? '—',
+                $log->description ?? '—',
+                $log->model_type ?? '—',
+            ];
+        }
+        $this->writeSheetRows($sheet, $rows, $headerStyle, $border);
+    }
+
+    private function writeSheetRows($sheet, $rows, $headerStyle, $border)
+    {
+        $row = 1;
+        foreach ($rows as $index => $cells) {
+            $col = 'A';
+            foreach ($cells as $value) {
+                $sheet->setCellValue($col . $row, $value);
+                if ($index === 0) {
+                    $sheet->getStyle($col . $row)->applyFromArray($headerStyle);
+                }
+                $sheet->getStyle($col . $row)->applyFromArray($border);
+                $col++;
+            }
+            $row++;
+        }
+        foreach (range('A', $sheet->getHighestDataColumn()) as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
     }
 
     /**

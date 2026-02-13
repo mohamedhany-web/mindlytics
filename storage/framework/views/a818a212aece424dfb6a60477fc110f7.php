@@ -7,7 +7,7 @@
         </button>
         <div class="flex items-center gap-2 md:gap-3 pr-8 lg:pr-0">
             <div class="w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center overflow-hidden bg-slate-100 border border-slate-200 flex-shrink-0">
-                <img src="{{ $platformLogoUrl ?? asset('logo-removebg-preview.png') }}" alt="Mindlytics Logo" class="w-full h-full object-contain" style="transform: none !important; object-position: center !important;" onerror="this.onerror=null; this.src='{{ asset('logo-removebg-preview.png') }}';">
+                <img src="<?php echo e($platformLogoUrl ?? asset('logo-removebg-preview.png')); ?>" alt="Mindlytics Logo" class="w-full h-full object-contain" style="transform: none !important; object-position: center !important;" onerror="this.onerror=null; this.src='<?php echo e(asset('logo-removebg-preview.png')); ?>';">
             </div>
             <div class="flex-1 min-w-0">
                 <h2 class="text-base md:text-lg font-bold text-slate-800 tracking-tight">Mindlytics</h2>
@@ -17,7 +17,7 @@
     </div>
 
     <!-- Quick Stats -->
-    @php
+    <?php
         $user = auth()->user();
         $directCourseIds = \App\Models\AdvancedCourse::where('instructor_id', $user->id)->pluck('id');
         $assignedFromPaths = $user->teachingLearningPaths()->get()->flatMap(fn($ay) => json_decode($ay->pivot->assigned_courses ?? '[]', true) ?: []);
@@ -25,7 +25,7 @@
         $myCoursesCount = $teachingCourseIds->count();
         $totalStudents = $teachingCourseIds->isEmpty() ? 0 : \App\Models\StudentCourseEnrollment::whereIn('advanced_course_id', $teachingCourseIds)->where('status', 'active')->distinct('user_id')->count('user_id');
         $myOfflineCoursesCount = \App\Models\OfflineCourse::where('instructor_id', $user->id)->count();
-    @endphp
+    ?>
     <div class="p-3 md:p-4 border-b border-slate-200 bg-slate-50/50">
         <div class="grid grid-cols-2 gap-2">
             <div class="rounded-xl p-3 border border-slate-200 bg-white shadow-sm">
@@ -33,29 +33,29 @@
                     <i class="fas fa-book text-sky-500 text-xs"></i>
                     <span class="text-xs font-semibold text-slate-600">الكورسات</span>
                 </div>
-                <div class="text-lg font-bold text-slate-800">{{ $myCoursesCount }}</div>
+                <div class="text-lg font-bold text-slate-800"><?php echo e($myCoursesCount); ?></div>
             </div>
             <div class="rounded-xl p-3 border border-slate-200 bg-white shadow-sm">
                 <div class="flex items-center gap-1.5 mb-1">
                     <i class="fas fa-user-graduate text-emerald-500 text-xs"></i>
                     <span class="text-xs font-semibold text-slate-600">الطلاب</span>
                 </div>
-                <div class="text-lg font-bold text-slate-800">{{ $totalStudents }}</div>
+                <div class="text-lg font-bold text-slate-800"><?php echo e($totalStudents); ?></div>
             </div>
         </div>
     </div>
 
     <!-- Navigation -->
     <nav class="flex-1 overflow-y-auto sidebar-scroll p-2 md:p-3 space-y-1">
-        @php
+        <?php
             $user = auth()->user();
             $isInstructor = $user->isInstructor() || $user->isTeacher() || strtolower($user->role) === 'teacher' || strtolower($user->role) === 'instructor';
-        @endphp
-        @if($isInstructor || $user->hasAnyPermission('instructor.view.courses', 'instructor.manage.lectures', 'instructor.manage.groups', 'instructor.manage.assignments', 'instructor.manage.exams', 'instructor.manage.attendance', 'instructor.view.tasks'))
+        ?>
+        <?php if($isInstructor || $user->hasAnyPermission('instructor.view.courses', 'instructor.manage.lectures', 'instructor.manage.groups', 'instructor.manage.assignments', 'instructor.manage.exams', 'instructor.manage.attendance', 'instructor.view.tasks')): ?>
             <!-- Dashboard -->
-            <a href="{{ route('dashboard') }}" 
+            <a href="<?php echo e(route('dashboard')); ?>" 
                @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('dashboard') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent' }}">
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('dashboard') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
                 <div class="w-9 h-9 rounded-lg bg-sky-500 text-white flex items-center justify-center flex-shrink-0">
                     <i class="fas fa-chart-line text-sm"></i>
                 </div>
@@ -67,201 +67,202 @@
             </a>
 
             <!-- My Courses -->
-            @if($isInstructor || $user->hasPermission('instructor.view.courses'))
-            <a href="{{ route('instructor.courses.index') }}" 
+            <?php if($isInstructor || $user->hasPermission('instructor.view.courses')): ?>
+            <a href="<?php echo e(route('instructor.courses.index')); ?>" 
                @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('instructor.courses.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent' }}">
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.courses.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
                 <div class="w-9 h-9 rounded-lg bg-sky-600 text-white flex items-center justify-center flex-shrink-0">
                     <i class="fas fa-book-open text-sm"></i>
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="font-bold text-slate-800 text-sm">كورساتي</div>
-                    <div class="text-xs text-slate-500 mt-0.5">{{ $myCoursesCount }} كورس</div>
+                    <div class="text-xs text-slate-500 mt-0.5"><?php echo e($myCoursesCount); ?> كورس</div>
                 </div>
                 <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
             </a>
-            @endif
+            <?php endif; ?>
 
             <!-- كورساتي الأوفلاين -->
-            @if($isInstructor || $user->hasPermission('instructor.view.courses'))
-            <a href="{{ route('instructor.offline-courses.index') }}" 
+            <?php if($isInstructor || $user->hasPermission('instructor.view.courses')): ?>
+            <a href="<?php echo e(route('instructor.offline-courses.index')); ?>" 
                @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('instructor.offline-courses.*') ? 'bg-amber-50 border border-amber-200' : 'hover:bg-slate-50 border border-transparent' }}">
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.offline-courses.*') ? 'bg-amber-50 border border-amber-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
                 <div class="w-9 h-9 rounded-lg bg-amber-500 text-white flex items-center justify-center flex-shrink-0">
                     <i class="fas fa-map-marker-alt text-sm"></i>
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="font-bold text-slate-800 text-sm">كورساتي الأوفلاين</div>
-                    <div class="text-xs text-slate-500 mt-0.5">{{ $myOfflineCoursesCount ?? 0 }} كورس أوفلاين</div>
+                    <div class="text-xs text-slate-500 mt-0.5"><?php echo e($myOfflineCoursesCount ?? 0); ?> كورس أوفلاين</div>
                 </div>
                 <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
             </a>
-            @endif
+            <?php endif; ?>
 
-            @php $teachingPaths = auth()->user()->teachingLearningPaths()->where('is_active', true)->get(); @endphp
-            @if($teachingPaths->count() > 0)
-            <a href="{{ route('instructor.learning-path.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('instructor.learning-path.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent' }}">
+            <?php $teachingPaths = auth()->user()->teachingLearningPaths()->where('is_active', true)->get(); ?>
+            <?php if($teachingPaths->count() > 0): ?>
+            <a href="<?php echo e(route('instructor.learning-path.index')); ?>" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.learning-path.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
                 <div class="w-9 h-9 rounded-lg bg-emerald-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-route text-sm"></i></div>
-                <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">المسار التعليمي</div><div class="text-xs text-slate-500 mt-0.5">{{ $teachingPaths->count() }} مسار</div></div>
+                <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">المسار التعليمي</div><div class="text-xs text-slate-500 mt-0.5"><?php echo e($teachingPaths->count()); ?> مسار</div></div>
                 <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
             </a>
-            @endif
+            <?php endif; ?>
 
-            @if($isInstructor || $user->hasPermission('instructor.manage.lectures'))
-            <a href="{{ route('instructor.lectures.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('instructor.lectures.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent' }}">
+            <?php if($isInstructor || $user->hasPermission('instructor.manage.lectures')): ?>
+            <a href="<?php echo e(route('instructor.lectures.index')); ?>" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.lectures.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
                 <div class="w-9 h-9 rounded-lg bg-violet-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-chalkboard-teacher text-sm"></i></div>
                 <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">المحاضرات</div><div class="text-xs text-slate-500 mt-0.5">إدارة المحاضرات</div></div>
                 <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
             </a>
-            @endif
+            <?php endif; ?>
 
-            @if($isInstructor || $user->hasPermission('instructor.manage.assignments'))
-            <a href="{{ route('instructor.assignments.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('instructor.assignments.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent' }}">
+            <?php if($isInstructor || $user->hasPermission('instructor.manage.assignments')): ?>
+            <a href="<?php echo e(route('instructor.assignments.index')); ?>" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.assignments.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
                 <div class="w-9 h-9 rounded-lg bg-amber-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-tasks text-sm"></i></div>
                 <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">الواجبات</div><div class="text-xs text-slate-500 mt-0.5">إدارة الواجبات</div></div>
                 <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
             </a>
-            @endif
+            <?php endif; ?>
 
-            @if($isInstructor || $user->hasPermission('instructor.manage.exams'))
-            <a href="{{ route('instructor.exams.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('instructor.exams.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent' }}">
+            <?php if($isInstructor || $user->hasPermission('instructor.manage.exams')): ?>
+            <a href="<?php echo e(route('instructor.exams.index')); ?>" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.exams.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
                 <div class="w-9 h-9 rounded-lg bg-indigo-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-clipboard-check text-sm"></i></div>
                 <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">الامتحانات</div><div class="text-xs text-slate-500 mt-0.5">إدارة الاختبارات</div></div>
                 <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
             </a>
-            @endif
+            <?php endif; ?>
 
-            @if($isInstructor)
-            <a href="{{ route('instructor.question-banks.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('instructor.question-banks.*') || request()->routeIs('instructor.questions.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent' }}">
+            <?php if($isInstructor): ?>
+            <a href="<?php echo e(route('instructor.question-banks.index')); ?>" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.question-banks.*') || request()->routeIs('instructor.questions.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
                 <div class="w-9 h-9 rounded-lg bg-teal-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-database text-sm"></i></div>
                 <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">بنوك الأسئلة</div><div class="text-xs text-slate-500 mt-0.5">إدارة الأسئلة</div></div>
                 <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
             </a>
-            @endif
+            <?php endif; ?>
 
-            @if($isInstructor || $user->hasPermission('instructor.manage.groups'))
-            <a href="{{ route('instructor.groups.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('instructor.groups.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent' }}">
+            <?php if($isInstructor || $user->hasPermission('instructor.manage.groups')): ?>
+            <a href="<?php echo e(route('instructor.groups.index')); ?>" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.groups.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
                 <div class="w-9 h-9 rounded-lg bg-emerald-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-users text-sm"></i></div>
                 <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">المجموعات</div><div class="text-xs text-slate-500 mt-0.5">إدارة المجموعات</div></div>
                 <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
             </a>
-            @endif
+            <?php endif; ?>
 
-            @if($isInstructor || $user->hasPermission('instructor.manage.attendance'))
-            <a href="{{ route('instructor.attendance.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('instructor.attendance.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent' }}">
+            <?php if($isInstructor || $user->hasPermission('instructor.manage.attendance')): ?>
+            <a href="<?php echo e(route('instructor.attendance.index')); ?>" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.attendance.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
                 <div class="w-9 h-9 rounded-lg bg-cyan-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-clipboard-list text-sm"></i></div>
                 <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">الحضور</div><div class="text-xs text-slate-500 mt-0.5">تسجيل الحضور</div></div>
                 <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
             </a>
-            @endif
+            <?php endif; ?>
 
-            @if($isInstructor || $user->hasPermission('instructor.view.tasks'))
-            <a href="{{ route('instructor.tasks.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('instructor.tasks.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent' }}">
+            <?php if($isInstructor || $user->hasPermission('instructor.view.tasks')): ?>
+            <a href="<?php echo e(route('instructor.tasks.index')); ?>" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.tasks.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
                 <div class="w-9 h-9 rounded-lg bg-rose-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-check-square text-sm"></i></div>
                 <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">المهام من الإدارة</div><div class="text-xs text-slate-500 mt-0.5">مهام مسندة من الإدارة</div></div>
                 <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
             </a>
-            @endif
+            <?php endif; ?>
 
-            @if(($isInstructor || $user->hasPermission('instructor.view.tasks')) && Route::has('instructor.management-requests.index'))
-            <a href="{{ route('instructor.management-requests.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('instructor.management-requests.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent' }}">
+            <?php if(($isInstructor || $user->hasPermission('instructor.view.tasks')) && Route::has('instructor.management-requests.index')): ?>
+            <a href="<?php echo e(route('instructor.management-requests.index')); ?>" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.management-requests.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
                 <div class="w-9 h-9 rounded-lg bg-indigo-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-paper-plane text-sm"></i></div>
                 <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">تقديم طلبات للإدارة</div><div class="text-xs text-slate-500 mt-0.5">طلباتي للإدارة</div></div>
                 <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
             </a>
-            @endif
+            <?php endif; ?>
 
-            <a href="{{ route('instructor.agreements.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('instructor.agreements.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent' }}">
+            <a href="<?php echo e(route('instructor.agreements.index')); ?>" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.agreements.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
                 <div class="w-9 h-9 rounded-lg bg-teal-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-handshake text-sm"></i></div>
                 <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">نظام الاتفاقيات</div><div class="text-xs text-slate-500 mt-0.5">عقدي مع المنصة</div></div>
                 <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
             </a>
 
-            <a href="{{ route('instructor.transfer-account.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('instructor.transfer-account.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent' }}">
+            <a href="<?php echo e(route('instructor.transfer-account.index')); ?>" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.transfer-account.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
                 <div class="w-9 h-9 rounded-lg bg-indigo-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-university text-sm"></i></div>
                 <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">حساب التحويل</div><div class="text-xs text-slate-500 mt-0.5">بيانات استلام المستحقات</div></div>
                 <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
             </a>
 
-            <a href="{{ route('instructor.withdrawals.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('instructor.withdrawals.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent' }}">
+            <a href="<?php echo e(route('instructor.withdrawals.index')); ?>" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.withdrawals.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
                 <div class="w-9 h-9 rounded-lg bg-orange-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-money-bill-wave text-sm"></i></div>
                 <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">طلبات السحب</div><div class="text-xs text-slate-500 mt-0.5">سحب الماديات</div></div>
                 <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
             </a>
 
-            <a href="{{ route('instructor.personal-branding.edit') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('instructor.personal-branding.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent' }}">
+            <a href="<?php echo e(route('instructor.personal-branding.edit')); ?>" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.personal-branding.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
                 <div class="w-9 h-9 rounded-lg bg-indigo-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-user-tie text-sm"></i></div>
                 <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">التسويق الشخصي</div><div class="text-xs text-slate-500 mt-0.5">الملف التعريفي للنشر</div></div>
                 <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
             </a>
-        @endif
+        <?php endif; ?>
 
-        @if(auth()->user()->isAdmin() || auth()->user()->isInstructor())
+        <?php if(auth()->user()->isAdmin() || auth()->user()->isInstructor()): ?>
             <hr class="my-3 border-slate-200">
-            @if(auth()->user()->isAdmin())
-            <a href="{{ route('admin.dashboard') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('admin.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent' }}">
+            <?php if(auth()->user()->isAdmin()): ?>
+            <a href="<?php echo e(route('admin.dashboard')); ?>" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('admin.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
                 <div class="w-9 h-9 rounded-lg bg-slate-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-cog text-sm"></i></div>
                 <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">لوحة الإدارة</div><div class="text-xs text-slate-500 mt-0.5">الإدارة</div></div>
                 <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
             </a>
-            @endif
-        @endif
+            <?php endif; ?>
+        <?php endif; ?>
 
-        <a href="{{ route('instructor.portfolio.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
-           class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('instructor.portfolio.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent' }}">
+        <a href="<?php echo e(route('instructor.portfolio.index')); ?>" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+           class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.portfolio.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
             <div class="w-9 h-9 rounded-lg bg-emerald-600 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-briefcase text-sm"></i></div>
             <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">البورتفوليو</div><div class="text-xs text-slate-500 mt-0.5">مراجعة المشاريع</div></div>
             <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
         </a>
 
-        <a href="{{ route('instructor.profile') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
-           class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('instructor.profile*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent' }}">
+        <a href="<?php echo e(route('instructor.profile')); ?>" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+           class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.profile*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
             <div class="w-9 h-9 rounded-lg bg-slate-600 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-user text-sm"></i></div>
             <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">الملف الشخصي</div><div class="text-xs text-slate-500 mt-0.5">معلوماتي</div></div>
             <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
         </a>
 
-        @if(auth()->check() && auth()->user()->hasPermission('student.view.settings'))
-        <a href="{{ route('settings') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
-           class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('settings') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent' }}">
+        <?php if(auth()->check() && auth()->user()->hasPermission('student.view.settings')): ?>
+        <a href="<?php echo e(route('settings')); ?>" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+           class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('settings') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
             <div class="w-9 h-9 rounded-lg bg-slate-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-cog text-sm"></i></div>
             <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">الإعدادات</div><div class="text-xs text-slate-500 mt-0.5">الخيارات</div></div>
             <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
         </a>
-        @endif
+        <?php endif; ?>
     </nav>
 
     <!-- User profile at bottom -->
     <div class="p-3 md:p-4 border-t border-slate-200 bg-slate-50/50">
         <div class="flex items-center gap-3 p-2.5 rounded-xl bg-white border border-slate-200 shadow-sm">
             <div class="w-10 h-10 rounded-xl bg-sky-500 flex items-center justify-center text-white font-bold text-sm overflow-hidden flex-shrink-0 relative">
-                @if(auth()->user()->profile_image)
-                    <img src="{{ auth()->user()->profile_image_url }}" alt="Profile" class="w-full h-full object-cover absolute inset-0" onerror="this.classList.add('!hidden'); this.nextElementSibling?.classList.remove('hidden');">
-                    <span class="hidden absolute inset-0 flex items-center justify-center bg-sky-500 text-white font-bold text-sm">{{ mb_substr(auth()->user()->name, 0, 1) }}</span>
-                @else
-                    {{ mb_substr(auth()->user()->name, 0, 1) }}
-                @endif
+                <?php if(auth()->user()->profile_image): ?>
+                    <img src="<?php echo e(auth()->user()->profile_image_url); ?>" alt="Profile" class="w-full h-full object-cover absolute inset-0" onerror="this.classList.add('!hidden'); this.nextElementSibling?.classList.remove('hidden');">
+                    <span class="hidden absolute inset-0 flex items-center justify-center bg-sky-500 text-white font-bold text-sm"><?php echo e(mb_substr(auth()->user()->name, 0, 1)); ?></span>
+                <?php else: ?>
+                    <?php echo e(mb_substr(auth()->user()->name, 0, 1)); ?>
+
+                <?php endif; ?>
             </div>
             <div class="flex-1 min-w-0">
-                <div class="font-bold text-slate-800 text-sm truncate">{{ auth()->user()->name }}</div>
+                <div class="font-bold text-slate-800 text-sm truncate"><?php echo e(auth()->user()->name); ?></div>
                 <div class="text-xs text-slate-500 truncate">مدرب</div>
             </div>
-            <form method="POST" action="{{ route('logout') }}" class="flex-shrink-0">
-                @csrf
+            <form method="POST" action="<?php echo e(route('logout')); ?>" class="flex-shrink-0">
+                <?php echo csrf_field(); ?>
                 <button type="submit" class="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 flex items-center justify-center transition-colors" title="تسجيل الخروج">
                     <i class="fas fa-sign-out-alt text-xs"></i>
                 </button>
@@ -269,3 +270,4 @@
         </div>
     </div>
 </div>
+<?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/layouts/instructor-sidebar.blade.php ENDPATH**/ ?>

@@ -67,6 +67,10 @@
                     <i class="fas fa-briefcase text-sm ml-2 opacity-90"></i>
                     البورتفوليو
                 </a>
+                <a href="<?php echo e(route('public.instructors.index')); ?>" class="nav-link-modern px-4 py-2.5 rounded-xl text-white/90 hover:text-white font-bold text-[15px] transition-all duration-200 hover:bg-white/10">
+                    <i class="fas fa-user-tie text-sm ml-2 opacity-90"></i>
+                    المدربون
+                </a>
             </div>
 
             <!-- أزرار الدخول والتسجيل -->
@@ -153,6 +157,11 @@
                 <a href="<?php echo e(route('public.portfolio.index')); ?>" class="mobile-sidebar-link flex items-center gap-4 text-white hover:bg-white/12 active:bg-white/18 rounded-2xl px-4 min-h-[52px] touch-manipulation transition-colors">
                     <span class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0"><i class="fas fa-briefcase text-white text-lg"></i></span>
                     <span class="flex-1 font-bold text-[17px]">البورتفوليو</span>
+                    <i class="fas fa-chevron-left text-white/40 text-sm flex-shrink-0"></i>
+                </a>
+                <a href="<?php echo e(route('public.instructors.index')); ?>" class="mobile-sidebar-link flex items-center gap-4 text-white hover:bg-white/12 active:bg-white/18 rounded-2xl px-4 min-h-[52px] touch-manipulation transition-colors">
+                    <span class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0"><i class="fas fa-user-tie text-white text-lg"></i></span>
+                    <span class="flex-1 font-bold text-[17px]">المدربون</span>
                     <i class="fas fa-chevron-left text-white/40 text-sm flex-shrink-0"></i>
                 </a>
             </div>

@@ -1121,6 +1121,18 @@
                         </div>
                     </div>
 
+                    @if($course->instructor && \App\Models\InstructorProfile::where('user_id', $course->instructor->id)->where('status', 'approved')->exists())
+                    <div class="mb-6 fade-in-up" style="animation-delay: 0.15s;">
+                        <span class="text-sm text-gray-600 font-medium">المدرب: </span>
+                        <a href="{{ route('public.instructors.show', $course->instructor) }}" class="text-blue-600 hover:text-blue-700 font-bold hover:underline">{{ $course->instructor->name }}</a>
+                    </div>
+                    @elseif($course->instructor)
+                    <div class="mb-6 fade-in-up" style="animation-delay: 0.15s;">
+                        <span class="text-sm text-gray-600 font-medium">المدرب: </span>
+                        <span class="font-semibold text-gray-800">{{ $course->instructor->name }}</span>
+                    </div>
+                    @endif
+
                     <!-- CTA Buttons -->
                     <div class="flex flex-col sm:flex-row gap-4 fade-in-up" style="animation-delay: 0.3s;">
                         @auth
