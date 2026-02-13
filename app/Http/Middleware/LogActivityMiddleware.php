@@ -70,7 +70,7 @@ class LogActivityMiddleware
                     ? json_encode($this->sanitizeData($request->except(['_token', '_method', 'password', 'password_confirmation']))) 
                     : null,
                 'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent() ? $request->userAgent() : '',
+                'user_agent' => substr((string) ($request->userAgent() ?? ''), 0, 255),
                 'url' => $request->fullUrl(),
                 'method' => $method,
                 'response_code' => $response->getStatusCode(),
@@ -83,13 +83,13 @@ class LogActivityMiddleware
             if (session()->isStarted()) {
                 try {
                     $insertData['session_id'] = session()->getId();
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                     // تجاهل
                 }
             }
             
             \DB::table('activity_logs')->insert($insertData);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             // تسجيل الخطأ في الـ log فقط بدون إيقاف العملية
             \Log::debug('Failed to log activity: ' . $e->getMessage());
         }
@@ -107,6 +107,10 @@ class LogActivityMiddleware
             '/horizon',
             '/telescope',
         ];
+        // تجاهل الموافقة/الرفض على الطلبات (يتم التسجيل من الـ Controller)
+        if (preg_match('#^/admin/orders/\d+/(approve|reject)$#', $path) && in_array($method, ['POST', 'PUT'], true)) {
+            return true;
+        }
 
         $ignorePatterns = [
             '/\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf)$/i',

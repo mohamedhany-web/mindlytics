@@ -41,7 +41,8 @@
                 <div class="flex flex-col sm:flex-row sm:items-center gap-5 w-full lg:w-auto">
                     <div class="profile-avatar flex items-center justify-center h-24 w-24 sm:h-28 sm:w-28 rounded-2xl bg-gradient-to-br {{ $roleMeta['color'] }} text-white overflow-hidden mx-auto sm:mx-0 shadow-lg">
                         @if($user->profile_image)
-                            <img src="{{ $user->profile_image_url }}" alt="صورة الملف الشخصي" class="w-full h-full object-cover">
+                            <img src="{{ asset('storage/' . $user->profile_image) }}" alt="صورة الملف الشخصي" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling?.classList.remove('hidden');">
+                            <span class="text-4xl sm:text-5xl font-black leading-none hidden">{{ mb_substr($user->name, 0, 1) }}</span>
                         @else
                             <span class="text-4xl sm:text-5xl font-black leading-none">{{ mb_substr($user->name, 0, 1) }}</span>
                         @endif
@@ -206,7 +207,8 @@
                         <div class="flex flex-col sm:flex-row sm:items-center gap-4">
                             <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center flex-shrink-0">
                                 @if($user->profile_image)
-                                    <img src="{{ $user->profile_image_url }}" alt="صورة الملف الشخصي" class="w-full h-full object-cover">
+                                    <img src="{{ asset('storage/' . $user->profile_image) }}" alt="صورة الملف الشخصي" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling?.classList.remove('hidden');">
+                                    <i class="fas fa-camera text-slate-400 text-3xl hidden"></i>
                                 @else
                                     <i class="fas fa-camera text-slate-400 text-3xl"></i>
                                 @endif

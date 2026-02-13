@@ -94,19 +94,38 @@ class Wallet extends Model
      */
     public function deposit($amount, $paymentId = null, $transactionId = null, $notes = null)
     {
-        $balanceBefore = $this->balance;
+        $balanceBefore = (float) $this->balance;
         $this->increment('balance', $amount);
-        
-        return WalletTransaction::create([
+        $balanceAfter = (float) $this->fresh()->balance;
+
+        $table = (new WalletTransaction)->getTable();
+
+        $data = [
             'wallet_id' => $this->id,
-            'payment_id' => $paymentId,
-            'transaction_id' => $transactionId,
             'type' => 'deposit',
             'amount' => $amount,
-            'balance_after' => $this->balance,
-            'notes' => $notes,
-            'created_by' => auth()->id(),
-        ]);
+            'balance_after' => $balanceAfter,
+        ];
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'balance_before')) {
+            $data['balance_before'] = $balanceBefore;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'description')) {
+            $data['description'] = $notes ?? '';
+        } elseif (\Illuminate\Support\Facades\Schema::hasColumn($table, 'notes')) {
+            $data['notes'] = $notes;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'payment_id')) {
+            $data['payment_id'] = $paymentId;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'transaction_id')) {
+            $data['transaction_id'] = $transactionId;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'created_by')) {
+            $data['created_by'] = auth()->id();
+        }
+
+        return WalletTransaction::create($data);
     }
 
     /**

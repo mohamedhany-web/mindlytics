@@ -15,9 +15,13 @@ class WalletTransaction extends Model
         'transaction_id',
         'type',
         'amount',
+        'balance_before',
         'balance_after',
         'reference_number',
         'notes',
+        'description',
+        'status',
+        'metadata',
         'created_by',
     ];
 

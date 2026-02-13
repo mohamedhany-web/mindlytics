@@ -148,7 +148,7 @@ class CheckoutController extends Controller
                 'amount' => $finalAmount,
                 'payment_method' => $request->payment_method === 'wallet' ? 'bank_transfer' : $request->payment_method,
                 'payment_proof' => $paymentProofPath,
-                'wallet_id' => $request->payment_method === 'wallet' ? ($request->wallet_id ?: null) : null,
+                'wallet_id' => in_array($request->payment_method, ['wallet', 'bank_transfer']) ? ($request->wallet_id ?: null) : null,
                 'notes' => $request->notes ?? '',
                 'status' => Order::STATUS_PENDING,
             ]);
@@ -327,7 +327,7 @@ class CheckoutController extends Controller
                 ->with('info', 'أنت مسجل بالفعل في هذا المسار التعليمي');
         }
 
-        // التحقق من صحة البيانات (wallet_id: فقط محافظ نشطة ومعروضة في الصفحة)
+        // التحقق من صحة البيانات (wallet_id: عند المحفظة مطلوب، عند التحويل البنكي اختياري)
         $validated = $request->validate([
             'payment_method' => 'required|in:bank_transfer,wallet,online',
             'wallet_id' => [
@@ -345,7 +345,7 @@ class CheckoutController extends Controller
             'payment_proof.required' => 'صورة إيصال الدفع مطلوبة',
             'payment_proof.image' => 'يجب أن يكون الملف صورة',
             'payment_proof.mimes' => 'يجب أن تكون الصورة بصيغة jpeg, png أو jpg',
-            'payment_proof.max' => 'حجم الصورة يجب ألا يتجاوز 2 ميجابايت',
+            'payment_proof.max' => 'حجم الصورة يجب ألا تتجاوز 2 ميجابايت',
             'notes.max' => 'الملاحظات يجب ألا تتجاوز 1000 حرف',
         ]);
 
@@ -383,7 +383,7 @@ class CheckoutController extends Controller
                 'amount' => $finalAmount,
                 'payment_method' => $request->payment_method === 'wallet' ? 'bank_transfer' : $request->payment_method,
                 'payment_proof' => $paymentProofPath,
-                'wallet_id' => $request->payment_method === 'wallet' ? ($request->wallet_id ?? null) : null,
+                'wallet_id' => in_array($request->payment_method, ['wallet', 'bank_transfer']) ? ($request->wallet_id ?? null) : null,
                 'notes' => $request->notes ?? '',
                 'status' => Order::STATUS_PENDING,
             ]);

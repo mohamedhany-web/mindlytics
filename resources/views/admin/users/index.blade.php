@@ -135,10 +135,10 @@
             تم إنشاء المستخدم بنجاح.
         </div>
     @endif
-    @if(session('success'))
+    @if(session('success') || request('updated') == '1')
         <div class="rounded-2xl bg-emerald-50 border border-emerald-200 px-5 py-4 text-emerald-800 text-sm font-medium flex items-center gap-2">
             <i class="fas fa-check-circle text-emerald-600"></i>
-            {{ session('success') }}
+            {{ session('success', 'تم التعديل بنجاح') }}
         </div>
     @endif
     @if(session('warning'))
@@ -387,14 +387,19 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-center gap-2">
-                                    <button type="button" onclick="editUser({{ $user->id }})" 
-                                            class="w-9 h-9 flex items-center justify-center bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg font-semibold transition-colors shadow-sm hover:shadow-md"
-                                            title="تعديل">
+                                    <a href="{{ route('admin.users.show', $user->id) }}" 
+                                       class="w-9 h-9 flex items-center justify-center bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg font-semibold transition-colors shadow-sm hover:shadow-md"
+                                       title="عرض">
+                                        <i class="fas fa-eye text-sm"></i>
+                                    </a>
+                                    <a href="{{ route('admin.users.edit', $user->id) }}" 
+                                       class="w-9 h-9 flex items-center justify-center bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg font-semibold transition-colors shadow-sm hover:shadow-md"
+                                       title="تعديل">
                                         <i class="fas fa-edit text-sm"></i>
-                                    </button>
+                                    </a>
                                     @if ($user->id !== auth()->id())
                                         <button type="button" onclick="deleteUser(this)" 
-                                                data-delete-url="{{ route('admin.users.delete', ['id' => $user->id]) }}"
+                                                data-delete-url="{{ route('admin.users.delete', $user->id) }}"
                                                 class="w-9 h-9 flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg font-semibold transition-colors shadow-sm hover:shadow-md"
                                                 title="حذف">
                                             <i class="fas fa-trash text-sm"></i>
@@ -713,307 +718,72 @@
     </section>
 </div>
 
-<!-- Edit User Modal -->
-<div id="editUserModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-    <div class="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-2xl">
-        <div class="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-6 py-5">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-md">
-                    <i class="fas fa-user-edit text-lg"></i>
-                </div>
-                <h3 class="text-xl font-black text-slate-900">تعديل بيانات المستخدم</h3>
-            </div>
-            <button type="button" onclick="closeEditModal()" 
-                    class="w-9 h-9 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 rounded-lg transition-colors">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <form id="editUserForm" method="POST" class="space-y-5 px-6 py-5">
-            @csrf
-            @method('PUT')
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                        <i class="fas fa-user text-blue-600 text-sm"></i>
-                        الاسم الكامل <span class="text-red-500">*</span>
-                    </label>
-                    <input type="text" name="name" id="edit_name" required 
-                           class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                        <i class="fas fa-envelope text-blue-600 text-sm"></i>
-                        البريد الإلكتروني
-                    </label>
-                    <input type="email" name="email" id="edit_email" 
-                           class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                        <i class="fas fa-phone text-blue-600 text-sm"></i>
-                        رقم الهاتف <span class="text-red-500">*</span>
-                    </label>
-                    <input type="text" name="phone" id="edit_phone" required 
-                           class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                        <i class="fas fa-lock text-blue-600 text-sm"></i>
-                        كلمة المرور الجديدة (اختياري)
-                    </label>
-                    <input type="password" name="password" id="edit_password" 
-                           class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                        <i class="fas fa-user-tag text-blue-600 text-sm"></i>
-                        الدور <span class="text-red-500">*</span>
-                    </label>
-                    <select name="role" id="edit_role" required 
-                            class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
-                        <option value="super_admin">مدير عام</option>
-                        <option value="admin">إداري</option>
-                        <option value="instructor">مدرب</option>
-                        <option value="teacher">مدرس</option>
-                        <option value="student">طالب</option>
-                        <option value="parent">ولي أمر</option>
-                        <option value="employee">موظف</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                        <i class="fas fa-toggle-on text-blue-600 text-sm"></i>
-                        حالة الحساب <span class="text-red-500">*</span>
-                    </label>
-                    <select name="is_active" id="edit_is_active" required 
-                            class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
-                        <option value="1">نشط</option>
-                        <option value="0">غير نشط</option>
-                    </select>
-                </div>
-            </div>
-            <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
-                <button type="button" onclick="closeEditModal()" 
-                        class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
-                    <i class="fas fa-times ml-2"></i>
-                    إلغاء
-                </button>
-                <button type="submit" 
-                        class="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-200">
-                    <i class="fas fa-save ml-2"></i>
-                    حفظ التغييرات
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
 @push('scripts')
 <script>
-    const editModal = document.getElementById('editUserModal');
-    const editForm = document.getElementById('editUserForm');
-    let scrollPosition = 0;
-
-    function openModal() {
-        // حفظ موضع التمرير الحالي
-        scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
-        
-        // منع التمرير
-        document.body.style.overflow = 'hidden';
-        document.body.style.position = 'fixed';
-        document.body.style.top = `-${scrollPosition}px`;
-        document.body.style.width = '100%';
-        
-        editModal.classList.remove('hidden');
-        editModal.classList.add('flex');
-    }
-
-    function closeEditModal() {
-        editModal.classList.add('hidden');
-        editModal.classList.remove('flex');
-        editForm.reset();
-        
-        // استعادة التمرير
-        document.body.style.overflow = '';
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.width = '';
-        
-        // استعادة موضع التمرير
-        window.scrollTo(0, scrollPosition);
-    }
-
-    window.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && !editModal.classList.contains('hidden')) {
-            closeEditModal();
-        }
-    });
-
-    // Close modal when clicking outside
-    editModal.addEventListener('click', (e) => {
-        if (e.target === editModal) {
-            closeEditModal();
-        }
-    });
-
-    function editUser(userId) {
-        fetch(`/admin/users/${userId}/edit`, {
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-            .then(async response => {
-                const text = await response.text();
-                if (!response.ok) {
-                    throw new Error('فشل تحميل بيانات المستخدم');
-                }
-                try {
-                    return text ? JSON.parse(text) : {};
-                } catch (e) {
-                    throw new Error('فشل قراءة بيانات المستخدم');
-                }
-            })
-            .then(user => {
-                document.getElementById('edit_name').value = user.name || '';
-                document.getElementById('edit_email').value = user.email || '';
-                document.getElementById('edit_phone').value = user.phone || '';
-                // استخدام role من الـ response أو is_employee
-                document.getElementById('edit_role').value = user.is_employee ? 'employee' : (user.role || 'student');
-                document.getElementById('edit_is_active').value = user.is_active ? '1' : '0';
-
-                editForm.action = `/admin/users/${userId}`;
-                openModal();
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('حدث خطأ أثناء تحميل بيانات المستخدم');
-            });
-    }
-
     function deleteUser(btn) {
         const deleteUrl = btn && btn.getAttribute ? btn.getAttribute('data-delete-url') : null;
         if (!deleteUrl) {
             alert('خطأ: رابط الحذف غير متوفر. حدّث الصفحة وحاول مرة أخرى.');
             return;
         }
-        if (confirm('هل أنت متأكد من حذف هذا المستخدم؟ هذا الإجراء لا يمكن التراجع عنه.')) {
-            const csrfToken = document.querySelector('meta[name="csrf-token"]');
-            if (!csrfToken) {
-                alert('خطأ: لم يتم العثور على CSRF token');
-                return;
-            }
-
-            fetch(deleteUrl, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken.getAttribute('content'),
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(async response => {
-                const contentType = response.headers.get('content-type') || '';
-                let data = {};
-                try {
-                    const text = await response.text();
-                    if (contentType.includes('application/json') && text) {
-                        data = JSON.parse(text);
-                    } else if (text) {
-                        data = { message: text };
-                    }
-                } catch (e) {
-                    data = { message: 'استجابة غير متوقعة من الخادم' };
-                }
-                return { ok: response.ok, status: response.status, data: data };
-            })
-            .then(result => {
-                if (result.ok && (result.data.success === true)) {
-                    alert('تم حذف المستخدم بنجاح');
-                    window.location.reload();
-                } else {
-                    let errorMsg = (result.data && (result.data.message || result.data.error)) || '';
-                    if (!errorMsg) {
-                        if (result.status === 419) errorMsg = 'انتهت الجلسة. حدّث الصفحة وحاول مرة أخرى.';
-                        else if (result.status === 403) errorMsg = 'غير مصرح لك بهذا الإجراء.';
-                        else if (result.status === 404) errorMsg = 'المستخدم غير موجود.';
-                        else errorMsg = 'حدث خطأ أثناء حذف المستخدم.';
-                    }
-                    alert('خطأ: ' + errorMsg);
-                    console.error('Delete error:', result);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('حدث خطأ أثناء حذف المستخدم: ' + error.message);
-            });
-        }
-    }
-
-    // معالج submit — إرسال كـ application/x-www-form-urlencoded حتى يملأ PHP $_POST
-    editForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const csrfToken = document.querySelector('meta[name="csrf-token"]');
-        if (!csrfToken) {
-            alert('خطأ: لم يتم العثور على رمز الأمان. حدّث الصفحة وحاول مرة أخرى.');
+        if (!confirm('هل أنت متأكد من حذف هذا المستخدم؟ هذا الإجراء لا يمكن التراجع عنه.')) {
             return;
         }
-        const params = new URLSearchParams();
-        params.append('_token', csrfToken.getAttribute('content'));
-        params.append('_method', 'PUT');
-        params.append('name', (document.getElementById('edit_name') && document.getElementById('edit_name').value) || '');
-        params.append('email', (document.getElementById('edit_email') && document.getElementById('edit_email').value) || '');
-        params.append('phone', (document.getElementById('edit_phone') && document.getElementById('edit_phone').value) || '');
-        params.append('role', (document.getElementById('edit_role') && document.getElementById('edit_role').value) || 'student');
-        params.append('is_active', (document.getElementById('edit_is_active') && document.getElementById('edit_is_active').value) || '1');
-        const pwd = document.getElementById('edit_password') && document.getElementById('edit_password').value;
-        if (pwd) params.append('password', pwd);
+        const csrfToken = document.querySelector('meta[name="csrf-token"]');
+        if (!csrfToken) {
+            alert('خطأ: لم يتم العثور على CSRF token');
+            return;
+        }
 
-        fetch(editForm.action, {
-            method: 'POST',
-            body: params.toString(),
+        fetch(deleteUrl, {
+            method: 'DELETE',
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRF-TOKEN': csrfToken.getAttribute('content'),
                 'Accept': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': csrfToken.getAttribute('content'),
-            },
+                'Content-Type': 'application/json'
+            }
         })
-        .then(async response => {
-            const text = await response.text();
-            let data = {};
+        .then(async function(response) {
+            var contentType = response.headers.get('content-type') || '';
+            var data = {};
             try {
-                data = (text && text.trim()) ? JSON.parse(text) : {};
-            } catch (err) {
+                var text = await response.text();
+                if (text && contentType.indexOf('application/json') !== -1) {
+                    data = JSON.parse(text);
+                } else if (text && text.trim().length > 0) {
+                    data = { message: text };
+                }
+            } catch (e) {
                 data = {};
             }
-            // أي رد ناجح (2xx) = التعديل تم؛ نغلق البوب أب ونعرض النجاح
-            if (response.ok) {
-                return { success: true, data };
-            }
-            let msg = (data && data.message) || '';
-            if (!msg && data && data.errors && typeof data.errors === 'object') {
-                const list = Object.values(data.errors).flat().filter(Boolean);
-                msg = list.length ? list.join('\n') : '';
-            }
-            if (!msg) msg = 'حدث خطأ في التحقق. تأكد من تعبئة الاسم ورقم الهاتف والدور وحالة الحساب.';
-            throw new Error(msg);
+            return { ok: response.ok, status: response.status, data: data };
         })
-        .then(result => {
-            if (result.success !== false) {
-                closeEditModal();
-                alert('تم التعديل بنجاح');
+        .then(function(result) {
+            if (result.ok && result.status === 200) {
+                var msg = (result.data && result.data.message) ? result.data.message : 'تم حذف المستخدم بنجاح';
+                if (result.data && result.data.success === false) {
+                    alert('خطأ: ' + (result.data.message || msg));
+                    return;
+                }
+                alert(msg);
                 window.location.reload();
-            } else {
-                alert('خطأ: ' + (result.message || 'لم يتم التحديث. حاول مرة أخرى.'));
+                return;
             }
+            var errorMsg = (result.data && (result.data.message || result.data.error)) || '';
+            if (!errorMsg) {
+                if (result.status === 419) errorMsg = 'انتهت الجلسة. حدّث الصفحة وحاول مرة أخرى.';
+                else if (result.status === 403) errorMsg = 'غير مصرح لك بهذا الإجراء.';
+                else if (result.status === 404) errorMsg = 'المستخدم غير موجود.';
+                else errorMsg = 'حدث خطأ أثناء حذف المستخدم.';
+            }
+            alert('خطأ: ' + errorMsg);
         })
-        .catch(error => {
+        .catch(function(error) {
             console.error('Error:', error);
-            alert(error.message || 'حدث خطأ أثناء تحديث المستخدم.');
+            alert('حدث خطأ أثناء حذف المستخدم: ' + (error.message || 'تأكد من الاتصال ثم أعد المحاولة.'));
         });
-    });
-
+    }
 </script>
 @endpush
 @endsection

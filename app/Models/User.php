@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
@@ -84,7 +85,7 @@ class User extends Authenticatable
 
     /**
      * رابط صورة الملف الشخصي.
-     * نفس أسلوب صفحة تسجيل الدخول: الصور في storage/app/public تُعرض عبر asset('storage/'.$path).
+     * الصور في storage/app/public تُعرض عبر Storage::disk('public')->url() لضمان الرابط الصحيح.
      * تطبيع المسار (backslash على Windows) وضمان URL كامل.
      */
     public function getProfileImageUrlAttribute(): ?string
@@ -96,10 +97,8 @@ class User extends Authenticatable
         $path = ltrim($path, '/');
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
             $base = $path;
-        } elseif (str_starts_with($path, 'storage/')) {
-            $base = asset($path);
         } else {
-            $base = asset('storage/' . $path);
+            $base = Storage::disk('public')->url($path);
         }
         $ts = $this->updated_at ? $this->updated_at->timestamp : '';
         return $base . (str_contains($base, '?') ? '&' : '?') . 'v=' . $ts;

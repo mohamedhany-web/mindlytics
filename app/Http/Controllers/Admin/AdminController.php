@@ -315,9 +315,10 @@ class AdminController extends Controller
     public function users(Request $request)
     {
         try {
-            // بعد إضافة مستخدم نوجّه بـ created=1 — عرض نسخة مبسطة لتجنب 500
-            if ($request->get('created') == '1') {
-                $users = User::query()->latest()->paginate(20)->appends(['created' => '1']);
+            // بعد إضافة أو تعديل مستخدم نوجّه بـ created=1 أو updated=1 — عرض نسخة مبسطة لتجنب 500
+            $simpleRedirect = $request->get('created') == '1' || $request->get('updated') == '1';
+            if ($simpleRedirect) {
+                $users = User::query()->latest()->paginate(20)->appends($request->only(['created', 'updated']));
                 $stats = [
                     'total' => User::count(),
                     'active' => User::where('is_active', true)->count(),
@@ -683,26 +684,28 @@ class AdminController extends Controller
     }
 
     /**
+     * عرض تفاصيل مستخدم
+     */
+    public function showUser($id)
+    {
+        $user = User::findOrFail($id);
+        return view('admin.users.show', compact('user'));
+    }
+
+    /**
      * عرض صفحة تعديل مستخدم
      */
     public function editUser(Request $request, $id)
     {
-        $user = User::findOrFail($id);
-        
-        // إرجاع JSON للـ AJAX request
-        if ($request->wantsJson() || $request->ajax()) {
-            return response()->json([
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'phone' => $user->phone,
-                'role' => $user->is_employee ? 'employee' : $user->role,
-                'is_active' => $user->is_active,
-                'is_employee' => $user->is_employee,
-            ]);
+        Log::info('editUser: start', ['id' => $id]);
+        try {
+            $user = User::findOrFail($id);
+            Log::info('editUser: user loaded', ['user_id' => $user->id]);
+            return view('admin.users.edit', compact('user'));
+        } catch (\Throwable $e) {
+            Log::error('editUser failed', ['id' => $id, 'error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine(), 'trace' => $e->getTraceAsString()]);
+            throw $e;
         }
-        
-        return view('admin.users.edit', compact('user'));
     }
 
     /**
@@ -715,7 +718,15 @@ class AdminController extends Controller
 
         try {
             $user = User::findOrFail($id);
-            $oldValues = $user->toArray();
+            $oldValues = [
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'role' => $user->role,
+                'is_active' => $user->is_active,
+                'is_employee' => $user->is_employee,
+                'bio' => $user->bio,
+            ];
         } catch (\Throwable $e) {
             if ($isAjax) {
                 return response()->json(['success' => false, 'message' => 'المستخدم غير موجود.'], 404);
@@ -809,10 +820,12 @@ class AdminController extends Controller
             $updateData['is_employee'] = false;
         }
 
+        $updateDone = false;
         try {
             $user->update($updateData);
+            $updateDone = true;
         } catch (\Throwable $e) {
-            \Log::error('User update failed', ['user_id' => $id, 'error' => $e->getMessage()]);
+            Log::error('User update failed', ['user_id' => $id, 'error' => $e->getMessage()]);
             if ($isAjax) {
                 return response()->json([
                     'success' => false,
@@ -822,22 +835,6 @@ class AdminController extends Controller
             throw $e;
         }
 
-        // تسجيل النشاط (لا نوقف الاستجابة إذا فشل التسجيل)
-        try {
-            ActivityLog::create([
-                'user_id' => Auth::id(),
-                'action' => 'user_updated',
-                'model_type' => 'User',
-                'model_id' => $user->id,
-                'old_values' => $oldValues,
-                'new_values' => $user->fresh()->toArray(),
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-            ]);
-        } catch (\Throwable $e) {
-            \Log::warning('ActivityLog failed after user update', ['user_id' => $user->id, 'error' => $e->getMessage()]);
-        }
-
         if ($isAjax) {
             return response()->json([
                 'success' => true,
@@ -845,7 +842,34 @@ class AdminController extends Controller
             ]);
         }
 
-        return back()->with('success', 'تم تحديث بيانات المستخدم بنجاح');
+        try {
+            $updated = $user->fresh();
+            if ($updated) {
+                $newValues = [
+                    'name' => $updated->name ?? '',
+                    'email' => $updated->email ?? null,
+                    'phone' => $updated->phone ?? null,
+                    'role' => $updated->role ?? 'student',
+                    'is_active' => (bool) ($updated->is_active ?? false),
+                    'is_employee' => (bool) ($updated->is_employee ?? false),
+                    'bio' => $updated->bio ?? null,
+                ];
+                ActivityLog::create([
+                    'user_id' => Auth::id(),
+                    'action' => 'user_updated',
+                    'model_type' => 'User',
+                    'model_id' => $user->id,
+                    'old_values' => $oldValues,
+                    'new_values' => $newValues,
+                    'ip_address' => $request->ip(),
+                    'user_agent' => substr((string) ($request->userAgent() ?? ''), 0, 255),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('ActivityLog failed after user update', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+        }
+
+        return redirect()->route('admin.users.index', ['updated' => '1']);
     }
 
     /**
@@ -889,8 +913,8 @@ class AdminController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'تم حذف المستخدم بنجاح'
-            ]);
+                'message' => 'تم حذف المستخدم بنجاح',
+            ], 200, ['Content-Type' => 'application/json; charset=UTF-8']);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,

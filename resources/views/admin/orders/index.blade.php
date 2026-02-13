@@ -150,46 +150,46 @@
 
     {{-- 3. قائمة الطلبات بعرض كامل --}}
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
-        <div class="px-6 py-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="px-4 py-3 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
-                <h3 class="text-lg font-black text-slate-900">الطلبات</h3>
-                <p class="text-xs text-slate-600 mt-1">آخر الطلبات مرتبة من الأحدث إلى الأقدم.</p>
+                <h3 class="text-base font-black text-slate-900">الطلبات</h3>
+                <p class="text-xs text-slate-600">آخر الطلبات مرتبة من الأحدث إلى الأقدم.</p>
             </div>
-            <span class="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">{{ $orders->total() }} طلب</span>
+            <span class="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200">{{ $orders->total() }} طلب</span>
         </div>
         <div class="overflow-x-auto">
-            <div class="p-6 space-y-4">
+            <div class="p-3 space-y-1.5">
                 @forelse ($orders as $order)
-                    <div class="rounded-xl border border-slate-200 bg-slate-50/50 hover:border-blue-200 hover:bg-white transition-all duration-200 overflow-hidden">
-                        <div class="p-5">
-                            <div class="flex flex-col lg:flex-row lg:items-center gap-4">
+                    <div class="rounded-lg border border-slate-200 bg-slate-50/50 hover:border-blue-200 hover:bg-white transition-all duration-200 overflow-hidden">
+                        <div class="px-3 py-2.5">
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                                 {{-- أيقونة الحالة --}}
-                                <div class="w-14 h-14 flex-shrink-0 flex items-center justify-center rounded-xl
+                                <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-lg
                                     @if($order->status === 'pending') bg-amber-100 text-amber-600
                                     @elseif($order->status === 'approved') bg-emerald-100 text-emerald-600
                                     @else bg-rose-100 text-rose-600
                                     @endif">
-                                    <i class="{{ $order->status === 'approved' ? 'fas fa-check' : ($order->status === 'pending' ? 'fas fa-clock' : 'fas fa-times') }} text-xl"></i>
+                                    <i class="{{ $order->status === 'approved' ? 'fas fa-check' : ($order->status === 'pending' ? 'fas fa-clock' : 'fas fa-times') }} text-sm"></i>
                                 </div>
                                 {{-- بيانات الطلب --}}
-                                <div class="flex-1 min-w-0 space-y-2">
-                                    <div class="flex flex-wrap items-start justify-between gap-2">
+                                <div class="flex-1 min-w-0 space-y-1">
+                                    <div class="flex flex-wrap items-center justify-between gap-2">
                                         <div>
-                                            <p class="text-base font-bold text-slate-900">{{ htmlspecialchars($order->user->name ?? '—') }}</p>
-                                            <p class="text-sm text-slate-600">{{ htmlspecialchars($order->user->email ?? $order->user->phone ?? '—') }}</p>
+                                            <p class="text-sm font-bold text-slate-900">{{ htmlspecialchars($order->user->name ?? '—') }}</p>
+                                            <p class="text-xs text-slate-600">{{ htmlspecialchars($order->user->email ?? $order->user->phone ?? '—') }}</p>
                                         </div>
                                         @php $badge = $statusBadges[$order->status] ?? null; @endphp
                                         @if($badge)
-                                            <span class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold {{ $badge['classes'] }}">
-                                                <span class="h-2 w-2 rounded-full bg-current"></span>
+                                            <span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold {{ $badge['classes'] }}">
+                                                <span class="h-1.5 w-1.5 rounded-full bg-current"></span>
                                                 {{ $badge['label'] }}
                                             </span>
                                         @endif
                                     </div>
-                                    <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
+                                    <div class="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-600">
                                         @if($order->academic_year_id && $order->learningPath)
                                             <span class="font-semibold text-slate-800">{{ htmlspecialchars($order->learningPath->name ?? 'مسار تعليمي') }}</span>
-                                            <span class="text-blue-600"><i class="fas fa-route ml-1"></i> مسار تعليمي</span>
+                                            <span class="text-blue-600"><i class="fas fa-route ml-0.5"></i> مسار تعليمي</span>
                                         @elseif($order->course)
                                             <span class="font-semibold text-slate-800">{{ htmlspecialchars($order->course->title ?? 'كورس') }}</span>
                                             @if($order->course->academicYear || $order->course->academicSubject)
@@ -199,39 +199,33 @@
                                             <span class="text-slate-500">—</span>
                                         @endif
                                     </div>
-                                    <div class="flex flex-wrap items-center gap-4 text-sm text-slate-600">
-                                        <span class="inline-flex items-center gap-1.5">
-                                            <i class="fas fa-money-bill-wave text-blue-500"></i>
+                                    <div class="flex flex-wrap items-center gap-3 text-xs text-slate-600">
+                                        <span class="inline-flex items-center gap-1">
+                                            <i class="fas fa-money-bill-wave text-blue-500 text-[10px]"></i>
                                             <strong>{{ number_format($order->amount, 2) }}</strong> ج.م
                                         </span>
-                                        <span class="inline-flex items-center gap-1.5">
-                                            <i class="fas fa-calendar text-blue-500"></i>
+                                        <span class="inline-flex items-center gap-1">
+                                            <i class="fas fa-calendar text-blue-500 text-[10px]"></i>
                                             {{ $order->created_at->format('d/m/Y H:i') }}
                                         </span>
-                                        <span class="inline-flex items-center gap-1.5">
-                                            <i class="fas fa-wallet text-blue-500"></i>
+                                        <span class="inline-flex items-center gap-1">
+                                            <i class="fas fa-wallet text-blue-500 text-[10px]"></i>
                                             {{ $paymentMethodLabels[$order->payment_method] ?? $order->payment_method ?? '—' }}
                                         </span>
                                     </div>
                                 </div>
                                 {{-- أزرار الإجراءات --}}
-                                <div class="flex items-center gap-2 flex-shrink-0">
-                                    <a href="{{ route('admin.orders.show', $order) }}" class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-blue-600 hover:bg-blue-50 hover:border-blue-400 transition-colors" title="عرض التفاصيل">
+                                <div class="flex items-center gap-1.5 flex-shrink-0">
+                                    <a href="{{ route('admin.orders.show', $order) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-blue-600 hover:bg-blue-50 hover:border-blue-400 transition-colors text-sm" title="عرض التفاصيل">
                                         <i class="fas fa-eye"></i>
                                     </a>
                                     @if ($order->status === 'pending')
-                                        <form method="POST" action="{{ route('admin.orders.approve', $order) }}" class="approve-form inline-block" onsubmit="return confirmApprove(event);">
-                                            @csrf
-                                            <button type="submit" class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-300 bg-white text-emerald-600 hover:bg-emerald-50 hover:border-emerald-400 transition-colors" title="موافقة">
-                                                <i class="fas fa-check"></i>
-                                            </button>
-                                        </form>
-                                        <form method="POST" action="{{ route('admin.orders.reject', $order) }}" class="reject-form inline-block" onsubmit="return confirmReject(event);">
-                                            @csrf
-                                            <button type="submit" class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-rose-300 bg-white text-rose-600 hover:bg-rose-50 hover:border-rose-400 transition-colors" title="رفض">
-                                                <i class="fas fa-times"></i>
-                                            </button>
-                                        </form>
+                                        <button type="button" class="approve-btn inline-flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-300 bg-white text-emerald-600 hover:bg-emerald-50 hover:border-emerald-400 transition-colors text-sm" title="موافقة" data-order-id="{{ $order->id }}" data-url="{{ route('admin.orders.approve', $order) }}">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button type="button" class="reject-btn inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-300 bg-white text-rose-600 hover:bg-rose-50 hover:border-rose-400 transition-colors text-sm" title="رفض" data-order-id="{{ $order->id }}" data-url="{{ route('admin.orders.reject', $order) }}">
+                                            <i class="fas fa-times"></i>
+                                        </button>
                                     @endif
                                 </div>
                             </div>
@@ -249,7 +243,7 @@
             </div>
 
             @if ($orders->hasPages())
-                <div class="border-t border-slate-200 px-6 py-4">
+                <div class="border-t border-slate-200 px-4 py-3">
                     {{ $orders->appends(request()->query())->links() }}
                 </div>
             @endif
@@ -302,29 +296,69 @@
 
 @push('scripts')
 <script>
-    let formSubmitting = false;
+(function() {
+    var csrfToken = document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    if (!csrfToken) return;
 
-    function confirmApprove(event) {
-        if (formSubmitting) { event.preventDefault(); return false; }
-        const confirmed = confirm('هل أنت متأكد من الموافقة على هذا الطلب؟\nسيتم تفعيل الكورس للطالب تلقائياً.');
-        if (confirmed) {
-            formSubmitting = true;
-            const btn = event.target.closest('form').querySelector('button[type="submit"]');
-            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
-        }
-        return confirmed;
+    function sendRequest(url, isApprove, btn) {
+        var formData = new FormData();
+        formData.append('_token', csrfToken);
+        var originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(function(response) {
+            var contentType = response.headers.get('content-type');
+            if (contentType && contentType.indexOf('application/json') !== -1) {
+                return response.json();
+            }
+            if (response.ok) {
+                window.location.reload();
+                return;
+            }
+            return response.text().then(function(text) { throw new Error(text || 'حدث خطأ أثناء المعالجة'); });
+        })
+        .then(function(data) {
+            if (data && data.success) {
+                if (data.message) alert(data.message);
+                window.location.reload();
+            } else {
+                var msg = (data && (data.error || data.message)) || 'حدث خطأ أثناء المعالجة';
+                alert(msg);
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        })
+        .catch(function(err) {
+            var msg = err.message || 'حدث خطأ أثناء المعالجة';
+            alert(msg);
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        });
     }
 
-    function confirmReject(event) {
-        if (formSubmitting) { event.preventDefault(); return false; }
-        const confirmed = confirm('هل أنت متأكد من رفض هذا الطلب؟');
-        if (confirmed) {
-            formSubmitting = true;
-            const btn = event.target.closest('form').querySelector('button[type="submit"]');
-            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
-        }
-        return confirmed;
-    }
+    document.querySelectorAll('.approve-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            if (!confirm('هل أنت متأكد من الموافقة على هذا الطلب؟\nسيتم تفعيل الكورس للطالب تلقائياً.')) return;
+            sendRequest(btn.getAttribute('data-url'), true, btn);
+        });
+    });
+
+    document.querySelectorAll('.reject-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            if (!confirm('هل أنت متأكد من رفض هذا الطلب؟')) return;
+            sendRequest(btn.getAttribute('data-url'), false, btn);
+        });
+    });
 
     var filterForm = document.getElementById('filterForm');
     if (filterForm) {
@@ -333,12 +367,7 @@
             if (searchInput) searchInput.value = searchInput.value.replace(/<[^>]*>/g, '').trim();
         });
     }
-
-    document.querySelectorAll('.approve-form, .reject-form').forEach(function(form) {
-        form.addEventListener('submit', function(e) {
-            if (formSubmitting) { e.preventDefault(); return false; }
-        });
-    });
+})();
 </script>
 @endpush
 @endsection

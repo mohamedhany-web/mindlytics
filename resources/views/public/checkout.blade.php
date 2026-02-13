@@ -542,8 +542,13 @@
                                 </div>
                             @endif
 
-                            <form action="{{ isset($course) ? route('public.course.checkout.complete', $course->id) : route('public.learning-path.checkout.complete', Str::slug($learningPath->name)) }}" method="POST" enctype="multipart/form-data" x-data="{ paymentMethod: '', walletId: '', isSubmitting: false }" @submit="isSubmitting = true">
+                            <form action="{{ isset($course) ? route('public.course.checkout.complete', $course->id) : route('public.learning-path.checkout.complete', Str::slug($learningPath->name)) }}" method="POST" enctype="multipart/form-data" x-data="{ paymentMethod: '', walletId: '', bankWalletId: '', isSubmitting: false }" @submit="isSubmitting = true">
                                 @csrf
+
+                                @php
+                                    $bankWallets = $wallets->where('type', 'bank_transfer');
+                                    $electronicWallets = $wallets->whereIn('type', ['vodafone_cash', 'instapay']);
+                                @endphp
 
                                 <!-- Payment Method -->
                                 <div class="mb-6">
@@ -579,82 +584,88 @@
                                     @enderror
                                 </div>
 
-                                <!-- Wallet Selection -->
+                                <!-- تحويل بنكي: عرض بيانات المحافظ البنكية للتحويل عليها -->
+                                <div x-show="paymentMethod === 'bank_transfer'" x-cloak class="mb-6">
+                                    <div class="p-5 bg-slate-50 rounded-xl border-2 border-blue-200">
+                                        <h4 class="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                                            <i class="fas fa-university text-blue-600"></i>
+                                            بيانات التحويل البنكي — انقل المبلغ إلى أحد الحسابات التالية
+                                        </h4>
+                                        @if($bankWallets->isEmpty())
+                                            <p class="text-sm text-amber-700">لا توجد حسابات بنكية مضافة حالياً. يمكنك اختيار "محفظة إلكترونية" أو التواصل معنا.</p>
+                                        @else
+                                            <div class="space-y-4">
+                                                @foreach($bankWallets as $w)
+                                                    <label class="flex cursor-pointer gap-4 p-4 bg-white rounded-xl border-2 border-gray-200 hover:border-blue-400 has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50/50 transition-all">
+                                                        <input type="radio" name="bank_wallet_id" value="{{ $w->id }}" class="mt-1" x-model="bankWalletId">
+                                                        <div class="flex-1 space-y-2 text-sm">
+                                                            <p class="font-bold text-gray-900">{{ $w->name ?? \App\Models\Wallet::typeLabel($w->type) }}</p>
+                                                            @if($w->account_number)
+                                                                <p class="text-gray-700"><span class="text-gray-500">رقم الحساب / الآيبان:</span> <span class="font-mono font-semibold text-gray-900">{{ $w->account_number }}</span></p>
+                                                            @endif
+                                                            @if($w->bank_name)
+                                                                <p class="text-gray-700"><span class="text-gray-500">البنك:</span> <span class="font-semibold">{{ $w->bank_name }}</span></p>
+                                                            @endif
+                                                            @if($w->account_holder)
+                                                                <p class="text-gray-700"><span class="text-gray-500">صاحب الحساب:</span> <span class="font-semibold">{{ $w->account_holder }}</span></p>
+                                                            @endif
+                                                        </div>
+                                                    </label>
+                                                @endforeach
+                                            </div>
+                                            <p class="mt-3 text-xs text-amber-700 flex items-center gap-1">
+                                                <i class="fas fa-info-circle"></i>
+                                                قم بالتحويل إلى الحساب أعلاه ثم أرفق صورة الإيصال.
+                                            </p>
+                                        @endif
+                                    </div>
+                                    <!-- يُرسل wallet_id عند اختيار تحويل بنكي (اختياري) أو محفظة إلكترونية (مطلوب عند المحفظة) -->
+                                    <input type="hidden" name="wallet_id" :value="paymentMethod === 'bank_transfer' ? (bankWalletId || '') : (paymentMethod === 'wallet' ? (walletId || '') : '')">
+                                </div>
+
+                                <!-- محفظة إلكترونية: اختيار المحفظة وعرض بيانات التحويل -->
                                 <div x-show="paymentMethod === 'wallet'" x-cloak class="mb-6 fade-in-up">
                                     <label class="block text-sm font-bold text-gray-900 mb-3">
                                         <i class="fas fa-wallet text-blue-600 ml-2"></i>
-                                        اختر المحفظة <span class="text-red-500">*</span>
+                                        اختر المحفظة للتحويل عليها <span class="text-red-500">*</span>
                                     </label>
-                                    <select name="wallet_id" x-model="walletId" 
-                                            :required="paymentMethod === 'wallet'"
-                                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white">
-                                        <option value="">اختر المحفظة الإلكترونية</option>
+                                    <p class="text-xs text-gray-600 mb-3">اختر المحفظة التي ستقوم بالتحويل إليها ثم انقل المبلغ على البيانات الظاهرة.</p>
+                                    <div class="space-y-3">
                                         @foreach($wallets as $wallet)
-                                            <option value="{{ $wallet->id }}" 
-                                                    data-type="{{ $wallet->type }}"
-                                                    data-name="{{ $wallet->name }}"
-                                                    data-account-number="{{ $wallet->account_number }}"
-                                                    data-bank-name="{{ $wallet->bank_name }}"
-                                                    data-account-holder="{{ $wallet->account_holder }}"
-                                                    data-notes="{{ $wallet->notes }}">
-                                                {{ $wallet->name ?? \App\Models\Wallet::typeLabel($wallet->type) }}
-                                                @if($wallet->account_number)
-                                                    - {{ $wallet->account_number }}
-                                                @endif
-                                            </option>
+                                            <label class="flex cursor-pointer gap-4 p-4 bg-white rounded-xl border-2 border-gray-200 hover:border-blue-400 peer-checked:border-blue-600 transition-all has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50/50">
+                                                <input type="radio" name="wallet_id_radio" value="{{ $wallet->id }}" class="mt-1" x-model="walletId">
+                                                <div class="flex-1">
+                                                    <p class="font-bold text-gray-900">{{ $wallet->name ?? \App\Models\Wallet::typeLabel($wallet->type) }}</p>
+                                                    <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-700">
+                                                        @if($wallet->account_number)
+                                                            <span><span class="text-gray-500">رقم المحفظة:</span> <span class="font-mono font-semibold">{{ $wallet->account_number }}</span></span>
+                                                        @endif
+                                                        @if($wallet->account_holder)
+                                                            <span><span class="text-gray-500">صاحب الحساب:</span> <span class="font-semibold">{{ $wallet->account_holder }}</span></span>
+                                                        @endif
+                                                        @if($wallet->bank_name)
+                                                            <span><span class="text-gray-500">البنك:</span> {{ $wallet->bank_name }}</span>
+                                                        @endif
+                                                    </div>
+                                                    @if($wallet->notes)
+                                                        <p class="mt-1 text-xs text-gray-500">{{ $wallet->notes }}</p>
+                                                    @endif
+                                                </div>
+                                            </label>
                                         @endforeach
-                                    </select>
+                                        @if($wallets->isEmpty())
+                                            <p class="text-sm text-amber-700">لا توجد محافظ إلكترونية متاحة حالياً.</p>
+                                        @endif
+                                    </div>
+                                    <div class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                        <p class="text-xs text-amber-800 flex items-center gap-2">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            <span>قم بالتحويل على رقم المحفظة أعلاه ثم أرفق صورة الإيصال عند إتمام الطلب.</span>
+                                        </p>
+                                    </div>
                                     @error('wallet_id')
                                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
-
-                                    <!-- Wallet Details -->
-                                    <div x-show="walletId" x-cloak class="mt-4 p-5 bg-gradient-to-br from-blue-50 to-green-50 rounded-xl border-2 border-blue-200 fade-in-up">
-                                        <h4 class="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                            <i class="fas fa-info-circle text-blue-600"></i>
-                                            تفاصيل المحفظة للتحويل
-                                        </h4>
-                                        <template x-if="walletId">
-                                            @foreach($wallets as $wallet)
-                                                <div x-show="walletId == '{{ $wallet->id }}'" class="space-y-3 text-sm">
-                                                    <div class="flex justify-between items-center bg-white/60 px-3 py-2 rounded-lg">
-                                                        <span class="text-gray-600">النوع:</span>
-                                                        <span class="font-bold text-gray-900">{{ \App\Models\Wallet::typeLabel($wallet->type) }}</span>
-                                                    </div>
-                                                    @if($wallet->account_number)
-                                                    <div class="flex justify-between items-center bg-white/60 px-3 py-2 rounded-lg">
-                                                        <span class="text-gray-600">رقم الحساب:</span>
-                                                        <span class="font-bold text-gray-900 font-mono">{{ $wallet->account_number }}</span>
-                                                    </div>
-                                                    @endif
-                                                    @if($wallet->bank_name)
-                                                    <div class="flex justify-between items-center bg-white/60 px-3 py-2 rounded-lg">
-                                                        <span class="text-gray-600">اسم البنك:</span>
-                                                        <span class="font-bold text-gray-900">{{ $wallet->bank_name }}</span>
-                                                    </div>
-                                                    @endif
-                                                    @if($wallet->account_holder)
-                                                    <div class="flex justify-between items-center bg-white/60 px-3 py-2 rounded-lg">
-                                                        <span class="text-gray-600">صاحب الحساب:</span>
-                                                        <span class="font-bold text-gray-900">{{ $wallet->account_holder }}</span>
-                                                    </div>
-                                                    @endif
-                                                    @if($wallet->notes)
-                                                    <div class="mt-3 pt-3 border-t border-blue-200 bg-white/60 px-3 py-2 rounded-lg">
-                                                        <span class="text-gray-600 block mb-1">ملاحظات:</span>
-                                                        <span class="text-sm text-gray-700">{{ $wallet->notes }}</span>
-                                                    </div>
-                                                    @endif
-                                                </div>
-                                            @endforeach
-                                        </template>
-                                        <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                            <p class="text-xs text-yellow-800 flex items-center gap-2">
-                                                <i class="fas fa-exclamation-triangle"></i>
-                                                <span>يرجى التحويل على البيانات المذكورة أعلاه وإرفاق صورة الإيصال</span>
-                                            </p>
-                                        </div>
-                                    </div>
                                 </div>
 
                                 <!-- Payment Proof -->

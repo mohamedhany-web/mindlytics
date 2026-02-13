@@ -15,7 +15,7 @@ class UserObserver
     {
         try {
             $this->clearCache();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             // لا نوقف عملية إنشاء المستخدم إذا فشل مسح الكاش
             Log::warning('Failed to clear cache after user creation: ' . $e->getMessage(), [
                 'user_id' => $user->id,
@@ -29,11 +29,11 @@ class UserObserver
     public function updated(User $user): void
     {
         try {
-            // مسح الكاش فقط عند تغيير الحقول المهمة
-            if ($user->isDirty(['role', 'is_active'])) {
+            // مسح الكاش فقط عند تغيير الحقول المهمة (استخدام wasChanged بعد الحفظ)
+            if ($user->wasChanged(['role', 'is_active'])) {
                 $this->clearCache();
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::warning('Failed to clear cache after user update: ' . $e->getMessage(), [
                 'user_id' => $user->id,
             ]);
@@ -47,7 +47,7 @@ class UserObserver
     {
         try {
             $this->clearCache();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::warning('Failed to clear cache after user deletion: ' . $e->getMessage(), [
                 'user_id' => $user->id ?? null,
             ]);
@@ -63,7 +63,7 @@ class UserObserver
             $statsService = app(StatisticsCacheService::class);
             $statsService->clearStats('user_stats');
             $statsService->clearStats('dashboard_stats');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::warning('Failed to clear statistics cache: ' . $e->getMessage());
             // لا نرمي exception لأن هذا لا يجب أن يوقف العملية
         }

@@ -145,6 +145,12 @@ class WalletController extends Controller
             ->take(8)
             ->get();
 
+        $walletPayments = $wallet->payments()
+            ->with(['invoice', 'user'])
+            ->latest('paid_at')
+            ->take(30)
+            ->get();
+
         $netFlow = $totalDeposits - $totalWithdrawals;
 
         $metrics = [
@@ -162,6 +168,7 @@ class WalletController extends Controller
             'wallet' => $wallet,
             'metrics' => $metrics,
             'recentTransactions' => $recentTransactions,
+            'walletPayments' => $walletPayments,
         ]);
     }
 
@@ -284,16 +291,31 @@ class WalletController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'user_id' => 'required|exists:users,id|unique:wallets,user_id',
+            'name' => 'required|string|max:255',
+            'type' => 'required|in:vodafone_cash,instapay,bank_transfer,cash,other',
+            'account_number' => 'nullable|string|max:100',
+            'bank_name' => 'nullable|string|max:100',
+            'account_holder' => 'nullable|string|max:255',
             'balance' => 'nullable|numeric|min:0',
+            'notes' => 'nullable|string|max:1000',
+            'is_active' => 'nullable|boolean',
+        ], [
+            'name.required' => 'اسم المحفظة مطلوب',
+            'type.required' => 'نوع المحفظة مطلوب',
         ]);
 
         Wallet::create([
-            'user_id' => $validated['user_id'],
-            'balance' => $validated['balance'] ?? 0,
+            'user_id' => null,
+            'name' => $validated['name'],
+            'type' => $validated['type'],
+            'account_number' => $validated['account_number'] ?? null,
+            'bank_name' => $validated['bank_name'] ?? null,
+            'account_holder' => $validated['account_holder'] ?? null,
+            'balance' => (float) ($validated['balance'] ?? 0),
             'pending_balance' => 0,
             'currency' => 'EGP',
-            'is_active' => true,
+            'notes' => $validated['notes'] ?? null,
+            'is_active' => $request->boolean('is_active', true),
         ]);
 
         return redirect()->route('admin.wallets.index')

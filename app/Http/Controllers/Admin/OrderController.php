@@ -100,13 +100,21 @@ class OrderController extends Controller
      */
     public function approve(Request $request, Order $order)
     {
-        // التحقق من الصلاحيات
-        if (!Auth::check() || !(Auth::user()->isSuperAdmin() || Auth::user()->can('manage.orders'))) {
-            abort(403, 'غير مصرح لك بالموافقة على الطلبات');
-        }
+        $isAjax = $request->wantsJson() || $request->ajax();
+        Log::info('Order approve: start', ['order_id' => $order->id, 'status' => $order->status, 'academic_year_id' => $order->academic_year_id, 'advanced_course_id' => $order->advanced_course_id]);
 
-        // Rate Limiting - حماية من Brute Force
-        $key = 'order_approve_' . Auth::id();
+        try {
+            // التحقق من الصلاحيات
+            if (!Auth::check() || !(Auth::user()->isSuperAdmin() || Auth::user()->can('manage.orders'))) {
+                $msg = 'غير مصرح لك بالموافقة على الطلبات';
+                if ($isAjax) {
+                    return response()->json(['success' => false, 'error' => $msg], 403);
+                }
+                abort(403, $msg);
+            }
+
+            // Rate Limiting - حماية من Brute Force
+            $key = 'order_approve_' . Auth::id();
         $maxAttempts = 10;
         $decayMinutes = 1;
 
@@ -159,8 +167,22 @@ class OrderController extends Controller
                 return back()->with('error', $msg);
             }
 
+            // التحقق من وجود المستخدم المرتبط بالطلب (تجنب foreign key violation)
+            $orderUser = \App\Models\User::find($order->user_id);
+            if (!$orderUser) {
+                DB::rollBack();
+                RateLimiter::clear($key);
+                $msg = 'المستخدم المرتبط بالطلب غير موجود في النظام. يرجى التحقق من بيانات الطلب.';
+                Log::warning('Order approve: order user not found', ['order_id' => $order->id, 'user_id' => $order->user_id]);
+                if ($request->wantsJson() || $request->ajax()) {
+                    return response()->json(['success' => false, 'error' => $msg], 400);
+                }
+                return back()->with('error', $msg);
+            }
+
             // تحديد نوع الطلب (كورس أو مسار)
             $isLearningPath = !empty($order->academic_year_id);
+            Log::info('Order approve: order type', ['order_id' => $order->id, 'is_learning_path' => $isLearningPath]);
             $orderTitle = '';
             $orderType = 'course';
             
@@ -179,6 +201,7 @@ class OrderController extends Controller
             }
 
             // إنشاء الفاتورة تلقائياً
+            Log::info('Order approve: creating invoice', ['order_id' => $order->id, 'type' => $orderType]);
             $invoiceNumber = 'INV-' . str_pad(Invoice::count() + 1, 8, '0', STR_PAD_LEFT);
             $invoice = Invoice::create([
                 'invoice_number' => $invoiceNumber,
@@ -202,30 +225,40 @@ class OrderController extends Controller
                     ]
                 ],
             ]);
+            Log::info('Order approve: invoice created', ['order_id' => $order->id, 'invoice_id' => $invoice->id]);
 
             // إنشاء المدفوعات تلقائياً
+            Log::info('Order approve: creating payment', ['order_id' => $order->id]);
             $paymentNumber = 'PAY-' . str_pad(Payment::count() + 1, 8, '0', STR_PAD_LEFT);
             
             // تحويل طريقة الدفع من order إلى payment
             $paymentMethodMap = [
                 'bank_transfer' => 'bank_transfer',
                 'cash' => 'cash',
+                'online' => 'online',
+                'wallet' => 'wallet',
                 'other' => 'other',
             ];
             $paymentMethod = $paymentMethodMap[$order->payment_method] ?? 'other';
 
-            $payment = Payment::create([
-                'payment_number' => $paymentNumber,
-                'invoice_id' => $invoice->id,
-                'user_id' => $order->user_id,
-                'payment_method' => $paymentMethod,
-                'amount' => $order->amount,
-                'currency' => 'EGP',
-                'status' => 'completed',
-                'paid_at' => now(),
-                'processed_by' => auth()->id(),
-                'notes' => 'دفعة من طلب رقم: ' . $order->id . ($order->wallet_id ? ' - محفظة: ' . $order->wallet_id : ''),
-            ]);
+            try {
+                $payment = Payment::create([
+                    'payment_number' => $paymentNumber,
+                    'invoice_id' => $invoice->id,
+                    'user_id' => $order->user_id,
+                    'payment_method' => $paymentMethod,
+                    'amount' => $order->amount,
+                    'currency' => 'EGP',
+                    'status' => 'completed',
+                    'paid_at' => now(),
+                    'processed_by' => auth()->id(),
+                    'notes' => 'دفعة من طلب رقم: ' . $order->id . ($order->wallet_id ? ' - محفظة: ' . $order->wallet_id : ''),
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('Order approve: Payment::create FAILED', ['order_id' => $order->id, 'message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+                throw $e;
+            }
+            Log::info('Order approve: payment created', ['order_id' => $order->id, 'payment_id' => $payment->id]);
 
             // ربط المدفوعات بالمحفظة إذا كانت موجودة وإضافة المبلغ للمحفظة
             $wallet = null;
@@ -250,14 +283,15 @@ class OrderController extends Controller
                             null, // transaction_id سيتم ربطه لاحقاً
                             $description
                         );
-                    } catch (\Exception $e) {
-                        \Log::error('Error depositing to wallet: ' . $e->getMessage());
-                        // لا نوقف العملية في حالة فشل الإيداع
+                    } catch (\Throwable $e) {
+                        \Log::warning('Wallet deposit skipped during order approval: ' . $e->getMessage(), ['order_id' => $order->id, 'wallet_id' => $order->wallet_id]);
+                        // لا نوقف الموافقة في حالة فشل الإيداع (مثلاً عمود notes غير موجود في جدول wallet_transactions)
                     }
                 }
             }
 
             // إنشاء معاملة مالية (إيراد)
+            Log::info('Order approve: creating transaction', ['order_id' => $order->id]);
             $transactionNumber = 'TXN-' . str_pad(Transaction::count() + 1, 8, '0', STR_PAD_LEFT);
             $transactionDescription = $isLearningPath 
                 ? 'دفعة مقابل تسجيل في المسار التعليمي: ' . ($order->learningPath?->name ?? 'مسار تعليمي')
@@ -287,6 +321,7 @@ class OrderController extends Controller
                 ],
                 'created_by' => auth()->id(),
             ]);
+            Log::info('Order approve: transaction created', ['order_id' => $order->id, 'transaction_id' => $transaction->id ?? null]);
 
             // ربط معاملة المحفظة بالمعاملة المالية إذا كانت موجودة
             if ($wallet) {
@@ -302,6 +337,7 @@ class OrderController extends Controller
             }
 
             // تحديث حالة الطلب وربطه بالفاتورة والمدفوعات
+            Log::info('Order approve: updating order status', ['order_id' => $order->id]);
             $order->update([
                 'status' => Order::STATUS_APPROVED,
                 'approved_at' => now(),
@@ -309,8 +345,10 @@ class OrderController extends Controller
                 'invoice_id' => $invoice->id,
                 'payment_id' => $payment->id,
             ]);
+            Log::info('Order approve: order updated', ['order_id' => $order->id]);
 
             // تحديث حالة الإحالة إذا كانت موجودة (لا نوقف الموافقة إذا فشل)
+            Log::info('Order approve: after order updated', ['order_id' => $order->id]);
             try {
                 $referralService = app(\App\Services\ReferralService::class);
                 $referral = \App\Models\Referral::where('referred_id', $order->user_id)
@@ -320,48 +358,58 @@ class OrderController extends Controller
                 if ($referral) {
                     $referralService->markReferralAsCompleted($referral, $order->amount);
                 }
-            } catch (\Exception $e) {
-                \Log::warning('Referral update failed during order approval: ' . $e->getMessage(), ['order_id' => $order->id]);
+            } catch (\Throwable $e) {
+                Log::warning('Referral update failed during order approval: ' . $e->getMessage(), ['order_id' => $order->id]);
             }
 
             // إذا كان الطلب للمسار التعليمي، تسجيل الطالب في المسار (لا نوقف الموافقة إذا فشل)
             if ($order->academic_year_id) {
+                Log::info('Order approve: starting learning path enrollment', ['order_id' => $order->id, 'academic_year_id' => $order->academic_year_id]);
                 try {
-                    $existingPathEnrollment = \App\Models\LearningPathEnrollment::where('user_id', $order->user_id)
-                        ->where('academic_year_id', $order->academic_year_id)
-                        ->first();
-
-                    if (!$existingPathEnrollment) {
-                        $pathEnrollment = \App\Models\LearningPathEnrollment::create([
-                            'user_id' => $order->user_id,
-                            'academic_year_id' => $order->academic_year_id,
-                            'status' => 'active',
-                            'enrolled_at' => now(),
-                            'activated_at' => now(),
-                            'activated_by' => auth()->id(),
-                            'progress' => 0,
-                        ]);
-                        $this->enrollInPathCourses($pathEnrollment);
+                    if (!\Illuminate\Support\Facades\Schema::hasTable('learning_path_enrollments')) {
+                        \Log::warning('Learning path enrollment skipped: table learning_path_enrollments does not exist. Run migrations.');
                     } else {
-                        if ($existingPathEnrollment->status !== 'active') {
-                            $existingPathEnrollment->update([
+                        $existingPathEnrollment = \App\Models\LearningPathEnrollment::where('user_id', $order->user_id)
+                            ->where('academic_year_id', $order->academic_year_id)
+                            ->first();
+
+                        if (!$existingPathEnrollment) {
+                            $pathEnrollment = \App\Models\LearningPathEnrollment::create([
+                                'user_id' => $order->user_id,
+                                'academic_year_id' => $order->academic_year_id,
                                 'status' => 'active',
+                                'enrolled_at' => now(),
                                 'activated_at' => now(),
                                 'activated_by' => auth()->id(),
+                                'progress' => 0,
                             ]);
-                            $this->enrollInPathCourses($existingPathEnrollment);
+                            $this->enrollInPathCourses($pathEnrollment);
+                        } else {
+                            if ($existingPathEnrollment->status !== 'active') {
+                                $existingPathEnrollment->update([
+                                    'status' => 'active',
+                                    'activated_at' => now(),
+                                    'activated_by' => auth()->id(),
+                                ]);
+                                $this->enrollInPathCourses($existingPathEnrollment);
+                            }
                         }
                     }
-                } catch (\Exception $e) {
-                    \Log::warning('Learning path enrollment failed during order approval: ' . $e->getMessage(), [
+                } catch (\Throwable $e) {
+                    \Log::error('Order approve: learning path enrollment FAILED', [
                         'order_id' => $order->id,
                         'academic_year_id' => $order->academic_year_id,
+                        'message' => $e->getMessage(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'trace' => $e->getTraceAsString(),
                     ]);
                 }
             }
 
             // إذا كان الطلب للكورس، تسجيل الطالب في الكورس (لا نوقف الموافقة إذا فشل)
             if ($order->advanced_course_id) {
+                Log::info('Order approve: starting course enrollment', ['order_id' => $order->id, 'advanced_course_id' => $order->advanced_course_id]);
                 try {
                     $existingEnrollment = StudentCourseEnrollment::where('user_id', $order->user_id)
                         ->where('advanced_course_id', $order->advanced_course_id)
@@ -392,22 +440,29 @@ class OrderController extends Controller
                             'final_price' => $order->amount,
                         ]);
                     }
-                } catch (\Exception $e) {
-                    \Log::warning('Course enrollment failed during order approval: ' . $e->getMessage(), [
+                } catch (\Throwable $e) {
+                    Log::warning('Course enrollment failed during order approval: ' . $e->getMessage(), [
                         'order_id' => $order->id,
                         'advanced_course_id' => $order->advanced_course_id,
+                        'trace' => $e->getTraceAsString(),
                     ]);
                 }
+                Log::info('Order approve: course enrollment block done', ['order_id' => $order->id]);
             }
 
-            // تسجيل النشاط (قيم مختصرة فقط لتجنب استهلاك الذاكرة أو دوائر في العلاقات)
+            // الـ commit أولاً حتى لا يعطل سجل النشاط استجابة الموافقة
+            Log::info('Order approve: before DB::commit', ['order_id' => $order->id]);
+            DB::commit();
+            RateLimiter::clear($key);
+
+            // تسجيل النشاط بعد الـ commit (إدراج مباشر لتجنب توقف النموذج أو استهلاك الذاكرة)
             try {
-                ActivityLog::create([
+                $logData = [
                     'user_id' => Auth::id(),
                     'action' => 'order_approved',
                     'model_type' => 'Order',
                     'model_id' => $order->id,
-                    'new_values' => [
+                    'new_values' => json_encode([
                         'id' => $order->id,
                         'user_id' => $order->user_id,
                         'status' => $order->status,
@@ -416,19 +471,21 @@ class OrderController extends Controller
                         'invoice_id' => $order->invoice_id,
                         'payment_id' => $order->payment_id,
                         'amount' => (float) $order->amount,
-                    ],
+                    ]),
                     'ip_address' => $request->ip(),
                     'user_agent' => substr((string) $request->userAgent(), 0, 255),
-                ]);
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+                if (\Illuminate\Support\Facades\Schema::hasColumn('activity_logs', 'description')) {
+                    $logData['description'] = 'موافقة على طلب #' . $order->id;
+                }
+                DB::table('activity_logs')->insert($logData);
             } catch (\Throwable $e) {
-                \Log::warning('Failed to create activity log: ' . $e->getMessage());
+                Log::warning('Order approve: activity log insert failed (after commit)', ['message' => $e->getMessage()]);
             }
 
-            // التأكد من أن كل شيء تم بنجاح قبل الـ commit
-            DB::commit();
-            RateLimiter::clear($key);
-
-            \Log::info('Order approved successfully', [
+            Log::info('Order approved successfully', [
                 'order_id' => $order->id,
                 'user_id' => $order->user_id,
                 'is_learning_path' => $isLearningPath,
@@ -452,6 +509,7 @@ class OrderController extends Controller
             return back()->with('success', $successMessage);
 
         } catch (\Throwable $e) {
+            Log::error('Order approve: CAUGHT', ['msg' => $e->getMessage(), 'class' => get_class($e)]);
             DB::rollBack();
             RateLimiter::clear($key);
 
@@ -468,14 +526,45 @@ class OrderController extends Controller
             ]);
 
             $errorMsg = $e->getMessage() ?: 'حدث خطأ غير متوقع';
+            Log::error('Order approve: ERROR during processing (سيظهر في الـ logs)', [
+                'order_id' => $order->id ?? null,
+                'message' => $e->getMessage(),
+                'exception' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
                     'success' => false,
                     'error' => $errorMsg,
                     'message' => $errorMsg,
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
                 ], 500);
             }
             return back()->with('error', 'حدث خطأ أثناء معالجة الطلب: ' . $errorMsg);
+        }
+
+        } catch (\Throwable $outer) {
+            Log::error('Order approve: UNEXPECTED ERROR (سيظهر في الـ logs)', [
+                'order_id' => $order->id ?? null,
+                'message' => $outer->getMessage(),
+                'exception' => get_class($outer),
+                'file' => $outer->getFile(),
+                'line' => $outer->getLine(),
+                'trace' => $outer->getTraceAsString(),
+            ]);
+            if ($isAjax) {
+                return response()->json([
+                    'success' => false,
+                    'error' => $outer->getMessage() ?: 'حدث خطأ أثناء المعالجة',
+                    'message' => $outer->getMessage() ?: 'حدث خطأ أثناء المعالجة',
+                    'file' => $outer->getFile(),
+                    'line' => $outer->getLine(),
+                ], 500);
+            }
+            throw $outer;
         }
     }
 
@@ -485,9 +574,15 @@ class OrderController extends Controller
      */
     public function reject(Request $request, Order $order)
     {
+        $isAjax = $request->wantsJson() || $request->ajax();
+
         // التحقق من الصلاحيات
         if (!Auth::check() || !(Auth::user()->isSuperAdmin() || Auth::user()->can('manage.orders'))) {
-            abort(403, 'غير مصرح لك برفض الطلبات');
+            $msg = 'غير مصرح لك برفض الطلبات';
+            if ($isAjax) {
+                return response()->json(['success' => false, 'error' => $msg], 403);
+            }
+            abort(403, $msg);
         }
 
         // Rate Limiting - حماية من Brute Force
@@ -540,27 +635,34 @@ class OrderController extends Controller
             }
             $order->update($updateData);
 
+            DB::commit();
+            RateLimiter::clear($key);
+
+            // تسجيل النشاط بعد الـ commit (إدراج مباشر كما في الموافقة)
             try {
-                ActivityLog::create([
+                $logData = [
                     'user_id' => Auth::id(),
                     'action' => 'order_rejected',
                     'model_type' => 'Order',
                     'model_id' => $order->id,
-                    'new_values' => [
+                    'new_values' => json_encode([
                         'id' => $order->id,
                         'user_id' => $order->user_id,
                         'status' => $order->status,
                         'approved_by' => $order->approved_by,
-                    ],
+                    ]),
                     'ip_address' => $request->ip(),
                     'user_agent' => substr((string) $request->userAgent(), 0, 255),
-                ]);
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+                if (\Illuminate\Support\Facades\Schema::hasColumn('activity_logs', 'description')) {
+                    $logData['description'] = 'رفض طلب #' . $order->id;
+                }
+                DB::table('activity_logs')->insert($logData);
             } catch (\Throwable $logEx) {
-                Log::warning('Activity log failed on reject: ' . $logEx->getMessage());
+                Log::warning('Order reject: activity log insert failed', ['message' => $logEx->getMessage()]);
             }
-
-            DB::commit();
-            RateLimiter::clear($key);
 
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
@@ -593,47 +695,73 @@ class OrderController extends Controller
 
     /**
      * تسجيل الطالب في جميع الكورسات في المسار (المجانية والمدفوعة)
-     * نفس الطريقة المستخدمة في LearningPathEnrollmentController بالضبط
+     * لا يرمي استثناءات؛ أي خطأ يُسجّل ويُتجاهل حتى لا تكسر الموافقة على الطلب
      */
     private function enrollInPathCourses(\App\Models\LearningPathEnrollment $enrollment)
     {
-        // تحميل المسار مع العلاقات المطلوبة (نفس الطريقة المستخدمة في LearningPathEnrollmentController)
-        $learningPath = $enrollment->learningPath()->with(['linkedCourses', 'academicSubjects'])->first();
-        
-        if (!$learningPath) {
-            return;
-        }
-        
-        // جمع الكورسات من المسار
-        $courses = collect();
-        
-        // الكورسات المرتبطة مباشرة
-        // تحديد الجدول بشكل صريح لتجنب مشكلة ambiguous column
-        $linkedCourses = $learningPath->linkedCourses()->where('advanced_courses.is_active', true)->get();
-        $courses = $courses->merge($linkedCourses);
-        
-        // الكورسات من المواد الدراسية
-        $subjectCourses = $learningPath->academicSubjects->flatMap(function($subject) {
-            return $subject->advancedCourses()->where('is_active', true)->get();
-        });
-        
-        $courses = $courses->merge($subjectCourses)->unique('id');
+        try {
+            Log::info('enrollInPathCourses: start', ['enrollment_id' => $enrollment->id, 'user_id' => $enrollment->user_id, 'academic_year_id' => $enrollment->academic_year_id]);
+            $learningPath = $enrollment->learningPath()->with(['academicSubjects'])->first();
+            if (!$learningPath) {
+                Log::info('enrollInPathCourses: no learning path (AcademicYear) found', ['enrollment_id' => $enrollment->id]);
+                return;
+            }
 
-        // تسجيل الطالب في جميع الكورسات (المجانية والمدفوعة)
-        foreach ($courses as $course) {
-            StudentCourseEnrollment::firstOrCreate(
-                [
-                    'user_id' => $enrollment->user_id,
-                    'advanced_course_id' => $course->id,
-                ],
-                [
-                    'status' => 'active',
-                    'enrolled_at' => now(),
-                    'activated_at' => now(),
-                    'activated_by' => Auth::id(),
-                    'progress' => 0,
-                ]
-            );
+            $courses = collect();
+
+            // الكورسات المرتبطة مباشرة بالمسار (جدول academic_year_courses)
+            if (\Illuminate\Support\Facades\Schema::hasTable('academic_year_courses')) {
+                try {
+                    $learningPath->load('linkedCourses');
+                    $linked = $learningPath->linkedCourses()->where('advanced_courses.is_active', true)->get();
+                    $courses = $courses->merge($linked);
+                } catch (\Throwable $e) {
+                    Log::warning('enrollInPathCourses: linkedCourses failed', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+                }
+            }
+
+            // الكورسات من المواد الدراسية
+            $subjects = $learningPath->academicSubjects ?? collect();
+            foreach ($subjects as $subject) {
+                try {
+                    $subjectCourses = $subject->advancedCourses()->where('is_active', true)->get();
+                    $courses = $courses->merge($subjectCourses);
+                } catch (\Throwable $e) {
+                    Log::warning('enrollInPathCourses: subject courses failed', ['subject_id' => $subject->id ?? null, 'message' => $e->getMessage()]);
+                }
+            }
+
+            $courses = $courses->unique('id');
+            Log::info('enrollInPathCourses: courses to enroll', ['count' => $courses->count(), 'enrollment_id' => $enrollment->id]);
+
+            foreach ($courses as $course) {
+                try {
+                    StudentCourseEnrollment::firstOrCreate(
+                        [
+                            'user_id' => $enrollment->user_id,
+                            'advanced_course_id' => $course->id,
+                        ],
+                        [
+                            'status' => 'active',
+                            'enrolled_at' => now(),
+                            'activated_at' => now(),
+                            'activated_by' => Auth::id(),
+                            'progress' => 0,
+                        ]
+                    );
+                } catch (\Throwable $e) {
+                    Log::warning('enrollInPathCourses: firstOrCreate failed for course', ['course_id' => $course->id ?? null, 'message' => $e->getMessage()]);
+                }
+            }
+            Log::info('enrollInPathCourses: done', ['enrollment_id' => $enrollment->id]);
+        } catch (\Throwable $e) {
+            Log::error('enrollInPathCourses: FAILED (سيظهر في الـ logs)', [
+                'enrollment_id' => $enrollment->id ?? null,
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
         }
     }
 }

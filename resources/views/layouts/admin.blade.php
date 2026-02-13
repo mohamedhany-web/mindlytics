@@ -530,7 +530,8 @@
                                 <button @click.stop="open = !open" type="button" class="max-w-xs bg-white hover:bg-gray-50 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-slate-200/50 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400"
                                         :aria-expanded="open" aria-haspopup="true">
                                     @if(auth()->user()->profile_image)
-                                        <img src="{{ auth()->user()->profile_image_url }}" alt="{{ auth()->user()->name }}" class="w-7 h-7 sm:w-9 sm:h-9 rounded-full object-cover shadow-md flex-shrink-0 ring-2 ring-slate-200/50">
+                                        <img src="{{ asset('storage/' . auth()->user()->profile_image) }}" alt="{{ auth()->user()->name }}" class="w-7 h-7 sm:w-9 sm:h-9 rounded-full object-cover shadow-md flex-shrink-0 ring-2 ring-slate-200/50" onerror="this.style.display='none'; this.nextElementSibling?.classList.remove('hidden');">
+                                        <div class="w-7 h-7 sm:w-9 sm:h-9 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-full hidden flex items-center justify-center text-white font-black text-xs sm:text-sm shadow-md flex-shrink-0">{{ substr(auth()->user()->name, 0, 1) }}</div>
                                     @else
                                         <div class="w-7 h-7 sm:w-9 sm:h-9 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-full flex items-center justify-center text-white font-black text-xs sm:text-sm shadow-md flex-shrink-0">
                                             {{ substr(auth()->user()->name, 0, 1) }}
