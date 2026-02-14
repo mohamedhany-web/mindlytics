@@ -7,8 +7,8 @@
         <div class="p-6 sm:p-8 flex flex-col sm:flex-row gap-6">
             <div class="flex-shrink-0">
                 @if($profile->photo_path)
-                    <div class="w-32 h-32 rounded-2xl border border-slate-200 overflow-hidden bg-slate-100 relative flex items-center justify-center">
-                        <img src="{{ $profile->photo_url }}" alt="{{ $profile->user->name }}" class="w-full h-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
+                    <div class="w-32 h-32 rounded-2xl border border-slate-200 overflow-hidden bg-slate-100 relative">
+                        <img src="{{ $profile->photo_url }}" alt="{{ $profile->user->name }}" class="absolute inset-0 w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
                         <div class="hidden absolute inset-0 w-full h-full bg-slate-200 flex items-center justify-center text-slate-500"><i class="fas fa-user text-5xl"></i></div>
                     </div>
                 @else
@@ -33,16 +33,16 @@
         <div class="px-6 sm:px-8 pb-6">
             <h2 class="text-lg font-bold text-slate-900 mb-3">الخبرات</h2>
             @if(count($profile->experience_list) > 0)
-            <ul class="space-y-3">
+            <ul class="space-y-3 ps-4 pe-4 max-w-full">
                 @foreach($profile->experience_list as $item)
-                <li class="flex gap-3 text-slate-700">
+                <li class="flex gap-3 text-slate-700 items-start">
                     <span class="flex-shrink-0 w-6 h-6 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center text-xs font-bold mt-0.5">•</span>
-                    <span class="flex-1">{{ $item }}</span>
+                    <span class="flex-1 min-w-0 break-words text-justify">{{ $item }}</span>
                 </li>
                 @endforeach
             </ul>
             @else
-            <div class="text-slate-700 whitespace-pre-line">{{ $profile->experience }}</div>
+            <div class="text-slate-700 whitespace-pre-line break-words pe-2">{{ $profile->experience }}</div>
             @endif
         </div>
         @endif

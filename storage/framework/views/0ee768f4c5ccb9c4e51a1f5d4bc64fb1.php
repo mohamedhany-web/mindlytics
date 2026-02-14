@@ -7,8 +7,8 @@
         <div class="p-6 sm:p-8 flex flex-col sm:flex-row gap-6">
             <div class="flex-shrink-0">
                 <?php if($profile->photo_path): ?>
-                    <div class="w-32 h-32 rounded-2xl border border-slate-200 overflow-hidden bg-slate-100 relative flex items-center justify-center">
-                        <img src="<?php echo e($profile->photo_url); ?>" alt="<?php echo e($profile->user->name); ?>" class="w-full h-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
+                    <div class="w-32 h-32 rounded-2xl border border-slate-200 overflow-hidden bg-slate-100 relative">
+                        <img src="<?php echo e($profile->photo_url); ?>" alt="<?php echo e($profile->user->name); ?>" class="absolute inset-0 w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
                         <div class="hidden absolute inset-0 w-full h-full bg-slate-200 flex items-center justify-center text-slate-500"><i class="fas fa-user text-5xl"></i></div>
                     </div>
                 <?php else: ?>
@@ -31,8 +31,19 @@
         </div>
         <?php if($profile->experience): ?>
         <div class="px-6 sm:px-8 pb-6">
-            <h2 class="text-lg font-bold text-slate-900 mb-2">الخبرات</h2>
-            <div class="text-slate-700 whitespace-pre-line"><?php echo e($profile->experience); ?></div>
+            <h2 class="text-lg font-bold text-slate-900 mb-3">الخبرات</h2>
+            <?php if(count($profile->experience_list) > 0): ?>
+            <ul class="space-y-3 ps-4 pe-4 max-w-full">
+                <?php $__currentLoopData = $profile->experience_list; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $item): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <li class="flex gap-3 text-slate-700 items-start">
+                    <span class="flex-shrink-0 w-6 h-6 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center text-xs font-bold mt-0.5">•</span>
+                    <span class="flex-1 min-w-0 break-words text-justify"><?php echo e($item); ?></span>
+                </li>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+            </ul>
+            <?php else: ?>
+            <div class="text-slate-700 whitespace-pre-line break-words pe-2"><?php echo e($profile->experience); ?></div>
+            <?php endif; ?>
         </div>
         <?php endif; ?>
         <?php if($profile->skills_list): ?>

@@ -1,4 +1,3 @@
-
 <?php $__env->startSection('title', 'المدربون - Mindlytics'); ?>
 <?php $__env->startSection('content'); ?>
 <div class="max-w-6xl mx-auto px-4 sm:px-6 py-12">
@@ -11,7 +10,7 @@
         <a href="<?php echo e(route('public.instructors.show', $p->user)); ?>" class="group rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-lg overflow-hidden">
             <div class="aspect-[4/3] bg-slate-100 overflow-hidden relative">
                 <?php if($p->photo_path): ?>
-                    <img src="<?php echo e($p->photo_url); ?>" alt="<?php echo e($p->user->name); ?>" class="w-full h-full object-cover object-center" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
+                    <img src="<?php echo e($p->photo_url); ?>" alt="<?php echo e($p->user->name); ?>" class="absolute inset-0 w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
                     <div class="hidden absolute inset-0 w-full h-full flex items-center justify-center text-slate-400 bg-slate-100"><i class="fas fa-user text-6xl"></i></div>
                 <?php else: ?>
                     <div class="w-full h-full flex items-center justify-center text-slate-400"><i class="fas fa-user text-6xl"></i></div>
