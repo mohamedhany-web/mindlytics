@@ -12,7 +12,7 @@ class InstructorController extends Controller
     {
         $profiles = InstructorProfile::approved()
             ->with('user')
-            ->orderBy('updated_at', 'desc')
+            ->orderBy('created_at', 'asc')
             ->get();
 
         return view('instructors.index', compact('profiles'));
