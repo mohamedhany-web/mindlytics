@@ -4,27 +4,69 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class AdvancedCourse extends Model
 {
     use HasFactory;
 
-    protected static function booted(): void
+    /**
+     * حذف السجلات المرتبطة بالكورس باستعلامات SQL مباشرة (بدون تحميل نماذج أو أحداث).
+     * الترتيب حسب تبعيات المفاتيح الأجنبية: الأبناء قبل الآباء.
+     * يُستدعى من الكونترولر قبل حذف سجل الكورس.
+     */
+    public static function deleteRelatedRecords(int $courseId): void
     {
-        static::deleting(function (AdvancedCourse $course) {
-            // حذف السجلات المرتبطة بالترتيب لتجنب قيود المفتاح الأجنبي
-            $course->lessons()->delete();
-            $course->lectures()->delete();
-            $course->enrollments()->delete();
-            $course->exams()->delete();
-            $course->learningPatterns()->delete();
-            $course->sections()->delete();
-            $course->assignments()->where('advanced_course_id', $course->id)->delete();
-            $course->activations()->delete();
-            $course->installmentPlans()->delete();
-            $course->installmentAgreements()->delete();
-            $course->packages()->detach();
-        });
+        $steps = [
+            ['table' => 'lesson_progress', 'column' => 'course_lesson_id', 'parent' => 'course_lessons', 'parent_column' => 'advanced_course_id'],
+            ['table' => 'curriculum_items', 'column' => 'course_section_id', 'parent' => 'course_sections', 'parent_column' => 'advanced_course_id'],
+            ['table' => 'attendance_records', 'column' => 'lecture_id', 'parent' => 'lectures', 'parent_column' => 'course_id'],
+            ['table' => 'teams_attendance_files', 'column' => 'lecture_id', 'parent' => 'lectures', 'parent_column' => 'course_id'],
+            ['table' => 'lectures', 'column' => 'course_id', 'direct' => true],
+            ['table' => 'course_lessons', 'column' => 'advanced_course_id', 'direct' => true],
+            ['table' => 'assignment_submissions', 'column' => 'assignment_id', 'parent' => 'assignments', 'parent_column' => 'advanced_course_id'],
+            ['table' => 'assignments', 'column' => 'advanced_course_id', 'direct' => true],
+            ['table' => 'review_helpful', 'column' => 'review_id', 'parent' => 'course_reviews', 'parent_column' => 'course_id'],
+            ['table' => 'course_reviews', 'column' => 'course_id', 'direct' => true],
+            ['table' => 'student_course_enrollments', 'column' => 'advanced_course_id', 'direct' => true],
+            ['table' => 'installment_agreements', 'column' => 'advanced_course_id', 'direct' => true],
+            ['table' => 'installment_plans', 'column' => 'advanced_course_id', 'direct' => true],
+            ['table' => 'course_sections', 'column' => 'advanced_course_id', 'direct' => true],
+            ['table' => 'learning_pattern_attempts', 'column' => 'learning_pattern_id', 'parent' => 'learning_patterns', 'parent_column' => 'advanced_course_id'],
+            ['table' => 'learning_patterns', 'column' => 'advanced_course_id', 'direct' => true],
+            ['table' => 'exam_anti_cheat_logs', 'column' => 'exam_id', 'parent' => 'exams', 'parent_column' => 'advanced_course_id'],
+            ['table' => 'exam_tab_switch_logs', 'column' => 'exam_id', 'parent' => 'exams', 'parent_column' => 'advanced_course_id'],
+            ['table' => 'exam_activity_logs', 'column' => 'exam_id', 'parent' => 'exams', 'parent_column' => 'advanced_course_id'],
+            ['table' => 'exam_attempts', 'column' => 'exam_id', 'parent' => 'exams', 'parent_column' => 'advanced_course_id'],
+            ['table' => 'exam_questions', 'column' => 'exam_id', 'parent' => 'exams', 'parent_column' => 'advanced_course_id'],
+            ['table' => 'exams', 'column' => 'advanced_course_id', 'direct' => true],
+            ['table' => 'package_course', 'column' => 'course_id', 'direct' => true],
+            ['table' => 'attendance_statistics', 'column' => 'course_id', 'direct' => true],
+            ['table' => 'academic_year_courses', 'column' => 'advanced_course_id', 'direct' => true],
+            ['table' => 'calendar_events', 'column' => 'advanced_course_id', 'direct' => true],
+        ];
+
+        foreach ($steps as $def) {
+            try {
+                if (! Schema::hasTable($def['table'])) {
+                    continue;
+                }
+                if (! empty($def['direct'])) {
+                    DB::table($def['table'])->where($def['column'], $courseId)->delete();
+                } else {
+                    if (! Schema::hasTable($def['parent'])) {
+                        continue;
+                    }
+                    $parentIds = DB::table($def['parent'])->where($def['parent_column'], $courseId)->pluck('id');
+                    if ($parentIds->isNotEmpty()) {
+                        DB::table($def['table'])->whereIn($def['column'], $parentIds)->delete();
+                    }
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
     }
 
     protected $fillable = [

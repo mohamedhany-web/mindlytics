@@ -52,10 +52,10 @@
                                 </div>
 
                                 <div class="space-y-2">
-                                    <label class="block text-sm font-semibold text-gray-700">المسار التعليمي *</label>
-                                    <select name="academic_year_id" x-model="formTrack" @change="refreshSubjects" required
+                                    <label class="block text-sm font-semibold text-gray-700">المسار التعليمي</label>
+                                    <select name="academic_year_id" x-model="formTrack" @change="refreshSubjects"
                                             class="w-full rounded-2xl border border-gray-200 bg-white/70 px-4 py-3 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition">
-                                        <option value="">اختر المسار</option>
+                                        <option value="">بدون مسار (كورس مستقل)</option>
                                         @foreach($academicYears as $year)
                                             <option value="{{ $year->id }}" 
                                                     {{ old('academic_year_id', $advancedCourse->academic_year_id) == $year->id ? 'selected' : '' }}

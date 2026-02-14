@@ -82,6 +82,10 @@ class ActivityLog extends Model
      */
     public static function logActivity($action, $model = null, $oldValues = null, $newValues = null, $description = null)
     {
+        if (app()->runningInConsole()) {
+            return null;
+        }
+        $request = request();
         $data = [
             'user_id' => auth()->id(),
             'action' => $action,
@@ -90,10 +94,10 @@ class ActivityLog extends Model
             'model_id' => $model ? $model->id : null,
             'old_values' => $oldValues,
             'new_values' => $newValues,
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-            'url' => request()->fullUrl(),
-            'method' => request()->method(),
+            'ip_address' => $request ? $request->ip() : null,
+            'user_agent' => $request ? $request->userAgent() : null,
+            'url' => $request ? $request->fullUrl() : null,
+            'method' => $request ? $request->method() : null,
             'response_code' => null,
             'duration' => null,
         ];

@@ -7,13 +7,16 @@
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <?php $__empty_1 = true; $__currentLoopData = $profiles; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $p): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-        <a href="<?php echo e(route('public.instructors.show', $p->user)); ?>" class="group rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-lg overflow-hidden">
+        <a href="<?php echo e(route('public.instructors.show', $p->user)); ?>" class="group rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-lg overflow-hidden block">
             <div class="aspect-[4/3] bg-slate-100 overflow-hidden relative">
                 <?php if($p->photo_path): ?>
                     <img src="<?php echo e($p->photo_url); ?>" alt="<?php echo e($p->user->name); ?>" class="absolute inset-0 w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
                     <div class="hidden absolute inset-0 w-full h-full flex items-center justify-center text-slate-400 bg-slate-100"><i class="fas fa-user text-6xl"></i></div>
                 <?php else: ?>
                     <div class="w-full h-full flex items-center justify-center text-slate-400"><i class="fas fa-user text-6xl"></i></div>
+                <?php endif; ?>
+                <?php if(!empty($p->social_links['linkedin'])): ?>
+                <span role="link" tabindex="0" data-linkedin="<?php echo e($p->social_links['linkedin']); ?>" onclick="event.preventDefault(); event.stopPropagation(); window.open(this.getAttribute('data-linkedin'), '_blank');" class="absolute bottom-3 left-3 z-10 w-9 h-9 rounded-xl bg-[#0A66C2] text-white flex items-center justify-center shadow-md hover:bg-[#004182] hover:scale-105 transition-all cursor-pointer" title="LinkedIn" aria-label="LinkedIn"><i class="fab fa-linkedin text-lg"></i></span>
                 <?php endif; ?>
             </div>
             <div class="p-5">

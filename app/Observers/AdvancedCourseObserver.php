@@ -50,12 +50,16 @@ class AdvancedCourseObserver
      */
     public function deleted(AdvancedCourse $advancedCourse): void
     {
-        ActivityLog::logActivity(
-            'course_deleted',
-            $advancedCourse,
-            $advancedCourse->only(['title', 'academic_subject_id', 'price']),
-            null
-        );
+        try {
+            $oldValues = array_filter([
+                'title' => $advancedCourse->title ?? null,
+                'academic_subject_id' => $advancedCourse->academic_subject_id ?? null,
+                'price' => $advancedCourse->price ?? null,
+            ]);
+            ActivityLog::logActivity('course_deleted', $advancedCourse, $oldValues, null);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     /**

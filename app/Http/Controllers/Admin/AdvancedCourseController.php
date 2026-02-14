@@ -25,7 +25,7 @@ class AdvancedCourseController extends Controller
      */
     public function index(Request $request)
     {
-        $query = AdvancedCourse::with(['instructor'])
+        $query = AdvancedCourse::with(['instructor', 'academicYear', 'academicSubject'])
             ->withCount(['lessons', 'enrollments', 'orders']);
 
         // فلترة حسب لغة البرمجة
@@ -82,14 +82,24 @@ class AdvancedCourseController extends Controller
 
         $academicYears = AcademicYear::orderBy('order')->orderBy('name')->get(['id', 'name', 'code']);
 
-        return view('admin.advanced-courses.index', compact(
-            'courses',
-            'programmingLanguages',
-            'categories',
-            'instructors',
-            'academicYears',
-            'selectedCluster'
-        ));
+        try {
+            return view('admin.advanced-courses.index', compact(
+                'courses',
+                'programmingLanguages',
+                'categories',
+                'instructors',
+                'academicYears',
+                'selectedCluster'
+            ));
+        } catch (\Throwable $e) {
+            Log::error('AdvancedCourse index view error', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
     }
 
     /**
@@ -97,8 +107,11 @@ class AdvancedCourseController extends Controller
      */
     public function create(Request $request): View
     {
-        $trackOptions = AcademicYear::with(['subjects:id,academic_year_id,name'])
+        $trackOptions = AcademicYear::with(['subjects' => function ($q) {
+                $q->select('id', 'academic_year_id', 'name');
+            }])
             ->orderBy('order')
+            ->orderBy('name')
             ->get(['id', 'name'])
             ->map(function (AcademicYear $year) {
                 return [
@@ -170,10 +183,15 @@ class AdvancedCourseController extends Controller
      */
     public function store(Request $request)
     {
+        $request->merge([
+            'academic_year_id' => $request->filled('academic_year_id') ? $request->academic_year_id : null,
+            'academic_subject_id' => $request->filled('academic_subject_id') ? $request->academic_subject_id : null,
+        ]);
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'academic_year_id' => 'required|exists:academic_years,id',
-            'academic_subject_id' => 'required|exists:academic_subjects,id',
+            'academic_year_id' => 'nullable|exists:academic_years,id',
+            'academic_subject_id' => 'nullable|exists:academic_subjects,id',
             'description' => 'nullable|string',
             'video_url' => 'nullable|url|max:500',
             'objectives' => 'nullable|string',
@@ -198,8 +216,8 @@ class AdvancedCourseController extends Controller
             'is_featured' => 'boolean',
         ], [
             'title.required' => 'عنوان الكورس مطلوب',
-            'academic_year_id.required' => 'المسار التعليمي مطلوب',
-            'academic_subject_id.required' => 'مجموعة المهارات مطلوبة',
+            'academic_year_id.exists' => 'المسار التعليمي المحدد غير موجود',
+            'academic_subject_id.exists' => 'مجموعة المهارات المحددة غير موجودة',
             'instructor_id.exists' => 'المدرب المحدد غير موجود',
             'level.in' => 'مستوى الكورس غير صحيح',
             'duration_hours.numeric' => 'مدة الكورس يجب أن تكون رقم',
@@ -245,6 +263,9 @@ class AdvancedCourseController extends Controller
                 'reviews_count' => 0,
             ]
         );
+        $data['academic_year_id'] = $request->filled('academic_year_id') ? (int) $data['academic_year_id'] : null;
+        $data['academic_subject_id'] = $request->filled('academic_subject_id') ? (int) $data['academic_subject_id'] : null;
+        $data['instructor_id'] = isset($data['instructor_id']) && $data['instructor_id'] !== '' ? (int) $data['instructor_id'] : null;
 
         $data['level'] = $data['level'] ?? 'beginner';
         $data['price'] = $data['price'] ?? 0;
@@ -259,7 +280,17 @@ class AdvancedCourseController extends Controller
             $data['thumbnail'] = $request->file('thumbnail')->store('courses', 'public');
         }
 
-        AdvancedCourse::create($data);
+        try {
+            AdvancedCourse::create($data);
+        } catch (\Throwable $e) {
+            Log::error('AdvancedCourse::store create failed', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
 
         return redirect()->route('admin.advanced-courses.index')
             ->with('success', 'تم إنشاء الكورس بنجاح');
@@ -463,19 +494,31 @@ class AdvancedCourseController extends Controller
 
     /**
      * حذف كورس
+     * الحذف يتم باستعلامات مباشرة دون أحداث النموذج لتجنب خطأ 500.
      */
     public function destroy(AdvancedCourse $advancedCourse)
     {
+        $courseId = $advancedCourse->id;
+        $title = $advancedCourse->title;
+
         try {
-            DB::transaction(function () use ($advancedCourse) {
-                $advancedCourse->delete();
+            Log::info('بدء حذف الكورس', ['course_id' => $courseId, 'title' => $title]);
+
+            DB::transaction(function () use ($courseId) {
+                AdvancedCourse::deleteRelatedRecords($courseId);
+                DB::table('advanced_courses')->where('id', $courseId)->delete();
             });
+
+            Log::info('تم حذف الكورس بنجاح', ['course_id' => $courseId]);
             return redirect()->route('admin.advanced-courses.index')
                 ->with('success', 'تم حذف الكورس بنجاح');
         } catch (\Throwable $e) {
-            Log::error('حذف الكورس فشل: ' . $e->getMessage(), [
-                'course_id' => $advancedCourse->id ?? null,
-                'exception' => $e,
+            Log::error('حذف الكورس فشل', [
+                'course_id' => $courseId,
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
             ]);
             return redirect()->route('admin.advanced-courses.index')
                 ->with('error', 'حدث خطأ أثناء حذف الكورس. قد يكون الكورس مرتبطاً ببيانات أخرى.');
