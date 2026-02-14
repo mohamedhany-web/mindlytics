@@ -22,11 +22,18 @@ class InputSanitizationMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // حقول نصية طويلة (خبرات، نبذة، مهارات) نستثنيها من فحص SQL/XSS لتجنب إنذارات خاطئة عند كتابة نصوص كثيرة
+        $longTextFields = ['experience', 'bio', 'skills', 'rejection_reason', 'bio_ar', 'bio_en'];
+
         // التحقق من SQL Injection
         foreach ($request->all() as $key => $value) {
             if (is_string($value)) {
                 // تخطي CSRF token
                 if ($key === '_token') {
+                    continue;
+                }
+                // تخطي الحقول النصية الطويلة المعروفة (تحصل على التنظيف فقط دون إيقاف الطلب)
+                if (in_array($key, $longTextFields)) {
                     continue;
                 }
 

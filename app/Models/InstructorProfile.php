@@ -79,4 +79,17 @@ class InstructorProfile extends Model
             default => $status,
         };
     }
+
+    /**
+     * المهارات كقائمة مرتبة (سطر لكل مهارة أو مفصولة بفاصلة)
+     */
+    public function getSkillsListAttribute(): array
+    {
+        if (empty($this->skills)) {
+            return [];
+        }
+        $raw = preg_split('/[\r\n,،]+/u', $this->skills, -1, PREG_SPLIT_NO_EMPTY);
+        $list = array_map('trim', $raw);
+        return array_values(array_filter($list));
+    }
 }

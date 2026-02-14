@@ -7,8 +7,8 @@
         <div class="p-6 sm:p-8 flex flex-col sm:flex-row gap-6">
             <div class="flex-shrink-0">
                 @if($profile->photo_path)
-                    <div class="w-32 h-32 rounded-2xl border border-slate-200 overflow-hidden bg-slate-100 relative">
-                        <img src="{{ $profile->photo_url }}" alt="{{ $profile->user->name }}" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
+                    <div class="w-32 h-32 rounded-2xl border border-slate-200 overflow-hidden bg-slate-100 relative flex items-center justify-center">
+                        <img src="{{ $profile->photo_url }}" alt="{{ $profile->user->name }}" class="w-full h-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
                         <div class="hidden absolute inset-0 w-full h-full bg-slate-200 flex items-center justify-center text-slate-500"><i class="fas fa-user text-5xl"></i></div>
                     </div>
                 @else
@@ -29,10 +29,14 @@
             <div class="text-slate-700 whitespace-pre-line">{{ $profile->experience }}</div>
         </div>
         @endif
-        @if($profile->skills)
+        @if($profile->skills_list)
         <div class="px-6 sm:px-8 pb-6">
-            <h2 class="text-lg font-bold text-slate-900 mb-2">المهارات</h2>
-            <div class="text-slate-700 whitespace-pre-line">{{ $profile->skills }}</div>
+            <h2 class="text-lg font-bold text-slate-900 mb-3">المهارات</h2>
+            <div class="flex flex-wrap gap-2">
+                @foreach($profile->skills_list as $skill)
+                <span class="inline-flex items-center rounded-xl bg-slate-100 text-slate-700 px-3 py-1.5 text-sm font-medium border border-slate-200">{{ $skill }}</span>
+                @endforeach
+            </div>
         </div>
         @endif
         @if($courses->count() > 0)

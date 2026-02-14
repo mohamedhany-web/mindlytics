@@ -7,8 +7,8 @@
         <div class="p-6 sm:p-8 flex flex-col sm:flex-row gap-6">
             <div class="flex-shrink-0">
                 <?php if($profile->photo_path): ?>
-                    <div class="w-32 h-32 rounded-2xl border border-slate-200 overflow-hidden bg-slate-100 relative">
-                        <img src="<?php echo e($profile->photo_url); ?>" alt="<?php echo e($profile->user->name); ?>" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
+                    <div class="w-32 h-32 rounded-2xl border border-slate-200 overflow-hidden bg-slate-100 relative flex items-center justify-center">
+                        <img src="<?php echo e($profile->photo_url); ?>" alt="<?php echo e($profile->user->name); ?>" class="w-full h-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
                         <div class="hidden absolute inset-0 w-full h-full bg-slate-200 flex items-center justify-center text-slate-500"><i class="fas fa-user text-5xl"></i></div>
                     </div>
                 <?php else: ?>
@@ -29,10 +29,14 @@
             <div class="text-slate-700 whitespace-pre-line"><?php echo e($profile->experience); ?></div>
         </div>
         <?php endif; ?>
-        <?php if($profile->skills): ?>
+        <?php if($profile->skills_list): ?>
         <div class="px-6 sm:px-8 pb-6">
-            <h2 class="text-lg font-bold text-slate-900 mb-2">المهارات</h2>
-            <div class="text-slate-700 whitespace-pre-line"><?php echo e($profile->skills); ?></div>
+            <h2 class="text-lg font-bold text-slate-900 mb-3">المهارات</h2>
+            <div class="flex flex-wrap gap-2">
+                <?php $__currentLoopData = $profile->skills_list; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $skill): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <span class="inline-flex items-center rounded-xl bg-slate-100 text-slate-700 px-3 py-1.5 text-sm font-medium border border-slate-200"><?php echo e($skill); ?></span>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+            </div>
         </div>
         <?php endif; ?>
         <?php if($courses->count() > 0): ?>

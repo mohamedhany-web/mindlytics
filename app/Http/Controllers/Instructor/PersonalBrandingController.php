@@ -36,10 +36,12 @@ class PersonalBrandingController extends Controller
         $data = $request->validate([
             'headline' => 'nullable|string|max:255',
             'bio' => 'nullable|string|max:5000',
-            'experience' => 'nullable|string|max:10000',
-            'skills' => 'nullable|string|max:2000',
+            'experience' => 'nullable|string|max:50000',
+            'skills' => 'nullable|string|max:5000',
             'photo' => 'nullable|image|max:2048',
         ], [
+            'experience.max' => 'الخبرات في المجال يجب ألا تتجاوز 50 ألف حرف. إن احتجت مساحة أكبر تواصل مع الإدارة.',
+            'skills.max' => 'المهارات يجب ألا تتجاوز 5 آلاف حرف.',
             'photo.image' => 'الملف الذي تم رفعه يجب أن يكون صورة',
             'photo.max' => 'حجم الصورة يجب ألا يتجاوز 2 ميجابايت',
         ]);

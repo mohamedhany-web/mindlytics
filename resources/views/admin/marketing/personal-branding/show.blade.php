@@ -55,8 +55,16 @@
                 <p class="text-slate-900 whitespace-pre-line">{{ $personal_branding->experience ?? '—' }}</p>
             </div>
             <div>
-                <h3 class="text-sm font-semibold text-slate-600 mb-1">المهارات</h3>
-                <p class="text-slate-900 whitespace-pre-line">{{ $personal_branding->skills ?? '—' }}</p>
+                <h3 class="text-sm font-semibold text-slate-600 mb-2">المهارات</h3>
+                @if(count($personal_branding->skills_list) > 0)
+                <div class="flex flex-wrap gap-2">
+                    @foreach($personal_branding->skills_list as $skill)
+                    <span class="inline-flex items-center rounded-xl bg-sky-50 text-sky-800 px-3 py-1.5 text-sm font-medium border border-sky-200">{{ $skill }}</span>
+                    @endforeach
+                </div>
+                @else
+                <p class="text-slate-900">{{ $personal_branding->skills ?: '—' }}</p>
+                @endif
             </div>
             @if($personal_branding->rejection_reason)
             <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200">

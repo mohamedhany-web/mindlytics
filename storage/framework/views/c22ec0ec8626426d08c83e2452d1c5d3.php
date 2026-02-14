@@ -88,7 +88,7 @@ unset($__errorArgs, $__bag); ?>
 
         <div>
             <label class="block text-sm font-semibold text-slate-700 mb-2">الخبرات في المجال</label>
-            <textarea name="experience" rows="6" placeholder="اذكر خبراتك العملية والتعليمية..." class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm"><?php echo e(old('experience', $profile->experience)); ?></textarea>
+            <textarea name="experience" rows="10" placeholder="اذكر خبراتك العملية والتعليمية... (حتى 50 ألف حرف)" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm"><?php echo e(old('experience', $profile->experience)); ?></textarea>
             <?php $__errorArgs = ['experience'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
 if ($__bag->has($__errorArgs[0])) :
@@ -101,7 +101,8 @@ unset($__errorArgs, $__bag); ?>
 
         <div>
             <label class="block text-sm font-semibold text-slate-700 mb-2">المهارات</label>
-            <textarea name="skills" rows="3" placeholder="مهاراتك التقنية أو التدريبية (سطر أو أكثر)..." class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm"><?php echo e(old('skills', $profile->skills)); ?></textarea>
+            <p class="text-xs text-slate-500 mb-2">مهارة واحدة في كل سطر، أو افصل بينها بفاصلة (،) أو شرطة سطر جديد. ستظهر في صفحتك كشارات مرتبة.</p>
+            <textarea name="skills" rows="5" placeholder="مثال:&#10;إدارة المشاريع&#10;التدريب الاحترافي&#10;تحليل البيانات، العرض التقديمي" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm"><?php echo e(old('skills', $profile->skills)); ?></textarea>
             <?php $__errorArgs = ['skills'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
 if ($__bag->has($__errorArgs[0])) :
@@ -110,6 +111,21 @@ $message = $__bag->first($__errorArgs[0]); ?><p class="text-rose-600 text-sm mt-
 if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
 unset($__errorArgs, $__bag); ?>
+            <?php
+                $skillsPreview = $profile->skills_list;
+                if (old('skills') !== null) {
+                    $split = preg_split('/[\r\n,،]+/u', old('skills'), -1, PREG_SPLIT_NO_EMPTY);
+                    $skillsPreview = array_values(array_filter(array_map('trim', $split)));
+                }
+            ?>
+            <?php if(count($skillsPreview) > 0): ?>
+            <p class="text-xs text-slate-500 mt-2">معاينة (<?php echo e(count($skillsPreview)); ?> مهارة):</p>
+            <div class="flex flex-wrap gap-2 mt-1">
+                <?php $__currentLoopData = $skillsPreview; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $skill): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <span class="inline-flex items-center rounded-lg bg-sky-50 text-sky-700 px-2.5 py-1 text-xs font-medium"><?php echo e($skill); ?></span>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+            </div>
+            <?php endif; ?>
         </div>
 
         <div class="flex flex-wrap gap-3">
