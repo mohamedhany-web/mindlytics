@@ -31,8 +31,19 @@
         </div>
         @if($profile->experience)
         <div class="px-6 sm:px-8 pb-6">
-            <h2 class="text-lg font-bold text-slate-900 mb-2">الخبرات</h2>
+            <h2 class="text-lg font-bold text-slate-900 mb-3">الخبرات</h2>
+            @if(count($profile->experience_list) > 0)
+            <ul class="space-y-3">
+                @foreach($profile->experience_list as $item)
+                <li class="flex gap-3 text-slate-700">
+                    <span class="flex-shrink-0 w-6 h-6 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center text-xs font-bold mt-0.5">•</span>
+                    <span class="flex-1">{{ $item }}</span>
+                </li>
+                @endforeach
+            </ul>
+            @else
             <div class="text-slate-700 whitespace-pre-line">{{ $profile->experience }}</div>
+            @endif
         </div>
         @endif
         @if($profile->skills_list)

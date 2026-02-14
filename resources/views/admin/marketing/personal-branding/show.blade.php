@@ -54,8 +54,19 @@
                 <p class="text-slate-900 whitespace-pre-line">{{ $personal_branding->bio ?? '—' }}</p>
             </div>
             <div>
-                <h3 class="text-sm font-semibold text-slate-600 mb-1">الخبرات في المجال</h3>
-                <p class="text-slate-900 whitespace-pre-line">{{ $personal_branding->experience ?? '—' }}</p>
+                <h3 class="text-sm font-semibold text-slate-600 mb-2">الخبرات في المجال</h3>
+                @if(count($personal_branding->experience_list) > 0)
+                <ul class="space-y-2">
+                    @foreach($personal_branding->experience_list as $item)
+                    <li class="flex gap-2 text-slate-900">
+                        <span class="flex-shrink-0 w-5 h-5 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center text-xs font-bold">•</span>
+                        <span>{{ $item }}</span>
+                    </li>
+                    @endforeach
+                </ul>
+                @else
+                <p class="text-slate-900">{{ $personal_branding->experience ?: '—' }}</p>
+                @endif
             </div>
             <div>
                 <h3 class="text-sm font-semibold text-slate-600 mb-2">المهارات</h3>

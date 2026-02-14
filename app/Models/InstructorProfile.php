@@ -92,4 +92,17 @@ class InstructorProfile extends Model
         $list = array_map('trim', $raw);
         return array_values(array_filter($list));
     }
+
+    /**
+     * الخبرات كقائمة (كل سطر = نقطة/فقرة للعرض المنظم)
+     */
+    public function getExperienceListAttribute(): array
+    {
+        if (empty($this->experience)) {
+            return [];
+        }
+        $lines = preg_split('/\r\n|\r|\n/', $this->experience, -1, PREG_SPLIT_NO_EMPTY);
+        $list = array_map('trim', $lines);
+        return array_values(array_filter($list));
+    }
 }
