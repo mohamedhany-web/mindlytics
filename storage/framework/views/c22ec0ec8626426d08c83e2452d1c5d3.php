@@ -128,6 +128,20 @@ unset($__errorArgs, $__bag); ?>
             <?php endif; ?>
         </div>
 
+        <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">رابط LinkedIn</label>
+            <input type="url" name="linkedin" value="<?php echo e(old('linkedin', $profile->social_links['linkedin'] ?? '')); ?>" placeholder="https://www.linkedin.com/in/اسم-المستخدم" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" dir="ltr">
+            <p class="text-xs text-slate-500 mt-1">اختياري — سيظهر في صفحتك للزوار للتواصل معك على لينكد إن.</p>
+            <?php $__errorArgs = ['linkedin'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="text-rose-600 text-sm mt-1"><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+        </div>
+
         <div class="flex flex-wrap gap-3">
             <button type="submit" class="rounded-xl bg-sky-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-sky-700">حفظ التعديلات</button>
         </div>

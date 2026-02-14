@@ -36,7 +36,10 @@
                 @endif
                 <div>
                     <p class="text-slate-500 text-sm">البريد: {{ $personal_branding->user->email ?? '—' }}</p>
-                    <p class="text-slate-500 text-sm">تاريخ التقديم: {{ $personal_branding->submitted_at ? $personal_branding->submitted_at->format('Y-m-d H:i') : '—' }}</p>
+                    @if(!empty($personal_branding->social_links['linkedin']))
+                    <p class="text-slate-500 text-sm mt-1">LinkedIn: <a href="{{ $personal_branding->social_links['linkedin'] }}" target="_blank" rel="noopener" class="text-sky-600 hover:text-sky-700">{{ $personal_branding->social_links['linkedin'] }}</a></p>
+                    @endif
+                    <p class="text-slate-500 text-sm mt-1">تاريخ التقديم: {{ $personal_branding->submitted_at ? $personal_branding->submitted_at->format('Y-m-d H:i') : '—' }}</p>
                     @if($personal_branding->reviewed_at)
                         <p class="text-slate-500 text-sm">تمت المراجعة: {{ $personal_branding->reviewed_at->format('Y-m-d H:i') }} — {{ $personal_branding->reviewedByUser->name ?? '' }}</p>
                     @endif

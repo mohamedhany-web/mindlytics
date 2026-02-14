@@ -38,10 +38,12 @@ class PersonalBrandingController extends Controller
             'bio' => 'nullable|string|max:5000',
             'experience' => 'nullable|string|max:50000',
             'skills' => 'nullable|string|max:5000',
+            'linkedin' => 'nullable|string|max:500|url',
             'photo' => 'nullable|image|max:2048',
         ], [
             'experience.max' => 'الخبرات في المجال يجب ألا تتجاوز 50 ألف حرف. إن احتجت مساحة أكبر تواصل مع الإدارة.',
             'skills.max' => 'المهارات يجب ألا تتجاوز 5 آلاف حرف.',
+            'linkedin.url' => 'رابط LinkedIn يجب أن يكون رابطاً صالحاً (مثال: https://www.linkedin.com/in/اسم-المستخدم)',
             'photo.image' => 'الملف الذي تم رفعه يجب أن يكون صورة',
             'photo.max' => 'حجم الصورة يجب ألا يتجاوز 2 ميجابايت',
         ]);
@@ -54,6 +56,10 @@ class PersonalBrandingController extends Controller
         }
 
         unset($data['photo']);
+        $socialLinks = $profile->social_links ?? [];
+        $socialLinks['linkedin'] = !empty($data['linkedin']) ? trim($data['linkedin']) : null;
+        $data['social_links'] = $socialLinks;
+        unset($data['linkedin']);
         $profile->update($data);
 
         return back()->with('success', 'تم حفظ الملف التعريفي.');

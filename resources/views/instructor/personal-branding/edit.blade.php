@@ -92,6 +92,13 @@
             @endif
         </div>
 
+        <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">رابط LinkedIn</label>
+            <input type="url" name="linkedin" value="{{ old('linkedin', $profile->social_links['linkedin'] ?? '') }}" placeholder="https://www.linkedin.com/in/اسم-المستخدم" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" dir="ltr">
+            <p class="text-xs text-slate-500 mt-1">اختياري — سيظهر في صفحتك للزوار للتواصل معك على لينكد إن.</p>
+            @error('linkedin')<p class="text-rose-600 text-sm mt-1">{{ $message }}</p>@enderror
+        </div>
+
         <div class="flex flex-wrap gap-3">
             <button type="submit" class="rounded-xl bg-sky-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-sky-700">حفظ التعديلات</button>
         </div>

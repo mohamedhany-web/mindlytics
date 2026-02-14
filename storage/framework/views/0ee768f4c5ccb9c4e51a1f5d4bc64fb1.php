@@ -21,6 +21,12 @@
                 <?php if($profile->bio): ?>
                     <div class="mt-4 text-slate-700 whitespace-pre-line"><?php echo e($profile->bio); ?></div>
                 <?php endif; ?>
+                <?php if(!empty($profile->social_links['linkedin'])): ?>
+                <a href="<?php echo e($profile->social_links['linkedin']); ?>" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 mt-4 rounded-xl bg-[#0A66C2] text-white px-4 py-2 text-sm font-semibold hover:bg-[#004182] transition-colors">
+                    <i class="fab fa-linkedin text-lg"></i>
+                    <span>LinkedIn</span>
+                </a>
+                <?php endif; ?>
             </div>
         </div>
         <?php if($profile->experience): ?>
