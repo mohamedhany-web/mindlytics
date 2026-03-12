@@ -1284,24 +1284,7 @@
                             <i class="fas fa-play-circle text-blue-600"></i>
                             محتوى الكورس — معاينة
                         </h2>
-                        <p class="text-gray-600 mb-6">اطّلع على تقسيمات الكورس وأول 3 فيديوهات قبل الشراء.</p>
-
-                        @if(isset($sections) && $sections->count() > 0)
-                            <div class="mb-8">
-                                <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                    <i class="fas fa-folder-open text-amber-500"></i>
-                                    التقسيمات
-                                </h3>
-                                <ul class="space-y-2">
-                                    @foreach($sections as $idx => $section)
-                                        <li class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
-                                            <span class="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center text-sm font-bold">{{ $idx + 1 }}</span>
-                                            <span class="font-semibold text-gray-800">{{ $section->title }}</span>
-                                        </li>
-                                    @endforeach
-                                </ul>
-                            </div>
-                        @endif
+                        <p class="text-gray-600 mb-6">اطّلع على أول 3 فيديوهات وتقسيمات الكورس قبل الشراء.</p>
 
                         @if(isset($previewVideoLessons) && $previewVideoLessons->count() > 0)
                             <div x-data="coursePreviewPopup()">
@@ -1311,6 +1294,13 @@
                                 </h3>
                                 <div class="space-y-4">
                                     @foreach($previewVideoLessons as $idx => $lesson)
+                                        @php
+                                            $embedUrl = null;
+                                            if ($lesson->video_url) {
+                                                $embedUrl = \App\Helpers\VideoHelper::getEmbedUrl(trim($lesson->video_url));
+                                            }
+                                            $encodedSrc = $embedUrl ? base64_encode($embedUrl) : '';
+                                        @endphp
                                         <div class="rounded-xl border-2 border-gray-200 overflow-hidden bg-gray-50 hover:border-blue-300 transition-all duration-300">
                                             <div class="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                                                 <div class="flex items-center gap-3 flex-1 min-w-0">
@@ -1324,25 +1314,24 @@
                                                         @endif
                                                     </div>
                                                 </div>
-                                                <div class="flex-shrink-0">
-                                                    <button type="button"
-                                                            data-course-id="{{ $course->id }}"
-                                                            data-lesson-id="{{ $lesson->id }}"
-                                                            data-title="{{ e($lesson->title) }}"
-                                                            @click="openPreview($event.currentTarget.dataset.courseId, $event.currentTarget.dataset.lessonId, $event.currentTarget.dataset.title)"
-                                                            :disabled="loading"
-                                                            class="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-70 disabled:cursor-not-allowed text-white rounded-xl text-sm font-semibold transition-colors shadow-md hover:shadow-lg">
-                                                        <i class="fas fa-eye" x-show="!loading"></i>
-                                                        <i class="fas fa-spinner fa-spin" x-show="loading" x-cloak></i>
-                                                        <span x-text="loading ? 'جاري التحميل...' : 'معاينة'">معاينة</span>
-                                                    </button>
-                                                </div>
+                                                @if($encodedSrc)
+                                                    <div class="flex-shrink-0">
+                                                        <button type="button"
+                                                                data-video-src="{{ $encodedSrc }}"
+                                                                data-title="{{ e($lesson->title) }}"
+                                                                @click="openPreview($event.currentTarget.dataset.videoSrc, $event.currentTarget.dataset.title)"
+                                                                class="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-semibold transition-colors shadow-md hover:shadow-lg">
+                                                            <i class="fas fa-eye"></i>
+                                                            <span>معاينة</span>
+                                                        </button>
+                                                    </div>
+                                                @endif
                                             </div>
                                         </div>
                                     @endforeach
                                 </div>
 
-                                <!-- بوب أب المعاينة (الرابط يُحمّل عبر رابط موقّع — لا يُعرَض الرابط الحقيقي أبداً) -->
+                                <!-- بوب أب المعاينة (الرابط مخزّن مشفّراً base64 فلا يظهر جلياً في مصدر الصفحة) -->
                                 <div x-show="open" x-cloak class="fixed inset-0 z-[9999] flex items-center justify-center p-4" style="background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);"
                                      x-transition:enter="transition ease-out duration-200"
                                      x-transition:enter-start="opacity-0"
@@ -1361,15 +1350,10 @@
                                                 <i class="fas fa-times text-xl"></i>
                                             </button>
                                         </div>
-                                        <div class="flex-1 min-h-0 p-4 overflow-auto">
-                                            <template x-if="error">
-                                                <p class="text-red-600 py-4" x-text="error"></p>
-                                            </template>
-                                            <template x-if="watchUrl && !error">
-                                                <div class="aspect-video w-full bg-black rounded-xl overflow-hidden">
-                                                    <iframe :src="watchUrl" class="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                                                </div>
-                                            </template>
+                                        <div class="flex-1 min-h-0 p-4 overflow-auto" x-show="embedUrl">
+                                            <div class="aspect-video w-full bg-black rounded-xl overflow-hidden" x-show="embedUrl">
+                                                <iframe :src="embedUrl" class="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1378,39 +1362,46 @@
                                 function coursePreviewPopup() {
                                     return {
                                         open: false,
-                                        watchUrl: '',
+                                        embedUrl: '',
                                         title: '',
-                                        loading: false,
-                                        error: '',
-                                        async openPreview(courseId, lessonId, title) {
-                                            this.title = title || 'معاينة';
-                                            this.watchUrl = '';
-                                            this.error = '';
-                                            this.open = true;
-                                            this.loading = true;
-                                            document.body.style.overflow = 'hidden';
+                                        openPreview(encodedSrc, title) {
                                             try {
-                                                const r = await fetch('/course/' + courseId + '/preview-watch-url/' + lessonId, { headers: { 'Accept': 'application/json' } });
-                                                const d = await r.json();
-                                                if (!r.ok) throw new Error(d.error || 'فشل تحميل المعاينة');
-                                                this.watchUrl = d.watch_url || '';
-                                                if (!this.watchUrl) throw new Error('لم يُرجَع رابط المعاينة');
+                                                this.title = title || 'معاينة';
+                                                this.embedUrl = encodedSrc ? (typeof atob !== 'undefined' ? atob(encodedSrc) : '') : '';
+                                                this.open = true;
+                                                document.body.style.overflow = 'hidden';
                                             } catch (e) {
-                                                this.error = e.message || 'حدث خطأ. حاول لاحقاً.';
-                                            } finally {
-                                                this.loading = false;
+                                                this.embedUrl = '';
                                             }
                                         },
                                         closePopup() {
                                             this.open = false;
-                                            this.watchUrl = '';
-                                            this.error = '';
+                                            this.embedUrl = '';
                                             document.body.style.overflow = '';
                                         }
                                     };
                                 }
                             </script>
-                        @else
+                        @endif
+
+                        @if(isset($sections) && $sections->count() > 0)
+                            <div class="mt-8">
+                                <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                    <i class="fas fa-folder-open text-amber-500"></i>
+                                    تقسيمات الكورس
+                                </h3>
+                                <ul class="space-y-2">
+                                    @foreach($sections as $idx => $section)
+                                        <li class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                            <span class="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center text-sm font-bold">{{ $idx + 1 }}</span>
+                                            <span class="font-semibold text-gray-800">{{ $section->title }}</span>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+
+                        @if(!isset($previewVideoLessons) || $previewVideoLessons->count() == 0)
                             @if(isset($sections) && $sections->count() > 0)
                                 <p class="text-sm text-gray-500">لا توجد فيديوهات معاينة في هذا الكورس. سجّل في الكورس لمشاهدة المحتوى كاملاً.</p>
                             @else

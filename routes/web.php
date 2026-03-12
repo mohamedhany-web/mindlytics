@@ -304,13 +304,13 @@ Route::get('/course/{id}', function ($id) {
         ->orderBy('order')
         ->get(['id', 'title', 'order']);
 
-    // أول 3 فيديوهات للمعاينة (بدون تمرير video_url للحماية — الرابط يُجلَب عبر رابط موقّع عند الطلب)
+    // أول 3 فيديوهات للمعاينة (رابط التضمين يُمرَّر مشفّراً base64 لعدم ظهور الرابط الحقيقي في المصدر)
     $previewVideoLessons = \App\Models\CourseLesson::where('advanced_course_id', $course->id)
         ->where('is_active', true)
         ->where('type', 'video')
         ->orderBy('order')
         ->limit(3)
-        ->get(['id', 'title', 'duration_minutes', 'order']);
+        ->get(['id', 'title', 'duration_minutes', 'video_url', 'order']);
 
     // التحقق من التسجيل في الكورس
     $isEnrolled = false;
@@ -524,7 +524,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
     // API لمعلومات الفيديو
     Route::post('/api/video/info', [\App\Http\Controllers\Api\VideoInfoController::class, 'getInfo'])->name('api.video.info');
     
-    // API للدروس - محمية بالتأكد من التسجيل (رابط الفيديو موقّع فقط — لا يُعاد الرابط الحقيقي)
+    // API للدروس - محمية بالتأكد من التسجيل
     Route::get('/api/lessons/{lesson}', function(\App\Models\CourseLesson $lesson) {
         $user = auth()->user();
         
@@ -538,12 +538,13 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         
         $progress = $lesson->progress()->where('user_id', $user->id)->first();
         
-        $payload = [
+        return response()->json([
             'id' => $lesson->id,
             'title' => $lesson->title,
             'description' => $lesson->description,
             'content' => $lesson->content,
             'type' => $lesson->type,
+            'video_url' => $lesson->video_url ? trim($lesson->video_url) : null,
             'duration_minutes' => $lesson->duration_minutes,
             'attachments' => $lesson->attachments ? json_decode($lesson->attachments, true) : null,
             'progress' => $progress ? [
@@ -551,19 +552,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
                 'progress_percent' => (int) ($progress->progress_percent ?? 0),
                 'watch_time' => (int) ($progress->watch_time ?? 0),
             ] : null
-        ];
-        
-        if ($lesson->type === 'video' && $lesson->video_url) {
-            $payload['watch_url'] = \App\Http\Controllers\ProtectedVideoController::signedWatchUrlForLesson(
-                (int) $lesson->advanced_course_id,
-                (int) $lesson->id,
-                60
-            );
-        } else {
-            $payload['watch_url'] = null;
-        }
-        
-        return response()->json($payload);
+        ]);
     });
 
     // API للطلاب المسجلين في الكورس - محمية بـ role middleware

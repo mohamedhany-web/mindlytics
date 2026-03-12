@@ -1035,7 +1035,7 @@ function courseFocusMode() {
                 const lesson = await response.json();
                 this.currentLessonTitle = lesson.title || '';
                 this.currentLessonDuration = lesson.duration_minutes || null;
-                const videoSrc = lesson.watch_url || lesson.video_url || null;
+                const videoSrc = lesson.video_url || null;
                 this.currentLessonThumbnail = (lesson.video_url && this.getYoutubeThumb(lesson.video_url)) ? this.getYoutubeThumb(lesson.video_url) : '';
                 this.currentLessonCompleted = !!(lesson.progress && lesson.progress.is_completed);
                 this.watchedSeconds = (lesson.progress && lesson.progress.watch_time != null) ? lesson.progress.watch_time : 0;
@@ -1049,8 +1049,7 @@ function courseFocusMode() {
                     this.showVideoPlayer = true;
                     this.currentLessonVideoUrl = videoSrc;
                     let platform = null;
-                    if (videoSrc.includes('/v/watch')) platform = 'protected';
-                    else if (videoSrc.includes('youtube.com') || videoSrc.includes('youtu.be')) platform = 'youtube';
+                    if (videoSrc.includes('youtube.com') || videoSrc.includes('youtu.be')) platform = 'youtube';
                     else if (videoSrc.includes('vimeo.com')) platform = 'vimeo';
                     else if (videoSrc.includes('drive.google.com')) platform = 'google_drive';
                     else if (videoSrc.match(/\.(mp4|webm|ogg|avi|mov)(\?.*)?$/i)) platform = 'direct';
@@ -1646,7 +1645,6 @@ function videoPlayer() {
         },
         detectPlatform(url) {
             if (!url) return null;
-            if (url.includes('/v/watch')) return 'protected';
             if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
             if (url.includes('vimeo.com')) return 'vimeo';
             if (url.includes('drive.google.com')) return 'google_drive';
@@ -1740,13 +1738,6 @@ function videoPlayer() {
                 iframe.src = embedUrl;
                 iframe.className = 'absolute inset-0 w-full h-full border-0';
                 iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture');
-                iframe.allowFullscreen = true;
-                surface.appendChild(iframe);
-            } else if (platform === 'protected') {
-                const iframe = document.createElement('iframe');
-                iframe.src = videoUrl;
-                iframe.className = 'absolute inset-0 w-full h-full border-0';
-                iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
                 iframe.allowFullscreen = true;
                 surface.appendChild(iframe);
             }
