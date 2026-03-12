@@ -68,7 +68,7 @@
                             <label for="file" class="block text-sm font-bold text-slate-700 mb-2">استبدال الملف (اختياري)</label>
                             <input type="file" name="file" id="file" accept=".xlsx,.xls,.csv"
                                    class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 file:font-bold">
-                            <p class="mt-1.5 text-xs text-slate-500">الحد الأقصى 10 MB. الامتدادات: xlsx, xls, csv.</p>
+                            <p class="mt-1.5 text-xs text-slate-500">الحد الأقصى 100 MB. الامتدادات: xlsx, xls, csv.</p>
                             @error('file')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
                         </div>
                     </div>

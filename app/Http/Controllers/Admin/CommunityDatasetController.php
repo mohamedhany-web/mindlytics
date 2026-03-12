@@ -36,7 +36,7 @@ class CommunityDatasetController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'file' => 'nullable|file|mimes:xlsx,xls,csv|max:10240',
+            'file' => 'nullable|file|mimes:xlsx,xls,csv|max:102400',
             'file_url' => 'nullable|url|max:500',
             'file_size' => 'nullable|string|max:50',
             'is_active' => 'boolean',
@@ -65,7 +65,7 @@ class CommunityDatasetController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'file' => 'nullable|file|mimes:xlsx,xls,csv|max:10240',
+            'file' => 'nullable|file|mimes:xlsx,xls,csv|max:102400',
             'file_url' => 'nullable|url|max:500',
             'file_size' => 'nullable|string|max:50',
             'is_active' => 'boolean',

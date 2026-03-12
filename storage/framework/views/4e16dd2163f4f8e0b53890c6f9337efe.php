@@ -1,22 +1,22 @@
-@extends('layouts.app')
 
-@section('title', 'بنك الأسئلة: ' . $questionBank->title . ' - Mindlytics')
-@section('header', 'بنك الأسئلة: ' . $questionBank->title)
 
-@push('styles')
+<?php $__env->startSection('title', 'بنك الأسئلة: ' . $questionBank->title . ' - Mindlytics'); ?>
+<?php $__env->startSection('header', 'بنك الأسئلة: ' . $questionBank->title); ?>
+
+<?php $__env->startPush('styles'); ?>
 <style>
     [x-cloak] { display: none !important; }
 </style>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="w-full px-4 sm:px-6 lg:px-8 py-6" x-data="{ showCreateModal: false }">
     <!-- هيدر الصفحة (عرض الصفحة كاملاً) -->
     <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-5 sm:p-6 mb-6">
         <nav class="text-sm text-slate-500 mb-2">
-            <a href="{{ route('instructor.question-banks.index') }}" class="hover:text-sky-600 transition-colors">بنوك الأسئلة</a>
+            <a href="<?php echo e(route('instructor.question-banks.index')); ?>" class="hover:text-sky-600 transition-colors">بنوك الأسئلة</a>
             <span class="mx-2">/</span>
-            <span class="text-slate-700 font-semibold">{{ $questionBank->title }}</span>
+            <span class="text-slate-700 font-semibold"><?php echo e($questionBank->title); ?></span>
         </nav>
         <div class="flex flex-wrap items-center justify-between gap-4">
             <div class="flex flex-wrap items-center gap-4">
@@ -24,8 +24,8 @@
                     <i class="fas fa-database text-lg"></i>
                 </div>
                 <div class="min-w-0">
-                    <h1 class="text-xl sm:text-2xl font-bold text-slate-800">{{ $questionBank->title }}</h1>
-                    <p class="text-sm text-slate-600 mt-0.5">{{ $questionBank->description ?? 'بنك أسئلة' }}</p>
+                    <h1 class="text-xl sm:text-2xl font-bold text-slate-800"><?php echo e($questionBank->title); ?></h1>
+                    <p class="text-sm text-slate-600 mt-0.5"><?php echo e($questionBank->description ?? 'بنك أسئلة'); ?></p>
                 </div>
             </div>
             <div class="flex flex-wrap items-center gap-2">
@@ -34,12 +34,12 @@
                     <i class="fas fa-plus"></i>
                     <span>إضافة سؤال</span>
                 </button>
-                <a href="{{ route('instructor.question-banks.edit', $questionBank) }}"
+                <a href="<?php echo e(route('instructor.question-banks.edit', $questionBank)); ?>"
                    class="inline-flex items-center gap-2 px-4 py-2.5 bg-sky-500 hover:bg-sky-600 text-white rounded-xl font-semibold transition-colors">
                     <i class="fas fa-edit"></i>
                     <span>تعديل البنك</span>
                 </a>
-                <a href="{{ route('instructor.question-banks.index') }}"
+                <a href="<?php echo e(route('instructor.question-banks.index')); ?>"
                    class="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors">
                     <i class="fas fa-arrow-right"></i>
                     <span>العودة</span>
@@ -48,37 +48,38 @@
         </div>
     </div>
 
-    @if(session('success'))
+    <?php if(session('success')): ?>
         <div class="rounded-xl p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-medium mb-6">
-            <i class="fas fa-check-circle ml-2"></i>{{ session('success') }}
+            <i class="fas fa-check-circle ml-2"></i><?php echo e(session('success')); ?>
+
         </div>
-    @endif
-    @if($errors->any())
+    <?php endif; ?>
+    <?php if($errors->any()): ?>
         <div class="rounded-xl p-4 bg-red-50 border border-red-200 text-red-800 text-sm mb-6">
             <ul class="list-disc list-inside space-y-0.5">
-                @foreach($errors->all() as $err)
-                    <li>{{ $err }}</li>
-                @endforeach
+                <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $err): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <li><?php echo e($err); ?></li>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </ul>
         </div>
-    @endif
+    <?php endif; ?>
 
     <!-- إحصائيات -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         <div class="rounded-xl bg-white border border-slate-200 shadow-sm p-5">
-            <div class="text-2xl font-bold text-sky-600">{{ $questionBank->questions->count() }}</div>
+            <div class="text-2xl font-bold text-sky-600"><?php echo e($questionBank->questions->count()); ?></div>
             <div class="text-sm font-medium text-slate-600 mt-0.5">إجمالي الأسئلة</div>
         </div>
         <div class="rounded-xl bg-white border border-slate-200 shadow-sm p-5">
-            <div class="text-2xl font-bold text-green-600">{{ $questionBank->questions->where('difficulty_level', 'easy')->count() }}</div>
+            <div class="text-2xl font-bold text-green-600"><?php echo e($questionBank->questions->where('difficulty_level', 'easy')->count()); ?></div>
             <div class="text-sm font-medium text-slate-600 mt-0.5">سهل</div>
         </div>
         <div class="rounded-xl bg-white border border-slate-200 shadow-sm p-5">
-            <div class="text-2xl font-bold text-amber-600">{{ $questionBank->questions->where('difficulty_level', 'medium')->count() }}</div>
+            <div class="text-2xl font-bold text-amber-600"><?php echo e($questionBank->questions->where('difficulty_level', 'medium')->count()); ?></div>
             <div class="text-sm font-medium text-slate-600 mt-0.5">متوسط</div>
         </div>
         <div class="rounded-xl bg-white border border-slate-200 shadow-sm p-5">
-            <div class="text-2xl font-bold text-red-600">{{ $questionBank->questions->where('difficulty_level', 'hard')->count() }}</div>
+            <div class="text-2xl font-bold text-red-600"><?php echo e($questionBank->questions->where('difficulty_level', 'hard')->count()); ?></div>
             <div class="text-sm font-medium text-slate-600 mt-0.5">صعب</div>
         </div>
     </div>
@@ -86,7 +87,7 @@
     <!-- قائمة الأسئلة -->
     <div class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
         <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between flex-wrap gap-2">
-            <h2 class="text-lg font-bold text-slate-800">الأسئلة ({{ $questionBank->questions->count() }})</h2>
+            <h2 class="text-lg font-bold text-slate-800">الأسئلة (<?php echo e($questionBank->questions->count()); ?>)</h2>
             <button type="button" @click="showCreateModal = true"
                     class="inline-flex items-center gap-2 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold transition-colors">
                 <i class="fas fa-plus"></i>
@@ -94,13 +95,13 @@
             </button>
         </div>
 
-        @if($questionBank->questions->count() > 0)
+        <?php if($questionBank->questions->count() > 0): ?>
             <div class="divide-y divide-slate-200">
-                @foreach($questionBank->questions as $index => $question)
+                <?php $__currentLoopData = $questionBank->questions; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $question): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                     <div class="p-6 hover:bg-slate-50/50 transition-colors">
                         <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                             <div class="flex-1 min-w-0">
-                                @php
+                                <?php
                                     $typeIcons = [
                                         'multiple_choice' => ['fas fa-list-ul', 'text-sky-600', 'bg-sky-100'],
                                         'true_false' => ['fas fa-check-circle', 'text-green-600', 'bg-green-100'],
@@ -109,42 +110,42 @@
                                         'essay' => ['fas fa-file-alt', 'text-indigo-600', 'bg-indigo-100'],
                                     ];
                                     $icon = $typeIcons[$question->type] ?? ['fas fa-question', 'text-slate-600', 'bg-slate-100'];
-                                @endphp
+                                ?>
                                 <div class="flex gap-3 mb-2">
-                                    <span class="w-8 h-8 rounded-lg {{ $icon[2] }} {{ $icon[1] }} flex items-center justify-center text-sm font-bold shrink-0">{{ $index + 1 }}</span>
+                                    <span class="w-8 h-8 rounded-lg <?php echo e($icon[2]); ?> <?php echo e($icon[1]); ?> flex items-center justify-center text-sm font-bold shrink-0"><?php echo e($index + 1); ?></span>
                                     <div class="min-w-0 flex-1">
-                                        <p class="font-semibold text-slate-800">{{ Str::limit($question->question, 200) }}</p>
+                                        <p class="font-semibold text-slate-800"><?php echo e(Str::limit($question->question, 200)); ?></p>
                                         <div class="flex flex-wrap items-center gap-2 mt-2 text-xs text-slate-500">
-                                            <span class="px-2 py-0.5 rounded {{ $icon[2] }} {{ $icon[1] }}">{{ $question->getTypeLabel() }}</span>
-                                            <span>{{ $question->points }} نقطة</span>
-                                            <span>{{ $question->getDifficultyLabel() }}</span>
-                                            @if($question->category)
-                                                <span>{{ $question->category->name }}</span>
-                                            @endif
+                                            <span class="px-2 py-0.5 rounded <?php echo e($icon[2]); ?> <?php echo e($icon[1]); ?>"><?php echo e($question->getTypeLabel()); ?></span>
+                                            <span><?php echo e($question->points); ?> نقطة</span>
+                                            <span><?php echo e($question->getDifficultyLabel()); ?></span>
+                                            <?php if($question->category): ?>
+                                                <span><?php echo e($question->category->name); ?></span>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 </div>
-                                @if($question->type == 'multiple_choice' && $question->options && is_array($question->options))
+                                <?php if($question->type == 'multiple_choice' && $question->options && is_array($question->options)): ?>
                                     <div class="mt-2 flex flex-wrap gap-2">
-                                        @foreach($question->options as $opt)
-                                            <span class="px-2 py-1 rounded-lg text-sm bg-slate-100 text-slate-700 {{ (!is_array($question->correct_answer) && $opt == $question->correct_answer) || (is_array($question->correct_answer) && in_array($opt, $question->correct_answer)) ? 'ring-2 ring-green-500 bg-green-50 text-green-800' : '' }}">
-                                                {{ $opt }} @if((!is_array($question->correct_answer) && $opt == $question->correct_answer) || (is_array($question->correct_answer) && in_array($opt, $question->correct_answer))) <i class="fas fa-check text-green-600 mr-1"></i> @endif
+                                        <?php $__currentLoopData = $question->options; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $opt): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                            <span class="px-2 py-1 rounded-lg text-sm bg-slate-100 text-slate-700 <?php echo e((!is_array($question->correct_answer) && $opt == $question->correct_answer) || (is_array($question->correct_answer) && in_array($opt, $question->correct_answer)) ? 'ring-2 ring-green-500 bg-green-50 text-green-800' : ''); ?>">
+                                                <?php echo e($opt); ?> <?php if((!is_array($question->correct_answer) && $opt == $question->correct_answer) || (is_array($question->correct_answer) && in_array($opt, $question->correct_answer))): ?> <i class="fas fa-check text-green-600 mr-1"></i> <?php endif; ?>
                                             </span>
-                                        @endforeach
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                     </div>
-                                @elseif($question->type == 'fill_blank' && is_array($question->correct_answer))
-                                    <p class="mt-2 text-sm text-slate-600">الإجابات: {{ implode('، ', $question->correct_answer) ?: '—' }}</p>
-                                @elseif(in_array($question->type, ['true_false', 'short_answer', 'essay']))
-                                    <p class="mt-2 text-sm text-slate-600">الإجابة: {{ is_array($question->correct_answer) ? ($question->correct_answer[0] ?? '—') : $question->correct_answer }}</p>
-                                @endif
+                                <?php elseif($question->type == 'fill_blank' && is_array($question->correct_answer)): ?>
+                                    <p class="mt-2 text-sm text-slate-600">الإجابات: <?php echo e(implode('، ', $question->correct_answer) ?: '—'); ?></p>
+                                <?php elseif(in_array($question->type, ['true_false', 'short_answer', 'essay'])): ?>
+                                    <p class="mt-2 text-sm text-slate-600">الإجابة: <?php echo e(is_array($question->correct_answer) ? ($question->correct_answer[0] ?? '—') : $question->correct_answer); ?></p>
+                                <?php endif; ?>
                             </div>
                             <div class="flex items-center gap-2 shrink-0">
-                                <a href="{{ route('instructor.questions.edit', $question) }}" class="p-2 rounded-lg text-sky-600 hover:bg-sky-50 transition-colors" title="تعديل">
+                                <a href="<?php echo e(route('instructor.questions.edit', $question)); ?>" class="p-2 rounded-lg text-sky-600 hover:bg-sky-50 transition-colors" title="تعديل">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <form action="{{ route('instructor.questions.destroy', $question) }}" method="POST" onsubmit="return confirm('هل تريد حذف هذا السؤال؟');" class="inline">
-                                    @csrf
-                                    @method('DELETE')
+                                <form action="<?php echo e(route('instructor.questions.destroy', $question)); ?>" method="POST" onsubmit="return confirm('هل تريد حذف هذا السؤال؟');" class="inline">
+                                    <?php echo csrf_field(); ?>
+                                    <?php echo method_field('DELETE'); ?>
                                     <button type="submit" class="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="حذف">
                                         <i class="fas fa-trash"></i>
                                     </button>
@@ -152,9 +153,9 @@
                             </div>
                         </div>
                     </div>
-                @endforeach
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </div>
-        @else
+        <?php else: ?>
             <div class="p-12 text-center">
                 <div class="w-16 h-16 rounded-2xl bg-sky-100 text-sky-500 flex items-center justify-center mx-auto mb-4">
                     <i class="fas fa-question-circle text-3xl"></i>
@@ -167,7 +168,7 @@
                     إضافة سؤال
                 </button>
             </div>
-        @endif
+        <?php endif; ?>
     </div>
 
     <!-- Modal إضافة سؤال جديد (داخل نفس x-data) -->
@@ -186,8 +187,8 @@
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <form action="{{ route('instructor.question-banks.questions.store', $questionBank) }}" method="POST" class="p-6 overflow-y-auto flex-1" id="add-question-form">
-                @csrf
+            <form action="<?php echo e(route('instructor.question-banks.questions.store', $questionBank)); ?>" method="POST" class="p-6 overflow-y-auto flex-1" id="add-question-form">
+                <?php echo csrf_field(); ?>
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">نوع السؤال <span class="text-red-500">*</span></label>
@@ -253,9 +254,9 @@
                             <label class="block text-sm font-semibold text-slate-700 mb-1">التصنيف</label>
                             <select name="category_id" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500/20 text-slate-800">
                                 <option value="">بدون تصنيف</option>
-                                @foreach($categories as $category)
-                                    <option value="{{ $category->id }}">{{ $category->name }}</option>
-                                @endforeach
+                                <?php $__currentLoopData = $categories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $category): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <option value="<?php echo e($category->id); ?>"><?php echo e($category->name); ?></option>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </select>
                         </div>
                     </div>
@@ -277,7 +278,7 @@
     </div>
 </div>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 function updateQuestionForm() {
     var type = document.getElementById('question_type').value;
@@ -351,5 +352,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-@endpush
-@endsection
+<?php $__env->stopPush(); ?>
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/instructor/question-banks/show.blade.php ENDPATH**/ ?>

@@ -268,7 +268,7 @@
             z-index: 0;
             pointer-events: none;
             overflow: hidden;
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #ffffff 100%);
+            background: linear-gradient(165deg, #ffffff 0%, #f8fafc 40%, #f0f7ff 70%, #ffffff 100%);
             max-width: 100vw;
             /* تحسين الأداء */
             will-change: auto;
@@ -334,18 +334,18 @@
 
         /* Enhanced Navbar */
         .navbar-gradient {
-            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 45%, #1d4ed8 100%);
-            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 40%, #2563eb 100%);
+            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1);
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             width: 100%;
             z-index: 1000;
-            transition: box-shadow 0.25s ease, background 0.25s ease;
-            backdrop-filter: blur(12px) saturate(140%);
-            -webkit-backdrop-filter: blur(12px) saturate(140%);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            transition: box-shadow 0.3s ease, background 0.3s ease;
+            backdrop-filter: blur(16px) saturate(150%);
+            -webkit-backdrop-filter: blur(16px) saturate(150%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             max-width: 100vw;
             overflow-x: hidden;
             transform: translateZ(0);
@@ -389,11 +389,11 @@
         }
 
         .navbar-gradient.scrolled {
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.06);
-            background: linear-gradient(135deg, rgba(30, 64, 175, 0.97) 0%, rgba(30, 58, 138, 0.98) 50%, rgba(29, 78, 216, 0.97) 100%);
-            backdrop-filter: blur(16px) saturate(150%);
-            -webkit-backdrop-filter: blur(16px) saturate(150%);
-            border-bottom-color: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1), 0 1px 8px rgba(0, 0, 0, 0.06);
+            background: linear-gradient(135deg, rgba(30, 58, 138, 0.98) 0%, rgba(30, 64, 175, 0.98) 40%, rgba(37, 99, 235, 0.97) 100%);
+            backdrop-filter: blur(20px) saturate(160%);
+            -webkit-backdrop-filter: blur(20px) saturate(160%);
+            border-bottom-color: rgba(255, 255, 255, 0.12);
         }
         .nav-modern .nav-link-modern:hover {
             background: rgba(255, 255, 255, 0.12);
@@ -647,7 +647,7 @@
 
         /* Enhanced Hero Section */
         .hero-section {
-            background: linear-gradient(to bottom, #f0f9ff, #e0f2fe, #ffffff);
+            background: linear-gradient(165deg, #f0f9ff 0%, #e0f2fe 30%, #eff6ff 60%, #f0fdf4 85%, #ffffff 100%);
             position: relative;
             overflow: hidden;
             overflow-x: hidden;
@@ -656,9 +656,7 @@
             margin-top: 0;
             width: 100%;
             max-width: 100vw;
-            /* Prevent layout shift */
             contain: layout style paint;
-            /* Optimize rendering */
             will-change: auto;
             transform: translateZ(0);
         }
@@ -1228,10 +1226,11 @@
 
         /* Enhanced Buttons */
         .btn-primary {
-            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
+            letter-spacing: 0.01em;
         }
 
         .btn-primary::before {
@@ -1253,9 +1252,9 @@
         }
 
         .btn-primary:hover {
-            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(30, 58, 138, 0.4);
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(37, 99, 235, 0.35);
         }
 
         .btn-secondary {
@@ -1291,13 +1290,14 @@
 
         /* Enhanced Stat Cards */
         .stat-card {
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+            border-radius: 20px;
             position: relative;
             overflow: hidden;
-            border: 1px solid rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.08);
+            backdrop-filter: blur(10px);
         }
 
         .stat-card::before {
@@ -1307,7 +1307,7 @@
             left: -50%;
             width: 200%;
             height: 200%;
-            background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
             opacity: 0;
             transition: opacity 0.5s ease;
         }
@@ -1319,7 +1319,8 @@
             right: 0;
             width: 3px;
             height: 100%;
-            background: linear-gradient(180deg, #3b82f6, #10b981);
+            background: linear-gradient(180deg, #2563eb, #0891b2);
+            border-radius: 0 0 0 3px;
             opacity: 0;
             transition: opacity 0.3s ease;
         }
@@ -1333,13 +1334,13 @@
         }
 
         .stat-card:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: 0 20px 40px rgba(59, 130, 246, 0.2);
-            border-color: rgba(59, 130, 246, 0.3);
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: 0 20px 50px rgba(37, 99, 235, 0.15), 0 8px 20px rgba(0, 0, 0, 0.06);
+            border-color: rgba(59, 130, 246, 0.2);
         }
 
         .feature-card {
-            transition: all 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             display: flex;
             flex-direction: column;
@@ -1347,20 +1348,21 @@
         }
 
         .feature-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transform: translateY(-6px);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
         }
 
         .course-card {
             transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            background: linear-gradient(135deg, #ffffff 0%, #fafcff 100%);
             position: relative;
             overflow: hidden;
-            border: 2px solid rgba(226, 232, 240, 0.8);
+            border: 1.5px solid rgba(226, 232, 240, 0.6);
             display: flex;
             flex-direction: column;
             margin: 0;
             height: 100%;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
         }
 
         .course-card::before {
@@ -1397,9 +1399,9 @@
         }
 
         .course-card:hover {
-            transform: translateY(-15px) scale(1.04);
-            box-shadow: 0 30px 60px rgba(59, 130, 246, 0.3), 0 0 40px rgba(16, 185, 129, 0.2);
-            border-color: rgba(59, 130, 246, 0.3);
+            transform: translateY(-10px) scale(1.03);
+            box-shadow: 0 25px 50px rgba(37, 99, 235, 0.15), 0 10px 20px rgba(0, 0, 0, 0.06);
+            border-color: rgba(59, 130, 246, 0.25);
         }
 
         .course-card .course-image {
@@ -1515,9 +1517,9 @@
             bottom: 0;
             right: 0;
             width: 80px;
-            height: 4px;
-            background: linear-gradient(135deg, #3b82f6, #10b981, #8b5cf6);
-            border-radius: 2px;
+            height: 3px;
+            background: linear-gradient(135deg, #2563eb, #0891b2, #7c3aed);
+            border-radius: 4px;
             animation: expandWidth 1s ease-out;
         }
 
@@ -1527,9 +1529,9 @@
             bottom: -2px;
             right: 0;
             width: 40px;
-            height: 8px;
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(16, 185, 129, 0.3));
-            border-radius: 2px;
+            height: 7px;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(8, 145, 178, 0.15));
+            border-radius: 4px;
             animation: expandWidth 1.2s ease-out;
         }
 
@@ -1541,35 +1543,35 @@
         /* Scroll Animations */
         .fade-in-up {
                 opacity: 0;
-            transform: translateY(80px) scale(0.95);
-            transition: all 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform: translateY(40px);
+            transition: opacity 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             }
 
         .fade-in-up.visible {
                 opacity: 1;
-            transform: translateY(0) scale(1);
+            transform: translateY(0);
         }
 
         .fade-in-left {
                 opacity: 0;
-            transform: translateX(-80px) scale(0.95);
-            transition: all 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform: translateX(-40px);
+            transition: opacity 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
         .fade-in-left.visible {
             opacity: 1;
-            transform: translateX(0) scale(1);
+            transform: translateX(0);
         }
 
         .fade-in-right {
             opacity: 0;
-            transform: translateX(80px) scale(0.95);
-            transition: all 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform: translateX(40px);
+            transition: opacity 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
         .fade-in-right.visible {
             opacity: 1;
-            transform: translateX(0) scale(1);
+            transform: translateX(0);
         }
 
         /* Counter Animation */
@@ -1698,7 +1700,7 @@
         }
 
         .gradient-text {
-            background: linear-gradient(135deg, #3b82f6, #10b981, #8b5cf6, #3b82f6);
+            background: linear-gradient(135deg, #2563eb, #0891b2, #7c3aed, #2563eb);
             background-size: 300% 300%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -1728,12 +1730,12 @@
         /* خط زخرفي بألوان الأكاديمية (أزرق → أخضر) */
         .featured-courses-title-line {
             display: block;
-            height: 4px;
+            height: 3px;
             width: 100%;
             max-width: 100%;
             margin-top: 0.4em;
-            background: linear-gradient(90deg, #1e40af 0%, #3b82f6 35%, #10b981 70%, #059669 100%);
-            border-radius: 2px;
+            background: linear-gradient(90deg, #2563eb 0%, #3b82f6 30%, #0891b2 65%, #059669 100%);
+            border-radius: 4px;
             transform: scaleX(0);
             transform-origin: right;
             animation: featuredLineDraw 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.5s forwards;
@@ -1749,7 +1751,7 @@
             text-shadow: 0 1px 2px rgba(30, 58, 138, 0.08);
         }
         .featured-courses-title-highlight {
-            background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 40%, #10b981 70%, #059669 100%);
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 35%, #0891b2 65%, #059669 100%);
             background-size: 200% auto;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -2005,12 +2007,12 @@
             content: '';
             position: absolute;
             inset: -2px;
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(16, 185, 129, 0.2));
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(8, 145, 178, 0.15));
             border-radius: inherit;
             z-index: -1;
             opacity: 0;
-            filter: blur(10px);
-            transition: opacity 0.3s ease;
+            filter: blur(12px);
+            transition: opacity 0.4s ease;
         }
 
         .glow-effect:hover::after {

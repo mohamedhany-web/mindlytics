@@ -61,6 +61,7 @@ return [
     'employees' => 'Employees',
     'jobs' => 'Jobs',
     'employee_tasks' => 'Employee Tasks',
+    'employee_deductions' => 'Employee Deductions',
     'instructor_tasks' => 'Instructor Tasks',
     'instructor_requests' => 'Instructor Requests',
     'leaves' => 'Leaves',

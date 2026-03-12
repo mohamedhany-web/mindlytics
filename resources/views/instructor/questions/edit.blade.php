@@ -387,10 +387,27 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// معالجة الخيارات عند الإرسال
-document.querySelector('form[action*="questions.update"]')?.addEventListener('submit', function(e) {
+// عند الإرسال: تعطيل حقول الإجابة غير المستخدمة حتى يُرسل حقل واحد فقط
+document.querySelector('form[action*="questions.update"]')?.addEventListener('submit', function() {
+    const type = document.getElementById('question_type').value;
+    const typeToId = {
+        'multiple_choice': 'correct_answer_multiple_choice',
+        'true_false': 'correct_answer_true_false',
+        'fill_blank': 'correct_answer_fill_blank',
+        'short_answer': 'correct_answer_short_answer',
+        'essay': 'correct_answer_essay'
+    };
+    const allIds = ['correct_answer_multiple_choice', 'correct_answer_true_false', 'correct_answer_fill_blank', 'correct_answer_short_answer', 'correct_answer_essay'];
+    const keepId = typeToId[type] || null;
+    allIds.forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) {
+            const inp = el.querySelector('[name="correct_answer"]');
+            if (inp) inp.disabled = (id !== keepId);
+        }
+    });
     const optionsText = this.querySelector('textarea[name="options_text"]');
-    if (optionsText && optionsText.value && document.getElementById('question_type').value === 'multiple_choice') {
+    if (optionsText && optionsText.value && type === 'multiple_choice') {
         const options = optionsText.value.split('\n').filter(opt => opt.trim());
         const optionsInput = document.createElement('input');
         optionsInput.type = 'hidden';

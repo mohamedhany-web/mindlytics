@@ -746,7 +746,7 @@
 
             <!-- إدارة الموظفين -->
             <?php
-                $employeesOpen = request()->routeIs('admin.employees.*') || request()->routeIs('admin.employee-jobs.*') || request()->routeIs('admin.employee-tasks.*') || request()->routeIs('admin.leaves.*') || request()->routeIs('admin.tasks.*') || request()->routeIs('admin.instructor-requests.*');
+                $employeesOpen = request()->routeIs('admin.employees.*') || request()->routeIs('admin.employee-jobs.*') || request()->routeIs('admin.employee-tasks.*') || request()->routeIs('admin.employee-deductions.*') || request()->routeIs('admin.leaves.*') || request()->routeIs('admin.tasks.*') || request()->routeIs('admin.instructor-requests.*');
             ?>
             <li x-data="{ open: <?php echo e($employeesOpen ? 'true' : 'false'); ?> }">
                 <button @click="open = !open" 
@@ -775,7 +775,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="<?php echo e(route('admin.employee-tasks.index')); ?>" 
+                        <a href="<?php echo e(route('admin.employee-tasks.index')); ?>"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.employee-tasks.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : ''); ?>">
                             <i class="fas fa-tasks w-4"></i>
@@ -790,6 +790,14 @@
                             <?php if($pendingTasks > 0): ?>
                                 <span class="mr-auto bg-yellow-500 text-white text-xs font-bold rounded-full px-2 py-0.5 shadow-lg"><?php echo e($pendingTasks); ?></span>
                             <?php endif; ?>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="<?php echo e(route('admin.employee-deductions.index')); ?>"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.employee-deductions.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : ''); ?>">
+                            <i class="fas fa-minus-circle w-4"></i>
+                            <span><?php echo e(__('admin.employee_deductions')); ?></span>
                         </a>
                     </li>
                     <li>

@@ -1044,6 +1044,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::resource('employees', \App\Http\Controllers\Admin\EmployeeController::class);
         Route::resource('employee-jobs', \App\Http\Controllers\Admin\EmployeeJobController::class);
         Route::resource('employee-tasks', \App\Http\Controllers\Admin\EmployeeTaskController::class);
+        Route::resource('employee-deductions', \App\Http\Controllers\Admin\EmployeeDeductionController::class);
         
         // إدارة الإجازات
         Route::get('/leaves', [\App\Http\Controllers\Admin\AdminLeaveController::class, 'index'])->name('leaves.index');

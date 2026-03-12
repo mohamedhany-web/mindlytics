@@ -26,8 +26,8 @@ class ContributorController extends Controller
     /** امتدادات ملفات النماذج (أوزان، أرشيفات، سكربتات بايثون) — تُخزَّن على Cloudflare R2 */
     public const ALLOWED_MODEL_EXTENSIONS = 'pkl,pt,pth,h5,hdf5,onnx,joblib,zip,safetensors,bin,json,py,pyw,ipynb';
 
-    /** حد حجم ملف واحد بالكيلوبايت (25 ميجا) */
-    public const MAX_FILE_KB = 25600;
+    /** حد حجم ملف واحد بالكيلوبايت (100 ميجا) */
+    public const MAX_FILE_KB = 102400;
 
     /** أقصى عدد ملفات في تقديم واحد */
     public const MAX_FILES = 20;
@@ -130,8 +130,8 @@ class ContributorController extends Controller
             ->with('success', 'تم إرسال مجموعة البيانات بنجاح. ستتم مراجعتها من الإدارة قبل النشر.');
     }
 
-    /** حد حجم ملف نموذج واحد (مثلاً 500 ميجا) */
-    public const MAX_MODEL_FILE_KB = 512000;
+    /** حد حجم ملف النموذج بالكيلوبايت (100 ميجا) */
+    public const MAX_MODEL_FILE_KB = 102400;
 
     public function models(): View
     {

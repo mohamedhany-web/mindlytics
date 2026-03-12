@@ -61,6 +61,7 @@ return [
     'employees' => 'الموظفين',
     'jobs' => 'الوظائف',
     'employee_tasks' => 'مهام الموظفين',
+    'employee_deductions' => 'خصومات الموظفين',
     'instructor_tasks' => 'مهام المدربين',
     'instructor_requests' => 'طلبات الانضمام كمدرب',
     'leaves' => 'الإجازات',
