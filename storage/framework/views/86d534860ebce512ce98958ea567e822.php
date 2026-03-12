@@ -1291,6 +1291,151 @@
                         </div>
                     </div>
                     <?php endif; ?>
+
+                    <!-- محتوى الكورس: التقسيمات + معاينة أول 3 فيديوهات (للتجربة قبل الشراء) -->
+                    <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 lg:p-8 border border-gray-200 fade-in-up" style="animation-delay: 0.25s;">
+                        <h2 class="text-2xl lg:text-3xl font-black text-gray-900 mb-6 flex items-center gap-3">
+                            <i class="fas fa-play-circle text-blue-600"></i>
+                            محتوى الكورس — معاينة
+                        </h2>
+                        <p class="text-gray-600 mb-6">اطّلع على تقسيمات الكورس وأول 3 فيديوهات قبل الشراء.</p>
+
+                        <?php if(isset($sections) && $sections->count() > 0): ?>
+                            <div class="mb-8">
+                                <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                    <i class="fas fa-folder-open text-amber-500"></i>
+                                    التقسيمات
+                                </h3>
+                                <ul class="space-y-2">
+                                    <?php $__currentLoopData = $sections; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $idx => $section): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                        <li class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                            <span class="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center text-sm font-bold"><?php echo e($idx + 1); ?></span>
+                                            <span class="font-semibold text-gray-800"><?php echo e($section->title); ?></span>
+                                        </li>
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                </ul>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if(isset($previewVideoLessons) && $previewVideoLessons->count() > 0): ?>
+                            <div x-data="coursePreviewPopup()">
+                                <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                    <i class="fas fa-video text-green-600"></i>
+                                    معاينة أول <?php echo e($previewVideoLessons->count()); ?> فيديو
+                                </h3>
+                                <div class="space-y-4">
+                                    <?php $__currentLoopData = $previewVideoLessons; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $idx => $lesson): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                        <?php
+                                            $embedUrl = null;
+                                            $videoUrl = $lesson->video_url;
+                                            if ($videoUrl && (str_contains($videoUrl, 'youtube.com') || str_contains($videoUrl, 'youtu.be') || str_contains($videoUrl, 'vimeo.com'))) {
+                                                if (preg_match('/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/', $videoUrl, $m)) {
+                                                    $embedUrl = 'https://www.youtube.com/embed/' . $m[1];
+                                                } elseif (preg_match('/vimeo\.com\/(\d+)/', $videoUrl, $m)) {
+                                                    $embedUrl = 'https://player.vimeo.com/video/' . $m[1];
+                                                }
+                                            }
+                                        ?>
+                                        <div class="rounded-xl border-2 border-gray-200 overflow-hidden bg-gray-50 hover:border-blue-300 transition-all duration-300">
+                                            <div class="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                                                <div class="flex items-center gap-3 flex-1 min-w-0">
+                                                    <div class="flex-shrink-0 w-10 h-10 bg-blue-600 text-white rounded-lg flex items-center justify-center">
+                                                        <i class="fas fa-play text-sm"></i>
+                                                    </div>
+                                                    <div class="min-w-0">
+                                                        <div class="font-semibold text-gray-900"><?php echo e($lesson->title); ?></div>
+                                                        <?php if($lesson->duration_minutes): ?>
+                                                            <div class="text-sm text-gray-500"><i class="fas fa-clock ml-1"></i> <?php echo e($lesson->duration_minutes); ?> دقيقة</div>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </div>
+                                                <?php if($videoUrl): ?>
+                                                    <div class="flex-shrink-0">
+                                                        <button type="button"
+                                                                data-embed-url="<?php echo e($embedUrl ?? ''); ?>"
+                                                                data-title="<?php echo e(e($lesson->title)); ?>"
+                                                                data-external-url="<?php echo e($embedUrl ? '' : e($videoUrl)); ?>"
+                                                                @click="openPopup($event.currentTarget.dataset.embedUrl || '', $event.currentTarget.dataset.title || 'معاينة', $event.currentTarget.dataset.externalUrl || '')"
+                                                                class="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-semibold transition-colors shadow-md hover:shadow-lg">
+                                                            <i class="fas fa-eye"></i>
+                                                            <span>معاينة</span>
+                                                        </button>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                </div>
+
+                                <!-- بوب أب المعاينة -->
+                                <div x-show="open" x-cloak class="fixed inset-0 z-[9999] flex items-center justify-center p-4" style="background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);"
+                                     x-transition:enter="transition ease-out duration-200"
+                                     x-transition:enter-start="opacity-0"
+                                     x-transition:enter-end="opacity-100"
+                                     x-transition:leave="transition ease-in duration-150"
+                                     x-transition:leave-start="opacity-100"
+                                     x-transition:leave-end="opacity-0"
+                                     @click.self="closePopup()">
+                                    <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+                                         x-transition:enter="transition ease-out duration-200"
+                                         x-transition:enter-start="opacity-0 scale-95"
+                                         x-transition:enter-end="opacity-100 scale-100">
+                                        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
+                                            <h4 class="text-lg font-bold text-gray-900" x-text="title"></h4>
+                                            <button type="button" @click="closePopup()" class="p-2 rounded-xl text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors">
+                                                <i class="fas fa-times text-xl"></i>
+                                            </button>
+                                        </div>
+                                        <div class="flex-1 min-h-0 p-4 overflow-auto">
+                                            <template x-if="embedUrl">
+                                                <div class="aspect-video w-full bg-black rounded-xl overflow-hidden">
+                                                    <iframe :src="embedUrl" class="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                                </div>
+                                            </template>
+                                            <template x-if="!embedUrl && externalUrl">
+                                                <div class="py-6 text-center">
+                                                    <p class="text-gray-600 mb-4">الفيديو يفتح في نافذة خارجية</p>
+                                                    <a :href="externalUrl" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors">
+                                                        <i class="fas fa-external-link-alt"></i>
+                                                        فتح الفيديو
+                                                    </a>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <script>
+                                function coursePreviewPopup() {
+                                    return {
+                                        open: false,
+                                        embedUrl: '',
+                                        externalUrl: '',
+                                        title: '',
+                                        openPopup(embedUrl, title, externalUrl) {
+                                            this.title = title || 'معاينة';
+                                            this.embedUrl = embedUrl || '';
+                                            this.externalUrl = externalUrl || '';
+                                            this.open = true;
+                                            document.body.style.overflow = 'hidden';
+                                        },
+                                        closePopup() {
+                                            this.open = false;
+                                            this.embedUrl = '';
+                                            this.externalUrl = '';
+                                            document.body.style.overflow = '';
+                                        }
+                                    };
+                                }
+                            </script>
+                        <?php else: ?>
+                            <?php if(isset($sections) && $sections->count() > 0): ?>
+                                <p class="text-sm text-gray-500">لا توجد فيديوهات معاينة في هذا الكورس. سجّل في الكورس لمشاهدة المحتوى كاملاً.</p>
+                            <?php else: ?>
+                                <p class="text-sm text-gray-500">لا توجد تقسيمات أو فيديوهات معاينة. سجّل في الكورس لمشاهدة المحتوى.</p>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                    </div>
                 </div>
 
                 <!-- Sidebar -->

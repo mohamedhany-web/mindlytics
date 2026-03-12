@@ -1277,6 +1277,147 @@
                         </div>
                     </div>
                     @endif
+
+                    <!-- محتوى الكورس: التقسيمات + معاينة أول 3 فيديوهات (للتجربة قبل الشراء) -->
+                    <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 lg:p-8 border border-gray-200 fade-in-up" style="animation-delay: 0.25s;">
+                        <h2 class="text-2xl lg:text-3xl font-black text-gray-900 mb-6 flex items-center gap-3">
+                            <i class="fas fa-play-circle text-blue-600"></i>
+                            محتوى الكورس — معاينة
+                        </h2>
+                        <p class="text-gray-600 mb-6">اطّلع على تقسيمات الكورس وأول 3 فيديوهات قبل الشراء.</p>
+
+                        @if(isset($sections) && $sections->count() > 0)
+                            <div class="mb-8">
+                                <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                    <i class="fas fa-folder-open text-amber-500"></i>
+                                    التقسيمات
+                                </h3>
+                                <ul class="space-y-2">
+                                    @foreach($sections as $idx => $section)
+                                        <li class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                            <span class="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center text-sm font-bold">{{ $idx + 1 }}</span>
+                                            <span class="font-semibold text-gray-800">{{ $section->title }}</span>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+
+                        @if(isset($previewVideoLessons) && $previewVideoLessons->count() > 0)
+                            <div x-data="coursePreviewPopup()">
+                                <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                    <i class="fas fa-video text-green-600"></i>
+                                    معاينة أول {{ $previewVideoLessons->count() }} فيديو
+                                </h3>
+                                <div class="space-y-4">
+                                    @foreach($previewVideoLessons as $idx => $lesson)
+                                        <div class="rounded-xl border-2 border-gray-200 overflow-hidden bg-gray-50 hover:border-blue-300 transition-all duration-300">
+                                            <div class="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                                                <div class="flex items-center gap-3 flex-1 min-w-0">
+                                                    <div class="flex-shrink-0 w-10 h-10 bg-blue-600 text-white rounded-lg flex items-center justify-center">
+                                                        <i class="fas fa-play text-sm"></i>
+                                                    </div>
+                                                    <div class="min-w-0">
+                                                        <div class="font-semibold text-gray-900">{{ $lesson->title }}</div>
+                                                        @if($lesson->duration_minutes)
+                                                            <div class="text-sm text-gray-500"><i class="fas fa-clock ml-1"></i> {{ $lesson->duration_minutes }} دقيقة</div>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                                <div class="flex-shrink-0">
+                                                    <button type="button"
+                                                            data-course-id="{{ $course->id }}"
+                                                            data-lesson-id="{{ $lesson->id }}"
+                                                            data-title="{{ e($lesson->title) }}"
+                                                            @click="openPreview($event.currentTarget.dataset.courseId, $event.currentTarget.dataset.lessonId, $event.currentTarget.dataset.title)"
+                                                            :disabled="loading"
+                                                            class="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-70 disabled:cursor-not-allowed text-white rounded-xl text-sm font-semibold transition-colors shadow-md hover:shadow-lg">
+                                                        <i class="fas fa-eye" x-show="!loading"></i>
+                                                        <i class="fas fa-spinner fa-spin" x-show="loading" x-cloak></i>
+                                                        <span x-text="loading ? 'جاري التحميل...' : 'معاينة'">معاينة</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+
+                                <!-- بوب أب المعاينة (الرابط يُحمّل عبر رابط موقّع — لا يُعرَض الرابط الحقيقي أبداً) -->
+                                <div x-show="open" x-cloak class="fixed inset-0 z-[9999] flex items-center justify-center p-4" style="background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);"
+                                     x-transition:enter="transition ease-out duration-200"
+                                     x-transition:enter-start="opacity-0"
+                                     x-transition:enter-end="opacity-100"
+                                     x-transition:leave="transition ease-in duration-150"
+                                     x-transition:leave-start="opacity-100"
+                                     x-transition:leave-end="opacity-0"
+                                     @click.self="closePopup()">
+                                    <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+                                         x-transition:enter="transition ease-out duration-200"
+                                         x-transition:enter-start="opacity-0 scale-95"
+                                         x-transition:enter-end="opacity-100 scale-100">
+                                        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
+                                            <h4 class="text-lg font-bold text-gray-900" x-text="title"></h4>
+                                            <button type="button" @click="closePopup()" class="p-2 rounded-xl text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors">
+                                                <i class="fas fa-times text-xl"></i>
+                                            </button>
+                                        </div>
+                                        <div class="flex-1 min-h-0 p-4 overflow-auto">
+                                            <template x-if="error">
+                                                <p class="text-red-600 py-4" x-text="error"></p>
+                                            </template>
+                                            <template x-if="watchUrl && !error">
+                                                <div class="aspect-video w-full bg-black rounded-xl overflow-hidden">
+                                                    <iframe :src="watchUrl" class="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <script>
+                                function coursePreviewPopup() {
+                                    return {
+                                        open: false,
+                                        watchUrl: '',
+                                        title: '',
+                                        loading: false,
+                                        error: '',
+                                        async openPreview(courseId, lessonId, title) {
+                                            this.title = title || 'معاينة';
+                                            this.watchUrl = '';
+                                            this.error = '';
+                                            this.open = true;
+                                            this.loading = true;
+                                            document.body.style.overflow = 'hidden';
+                                            try {
+                                                const r = await fetch('/course/' + courseId + '/preview-watch-url/' + lessonId, { headers: { 'Accept': 'application/json' } });
+                                                const d = await r.json();
+                                                if (!r.ok) throw new Error(d.error || 'فشل تحميل المعاينة');
+                                                this.watchUrl = d.watch_url || '';
+                                                if (!this.watchUrl) throw new Error('لم يُرجَع رابط المعاينة');
+                                            } catch (e) {
+                                                this.error = e.message || 'حدث خطأ. حاول لاحقاً.';
+                                            } finally {
+                                                this.loading = false;
+                                            }
+                                        },
+                                        closePopup() {
+                                            this.open = false;
+                                            this.watchUrl = '';
+                                            this.error = '';
+                                            document.body.style.overflow = '';
+                                        }
+                                    };
+                                }
+                            </script>
+                        @else
+                            @if(isset($sections) && $sections->count() > 0)
+                                <p class="text-sm text-gray-500">لا توجد فيديوهات معاينة في هذا الكورس. سجّل في الكورس لمشاهدة المحتوى كاملاً.</p>
+                            @else
+                                <p class="text-sm text-gray-500">لا توجد تقسيمات أو فيديوهات معاينة. سجّل في الكورس لمشاهدة المحتوى.</p>
+                            @endif
+                        @endif
+                    </div>
                 </div>
 
                 <!-- Sidebar -->

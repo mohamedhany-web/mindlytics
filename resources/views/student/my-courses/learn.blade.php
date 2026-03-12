@@ -1035,7 +1035,8 @@ function courseFocusMode() {
                 const lesson = await response.json();
                 this.currentLessonTitle = lesson.title || '';
                 this.currentLessonDuration = lesson.duration_minutes || null;
-                this.currentLessonThumbnail = this.getYoutubeThumb(lesson.video_url) || '';
+                const videoSrc = lesson.watch_url || lesson.video_url || null;
+                this.currentLessonThumbnail = (lesson.video_url && this.getYoutubeThumb(lesson.video_url)) ? this.getYoutubeThumb(lesson.video_url) : '';
                 this.currentLessonCompleted = !!(lesson.progress && lesson.progress.is_completed);
                 this.watchedSeconds = (lesson.progress && lesson.progress.watch_time != null) ? lesson.progress.watch_time : 0;
                 this.lastReportedTime = null;
@@ -1044,34 +1045,27 @@ function courseFocusMode() {
                 const durSec = (lesson.duration_minutes && lesson.duration_minutes > 0) ? lesson.duration_minutes * 60 : 0;
                 this.reportVideoProgress(pct, watchSec, durSec);
                 
-                // إذا كان هناك فيديو، اعرض جزء المشاهدة
-                if (lesson.video_url) {
-                    // التحقق من نوع الفيديو
-                    const isExternalVideo = this.isExternalVideo(lesson.video_url);
-                    
-                    // عرض جزء المشاهدة للفيديو
+                if (videoSrc) {
                     this.showVideoPlayer = true;
-                    this.currentLessonVideoUrl = lesson.video_url;
-                    
+                    this.currentLessonVideoUrl = videoSrc;
                     let platform = null;
-                    if (lesson.video_url.includes('youtube.com') || lesson.video_url.includes('youtu.be')) platform = 'youtube';
-                    else if (lesson.video_url.includes('vimeo.com')) platform = 'vimeo';
-                    else if (lesson.video_url.includes('drive.google.com')) platform = 'google_drive';
-                    else if (lesson.video_url.match(/\.(mp4|webm|ogg|avi|mov)(\?.*)?$/i)) platform = 'direct';
+                    if (videoSrc.includes('/v/watch')) platform = 'protected';
+                    else if (videoSrc.includes('youtube.com') || videoSrc.includes('youtu.be')) platform = 'youtube';
+                    else if (videoSrc.includes('vimeo.com')) platform = 'vimeo';
+                    else if (videoSrc.includes('drive.google.com')) platform = 'google_drive';
+                    else if (videoSrc.match(/\.(mp4|webm|ogg|avi|mov)(\?.*)?$/i)) platform = 'direct';
                     [100, 250, 500].forEach(delay => {
                         setTimeout(() => {
                             const videoContainer = document.querySelector('#video-container');
                             if (videoContainer && videoContainer.__x) {
                                 const v = videoContainer.__x.$data;
-                                if (v && v.loadVideo && (v.currentLessonVideoUrl !== lesson.video_url || !v.currentSourceType)) {
-                                    v.currentLessonVideoUrl = lesson.video_url;
-                                    v.loadVideo(lesson.video_url, platform);
+                                if (v && v.loadVideo && (v.currentLessonVideoUrl !== videoSrc || !v.currentSourceType)) {
+                                    v.currentLessonVideoUrl = videoSrc;
+                                    v.loadVideo(videoSrc, platform);
                                 }
                             }
                         }, delay);
                     });
-                    
-                    // تحديث تقدم المشاهدة
                     this.trackLessonProgress(lessonId);
                     return;
                 }
@@ -1652,6 +1646,7 @@ function videoPlayer() {
         },
         detectPlatform(url) {
             if (!url) return null;
+            if (url.includes('/v/watch')) return 'protected';
             if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
             if (url.includes('vimeo.com')) return 'vimeo';
             if (url.includes('drive.google.com')) return 'google_drive';
@@ -1745,6 +1740,13 @@ function videoPlayer() {
                 iframe.src = embedUrl;
                 iframe.className = 'absolute inset-0 w-full h-full border-0';
                 iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture');
+                iframe.allowFullscreen = true;
+                surface.appendChild(iframe);
+            } else if (platform === 'protected') {
+                const iframe = document.createElement('iframe');
+                iframe.src = videoUrl;
+                iframe.className = 'absolute inset-0 w-full h-full border-0';
+                iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
                 iframe.allowFullscreen = true;
                 surface.appendChild(iframe);
             }
