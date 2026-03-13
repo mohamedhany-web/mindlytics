@@ -2457,9 +2457,10 @@
             <div class="learning-paths-scroll w-full">
                 <div id="learning-paths-track" class="flex gap-4 lg:gap-6 overflow-x-auto overflow-y-hidden pb-4 scroll-smooth snap-x snap-mandatory scrollbar-featured" style="scrollbar-gutter: stable;">
                     <?php $__currentLoopData = $landingPaths; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $path): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                        <div class="group relative flex-shrink-0 w-[280px] sm:w-[320px] lg:w-[340px] snap-center fade-in-up bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-blue-200" style="animation-delay: <?php echo e($index * 0.05); ?>s;">
+                        <div class="group relative flex-shrink-0 w-[260px] sm:w-[300px] lg:w-[320px] snap-center fade-in-up bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-blue-200" style="animation-delay: <?php echo e($index * 0.05); ?>s;">
                             <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-400 via-green-400 to-purple-400 rounded-2xl blur opacity-0 group-hover:opacity-20 transition-opacity duration-500 -z-10"></div>
-                            <div class="relative h-44 sm:h-48 bg-gradient-to-br from-blue-600 via-blue-500 to-green-500 overflow-hidden">
+                            <!-- مربع صورة المسار بنفس تصميم صفحة المسارات (يفضل رفع 1563×1563) -->
+                            <div class="relative bg-gradient-to-br from-blue-600 via-blue-500 to-green-500 overflow-hidden flex items-center justify-center aspect-square">
                                 <?php if($path->image_url): ?>
                                     <img src="<?php echo e($path->image_url); ?>" alt="<?php echo e($path->name); ?>" class="absolute inset-0 w-full h-full object-cover">
                                 <?php else: ?>

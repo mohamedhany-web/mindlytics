@@ -115,9 +115,9 @@ unset($__errorArgs, $__bag); ?>
                         </label>
                         <input type="url" name="video_url" value="<?php echo e(old('video_url', $academicYear->video_url)); ?>"
                                class="w-full rounded-2xl border border-gray-200 bg-white/70 px-4 py-3 text-gray-900 shadow-sm focus:border-sky-500 focus:ring-4 focus:ring-sky-500/20 transition"
-                               placeholder="https://www.youtube.com/watch?v=... أو https://youtu.be/...">
+                               placeholder="https://www.youtube.com/watch?v=VIDEO_ID أو https://youtu.be/VIDEO_ID أو https://vimeo.com/VIDEO_ID">
                         <p class="mt-1 text-xs text-gray-500">
-                            رابط فيديو مقدمة المسار التعليمي الذي سيتم عرضه في صفحة المسار. يدعم روابط YouTube و Vimeo.
+                            يُعرض في صفحة المسار على الموقع. الصيغ المدعومة: YouTube، Vimeo، أو رابط مباشر لملف .mp4
                         </p>
                         <?php $__errorArgs = ['video_url'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');

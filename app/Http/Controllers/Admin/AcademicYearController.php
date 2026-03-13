@@ -66,8 +66,8 @@ class AcademicYearController extends Controller
             'code' => 'required|string|max:10|unique:academic_years',
             'description' => 'nullable|string',
             'video_url' => 'nullable|url|max:500',
-            // رفع صورة المسار حتى 10 ميجابايت (10240 كيلوبايت)
-            'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg|max:10240',
+            // رفع صورة المسار حتى 5 ميجابايت (5120 كيلوبايت)
+            'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
             'price' => 'nullable|numeric|min:0',
             'icon' => 'nullable|string|max:100',
             'color' => 'nullable|string|max:7',
@@ -80,7 +80,7 @@ class AcademicYearController extends Controller
             'code.unique' => 'رمز السنة الدراسية موجود مسبقاً',
             'thumbnail.image' => 'يجب أن يكون الملف صورة',
             'thumbnail.mimes' => 'يجب أن تكون الصورة بصيغة jpeg, png أو jpg',
-            'thumbnail.max' => 'حجم صورة المسار يجب ألا يتجاوز 10 ميجابايت',
+            'thumbnail.max' => 'حجم صورة المسار يجب ألا يتجاوز 5 ميجابايت',
         ]);
 
         $data = $request->all();
@@ -192,7 +192,8 @@ class AcademicYearController extends Controller
             ],
             'description' => 'nullable|string',
             'video_url' => 'nullable|url|max:500',
-            'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            // تعديل صورة المسار حتى 5 ميجابايت (5120 كيلوبايت)
+            'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
             'price' => 'nullable|numeric|min:0',
             'icon' => 'nullable|string|max:100',
             'color' => 'nullable|string|max:7',
@@ -205,7 +206,7 @@ class AcademicYearController extends Controller
             'code.unique' => 'رمز السنة الدراسية موجود مسبقاً',
             'thumbnail.image' => 'يجب أن يكون الملف صورة',
             'thumbnail.mimes' => 'يجب أن تكون الصورة بصيغة jpeg, png أو jpg',
-            'thumbnail.max' => 'حجم الصورة يجب ألا يتجاوز 2 ميجابايت',
+            'thumbnail.max' => 'حجم صورة المسار يجب ألا يتجاوز 5 ميجابايت',
         ]);
 
         $data = $request->all();

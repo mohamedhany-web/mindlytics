@@ -854,8 +854,8 @@
                      data-image-url="{{ $imageUrl ?? '' }}"
                      x-show="!searchQuery || '{{ strtolower(addslashes($path->name)) }}'.includes(searchQuery.toLowerCase()) || '{{ strtolower(addslashes($path->description ?? '')) }}'.includes(searchQuery.toLowerCase())"
                      style="animation-delay: {{ $index * 0.1 }}s; display: block !important;">
-                    <!-- Path Header - Like Course Card -->
-                    <div class="h-48 lg:h-44 bg-gradient-to-br from-blue-600 via-blue-500 to-green-500 flex items-center justify-center relative course-image overflow-hidden flex-shrink-0
+                    <!-- Path Header - Like Course Card (مربع 1:1 يُفضَّل رفع صورة 1563×1563) -->
+                    <div class="bg-gradient-to-br from-blue-600 via-blue-500 to-green-500 flex items-center justify-center relative course-image overflow-hidden flex-shrink-0 aspect-square
                         @if($loop->index % 3 == 0) from-sky-400 via-sky-500 to-sky-600
                         @elseif($loop->index % 3 == 1) from-blue-500 via-blue-600 to-blue-700
                         @else from-indigo-500 via-indigo-600 to-indigo-700
@@ -880,14 +880,14 @@
                         </div>
                     </div>
 
-                    <!-- Path Content - Like Course Card -->
-                    <div class="p-6 bg-white flex-grow flex flex-col justify-between">
+                    <!-- Path Content - Like Course Card (جزء أقصر ليتناسق مع الصورة الطويلة) -->
+                    <div class="p-4 lg:p-5 bg-white flex flex-col justify-between">
                         <div>
-                            <h3 class="text-lg lg:text-xl font-black text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors duration-300 leading-tight min-h-[3.5rem]">
+                            <h3 class="text-lg lg:text-xl font-black text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors duration-300 leading-tight min-h-[2.5rem]">
                                 {{ $path->name }}
                             </h3>
                             
-                            <p class="text-gray-600 text-xs lg:text-sm mb-3 line-clamp-2 leading-relaxed min-h-[3rem]">
+                            <p class="text-gray-600 text-xs lg:text-sm mb-3 line-clamp-2 leading-relaxed">
                                 {{ Str::limit($path->description ?? __('public.path_description_fallback'), 80) }}
                             </p>
                         </div>
