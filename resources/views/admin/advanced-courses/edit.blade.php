@@ -327,7 +327,7 @@
                                 @endif
                                 <input type="file" name="thumbnail" accept="image/*"
                                        class="w-full rounded-2xl border border-gray-200 bg-white/70 px-4 py-2 text-gray-900 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition">
-                                <p class="text-xs text-gray-500">PNG أو JPG بحد أقصى 2MB.</p>
+                                <p class="text-xs text-gray-500">PNG أو JPG بحد أقصى 10MB.</p>
                             </div>
                         </div>
                     </div>
