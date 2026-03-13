@@ -209,7 +209,8 @@ class AdvancedCourseController extends Controller
             'skills' => 'nullable|array',
             'skills.*' => 'nullable|string|max:100',
             'language' => 'nullable|string|max:10',
-            'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            // رفع صورة الكورس حتى 10 ميجابايت (10240 كيلوبايت)
+            'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg|max:10240',
             'starts_at' => 'nullable|date',
             'ends_at' => 'nullable|date|after_or_equal:starts_at',
             'is_active' => 'boolean',
@@ -228,7 +229,7 @@ class AdvancedCourseController extends Controller
             'price.min' => 'السعر لا يمكن أن يكون أقل من صفر',
             'thumbnail.image' => 'يجب أن تكون صورة صحيحة',
             'thumbnail.mimes' => 'يجب أن تكون الصورة بصيغة jpeg, png أو jpg',
-            'thumbnail.max' => 'حجم الصورة يجب ألا يتجاوز 2 ميجابايت',
+            'thumbnail.max' => 'حجم صورة الكورس يجب ألا يتجاوز 10 ميجابايت',
             'ends_at.after_or_equal' => 'تاريخ النهاية يجب أن يكون بعد أو يساوي تاريخ البداية',
         ]);
 
