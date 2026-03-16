@@ -44,10 +44,15 @@ class LectureVideoQuestionController extends Controller
                 'show_count_label' => $showCountLabel,
             ];
         });
+        // إحضار بنوك الأسئلة الخاصة بالمدرب الحالي + البنوك العامة (instructor_id null)، بشرط أن تكون نشطة
         $instructor = Auth::user();
-        $banks = QuestionBank::where(function ($q) use ($instructor) {
-            $q->where('instructor_id', $instructor->id)->orWhereNull('instructor_id');
-        })->orderBy('title')->get(['id', 'title']);
+        $banks = QuestionBank::where('is_active', true)
+            ->where(function ($q) use ($instructor) {
+                $q->whereNull('instructor_id')
+                  ->orWhere('instructor_id', $instructor->id);
+            })
+            ->orderBy('title')
+            ->get(['id', 'title']);
         $bankQuestions = [];
         foreach ($banks as $bank) {
             $bankQuestions[$bank->id] = $bank->questions()->where('is_active', true)->orderBy('created_at')->get(['id', 'question', 'type', 'options', 'correct_answer'])->map(function ($q) {

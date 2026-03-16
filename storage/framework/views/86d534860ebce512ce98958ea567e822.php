@@ -1298,24 +1298,7 @@
                             <i class="fas fa-play-circle text-blue-600"></i>
                             محتوى الكورس — معاينة
                         </h2>
-                        <p class="text-gray-600 mb-6">اطّلع على تقسيمات الكورس وأول 3 فيديوهات قبل الشراء.</p>
-
-                        <?php if(isset($sections) && $sections->count() > 0): ?>
-                            <div class="mb-8">
-                                <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                    <i class="fas fa-folder-open text-amber-500"></i>
-                                    التقسيمات
-                                </h3>
-                                <ul class="space-y-2">
-                                    <?php $__currentLoopData = $sections; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $idx => $section): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                        <li class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
-                                            <span class="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center text-sm font-bold"><?php echo e($idx + 1); ?></span>
-                                            <span class="font-semibold text-gray-800"><?php echo e($section->title); ?></span>
-                                        </li>
-                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                                </ul>
-                            </div>
-                        <?php endif; ?>
+                        <p class="text-gray-600 mb-6">اطّلع على أول 3 فيديوهات وتقسيمات الكورس قبل الشراء.</p>
 
                         <?php if(isset($previewVideoLessons) && $previewVideoLessons->count() > 0): ?>
                             <div x-data="coursePreviewPopup()">
@@ -1327,14 +1310,10 @@
                                     <?php $__currentLoopData = $previewVideoLessons; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $idx => $lesson): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                         <?php
                                             $embedUrl = null;
-                                            $videoUrl = $lesson->video_url;
-                                            if ($videoUrl && (str_contains($videoUrl, 'youtube.com') || str_contains($videoUrl, 'youtu.be') || str_contains($videoUrl, 'vimeo.com'))) {
-                                                if (preg_match('/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/', $videoUrl, $m)) {
-                                                    $embedUrl = 'https://www.youtube.com/embed/' . $m[1];
-                                                } elseif (preg_match('/vimeo\.com\/(\d+)/', $videoUrl, $m)) {
-                                                    $embedUrl = 'https://player.vimeo.com/video/' . $m[1];
-                                                }
+                                            if ($lesson->video_url) {
+                                                $embedUrl = \App\Helpers\VideoHelper::getEmbedUrl(trim($lesson->video_url));
                                             }
+                                            $encodedSrc = $embedUrl ? base64_encode($embedUrl) : '';
                                         ?>
                                         <div class="rounded-xl border-2 border-gray-200 overflow-hidden bg-gray-50 hover:border-blue-300 transition-all duration-300">
                                             <div class="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -1349,13 +1328,12 @@
                                                         <?php endif; ?>
                                                     </div>
                                                 </div>
-                                                <?php if($videoUrl): ?>
+                                                <?php if($encodedSrc): ?>
                                                     <div class="flex-shrink-0">
                                                         <button type="button"
-                                                                data-embed-url="<?php echo e($embedUrl ?? ''); ?>"
+                                                                data-video-src="<?php echo e($encodedSrc); ?>"
                                                                 data-title="<?php echo e(e($lesson->title)); ?>"
-                                                                data-external-url="<?php echo e($embedUrl ? '' : e($videoUrl)); ?>"
-                                                                @click="openPopup($event.currentTarget.dataset.embedUrl || '', $event.currentTarget.dataset.title || 'معاينة', $event.currentTarget.dataset.externalUrl || '')"
+                                                                @click="openPreview($event.currentTarget.dataset.videoSrc, $event.currentTarget.dataset.title)"
                                                                 class="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-semibold transition-colors shadow-md hover:shadow-lg">
                                                             <i class="fas fa-eye"></i>
                                                             <span>معاينة</span>
@@ -1367,7 +1345,7 @@
                                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                 </div>
 
-                                <!-- بوب أب المعاينة -->
+                                <!-- بوب أب المعاينة (الرابط مخزّن مشفّراً base64 فلا يظهر جلياً في مصدر الصفحة) -->
                                 <div x-show="open" x-cloak class="fixed inset-0 z-[9999] flex items-center justify-center p-4" style="background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);"
                                      x-transition:enter="transition ease-out duration-200"
                                      x-transition:enter-start="opacity-0"
@@ -1386,21 +1364,10 @@
                                                 <i class="fas fa-times text-xl"></i>
                                             </button>
                                         </div>
-                                        <div class="flex-1 min-h-0 p-4 overflow-auto">
-                                            <template x-if="embedUrl">
-                                                <div class="aspect-video w-full bg-black rounded-xl overflow-hidden">
-                                                    <iframe :src="embedUrl" class="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                                                </div>
-                                            </template>
-                                            <template x-if="!embedUrl && externalUrl">
-                                                <div class="py-6 text-center">
-                                                    <p class="text-gray-600 mb-4">الفيديو يفتح في نافذة خارجية</p>
-                                                    <a :href="externalUrl" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors">
-                                                        <i class="fas fa-external-link-alt"></i>
-                                                        فتح الفيديو
-                                                    </a>
-                                                </div>
-                                            </template>
+                                        <div class="flex-1 min-h-0 p-4 overflow-auto" x-show="embedUrl">
+                                            <div class="aspect-video w-full bg-black rounded-xl overflow-hidden" x-show="embedUrl">
+                                                <iframe :src="embedUrl" class="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1410,25 +1377,45 @@
                                     return {
                                         open: false,
                                         embedUrl: '',
-                                        externalUrl: '',
                                         title: '',
-                                        openPopup(embedUrl, title, externalUrl) {
-                                            this.title = title || 'معاينة';
-                                            this.embedUrl = embedUrl || '';
-                                            this.externalUrl = externalUrl || '';
-                                            this.open = true;
-                                            document.body.style.overflow = 'hidden';
+                                        openPreview(encodedSrc, title) {
+                                            try {
+                                                this.title = title || 'معاينة';
+                                                this.embedUrl = encodedSrc ? (typeof atob !== 'undefined' ? atob(encodedSrc) : '') : '';
+                                                this.open = true;
+                                                document.body.style.overflow = 'hidden';
+                                            } catch (e) {
+                                                this.embedUrl = '';
+                                            }
                                         },
                                         closePopup() {
                                             this.open = false;
                                             this.embedUrl = '';
-                                            this.externalUrl = '';
                                             document.body.style.overflow = '';
                                         }
                                     };
                                 }
                             </script>
-                        <?php else: ?>
+                        <?php endif; ?>
+
+                        <?php if(isset($sections) && $sections->count() > 0): ?>
+                            <div class="mt-8">
+                                <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                    <i class="fas fa-folder-open text-amber-500"></i>
+                                    تقسيمات الكورس
+                                </h3>
+                                <ul class="space-y-2">
+                                    <?php $__currentLoopData = $sections; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $idx => $section): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                        <li class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                            <span class="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center text-sm font-bold"><?php echo e($idx + 1); ?></span>
+                                            <span class="font-semibold text-gray-800"><?php echo e($section->title); ?></span>
+                                        </li>
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                </ul>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if(!isset($previewVideoLessons) || $previewVideoLessons->count() == 0): ?>
                             <?php if(isset($sections) && $sections->count() > 0): ?>
                                 <p class="text-sm text-gray-500">لا توجد فيديوهات معاينة في هذا الكورس. سجّل في الكورس لمشاهدة المحتوى كاملاً.</p>
                             <?php else: ?>

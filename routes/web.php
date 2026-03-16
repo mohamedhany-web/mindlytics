@@ -379,6 +379,12 @@ Route::post('/learning-path/{slug}/checkout/kashier', [\App\Http\Controllers\Pub
     ->middleware('auth')
     ->name('public.learning-path.checkout.kashier');
 
+// صفحة حجز ورش العمل العامة (workshops)
+Route::get('/workshops/{slug}', [\App\Http\Controllers\Public\WorkshopPublicController::class, 'show'])
+    ->name('public.workshops.show');
+Route::post('/workshops/{slug}/register', [\App\Http\Controllers\Public\WorkshopPublicController::class, 'register'])
+    ->name('public.workshops.register');
+
 // استقبال العودة من بوابة كاشير بعد الدفع (بدون auth لأن كاشير يوجّه المتصفح هنا)
 Route::get('/checkout/kashier/callback', [\App\Http\Controllers\Public\CheckoutController::class, 'kashierCallback'])
     ->name('public.checkout.kashier.callback');
@@ -757,6 +763,15 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('/advanced-courses/{advancedCourse}/statistics', [\App\Http\Controllers\Admin\AdvancedCourseController::class, 'statistics'])->name('advanced-courses.statistics');
         Route::post('/advanced-courses/{advancedCourse}/duplicate', [\App\Http\Controllers\Admin\AdvancedCourseController::class, 'duplicate'])->name('advanced-courses.duplicate');
         Route::get('/get-subjects-by-year', [\App\Http\Controllers\Admin\AdvancedCourseController::class, 'getSubjectsByYear'])->name('advanced-courses.get-subjects-by-year');
+
+        // الاجتماعات / الورش
+        Route::resource('workshops', \App\Http\Controllers\Admin\WorkshopController::class);
+        Route::get('workshops/{workshop}/export', [\App\Http\Controllers\Admin\WorkshopController::class, 'exportRegistrations'])
+            ->name('workshops.export');
+        Route::post('workshops/{workshop}/send-acceptance', [\App\Http\Controllers\Admin\WorkshopController::class, 'sendAcceptanceEmails'])
+            ->name('workshops.send-acceptance');
+        Route::post('workshops/{workshop}/checkin', [\App\Http\Controllers\Admin\WorkshopController::class, 'checkin'])
+            ->name('workshops.checkin');
         Route::get('/courses/{course}/lessons-list', function(\App\Models\AdvancedCourse $course) {
             return response()->json($course->lessons()->active()->select('id', 'title')->get());
         });

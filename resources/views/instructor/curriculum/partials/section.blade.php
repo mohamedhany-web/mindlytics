@@ -68,7 +68,15 @@
                             <i class="fas fa-grip-vertical text-slate-400 cursor-move shrink-0"></i>
                             @if($item->item instanceof \App\Models\Lecture)
                                 <i class="fas fa-chalkboard-teacher text-sky-500 shrink-0"></i>
-                                <span class="font-semibold text-slate-800 truncate">{{ $item->item->title }}</span>
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <span class="font-semibold text-slate-800 truncate">{{ $item->item->title }}</span>
+                                    @if($item->item->videoQuestions()->exists())
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] shrink-0" title="توجد أسئلة مرتبطة بالفيديو">
+                                            <i class="fas fa-question-circle"></i>
+                                            <span>أسئلة فيديو</span>
+                                        </span>
+                                    @endif
+                                </div>
                                 <span class="text-xs text-slate-500 shrink-0">(محاضرة)</span>
                                 <div class="flex items-center gap-1 shrink-0">
                                     <button type="button" onclick="openVideoQuestionsModal({{ $item->item->id }}, '{{ addslashes($item->item->title) }}')" class="p-1.5 rounded bg-amber-100 hover:bg-amber-200 text-amber-700 text-xs" title="أسئلة الفيديو"><i class="fas fa-question-circle"></i></button>

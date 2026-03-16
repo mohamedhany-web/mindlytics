@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
+    <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>إتمام الطلب - <?php echo e(isset($course) ? $course->title : ($learningPath->name ?? 'الطلب')); ?> - Mindlytics</title>
@@ -582,7 +583,12 @@
                                 </p>
                             </div>
 
-                            <form action="<?php echo e(isset($course) ? route('public.course.checkout.kashier', $course->id) : route('public.learning-path.checkout.kashier', Str::slug($learningPath->name))); ?>" method="POST" x-data="{ isSubmitting: false }" @submit="isSubmitting = true">
+                            
+                            <form
+                                x-data="checkoutKashierHandler('<?php echo e(isset($course) ? 'course' : 'path'); ?>', '<?php echo e(isset($course) ? route('public.course.checkout.kashier', $course->id) : route('public.learning-path.checkout.kashier', Str::slug($learningPath->name))); ?>')"
+                                @submit.prevent="startPayment"
+                                <?php if(!isset($course)): ?> x-init="startPayment()" <?php endif; ?>
+                            >
                                 <?php echo csrf_field(); ?>
                                 <div class="flex flex-col sm:flex-row gap-4">
                                     <button type="submit" 
@@ -590,7 +596,7 @@
                                             class="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-6 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
                                         <i class="fas fa-lock" x-show="!isSubmitting"></i>
                                         <i class="fas fa-spinner fa-spin" x-show="isSubmitting" x-cloak></i>
-                                        <span x-text="isSubmitting ? 'جاري التوجيه...' : 'متابعة للدفع'"></span>
+                                        <span x-text="isSubmitting ? 'جاري فتح صفحة الدفع...' : 'متابعة للدفع'"></span>
                                     </button>
                                     <a href="<?php echo e(isset($course) ? route('public.course.show', $course->id) : route('public.learning-path.show', Str::slug($learningPath->name))); ?>" 
                                        :class="{ 'pointer-events-none opacity-50': isSubmitting }"
@@ -599,11 +605,67 @@
                                         <span>إلغاء</span>
                                     </a>
                                 </div>
+                                <!-- رسالة خطأ أسفل الأزرار عند فشل بدء الدفع -->
+                                <p x-show="error" x-text="error" class="mt-3 text-xs text-red-600 text-center" x-cloak></p>
                                 <p class="mt-4 text-xs text-gray-500 text-center">
                                     <i class="fas fa-shield-alt ml-1"></i>
                                     تفعيل فوري بعد إتمام الدفع بنجاح
                                 </p>
                             </form>
+
+                            
+                            <?php if(!isset($course)): ?>
+                                <div class="mt-6">
+                                    <template x-if="!error">
+                                        <div>
+                                            <div x-show="!sessionUrl" class="flex items-center justify-center h-40">
+                                                <div class="flex flex-col items-center gap-3 text-gray-500">
+                                                    <i class="fas fa-spinner fa-spin text-2xl"></i>
+                                                    <p class="text-sm">جاري تجهيز صفحة الدفع الآمنة...</p>
+                                                </div>
+                                            </div>
+                                            <iframe x-show="sessionUrl" :src="sessionUrl" class="w-full h-[520px] border-0 rounded-2xl shadow-inner" allow="payment *; fullscreen *"></iframe>
+                                        </div>
+                                    </template>
+                                    <template x-if="error">
+                                        <div class="p-4 mt-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl">
+                                            <p x-text="error"></p>
+                                        </div>
+                                    </template>
+                                </div>
+                            <?php endif; ?>
+
+                            <!-- مودال الدفع (iframe) -->
+                            <div x-show="showModal && kind === 'course'" x-cloak class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+                                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+                                    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
+                                        <h3 class="text-lg font-bold text-gray-900">
+                                            إتمام الدفع الآمن
+                                        </h3>
+                                        <button type="button" @click="closeModal" class="p-2 rounded-xl text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors">
+                                            <i class="fas fa-times text-xl"></i>
+                                        </button>
+                                    </div>
+                                    <div class="flex-1 min-h-0">
+                                        <template x-if="error">
+                                            <div class="p-4 text-sm text-red-600">
+                                                <p x-text="error"></p>
+                                            </div>
+                                        </template>
+                                        <template x-if="!error">
+                                            <div class="w-full h-full">
+                                                <iframe x-show="sessionUrl" :src="sessionUrl" class="w-full h-[70vh] border-0" allow="payment *; fullscreen *"></iframe>
+                                                <div x-show="!sessionUrl" class="flex items-center justify-center h-[70vh]">
+                                                    <div class="flex flex-col items-center gap-3 text-gray-500">
+                                                        <i class="fas fa-spinner fa-spin text-2xl"></i>
+                                                        <p class="text-sm">جاري تحميل صفحة الدفع...</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -614,6 +676,60 @@
     <?php echo $__env->make('components.unified-footer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
     <script>
+        function checkoutKashierHandler(type, endpoint) {
+            return {
+                kind: type,
+                isSubmitting: false,
+                showModal: false,
+                sessionUrl: '',
+                error: '',
+                async startPayment() {
+                    this.isSubmitting = true;
+                    this.error = '';
+                    this.sessionUrl = '';
+                    try {
+                        const csrfMeta = document.querySelector('meta[name=\"csrf-token\"]');
+                        const token = csrfMeta ? csrfMeta.getAttribute('content') : (document.querySelector('input[name=\"_token\"]')?.value || '');
+                        const response = await fetch(endpoint, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': token,
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ source: type }),
+                        });
+                        const text = await response.text();
+                        let data = {};
+                        try {
+                            data = text ? JSON.parse(text) : {};
+                        } catch (e) {
+                            console.error('Failed to parse payment response JSON', e, text);
+                        }
+                        if (!response.ok) {
+                            throw new Error(data.message || 'فشل إنشاء جلسة الدفع. حاول مرة أخرى.');
+                        }
+                        if (!data.session_url) {
+                            throw new Error('لم يتم استلام رابط جلسة الدفع من بوابة الدفع.');
+                        }
+                        this.sessionUrl = data.session_url;
+                        this.showModal = true;
+                    } catch (e) {
+                        this.error = e.message || 'حدث خطأ أثناء الاتصال ببوابة الدفع.';
+                        this.showModal = true;
+                        console.error('Payment start error', e);
+                    } finally {
+                        this.isSubmitting = false;
+                    }
+                },
+                closeModal() {
+                    this.showModal = false;
+                    this.sessionUrl = '';
+                    this.error = '';
+                },
+            };
+        }
+
         function previewImage(input) {
             const preview = document.getElementById('image-preview');
             const previewImg = document.getElementById('preview-img');

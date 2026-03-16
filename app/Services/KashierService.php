@@ -51,10 +51,10 @@ class KashierService
         if (!filter_var($redirectUrl, FILTER_VALIDATE_URL)) {
             throw new \InvalidArgumentException('merchantRedirect must be a valid URL. Got: ' . substr($redirectUrl, 0, 80));
         }
-        // كاشير يقبل فقط روابط HTTPS — رفض مسبق مع رسالة واضحة بدل انتظار رفض الـ API
-        if (str_starts_with(strtolower($redirectUrl), 'http://')) {
+        // في بيئة الإنتاج نفرض HTTPS، لكن في البيئة المحلية نسمح بـ http://127.0.0.1 أو localhost للتجربة
+        if (!app()->environment('local') && str_starts_with(strtolower($redirectUrl), 'http://')) {
             throw new \RuntimeException(
-                'بوابة كاشير تقبل فقط روابط HTTPS. للتجربة المحلية: ثبّت ngrok وشغّله (ngrok http 8000)، ثم ضع في ملف .env: KASHIER_MERCHANT_REDIRECT_URL=https://الرابط-من-ngrok/checkout/kashier/callback'
+                'بوابة كاشير تقبل فقط روابط HTTPS. للتجربة المحلية يمكنك استخدام http://127.0.0.1 فقط أو ضبط رابط HTTPS في KASHIER_MERCHANT_REDIRECT_URL.'
             );
         }
         $payload = [

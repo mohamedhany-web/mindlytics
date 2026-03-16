@@ -160,9 +160,11 @@ class CheckoutController extends Controller
     }
 
     /**
-     * التوجيه لبوابة الدفع كاشير (مسار تعليمي)
+     * إنشاء جلسة دفع عبر كاشير لمسار تعليمي.
+     * - إذا كان الطلب عادي (HTML): نعيد توجيه المستخدم لرابط الدفع (السلوك القديم).
+     * - إذا كان الطلب JSON/AJAX: نرجع sessionUrl و sessionId لاستخدامه داخل iframe في نفس الصفحة.
      */
-    public function redirectToKashierLearningPath($slug)
+    public function redirectToKashierLearningPath(Request $request, $slug)
     {
         if (!Auth::check()) {
             return redirect()->route('login')->with('error', 'يجب تسجيل الدخول أولاً');
@@ -184,67 +186,93 @@ class CheckoutController extends Controller
                 ->with('info', 'أنت مسجل بالفعل في هذا المسار');
         }
 
-        $existingOrder = Order::where('user_id', Auth::id())
-            ->where('academic_year_id', $learningPath->id)
-            ->where('status', Order::STATUS_PENDING)
-            ->first();
-        if ($existingOrder) {
-            return redirect()->route('public.learning-path.show', $slug)
-                ->with('info', 'لديك طلب قيد الانتظار لهذا المسار');
-        }
-
         $amount = (float) ($learningPath->price ?? 0);
         if ($amount <= 0) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'هذا المسار مجاني يمكنك التسجيل مباشرة.'], 422);
+            }
             return redirect()->route('public.learning-path.show', $slug)
                 ->with('info', 'هذا المسار مجاني يمكنك التسجيل مباشرة.');
         }
 
-        DB::beginTransaction();
-        try {
-            $order = Order::create([
-                'user_id' => Auth::id(),
-                'academic_year_id' => $learningPath->id,
-                'original_amount' => $amount,
-                'discount_amount' => 0,
-                'amount' => $amount,
-                'payment_method' => 'online',
-                'payment_proof' => null,
-                'wallet_id' => null,
-                'notes' => 'دفع عبر بوابة كاشير',
-                'status' => Order::STATUS_PENDING,
-            ]);
-            DB::commit();
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Kashier redirect: order create failed (path)', ['slug' => $slug, 'message' => $e->getMessage()]);
-            return redirect()->route('public.learning-path.show', $slug)
-                ->with('error', 'حدث خطأ أثناء إنشاء الطلب. يرجى المحاولة مرة أخرى.');
+        // إعادة استخدام طلب pending موجود أو إنشاء واحد جديد
+        $order = Order::where('user_id', Auth::id())
+            ->where('academic_year_id', $learningPath->id)
+            ->where('status', Order::STATUS_PENDING)
+            ->first();
+
+        if (!$order) {
+            DB::beginTransaction();
+            try {
+                $order = Order::create([
+                    'user_id' => Auth::id(),
+                    'academic_year_id' => $learningPath->id,
+                    'original_amount' => $amount,
+                    'discount_amount' => 0,
+                    'amount' => $amount,
+                    'payment_method' => 'online',
+                    'payment_proof' => null,
+                    'wallet_id' => null,
+                    'notes' => 'دفع عبر بوابة كاشير',
+                    'status' => Order::STATUS_PENDING,
+                ]);
+                DB::commit();
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error('Kashier redirect: order create failed (path)', ['slug' => $slug, 'message' => $e->getMessage()]);
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => 'حدث خطأ أثناء إنشاء الطلب. يرجى المحاولة مرة أخرى.'], 500);
+                }
+                return redirect()->route('public.learning-path.show', $slug)
+                    ->with('error', 'حدث خطأ أثناء إنشاء الطلب. يرجى المحاولة مرة أخرى.');
+            }
         }
 
         $kashier = app(KashierService::class);
         $callbackUrl = $this->getKashierCallbackUrl();
         try {
-            $hppUrl = $kashier->getHppUrl(
+            // إنشاء جلسة دفع جديدة عبر API v3
+            $session = $kashier->createPaymentSession(
                 (string) $order->id,
                 $amount,
                 $callbackUrl,
-                null,
                 Auth::user()->email,
                 (string) Auth::id(),
                 'Learning path order #' . $order->id
             );
         } catch (\RuntimeException $e) {
             $order->delete();
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                ], 422);
+            }
             return redirect()->route('public.learning-path.checkout', $slug)
                 ->with('error', $e->getMessage());
         } catch (\Exception $e) {
-            Log::error('Kashier getHppUrl failed (path)', ['slug' => $slug, 'message' => $e->getMessage()]);
+            Log::error('Kashier createPaymentSession failed (path)', ['slug' => $slug, 'message' => $e->getMessage()]);
             $order->delete();
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'حدث خطأ أثناء إنشاء جلسة الدفع. يرجى المحاولة مرة أخرى.',
+                ], 500);
+            }
             return redirect()->route('public.learning-path.checkout', $slug)
                 ->with('error', 'حدث خطأ أثناء التوجيه للدفع. يرجى المحاولة مرة أخرى.');
         }
 
-        return redirect()->away($hppUrl);
+        // طلب AJAX من صفحة البلاتفورم: نرجع بيانات الجلسة لاستخدامها في iframe داخل نفس الصفحة
+        if ($request->expectsJson()) {
+            return response()->json([
+                'session_url' => $session['sessionUrl'] ?? null,
+                'session_id' => $session['sessionId'] ?? null,
+                'order_id' => $order->id,
+                'amount' => $amount,
+            ]);
+        }
+
+        // السلوك القديم: إعادة توجيه كاملة لرابط الدفع
+        return redirect()->away($session['sessionUrl'] ?? '');
     }
 
     /**
@@ -709,17 +737,6 @@ class CheckoutController extends Controller
         if ($isEnrolled) {
             return redirect()->route('public.learning-path.show', $slug)
                 ->with('info', 'أنت مسجل بالفعل في هذا المسار التعليمي');
-        }
-
-        // التحقق من وجود طلب قيد الانتظار
-        $existingOrder = Order::where('user_id', Auth::id())
-            ->where('academic_year_id', $learningPath->id)
-            ->where('status', Order::STATUS_PENDING)
-            ->first();
-
-        if ($existingOrder) {
-            return redirect()->route('public.learning-path.show', $slug)
-                ->with('info', 'لديك طلب قيد الانتظار لهذا المسار');
         }
 
         // جلب المحافظ الإلكترونية النشطة
