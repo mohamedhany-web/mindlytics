@@ -268,10 +268,12 @@ class WorkshopController extends Controller
             'scope' => 'required|in:all,phone',
             'phone' => 'nullable|string|max:30',
             'message' => 'required|string|max:2000',
+            'attendance_mode' => 'nullable|in:all,online,offline',
         ]);
 
         $numbers = [];
         $targetRegistrations = collect();
+        $attendanceMode = $data['attendance_mode'] ?? 'all';
 
         if ($data['scope'] === 'phone') {
             if (empty($data['phone'])) {
@@ -286,9 +288,11 @@ class WorkshopController extends Controller
                 ->filter(fn ($reg) => $this->normalizePhone($reg->phone) === $normalizedPhone)
                 ->values();
         } else {
-            $targetRegistrations = $workshop->registrations()
-                ->whereNotNull('phone')
-                ->get();
+            $targetQuery = $workshop->registrations()->whereNotNull('phone');
+            if (in_array($attendanceMode, ['online', 'offline'], true)) {
+                $targetQuery->where('attendance_mode', $attendanceMode);
+            }
+            $targetRegistrations = $targetQuery->get();
 
             $numbers = $targetRegistrations
                 ->pluck('phone')

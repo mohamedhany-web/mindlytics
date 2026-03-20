@@ -199,6 +199,12 @@
                         <input type="text" name="phone" placeholder="2010xxxxxxx"
                                class="w-full md:w-52 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-green-500/70 focus:border-green-500"
                                onfocus="document.querySelectorAll('input[name=&quot;scope&quot;]').forEach(r=>{ if(r.value==='phone') r.checked=true; });">
+                        <select name="attendance_mode"
+                                class="w-full md:w-40 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-green-500/70 focus:border-green-500">
+                            <option value="all">فلترة: الكل</option>
+                            <option value="online">فلترة: أونلاين</option>
+                            <option value="offline">فلترة: أوفلاين</option>
+                        </select>
                     </div>
                     <div class="flex flex-col md:flex-row items-start md:items-center gap-2">
                         <textarea name="message" rows="2" required
