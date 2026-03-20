@@ -46,16 +46,25 @@ class LectureVideoQuestionController extends Controller
         });
         // إحضار بنوك الأسئلة الخاصة بالمدرب الحالي + البنوك العامة (instructor_id null)، بشرط أن تكون نشطة
         $instructor = Auth::user();
-        $banks = QuestionBank::where('is_active', true)
+        $banks = QuestionBank::where(function ($q) {
+                $q->where('is_active', true)->orWhereNull('is_active');
+            })
             ->where(function ($q) use ($instructor) {
                 $q->whereNull('instructor_id')
-                  ->orWhere('instructor_id', $instructor->id);
+                  ->orWhere('instructor_id', $instructor->id)
+                  ->orWhere('created_by', $instructor->id);
             })
             ->orderBy('title')
             ->get(['id', 'title']);
         $bankQuestions = [];
         foreach ($banks as $bank) {
-            $bankQuestions[$bank->id] = $bank->questions()->where('is_active', true)->orderBy('created_at')->get(['id', 'question', 'type', 'options', 'correct_answer'])->map(function ($q) {
+            $bankQuestions[$bank->id] = $bank->questions()
+            ->where(function ($q) {
+                $q->where('is_active', true)->orWhereNull('is_active');
+            })
+            ->orderBy('created_at')
+            ->get(['id', 'question', 'type', 'options', 'correct_answer'])
+            ->map(function ($q) {
                 return ['id' => $q->id, 'text' => $q->question, 'type' => $q->type, 'options' => $q->options];
             })->toArray();
         }
@@ -72,9 +81,13 @@ class LectureVideoQuestionController extends Controller
     public function store(Request $request, Lecture $lecture): JsonResponse
     {
         $this->authorizeLecture($lecture);
+        $request->merge([
+            'show_at_end' => $request->boolean('show_at_end') ? 1 : 0,
+        ]);
+
         $validated = $request->validate([
             'show_at_end' => 'nullable|boolean',
-            'timestamp_minutes' => 'required_unless:show_at_end,true|nullable|numeric|min:0|max:999',
+            'timestamp_minutes' => 'required_unless:show_at_end,1|nullable|numeric|min:0|max:999',
             'timestamp_seconds_extra' => 'nullable|integer|min:0|max:59',
             'question_source' => 'required|in:bank,custom',
             'question_id' => 'required_if:question_source,bank|nullable|exists:questions,id',
@@ -93,7 +106,7 @@ class LectureVideoQuestionController extends Controller
             'custom_correct_answer.required_if' => 'الإجابة الصحيحة مطلوبة',
         ]);
 
-        $showAtEnd = !empty($validated['show_at_end']);
+        $showAtEnd = ((int) ($validated['show_at_end'] ?? 0)) === 1;
         $timestamp_seconds = 0;
         if (!$showAtEnd) {
             $minutes = (int) floor((float) ($validated['timestamp_minutes'] ?? 0));

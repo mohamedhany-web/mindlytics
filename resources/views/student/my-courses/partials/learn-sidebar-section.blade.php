@@ -124,14 +124,29 @@
             <div class="curriculum-item {{ $isCompleted ? 'completed' : '' }} {{ $isCurrent ? 'active' : '' }} {{ $isLocked ? 'locked' : '' }}"
                  data-section-id="{{ $section->id }}"
                  @if($item instanceof \App\Models\CourseLesson)
+                     data-item-type="lesson"
+                     data-item-id="{{ $item->id }}"
+                     data-item-locked="{{ $isLocked ? '1' : '0' }}"
                      @click="currentSectionDescription = (window.learnSectionDescriptions || {})[$event.currentTarget.dataset.sectionId] || ''; if ({{ $isLocked ? 'true' : 'false' }}) return; selectedLesson = {{ $item->id }}; loadLesson({{ $item->id }})"
                  @elseif($item instanceof \App\Models\Lecture)
+                     data-item-type="lecture"
+                     data-item-id="{{ $item->id }}"
+                     data-item-locked="{{ $isLocked ? '1' : '0' }}"
                      @click="currentSectionDescription = (window.learnSectionDescriptions || {})[$event.currentTarget.dataset.sectionId] || ''; if ({{ $isLocked ? 'true' : 'false' }}) return; loadLecture({{ $item->id }})"
                  @elseif($item instanceof \App\Models\Assignment)
+                     data-item-type="assignment"
+                     data-item-id="{{ $item->id }}"
+                     data-item-locked="0"
                      @click="currentSectionDescription = (window.learnSectionDescriptions || {})[$event.currentTarget.dataset.sectionId] || ''; loadAssignment({{ $item->id }})"
                  @elseif($item instanceof \App\Models\AdvancedExam || $item instanceof \App\Models\Exam)
+                     data-item-type="exam"
+                     data-item-id="{{ $item->id }}"
+                     data-item-locked="0"
                      @click="currentSectionDescription = (window.learnSectionDescriptions || {})[$event.currentTarget.dataset.sectionId] || ''; loadExam({{ $item->id }})"
                  @elseif($item instanceof \App\Models\LearningPattern)
+                     data-item-type="pattern"
+                     data-item-id="{{ $item->id }}"
+                     data-item-locked="{{ $isLocked ? '1' : '0' }}"
                      @click="currentSectionDescription = (window.learnSectionDescriptions || {})[$event.currentTarget.dataset.sectionId] || ''; if ({{ $isLocked ? 'true' : 'false' }}) return; loadPattern({{ $item->id }})"
                  @endif
                  x-show="!searchQuery || '{{ strtolower($item->title) }}'.includes(searchQuery.toLowerCase())">

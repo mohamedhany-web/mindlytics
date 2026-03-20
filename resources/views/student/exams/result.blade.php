@@ -142,9 +142,12 @@
                     </div>
 
                     <div class="divide-y divide-gray-200">
-                        @foreach($exam->examQuestions as $index => $examQuestion)
+                        @foreach(($reviewQuestions ?? collect()) as $index => $examQuestion)
                             @php
                                 $question = $examQuestion->question;
+                                if (!$question) {
+                                    continue;
+                                }
                                 $userAnswer = $attempt->answers[$question->id] ?? null;
                                 $isCorrect = $question->isCorrectAnswer($userAnswer);
                             @endphp

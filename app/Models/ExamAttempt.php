@@ -30,6 +30,8 @@ class ExamAttempt extends Model
     ];
 
     protected $casts = [
+        'exam_id' => 'integer',
+        'user_id' => 'integer',
         'started_at' => 'datetime',
         'submitted_at' => 'datetime',
         'reviewed_at' => 'datetime',
@@ -38,7 +40,7 @@ class ExamAttempt extends Model
         'auto_submitted' => 'boolean',
         'score' => 'decimal:2',
         'percentage' => 'decimal:2',
-        'time_taken' => 'integer', // بالثواني
+        'time_taken' => 'integer',
         'tab_switches' => 'integer',
     ];
 
@@ -173,8 +175,17 @@ class ExamAttempt extends Model
         $totalScore = 0;
         $totalMarks = 0;
 
-        foreach ($this->exam->examQuestions as $examQuestion) {
+        $examModel = $this->exam;
+        if (!$examModel) {
+            \Log::error('calculateScore: Exam not found for attempt', ['attempt_id' => $this->id, 'exam_id' => $this->exam_id]);
+            return 0;
+        }
+
+        foreach ($examModel->examQuestions as $examQuestion) {
             $question = $examQuestion->question;
+            if (!$question) {
+                continue;
+            }
             $userAnswer = $this->answers[$question->id] ?? null;
             $totalMarks += $examQuestion->marks;
 

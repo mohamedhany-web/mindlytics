@@ -77,6 +77,27 @@
                         </form>
                     @else
                         @php $sub = $assignment->group_submission; @endphp
+                        @if($sub->attachments && count($sub->attachments) > 0)
+                            <div class="mt-4 pt-4 border-t border-slate-200">
+                                <h4 class="text-sm font-bold text-slate-700 mb-1">المرفقات المرفوعة</h4>
+                                <ul class="text-sm space-y-1">
+                                    @foreach($sub->attachments as $att)
+                                        @php
+                                            $path = is_string($att) ? $att : ($att['path'] ?? $att['url'] ?? null);
+                                            $url = is_array($att) && !empty($att['url'])
+                                                ? $att['url']
+                                                : ($path ? (str_starts_with($path, 'http') ? $path : url('storage/' . $path)) : '#');
+                                            $label = is_array($att) ? ($att['name'] ?? basename($path ?? 'attachment')) : basename($att);
+                                        @endphp
+                                        <li>
+                                            <a href="{{ $url }}" target="_blank" rel="noopener" class="text-sky-600 hover:underline">
+                                                {{ $label }}
+                                            </a>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
                         @if($sub->score !== null || $sub->feedback || in_array($sub->status, ['graded', 'returned']))
                             <div class="mt-4 pt-4 border-t border-slate-200 rounded-xl bg-white p-4 border border-sky-100">
                                 <h4 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">

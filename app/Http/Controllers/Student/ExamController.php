@@ -105,27 +105,31 @@ class ExamController extends Controller
      */
     public function start(Exam $exam)
     {
-        $user = Auth::user();
-
-        $canAccess = ($exam->advanced_course_id && $user->isEnrolledIn($exam->advanced_course_id))
-            || ($exam->offline_course_id && $user->isEnrolledInOfflineCourse($exam->offline_course_id));
-        if (!$canAccess || !$exam->canAttempt($user->id)) {
-            return redirect()->route('student.exams.index')
-                ->with('error', 'غير مصرح لك ببدء هذا الامتحان');
-        }
-
-        // التحقق من عدم وجود محاولة جارية
-        $activeAttempt = $exam->attempts()
-                            ->where('user_id', $user->id)
-                            ->where('status', 'in_progress')
-                            ->first();
-
-        if ($activeAttempt) {
-            return redirect()->route('student.exams.take', [$exam, $activeAttempt]);
-        }
-
         try {
-            // إنشاء محاولة جديدة
+            $user = Auth::user();
+            $canAccess = ($exam->advanced_course_id && $user->isEnrolledIn($exam->advanced_course_id))
+                || ($exam->offline_course_id && $user->isEnrolledInOfflineCourse($exam->offline_course_id));
+
+            $activeAttempt = $exam->attempts()
+                                ->where('user_id', $user->id)
+                                ->where('status', 'in_progress')
+                                ->first();
+
+            if ($activeAttempt) {
+                return redirect()->route('student.exams.take', [$exam, $activeAttempt]);
+            }
+
+            if (!$canAccess || !$exam->canAttempt($user->id)) {
+                return redirect()->route('student.exams.index')
+                    ->with('error', 'غير مصرح لك ببدء هذا الامتحان');
+            }
+
+            $validQuestionsCount = $exam->examQuestions()->whereHas('question')->count();
+            if ($validQuestionsCount === 0) {
+                return redirect()->route('student.exams.show', $exam)
+                    ->with('error', 'لا توجد أسئلة صالحة في هذا الامتحان حالياً.');
+            }
+
             $attempt = ExamAttempt::create([
                 'exam_id' => $exam->id,
                 'user_id' => $user->id,
@@ -139,15 +143,17 @@ class ExamController extends Controller
             ]);
 
             return redirect()->route('student.exams.take', [$exam, $attempt]);
+
         } catch (\Throwable $e) {
             \Log::error('Exam start failed', [
                 'exam_id' => $exam->id,
-                'user_id' => $user->id,
+                'user_id' => Auth::id(),
                 'error' => $e->getMessage(),
+                'file' => $e->getFile() . ':' . $e->getLine(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            return redirect()->route('student.exams.show', $exam)
-                ->with('error', 'حدث خطأ عند بدء الامتحان. يرجى المحاولة مرة أخرى أو التواصل مع الدعم.');
+            return redirect()->route('student.exams.index')
+                ->with('error', 'حدث خطأ عند بدء الامتحان. يرجى المحاولة مرة أخرى.');
         }
     }
 
@@ -156,33 +162,50 @@ class ExamController extends Controller
      */
     public function take(Exam $exam, ExamAttempt $attempt)
     {
-        $user = Auth::user();
+        try {
+            $user = Auth::user();
 
-        // التحقق من الصلاحيات
-        if ($attempt->user_id !== $user->id || $attempt->exam_id !== $exam->id) {
+            if ((int) $attempt->user_id !== (int) $user->id || (int) $attempt->exam_id !== (int) $exam->id) {
+                return redirect()->route('student.exams.index')
+                    ->with('error', 'غير مصرح لك بالوصول لهذه المحاولة');
+            }
+
+            if ($attempt->status !== 'in_progress') {
+                return redirect()->route('student.exams.result', [$exam, $attempt]);
+            }
+
+            // التحقق من انتهاء الوقت
+            if ($attempt->isTimeExpired()) {
+                return $this->autoSubmit($exam, $attempt);
+            }
+
+            $exam->load(['examQuestions.question.category']);
+
+            $questions = $exam->examQuestions()->with(['question.category'])->whereHas('question')->orderBy('order')->get();
+
+            if ($questions->isEmpty()) {
+                return redirect()->route('student.exams.show', $exam)
+                    ->with('error', 'لا توجد أسئلة صالحة في هذا الامتحان حالياً. يرجى التواصل مع الإدارة.');
+            }
+
+            // ترتيب الأسئلة
+            if ($exam->randomize_questions) {
+                $questions = $questions->shuffle();
+            }
+
+            return view('student.exams.take', compact('exam', 'attempt', 'questions'));
+        } catch (\Throwable $e) {
+            \Log::error('Exam take page failed', [
+                'exam_id' => $exam->id ?? null,
+                'attempt_id' => $attempt->id ?? null,
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'file' => $e->getFile() . ':' . $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return redirect()->route('student.exams.index')
-                ->with('error', 'غير مصرح لك بالوصول لهذه المحاولة');
+                ->with('error', 'حدث خطأ أثناء فتح صفحة الامتحان. تم تسجيل السبب وسيتم إصلاحه.');
         }
-
-        // التحقق من حالة المحاولة
-        if ($attempt->status !== 'in_progress') {
-            return redirect()->route('student.exams.result', [$exam, $attempt]);
-        }
-
-        // التحقق من انتهاء الوقت
-        if ($attempt->isTimeExpired()) {
-            return $this->autoSubmit($exam, $attempt);
-        }
-
-        $exam->load(['examQuestions.question.category']);
-
-        // ترتيب الأسئلة
-        $questions = $exam->examQuestions;
-        if ($exam->randomize_questions) {
-            $questions = $questions->shuffle();
-        }
-
-        return view('student.exams.take', compact('exam', 'attempt', 'questions'));
     }
 
     /**
@@ -192,8 +215,22 @@ class ExamController extends Controller
     {
         $user = Auth::user();
 
-        if ($attempt->user_id !== $user->id || $attempt->status !== 'in_progress') {
+        if ((int) $attempt->user_id !== (int) $user->id || $attempt->status !== 'in_progress') {
             return response()->json(['error' => 'غير مصرح'], 403);
+        }
+
+        $validated = $request->validate([
+            'question_id' => 'required|integer',
+            'answer' => 'nullable',
+        ]);
+
+        $questionBelongsToExam = $exam->examQuestions()
+            ->where('question_id', $validated['question_id'])
+            ->whereHas('question')
+            ->exists();
+
+        if (!$questionBelongsToExam) {
+            return response()->json(['error' => 'السؤال غير صالح لهذا الامتحان'], 422);
         }
 
         if ($attempt->isTimeExpired()) {
@@ -201,7 +238,7 @@ class ExamController extends Controller
         }
 
         $answers = $attempt->answers ?? [];
-        $answers[$request->question_id] = $request->answer;
+        $answers[$validated['question_id']] = $validated['answer'];
 
         $attempt->update(['answers' => $answers]);
 
@@ -213,14 +250,38 @@ class ExamController extends Controller
      */
     public function submit(Request $request, Exam $exam, ExamAttempt $attempt)
     {
-        $user = Auth::user();
+        try {
+            $user = Auth::user();
 
-        if ($attempt->user_id !== $user->id || $attempt->status !== 'in_progress') {
+            if ((int) $attempt->user_id !== (int) $user->id || (int) $attempt->exam_id !== (int) $exam->id) {
+                return redirect()->route('student.exams.index')
+                    ->with('error', 'غير مصرح لك بتسليم هذا الامتحان');
+            }
+
+            if ($attempt->status === 'completed') {
+                return $exam->show_results_immediately
+                    ? redirect()->route('student.exams.result', [$exam, $attempt])
+                    : redirect()->route('student.exams.index')->with('info', 'تم تسليم الامتحان بالفعل.');
+            }
+
+            if ($attempt->status !== 'in_progress') {
+                return redirect()->route('student.exams.index')
+                    ->with('error', 'حالة المحاولة غير صالحة للتسليم');
+            }
+
+            return $this->completeAttempt($exam, $attempt, false);
+        } catch (\Throwable $e) {
+            \Log::error('Exam submit endpoint failed', [
+                'exam_id' => $exam->id ?? null,
+                'attempt_id' => $attempt->id ?? null,
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'file' => $e->getFile() . ':' . $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return redirect()->route('student.exams.index')
-                ->with('error', 'غير مصرح لك بتسليم هذا الامتحان');
+                ->with('error', 'حدث خطأ أثناء التسليم. يرجى المحاولة مرة أخرى.');
         }
-
-        return $this->completeAttempt($exam, $attempt, false);
     }
 
     /**
@@ -236,23 +297,35 @@ class ExamController extends Controller
      */
     private function completeAttempt(Exam $exam, ExamAttempt $attempt, $autoSubmitted = false)
     {
-        // الوقت المستغرق بالثواني (دائماً غير سالب، صحيح)
-        $timeTaken = (int) max(0, now()->diffInSeconds($attempt->started_at, true));
+        try {
+            DB::transaction(function () use ($exam, $attempt, $autoSubmitted) {
+                $timeTaken = (int) max(0, now()->diffInSeconds($attempt->started_at, true));
 
-        $attempt->update([
-            'status' => 'completed',
-            'submitted_at' => now(),
-            'time_taken' => $timeTaken,
-            'auto_submitted' => $autoSubmitted,
-        ]);
+                $attempt->update([
+                    'status' => 'completed',
+                    'submitted_at' => now(),
+                    'time_taken' => $timeTaken,
+                    'auto_submitted' => $autoSubmitted,
+                ]);
 
-        // حساب النتيجة
-        $attempt->calculateScore();
+                $attempt->refresh();
+                $attempt->calculateScore();
+            });
+        } catch (\Throwable $e) {
+            \Log::error('Exam submit failed', [
+                'exam_id' => $exam->id,
+                'attempt_id' => $attempt->id,
+                'error' => $e->getMessage(),
+            ]);
 
-        // تحديث تقدم الكورس في صفحة التعلم
+            return redirect()->route('student.exams.index')
+                ->with('error', 'حدث خطأ أثناء تسليم الامتحان. يرجى المحاولة مرة أخرى.');
+        }
+
         if ($exam->advanced_course_id) {
             try {
-                app(\App\Http\Controllers\Student\MyCourseController::class)->updateCourseProgress($user->id, $exam->advanced_course_id);
+                $userId = $attempt->user_id;
+                app(\App\Http\Controllers\Student\MyCourseController::class)->updateCourseProgress($userId, $exam->advanced_course_id);
             } catch (\Throwable $e) {
                 \Log::warning('Failed to update course progress after exam submit: ' . $e->getMessage());
             }
@@ -271,21 +344,34 @@ class ExamController extends Controller
      */
     public function result(Exam $exam, ExamAttempt $attempt)
     {
-        $user = Auth::user();
+        try {
+            $user = Auth::user();
 
-        if ($attempt->user_id !== $user->id) {
+            if ((int) $attempt->user_id !== (int) $user->id) {
+                return redirect()->route('student.exams.index')
+                    ->with('error', 'غير مصرح لك بعرض هذه النتيجة');
+            }
+
+            if (!$exam->show_results_immediately && $attempt->status === 'completed') {
+                return redirect()->route('student.exams.index')
+                    ->with('info', 'ستظهر النتيجة لاحقاً');
+            }
+
+            $attempt->load(['exam.examQuestions.question']);
+            $reviewQuestions = $exam->examQuestions()->with('question')->whereHas('question')->orderBy('order')->get();
+            return view('student.exams.result', compact('exam', 'attempt', 'reviewQuestions'));
+        } catch (\Throwable $e) {
+            \Log::error('Exam result page failed', [
+                'exam_id' => $exam->id ?? null,
+                'attempt_id' => $attempt->id ?? null,
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'file' => $e->getFile() . ':' . $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return redirect()->route('student.exams.index')
-                ->with('error', 'غير مصرح لك بعرض هذه النتيجة');
+                ->with('error', 'حدث خطأ أثناء عرض نتيجة الامتحان. تم تسجيل السبب وسيتم إصلاحه.');
         }
-
-        if (!$exam->show_results_immediately && $attempt->status === 'completed') {
-            return redirect()->route('student.exams.index')
-                ->with('info', 'ستظهر النتيجة لاحقاً');
-        }
-
-        $attempt->load(['exam.examQuestions.question']);
-
-        return view('student.exams.result', compact('exam', 'attempt'));
     }
 
     /**
@@ -295,7 +381,7 @@ class ExamController extends Controller
     {
         $user = Auth::user();
 
-        if ($attempt->user_id !== $user->id || $attempt->status !== 'in_progress') {
+        if ((int) $attempt->user_id !== (int) $user->id || $attempt->status !== 'in_progress') {
             return response()->json(['error' => 'غير مصرح'], 403);
         }
 

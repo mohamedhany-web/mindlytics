@@ -8,6 +8,7 @@ use App\Models\AssignmentSubmission;
 use App\Models\Group;
 use App\Models\GroupMessage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class GroupController extends Controller
 {
@@ -159,7 +160,28 @@ class GroupController extends Controller
         $attachments = [];
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
-                $attachments[] = $file->store('group-submissions', 'public');
+                $disk = config('filesystems.assignments_disk', 'r2');
+                $path = null;
+                $url = null;
+
+                try {
+                    $path = $file->store('group-submissions', $disk);
+                    $url = Storage::disk($disk)->url($path);
+                } catch (\Throwable $e) {
+                    // fallback local to avoid blocking submission if cloud is temporarily unavailable
+                    $disk = 'public';
+                    $path = $file->store('group-submissions', $disk);
+                    $url = Storage::disk($disk)->url($path);
+                }
+
+                $attachments[] = [
+                    'name' => $file->getClientOriginalName(),
+                    'path' => $path,
+                    'disk' => $disk,
+                    'url' => $url,
+                    'mime' => $file->getClientMimeType(),
+                    'size' => $file->getSize(),
+                ];
             }
         }
 

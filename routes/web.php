@@ -612,12 +612,12 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
     Route::prefix('exams')->name('student.exams.')->middleware(['role:student'])->group(function () {
         Route::get('/', [\App\Http\Controllers\Student\ExamController::class, 'index'])->name('index');
         Route::get('/{exam}', [\App\Http\Controllers\Student\ExamController::class, 'show'])->name('show');
-        Route::post('/{exam}/start', [\App\Http\Controllers\Student\ExamController::class, 'start'])->name('start');
+        Route::match(['get', 'post'], '/{exam}/start', [\App\Http\Controllers\Student\ExamController::class, 'start'])->name('start');
         Route::get('/{exam}/attempts/{attempt}/take', [\App\Http\Controllers\Student\ExamController::class, 'take'])
             ->middleware(\App\Http\Middleware\VideoProtectionMiddleware::class)
             ->name('take');
         Route::post('/{exam}/attempts/{attempt}/save-answer', [\App\Http\Controllers\Student\ExamController::class, 'saveAnswer'])->name('save-answer');
-        Route::post('/{exam}/attempts/{attempt}/submit', [\App\Http\Controllers\Student\ExamController::class, 'submit'])->name('submit');
+        Route::match(['get', 'post'], '/{exam}/attempts/{attempt}/submit', [\App\Http\Controllers\Student\ExamController::class, 'submit'])->name('submit');
         Route::get('/{exam}/attempts/{attempt}/result', [\App\Http\Controllers\Student\ExamController::class, 'result'])->name('result');
         Route::post('/{exam}/attempts/{attempt}/tab-switch', [\App\Http\Controllers\Student\ExamController::class, 'logTabSwitch'])->name('tab-switch');
     });

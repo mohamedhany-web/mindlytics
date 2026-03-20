@@ -186,9 +186,9 @@
                         <i class="fas fa-redo"></i>
                         <span>إعادة المحاولة</span>
                     </button>
-                    <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center justify-center gap-2 bg-white text-orange-600 px-8 py-4 rounded-full font-bold text-base border-2 border-orange-600 hover:bg-orange-50 transition-all duration-300">
+                    <a href="/" class="inline-flex items-center justify-center gap-2 bg-white text-orange-600 px-8 py-4 rounded-full font-bold text-base border-2 border-orange-600 hover:bg-orange-50 transition-all duration-300">
                         <i class="fas fa-home"></i>
-                        <span>{{ __('errors.back_dashboard') }}</span>
+                        <span>الصفحة الرئيسية</span>
                     </a>
                 </div>
             </div>

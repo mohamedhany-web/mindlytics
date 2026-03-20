@@ -107,6 +107,11 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->expectsJson()) {
                 return response()->json(['message' => $e->getMessage() ?: 'حدث خطأ'], $statusCode);
             }
+
+            // في وضع Debug: عرض Whoops للـ 500 بدل الصفحة المخصصة
+            if ($statusCode === 500 && config('app.debug')) {
+                return null;
+            }
             
             if ($statusCode === 503 && view()->exists('errors.503')) {
                 return response()->view('errors.503', [], 503);
@@ -162,12 +167,15 @@ return Application::configure(basePath: dirname(__DIR__))
                     'line' => config('app.debug') ? $e->getLine() : null,
                 ], 500);
             }
+
+            // في وضع Debug: عرض صفحة Whoops التفصيلية بدل الصفحة المخصصة
+            if (config('app.debug')) {
+                return null;
+            }
             
             if (view()->exists('errors.500')) {
                 return response()->view('errors.500', [
-                    'message' => config('app.debug') ? $e->getMessage() : 'حدث خطأ في الخادم',
-                    'file' => config('app.debug') ? $e->getFile() : null,
-                    'line' => config('app.debug') ? $e->getLine() : null,
+                    'message' => 'حدث خطأ في الخادم',
                 ], 500);
             }
         });

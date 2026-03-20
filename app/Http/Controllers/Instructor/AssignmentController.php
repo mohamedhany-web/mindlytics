@@ -31,7 +31,7 @@ class AssignmentController extends Controller
                     $q2->where('instructor_id', $instructor->id);
                 })->orWhere('teacher_id', $instructor->id);
             })
-            ->with(['course', 'lesson', 'teacher'])
+            ->with(['course.academicSubject', 'lesson', 'teacher'])
             ->withCount('submissions');
         
         // فلترة حسب الكورس

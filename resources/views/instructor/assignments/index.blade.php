@@ -95,45 +95,60 @@
     </div>
 
     @if($assignments->count() > 0)
-        <div class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             @foreach($assignments as $assignment)
-                <div class="rounded-xl bg-white border border-slate-200 shadow-sm hover:border-sky-300 hover:shadow-md transition-all p-5">
-                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                        <div class="flex-1 min-w-0">
-                            <div class="flex flex-wrap items-center gap-2 mb-2">
-                                <h3 class="text-lg font-bold text-slate-800">{{ $assignment->title }}</h3>
-                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold
-                                    @if($assignment->status == 'published') bg-emerald-100 text-emerald-700
-                                    @elseif($assignment->status == 'draft') bg-amber-100 text-amber-700
-                                    @else bg-slate-100 text-slate-600
-                                    @endif">
-                                    @if($assignment->status == 'published') {{ __('instructor.published') }}
-                                    @elseif($assignment->status == 'draft') {{ __('instructor.draft') }}
-                                    @else {{ __('instructor.archived') }}
-                                    @endif
-                                </span>
-                            </div>
-                            @if($assignment->description)
-                                <p class="text-sm text-slate-600 mb-3 line-clamp-2">{{ $assignment->description }}</p>
+                <div class="rounded-xl bg-white border border-slate-200 shadow-sm hover:border-sky-300 hover:shadow-md transition-all p-5 h-full flex flex-col">
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                        <h3 class="text-lg font-bold text-slate-800 line-clamp-2">{{ $assignment->title }}</h3>
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold shrink-0
+                            @if($assignment->status == 'published') bg-emerald-100 text-emerald-700
+                            @elseif($assignment->status == 'draft') bg-amber-100 text-amber-700
+                            @else bg-slate-100 text-slate-600
+                            @endif">
+                            @if($assignment->status == 'published') {{ __('instructor.published') }}
+                            @elseif($assignment->status == 'draft') {{ __('instructor.draft') }}
+                            @else {{ __('instructor.archived') }}
                             @endif
-                            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
-                                <span><i class="fas fa-book text-sky-500 ml-1"></i> {{ $assignment->course->title ?? '—' }}</span>
-                                @if($assignment->due_date)
-                                    <span><i class="fas fa-calendar text-slate-400 ml-1"></i> {{ $assignment->due_date->format('Y/m/d') }}</span>
-                                @endif
-                                <span>{{ $assignment->submissions_count }} {{ __('instructor.submission_single') }}</span>
-                                <span>{{ $assignment->max_score }} {{ __('instructor.score_marks') }}</span>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2 shrink-0">
-                            <a href="{{ route('instructor.assignments.submissions', $assignment) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-violet-500 hover:bg-violet-600 text-white rounded-xl font-semibold text-sm transition-colors">
-                                <i class="fas fa-list"></i> {{ __('instructor.submissions') }}
-                            </a>
-                            <a href="{{ route('instructor.assignments.show', $assignment) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-xl font-semibold text-sm transition-colors">
-                                <i class="fas fa-eye"></i> {{ __('common.view') }}
-                            </a>
-                        </div>
+                        </span>
                     </div>
+
+                    @if($assignment->description)
+                        <p class="text-sm text-slate-600 mb-3 line-clamp-3">{{ $assignment->description }}</p>
+                    @endif
+
+                    <div class="space-y-1.5 text-sm text-slate-500 mb-4">
+                        <div><i class="fas fa-book text-sky-500 ml-1"></i> <span class="font-semibold text-slate-700">الكورس:</span> {{ $assignment->course->title ?? '—' }}</div>
+                        @if(!empty($assignment->course?->code))
+                            <div><i class="fas fa-hashtag text-slate-400 ml-1"></i> <span class="font-semibold text-slate-700">كود الكورس:</span> {{ $assignment->course->code }}</div>
+                        @endif
+                        @if(!empty($assignment->course?->academicSubject?->name))
+                            <div><i class="fas fa-layer-group text-indigo-500 ml-1"></i> <span class="font-semibold text-slate-700">المادة:</span> {{ $assignment->course->academicSubject->name }}</div>
+                        @endif
+                        @if(!empty($assignment->lesson?->title))
+                            <div><i class="fas fa-list-alt text-emerald-500 ml-1"></i> <span class="font-semibold text-slate-700">الدرس:</span> {{ $assignment->lesson->title }}</div>
+                        @endif
+                        @if($assignment->due_date)
+                            <div><i class="fas fa-calendar text-slate-400 ml-1"></i> {{ $assignment->due_date->format('Y/m/d') }}</div>
+                        @endif
+                        <div><i class="fas fa-file-upload text-violet-500 ml-1"></i> {{ $assignment->submissions_count }} {{ __('instructor.submission_single') }}</div>
+                        <div><i class="fas fa-star text-amber-500 ml-1"></i> {{ $assignment->max_score }} {{ __('instructor.score_marks') }}</div>
+                    </div>
+
+                    <div class="mt-auto grid grid-cols-2 gap-2">
+                        <a href="{{ route('instructor.assignments.show', $assignment) }}" class="inline-flex items-center justify-center gap-2 px-3 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-xl font-semibold text-sm transition-colors">
+                            <i class="fas fa-eye"></i> {{ __('common.view') }}
+                        </a>
+                        <a href="{{ route('instructor.assignments.submissions', $assignment) }}" class="inline-flex items-center justify-center gap-2 px-3 py-2 bg-violet-500 hover:bg-violet-600 text-white rounded-xl font-semibold text-sm transition-colors">
+                            <i class="fas fa-list"></i> {{ __('instructor.submissions') }}
+                        </a>
+                    </div>
+                    <form method="POST" action="{{ route('instructor.assignments.destroy', $assignment) }}" class="mt-2">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" onclick="return confirm('هل أنت متأكد من حذف الواجب؟')" class="w-full inline-flex items-center justify-center gap-2 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl font-semibold text-sm transition-colors">
+                            <i class="fas fa-trash"></i> حذف الواجب
+                        </button>
+                    </form>
                 </div>
             @endforeach
         </div>

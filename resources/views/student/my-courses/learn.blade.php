@@ -671,7 +671,36 @@
              else if (d.type === 'assignment' && d.id) _learnComp.loadAssignment(d.id);
              else if (d.type === 'pattern' && d.id) _learnComp.loadPattern(d.id);
          });
+         window.addEventListener('learn-video-ended', () => {
+             if (_learnComp.currentLessonId && typeof window.showAutoAdvanceToNext === 'function') {
+                 window.showAutoAdvanceToNext('lesson', _learnComp.currentLessonId);
+             }
+         });
      ">
+    {{-- Auto-advance countdown overlay --}}
+    <div id="autoplay-next-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.78);align-items:flex-end;justify-content:center;padding-bottom:80px;" dir="rtl">
+        <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px 28px;min-width:320px;max-width:480px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.5);text-align:center;">
+            <div style="font-size:13px;color:#94a3b8;margin-bottom:6px;">الفيديو التالي</div>
+            <div id="autoplay-next-title" style="font-size:16px;font-weight:700;color:#f1f5f9;margin-bottom:14px;line-height:1.4;"></div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:16px;">
+                <svg style="width:36px;height:36px;transform:rotate(-90deg)">
+                    <circle id="autoplay-ring-bg" cx="18" cy="18" r="14" fill="none" stroke="#334155" stroke-width="3"/>
+                    <circle id="autoplay-ring" cx="18" cy="18" r="14" fill="none" stroke="#38bdf8" stroke-width="3" stroke-dasharray="88" stroke-dashoffset="0" style="transition:stroke-dashoffset 1s linear;"/>
+                </svg>
+                <span id="autoplay-countdown-num" style="font-size:26px;font-weight:800;color:#38bdf8;min-width:28px;text-align:center;">5</span>
+                <span style="font-size:13px;color:#94a3b8;">ثانية</span>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:center;">
+                <button id="autoplay-btn-now" onclick="window._autoplayNow && window._autoplayNow()" style="flex:1;padding:9px 16px;background:#0ea5e9;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">
+                    <i class="fas fa-forward" style="margin-left:5px;"></i> تشغيل الآن
+                </button>
+                <button id="autoplay-btn-cancel" onclick="window._autoplayCancel && window._autoplayCancel()" style="flex:1;padding:9px 16px;background:#334155;color:#cbd5e1;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">
+                    <i class="fas fa-times" style="margin-left:5px;"></i> إلغاء
+                </button>
+            </div>
+        </div>
+    </div>
+
     {{-- Breadcrumb (مخفي في وضع التركيز) --}}
     <nav x-show="!focusMode" class="bg-white border-b border-slate-200 px-4 py-2 lg:px-6" aria-label="Breadcrumb">
         <ol class="w-full flex flex-wrap items-center gap-2 text-sm text-slate-600">
@@ -1010,6 +1039,7 @@ function courseFocusMode() {
         lastReportedTime: null,
         SEEK_THRESHOLD: 2.5,
         async loadLesson(lessonId) {
+            if (window._autoplayCancel) window._autoplayCancel();
             this.selectedLesson = lessonId;
             this.selectedLecture = null;
             this.selectedPattern = null;
@@ -1194,9 +1224,11 @@ function courseFocusMode() {
             this.progressInterval = null;
         },
         async loadLecture(lectureId) {
+            if (window._autoplayCancel) window._autoplayCancel();
             this.selectedLecture = lectureId;
             this.selectedLesson = null;
             this.selectedPattern = null;
+            this.currentLessonId = null;
             this.showVideoPlayer = false;
             this.currentLessonVideoUrl = null;
             this.lectureMaterials = [];
@@ -1307,7 +1339,61 @@ function courseFocusMode() {
             this.lectureContent = html;
         },
         loadAssignment(assignmentId) {
-            this.lectureContent = '<div class="text-center text-gray-600 p-8"><i class="fas fa-tasks text-4xl mb-4"></i><p class="text-xl font-bold">عرض الواجب قريباً</p></div>';
+            this.selectedLesson = null;
+            this.selectedLecture = null;
+            this.selectedPattern = null;
+            this.lectureContent = '<div class="text-center p-8"><i class="fas fa-spinner fa-spin text-4xl text-sky-500 mb-4"></i><p class="text-gray-600">جاري تحميل الواجب...</p></div>';
+
+            fetch('/student/assignments/' + assignmentId, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                }
+            })
+            .then(r => {
+                if (!r.ok) throw new Error('فشل تحميل الواجب');
+                return r.json();
+            })
+            .then(data => {
+                let html = '<div class="assignment-viewer space-y-6 w-full">';
+                html += '<div class="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-6 border-2 border-amber-200 w-full">';
+                html += '<h2 class="text-3xl font-black text-gray-900 mb-3">' + this.escapeHtml(data.title || 'الواجب') + '</h2>';
+                if (data.description) html += '<p class="text-gray-700 leading-relaxed mb-3">' + this.escapeHtml(data.description) + '</p>';
+                html += '<div class="grid grid-cols-2 gap-4 text-sm">';
+                html += '<div class="flex items-center gap-2 text-gray-600"><i class="fas fa-star text-amber-600"></i><span class="font-semibold">الدرجة:</span> ' + (data.max_score ?? '-') + '</div>';
+                html += '<div class="flex items-center gap-2 text-gray-600"><i class="fas fa-calendar text-amber-600"></i><span class="font-semibold">آخر موعد:</span> ' + (data.due_date || 'غير محدد') + '</div>';
+                html += '</div></div>';
+
+                if (data.instructions) {
+                    html += '<div class="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 w-full">';
+                    html += '<h3 class="font-bold text-blue-900 mb-2">تعليمات الواجب:</h3>';
+                    html += '<p class="text-blue-800 whitespace-pre-wrap">' + this.escapeHtml(data.instructions) + '</p>';
+                    html += '</div>';
+                }
+
+                if (data.submission) {
+                    html += '<div class="bg-emerald-50 border-2 border-emerald-200 rounded-xl p-6 w-full">';
+                    html += '<h3 class="font-bold text-emerald-900 mb-2"><i class="fas fa-check-circle ml-1"></i> تم التسليم</h3>';
+                    html += '<p class="text-emerald-800 text-sm">الحالة: ' + this.escapeHtml(data.submission.status || '') + '</p>';
+                    if (data.submission.score !== null && data.submission.score !== undefined) {
+                        html += '<p class="text-emerald-800 text-sm mt-1">الدرجة: <span class="font-bold">' + data.submission.score + '</span> / ' + (data.max_score ?? '-') + '</p>';
+                    }
+                    if (data.submission.feedback) {
+                        html += '<div class="mt-3 p-3 bg-white border border-emerald-200 rounded-lg text-sm text-gray-700 whitespace-pre-wrap">' + this.escapeHtml(data.submission.feedback) + '</div>';
+                    }
+                    html += '</div>';
+                }
+
+                html += '<div class="text-center mt-6">';
+                html += '<a href="/student/assignments/' + assignmentId + '" class="inline-flex items-center gap-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-8 py-4 rounded-xl font-bold shadow-lg transition-all duration-300 transform hover:scale-105">';
+                html += '<i class="fas fa-upload"></i><span>فتح صفحة الواجب والتسليم</span></a>';
+                html += '</div></div>';
+                this.lectureContent = html;
+            })
+            .catch(() => {
+                this.lectureContent = '<div class="text-center text-red-600 p-8"><i class="fas fa-exclamation-triangle text-4xl mb-4"></i><p class="text-xl font-bold">فشل تحميل الواجب</p></div>';
+            });
         },
         loadPattern(patternId) {
             this.selectedLesson = null;
@@ -1757,6 +1843,7 @@ function videoPlayer() {
             video.addEventListener('play', report);
             video.addEventListener('pause', report);
             video.addEventListener('progress', () => { if (video.duration && isFinite(video.duration)) report(); });
+            video.addEventListener('ended', function() { window.dispatchEvent(new CustomEvent('learn-video-ended')); });
             if (video.readyState >= 1 && video.duration && isFinite(video.duration)) report();
         },
         setupYoutubeProgressTracking(surface, vid, iframeId) {
@@ -1787,6 +1874,9 @@ function videoPlayer() {
                                 }
                                 if (e.data === 0 || e.data === 2) {
                                     if (self.ytProgressInterval) { clearInterval(self.ytProgressInterval); self.ytProgressInterval = null; }
+                                    if (e.data === 0) {
+                                        window.dispatchEvent(new CustomEvent('learn-video-ended'));
+                                    }
                                 }
                             }
                         }
@@ -1893,22 +1983,66 @@ function videoPlayer() {
         var resultEmoji = document.getElementById('lecture-vq-result-emoji');
         var resultMessage = document.getElementById('lecture-vq-result-message');
         var continueBtn = document.getElementById('lecture-vq-continue-btn');
-        var correctMessages = [
-            'واو! عقلك يعمل بشكل ممتاز اليوم 🧠✨',
-            'ماشاء الله! إجابة ذكية جداً 🎯🔥',
-            'برافو! أنت منتبه ومتابع 👏💡',
-            'صح ١٠٠٪! استمر هيك 🌟👍',
-            'فهمت الفكرة صح، رائع! 🏆😊',
-            'إجابة صحيحة بامتياز! متفوق اليوم 🎓✨'
+        var isEnglishUi = '{{ app()->getLocale() }}' === 'en';
+        var correctMessagesAr = [
+            'عاش جدا! إجابتك صح وممتازة 🔥👏',
+            'برافو عليك يا بطل، شغلك عالي اوي 💪✨',
+            'صح 100%.. كمل بنفس التركيز 🧠✅',
+            'إجابة ممتازة، واضح إنك مركز جدا 🎯',
+            'فل الفل! أنت ماشي صح 👌',
+            'تسلم إيدك، إجابة مظبوطة جدا 🌟',
+            'جامد! كده أنت فاهم النقطة صح 🏆',
+            'ممتاز، إجابة في الجون ⚽✅',
+            'يا سلام! إجابة قوية جدا 🔥',
+            'برافو، أنت متابع الفيديو باحتراف 👏',
+            'إجابة تحفة.. كمل كده 🙌',
+            'صح يا نجم، أداء جميل جدا ⭐'
         ];
-        var wrongMessages = [
-            'لا بأس! جرّب التركيز والمشاهدة مرة أخرى 🔄💪',
-            'هيك نتعلم! رجّع شوي وشوف الجزء مرة تانية 📚😊',
-            'غلطة بسيطة، المهم إنك تحاول 💪❤️',
-            'راجع الدقيقة اللي فاتت وارجع جرب 🎬✨',
-            'ما في مشكلة، كلنا بنتعلم من الأخطاء 🌱🙌',
-            'شوي تركيز وراح تضبط! أنت قادر 💯🔥'
+        var wrongMessagesAr = [
+            'ولا يهمك، دي بسيطة.. جرب تاني 💙',
+            'قربت! ركز ثانية كمان وهتجيبها ✅',
+            'مش مشكلة خالص، الغلط جزء من التعلم 🌱',
+            'ارجع كام ثانية وراجع النقطة دي وهتزبط 👀',
+            'لأ بس تمام، المحاولة الجاية أحسن 💪',
+            'خد نفس وجرّب تاني، أنت قدها 🔥',
+            'إجابة مش مظبوطة، بس أنت ماشي صح 👌',
+            'قربت جدا.. محتاجة تركيز بسيط بس 🎯',
+            'تمام، خلينا نحاول مرة كمان ✨',
+            'مش صح المرة دي.. بس أكيد هتظبط معاك 💯',
+            'ولا تزعل، راجع الجزء اللي فات بسرعة 🎬',
+            'يلا بينا محاولة جديدة، وأنت قدها يا بطل 🚀'
         ];
+        var correctMessagesEn = [
+            'Awesome! That is exactly right 🔥👏',
+            'Great job, you are really focused 💪✨',
+            '100% correct. Keep it up 🧠✅',
+            'Excellent answer, you nailed it 🎯',
+            'Perfect! You are doing great 👌',
+            'Well done, that was spot on 🌟',
+            'Fantastic work, keep going 🏆',
+            'Brilliant! Right on target ⚽✅',
+            'Nice one! Super strong answer 🔥',
+            'Great focus, you are learning fast 👏',
+            'Amazing answer. Keep moving 🙌',
+            'Correct, champion. Beautiful performance ⭐'
+        ];
+        var wrongMessagesEn = [
+            'No worries, that one was close 💙',
+            'Almost there. Try one more time ✅',
+            'It is okay, mistakes help you learn 🌱',
+            'Replay a few seconds and try again 👀',
+            'Not this time, but you are improving 💪',
+            'Take a breath and go again 🔥',
+            'Not quite right yet, keep pushing 👌',
+            'Very close. Just a little more focus 🎯',
+            'Good attempt. Let us try again ✨',
+            'Incorrect this time, you can do it 💯',
+            'Quick review and retry 🎬',
+            'One more try, you have got this 🚀'
+        ];
+        var labels = isEnglishUi
+            ? { correct: 'Correct Answer ✓', wrong: 'Wrong Answer', pick: 'Choose an answer' }
+            : { correct: 'إجابتك صح ✓', wrong: 'إجابتك غلط', pick: 'اختر إجابة' };
         var continueHandler = null;
 
         function showQuestion(q) {
@@ -1937,12 +2071,14 @@ function videoPlayer() {
             if (questionView) questionView.classList.add('hidden');
             if (feedbackView) feedbackView.classList.remove('hidden');
             if (resultLabel) {
-                resultLabel.textContent = correct ? 'إجابة صحيحة ✓' : 'إجابة خاطئة';
+                resultLabel.textContent = correct ? labels.correct : labels.wrong;
                 resultLabel.className = 'text-xl font-bold mb-2 ' + (correct ? 'text-emerald-600' : 'text-amber-600');
             }
             if (resultEmoji) resultEmoji.textContent = correct ? '🎉' : '💪';
             if (resultMessage) {
-                var arr = correct ? correctMessages : wrongMessages;
+                var arr = correct
+                    ? (isEnglishUi ? correctMessagesEn : correctMessagesAr)
+                    : (isEnglishUi ? wrongMessagesEn : wrongMessagesAr);
                 resultMessage.textContent = arr[Math.floor(Math.random() * arr.length)];
             }
             if (continueHandler && continueBtn) continueBtn.removeEventListener('click', continueHandler);
@@ -1991,7 +2127,7 @@ function videoPlayer() {
             if (!currentQuestion) return;
             var selected = document.querySelector('input[name="lecture_vq_answer"]:checked');
             var answer = selected ? selected.value : '';
-            if (!answer) { alert('اختر إجابة'); return; }
+            if (!answer) { alert(labels.pick); return; }
             if (submitBtn) submitBtn.disabled = true;
             var answerUrl = '/my-courses/' + courseId + '/lectures/' + lectureId + '/video-questions/' + currentQuestion.id + '/answer';
             var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -2237,6 +2373,10 @@ function videoPlayer() {
                     return;
                 }
             }
+            // No questions left — auto-advance to next item
+            if (typeof window.showAutoAdvanceToNext === 'function') {
+                window.showAutoAdvanceToNext('lecture', lectureId);
+            }
         }
 
         if (platform === 'youtube') {
@@ -2334,6 +2474,86 @@ function videoPlayer() {
             }
         }
     };
+})();
+
+// ===== Auto-advance to next curriculum item =====
+(function() {
+    var _countdownTimer = null;
+    var _nextPending = null;
+
+    function getNextCurriculumItem(currentType, currentId) {
+        var items = Array.from(document.querySelectorAll('.curriculum-item[data-item-type][data-item-id]'));
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].dataset.itemType === currentType && String(items[i].dataset.itemId) === String(currentId)) {
+                // find next unlocked item
+                for (var j = i + 1; j < items.length; j++) {
+                    if (items[j].dataset.itemLocked !== '1') {
+                        return { type: items[j].dataset.itemType, id: items[j].dataset.itemId, el: items[j] };
+                    }
+                }
+                return null;
+            }
+        }
+        return null;
+    }
+
+    function getItemTitle(el) {
+        var titleEl = el && el.querySelector('.curriculum-item-title');
+        return titleEl ? titleEl.textContent.trim() : '';
+    }
+
+    function hideOverlay() {
+        var overlay = document.getElementById('autoplay-next-overlay');
+        if (overlay) overlay.style.display = 'none';
+        if (_countdownTimer) { clearInterval(_countdownTimer); _countdownTimer = null; }
+        _nextPending = null;
+    }
+
+    function loadNextItem(item) {
+        hideOverlay();
+        if (!item) return;
+        window.dispatchEvent(new CustomEvent('learn-open-next-item', { detail: { type: item.type, id: parseInt(item.id, 10) } }));
+        // scroll item into view in sidebar
+        if (item.el) {
+            item.el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+
+    function showAutoAdvance(currentType, currentId) {
+        var next = getNextCurriculumItem(currentType, currentId);
+        if (!next) return; // no next item — do nothing
+        _nextPending = next;
+
+        var overlay = document.getElementById('autoplay-next-overlay');
+        var titleEl = document.getElementById('autoplay-next-title');
+        var numEl = document.getElementById('autoplay-countdown-num');
+        var ring = document.getElementById('autoplay-ring');
+        if (!overlay) return;
+
+        var title = getItemTitle(next.el);
+        if (titleEl) titleEl.textContent = title || 'العنصر التالي';
+        overlay.style.display = 'flex';
+
+        var seconds = 5;
+        var circumference = 88; // 2*π*14 ≈ 88
+        if (numEl) numEl.textContent = seconds;
+        if (ring) ring.style.strokeDashoffset = '0';
+
+        if (_countdownTimer) clearInterval(_countdownTimer);
+        _countdownTimer = setInterval(function() {
+            seconds--;
+            if (numEl) numEl.textContent = seconds;
+            var offset = circumference - (circumference * seconds / 5);
+            if (ring) ring.style.strokeDashoffset = String(offset);
+            if (seconds <= 0) {
+                loadNextItem(_nextPending);
+            }
+        }, 1000);
+    }
+
+    window._autoplayNow = function() { loadNextItem(_nextPending); };
+    window._autoplayCancel = function() { hideOverlay(); };
+    window.showAutoAdvanceToNext = showAutoAdvance;
 })();
 </script>
 @endpush
