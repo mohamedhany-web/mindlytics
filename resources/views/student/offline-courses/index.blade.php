@@ -87,12 +87,31 @@
                     @if($course->description)
                         <p class="text-xs text-gray-600 line-clamp-2 mb-3">{{ Str::limit($course->description, 80) }}</p>
                     @endif
-                    <div class="flex items-center justify-between text-xs text-gray-500 mb-3">
+                    <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500 mb-2">
                         <span><i class="fas fa-users ml-1"></i>{{ $course->current_students ?? 0 }} / {{ $course->max_students ?? '—' }}</span>
                         @if($enrollment->group)
                             <span class="truncate max-w-[120px]" title="{{ $enrollment->group->name }}"><i class="fas fa-users-cog ml-1"></i>{{ $enrollment->group->name }}</span>
                         @endif
                     </div>
+                    @if($enrollment->group?->start_date)
+                    <div class="text-xs text-indigo-600 font-medium mb-2">
+                        <i class="fas fa-calendar-check ml-1"></i>يبدأ: {{ $enrollment->group->start_date->format('Y-m-d') }}
+                    </div>
+                    @endif
+                    @if((float)$enrollment->total_amount > 0)
+                    <div class="flex items-center gap-2 text-xs mb-2">
+                        @php
+                            $pColors = ['paid' => 'bg-green-100 text-green-700', 'partial' => 'bg-amber-100 text-amber-700', 'unpaid' => 'bg-red-100 text-red-700'];
+                            $pLabels = ['paid' => 'مدفوع', 'partial' => 'جزئي', 'unpaid' => 'غير مدفوع'];
+                        @endphp
+                        <span class="px-2 py-0.5 rounded-full font-semibold {{ $pColors[$enrollment->payment_status] ?? '' }}">
+                            {{ $pLabels[$enrollment->payment_status] ?? '' }}
+                        </span>
+                        @if($enrollment->payment_status !== 'paid')
+                            <span class="text-red-500">متبقي: {{ number_format($enrollment->remaining_amount, 0) }} ج.م</span>
+                        @endif
+                    </div>
+                    @endif
                     <div class="flex items-center justify-between gap-2 mb-3">
                         <span class="text-xs font-medium text-gray-600">التقدم</span>
                         <span class="text-sm font-bold text-sky-600">{{ number_format($enrollment->progress, 0) }}%</span>

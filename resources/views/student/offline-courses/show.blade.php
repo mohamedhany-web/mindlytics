@@ -63,7 +63,7 @@
                 <p class="text-sm text-gray-700 leading-relaxed">{{ $offlineCourse->description }}</p>
             </div>
             @endif
-            <!-- روابط المحتوى الأوفلاين (منفصلة عن الأونلاين) -->
+            <!-- روابط المحتوى الأوفلاين -->
             <div class="pt-4 border-t border-gray-100 flex flex-wrap gap-3">
                 <a href="{{ route('student.offline-courses.resources', $offlineCourse) }}" class="inline-flex items-center gap-2 px-3 py-2 bg-sky-50 text-sky-700 rounded-lg border border-sky-100 font-medium text-sm hover:bg-sky-100">
                     <i class="fas fa-file-alt"></i> الموارد
@@ -74,6 +74,101 @@
             </div>
         </div>
     </div>
+
+    <!-- حالة الدفع -->
+    @if((float)$enrollment->total_amount > 0)
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="p-5 sm:p-6">
+            <h2 class="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <i class="fas fa-money-bill-wave text-green-500"></i>
+                حالة الدفع
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="py-3 px-4 rounded-xl border {{ $enrollment->payment_status === 'paid' ? 'bg-green-50 border-green-200' : ($enrollment->payment_status === 'partial' ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200') }}">
+                    <p class="text-xs font-medium text-gray-500 mb-1">حالة الدفع</p>
+                    @php
+                        $pTexts = ['paid' => 'مكتمل', 'partial' => 'جزئي', 'unpaid' => 'لم يتم الدفع'];
+                        $pIcons = ['paid' => 'fa-check-circle text-green-600', 'partial' => 'fa-exclamation-circle text-amber-600', 'unpaid' => 'fa-times-circle text-red-600'];
+                    @endphp
+                    <p class="text-sm font-bold">
+                        <i class="fas {{ $pIcons[$enrollment->payment_status] ?? '' }} ml-1"></i>
+                        {{ $pTexts[$enrollment->payment_status] ?? '—' }}
+                    </p>
+                </div>
+                <div class="py-3 px-4 bg-gray-50 rounded-xl border border-gray-200">
+                    <p class="text-xs font-medium text-gray-500 mb-1">المبلغ المدفوع</p>
+                    <p class="text-sm font-bold text-gray-900">{{ number_format($enrollment->paid_amount, 2) }} ج.م</p>
+                </div>
+                <div class="py-3 px-4 bg-gray-50 rounded-xl border border-gray-200">
+                    <p class="text-xs font-medium text-gray-500 mb-1">المبلغ المتبقي</p>
+                    <p class="text-sm font-bold {{ (float)$enrollment->remaining_amount > 0 ? 'text-red-600' : 'text-green-600' }}">
+                        {{ number_format($enrollment->remaining_amount, 2) }} ج.م
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- جدول الجلسات القادمة -->
+    @if($enrollment->group && $upcomingSessions->count() > 0)
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="p-5 sm:p-6">
+            <h2 class="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <i class="fas fa-calendar-alt text-indigo-500"></i>
+                الجلسات القادمة
+                @if($enrollment->group->start_date)
+                    <span class="text-xs font-normal text-gray-500 mr-2">
+                        (يبدأ {{ $enrollment->group->start_date->format('Y-m-d') }})
+                    </span>
+                @endif
+            </h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-right font-medium text-gray-500">#</th>
+                            <th class="px-4 py-2 text-right font-medium text-gray-500">التاريخ</th>
+                            <th class="px-4 py-2 text-right font-medium text-gray-500">الوقت</th>
+                            <th class="px-4 py-2 text-right font-medium text-gray-500">المدة</th>
+                            <th class="px-4 py-2 text-right font-medium text-gray-500">المكان</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        @foreach($upcomingSessions as $i => $session)
+                        <tr class="{{ $session->session_date->isToday() ? 'bg-blue-50' : '' }}">
+                            <td class="px-4 py-2 text-gray-500">{{ $i + 1 }}</td>
+                            <td class="px-4 py-2 font-medium text-gray-900">
+                                {{ $session->session_date->format('Y-m-d') }}
+                                <span class="text-xs text-gray-500">({{ $session->session_date->translatedFormat('l') }})</span>
+                                @if($session->session_date->isToday())
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-800 mr-1">اليوم</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-2 text-gray-700">{{ \Carbon\Carbon::parse($session->start_time)->format('h:i A') }} - {{ \Carbon\Carbon::parse($session->end_time)->format('h:i A') }}</td>
+                            <td class="px-4 py-2 text-gray-700">{{ $session->duration_minutes }} دقيقة</td>
+                            <td class="px-4 py-2 text-gray-700">{{ $session->location ?? $enrollment->group->location ?? '—' }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @if($enrollment->group->sessions->count() > 10)
+                <p class="text-xs text-gray-500 mt-3 text-center">يوجد {{ $enrollment->group->sessions->count() }} جلسة إجمالاً. يتم عرض أقرب 10 جلسات.</p>
+            @endif
+        </div>
+    </div>
+    @elseif($enrollment->group && $enrollment->group->start_date)
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 sm:p-6">
+        <div class="flex items-center gap-3 text-indigo-700 bg-indigo-50 rounded-lg p-4">
+            <i class="fas fa-calendar-check text-2xl"></i>
+            <div>
+                <p class="font-bold">موعد بدء الكورس</p>
+                <p class="text-sm">{{ $enrollment->group->start_date->format('Y-m-d') }} — المجموعة: {{ $enrollment->group->name }}</p>
+            </div>
+        </div>
+    </div>
+    @endif
 
     <!-- الأنشطة المطلوبة -->
     @if($pendingActivities->count() > 0)

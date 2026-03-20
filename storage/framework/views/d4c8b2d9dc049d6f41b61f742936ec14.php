@@ -1,32 +1,33 @@
-@extends('layouts.admin')
 
-@section('title', 'تفاصيل الورشة')
 
-@section('content')
+<?php $__env->startSection('title', 'تفاصيل الورشة'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="p-6 lg:p-8 space-y-6">
     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
             <h1 class="text-2xl font-black text-slate-900 flex items-center gap-2">
                 <i class="fas fa-people-arrows text-blue-600"></i>
-                <span>{{ $workshop->title }}</span>
+                <span><?php echo e($workshop->title); ?></span>
             </h1>
             <p class="text-sm text-slate-500 mt-1">
                 إدارة الورشة وحجوزات الطلاب، مع إمكانية تحميل بيانات المسجلين كملف Excel (CSV).
             </p>
             <div class="mt-2 text-xs text-slate-500">
                 رابط صفحة الحجز:
-                <a href="{{ route('public.workshops.show', $workshop->slug) }}" target="_blank" class="text-blue-600 hover:underline">
-                    {{ route('public.workshops.show', $workshop->slug) }}
+                <a href="<?php echo e(route('public.workshops.show', $workshop->slug)); ?>" target="_blank" class="text-blue-600 hover:underline">
+                    <?php echo e(route('public.workshops.show', $workshop->slug)); ?>
+
                 </a>
             </div>
         </div>
         <div class="flex flex-wrap items-center gap-3">
-            <a href="{{ route('admin.workshops.edit', $workshop) }}"
+            <a href="<?php echo e(route('admin.workshops.edit', $workshop)); ?>"
                class="inline-flex items-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md">
                 <i class="fas fa-edit"></i>
                 <span>تعديل بيانات الورشة</span>
             </a>
-            <a href="{{ route('admin.workshops.export', $workshop) }}"
+            <a href="<?php echo e(route('admin.workshops.export', $workshop)); ?>"
                class="inline-flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md">
                 <i class="fas fa-file-excel"></i>
                 <span>تحميل بيانات المسجلين (CSV)</span>
@@ -37,7 +38,7 @@
                 <i class="fas fa-qrcode"></i>
                 <span>التأكد من الحضور (QR)</span>
             </button>
-            <a href="{{ route('admin.workshops.index') }}"
+            <a href="<?php echo e(route('admin.workshops.index')); ?>"
                class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                 <i class="fas fa-arrow-right"></i>
                 <span>العودة للقائمة</span>
@@ -45,18 +46,18 @@
         </div>
     </div>
 
-    @if(session('success'))
+    <?php if(session('success')): ?>
         <div class="mb-2 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-center gap-2">
             <i class="fas fa-check-circle"></i>
-            <span>{{ session('success') }}</span>
+            <span><?php echo e(session('success')); ?></span>
         </div>
-    @endif
-    @if(session('error'))
+    <?php endif; ?>
+    <?php if(session('error')): ?>
         <div class="mb-2 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-center gap-2">
             <i class="fas fa-exclamation-circle"></i>
-            <span>{{ session('error') }}</span>
+            <span><?php echo e(session('error')); ?></span>
         </div>
-    @endif
+    <?php endif; ?>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- معلومات الورشة -->
@@ -68,91 +69,92 @@
             <dl class="space-y-3 text-sm text-slate-700">
                 <div class="flex items-start justify-between gap-3">
                     <dt class="font-semibold text-slate-600">العنوان:</dt>
-                    <dd class="text-right flex-1">{{ $workshop->title }}</dd>
+                    <dd class="text-right flex-1"><?php echo e($workshop->title); ?></dd>
                 </div>
                 <div class="flex items-start justify-between gap-3">
                     <dt class="font-semibold text-slate-600">الحالة:</dt>
                     <dd class="text-right">
-                        @if($workshop->is_active)
+                        <?php if($workshop->is_active): ?>
                             <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                                 نشطة
                             </span>
-                        @else
+                        <?php else: ?>
                             <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
                                 غير نشطة
                             </span>
-                        @endif
+                        <?php endif; ?>
                     </dd>
                 </div>
                 <div class="flex items-start justify-between gap-3">
                     <dt class="font-semibold text-slate-600">التاريخ:</dt>
                     <dd class="text-right text-sm">
-                        @if($workshop->starts_at)
-                            <div>من {{ $workshop->starts_at->format('Y-m-d H:i') }}</div>
-                            @if($workshop->ends_at)
-                                <div class="text-xs text-slate-500">إلى {{ $workshop->ends_at->format('Y-m-d H:i') }}</div>
-                            @endif
-                        @else
+                        <?php if($workshop->starts_at): ?>
+                            <div>من <?php echo e($workshop->starts_at->format('Y-m-d H:i')); ?></div>
+                            <?php if($workshop->ends_at): ?>
+                                <div class="text-xs text-slate-500">إلى <?php echo e($workshop->ends_at->format('Y-m-d H:i')); ?></div>
+                            <?php endif; ?>
+                        <?php else: ?>
                             <span class="text-xs text-slate-400">غير محدد</span>
-                        @endif
+                        <?php endif; ?>
                     </dd>
                 </div>
                 <div class="flex items-start justify-between gap-3">
                     <dt class="font-semibold text-slate-600">المقاعد:</dt>
-                    @php
+                    <?php
                         $total = $workshop->max_seats ?: null;
                         $registeredCount = $workshop->registrations()->count();
                         $remaining = $workshop->remaining_seats;
-                    @endphp
+                    ?>
                     <dd class="text-right text-sm">
-                        @if($total)
-                            <div class="font-semibold">{{ $registeredCount }} / {{ $total }}</div>
-                            <div class="text-xs text-slate-500">متبقي: {{ $remaining }}</div>
-                        @else
+                        <?php if($total): ?>
+                            <div class="font-semibold"><?php echo e($registeredCount); ?> / <?php echo e($total); ?></div>
+                            <div class="text-xs text-slate-500">متبقي: <?php echo e($remaining); ?></div>
+                        <?php else: ?>
                             <span class="text-xs text-slate-400">غير محدود</span>
-                        @endif
+                        <?php endif; ?>
                     </dd>
                 </div>
                 <div class="flex items-start justify-between gap-3">
                     <dt class="font-semibold text-slate-600">نوع الحضور:</dt>
                     <dd class="text-right text-sm">
-                        @if($workshop->mode === 'online')
+                        <?php if($workshop->mode === 'online'): ?>
                             <span class="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
                                 <i class="fas fa-globe"></i>
                                 أونلاين (عن بُعد)
                             </span>
-                        @elseif($workshop->mode === 'offline')
+                        <?php elseif($workshop->mode === 'offline'): ?>
                             <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
                                 <i class="fas fa-building"></i>
                                 في المكان (أوفلاين)
                             </span>
-                        @else
+                        <?php else: ?>
                             <span class="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
                                 <i class="fas fa-exchange-alt"></i>
                                 يمكن للطالب اختيار أونلاين أو أوفلاين
                             </span>
-                        @endif
+                        <?php endif; ?>
                     </dd>
                 </div>
             </dl>
 
-            @if($workshop->description)
+            <?php if($workshop->description): ?>
                 <div class="pt-4 border-t border-slate-100">
                     <h3 class="text-sm font-semibold text-slate-800 mb-1">وصف الورشة</h3>
                     <p class="text-sm text-slate-700 whitespace-pre-line leading-relaxed">
-                        {{ $workshop->description }}
+                        <?php echo e($workshop->description); ?>
+
                     </p>
                 </div>
-            @endif
+            <?php endif; ?>
         </div>
 
         <!-- جدول المسجلين -->
         <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden" x-data>
             <!-- قسم إرسال إيميلات القبول -->
             <div class="px-6 pt-4 pb-3 border-b border-slate-100">
-                <form method="POST" action="{{ route('admin.workshops.send-acceptance', $workshop) }}" class="flex flex-col md:flex-row items-start md:items-center gap-3">
-                    @csrf
+                <form method="POST" action="<?php echo e(route('admin.workshops.send-acceptance', $workshop)); ?>" class="flex flex-col md:flex-row items-start md:items-center gap-3">
+                    <?php echo csrf_field(); ?>
                     <div class="flex items-center gap-3 text-sm text-slate-700">
                         <span class="font-semibold">إرسال نموذج القبول عبر الإيميل:</span>
                         <label class="inline-flex items-center gap-1">
@@ -175,14 +177,15 @@
                         </button>
                     </div>
                     <div class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1">
-                        المتبقي بدون إرسال: {{ $emailPendingCount ?? 0 }}
+                        المتبقي بدون إرسال: <?php echo e($emailPendingCount ?? 0); ?>
+
                     </div>
                 </form>
             </div>
 
             <div class="px-6 py-3 border-b border-slate-100 bg-slate-50/60">
-                <form method="POST" action="{{ route('admin.workshops.send-whatsapp', $workshop) }}" class="flex flex-col gap-3">
-                    @csrf
+                <form method="POST" action="<?php echo e(route('admin.workshops.send-whatsapp', $workshop)); ?>" class="flex flex-col gap-3">
+                    <?php echo csrf_field(); ?>
                     <div class="flex flex-wrap items-center gap-3 text-sm text-slate-700">
                         <span class="font-semibold">إرسال رسالة واتساب:</span>
                         <label class="inline-flex items-center gap-1">
@@ -218,15 +221,15 @@
                 </h2>
                 <div class="flex items-center gap-4 text-xs text-slate-500">
                     <div>
-                        إجمالي المسجلين: <span class="font-semibold">{{ $registrations->total() }}</span>
+                        إجمالي المسجلين: <span class="font-semibold"><?php echo e($registrations->total()); ?></span>
                     </div>
-                    <form method="GET" action="{{ route('admin.workshops.show', $workshop) }}" class="flex items-center gap-1">
+                    <form method="GET" action="<?php echo e(route('admin.workshops.show', $workshop)); ?>" class="flex items-center gap-1">
                         <span class="text-[11px] text-slate-500">فلترة حسب نوع الحضور:</span>
                         <select name="attendance_mode" onchange="this.form.submit()"
                                 class="rounded-lg border border-slate-200 px-2 py-1 text-[11px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500/70 focus:border-blue-500">
-                            <option value="all" {{ ($filterMode ?? 'all') === 'all' ? 'selected' : '' }}>الكل</option>
-                            <option value="online" {{ ($filterMode ?? 'all') === 'online' ? 'selected' : '' }}>أونلاين فقط</option>
-                            <option value="offline" {{ ($filterMode ?? 'all') === 'offline' ? 'selected' : '' }}>أوفلاين فقط</option>
+                            <option value="all" <?php echo e(($filterMode ?? 'all') === 'all' ? 'selected' : ''); ?>>الكل</option>
+                            <option value="online" <?php echo e(($filterMode ?? 'all') === 'online' ? 'selected' : ''); ?>>أونلاين فقط</option>
+                            <option value="offline" <?php echo e(($filterMode ?? 'all') === 'offline' ? 'selected' : ''); ?>>أوفلاين فقط</option>
                         </select>
                     </form>
                 </div>
@@ -244,75 +247,81 @@
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-slate-100">
-                        @forelse($registrations as $reg)
+                        <?php $__empty_1 = true; $__currentLoopData = $registrations; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $reg): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                             <tr class="hover:bg-slate-50/80 transition-colors">
-                                <td class="px-4 py-3 text-sm text-slate-500">{{ $reg->id }}</td>
+                                <td class="px-4 py-3 text-sm text-slate-500"><?php echo e($reg->id); ?></td>
                                 <td class="px-4 py-3 text-sm text-slate-800 font-semibold">
-                                    {{ $reg->name }}
+                                    <?php echo e($reg->name); ?>
+
                                 </td>
                                 <td class="px-4 py-3 text-xs text-slate-700 space-y-1">
-                                    @if($reg->email)
+                                    <?php if($reg->email): ?>
                                         <div class="flex items-center gap-1">
                                             <i class="fas fa-envelope text-slate-400"></i>
-                                            <a href="mailto:{{ $reg->email }}" class="text-blue-600 hover:underline">{{ $reg->email }}</a>
+                                            <a href="mailto:<?php echo e($reg->email); ?>" class="text-blue-600 hover:underline"><?php echo e($reg->email); ?></a>
                                         </div>
-                                    @endif
-                                    @if($reg->phone)
+                                    <?php endif; ?>
+                                    <?php if($reg->phone): ?>
                                         <div class="flex items-center gap-1">
                                             <i class="fas fa-phone text-slate-400"></i>
-                                            <span>{{ $reg->phone }}</span>
+                                            <span><?php echo e($reg->phone); ?></span>
                                         </div>
-                                    @endif
-                                    @if($reg->whatsapp_link_sent_at)
+                                    <?php endif; ?>
+                                    <?php if($reg->whatsapp_link_sent_at): ?>
                                         <div class="inline-flex items-center gap-1 rounded-full bg-green-50 border border-green-200 px-2 py-0.5 text-[10px] font-semibold text-green-700">
                                             <i class="fab fa-whatsapp"></i>
                                             <span>تم إرسال رابط الواتساب</span>
-                                            <span class="text-green-600/80">({{ $reg->whatsapp_link_sent_at->format('Y-m-d H:i') }})</span>
+                                            <span class="text-green-600/80">(<?php echo e($reg->whatsapp_link_sent_at->format('Y-m-d H:i')); ?>)</span>
                                         </div>
-                                    @endif
+                                    <?php endif; ?>
                                 </td>
                                 <td class="px-4 py-3 text-xs text-slate-700 space-y-0.5">
-                                    @php
+                                    <?php
                                         $mode = $reg->attendance_mode === 'offline'
                                             ? 'أوفلاين'
                                             : ($reg->attendance_mode === 'online' ? 'أونلاين' : '—');
-                                    @endphp
+                                    ?>
                                     <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
                                         <i class="fas fa-location-dot text-slate-500"></i>
-                                        {{ $mode }}
+                                        <?php echo e($mode); ?>
+
                                     </span>
-                                    @if($reg->checked_in_at)
+                                    <?php if($reg->checked_in_at): ?>
                                         <div class="text-[10px] text-emerald-600 flex items-center gap-1">
                                             <i class="fas fa-check-circle"></i>
-                                            تم الحضور {{ $reg->checked_in_at->format('Y-m-d H:i') }}
+                                            تم الحضور <?php echo e($reg->checked_in_at->format('Y-m-d H:i')); ?>
+
                                         </div>
-                                    @endif
+                                    <?php endif; ?>
                                 </td>
                                 <td class="px-4 py-3 text-xs text-slate-700 max-w-xs">
-                                    {{ Str::limit($reg->notes, 80) ?: '—' }}
+                                    <?php echo e(Str::limit($reg->notes, 80) ?: '—'); ?>
+
                                 </td>
                                 <td class="px-4 py-3 text-xs text-slate-500">
-                                    {{ optional($reg->created_at)->format('Y-m-d H:i') }}
+                                    <?php echo e(optional($reg->created_at)->format('Y-m-d H:i')); ?>
+
                                 </td>
                             </tr>
-                        @empty
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                             <tr>
                                 <td colspan="5" class="px-6 py-8 text-center text-slate-500 text-sm">
                                     لا توجد تسجيلات حتى الآن.
                                 </td>
                             </tr>
-                        @endforelse
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
             <div class="px-4 py-3 border-t border-slate-100">
-                {{ $registrations->links() }}
+                <?php echo e($registrations->links()); ?>
+
             </div>
         </div>
     </div>
 </div>
 
-{{-- مودال التأكد من الحضور عبر QR --}}
+
 <div x-data="{ open: false, result: '', resultType: 'info' }"
      x-on:open-checkin-modal.window="open = true; result=''; resultType='info';"
      x-cloak
@@ -345,7 +354,7 @@
     </div>
 </div>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
     <script src="https://unpkg.com/html5-qrcode@2.3.10/html5-qrcode.min.js"></script>
     <script>
         document.addEventListener('alpine:init', () => {
@@ -364,11 +373,11 @@
                         config,
                         async (decodedText) => {
                             try {
-                                const res = await fetch("{{ route('admin.workshops.checkin', $workshop) }}", {
+                                const res = await fetch("<?php echo e(route('admin.workshops.checkin', $workshop)); ?>", {
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/json',
-                                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                        'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>',
                                         'Accept': 'application/json',
                                     },
                                     body: JSON.stringify({ token: decodedText }),
@@ -393,6 +402,8 @@
             });
         });
     </script>
-@endpush
-@endsection
+<?php $__env->stopPush(); ?>
+<?php $__env->stopSection(); ?>
 
+
+<?php echo $__env->make('layouts.admin', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/admin/workshops/show.blade.php ENDPATH**/ ?>

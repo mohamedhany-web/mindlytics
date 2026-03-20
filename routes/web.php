@@ -770,6 +770,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             ->name('workshops.export');
         Route::post('workshops/{workshop}/send-acceptance', [\App\Http\Controllers\Admin\WorkshopController::class, 'sendAcceptanceEmails'])
             ->name('workshops.send-acceptance');
+        Route::post('workshops/{workshop}/send-whatsapp', [\App\Http\Controllers\Admin\WorkshopController::class, 'sendWhatsappMessages'])
+            ->name('workshops.send-whatsapp');
         Route::post('workshops/{workshop}/checkin', [\App\Http\Controllers\Admin\WorkshopController::class, 'checkin'])
             ->name('workshops.checkin');
         Route::get('/courses/{course}/lessons-list', function(\App\Models\AdvancedCourse $course) {
@@ -1043,6 +1045,12 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('/', [\App\Http\Controllers\Admin\OfflineGroupController::class, 'store'])->name('store');
             Route::put('/{group}', [\App\Http\Controllers\Admin\OfflineGroupController::class, 'update'])->name('update');
             Route::delete('/{group}', [\App\Http\Controllers\Admin\OfflineGroupController::class, 'destroy'])->name('destroy');
+
+            // جلسات المجموعة
+            Route::post('/{group}/sessions', [\App\Http\Controllers\Admin\OfflineGroupController::class, 'storeSession'])->name('sessions.store');
+            Route::put('/{group}/sessions/{session}', [\App\Http\Controllers\Admin\OfflineGroupController::class, 'updateSession'])->name('sessions.update');
+            Route::delete('/{group}/sessions/{session}', [\App\Http\Controllers\Admin\OfflineGroupController::class, 'destroySession'])->name('sessions.destroy');
+            Route::post('/{group}/sessions/bulk', [\App\Http\Controllers\Admin\OfflineGroupController::class, 'bulkCreateSessions'])->name('sessions.bulk');
         });
 
         // إدارة التسجيلات في الكورسات الأوفلاين
@@ -1050,6 +1058,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\OfflineEnrollmentController::class, 'index'])->name('index');
             Route::post('/', [\App\Http\Controllers\Admin\OfflineEnrollmentController::class, 'store'])->name('store');
             Route::put('/{enrollment}/status', [\App\Http\Controllers\Admin\OfflineEnrollmentController::class, 'updateStatus'])->name('update-status');
+            Route::post('/{enrollment}/payment', [\App\Http\Controllers\Admin\OfflineEnrollmentController::class, 'addPayment'])->name('add-payment');
             Route::delete('/{enrollment}', [\App\Http\Controllers\Admin\OfflineEnrollmentController::class, 'destroy'])->name('destroy');
         });
 
@@ -1366,6 +1375,10 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
 
         Route::resource('courses', \App\Http\Controllers\Instructor\CourseController::class)->only(['index', 'show']);
         Route::resource('offline-courses', \App\Http\Controllers\Instructor\OfflineCourseController::class)->only(['index', 'show'])->parameters(['offline_course' => 'offlineCourse']);
+
+        // تقويم المدرب (جلسات الأوفلاين)
+        Route::get('/calendar', [\App\Http\Controllers\Instructor\OfflineCourseController::class, 'calendar'])->name('calendar');
+        Route::get('/api/calendar/events', [\App\Http\Controllers\Instructor\OfflineCourseController::class, 'calendarEvents'])->name('calendar.events');
         // موارد ومحاضرات وأنشطة الكورسات الأوفلاين (واجهات منفصلة عن الأونلاين)
         Route::prefix('offline-courses/{offlineCourse}')->name('offline-courses.')->group(function () {
             Route::resource('resources', \App\Http\Controllers\Instructor\OfflineResourceController::class)->except(['show'])->parameters(['resource' => 'resource']);

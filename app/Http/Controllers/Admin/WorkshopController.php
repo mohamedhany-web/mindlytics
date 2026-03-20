@@ -9,6 +9,7 @@ use App\Models\WorkshopRegistration;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class WorkshopController extends Controller
@@ -64,7 +65,12 @@ class WorkshopController extends Controller
 
         $registrations = $registrationsQuery->paginate(25)->appends(['attendance_mode' => $filterMode]);
 
-        return view('admin.workshops.show', compact('workshop', 'registrations', 'filterMode'));
+        $emailPendingCount = (int) $workshop->registrations()
+            ->whereNotNull('email')
+            ->whereNull('acceptance_email_sent_at')
+            ->count();
+
+        return view('admin.workshops.show', compact('workshop', 'registrations', 'filterMode', 'emailPendingCount'));
     }
 
     /**
@@ -225,7 +231,8 @@ class WorkshopController extends Controller
             }
             $query->where('email', $data['email']);
         } else {
-            $query->whereNotNull('email');
+            // عند الإرسال الجماعي: لا نعيد إرسال الإيميل لمن تم إرسال نموذج القبول لهم سابقاً
+            $query->whereNotNull('email')->whereNull('acceptance_email_sent_at');
         }
 
         $registrations = $query->get();
@@ -233,14 +240,15 @@ class WorkshopController extends Controller
 
         foreach ($registrations as $reg) {
             if (empty($reg->checkin_token)) {
-                $reg->checkin_token = (string) \Illuminate\Support\Str::uuid();
-                $reg->save();
+                $reg->checkin_token = (string) Str::uuid();
             }
             if (!$reg->email) {
                 continue;
             }
             // نستخدم send() مباشرة للتأكد من الإرسال فوراً (بدون الاعتماد على الـ queue worker)
             Mail::to($reg->email)->send(new WorkshopAcceptanceMail($workshop, $reg));
+            $reg->acceptance_email_sent_at = now();
+            $reg->save();
             $count++;
         }
 
@@ -249,6 +257,88 @@ class WorkshopController extends Controller
         }
 
         return back()->with('success', 'تم إرسال نموذج قبول الورشة إلى ' . $count . ' مشترك/مشتركة.');
+    }
+
+    /**
+     * إنشاء روابط واتساب جماعية/فردية برسالة جاهزة.
+     */
+    public function sendWhatsappMessages(Request $request, Workshop $workshop)
+    {
+        $data = $request->validate([
+            'scope' => 'required|in:all,phone',
+            'phone' => 'nullable|string|max:30',
+            'message' => 'required|string|max:2000',
+        ]);
+
+        $numbers = [];
+        $targetRegistrations = collect();
+
+        if ($data['scope'] === 'phone') {
+            if (empty($data['phone'])) {
+                return back()->with('error', 'يرجى إدخال رقم الهاتف عند اختيار الإرسال لرقم محدد.');
+            }
+            $normalizedPhone = $this->normalizePhone($data['phone']);
+            $numbers[] = $normalizedPhone;
+
+            $targetRegistrations = $workshop->registrations()
+                ->whereNotNull('phone')
+                ->get()
+                ->filter(fn ($reg) => $this->normalizePhone($reg->phone) === $normalizedPhone)
+                ->values();
+        } else {
+            $targetRegistrations = $workshop->registrations()
+                ->whereNotNull('phone')
+                ->get();
+
+            $numbers = $targetRegistrations
+                ->pluck('phone')
+                ->map(fn ($phone) => $this->normalizePhone($phone))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        $numbers = array_values(array_filter($numbers));
+
+        if (count($numbers) === 0) {
+            return back()->with('error', 'لا توجد أرقام واتساب متاحة للإرسال.');
+        }
+
+        if ($targetRegistrations->isNotEmpty()) {
+            $now = now();
+            WorkshopRegistration::whereIn('id', $targetRegistrations->pluck('id')->all())
+                ->update(['whatsapp_link_sent_at' => $now]);
+        }
+
+        $links = collect($numbers)->map(function ($phone) use ($data) {
+            return [
+                'phone' => $phone,
+                'url' => 'https://web.whatsapp.com/send/?phone=' . $phone . '&text=' . urlencode($data['message']) . '&type=phone_number&app_absent=0',
+            ];
+        })->all();
+
+        return view('admin.workshops.whatsapp-launch', [
+            'workshop' => $workshop,
+            'links' => $links,
+            'message' => $data['message'],
+        ]);
+    }
+
+    private function normalizePhone(?string $phone): ?string
+    {
+        if (!$phone) {
+            return null;
+        }
+
+        $clean = preg_replace('/[^0-9]/', '', $phone);
+
+        // تحويل رقم مصري محلي 01xxxxxxxxx إلى 201xxxxxxxxx
+        if (str_starts_with($clean, '01') && strlen($clean) === 11) {
+            $clean = '2' . $clean;
+        }
+
+        return $clean ?: null;
     }
 }
 

@@ -45,13 +45,12 @@ class OfflineCourseController extends Controller
     {
         $user = Auth::user();
         
-        // التحقق من أن الطالب مسجل في الكورس
         $enrollment = $user->offlineEnrollments()
             ->where('offline_course_id', $offlineCourse->id)
             ->where('status', 'active')
             ->firstOrFail();
 
-        $enrollment->load('group');
+        $enrollment->load(['group.sessions' => fn($q) => $q->ordered(), 'group.locationModel']);
 
         $offlineCourse->load([
             'instructor',
@@ -70,7 +69,6 @@ class OfflineCourseController extends Controller
             }
         ]);
 
-        // الأنشطة المعلقة
         $pendingActivities = $offlineCourse->activities()
             ->where('status', 'published')
             ->whereDoesntHave('submissions', function($q) use ($user) {
@@ -78,18 +76,22 @@ class OfflineCourseController extends Controller
             })
             ->get();
 
-        // الأنشطة المكتملة
         $completedActivities = $offlineCourse->activities()
             ->whereHas('submissions', function($q) use ($user) {
                 $q->where('student_id', $user->id)->where('status', 'graded');
             })
             ->get();
 
+        $upcomingSessions = $enrollment->group
+            ? $enrollment->group->sessions()->upcoming()->ordered()->take(10)->get()
+            : collect();
+
         return view('student.offline-courses.show', compact(
             'offlineCourse',
             'enrollment',
             'pendingActivities',
-            'completedActivities'
+            'completedActivities',
+            'upcomingSessions'
         ));
     }
 

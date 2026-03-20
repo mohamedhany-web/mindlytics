@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\OfflineGroupSession;
 
 class OfflineCourseGroup extends Model
 {
@@ -17,12 +18,19 @@ class OfflineCourseGroup extends Model
         'current_students',
         'location',
         'class_time',
+        'start_date',
+        'end_date',
+        'session_duration_hours',
+        'location_id',
         'status',
         'is_active',
     ];
 
     protected $casts = [
         'class_time' => 'datetime',
+        'start_date' => 'date',
+        'end_date' => 'date',
+        'session_duration_hours' => 'decimal:1',
         'is_active' => 'boolean',
     ];
 
@@ -56,6 +64,32 @@ class OfflineCourseGroup extends Model
     public function activities(): HasMany
     {
         return $this->hasMany(OfflineActivity::class, 'group_id');
+    }
+
+    /**
+     * علاقة مع الجلسات
+     */
+    public function sessions(): HasMany
+    {
+        return $this->hasMany(OfflineGroupSession::class, 'group_id');
+    }
+
+    /**
+     * علاقة مع المكان
+     */
+    public function locationModel(): BelongsTo
+    {
+        return $this->belongsTo(OfflineLocation::class, 'location_id');
+    }
+
+    public function upcomingSessions()
+    {
+        return $this->sessions()->upcoming()->ordered();
+    }
+
+    public function availableSeats(): int
+    {
+        return max(0, $this->max_students - $this->current_students);
     }
 
     /**

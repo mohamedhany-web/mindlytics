@@ -20,6 +20,14 @@ class WorkshopRegistration extends Model
         'status',
         'checkin_token',
         'checked_in_at',
+        'acceptance_email_sent_at',
+        'whatsapp_link_sent_at',
+    ];
+
+    protected $casts = [
+        'checked_in_at' => 'datetime',
+        'acceptance_email_sent_at' => 'datetime',
+        'whatsapp_link_sent_at' => 'datetime',
     ];
 
     public function workshop(): BelongsTo

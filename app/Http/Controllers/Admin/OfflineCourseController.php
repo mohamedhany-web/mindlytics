@@ -102,10 +102,16 @@ class OfflineCourseController extends Controller
             'instructor',
             'locationModel',
             'groups.instructor',
+            'groups.sessions',
             'enrollments.student',
+            'enrollments.group',
             'activities',
             'instructorAgreements'
         ]);
+
+        $totalSessions = $offlineCourse->groups->sum(fn($g) => $g->sessions->count());
+        $totalRevenue = $offlineCourse->enrollments->sum('paid_amount');
+        $totalRemaining = $offlineCourse->enrollments->sum('remaining_amount');
 
         $stats = [
             'total_students' => $offlineCourse->enrollments()->count(),
@@ -113,6 +119,9 @@ class OfflineCourseController extends Controller
             'total_groups' => $offlineCourse->groups()->count(),
             'total_activities' => $offlineCourse->activities()->count(),
             'completed_activities' => $offlineCourse->activities()->where('status', 'completed')->count(),
+            'total_sessions' => $totalSessions,
+            'total_revenue' => $totalRevenue,
+            'total_remaining' => $totalRemaining,
         ];
 
         return view('admin.offline-courses.show', compact('offlineCourse', 'stats'));

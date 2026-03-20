@@ -17,11 +17,21 @@ class OfflineCourseEnrollment extends Model
         'attendance_count',
         'absence_count',
         'notes',
+        'total_amount',
+        'paid_amount',
+        'remaining_amount',
+        'payment_status',
+        'invoice_id',
+        'payment_method',
+        'payment_notes',
     ];
 
     protected $casts = [
         'enrolled_at' => 'datetime',
         'progress' => 'decimal:2',
+        'total_amount' => 'decimal:2',
+        'paid_amount' => 'decimal:2',
+        'remaining_amount' => 'decimal:2',
     ];
 
     /**
@@ -48,11 +58,43 @@ class OfflineCourseEnrollment extends Model
         return $this->belongsTo(OfflineCourseGroup::class, 'group_id');
     }
 
-    /**
-     * تحديد ما إذا كان التسجيل نشط
-     */
+    public function invoice(): BelongsTo
+    {
+        return $this->belongsTo(Invoice::class);
+    }
+
     public function isActive(): bool
     {
         return $this->status === 'active';
+    }
+
+    public function isFullyPaid(): bool
+    {
+        return $this->payment_status === 'paid';
+    }
+
+    public function isPartiallyPaid(): bool
+    {
+        return $this->payment_status === 'partial';
+    }
+
+    public function calculateRemaining(): float
+    {
+        return max(0, (float)$this->total_amount - (float)$this->paid_amount);
+    }
+
+    public function updatePaymentStatus(): void
+    {
+        $remaining = $this->calculateRemaining();
+        $this->remaining_amount = $remaining;
+
+        if ($remaining <= 0 && (float)$this->total_amount > 0) {
+            $this->payment_status = 'paid';
+        } elseif ((float)$this->paid_amount > 0) {
+            $this->payment_status = 'partial';
+        } else {
+            $this->payment_status = 'unpaid';
+        }
+        $this->save();
     }
 }
