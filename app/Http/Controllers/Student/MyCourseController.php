@@ -232,6 +232,9 @@ class MyCourseController extends Controller
         // بناء خريطة "العنصر التالي" لكل محاضرة (للفتح التلقائي عند بلوغ النسبة)
         $nextItemByLectureId = $this->buildNextItemMapByLectureId($sections);
 
+        // الدرس التالي ضمن ترتيب دروس الكورس (فيديوهات الدروس — غير معروضة في السايدبار)
+        $nextItemByLessonId = $this->buildNextLessonMap($course);
+
         // تجميع المحاضرات حسب الدرس (للتوافق مع الكود القديم)
         $lecturesByLesson = $course->lectures->groupBy('course_lesson_id');
 
@@ -256,8 +259,34 @@ class MyCourseController extends Controller
             'sectionDescriptions',
             'sidebarExams',
             'lesson',
-            'nextItemByLectureId'
+            'nextItemByLectureId',
+            'nextItemByLessonId'
         ));
+    }
+
+    /**
+     * خريطة الدرس التالي حسب ترتيب الدروس النشطة في الكورس.
+     *
+     * @return array<int, array{type: string, id: int}|null>
+     */
+    private function buildNextLessonMap($course): array
+    {
+        $lessons = $course->lessons()
+            ->where('is_active', true)
+            ->orderBy('order')
+            ->get();
+
+        $map = [];
+        $count = $lessons->count();
+        for ($i = 0; $i < $count; $i++) {
+            $current = $lessons[$i];
+            $next = ($i + 1 < $count) ? $lessons[$i + 1] : null;
+            $map[$current->id] = $next
+                ? ['type' => 'lesson', 'id' => $next->id]
+                : null;
+        }
+
+        return $map;
     }
 
     /**

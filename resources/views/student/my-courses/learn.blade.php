@@ -641,6 +641,7 @@
 @section('content')
 <script type="application/json" id="learn-lectures-data">{!! $lecturesDataJson !!}</script>
 <script type="application/json" id="learn-next-item-map">{!! json_encode($nextItemByLectureId ?? []) !!}</script>
+<script type="application/json" id="learn-next-lesson-map">{!! json_encode($nextItemByLessonId ?? []) !!}</script>
 <div class="learn-page bg-slate-50/80 min-h-screen pb-8"
      data-course-id="{{ $course->id }}"
      data-course-progress="{{ min(100, (float)($progress ?? 0)) }}"
@@ -684,6 +685,9 @@
              }
              if (_learnComp.currentLessonId && !_learnComp.selectedLecture && _learnComp.showVideoPlayer) {
                  _learnComp.lessonVideoEndedThisClip = true;
+             }
+             if (typeof _learnComp.$nextTick === 'function') {
+                 _learnComp.$nextTick(function() {});
              }
              if (typeof window.showAutoAdvanceToNext !== 'function') return;
              // درس (فيديو الدرس): currentLessonId يُحدَّد عند loadLesson
@@ -1412,8 +1416,18 @@ function courseFocusMode() {
                 const courseId = this.$el.closest('[data-course-id]')?.dataset?.courseId;
                 const canControl = (platform === 'youtube' || platform === 'vimeo' || platform === 'bunny');
                 if (canControl && courseId) {
-                    const container = document.getElementById('learn-video-embed');
-                    if (container) window.initLectureVideoWithQuestions(container, lecture, platform, url, courseId, lectureId);
+                    const initLecturePlayer = () => {
+                        const container = document.getElementById('learn-video-embed');
+                        if (!container) return false;
+                        window.initLectureVideoWithQuestions(container, lecture, platform, url, courseId, lectureId);
+                        return true;
+                    };
+                    await this.$nextTick();
+                    requestAnimationFrame(function() { initLecturePlayer(); });
+                    setTimeout(function() {
+                        var c = document.getElementById('learn-video-embed');
+                        if (c && !c.querySelector('#lecture-yt-player-box')) initLecturePlayer();
+                    }, 280);
                 } else {
                     const embedHtml = this.buildLectureVideoEmbedHtml(url, platform);
                     const inject = () => {
@@ -2073,6 +2087,29 @@ function videoPlayer() {
         var fallbackDurationSec = durationMinutesFromLecture > 0 ? durationMinutesFromLecture * 60 : savedDurationSec;
         var hasOpenedNext = false;
         var minPercentToUnlock = (lecture.min_watch_percent_to_unlock_next != null && lecture.min_watch_percent_to_unlock_next !== '') ? parseInt(lecture.min_watch_percent_to_unlock_next, 10) : 90;
+        var lectureLearnEndedDispatched = false;
+        function dispatchLectureLearnVideoEnded() {
+            if (lectureLearnEndedDispatched) return;
+            lectureLearnEndedDispatched = true;
+            window.dispatchEvent(new CustomEvent('learn-video-ended'));
+        }
+        function getNextItemForLectureFromPageMap(lid) {
+            try {
+                var nextMap = document.getElementById('learn-next-item-map');
+                var nextByLecture = nextMap && nextMap.textContent ? JSON.parse(nextMap.textContent) : {};
+                var cand = [String(lid), lid];
+                var n = parseInt(String(lid), 10);
+                if (!isNaN(n)) cand.push(String(n));
+                for (var ci = 0; ci < cand.length; ci++) {
+                    var k = String(cand[ci]);
+                    if (Object.prototype.hasOwnProperty.call(nextByLecture, k)) return nextByLecture[k];
+                }
+                return null;
+            } catch (err) {
+                console.warn('learn-open-next map', err);
+                return null;
+            }
+        }
 
         function updateLectureBar(pct) {
             var elText = document.getElementById('lecture-watch-pct-text');
@@ -2245,8 +2282,8 @@ function videoPlayer() {
                         if (!shownIds.has(questions[k].id)) allEndDone = false;
                     }
                 }
-                if (hasEnd && allEndDone && typeof window.showAutoAdvanceToNext === 'function') {
-                    window.showAutoAdvanceToNext('lecture', lectureId);
+                if (hasEnd && allEndDone) {
+                    dispatchLectureLearnVideoEnded();
                     return;
                 }
                 doContinue();
@@ -2362,14 +2399,10 @@ function videoPlayer() {
                                                 }
                                                 if (!hasOpenedNext && (data.is_completed || (data.progress_percent >= minPercentToUnlock))) {
                                                     hasOpenedNext = true;
-                                                    try {
-                                                        var nextMap = document.getElementById('learn-next-item-map');
-                                                        var nextByLecture = nextMap && nextMap.textContent ? JSON.parse(nextMap.textContent) : {};
-                                                        var nextItem = nextByLecture[lectureId];
-                                                        if (nextItem && nextItem.type && nextItem.id) {
-                                                            window.dispatchEvent(new CustomEvent('learn-open-next-item', { detail: { type: nextItem.type, id: nextItem.id } }));
-                                                        }
-                                                    } catch (err) { console.warn('learn-open-next', err); }
+                                                    var nextItem = getNextItemForLectureFromPageMap(lectureId);
+                                                    if (nextItem && nextItem.type && nextItem.id) {
+                                                        window.dispatchEvent(new CustomEvent('learn-open-next-item', { detail: { type: nextItem.type, id: nextItem.id } }));
+                                                    }
                                                 }
                                             }
                                         }).catch(function() {});
@@ -2406,6 +2439,9 @@ function videoPlayer() {
                                     window.dispatchEvent(new CustomEvent('learn-lecture-progress', { detail: { progress_percent: Math.min(100, Math.round((currentSec / durForBar) * 100)) } }));
                                     updateLectureBar(Math.min(100, Math.round((currentSec / durForBar) * 100)));
                                 }
+                                if (d && d > 1 && typeof currentSec === 'number' && currentSec >= d - 0.4) {
+                                    showEndOfVideoQuestions();
+                                }
                                 var now = Date.now();
                                 if (!lastProgressSentAt || now - lastProgressSentAt > 5000) {
                                     lastProgressSentAt = now;
@@ -2431,14 +2467,10 @@ function videoPlayer() {
                                                 }
                                                 if (!hasOpenedNext && (data.is_completed || (data.progress_percent >= minPercentToUnlock))) {
                                                     hasOpenedNext = true;
-                                                    try {
-                                                        var nextMap = document.getElementById('learn-next-item-map');
-                                                        var nextByLecture = nextMap && nextMap.textContent ? JSON.parse(nextMap.textContent) : {};
-                                                        var nextItem = nextByLecture[lectureId];
-                                                        if (nextItem && nextItem.type && nextItem.id) {
-                                                            window.dispatchEvent(new CustomEvent('learn-open-next-item', { detail: { type: nextItem.type, id: nextItem.id } }));
-                                                        }
-                                                    } catch (err) { console.warn('learn-open-next', err); }
+                                                    var nextItem = getNextItemForLectureFromPageMap(lectureId);
+                                                    if (nextItem && nextItem.type && nextItem.id) {
+                                                        window.dispatchEvent(new CustomEvent('learn-open-next-item', { detail: { type: nextItem.type, id: nextItem.id } }));
+                                                    }
                                                 }
                                             }
                                         }).catch(function() {});
@@ -2490,14 +2522,10 @@ function videoPlayer() {
                                     }
                                     if (!hasOpenedNext && (data.is_completed || (data.progress_percent >= minPercentToUnlock))) {
                                         hasOpenedNext = true;
-                                        try {
-                                            var nextMap = document.getElementById('learn-next-item-map');
-                                            var nextByLecture = nextMap && nextMap.textContent ? JSON.parse(nextMap.textContent) : {};
-                                            var nextItem = nextByLecture[lectureId];
-                                            if (nextItem && nextItem.type && nextItem.id) {
-                                                window.dispatchEvent(new CustomEvent('learn-open-next-item', { detail: { type: nextItem.type, id: nextItem.id } }));
-                                            }
-                                        } catch (err) { console.warn('learn-open-next', err); }
+                                        var nextItem = getNextItemForLectureFromPageMap(lectureId);
+                                        if (nextItem && nextItem.type && nextItem.id) {
+                                            window.dispatchEvent(new CustomEvent('learn-open-next-item', { detail: { type: nextItem.type, id: nextItem.id } }));
+                                        }
                                     }
                                 }
                             }).catch(function() {});
@@ -2536,10 +2564,8 @@ function videoPlayer() {
                     return;
                 }
             }
-            // No questions left — auto-advance to next item
-            if (typeof window.showAutoAdvanceToNext === 'function') {
-                window.showAutoAdvanceToNext('lecture', lectureId);
-            }
+            // لا أسئلة نهاية متبقية — إشعار موحّد: يحدّث زر التالي (أزرق) وينتقل تلقائياً للعنصر التالي
+            dispatchLectureLearnVideoEnded();
         }
 
         if (platform === 'youtube') {
@@ -2614,6 +2640,8 @@ function videoPlayer() {
                     setTimeout(seekToStartPosition, 500);
                 });
                 player.on('ended', showEndOfVideoQuestions);
+                try { player.on('finish', showEndOfVideoQuestions); } catch (eFin) {}
+                try { player.on('complete', showEndOfVideoQuestions); } catch (eCmp) {}
             }
             window.addEventListener('beforeunload', function() {
                 if (!player) return;
@@ -2654,6 +2682,30 @@ function videoPlayer() {
         }
     }
 
+    function parseLearnNextLessonMap() {
+        try {
+            var el = document.getElementById('learn-next-lesson-map');
+            if (!el || !el.textContent) return {};
+            return JSON.parse(el.textContent);
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function getNextFromNavMap(map, currentId) {
+        if (!map || currentId == null || currentId === '') return undefined;
+        var sid = String(currentId);
+        if (Object.prototype.hasOwnProperty.call(map, sid)) return map[sid];
+        var n = parseInt(sid, 10);
+        if (!isNaN(n) && Object.prototype.hasOwnProperty.call(map, String(n))) return map[String(n)];
+        for (var k in map) {
+            if (!Object.prototype.hasOwnProperty.call(map, k)) continue;
+            if (String(k) === sid) return map[k];
+            if (!isNaN(n) && parseInt(String(k), 10) === n) return map[k];
+        }
+        return undefined;
+    }
+
     function findCurriculumItemEl(type, id) {
         if (!type || id == null || id === '') return null;
         var root = document.getElementById('learn-curriculum-sidebar');
@@ -2662,13 +2714,26 @@ function videoPlayer() {
     }
 
     function getNextCurriculumItem(currentType, currentId) {
+        // درس تالي من خريطة ترتيب دروس الكورس (الدروس غير مُدرجة في سايدبار المنهج)
+        if (currentType === 'lesson' && currentId != null && currentId !== '') {
+            var lmap = parseLearnNextLessonMap();
+            var nextLesson = getNextFromNavMap(lmap, currentId);
+            if (nextLesson !== undefined) {
+                if (nextLesson === null) return null;
+                if (!nextLesson.type || nextLesson.id == null) return null;
+                return {
+                    type: nextLesson.type,
+                    id: String(nextLesson.id),
+                    el: findCurriculumItemEl(nextLesson.type, nextLesson.id)
+                };
+            }
+        }
         // ترتيب موثوق من السيرفر (نفس flattenCurriculumItems) — يمنع القفز لعناصر «عشوائية» بسبب تخطي المقفل في الـ DOM
         if (currentType === 'lecture' && currentId != null && currentId !== '') {
             var map = parseLearnNextItemMap();
-            var sid = String(currentId);
-            if (Object.prototype.hasOwnProperty.call(map, sid)) {
-                var nextFromMap = map[sid];
-                if (nextFromMap === null || nextFromMap === undefined) return null;
+            var nextFromMap = getNextFromNavMap(map, currentId);
+            if (nextFromMap !== undefined) {
+                if (nextFromMap === null) return null;
                 if (!nextFromMap.type || nextFromMap.id == null) return null;
                 return {
                     type: nextFromMap.type,
@@ -2733,7 +2798,10 @@ function videoPlayer() {
     function loadNextItem(item) {
         hideOverlay();
         if (!item) return;
-        window.dispatchEvent(new CustomEvent('learn-open-next-item', { detail: { type: item.type, id: parseInt(item.id, 10) } }));
+        var raw = item.id;
+        var nid = parseInt(String(raw), 10);
+        var openId = (String(nid) === String(raw) && !isNaN(nid)) ? nid : raw;
+        window.dispatchEvent(new CustomEvent('learn-open-next-item', { detail: { type: item.type, id: openId } }));
         // scroll item into view in sidebar
         if (item.el) {
             item.el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
