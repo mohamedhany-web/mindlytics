@@ -15,7 +15,7 @@
             </button>
             <div>
                 <h1 class="text-lg font-semibold">{{ $lesson->title }}</h1>
-                <p class="text-sm text-gray-400">{{ $course->title }}</p>
+                <p class="text-sm text-gray-400">{{ $course->localized('title') }}</p>
             </div>
         </div>
         

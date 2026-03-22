@@ -38,7 +38,7 @@
         <div class="flex justify-between items-center h-16 lg:h-20 gap-4 lg:gap-6 overflow-visible min-w-0">
             <!-- الشعار والعلامة -->
             <div class="flex items-center gap-3 gap-reverse flex-shrink-0">
-                <a href="{{ route('home') }}" class="flex items-center gap-3 gap-reverse group nav-brand">
+                <a href="<?php echo e(route('home')); ?>" class="flex items-center gap-3 gap-reverse group nav-brand">
                     <div class="relative flex-shrink-0">
                         <div class="w-11 h-11 lg:w-14 lg:h-14 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300 group-hover:shadow-xl group-hover:scale-[1.02] relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-500 to-emerald-600 border border-white/20">
                             <span class="text-xl lg:text-2xl font-black text-white drop-shadow relative z-10" style="font-family: 'Tajawal', 'Cairo', sans-serif;">M</span>
@@ -46,32 +46,32 @@
                     </div>
                     <div class="flex flex-col">
                         <span class="text-base lg:text-lg font-extrabold text-white group-hover:text-white/95 transition-colors leading-tight" style="font-family: 'Tajawal', 'Cairo', sans-serif;">Mindlytics</span>
-                        <span class="text-[11px] lg:text-xs text-white/80 font-medium leading-tight" style="font-family: 'Tajawal', 'Cairo', sans-serif;">{{ __('landing.nav.brand') }}</span>
+                        <span class="text-[11px] lg:text-xs text-white/80 font-medium leading-tight" style="font-family: 'Tajawal', 'Cairo', sans-serif;"><?php echo e(__('landing.nav.brand')); ?></span>
                     </div>
                 </a>
             </div>
 
             <!-- روابط سطح المكتب -->
             <div class="hidden lg:flex items-center gap-0.5 flex-1 justify-center max-w-5xl mx-auto min-w-0 shrink" style="font-family: 'Tajawal', 'Cairo', sans-serif;">
-                <a href="{{ route('public.learning-paths.index') }}" class="nav-link-modern inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-[15px] transition-all duration-200 hover:bg-white/10 flex-shrink-0">
-                    <i class="fas fa-route text-sm {{ app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2' }} opacity-90 flex-shrink-0"></i>
-                    <span>{{ __('landing.nav.learning_paths') }}</span>
+                <a href="<?php echo e(route('public.learning-paths.index')); ?>" class="nav-link-modern inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-[15px] transition-all duration-200 hover:bg-white/10 flex-shrink-0">
+                    <i class="fas fa-route text-sm <?php echo e(app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2'); ?> opacity-90 flex-shrink-0"></i>
+                    <span><?php echo e(__('landing.nav.learning_paths')); ?></span>
                 </a>
-                <a href="{{ route('public.courses') }}" class="nav-link-modern inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-[15px] transition-all duration-200 hover:bg-white/10 flex-shrink-0">
-                    <i class="fas fa-book text-sm {{ app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2' }} opacity-90 flex-shrink-0"></i>
-                    <span>{{ __('landing.nav.courses') }}</span>
+                <a href="<?php echo e(route('public.courses')); ?>" class="nav-link-modern inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-[15px] transition-all duration-200 hover:bg-white/10 flex-shrink-0">
+                    <i class="fas fa-book text-sm <?php echo e(app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2'); ?> opacity-90 flex-shrink-0"></i>
+                    <span><?php echo e(__('landing.nav.courses')); ?></span>
                 </a>
-                <a href="{{ route('public.community.index') }}" class="nav-link-modern inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-[15px] transition-all duration-200 hover:bg-white/10 flex-shrink-0">
-                    <i class="fas fa-users-cog text-sm {{ app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2' }} opacity-90 flex-shrink-0"></i>
-                    <span>{{ __('landing.nav.community') }}</span>
+                <a href="<?php echo e(route('public.community.index')); ?>" class="nav-link-modern inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-[15px] transition-all duration-200 hover:bg-white/10 flex-shrink-0">
+                    <i class="fas fa-users-cog text-sm <?php echo e(app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2'); ?> opacity-90 flex-shrink-0"></i>
+                    <span><?php echo e(__('landing.nav.community')); ?></span>
                 </a>
-                <a href="{{ route('public.portfolio.index') }}" class="nav-link-modern inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-[15px] transition-all duration-200 hover:bg-white/10 flex-shrink-0">
-                    <i class="fas fa-briefcase text-sm {{ app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2' }} opacity-90 flex-shrink-0"></i>
-                    <span>{{ __('landing.nav.portfolio') }}</span>
+                <a href="<?php echo e(route('public.portfolio.index')); ?>" class="nav-link-modern inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-[15px] transition-all duration-200 hover:bg-white/10 flex-shrink-0">
+                    <i class="fas fa-briefcase text-sm <?php echo e(app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2'); ?> opacity-90 flex-shrink-0"></i>
+                    <span><?php echo e(__('landing.nav.portfolio')); ?></span>
                 </a>
-                <a href="{{ route('public.instructors.index') }}" class="nav-link-modern inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-[15px] transition-all duration-200 hover:bg-white/10 flex-shrink-0">
-                    <i class="fas fa-user-tie text-sm {{ app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2' }} opacity-90 flex-shrink-0"></i>
-                    <span>{{ __('landing.nav.instructors') }}</span>
+                <a href="<?php echo e(route('public.instructors.index')); ?>" class="nav-link-modern inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-[15px] transition-all duration-200 hover:bg-white/10 flex-shrink-0">
+                    <i class="fas fa-user-tie text-sm <?php echo e(app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2'); ?> opacity-90 flex-shrink-0"></i>
+                    <span><?php echo e(__('landing.nav.instructors')); ?></span>
                 </a>
             </div>
 
@@ -85,7 +85,7 @@
                             aria-haspopup="true"
                             :aria-expanded="langDropdown">
                         <i class="fas fa-globe text-white/90"></i>
-                        <span>{{ app()->getLocale() === 'ar' ? __('landing.language_switcher.ar') : __('landing.language_switcher.en') }}</span>
+                        <span><?php echo e(app()->getLocale() === 'ar' ? __('landing.language_switcher.ar') : __('landing.language_switcher.en')); ?></span>
                         <i class="fas fa-chevron-down text-xs transition-transform duration-200" :class="{ 'rotate-180': langDropdown }"></i>
                     </button>
                     <div x-show="langDropdown"
@@ -95,34 +95,37 @@
                          x-transition:leave="transition ease-in duration-100"
                          x-transition:leave-start="opacity-100 scale-100"
                          x-transition:leave-end="opacity-0 scale-95"
-                         class="absolute top-full mt-1 {{ app()->getLocale() === 'ar' ? 'right-0' : 'left-0' }} z-[100] min-w-[7rem] py-1 rounded-xl bg-white/95 backdrop-blur-md border border-white/30 shadow-xl"
+                         class="absolute top-full mt-1 <?php echo e(app()->getLocale() === 'ar' ? 'right-0' : 'left-0'); ?> z-[100] min-w-[7rem] py-1 rounded-xl bg-white/95 backdrop-blur-md border border-white/30 shadow-xl"
                          style="display: none;">
-                        <a href="{{ request()->fullUrlWithQuery(['lang' => 'ar']) }}" class="block px-4 py-2.5 text-sm font-medium {{ app()->getLocale() === 'ar' ? 'bg-blue-600 text-white' : 'text-slate-700 hover:bg-slate-100' }} rounded-lg mx-1">{{ __('landing.language_switcher.ar') }}</a>
-                        <a href="{{ request()->fullUrlWithQuery(['lang' => 'en']) }}" class="block px-4 py-2.5 text-sm font-medium {{ app()->getLocale() === 'en' ? 'bg-blue-600 text-white' : 'text-slate-700 hover:bg-slate-100' }} rounded-lg mx-1">{{ __('landing.language_switcher.en') }}</a>
+                        <a href="<?php echo e(request()->fullUrlWithQuery(['lang' => 'ar'])); ?>" class="block px-4 py-2.5 text-sm font-medium <?php echo e(app()->getLocale() === 'ar' ? 'bg-blue-600 text-white' : 'text-slate-700 hover:bg-slate-100'); ?> rounded-lg mx-1"><?php echo e(__('landing.language_switcher.ar')); ?></a>
+                        <a href="<?php echo e(request()->fullUrlWithQuery(['lang' => 'en'])); ?>" class="block px-4 py-2.5 text-sm font-medium <?php echo e(app()->getLocale() === 'en' ? 'bg-blue-600 text-white' : 'text-slate-700 hover:bg-slate-100'); ?> rounded-lg mx-1"><?php echo e(__('landing.language_switcher.en')); ?></a>
                     </div>
                 </div>
-                @auth
-                    <a href="{{ url('/dashboard') }}" class="nav-cta-btn bg-white text-blue-800 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-50 hover:shadow-lg transition-all duration-200 shadow-md border border-white/30">
-                        <i class="fas fa-tachometer-alt text-xs {{ app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2' }}"></i>
-                        {{ __('landing.nav.dashboard') }}
+                <?php if(auth()->guard()->check()): ?>
+                    <a href="<?php echo e(url('/dashboard')); ?>" class="nav-cta-btn bg-white text-blue-800 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-50 hover:shadow-lg transition-all duration-200 shadow-md border border-white/30">
+                        <i class="fas fa-tachometer-alt text-xs <?php echo e(app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2'); ?>"></i>
+                        <?php echo e(__('landing.nav.dashboard')); ?>
+
                     </a>
-                @endauth
-                @guest
-                    <a href="{{ route('login') }}" class="px-4 py-2.5 rounded-xl text-white/95 hover:text-white font-bold text-sm border border-white/30 hover:bg-white/10 transition-all duration-200">
-                        {{ __('landing.nav.login') }}
+                <?php endif; ?>
+                <?php if(auth()->guard()->guest()): ?>
+                    <a href="<?php echo e(route('login')); ?>" class="px-4 py-2.5 rounded-xl text-white/95 hover:text-white font-bold text-sm border border-white/30 hover:bg-white/10 transition-all duration-200">
+                        <?php echo e(__('landing.nav.login')); ?>
+
                     </a>
-                    <a href="{{ route('register') }}" class="nav-cta-btn bg-white text-blue-800 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-50 hover:shadow-lg transition-all duration-200 shadow-md border border-white/30">
-                        <i class="fas fa-user-plus text-xs {{ app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2' }}"></i>
-                        {{ __('landing.nav.register') }}
+                    <a href="<?php echo e(route('register')); ?>" class="nav-cta-btn bg-white text-blue-800 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-50 hover:shadow-lg transition-all duration-200 shadow-md border border-white/30">
+                        <i class="fas fa-user-plus text-xs <?php echo e(app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2'); ?>"></i>
+                        <?php echo e(__('landing.nav.register')); ?>
+
                     </a>
-                @endguest
+                <?php endif; ?>
             </div>
 
             <!-- زر القائمة للموبايل -->
             <button type="button"
                     id="mobile-menu-toggle"
                     class="lg:hidden text-white p-3 rounded-xl flex-shrink-0 z-50 border border-white/25 hover:bg-white/10 transition-all duration-200"
-                    aria-label="{{ __('landing.nav.mobile_menu') }}"
+                    aria-label="<?php echo e(__('landing.nav.mobile_menu')); ?>"
                     aria-expanded="false">
                 <span id="menu-bars-icon" class="relative z-10"><i class="fas fa-bars text-lg"></i></span>
                 <span id="menu-times-icon" style="display: none;" class="relative z-10"><i class="fas fa-times text-lg"></i></span>
@@ -154,10 +157,10 @@
                 </div>
                 <div class="min-w-0">
                     <h2 class="text-lg font-extrabold text-white truncate">Mindlytics</h2>
-                    <p class="text-sm text-white/80 font-medium truncate">{{ __('landing.nav.brand') }}</p>
+                    <p class="text-sm text-white/80 font-medium truncate"><?php echo e(__('landing.nav.brand')); ?></p>
                 </div>
             </div>
-            <button type="button" id="mobile-menu-close" class="mobile-sidebar-close flex-shrink-0 w-12 h-12 min-h-[48px] min-w-[48px] flex items-center justify-center text-white/90 hover:text-white hover:bg-white/15 active:bg-white/20 rounded-xl transition-colors touch-manipulation" aria-label="{{ __('landing.nav.close_menu') }}">
+            <button type="button" id="mobile-menu-close" class="mobile-sidebar-close flex-shrink-0 w-12 h-12 min-h-[48px] min-w-[48px] flex items-center justify-center text-white/90 hover:text-white hover:bg-white/15 active:bg-white/20 rounded-xl transition-colors touch-manipulation" aria-label="<?php echo e(__('landing.nav.close_menu')); ?>">
                 <i class="fas fa-times text-xl"></i>
             </button>
         </div>
@@ -165,73 +168,73 @@
         <div class="relative px-4 py-5 pb-8 space-y-2 mobile-sidebar-content" style="padding-bottom: calc(1.5rem + env(safe-area-inset-bottom)); font-family: 'Tajawal', 'Cairo', sans-serif;">
             <!-- روابط القائمة - مساحة لمس مناسبة للهاتف -->
             <div class="space-y-2">
-                <a href="{{ route('public.learning-paths.index') }}" class="mobile-sidebar-link flex items-center gap-4 text-white hover:bg-white/12 active:bg-white/18 rounded-2xl px-4 min-h-[52px] touch-manipulation transition-colors">
+                <a href="<?php echo e(route('public.learning-paths.index')); ?>" class="mobile-sidebar-link flex items-center gap-4 text-white hover:bg-white/12 active:bg-white/18 rounded-2xl px-4 min-h-[52px] touch-manipulation transition-colors">
                     <span class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0"><i class="fas fa-route text-white text-lg"></i></span>
-                    <span class="flex-1 font-bold text-[17px]">{{ __('landing.nav.learning_paths') }}</span>
-                    <i class="fas fa-chevron-{{ app()->getLocale() === 'ar' ? 'left' : 'right' }} text-white/40 text-sm flex-shrink-0"></i>
+                    <span class="flex-1 font-bold text-[17px]"><?php echo e(__('landing.nav.learning_paths')); ?></span>
+                    <i class="fas fa-chevron-<?php echo e(app()->getLocale() === 'ar' ? 'left' : 'right'); ?> text-white/40 text-sm flex-shrink-0"></i>
                 </a>
-                <a href="{{ route('public.courses') }}" class="mobile-sidebar-link flex items-center gap-4 text-white hover:bg-white/12 active:bg-white/18 rounded-2xl px-4 min-h-[52px] touch-manipulation transition-colors">
+                <a href="<?php echo e(route('public.courses')); ?>" class="mobile-sidebar-link flex items-center gap-4 text-white hover:bg-white/12 active:bg-white/18 rounded-2xl px-4 min-h-[52px] touch-manipulation transition-colors">
                     <span class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0"><i class="fas fa-book text-white text-lg"></i></span>
-                    <span class="flex-1 font-bold text-[17px]">{{ __('landing.nav.courses') }}</span>
-                    <i class="fas fa-chevron-{{ app()->getLocale() === 'ar' ? 'left' : 'right' }} text-white/40 text-sm flex-shrink-0"></i>
+                    <span class="flex-1 font-bold text-[17px]"><?php echo e(__('landing.nav.courses')); ?></span>
+                    <i class="fas fa-chevron-<?php echo e(app()->getLocale() === 'ar' ? 'left' : 'right'); ?> text-white/40 text-sm flex-shrink-0"></i>
                 </a>
-                <a href="{{ route('public.community.index') }}" class="mobile-sidebar-link flex items-center gap-4 text-white hover:bg-white/12 active:bg-white/18 rounded-2xl px-4 min-h-[52px] touch-manipulation transition-colors">
+                <a href="<?php echo e(route('public.community.index')); ?>" class="mobile-sidebar-link flex items-center gap-4 text-white hover:bg-white/12 active:bg-white/18 rounded-2xl px-4 min-h-[52px] touch-manipulation transition-colors">
                     <span class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0"><i class="fas fa-users-cog text-white text-lg"></i></span>
-                    <span class="flex-1 font-bold text-[17px]">{{ __('landing.nav.community') }}</span>
-                    <i class="fas fa-chevron-{{ app()->getLocale() === 'ar' ? 'left' : 'right' }} text-white/40 text-sm flex-shrink-0"></i>
+                    <span class="flex-1 font-bold text-[17px]"><?php echo e(__('landing.nav.community')); ?></span>
+                    <i class="fas fa-chevron-<?php echo e(app()->getLocale() === 'ar' ? 'left' : 'right'); ?> text-white/40 text-sm flex-shrink-0"></i>
                 </a>
-                <a href="{{ route('public.portfolio.index') }}" class="mobile-sidebar-link flex items-center gap-4 text-white hover:bg-white/12 active:bg-white/18 rounded-2xl px-4 min-h-[52px] touch-manipulation transition-colors">
+                <a href="<?php echo e(route('public.portfolio.index')); ?>" class="mobile-sidebar-link flex items-center gap-4 text-white hover:bg-white/12 active:bg-white/18 rounded-2xl px-4 min-h-[52px] touch-manipulation transition-colors">
                     <span class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0"><i class="fas fa-briefcase text-white text-lg"></i></span>
-                    <span class="flex-1 font-bold text-[17px]">{{ __('landing.nav.portfolio') }}</span>
-                    <i class="fas fa-chevron-{{ app()->getLocale() === 'ar' ? 'left' : 'right' }} text-white/40 text-sm flex-shrink-0"></i>
+                    <span class="flex-1 font-bold text-[17px]"><?php echo e(__('landing.nav.portfolio')); ?></span>
+                    <i class="fas fa-chevron-<?php echo e(app()->getLocale() === 'ar' ? 'left' : 'right'); ?> text-white/40 text-sm flex-shrink-0"></i>
                 </a>
-                <a href="{{ route('public.instructors.index') }}" class="mobile-sidebar-link flex items-center gap-4 text-white hover:bg-white/12 active:bg-white/18 rounded-2xl px-4 min-h-[52px] touch-manipulation transition-colors">
+                <a href="<?php echo e(route('public.instructors.index')); ?>" class="mobile-sidebar-link flex items-center gap-4 text-white hover:bg-white/12 active:bg-white/18 rounded-2xl px-4 min-h-[52px] touch-manipulation transition-colors">
                     <span class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0"><i class="fas fa-user-tie text-white text-lg"></i></span>
-                    <span class="flex-1 font-bold text-[17px]">{{ __('landing.nav.instructors') }}</span>
-                    <i class="fas fa-chevron-{{ app()->getLocale() === 'ar' ? 'left' : 'right' }} text-white/40 text-sm flex-shrink-0"></i>
+                    <span class="flex-1 font-bold text-[17px]"><?php echo e(__('landing.nav.instructors')); ?></span>
+                    <i class="fas fa-chevron-<?php echo e(app()->getLocale() === 'ar' ? 'left' : 'right'); ?> text-white/40 text-sm flex-shrink-0"></i>
                 </a>
             </div>
             
             <!-- مبدّل اللغة (موبايل) -->
             <div class="flex items-center gap-2 py-3 px-4 lg:hidden">
-                <a href="{{ request()->fullUrlWithQuery(['lang' => 'ar']) }}" class="px-3 py-2 rounded-xl text-sm font-bold {{ app()->getLocale() === 'ar' ? 'bg-white/20 text-white' : 'text-white/80 hover:bg-white/10' }}">{{ __('landing.language_switcher.ar') }}</a>
-                <a href="{{ request()->fullUrlWithQuery(['lang' => 'en']) }}" class="px-3 py-2 rounded-xl text-sm font-bold {{ app()->getLocale() === 'en' ? 'bg-white/20 text-white' : 'text-white/80 hover:bg-white/10' }}">{{ __('landing.language_switcher.en') }}</a>
+                <a href="<?php echo e(request()->fullUrlWithQuery(['lang' => 'ar'])); ?>" class="px-3 py-2 rounded-xl text-sm font-bold <?php echo e(app()->getLocale() === 'ar' ? 'bg-white/20 text-white' : 'text-white/80 hover:bg-white/10'); ?>"><?php echo e(__('landing.language_switcher.ar')); ?></a>
+                <a href="<?php echo e(request()->fullUrlWithQuery(['lang' => 'en'])); ?>" class="px-3 py-2 rounded-xl text-sm font-bold <?php echo e(app()->getLocale() === 'en' ? 'bg-white/20 text-white' : 'text-white/80 hover:bg-white/10'); ?>"><?php echo e(__('landing.language_switcher.en')); ?></a>
             </div>
             
             <div class="my-4 h-px bg-white/15"></div>
             
             <!-- الدخول والتسجيل -->
             <div class="space-y-3">
-                @auth
-                    <a href="{{ url('/dashboard') }}" class="flex items-center justify-center gap-2 bg-white text-blue-900 px-5 py-4 rounded-2xl font-bold text-[17px] shadow-lg hover:bg-blue-50 active:bg-blue-100 min-h-[52px] touch-manipulation transition-colors">
+                <?php if(auth()->guard()->check()): ?>
+                    <a href="<?php echo e(url('/dashboard')); ?>" class="flex items-center justify-center gap-2 bg-white text-blue-900 px-5 py-4 rounded-2xl font-bold text-[17px] shadow-lg hover:bg-blue-50 active:bg-blue-100 min-h-[52px] touch-manipulation transition-colors">
                         <i class="fas fa-tachometer-alt"></i>
-                        <span>{{ __('landing.nav.dashboard') }}</span>
+                        <span><?php echo e(__('landing.nav.dashboard')); ?></span>
                     </a>
-                @endauth
-                @guest
-                    <a href="{{ route('login') }}" class="mobile-sidebar-link flex items-center gap-4 text-white hover:bg-white/12 active:bg-white/18 rounded-2xl px-4 min-h-[52px] touch-manipulation transition-colors">
+                <?php endif; ?>
+                <?php if(auth()->guard()->guest()): ?>
+                    <a href="<?php echo e(route('login')); ?>" class="mobile-sidebar-link flex items-center gap-4 text-white hover:bg-white/12 active:bg-white/18 rounded-2xl px-4 min-h-[52px] touch-manipulation transition-colors">
                         <span class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0"><i class="fas fa-sign-in-alt text-white text-lg"></i></span>
-                        <span class="flex-1 font-bold text-[17px]">{{ __('landing.nav.login') }}</span>
-                        <i class="fas fa-chevron-{{ app()->getLocale() === 'ar' ? 'left' : 'right' }} text-white/40 text-sm flex-shrink-0"></i>
+                        <span class="flex-1 font-bold text-[17px]"><?php echo e(__('landing.nav.login')); ?></span>
+                        <i class="fas fa-chevron-<?php echo e(app()->getLocale() === 'ar' ? 'left' : 'right'); ?> text-white/40 text-sm flex-shrink-0"></i>
                     </a>
-                    <a href="{{ route('register') }}" class="flex items-center justify-center gap-2 bg-white text-blue-900 px-5 py-4 rounded-2xl font-bold text-[17px] shadow-lg hover:bg-blue-50 active:bg-blue-100 min-h-[52px] touch-manipulation transition-colors">
+                    <a href="<?php echo e(route('register')); ?>" class="flex items-center justify-center gap-2 bg-white text-blue-900 px-5 py-4 rounded-2xl font-bold text-[17px] shadow-lg hover:bg-blue-50 active:bg-blue-100 min-h-[52px] touch-manipulation transition-colors">
                         <i class="fas fa-user-plus"></i>
-                        <span>{{ __('landing.nav.register') }}</span>
+                        <span><?php echo e(__('landing.nav.register')); ?></span>
                     </a>
-                @endguest
+                <?php endif; ?>
             </div>
             
-            @auth
+            <?php if(auth()->guard()->check()): ?>
             <div class="mt-6 pt-5 border-t border-white/15">
                 <div class="flex items-center gap-3 px-4 py-3 bg-white/10 rounded-2xl">
-                    <div class="w-12 h-12 rounded-full bg-white flex items-center justify-center text-blue-600 font-bold text-lg flex-shrink-0">{{ substr(auth()->user()->name, 0, 1) }}</div>
+                    <div class="w-12 h-12 rounded-full bg-white flex items-center justify-center text-blue-600 font-bold text-lg flex-shrink-0"><?php echo e(substr(auth()->user()->name, 0, 1)); ?></div>
                     <div class="flex-1 min-w-0">
-                        <p class="text-white font-bold text-[15px] truncate">{{ auth()->user()->name }}</p>
-                        <p class="text-white/70 text-sm truncate">{{ auth()->user()->email }}</p>
+                        <p class="text-white font-bold text-[15px] truncate"><?php echo e(auth()->user()->name); ?></p>
+                        <p class="text-white/70 text-sm truncate"><?php echo e(auth()->user()->email); ?></p>
                     </div>
                 </div>
             </div>
-            @endauth
+            <?php endif; ?>
         </div>
     </div>
 
@@ -679,3 +682,4 @@
     }, 2000);
 })();
 </script>
+<?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/components/unified-navbar.blade.php ENDPATH**/ ?>

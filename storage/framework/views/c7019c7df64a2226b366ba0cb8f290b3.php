@@ -1,9 +1,9 @@
-@php
+<?php
     $locale = app()->getLocale();
     $isRtl = $locale === 'ar';
-@endphp
+?>
 <!DOCTYPE html>
-<html lang="{{ $locale }}" dir="{{ $isRtl ? 'rtl' : 'ltr' }}" itemscope itemtype="https://schema.org/EducationalOrganization">
+<html lang="<?php echo e($locale); ?>" dir="<?php echo e($isRtl ? 'rtl' : 'ltr'); ?>" itemscope itemtype="https://schema.org/EducationalOrganization">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
@@ -11,9 +11,9 @@
         <meta name="apple-mobile-web-app-capable" content="yes">
         
         <!-- Primary Meta Tags -->
-        <title>{{ __('landing.meta.title') }}</title>
-        <meta name="title" content="{{ __('landing.meta.title') }}">
-        <meta name="description" content="{{ __('landing.meta.description') }}">
+        <title><?php echo e(__('landing.meta.title')); ?></title>
+        <meta name="title" content="<?php echo e(__('landing.meta.title')); ?>">
+        <meta name="description" content="<?php echo e(__('landing.meta.description')); ?>">
         <meta name="keywords" content="برمجة, ذكاء اصطناعي, تعلم البرمجة, كورسات برمجة, دورات برمجة, برمجة عربية, Python, JavaScript, Laravel, React, تعلم البرمجة من الصفر, أكاديمية برمجة, منصة تعليمية">
         <meta name="author" content="Mindlytics">
         <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
@@ -25,31 +25,31 @@
         <meta name="geo.placename" content="Egypt">
         
         <!-- Canonical URL -->
-        <link rel="canonical" href="{{ url('/') }}">
+        <link rel="canonical" href="<?php echo e(url('/')); ?>">
         
         <!-- Language and Region -->
-        <link rel="alternate" hreflang="ar" href="{{ url('/') }}?lang=ar">
-        <link rel="alternate" hreflang="en" href="{{ url('/') }}?lang=en">
-        <link rel="alternate" hreflang="x-default" href="{{ url('/') }}?lang=ar">
+        <link rel="alternate" hreflang="ar" href="<?php echo e(url('/')); ?>?lang=ar">
+        <link rel="alternate" hreflang="en" href="<?php echo e(url('/')); ?>?lang=en">
+        <link rel="alternate" hreflang="x-default" href="<?php echo e(url('/')); ?>?lang=ar">
         
         <!-- Open Graph / Facebook -->
         <meta property="og:type" content="website">
-        <meta property="og:url" content="{{ url('/') }}">
-        <meta property="og:title" content="{{ __('landing.meta.og_title') }}">
-        <meta property="og:description" content="{{ __('landing.meta.og_description') }}">
-        <meta property="og:image" content="{{ asset('images/og-image.jpg') }}">
+        <meta property="og:url" content="<?php echo e(url('/')); ?>">
+        <meta property="og:title" content="<?php echo e(__('landing.meta.og_title')); ?>">
+        <meta property="og:description" content="<?php echo e(__('landing.meta.og_description')); ?>">
+        <meta property="og:image" content="<?php echo e(asset('images/og-image.jpg')); ?>">
         <meta property="og:image:width" content="1200">
         <meta property="og:image:height" content="630">
-        <meta property="og:image:alt" content="{{ __('landing.meta.og_title') }}">
-        <meta property="og:locale" content="{{ $locale === 'ar' ? 'ar_AR' : 'en_US' }}">
+        <meta property="og:image:alt" content="<?php echo e(__('landing.meta.og_title')); ?>">
+        <meta property="og:locale" content="<?php echo e($locale === 'ar' ? 'ar_AR' : 'en_US'); ?>">
         <meta property="og:site_name" content="Mindlytics">
         
         <!-- Twitter Card -->
         <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:url" content="{{ url('/') }}">
-        <meta name="twitter:title" content="{{ __('landing.meta.og_title') }}">
-        <meta name="twitter:description" content="{{ __('landing.meta.og_description') }}">
-        <meta name="twitter:image" content="{{ asset('images/og-image.jpg') }}">
+        <meta name="twitter:url" content="<?php echo e(url('/')); ?>">
+        <meta name="twitter:title" content="<?php echo e(__('landing.meta.og_title')); ?>">
+        <meta name="twitter:description" content="<?php echo e(__('landing.meta.og_description')); ?>">
+        <meta name="twitter:image" content="<?php echo e(asset('images/og-image.jpg')); ?>">
         <meta name="twitter:image:alt" content="Mindlytics - أكاديمية البرمجة والذكاء الاصطناعي">
         
         <!-- Additional SEO Meta Tags -->
@@ -58,10 +58,10 @@
         <meta name="application-name" content="Mindlytics">
         
         <!-- Favicon -->
-        <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-        <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('logo-removebg-preview.png') }}">
-        <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('logo-removebg-preview.png') }}">
-        <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('logo-removebg-preview.png') }}">
+        <link rel="icon" type="image/x-icon" href="<?php echo e(asset('favicon.ico')); ?>">
+        <link rel="apple-touch-icon" sizes="180x180" href="<?php echo e(asset('logo-removebg-preview.png')); ?>">
+        <link rel="icon" type="image/png" sizes="32x32" href="<?php echo e(asset('logo-removebg-preview.png')); ?>">
+        <link rel="icon" type="image/png" sizes="16x16" href="<?php echo e(asset('logo-removebg-preview.png')); ?>">
         
         <!-- Preconnect for Performance -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -71,7 +71,7 @@
         <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
         
         <!-- Structured Data (JSON-LD) -->
-        @php
+        <?php
         $schema1 = [
             "@context" => "https://schema.org",
             "@type" => "EducationalOrganization",
@@ -138,17 +138,20 @@
                 "availableLanguage" => ["Arabic"]
             ]
         ];
-        @endphp
+        ?>
         <script type="application/ld+json">
-        {!! json_encode($schema1, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
+        <?php echo json_encode($schema1, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>
+
         </script>
         
         <script type="application/ld+json">
-        {!! json_encode($schema2, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
+        <?php echo json_encode($schema2, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>
+
         </script>
         
         <script type="application/ld+json">
-        {!! json_encode($schema3, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
+        <?php echo json_encode($schema3, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>
+
         </script>
 
     <!-- خط عربي - تحميل غير معطل للرسم (تحسين FCP/LCP) -->
@@ -2305,7 +2308,7 @@
     </script>
 
     <!-- Navigation Header -->
-    @include('components.unified-navbar')
+    <?php echo $__env->make('components.unified-navbar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
     <!-- Scroll Progress Indicator - Hidden on mobile for performance -->
     <div class="scroll-indicator hidden sm:block" id="scrollIndicator"></div>
@@ -2363,67 +2366,71 @@
         <div class="max-w-7xl mx-auto text-center relative z-10">
             <!-- Main Headline -->
             <h1 class="hero-headline text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-extrabold text-blue-900 mb-6 sm:mb-8 md:mb-10 leading-tight fade-in-up" style="font-family: 'Tajawal', 'Cairo', sans-serif;">
-                {{ __('landing.hero.headline') }}
+                <?php echo e(__('landing.hero.headline')); ?>
+
             </h1>
             <!-- Sub-headline -->
             <p class="text-xl sm:text-2xl md:text-3xl lg:text-4xl text-blue-700/95 mb-8 sm:mb-10 md:mb-14 font-bold fade-in-up max-w-4xl mx-auto leading-relaxed" style="font-family: 'Tajawal', 'Cairo', sans-serif;">
-                {{ __('landing.hero.subheadline') }}
+                <?php echo e(__('landing.hero.subheadline')); ?>
+
             </p>
 
             <!-- CTA Buttons -->
             <div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-10 sm:mb-12 md:mb-16 fade-in-up">
-                <a href="{{ route('public.courses') }}" class="btn-primary text-white w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-full font-bold text-base sm:text-lg shadow-lg relative overflow-hidden">
+                <a href="<?php echo e(route('public.courses')); ?>" class="btn-primary text-white w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-full font-bold text-base sm:text-lg shadow-lg relative overflow-hidden">
                     <span class="relative z-10">
-                        <i class="fas fa-book {{ $isRtl ? 'ml-2' : 'mr-2' }}"></i>
-                        {{ __('landing.hero.browse_courses') }}
+                        <i class="fas fa-book <?php echo e($isRtl ? 'ml-2' : 'mr-2'); ?>"></i>
+                        <?php echo e(__('landing.hero.browse_courses')); ?>
+
                     </span>
                 </a>
-                <a href="{{ route('register') }}" class="btn-secondary text-white w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-full font-bold text-base sm:text-lg shadow-lg relative overflow-hidden">
+                <a href="<?php echo e(route('register')); ?>" class="btn-secondary text-white w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-full font-bold text-base sm:text-lg shadow-lg relative overflow-hidden">
                     <span class="relative z-10">
-                        <i class="fas fa-user-plus {{ $isRtl ? 'ml-2' : 'mr-2' }}"></i>
-                        {{ __('landing.hero.signup_now') }}
+                        <i class="fas fa-user-plus <?php echo e($isRtl ? 'ml-2' : 'mr-2'); ?>"></i>
+                        <?php echo e(__('landing.hero.signup_now')); ?>
+
                     </span>
                 </a>
                 </div>
 
             <!-- Statistics Section (أرقام حقيقية من قاعدة البيانات) -->
-            @php
+            <?php
                 $m = (int) ($statsMinutesWatched ?? 0);
                 $c = (int) ($statsCertificates ?? 0);
                 $co = (int) ($statsCourses ?? 0);
                 $l = (int) ($statsLearners ?? 0);
-            @endphp
+            ?>
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 max-w-5xl mx-auto">
                 <!-- Stat 1: دقائق المشاهدة -->
                 <div class="stat-card p-6 fade-in-up" style="animation-delay: 0.1s;">
                     <div class="counter-wrapper">
-                        <div class="text-3xl md:text-4xl font-black text-blue-600 mb-2 counter" data-target="{{ $m }}" data-suffix="">{{ number_format($m) }}</div>
+                        <div class="text-3xl md:text-4xl font-black text-blue-600 mb-2 counter" data-target="<?php echo e($m); ?>" data-suffix=""><?php echo e(number_format($m)); ?></div>
                     </div>
-                    <div class="text-gray-600 font-medium">{{ __('landing.stats.minutes_watched') }}</div>
+                    <div class="text-gray-600 font-medium"><?php echo e(__('landing.stats.minutes_watched')); ?></div>
                 </div>
 
                 <!-- Stat 2: الشهادات -->
                 <div class="stat-card p-6 fade-in-up" style="animation-delay: 0.2s;">
                     <div class="counter-wrapper">
-                        <div class="text-3xl md:text-4xl font-black text-blue-600 mb-2 counter" data-target="{{ $c }}" data-suffix="{{ $c > 0 ? '+' : '' }}">{{ number_format($c) }}{{ $c > 0 ? '+' : '' }}</div>
+                        <div class="text-3xl md:text-4xl font-black text-blue-600 mb-2 counter" data-target="<?php echo e($c); ?>" data-suffix="<?php echo e($c > 0 ? '+' : ''); ?>"><?php echo e(number_format($c)); ?><?php echo e($c > 0 ? '+' : ''); ?></div>
                     </div>
-                    <div class="text-gray-600 font-medium">{{ __('landing.stats.certificates') }}</div>
+                    <div class="text-gray-600 font-medium"><?php echo e(__('landing.stats.certificates')); ?></div>
                 </div>
 
                 <!-- Stat 3: الدورات -->
                 <div class="stat-card p-6 fade-in-up" style="animation-delay: 0.3s;">
                     <div class="counter-wrapper">
-                        <div class="text-3xl md:text-4xl font-black text-blue-600 mb-2 counter" data-target="{{ $co }}" data-suffix="{{ $co > 0 ? '+' : '' }}">{{ number_format($co) }}{{ $co > 0 ? '+' : '' }}</div>
+                        <div class="text-3xl md:text-4xl font-black text-blue-600 mb-2 counter" data-target="<?php echo e($co); ?>" data-suffix="<?php echo e($co > 0 ? '+' : ''); ?>"><?php echo e(number_format($co)); ?><?php echo e($co > 0 ? '+' : ''); ?></div>
                     </div>
-                    <div class="text-gray-600 font-medium">{{ __('landing.stats.courses') }}</div>
+                    <div class="text-gray-600 font-medium"><?php echo e(__('landing.stats.courses')); ?></div>
                 </div>
 
                 <!-- Stat 4: المتعلمون -->
                 <div class="stat-card p-6 fade-in-up" style="animation-delay: 0.4s;">
                     <div class="counter-wrapper">
-                        <div class="text-3xl md:text-4xl font-black text-blue-600 mb-2 counter" data-target="{{ $l }}" data-suffix="{{ $l > 0 ? '+' : '' }}">{{ number_format($l) }}{{ $l > 0 ? '+' : '' }}</div>
+                        <div class="text-3xl md:text-4xl font-black text-blue-600 mb-2 counter" data-target="<?php echo e($l); ?>" data-suffix="<?php echo e($l > 0 ? '+' : ''); ?>"><?php echo e(number_format($l)); ?><?php echo e($l > 0 ? '+' : ''); ?></div>
                     </div>
-                    <div class="text-gray-600 font-medium">{{ __('landing.stats.learners') }}</div>
+                    <div class="text-gray-600 font-medium"><?php echo e(__('landing.stats.learners')); ?></div>
                 </div>
             </div>
         </div>
@@ -2436,46 +2443,47 @@
                 <div class="inline-block mb-4">
                     <span class="featured-courses-badge bg-gradient-to-r from-blue-50 via-green-50/80 to-blue-50 text-blue-800 px-4 py-2 rounded-full text-sm font-bold inline-flex items-center gap-2 shadow-sm border border-blue-200/60">
                         <i class="fas fa-route text-blue-600"></i>
-                        <span>{{ __('landing.learning_paths.badge') }}</span>
+                        <span><?php echo e(__('landing.learning_paths.badge')); ?></span>
                     </span>
                 </div>
                 <h2 class="featured-courses-title text-4xl md:text-5xl lg:text-6xl font-black mb-5 inline-block">
                     <span class="featured-courses-title-draw">
-                        <span class="featured-courses-title-main">{{ __('landing.learning_paths.title') }}</span><span class="featured-courses-title-highlight">{{ __('landing.learning_paths.title_highlight') }}</span>
+                        <span class="featured-courses-title-main"><?php echo e(__('landing.learning_paths.title')); ?></span><span class="featured-courses-title-highlight"><?php echo e(__('landing.learning_paths.title_highlight')); ?></span>
                     </span>
                     <span class="featured-courses-title-line" aria-hidden="true"></span>
                 </h2>
                 <p class="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-                    {{ __('landing.learning_paths_subtitle') }}
+                    <?php echo e(__('landing.learning_paths_subtitle')); ?>
+
                 </p>
             </div>
         </div>
 
-        @if($landingPaths->count() > 0)
+        <?php if($landingPaths->count() > 0): ?>
             <div class="learning-paths-scroll w-full">
                 <div id="learning-paths-track" class="flex gap-4 lg:gap-6 overflow-x-auto overflow-y-hidden pb-4 scroll-smooth snap-x snap-mandatory scrollbar-featured" style="scrollbar-gutter: stable;">
-                    @foreach($landingPaths as $index => $path)
-                        <div class="group relative flex-shrink-0 w-[260px] sm:w-[300px] lg:w-[320px] snap-center fade-in-up bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-blue-200" style="animation-delay: {{ $index * 0.05 }}s;">
+                    <?php $__currentLoopData = $landingPaths; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $path): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <div class="group relative flex-shrink-0 w-[260px] sm:w-[300px] lg:w-[320px] snap-center fade-in-up bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-blue-200" style="animation-delay: <?php echo e($index * 0.05); ?>s;">
                             <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-400 via-green-400 to-purple-400 rounded-2xl blur opacity-0 group-hover:opacity-20 transition-opacity duration-500 -z-10"></div>
                             <!-- مربع صورة المسار بنفس تصميم صفحة المسارات (يفضل رفع 1563×1563) -->
                             <div class="relative bg-gradient-to-br from-blue-600 via-blue-500 to-green-500 overflow-hidden flex items-center justify-center aspect-square">
-                                @if($path->image_url)
-                                    <img src="{{ $path->image_url }}" alt="{{ $path->name }}" class="absolute inset-0 w-full h-full object-cover">
-                                @else
+                                <?php if($path->image_url): ?>
+                                    <img src="<?php echo e($path->image_url); ?>" alt="<?php echo e($path->name); ?>" class="absolute inset-0 w-full h-full object-cover">
+                                <?php else: ?>
                                     <div class="absolute inset-0 opacity-10" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px);"></div>
                                     <div class="absolute inset-0 flex items-center justify-center">
                                         <div class="relative z-10 transform group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
                                             <i class="fas fa-route text-white text-5xl lg:text-6xl drop-shadow-lg"></i>
                                         </div>
                                     </div>
-                                @endif
+                                <?php endif; ?>
                                 <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                                 <div class="absolute inset-0 bg-gradient-to-t from-black/20 via-black/5 to-transparent"></div>
                                 <div class="absolute bottom-2 right-2 z-20">
                                     <div class="bg-white/95 backdrop-blur-md rounded-lg px-2.5 py-1.5 shadow-xl border border-white/50 group-hover:scale-110 transition-transform duration-300">
                                         <span class="text-xs font-bold text-gray-800 flex items-center gap-1.5">
                                             <i class="fas fa-graduation-cap text-blue-600 text-[11px]"></i>
-                                            <span>{{ __('public.path_courses_count', ['count' => $path->courses_count]) }}</span>
+                                            <span><?php echo e(__('public.path_courses_count', ['count' => $path->courses_count])); ?></span>
                                         </span>
                                     </div>
                                 </div>
@@ -2483,66 +2491,68 @@
                             <div class="p-4 bg-white relative overflow-hidden">
                                 <div class="absolute inset-0 opacity-[0.02] pointer-events-none" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(59, 130, 246, 0.05) 5px, rgba(59, 130, 246, 0.05) 10px);"></div>
                                 <h3 class="text-base font-black text-gray-900 mb-2 line-clamp-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-green-600 transition-all duration-300 leading-tight relative z-10">
-                                    {{ $path->name }}
+                                    <?php echo e($path->name); ?>
+
                                 </h3>
                                 <p class="text-gray-600 text-xs mb-3 line-clamp-2 leading-relaxed group-hover:text-gray-700 transition-colors duration-300 relative z-10">
-                                    {{ Str::limit($path->description ?? __('public.path_description_fallback'), 70) }}
+                                    <?php echo e(Str::limit($path->description ?? __('public.path_description_fallback'), 70)); ?>
+
                                 </p>
                                 <div class="flex items-center justify-between pt-3 border-t border-gray-100 group-hover:border-blue-100 transition-colors duration-300 relative z-10">
                                     <div>
-                                        @if(($path->price ?? 0) > 0)
+                                        <?php if(($path->price ?? 0) > 0): ?>
                                             <span class="text-lg font-black text-blue-600 flex items-center gap-1 group-hover:scale-110 transition-transform duration-300">
-                                                <span>{{ number_format($path->price, 0) }}</span>
-                                                <span class="text-[10px] text-gray-500 font-normal">{{ __('public.currency_egp') }}</span>
+                                                <span><?php echo e(number_format($path->price, 0)); ?></span>
+                                                <span class="text-[10px] text-gray-500 font-normal"><?php echo e(__('public.currency_egp')); ?></span>
                                             </span>
-                                        @else
+                                        <?php else: ?>
                                             <span class="text-lg font-black text-green-600 flex items-center gap-1.5 group-hover:scale-110 transition-transform duration-300">
                                                 <div class="w-5 h-5 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-md">
                                                     <i class="fas fa-gift text-white text-[8px]"></i>
                                                 </div>
-                                                <span>{{ __('public.free_price') }}</span>
+                                                <span><?php echo e(__('public.free_price')); ?></span>
                                             </span>
-                                        @endif
+                                        <?php endif; ?>
                                     </div>
-                                    <a href="{{ route('public.learning-path.show', $path->slug) }}" class="relative bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 flex items-center gap-1.5 overflow-hidden group/btn">
+                                    <a href="<?php echo e(route('public.learning-path.show', $path->slug)); ?>" class="relative bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 flex items-center gap-1.5 overflow-hidden group/btn">
                                         <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-0 group-hover/btn:opacity-100 group-hover/btn:animate-shimmer transition-opacity duration-300"></div>
                                         <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-400 to-green-400 rounded-lg blur opacity-0 group-hover/btn:opacity-50 transition-opacity duration-300"></div>
-                                        <span class="relative z-10">{{ __('landing.view_btn') }}</span>
+                                        <span class="relative z-10"><?php echo e(__('landing.view_btn')); ?></span>
                                         <i class="fas fa-arrow-left text-[10px] relative z-10 group-hover/btn:translate-x-1 transition-transform duration-300"></i>
                                     </a>
                                 </div>
                             </div>
                         </div>
-                    @endforeach
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </div>
             </div>
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
                 <div class="text-center fade-in-up">
-                    <a href="{{ route('public.learning-paths.index') }}" class="inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-green-500 text-white px-10 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-110 relative overflow-hidden group">
+                    <a href="<?php echo e(route('public.learning-paths.index')); ?>" class="inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-green-500 text-white px-10 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-110 relative overflow-hidden group">
                         <span class="relative z-10 flex items-center gap-2">
                             <i class="fas fa-route"></i>
-                            <span>{{ __('landing.view_all_paths') }}</span>
+                            <span><?php echo e(__('landing.view_all_paths')); ?></span>
                             <i class="fas fa-arrow-left transition-transform duration-300 group-hover:-translate-x-1"></i>
                         </span>
                         <span class="absolute inset-0 bg-gradient-to-r from-green-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
                     </a>
                 </div>
             </div>
-        @else
+        <?php else: ?>
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="text-center py-12 fade-in-up">
                     <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <i class="fas fa-route text-gray-400 text-4xl"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">{{ __('landing.coming_soon') }}</h3>
-                    <p class="text-gray-600 mb-6">{{ __('public.coming_soon_paths') }}</p>
-                    <a href="{{ route('public.learning-paths.index') }}" class="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                    <h3 class="text-xl font-bold text-gray-900 mb-2"><?php echo e(__('landing.coming_soon')); ?></h3>
+                    <p class="text-gray-600 mb-6"><?php echo e(__('public.coming_soon_paths')); ?></p>
+                    <a href="<?php echo e(route('public.learning-paths.index')); ?>" class="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
                         <i class="fas fa-route"></i>
-                        <span>{{ __('landing.view_all_paths') }}</span>
+                        <span><?php echo e(__('landing.view_all_paths')); ?></span>
                     </a>
                 </div>
             </div>
-        @endif
+        <?php endif; ?>
     </section>
 
     <!-- Featured Courses Section -->
@@ -2552,58 +2562,59 @@
                 <div class="inline-block mb-4">
                     <span class="featured-courses-badge bg-gradient-to-r from-blue-50 via-green-50/80 to-blue-50 text-blue-800 px-4 py-2 rounded-full text-sm font-bold inline-flex items-center gap-2 shadow-sm border border-blue-200/60">
                         <i class="fas fa-star text-blue-600"></i>
-                        <span>{{ __('landing.featured.badge') }}</span>
+                        <span><?php echo e(__('landing.featured.badge')); ?></span>
                     </span>
                 </div>
                 <h2 class="featured-courses-title text-4xl md:text-5xl lg:text-6xl font-black mb-5 inline-block">
                     <span class="featured-courses-title-draw">
-                        <span class="featured-courses-title-main">{{ __('landing.featured.title') }}</span><span class="featured-courses-title-highlight">{{ __('landing.featured.title_highlight') }}</span>
+                        <span class="featured-courses-title-main"><?php echo e(__('landing.featured.title')); ?></span><span class="featured-courses-title-highlight"><?php echo e(__('landing.featured.title_highlight')); ?></span>
                     </span>
                     <span class="featured-courses-title-line" aria-hidden="true"></span>
                 </h2>
                 <p class="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-                    {{ __('landing.featured_subtitle') }}
+                    <?php echo e(__('landing.featured_subtitle')); ?>
+
                 </p>
             </div>
         </div>
 
-        @php
+        <?php
             $featuredCourses = \App\Models\AdvancedCourse::where('is_active', true)
                 ->where('is_featured', true)
                 ->with(['academicSubject', 'instructor'])
                 ->withCount('lessons')
                 ->limit(12)
                 ->get();
-        @endphp
+        ?>
 
-        @if($featuredCourses->count() > 0)
+        <?php if($featuredCourses->count() > 0): ?>
             <div class="featured-courses-scroll w-full">
                 <div id="featured-courses-track" class="flex gap-4 lg:gap-6 overflow-x-auto overflow-y-hidden pb-4 scroll-smooth snap-x snap-mandatory scrollbar-featured" style="scrollbar-gutter: stable;">
-                    @foreach($featuredCourses as $index => $course)
-                        @php
+                    <?php $__currentLoopData = $featuredCourses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <?php
                             $fcThumb = $course->thumbnail ? str_replace('\\', '/', $course->thumbnail) : null;
                             $fcImageUrl = $fcThumb ? asset('storage/' . $fcThumb) : null;
-                        @endphp
-                        <div class="group relative flex-shrink-0 w-[280px] sm:w-[320px] lg:w-[340px] snap-center fade-in-up bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-blue-200" style="animation-delay: {{ $index * 0.05 }}s;">
+                        ?>
+                        <div class="group relative flex-shrink-0 w-[280px] sm:w-[320px] lg:w-[340px] snap-center fade-in-up bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-blue-200" style="animation-delay: <?php echo e($index * 0.05); ?>s;">
                             <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-400 via-green-400 to-purple-400 rounded-2xl blur opacity-0 group-hover:opacity-20 transition-opacity duration-500 -z-10"></div>
                             <div class="relative h-44 sm:h-48 bg-gradient-to-br from-blue-600 via-blue-500 to-green-500 overflow-hidden">
-                                @if($fcImageUrl)
-                                    <img src="{{ $fcImageUrl }}" alt="{{ $course->localized('title') }}" class="absolute inset-0 w-full h-full object-cover">
-                                @else
+                                <?php if($fcImageUrl): ?>
+                                    <img src="<?php echo e($fcImageUrl); ?>" alt="<?php echo e($course->localized('title')); ?>" class="absolute inset-0 w-full h-full object-cover">
+                                <?php else: ?>
                                     <div class="absolute inset-0 opacity-10" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px);"></div>
                                     <div class="absolute inset-0 flex items-center justify-center">
                                         <div class="relative z-10 transform group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
                                             <i class="fas fa-play-circle text-white text-5xl lg:text-6xl drop-shadow-lg"></i>
                                         </div>
                                     </div>
-                                @endif
+                                <?php endif; ?>
                                 <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                                 <div class="absolute inset-0 bg-gradient-to-t from-black/20 via-black/5 to-transparent"></div>
                                 <div class="absolute bottom-2 right-2 z-20">
                                     <div class="bg-white/95 backdrop-blur-md rounded-lg px-2.5 py-1.5 shadow-xl border border-white/50 group-hover:scale-110 transition-transform duration-300">
                                         <span class="text-xs font-bold text-gray-800 flex items-center gap-1.5">
                                             <i class="fas fa-play-circle text-blue-600 text-[11px]"></i>
-                                            <span>{{ $course->lessons_count ?? 0 }} {{ __('landing.lesson_single') }}</span>
+                                            <span><?php echo e($course->lessons_count ?? 0); ?> <?php echo e(__('landing.lesson_single')); ?></span>
                                         </span>
                                     </div>
                                 </div>
@@ -2611,68 +2622,70 @@
                             <div class="p-4 bg-white relative overflow-hidden">
                                 <div class="absolute inset-0 opacity-[0.02] pointer-events-none" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(59, 130, 246, 0.05) 5px, rgba(59, 130, 246, 0.05) 10px);"></div>
                                 <h3 class="text-base font-black text-gray-900 mb-2 line-clamp-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-green-600 transition-all duration-300 leading-tight relative z-10">
-                                    {{ $course->localized('title') }}
+                                    <?php echo e($course->localized('title')); ?>
+
                                 </h3>
                                 <p class="text-gray-600 text-xs mb-3 line-clamp-2 leading-relaxed group-hover:text-gray-700 transition-colors duration-300 relative z-10">
-                                    {{ Str::limit($course->localized('description') ?: __('landing.course_description_fallback'), 70) }}
+                                    <?php echo e(Str::limit($course->localized('description') ?: __('landing.course_description_fallback'), 70)); ?>
+
                                 </p>
                                 <div class="flex items-center justify-between pt-3 border-t border-gray-100 group-hover:border-blue-100 transition-colors duration-300 relative z-10">
                                     <div>
-                                        @if($course->is_free)
+                                        <?php if($course->is_free): ?>
                                             <span class="text-lg font-black text-green-600 flex items-center gap-1.5 group-hover:scale-110 transition-transform duration-300">
                                                 <div class="w-5 h-5 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-md">
                                                     <i class="fas fa-gift text-white text-[8px]"></i>
                                                 </div>
-                                                <span>{{ __('public.free_price') }}</span>
+                                                <span><?php echo e(__('public.free_price')); ?></span>
                                             </span>
-                                        @else
+                                        <?php else: ?>
                                             <span class="text-lg font-black text-blue-600 flex items-center gap-1 group-hover:scale-110 transition-transform duration-300">
-                                                <span>{{ number_format($course->price ?? 0) }}</span>
-                                                <span class="text-[10px] text-gray-500 font-normal">{{ __('public.currency_egp') }}</span>
+                                                <span><?php echo e(number_format($course->price ?? 0)); ?></span>
+                                                <span class="text-[10px] text-gray-500 font-normal"><?php echo e(__('public.currency_egp')); ?></span>
                                             </span>
-                                        @endif
+                                        <?php endif; ?>
                                     </div>
-                                    <a href="{{ route('public.course.show', $course->id) }}" class="relative bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 flex items-center gap-1.5 overflow-hidden group/btn">
+                                    <a href="<?php echo e(route('public.course.show', $course->id)); ?>" class="relative bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 flex items-center gap-1.5 overflow-hidden group/btn">
                                         <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-0 group-hover/btn:opacity-100 group-hover/btn:animate-shimmer transition-opacity duration-300"></div>
                                         <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-400 to-green-400 rounded-lg blur opacity-0 group-hover/btn:opacity-50 transition-opacity duration-300"></div>
-                                        <span class="relative z-10">{{ __('landing.view_btn') }}</span>
+                                        <span class="relative z-10"><?php echo e(__('landing.view_btn')); ?></span>
                                         <i class="fas fa-arrow-left text-[10px] relative z-10 group-hover/btn:translate-x-1 transition-transform duration-300"></i>
                                     </a>
                                 </div>
                             </div>
                         </div>
-                    @endforeach
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </div>
             </div>
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
                 <div class="text-center fade-in-up">
-                    <a href="{{ route('public.courses') }}" class="inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-green-500 text-white px-10 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-110 relative overflow-hidden group">
+                    <a href="<?php echo e(route('public.courses')); ?>" class="inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-green-500 text-white px-10 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-110 relative overflow-hidden group">
                         <span class="relative z-10 flex items-center gap-2">
                             <i class="fas fa-book-open"></i>
-                            <span>{{ __('landing.view_all_courses') }}</span>
+                            <span><?php echo e(__('landing.view_all_courses')); ?></span>
                             <i class="fas fa-arrow-left transition-transform duration-300 group-hover:-translate-x-1"></i>
                         </span>
                         <span class="absolute inset-0 bg-gradient-to-r from-green-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
                     </a>
                 </div>
             </div>
-        @else
+        <?php else: ?>
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="text-center py-12 fade-in-up">
                     <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <i class="fas fa-book text-gray-400 text-4xl"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">{{ __('landing.coming_soon') }}</h3>
-                    <p class="text-gray-600 mb-6">{{ __('landing.coming_soon_desc') }}</p>
-                    <a href="{{ route('register') }}" class="btn-primary text-white px-6 py-3 rounded-full relative overflow-hidden">
-                        <span class="relative z-10">{{ __('landing.subscribe_updates') }}</span>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2"><?php echo e(__('landing.coming_soon')); ?></h3>
+                    <p class="text-gray-600 mb-6"><?php echo e(__('landing.coming_soon_desc')); ?></p>
+                    <a href="<?php echo e(route('register')); ?>" class="btn-primary text-white px-6 py-3 rounded-full relative overflow-hidden">
+                        <span class="relative z-10"><?php echo e(__('landing.subscribe_updates')); ?></span>
                     </a>
                 </div>
             </div>
-        @endif
+        <?php endif; ?>
     </section>
 
-    @if(isset($featuredCourses) && $featuredCourses->count() > 0)
+    <?php if(isset($featuredCourses) && $featuredCourses->count() > 0): ?>
     <script>
     (function() {
         var track = document.getElementById('featured-courses-track');
@@ -2702,9 +2715,9 @@
         }, stepMs);
     })();
     </script>
-    @endif
+    <?php endif; ?>
 
-    @if(isset($landingPaths) && $landingPaths->count() > 0)
+    <?php if(isset($landingPaths) && $landingPaths->count() > 0): ?>
     <script>
     (function() {
         var track = document.getElementById('learning-paths-track');
@@ -2734,7 +2747,7 @@
         }, stepMs);
     })();
     </script>
-    @endif
+    <?php endif; ?>
 
     <!-- Features Section -->
     <section class="py-12 md:py-16 lg:py-20 bg-gradient-to-b from-white via-gray-50 to-white relative">
@@ -2747,10 +2760,12 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div class="text-center mb-12 fade-in-up">
                 <h2 class="text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 mb-4 section-title" style="font-family: 'Tajawal', 'Cairo', sans-serif;">
-                    {{ __('landing.why_mindlytics') }} <span class="gradient-text">Mindlytics</span>{{ __('landing.why_mindlytics_suffix') }}
+                    <?php echo e(__('landing.why_mindlytics')); ?> <span class="gradient-text">Mindlytics</span><?php echo e(__('landing.why_mindlytics_suffix')); ?>
+
                 </h2>
                 <p class="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
-                    {{ __('landing.why_subtitle') }}
+                    <?php echo e(__('landing.why_subtitle')); ?>
+
                 </p>
                         </div>
                         
@@ -2760,8 +2775,8 @@
                     <div class="w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl group-hover:scale-110 transition-transform duration-300">
                         <i class="fas fa-graduation-cap text-white text-3xl"></i>
                                 </div>
-                    <h3 class="text-xl md:text-2xl font-black text-gray-900 mb-3">{{ __('landing.feature1_title') }}</h3>
-                    <p class="text-gray-600 text-base leading-relaxed">{{ __('landing.feature1_desc') }}</p>
+                    <h3 class="text-xl md:text-2xl font-black text-gray-900 mb-3"><?php echo e(__('landing.feature1_title')); ?></h3>
+                    <p class="text-gray-600 text-base leading-relaxed"><?php echo e(__('landing.feature1_desc')); ?></p>
                             </div>
                             
                 <!-- Feature 2 -->
@@ -2769,8 +2784,8 @@
                     <div class="w-20 h-20 bg-gradient-to-br from-green-600 to-green-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl group-hover:scale-110 transition-transform duration-300">
                         <i class="fas fa-certificate text-white text-3xl"></i>
                                 </div>
-                    <h3 class="text-xl md:text-2xl font-black text-gray-900 mb-3">{{ __('landing.feature2_title') }}</h3>
-                    <p class="text-gray-600 text-base leading-relaxed">{{ __('landing.feature2_desc') }}</p>
+                    <h3 class="text-xl md:text-2xl font-black text-gray-900 mb-3"><?php echo e(__('landing.feature2_title')); ?></h3>
+                    <p class="text-gray-600 text-base leading-relaxed"><?php echo e(__('landing.feature2_desc')); ?></p>
                             </div>
                             
                 <!-- Feature 3 -->
@@ -2778,8 +2793,8 @@
                     <div class="w-20 h-20 bg-gradient-to-br from-purple-600 to-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl group-hover:scale-110 transition-transform duration-300">
                         <i class="fas fa-users text-white text-3xl"></i>
                                 </div>
-                    <h3 class="text-xl md:text-2xl font-black text-gray-900 mb-3">{{ __('landing.feature3_title') }}</h3>
-                    <p class="text-gray-600 text-base leading-relaxed">{{ __('landing.feature3_desc') }}</p>
+                    <h3 class="text-xl md:text-2xl font-black text-gray-900 mb-3"><?php echo e(__('landing.feature3_title')); ?></h3>
+                    <p class="text-gray-600 text-base leading-relaxed"><?php echo e(__('landing.feature3_desc')); ?></p>
                             </div>
                             
                 <!-- Feature 4 -->
@@ -2787,15 +2802,15 @@
                     <div class="w-20 h-20 bg-gradient-to-br from-orange-600 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl group-hover:scale-110 transition-transform duration-300">
                         <i class="fas fa-headset text-white text-3xl"></i>
                             </div>
-                    <h3 class="text-xl md:text-2xl font-black text-gray-900 mb-3">{{ __('landing.feature4_title') }}</h3>
-                    <p class="text-gray-600 text-base leading-relaxed">{{ __('landing.feature4_desc') }}</p>
+                    <h3 class="text-xl md:text-2xl font-black text-gray-900 mb-3"><?php echo e(__('landing.feature4_title')); ?></h3>
+                    <p class="text-gray-600 text-base leading-relaxed"><?php echo e(__('landing.feature4_desc')); ?></p>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Mindlytics Portfolio Section -->
-    @php
+    <?php
         $portfolioCards = [
             [
                 'name' => __('landing.portfolio_card1_name'),
@@ -2863,7 +2878,7 @@
                 'cta_route' => 'register'
             ]
         ];
-    @endphp
+    ?>
 
     <section class="py-12 md:py-16 bg-gradient-to-b from-blue-50 via-white to-green-50 content-wrapper relative">
         <div class="absolute inset-0">
@@ -2876,13 +2891,14 @@
                     <span class="gradient-text">Mindlytics</span> Portfolio
                 </h2>
                 <p class="text-lg text-gray-600 max-w-2xl mx-auto">
-                    {{ __('landing.portfolio_section_subtitle') }}
+                    <?php echo e(__('landing.portfolio_section_subtitle')); ?>
+
                 </p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-fr">
-                @foreach($portfolioCards as $index => $card)
-                    @php
+                <?php $__currentLoopData = $portfolioCards; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $card): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <?php
                         $colorClasses = [
                             'blue' => [
                                 'border' => 'border-blue-200',
@@ -2909,48 +2925,49 @@
                         $colors = $colorClasses[$card['icon_color']] ?? $colorClasses['blue'];
                         $animationClass = $index === 0 ? 'fade-in-left' : ($index === 1 ? 'fade-in-up' : 'fade-in-right');
                         $popularClass = ($card['is_popular'] ?? false) ? 'md:-mt-4 md:mb-4 md:scale-105 border-4' : '';
-                    @endphp
+                    ?>
 
-                    <div class="bg-gradient-to-br {{ $card['bg_gradient'] }} rounded-2xl p-8 shadow-xl border-2 {{ $colors['border'] }} {{ $colors['border_hover'] }} transition-all {{ $animationClass }} relative overflow-hidden group h-full flex flex-col {{ $popularClass }} {{ ($card['is_popular'] ?? false) ? 'pt-14 md:pt-16' : '' }}">
-                        @if($card['is_popular'] ?? false)
+                    <div class="bg-gradient-to-br <?php echo e($card['bg_gradient']); ?> rounded-2xl p-8 shadow-xl border-2 <?php echo e($colors['border']); ?> <?php echo e($colors['border_hover']); ?> transition-all <?php echo e($animationClass); ?> relative overflow-hidden group h-full flex flex-col <?php echo e($popularClass); ?> <?php echo e(($card['is_popular'] ?? false) ? 'pt-14 md:pt-16' : ''); ?>">
+                        <?php if($card['is_popular'] ?? false): ?>
                             <div class="absolute top-2 left-1/2 transform -translate-x-1/2 z-30">
                                 <span class="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1 whitespace-nowrap">
                                     <i class="fas fa-star text-[10px]"></i>
-                                    {{ __('landing.most_popular_badge') }}
+                                    <?php echo e(__('landing.most_popular_badge')); ?>
+
                                 </span>
                             </div>
-                        @endif
+                        <?php endif; ?>
 
-                        <div class="absolute top-0 right-0 w-32 h-32 {{ $colors['bg'] }} rounded-full opacity-80 group-hover:scale-150 transition-transform"></div>
+                        <div class="absolute top-0 right-0 w-32 h-32 <?php echo e($colors['bg']); ?> rounded-full opacity-80 group-hover:scale-150 transition-transform"></div>
 
-                        <div class="w-20 h-20 bg-gradient-to-br {{ $colors['icon_bg'] }} rounded-full flex items-center justify-center mx-auto mb-6 icon-hover shadow-lg group-hover:shadow-xl transition-shadow relative z-10">
-                            <i class="fas fa-{{ $card['icon'] }} {{ $colors['icon_text'] }} text-3xl"></i>
+                        <div class="w-20 h-20 bg-gradient-to-br <?php echo e($colors['icon_bg']); ?> rounded-full flex items-center justify-center mx-auto mb-6 icon-hover shadow-lg group-hover:shadow-xl transition-shadow relative z-10">
+                            <i class="fas fa-<?php echo e($card['icon']); ?> <?php echo e($colors['icon_text']); ?> text-3xl"></i>
                         </div>
 
-                        <h3 class="text-2xl font-bold text-gray-900 mb-2 text-center relative z-10">{{ $card['name'] }}</h3>
-                        <p class="text-center text-gray-600 text-sm mb-6 relative z-10">{{ $card['subtitle'] }}</p>
+                        <h3 class="text-2xl font-bold text-gray-900 mb-2 text-center relative z-10"><?php echo e($card['name']); ?></h3>
+                        <p class="text-center text-gray-600 text-sm mb-6 relative z-10"><?php echo e($card['subtitle']); ?></p>
 
                         <ul class="space-y-3 mb-6 relative z-10 flex-grow">
-                            @foreach($card['features'] as $feature)
+                            <?php $__currentLoopData = $card['features']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $feature): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                 <li class="flex items-start text-gray-600 group/item">
                                     <i class="fas fa-check text-green-500 ml-2 mt-1 group-hover/item:scale-125 transition-transform flex-shrink-0"></i>
-                                    <span class="text-sm">{{ $feature }}</span>
+                                    <span class="text-sm"><?php echo e($feature); ?></span>
                                 </li>
-                            @endforeach
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </ul>
 
-                        @php
+                        <?php
                             $buttonClass = !empty($card['button_class']) ? $card['button_class'] : 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800';
-                        @endphp
+                        ?>
 
-                        <a href="{{ route($card['cta_route'] ?? 'public.courses') }}" class="{{ $buttonClass }} text-white w-full py-3 rounded-full text-center block relative overflow-hidden transition-all duration-300 font-bold transform group-hover:scale-105 shadow-lg group-hover:shadow-xl relative z-10 mt-auto">
+                        <a href="<?php echo e(route($card['cta_route'] ?? 'public.courses')); ?>" class="<?php echo e($buttonClass); ?> text-white w-full py-3 rounded-full text-center block relative overflow-hidden transition-all duration-300 font-bold transform group-hover:scale-105 shadow-lg group-hover:shadow-xl relative z-10 mt-auto">
                             <span class="relative z-10 flex items-center justify-center gap-2">
                                 <i class="fas fa-arrow-left"></i>
-                                <span>{{ $card['cta_text'] }}</span>
+                                <span><?php echo e($card['cta_text']); ?></span>
                             </span>
                         </a>
                     </div>
-                @endforeach
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </div>
         </div>
     </section>
@@ -2966,22 +2983,24 @@
         
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center fade-in-up relative z-10">
             <h2 class="text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 mb-6 leading-tight">
-                {{ __('landing.cta_ready_title') }}
+                <?php echo e(__('landing.cta_ready_title')); ?>
+
             </h2>
             <p class="text-lg md:text-xl text-gray-600 mb-10 font-medium">
-                {{ __('landing.cta_ready_desc') }}
+                <?php echo e(__('landing.cta_ready_desc')); ?>
+
             </p>
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                <a href="{{ route('register') }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-8 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 relative overflow-hidden group">
+                <a href="<?php echo e(route('register')); ?>" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-8 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 relative overflow-hidden group">
                     <span class="relative z-10 flex items-center gap-2">
                     <i class="fas fa-user-plus"></i>
-                        <span>{{ __('landing.cta_register_free') }}</span>
+                        <span><?php echo e(__('landing.cta_register_free')); ?></span>
                     </span>
                     <span class="absolute inset-0 bg-gradient-to-r from-green-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
                 </a>
-                <a href="{{ route('public.courses') }}" class="inline-flex items-center justify-center gap-2 bg-white text-blue-600 px-8 py-4 rounded-full font-bold text-lg border-2 border-blue-600 hover:bg-blue-50 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl relative">
+                <a href="<?php echo e(route('public.courses')); ?>" class="inline-flex items-center justify-center gap-2 bg-white text-blue-600 px-8 py-4 rounded-full font-bold text-lg border-2 border-blue-600 hover:bg-blue-50 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl relative">
                     <span class="flex items-center gap-2">
-                        <span>{{ __('landing.cta_browse_all') }}</span>
+                        <span><?php echo e(__('landing.cta_browse_all')); ?></span>
                         <i class="fas fa-arrow-left"></i>
                     </span>
                 </a>
@@ -2992,10 +3011,10 @@
     </main>
 
     <!-- Unified Footer -->
-    @include('components.unified-footer')
+    <?php echo $__env->make('components.unified-footer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
     <script>
-        const landingCounterLocale = @json($isRtl ? 'ar-EG' : 'en-US');
+        const landingCounterLocale = <?php echo json_encode($isRtl ? 'ar-EG' : 'en-US', 15, 512) ?>;
         // Counter Animation
         function animateCounter(counter) {
             const target = parseInt(counter.getAttribute('data-target'), 10) || 0;
@@ -3362,8 +3381,8 @@
             }, { passive: true, capture: true });
         })();
     </script>
-    @if(isset($popupAd) && $popupAd)
-        @include('partials.popup-ad', ['ad' => $popupAd])
-    @endif
+    <?php if(isset($popupAd) && $popupAd): ?>
+        <?php echo $__env->make('partials.popup-ad', ['ad' => $popupAd], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+    <?php endif; ?>
     </body>
-</html>
+</html><?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/welcome.blade.php ENDPATH**/ ?>

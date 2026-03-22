@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', $course->title . ' - ' . __('student.my_courses'))
-@section('header', $course->title)
+@section('title', $course->localized('title') . ' - ' . __('student.my_courses'))
+@section('header', $course->localized('title'))
 
 @push('styles')
 <style>
@@ -852,7 +852,7 @@
                 <!-- صورة الكورس -->
                 <div class="lg:w-2/5 h-52 lg:h-72 bg-sky-100 flex items-center justify-center relative overflow-hidden flex-shrink-0">
                     @if($course->thumbnail)
-                        <img src="{{ asset('storage/' . $course->thumbnail) }}" alt="{{ $course->title }}" class="w-full h-full object-cover">
+                        <img src="{{ asset('storage/' . $course->thumbnail) }}" alt="{{ $course->localized('title') }}" class="w-full h-full object-cover">
                     @else
                         <div class="text-sky-600 text-center">
                             <i class="fas fa-graduation-cap text-4xl"></i>
@@ -868,7 +868,7 @@
                 <div class="lg:flex-1 p-5 sm:p-6 lg:p-8">
                     <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
                         <div class="min-w-0 flex-1">
-                            <h1 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2 leading-tight">{{ $course->title }}</h1>
+                            <h1 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2 leading-tight">{{ $course->localized('title') }}</h1>
                             <p class="text-sm text-gray-500">
                                 {{ $course->academicYear->name ?? '—' }} · {{ $course->academicSubject->name ?? '—' }} · {{ $course->teacher->name ?? '—' }}
                             </p>
@@ -1020,7 +1020,7 @@
                         
                         <!-- عنوان الكورس -->
                         <div class="flex items-center gap-3">
-                            <h1 class="text-xl font-black text-gray-900">{{ $course->title }}</h1>
+                            <h1 class="text-xl font-black text-gray-900">{{ $course->localized('title') }}</h1>
                             <span class="text-sm text-gray-500">|</span>
                             <span class="text-sm text-gray-600">{{ $course->academicYear->name ?? 'غير محدد' }} - {{ $course->academicSubject->name ?? 'غير محدد' }}</span>
                         </div>
@@ -1061,7 +1061,7 @@
                         <!-- حالة فارغة - اختر درساً أو محاضرة من السايدبار -->
                         <div x-show="!selectedLesson && !selectedLecture" class="empty-content-state">
                             <i class="fas fa-graduation-cap"></i>
-                            <h3 class="text-xl font-black text-gray-900 mb-2 mt-4">مرحباً في {{ $course->title }}</h3>
+                            <h3 class="text-xl font-black text-gray-900 mb-2 mt-4">مرحباً في {{ $course->localized('title') }}</h3>
                             <p class="text-sm text-gray-600">اختر درساً أو محاضرة من القائمة الجانبية لبدء التعلم</p>
                         </div>
                         

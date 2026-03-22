@@ -181,6 +181,27 @@
                                           placeholder="اشرح محتوى الكورس وقيمته للطلاب.">{{ old('description', $advancedCourse->description) }}</textarea>
                             </div>
 
+                            <div class="md:col-span-2 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-5 space-y-4">
+                                <p class="text-sm font-bold text-indigo-900 flex items-center gap-2">
+                                    <i class="fas fa-language"></i>
+                                    النسخة الإنجليزية (للموقع عند اختيار English — اختياري)
+                                </p>
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-semibold text-gray-700">عنوان الكورس (English)</label>
+                                    <input type="text" name="title_en" value="{{ old('title_en', $advancedCourse->title_en) }}"
+                                           class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition"
+                                           placeholder="e.g. Web Development Fundamentals" dir="ltr">
+                                    @error('title_en') <p class="text-xs text-rose-500 mt-1">{{ $message }}</p> @enderror
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-semibold text-gray-700">وصف الكورس (English)</label>
+                                    <textarea name="description_en" rows="4" dir="ltr"
+                                              class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition"
+                                              placeholder="Course description in English">{{ old('description_en', $advancedCourse->description_en) }}</textarea>
+                                    @error('description_en') <p class="text-xs text-rose-500 mt-1">{{ $message }}</p> @enderror
+                                </div>
+                            </div>
+
                             <div class="md:col-span-2 space-y-2">
                                 <label class="block text-sm font-semibold text-gray-700">
                                     <i class="fas fa-video text-indigo-600 ml-1"></i>

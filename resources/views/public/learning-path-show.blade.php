@@ -1,5 +1,9 @@
+@php
+    $__pageLocale = app()->getLocale();
+    $__pageRtl = $__pageLocale === 'ar';
+@endphp
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ $__pageLocale }}" dir="{{ $__pageRtl ? 'rtl' : 'ltr' }}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
@@ -537,10 +541,10 @@
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <h3 class="text-lg font-black text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
-                                        {{ $course->title }}
+                                        {{ $course->localized('title') }}
                                     </h3>
                                     <p class="text-gray-600 text-sm mb-3 line-clamp-2">
-                                        {{ Str::limit($course->description ?? __('public.course_fallback_short'), 100) }}
+                                        {{ Str::limit($course->localized('description') ?: __('public.course_fallback_short'), 100) }}
                                     </p>
                                     <div class="flex items-center gap-4 flex-wrap">
                                         @if($course->lessons_count > 0)

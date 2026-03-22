@@ -72,12 +72,14 @@ class AdvancedCourse extends Model
     protected $fillable = [
         'instructor_id',
         'title',
+        'title_en',
         'academic_year_id',
         'academic_subject_id',
         'programming_language',
         'framework',
         'category',
         'description',
+        'description_en',
         'video_url',
         'objectives',
         'level',
@@ -234,6 +236,26 @@ class AdvancedCourse extends Model
     public function scopeByLevel($query, $level)
     {
         return $query->where('level', $level);
+    }
+
+    /**
+     * نص مُعرَّض حسب لغة الواجهة: عند en يُستخدم الحقل *_en إن وُجد، وإلا النص العربي.
+     *
+     * @param  string  $field  اسم الحقل الأساسي بدون اللاحقة، مثل title أو description
+     */
+    public function localized(string $field): string
+    {
+        $base = $this->getAttribute($field);
+        if (app()->getLocale() !== 'en') {
+            return is_string($base) ? $base : (string) ($base ?? '');
+        }
+        $enKey = $field . '_en';
+        $en = $this->getAttribute($enKey);
+        if (is_string($en) && $en !== '') {
+            return $en;
+        }
+
+        return is_string($base) ? $base : (string) ($base ?? '');
     }
 
     public function getTotalLessonsAttribute()

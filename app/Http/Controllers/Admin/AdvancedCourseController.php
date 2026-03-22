@@ -190,9 +190,11 @@ class AdvancedCourseController extends Controller
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
+            'title_en' => 'nullable|string|max:255',
             'academic_year_id' => 'nullable|exists:academic_years,id',
             'academic_subject_id' => 'nullable|exists:academic_subjects,id',
             'description' => 'nullable|string',
+            'description_en' => 'nullable|string',
             'video_url' => 'nullable|url|max:500',
             'objectives' => 'nullable|string',
             'instructor_id' => 'nullable|exists:users,id',
@@ -236,9 +238,11 @@ class AdvancedCourseController extends Controller
         $data = array_merge(
             $request->only([
                 'title',
+                'title_en',
                 'academic_year_id',
                 'academic_subject_id',
                 'description',
+                'description_en',
                 'video_url',
                 'objectives',
                 'instructor_id',
@@ -276,6 +280,8 @@ class AdvancedCourseController extends Controller
         $data['skills'] = $request->filled('skills')
             ? array_values(array_filter($request->input('skills', [])))
             : null;
+        $data['title_en'] = $request->filled('title_en') ? trim((string) $data['title_en']) : null;
+        $data['description_en'] = $request->filled('description_en') ? trim((string) $data['description_en']) : null;
 
         if ($request->hasFile('thumbnail')) {
             $data['thumbnail'] = $request->file('thumbnail')->store('courses', 'public');
@@ -411,9 +417,11 @@ class AdvancedCourseController extends Controller
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
+            'title_en' => 'nullable|string|max:255',
             'academic_year_id' => 'nullable|exists:academic_years,id',
             'academic_subject_id' => 'nullable|exists:academic_subjects,id',
             'description' => 'nullable|string',
+            'description_en' => 'nullable|string',
             'video_url' => 'nullable|url|max:500',
             'objectives' => 'nullable|string',
             'instructor_id' => 'nullable|exists:users,id',
@@ -447,9 +455,11 @@ class AdvancedCourseController extends Controller
 
         $data = $request->only([
             'title',
+            'title_en',
             'academic_year_id',
             'academic_subject_id',
             'description',
+            'description_en',
             'video_url',
             'objectives',
             'instructor_id',
@@ -478,6 +488,8 @@ class AdvancedCourseController extends Controller
         $data['skills'] = $request->filled('skills')
             ? array_values(array_filter($request->input('skills', [])))
             : null;
+        $data['title_en'] = $request->filled('title_en') ? trim((string) $data['title_en']) : null;
+        $data['description_en'] = $request->filled('description_en') ? trim((string) $data['description_en']) : null;
 
         // المسار ومجموعة المهارات اختياريان في التعديل
         $data['academic_year_id'] = $request->filled('academic_year_id') ? $data['academic_year_id'] : null;

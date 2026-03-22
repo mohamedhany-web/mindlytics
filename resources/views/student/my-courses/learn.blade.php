@@ -1,6 +1,6 @@
 @extends('layouts.student-dashboard')
 
-@section('title', $course->title . ' - ' . __('student.learn'))
+@section('title', $course->localized('title') . ' - ' . __('student.learn'))
 @section('header', '')
 
 @push('meta')
@@ -672,8 +672,15 @@
              else if (d.type === 'pattern' && d.id) _learnComp.loadPattern(d.id);
          });
          window.addEventListener('learn-video-ended', () => {
-             if (_learnComp.currentLessonId && typeof window.showAutoAdvanceToNext === 'function') {
+             if (typeof window.showAutoAdvanceToNext !== 'function') return;
+             // درس (فيديو الدرس): currentLessonId يُحدَّد عند loadLesson
+             if (_learnComp.currentLessonId && !_learnComp.selectedLecture) {
                  window.showAutoAdvanceToNext('lesson', _learnComp.currentLessonId);
+                 return;
+             }
+             // محاضرة (فيديو المنهج): بعد loadLecture يكون currentLessonId = null وselectedLecture = id المحاضرة
+             if (_learnComp.selectedLecture) {
+                 window.showAutoAdvanceToNext('lecture', _learnComp.selectedLecture);
              }
          });
      ">
@@ -708,7 +715,7 @@
             <li class="flex items-center gap-2"><i class="fas fa-chevron-left text-slate-400 text-xs"></i></li>
             <li><a href="{{ route('my-courses.index') }}" class="hover:text-sky-600 transition-colors">{{ __('student.my_courses') }}</a></li>
             <li class="flex items-center gap-2"><i class="fas fa-chevron-left text-slate-400 text-xs"></i></li>
-            <li><a href="{{ route('my-courses.show', $course) }}" class="hover:text-sky-600 transition-colors truncate max-w-[180px]">{{ $course->title }}</a></li>
+            <li><a href="{{ route('my-courses.show', $course) }}" class="hover:text-sky-600 transition-colors truncate max-w-[180px]">{{ $course->localized('title') }}</a></li>
             <li class="flex items-center gap-2"><i class="fas fa-chevron-left text-slate-400 text-xs"></i></li>
             <li class="text-sky-600 font-medium">{{ __('student.learn') }}</li>
         </ol>
@@ -725,7 +732,7 @@
                         <i class="fas fa-arrow-right"></i>
                     </a>
                     <div class="min-w-0 flex-1">
-                        <h1 class="text-lg lg:text-xl font-bold text-gray-900 truncate">{{ $course->title }}</h1>
+                        <h1 class="text-lg lg:text-xl font-bold text-gray-900 truncate">{{ $course->localized('title') }}</h1>
                         <div class="flex items-center gap-2 mt-1.5 flex-wrap">
                             <div class="h-2 flex-1 max-w-[140px] bg-slate-200 rounded-full overflow-hidden">
                                 <div class="learn-progress-fill h-full bg-gradient-to-l from-sky-400 to-sky-500 rounded-full transition-all duration-500" style="width: {{ min(100, (float)($progress ?? 0)) }}%"></div>
@@ -785,7 +792,7 @@
                         <div class="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"><i class="fas fa-search text-xs"></i></div>
                     </div>
                 </div>
-                <div class="focus-sidebar-content max-h-[60vh] overflow-y-auto p-3">
+                <div id="learn-curriculum-sidebar" class="focus-sidebar-content max-h-[60vh] overflow-y-auto p-3">
                     <!-- الاختبارات في السايدبار -->
                     @if(isset($sidebarExams) && $sidebarExams->count() > 0)
                         <div class="mb-4">
@@ -861,7 +868,7 @@
                                 <i class="fas fa-play text-emerald-400 text-lg"></i>
                             </div>
                         </div>
-                        <h3 class="text-2xl md:text-3xl font-bold text-gray-900 mb-2">مرحباً في {{ $course->title }}</h3>
+                        <h3 class="text-2xl md:text-3xl font-bold text-gray-900 mb-2">مرحباً في {{ $course->localized('title') }}</h3>
                         <p class="text-gray-600 text-base md:text-lg mb-2 max-w-md mx-auto">اختر محاضرة أو واجباً أو امتحاناً من القائمة لبدء التعلم</p>
                         <p class="text-gray-500 text-sm mb-8">التقدم: {{ $completedLessons ?? 0 }} من {{ $totalLessons ?? 0 }} — {{ number_format((float)($progress ?? 0), 0) }}%</p>
                     </div>
@@ -2481,15 +2488,48 @@ function videoPlayer() {
     var _countdownTimer = null;
     var _nextPending = null;
 
+    function parseLearnNextItemMap() {
+        try {
+            var el = document.getElementById('learn-next-item-map');
+            if (!el || !el.textContent) return {};
+            return JSON.parse(el.textContent);
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function findCurriculumItemEl(type, id) {
+        if (!type || id == null || id === '') return null;
+        var root = document.getElementById('learn-curriculum-sidebar');
+        var sel = '.curriculum-item[data-item-type="' + String(type) + '"][data-item-id="' + String(id) + '"]';
+        return root ? root.querySelector(sel) : document.querySelector(sel);
+    }
+
     function getNextCurriculumItem(currentType, currentId) {
-        var items = Array.from(document.querySelectorAll('.curriculum-item[data-item-type][data-item-id]'));
+        // ترتيب موثوق من السيرفر (نفس flattenCurriculumItems) — يمنع القفز لعناصر «عشوائية» بسبب تخطي المقفل في الـ DOM
+        if (currentType === 'lecture' && currentId != null && currentId !== '') {
+            var map = parseLearnNextItemMap();
+            var sid = String(currentId);
+            if (Object.prototype.hasOwnProperty.call(map, sid)) {
+                var nextFromMap = map[sid];
+                if (nextFromMap === null || nextFromMap === undefined) return null;
+                if (!nextFromMap.type || nextFromMap.id == null) return null;
+                return {
+                    type: nextFromMap.type,
+                    id: String(nextFromMap.id),
+                    el: findCurriculumItemEl(nextFromMap.type, nextFromMap.id)
+                };
+            }
+        }
+
+        var root = document.getElementById('learn-curriculum-sidebar');
+        var items = Array.from((root || document).querySelectorAll('.curriculum-item[data-item-type][data-item-id]'));
         for (var i = 0; i < items.length; i++) {
             if (items[i].dataset.itemType === currentType && String(items[i].dataset.itemId) === String(currentId)) {
-                // find next unlocked item
-                for (var j = i + 1; j < items.length; j++) {
-                    if (items[j].dataset.itemLocked !== '1') {
-                        return { type: items[j].dataset.itemType, id: items[j].dataset.itemId, el: items[j] };
-                    }
+                // العنصر التالي مباشرة في ترتيب المنهج (بما في ذلك المقفل) — لا نتخطى المقفل لأن ذلك كان يغيّر التسلسل
+                if (i + 1 < items.length) {
+                    var n = items[i + 1];
+                    return { type: n.dataset.itemType, id: n.dataset.itemId, el: n };
                 }
                 return null;
             }

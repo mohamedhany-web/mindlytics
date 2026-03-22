@@ -105,7 +105,8 @@ class QuestionController extends Controller
             'explanation' => $validated['explanation'] ?? null,
             'points' => $validated['points'],
             'difficulty_level' => $validated['difficulty_level'],
-            'is_active' => $request->has('is_active', true),
+            /* لا تستخدم has('is_active', true) — يطلب Laravel وجود مفتاحين is_active و true في الطلب فيُحفظ دائماً false */
+            'is_active' => $request->boolean('is_active', true),
         ]);
         
         return redirect()->route('instructor.question-banks.show', $questionBank)
@@ -206,7 +207,7 @@ class QuestionController extends Controller
             'explanation' => $validated['explanation'] ?? null,
             'points' => $validated['points'],
             'difficulty_level' => $validated['difficulty_level'],
-            'is_active' => $request->has('is_active'),
+            'is_active' => $request->boolean('is_active'),
         ]);
         
         return redirect()->route('instructor.question-banks.show', $question->questionBank)

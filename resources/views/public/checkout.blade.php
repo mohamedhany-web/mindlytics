@@ -1,12 +1,16 @@
+@php
+    $__pageLocale = app()->getLocale();
+    $__pageRtl = $__pageLocale === 'ar';
+@endphp
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ $__pageLocale }}" dir="{{ $__pageRtl ? 'rtl' : 'ltr' }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>إتمام الطلب - {{ isset($course) ? $course->title : ($learningPath->name ?? 'الطلب') }} - Mindlytics</title>
+    <title>إتمام الطلب - {{ isset($course) ? $course->localized('title') : ($learningPath->name ?? 'الطلب') }} - Mindlytics</title>
 
     <!-- خط عربي -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -400,7 +404,7 @@
                     <a href="{{ route('public.courses') }}" class="hover:text-blue-600 transition-colors">الكورسات</a>
                     <span class="mx-2 text-gray-400">/</span>
                     @if(isset($course))
-                        <a href="{{ route('public.course.show', $course->id) }}" class="hover:text-blue-600 transition-colors">{{ Str::limit($course->title ?? 'الكورس', 30) }}</a>
+                        <a href="{{ route('public.course.show', $course->id) }}" class="hover:text-blue-600 transition-colors">{{ Str::limit($course->localized('title') ?: 'الكورس', 30) }}</a>
                     @elseif(isset($learningPath))
                         <a href="{{ route('public.learning-path.show', Str::slug($learningPath->name)) }}" class="hover:text-blue-600 transition-colors">{{ Str::limit($learningPath->name ?? 'المسار', 30) }}</a>
                     @endif
@@ -444,7 +448,7 @@
                                     <div class="flex-1 min-w-0">
                                         <h4 class="font-bold text-gray-900 text-base mb-1 line-clamp-2">
                                             @if(isset($course))
-                                                {{ $course->title }}
+                                                {{ $course->localized('title') }}
                                             @else
                                                 {{ $learningPath->name }}
                                             @endif

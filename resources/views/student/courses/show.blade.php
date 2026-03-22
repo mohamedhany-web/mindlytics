@@ -148,7 +148,7 @@
                 <!-- فيديو الكورس -->
                 <div class="course-video-card bg-gradient-to-br from-[#2CA9BD] via-[#65DBE4] to-[#2CA9BD] h-[320px] sm:h-[380px] md:h-[450px] flex items-center justify-center relative group overflow-hidden">
                     @if($advancedCourse->image)
-                        <img src="{{ asset('storage/' . $advancedCourse->image) }}" alt="{{ $advancedCourse->title }}" 
+                        <img src="{{ asset('storage/' . $advancedCourse->image) }}" alt="{{ $advancedCourse->localized('title') }}" 
                              class="w-full h-full object-cover absolute inset-0 transition-transform duration-700 group-hover:scale-110">
                         <div class="absolute inset-0 bg-gradient-to-br from-[#2CA9BD]/90 via-[#65DBE4]/85 to-[#2CA9BD]/90 transition-opacity duration-300 group-hover:opacity-75"></div>
                     @else
@@ -207,11 +207,11 @@
                             </a>
                             @endif
                             <span class="text-[#2CA9BD]">/</span>
-                            <span class="text-[#1C2C39] font-bold">{{ $advancedCourse->title }}</span>
+                            <span class="text-[#1C2C39] font-bold">{{ $advancedCourse->localized('title') }}</span>
                         </nav>
 
                         <!-- عنوان الكورس -->
-                        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black text-[#1C2C39] mb-4 leading-tight">{{ $advancedCourse->title }}</h1>
+                        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black text-[#1C2C39] mb-4 leading-tight">{{ $advancedCourse->localized('title') }}</h1>
                         
                         <!-- وصف الكورس -->
                         <div class="prose max-w-none mb-8">

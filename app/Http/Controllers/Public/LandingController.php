@@ -5,7 +5,11 @@ namespace App\Http\Controllers\Public;
 use App\Http\Controllers\Controller;
 use App\Models\AcademicYear;
 use App\Models\AdvancedCourse;
+use App\Models\LectureWatchProgress;
+use App\Models\LessonProgress;
+use App\Models\OfflineCourse;
 use App\Models\PopupAd;
+use App\Models\User;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -31,7 +35,29 @@ class LandingController extends Controller
         // نفس مسارات صفحة المسارات التعليمية بكل بياناتها (سعر المسار المستقل، عدد الكورسات، الصورة، إلخ)
         $landingPaths = $this->getPublicLearningPaths(12);
 
-        return view('welcome', compact('popupAd', 'landingPaths'));
+        $statsLearners = User::query()
+            ->where('role', 'student')
+            ->where('is_active', true)
+            ->count();
+
+        $statsCourses = AdvancedCourse::query()->where('is_active', true)->count()
+            + OfflineCourse::query()->where('is_active', true)->where('status', 'active')->count();
+
+        // خانة الشهادات في الصفحة الرئيسية تعرض نفس عدد الطلاب النشطين (حسب الطلب)
+        $statsCertificates = $statsLearners;
+
+        $secondsLecture = (int) (LectureWatchProgress::query()->sum('watch_time_seconds') ?? 0);
+        $secondsLesson = (int) (LessonProgress::query()->sum('watch_time') ?? 0);
+        $statsMinutesWatched = (int) floor(($secondsLecture + $secondsLesson) / 60);
+
+        return view('welcome', compact(
+            'popupAd',
+            'landingPaths',
+            'statsLearners',
+            'statsCourses',
+            'statsCertificates',
+            'statsMinutesWatched'
+        ));
     }
 
     /**

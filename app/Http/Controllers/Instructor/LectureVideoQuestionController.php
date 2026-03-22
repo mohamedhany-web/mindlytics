@@ -58,16 +58,15 @@ class LectureVideoQuestionController extends Controller
             ->get(['id', 'title']);
         $bankQuestions = [];
         foreach ($banks as $bank) {
-            $bankQuestions[$bank->id] = $bank->questions()
-            ->where(function ($q) {
-                $q->where('is_active', true)->orWhereNull('is_active');
-            })
-            ->orderBy('created_at')
-            ->get(['id', 'question', 'type', 'options', 'correct_answer'])
-            ->map(function ($q) {
-                return ['id' => $q->id, 'text' => $q->question, 'type' => $q->type, 'options' => $q->options];
-            })->toArray();
+            /* كل أسئلة البنك للاختيار (بما فيها القديمة التي حُفظت is_active=0 بسبب خطأ has('is_active',true) في التخزين) */
+            $bankQuestions[(string) $bank->id] = $bank->questions()
+                ->orderBy('created_at')
+                ->get(['id', 'question', 'type', 'options', 'correct_answer'])
+                ->map(function ($q) {
+                    return ['id' => $q->id, 'text' => $q->question, 'type' => $q->type, 'options' => $q->options];
+                })->values()->all();
         }
+
         return response()->json([
             'video_questions' => $questions,
             'question_banks' => $banks,
@@ -115,9 +114,17 @@ class LectureVideoQuestionController extends Controller
         }
 
         if ($validated['question_source'] === 'bank') {
-            $q = \App\Models\Question::find($validated['question_id']);
-            if (!$q || ($q->question_bank_id && $q->questionBank->instructor_id !== Auth::id() && $q->questionBank->instructor_id !== null)) {
+            $q = \App\Models\Question::with('questionBank')->find($validated['question_id']);
+            if (! $q || ! $q->questionBank) {
                 return response()->json(['success' => false, 'message' => 'السؤال غير متاح'], 422);
+            }
+            $bank = $q->questionBank;
+            $uid = (int) Auth::id();
+            $canUseBank = $bank->instructor_id === null
+                || (int) $bank->instructor_id === $uid
+                || (int) ($bank->created_by ?? 0) === $uid;
+            if (! $canUseBank) {
+                return response()->json(['success' => false, 'message' => 'السؤال غير متاح لهذا الحساب'], 422);
             }
         }
 

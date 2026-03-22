@@ -1,9 +1,7 @@
-@extends('layouts.app')
+<?php $__env->startSection('title', __('instructor.build_curriculum') . ' - ' . $course->title); ?>
+<?php $__env->startSection('header', __('instructor.build_curriculum') . ' - ' . $course->title); ?>
 
-@section('title', __('instructor.build_curriculum') . ' - ' . $course->title)
-@section('header', __('instructor.build_curriculum') . ' - ' . $course->title)
-
-@push('styles')
+<?php $__env->startPush('styles'); ?>
 <style>
     #lectureModal { backdrop-filter: blur(4px); }
     .section-block.collapsed .section-body { display: none; }
@@ -17,27 +15,27 @@
     .section-block .section-header { touch-action: none; }
     .item-card .fa-grip-vertical { pointer-events: none; }
 </style>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="space-y-6">
     <!-- الهيدر -->
     <div class="rounded-2xl p-5 sm:p-6 bg-white border border-slate-200 shadow-sm">
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-                <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 mb-1">{{ __('instructor.build_curriculum') }}</h1>
-                <p class="text-sm text-slate-500">{{ $course->title }}</p>
+                <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 mb-1"><?php echo e(__('instructor.build_curriculum')); ?></h1>
+                <p class="text-sm text-slate-500"><?php echo e($course->title); ?></p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
-                <a href="{{ route('instructor.lectures.index') }}" 
+                <a href="<?php echo e(route('instructor.lectures.index')); ?>" 
                    class="inline-flex items-center gap-2 px-4 py-2.5 bg-sky-500 hover:bg-sky-600 text-white rounded-xl font-semibold transition-colors">
                     <i class="fas fa-chalkboard-teacher"></i>
-                    <span>{{ __('instructor.lectures') }}</span>
+                    <span><?php echo e(__('instructor.lectures')); ?></span>
                 </a>
-                <a href="{{ route('instructor.courses.index') }}" 
+                <a href="<?php echo e(route('instructor.courses.index')); ?>" 
                    class="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors">
                     <i class="fas fa-arrow-right"></i>
-                    <span>{{ __('instructor.back') }}</span>
+                    <span><?php echo e(__('instructor.back')); ?></span>
                 </a>
             </div>
         </div>
@@ -48,9 +46,9 @@
         <div class="lg:col-span-2 space-y-6">
             <!-- الأقسام -->
             <div id="sections-container">
-                @forelse($sections as $section)
-                    @include('instructor.curriculum.partials.section', ['section' => $section, 'depth' => 0])
-                @empty
+                <?php $__empty_1 = true; $__currentLoopData = $sections; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $section): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                    <?php echo $__env->make('instructor.curriculum.partials.section', ['section' => $section, 'depth' => 0], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                     <div class="text-center py-12 bg-white rounded-xl border border-dashed border-slate-200">
                         <i class="fas fa-folder-open text-4xl text-slate-300 mb-4"></i>
                         <p class="text-slate-600 mb-4">لا توجد أقسام بعد</p>
@@ -60,108 +58,108 @@
                             إضافة قسم جديد
                         </button>
                     </div>
-                @endforelse
+                <?php endif; ?>
             </div>
 
-            @if($sections->count() > 0)
+            <?php if($sections->count() > 0): ?>
                 <button onclick="showAddSectionModal()" 
                         class="w-full py-3 bg-white border border-slate-200 rounded-xl font-semibold text-slate-700 hover:bg-slate-50 transition-colors inline-flex items-center justify-center gap-2">
                     <i class="fas fa-plus"></i>
                     إضافة قسم جديد
                 </button>
-            @endif
+            <?php endif; ?>
         </div>
 
         <!-- العناصر المتاحة -->
         <div class="rounded-xl p-5 bg-slate-50 border border-slate-200">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-bold text-slate-800">العناصر المتاحة</h3>
-                <a href="{{ route('instructor.learning-patterns.index', $course) }}" 
+                <a href="<?php echo e(route('instructor.learning-patterns.index', $course)); ?>" 
                    class="px-3 py-2 bg-violet-500 hover:bg-violet-600 text-white rounded-lg text-xs font-semibold transition-colors">
                     <i class="fas fa-puzzle-piece ml-1"></i>
                     إدارة الأنماط
                 </a>
             </div>
 
-            @if($availableLectures->count() > 0)
+            <?php if($availableLectures->count() > 0): ?>
                 <div class="mb-5">
                     <h4 class="text-sm font-semibold text-slate-600 mb-2 flex items-center gap-2">
                         <i class="fas fa-chalkboard-teacher text-sky-500"></i>
-                        المحاضرات ({{ $availableLectures->count() }})
+                        المحاضرات (<?php echo e($availableLectures->count()); ?>)
                     </h4>
                     <div class="space-y-2">
-                        @foreach($availableLectures as $lecture)
+                        <?php $__currentLoopData = $availableLectures; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $lecture): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <div class="p-3 bg-white rounded-lg border border-slate-200 hover:border-sky-300 hover:bg-sky-50/50 transition-all cursor-pointer"
-                                 onclick="showAddItemModal('App\\Models\\Lecture', {{ $lecture->id }}, '{{ addslashes($lecture->title) }}', 'محاضرة')">
-                                <div class="font-semibold text-sm text-slate-800">{{ $lecture->title }}</div>
+                                 onclick="showAddItemModal('App\\Models\\Lecture', <?php echo e($lecture->id); ?>, '<?php echo e(addslashes($lecture->title)); ?>', 'محاضرة')">
+                                <div class="font-semibold text-sm text-slate-800"><?php echo e($lecture->title); ?></div>
                             </div>
-                        @endforeach
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </div>
                 </div>
-            @endif
+            <?php endif; ?>
 
-            @if($availableAssignments->count() > 0)
+            <?php if($availableAssignments->count() > 0): ?>
                 <div class="mb-5">
                     <h4 class="text-sm font-semibold text-slate-600 mb-2 flex items-center gap-2">
                         <i class="fas fa-tasks text-emerald-500"></i>
-                        الواجبات ({{ $availableAssignments->count() }})
+                        الواجبات (<?php echo e($availableAssignments->count()); ?>)
                     </h4>
                     <div class="space-y-2">
-                        @foreach($availableAssignments as $assignment)
+                        <?php $__currentLoopData = $availableAssignments; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $assignment): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <div class="p-3 bg-white rounded-lg border border-slate-200 hover:border-sky-300 hover:bg-sky-50/50 transition-all cursor-pointer"
-                                 onclick="showAddItemModal('App\\Models\\Assignment', {{ $assignment->id }}, '{{ addslashes($assignment->title) }}', 'واجب')">
-                                <div class="font-semibold text-sm text-slate-800">{{ $assignment->title }}</div>
+                                 onclick="showAddItemModal('App\\Models\\Assignment', <?php echo e($assignment->id); ?>, '<?php echo e(addslashes($assignment->title)); ?>', 'واجب')">
+                                <div class="font-semibold text-sm text-slate-800"><?php echo e($assignment->title); ?></div>
                             </div>
-                        @endforeach
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </div>
                 </div>
-            @endif
+            <?php endif; ?>
 
-            @if(isset($availableExams) && $availableExams->count() > 0)
+            <?php if(isset($availableExams) && $availableExams->count() > 0): ?>
                 <div class="mb-5">
                     <h4 class="text-sm font-semibold text-slate-600 mb-2 flex items-center gap-2">
                         <i class="fas fa-clipboard-check text-violet-500"></i>
-                        الامتحانات ({{ $availableExams->count() }})
+                        الامتحانات (<?php echo e($availableExams->count()); ?>)
                     </h4>
                     <div class="space-y-2">
-                        @foreach($availableExams as $exam)
+                        <?php $__currentLoopData = $availableExams; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $exam): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <div class="p-3 bg-white rounded-lg border border-slate-200 hover:border-sky-300 hover:bg-sky-50/50 transition-all cursor-pointer"
-                                 onclick="showAddItemModal('App\\Models\\AdvancedExam', {{ $exam->id }}, '{{ addslashes($exam->title) }}', 'امتحان')">
-                                <div class="font-semibold text-sm text-slate-800">{{ $exam->title }}</div>
+                                 onclick="showAddItemModal('App\\Models\\AdvancedExam', <?php echo e($exam->id); ?>, '<?php echo e(addslashes($exam->title)); ?>', 'امتحان')">
+                                <div class="font-semibold text-sm text-slate-800"><?php echo e($exam->title); ?></div>
                             </div>
-                        @endforeach
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </div>
                 </div>
-            @endif
+            <?php endif; ?>
 
-            @if(isset($availableLearningPatterns) && $availableLearningPatterns->count() > 0)
+            <?php if(isset($availableLearningPatterns) && $availableLearningPatterns->count() > 0): ?>
                 <div class="mb-5">
                     <h4 class="text-sm font-semibold text-slate-600 mb-2 flex items-center gap-2">
                         <i class="fas fa-puzzle-piece text-amber-500"></i>
-                        الأنماط التعليمية ({{ $availableLearningPatterns->count() }})
+                        الأنماط التعليمية (<?php echo e($availableLearningPatterns->count()); ?>)
                     </h4>
                     <div class="space-y-2">
-                        @foreach($availableLearningPatterns as $pattern)
-                            @php $typeInfo = $pattern->getTypeInfo(); @endphp
+                        <?php $__currentLoopData = $availableLearningPatterns; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $pattern): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <?php $typeInfo = $pattern->getTypeInfo(); ?>
                             <div class="p-3 bg-white rounded-lg border border-slate-200 hover:border-sky-300 hover:bg-sky-50/50 transition-all cursor-pointer"
-                                 onclick="showAddItemModal('App\\Models\\LearningPattern', {{ $pattern->id }}, '{{ addslashes($pattern->title) }}', '{{ addslashes($typeInfo['name'] ?? 'نمط تعليمي') }}')">
+                                 onclick="showAddItemModal('App\\Models\\LearningPattern', <?php echo e($pattern->id); ?>, '<?php echo e(addslashes($pattern->title)); ?>', '<?php echo e(addslashes($typeInfo['name'] ?? 'نمط تعليمي')); ?>')">
                                 <div class="flex items-center gap-2 mb-0.5">
-                                    <i class="{{ $typeInfo['icon'] ?? 'fas fa-puzzle-piece' }} text-amber-500"></i>
-                                    <span class="font-semibold text-sm text-slate-800">{{ $pattern->title }}</span>
+                                    <i class="<?php echo e($typeInfo['icon'] ?? 'fas fa-puzzle-piece'); ?> text-amber-500"></i>
+                                    <span class="font-semibold text-sm text-slate-800"><?php echo e($pattern->title); ?></span>
                                 </div>
-                                <div class="text-xs text-slate-500">{{ $typeInfo['name'] ?? 'نمط تعليمي' }}</div>
+                                <div class="text-xs text-slate-500"><?php echo e($typeInfo['name'] ?? 'نمط تعليمي'); ?></div>
                             </div>
-                        @endforeach
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </div>
                 </div>
-            @endif
+            <?php endif; ?>
 
-            @if($availableLectures->count() == 0 && $availableAssignments->count() == 0 && (!isset($availableExams) || $availableExams->count() == 0) && (!isset($availableLearningPatterns) || $availableLearningPatterns->count() == 0))
+            <?php if($availableLectures->count() == 0 && $availableAssignments->count() == 0 && (!isset($availableExams) || $availableExams->count() == 0) && (!isset($availableLearningPatterns) || $availableLearningPatterns->count() == 0)): ?>
                 <div class="text-center py-8 text-slate-500">
                     <i class="fas fa-check-circle text-2xl mb-2 text-emerald-400"></i>
                     <p class="text-sm">جميع العناصر مضافة للمنهج</p>
                 </div>
-            @endif
+            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -219,9 +217,9 @@
             </button>
         </div>
         <form id="lectureForm" onsubmit="saveLecture(event)">
-            @csrf
+            <?php echo csrf_field(); ?>
             <input type="hidden" id="lectureSectionId">
-            <input type="hidden" name="course_id" value="{{ $course->id }}">
+            <input type="hidden" name="course_id" value="<?php echo e($course->id); ?>">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="space-y-5">
                 <div>
@@ -374,7 +372,7 @@
             <hr class="border-slate-200 my-4">
             <h4 class="text-base font-bold text-slate-800 mb-3">إضافة سؤال جديد</h4>
             <form id="videoQuestionForm" onsubmit="submitVideoQuestion(event)" class="space-y-4">
-                @csrf
+                <?php echo csrf_field(); ?>
                 <input type="hidden" id="vqLectureId" name="lecture_id" value="">
                 <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
                     <label class="inline-flex items-center gap-2 cursor-pointer flex-1">
@@ -469,7 +467,7 @@
             <button type="button" onclick="closeExamModal()" class="p-2 rounded-lg text-slate-500 hover:bg-slate-200 transition-colors"><i class="fas fa-times"></i></button>
         </div>
         <form id="examForm" onsubmit="saveExam(event)">
-            @csrf
+            <?php echo csrf_field(); ?>
             <input type="hidden" name="section_id" id="examSectionId" value="">
             <input type="hidden" name="course_lesson_id" value="">
             <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -601,9 +599,9 @@
                 <select id="targetSection" required
                         class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 text-slate-800">
                     <option value="">اختر القسم</option>
-                    @foreach($sectionsFlatForSelect as $entry)
-                        <option value="{{ $entry->section->id }}">{{ str_repeat('— ', $entry->depth) }}{{ $entry->section->title }}</option>
-                    @endforeach
+                    <?php $__currentLoopData = $sectionsFlatForSelect; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $entry): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <option value="<?php echo e($entry->section->id); ?>"><?php echo e(str_repeat('— ', $entry->depth)); ?><?php echo e($entry->section->title); ?></option>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </select>
             </div>
             <div class="flex gap-3">
@@ -618,7 +616,7 @@
     </div>
 </div>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
 let currentSectionId = null;
@@ -671,10 +669,10 @@ function saveAssignment(e) {
     var formData = new FormData(form);
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin ml-1"></i> جاري الحفظ...';
-    fetch('{{ route("instructor.courses.curriculum.assignments.store", $course) }}', {
+    fetch('<?php echo e(route("instructor.courses.curriculum.assignments.store", $course)); ?>', {
         method: 'POST',
         headers: {
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>',
             'Accept': 'application/json',
             'X-Requested-With': 'XMLHttpRequest'
         },
@@ -712,10 +710,10 @@ function saveExam(e) {
     const formData = new FormData(form);
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin ml-1"></i> جاري الحفظ...';
-    fetch('{{ route("instructor.courses.curriculum.exams.store", $course) }}', {
+    fetch('<?php echo e(route("instructor.courses.curriculum.exams.store", $course)); ?>', {
         method: 'POST',
         headers: {
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>',
             'Accept': 'application/json',
             'X-Requested-With': 'XMLHttpRequest'
         },
@@ -816,7 +814,7 @@ function saveSection(e) {
     
     const url = id 
         ? `/instructor/sections/${id}`
-        : `/instructor/courses/{{ $course->id }}/sections`;
+        : `/instructor/courses/<?php echo e($course->id); ?>/sections`;
     const method = id ? 'PUT' : 'POST';
     const body = id 
         ? { title, description, unlock_rule: unlockRule, unlock_percent: (unlockRule === 'previous_percent' ? unlockPercent : null) } 
@@ -826,7 +824,7 @@ function saveSection(e) {
         method: method,
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         },
         body: JSON.stringify(body)
     })
@@ -850,7 +848,7 @@ function deleteSection(id) {
     fetch(`/instructor/sections/${id}`, {
         method: 'DELETE',
         headers: {
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         }
     })
     .then(res => res.json())
@@ -887,7 +885,7 @@ function addItem(e) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         },
         body: JSON.stringify({
             item_type: currentItemType,
@@ -910,7 +908,7 @@ function removeItem(id) {
     fetch(`/instructor/curriculum-items/${id}`, {
         method: 'DELETE',
         headers: {
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         }
     })
     .then(res => res.json())
@@ -929,7 +927,7 @@ function showAddLectureModal(sectionId) {
     document.getElementById('lectureEditId').value = '';
     // مسح الحقول
     document.getElementById('lectureForm').reset();
-    document.getElementById('lectureForm').querySelector('input[name="course_id"]').value = {{ $course->id }};
+    document.getElementById('lectureForm').querySelector('input[name="course_id"]').value = <?php echo e($course->id); ?>;
     const statusEl = document.getElementById('lectureStatus');
     if (statusEl) statusEl.value = 'scheduled';
     const hasAttendance = document.getElementById('lectureForm').querySelector('input[name="has_attendance_tracking"]');
@@ -1123,7 +1121,7 @@ async function deleteLectureFromCurriculum(lectureId, curriculumItemId) {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>',
                 'Accept': 'application/json'
             }
         });
@@ -1191,17 +1189,7 @@ async function loadVideoQuestionsData(lectureId) {
     var listEl = document.getElementById('videoQuestionsList');
     listEl.innerHTML = '<p class="text-slate-500 text-sm"><i class="fas fa-spinner fa-spin ml-1"></i> جاري التحميل...</p>';
     try {
-        var res = await fetch('{{ url('/instructor/lectures') }}/' + lectureId + '/video-questions', {
-            credentials: 'same-origin',
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
-        if (!res.ok) {
-            listEl.innerHTML = '<p class="text-red-600 text-sm">فشل التحميل (' + res.status + '). تأكد من تسجيل الدخول.</p>';
-            return;
-        }
+        var res = await fetch('/instructor/lectures/' + lectureId + '/video-questions', { headers: { 'Accept': 'application/json' } });
         var data = await res.json();
         videoQuestionsBankData = data.bank_questions || {};
         var banks = data.question_banks || [];
@@ -1227,7 +1215,7 @@ document.getElementById('vqBankId').addEventListener('change', function() {
     var bankId = this.value;
     var qSelect = document.getElementById('vqQuestionId');
     qSelect.innerHTML = '<option value="">-- اختر السؤال --</option>';
-    var questions = videoQuestionsBankData[bankId] || videoQuestionsBankData[String(bankId)] || [];
+    var questions = videoQuestionsBankData[bankId] || [];
     questions.forEach(function(q) {
         qSelect.innerHTML += '<option value="' + q.id + '">' + (q.text || '').substring(0, 50) + (q.text && q.text.length > 50 ? '...' : '') + '</option>';
     });
@@ -1239,7 +1227,7 @@ async function submitVideoQuestion(e) {
     var source = form.querySelector('input[name="question_source"]:checked').value;
     var showAtEnd = document.getElementById('vqShowAtEnd') && document.getElementById('vqShowAtEnd').checked;
     var payload = {
-        _token: '{{ csrf_token() }}',
+        _token: '<?php echo e(csrf_token()); ?>',
         show_at_end: showAtEnd,
         timestamp_minutes: document.getElementById('vqTimestampMinutes').value,
         timestamp_seconds_extra: document.getElementById('vqTimestampSeconds').value,
@@ -1260,10 +1248,9 @@ async function submitVideoQuestion(e) {
         if (!payload.custom_question_text || !payload.custom_correct_answer) { alert('أدخل نص السؤال والإجابة الصحيحة'); return; }
     }
     try {
-        var res = await fetch('{{ url('/instructor/lectures') }}/' + videoQuestionsLectureId + '/video-questions', {
+        var res = await fetch('/instructor/lectures/' + videoQuestionsLectureId + '/video-questions', {
             method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>', 'Accept': 'application/json' },
             body: JSON.stringify(payload)
         });
         var data = await res.json();
@@ -1290,10 +1277,9 @@ async function submitVideoQuestion(e) {
 async function deleteVideoQuestion(lectureId, vqId) {
     if (!confirm('حذف هذا السؤال؟')) return;
     try {
-        var res = await fetch('{{ url('/instructor/lectures') }}/' + lectureId + '/video-questions/' + vqId, {
+        var res = await fetch('/instructor/lectures/' + lectureId + '/video-questions/' + vqId, {
             method: 'DELETE',
-            credentials: 'same-origin',
-            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            headers: { 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>', 'Accept': 'application/json' }
         });
         var data = await res.json();
         if (data.success) loadVideoQuestionsData(lectureId);
@@ -1441,7 +1427,7 @@ function saveLecture(e) {
     });
     
     // تحديد URL والـ method
-    let url = '{{ route("instructor.lectures.store") }}';
+    let url = '<?php echo e(route("instructor.lectures.store")); ?>';
     let method = 'POST';
     
     if (lectureId) {
@@ -1457,7 +1443,7 @@ function saveLecture(e) {
     fetch(url, {
         method: method,
         headers: {
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>',
             'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json'
         },
@@ -1500,10 +1486,10 @@ function saveLecture(e) {
         
         // إذا كان هناك أخطاء في التحقق من Laravel
         if (err.message && err.message.includes('422')) {
-            fetch('{{ route("instructor.lectures.store") }}', {
+            fetch('<?php echo e(route("instructor.lectures.store")); ?>', {
                 method: 'POST',
                 headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>',
                     'X-Requested-With': 'XMLHttpRequest',
                     'Accept': 'application/json'
                 },
@@ -1530,7 +1516,7 @@ function addLectureToSection(lectureId, sectionId) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         },
         body: JSON.stringify({
             item_type: 'App\\Models\\Lecture',
@@ -1801,10 +1787,10 @@ function closeLectureModal() {
 // ——— سحب وإفلات المنهج (أقسام + عناصر) ———
 (function curriculumSortable() {
     if (typeof Sortable === 'undefined') return;
-    var courseId = {{ $course->id }};
-    var sectionsOrderUrl = '{{ route("instructor.courses.sections.order", $course) }}';
-    var moveItemUrlBase = '{{ url("instructor/curriculum-items") }}';
-    var token = '{{ csrf_token() }}';
+    var courseId = <?php echo e($course->id); ?>;
+    var sectionsOrderUrl = '<?php echo e(route("instructor.courses.sections.order", $course)); ?>';
+    var moveItemUrlBase = '<?php echo e(url("instructor/curriculum-items")); ?>';
+    var token = '<?php echo e(csrf_token()); ?>';
 
     function showToast(msg, isError) {
         var t = document.createElement('div');
@@ -1938,5 +1924,7 @@ function closeLectureModal() {
     });
 })();
 </script>
-@endpush
-@endsection
+<?php $__env->stopPush(); ?>
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/instructor/curriculum/index.blade.php ENDPATH**/ ?>

@@ -250,8 +250,8 @@ Route::get('/courses', function () {
     $courses = $coursesCollection->map(function ($course) {
         return [
             'id' => $course->id,
-            'title' => $course->title ?? 'بدون عنوان',
-            'description' => $course->description ?? '',
+            'title' => $course->localized('title') ?: 'بدون عنوان',
+            'description' => $course->localized('description') ?? '',
             'level' => $course->level ?? 'beginner',
             'price' => (float)($course->price ?? 0),
             'duration_hours' => (int)($course->duration_hours ?? 0),

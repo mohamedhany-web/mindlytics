@@ -1,5 +1,9 @@
+@php
+    $__pageLocale = app()->getLocale();
+    $__pageRtl = $__pageLocale === 'ar';
+@endphp
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ $__pageLocale }}" dir="{{ $__pageRtl ? 'rtl' : 'ltr' }}">
     <head>
         <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
