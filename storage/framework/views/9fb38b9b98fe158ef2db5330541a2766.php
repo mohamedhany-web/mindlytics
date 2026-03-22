@@ -44,6 +44,12 @@
         }
     }
     
+    /* أزرار تنقل المنهج في السايدبار */
+    .learn-sidebar-nav-btn:focus-visible {
+        outline: 2px solid #0ea5e9;
+        outline-offset: 2px;
+    }
+
     /* عناصر المنهج - بطاقات مثل لوحة التحكم */
     .curriculum-item {
         background: #ffffff;
@@ -582,7 +588,7 @@
                 'download_url' => route('my-courses.lectures.material.download', [$course->id, $lecture->id, $m->id]),
             ];
         })->values()->all();
-        $videoQuestions = $lecture->videoQuestions()->orderBy('timestamp_seconds')->get()->filter(function($vq) use ($currentUser) {
+        $videoQuestions = $lecture->videoQuestions()->with('question')->orderBy('timestamp_seconds')->get()->filter(function($vq) use ($currentUser) {
             $showCount = $vq->show_count;
             if ($showCount === null || $showCount == 0) return true;
             $answered = \App\Models\LectureVideoQuestionAnswer::where('lecture_video_question_id', $vq->id)->where('user_id', $currentUser->id)->count();
@@ -592,7 +598,8 @@
             $showEveryTime = $vq->show_count === null || $vq->show_count == 0;
             return [
                 'id' => $vq->id,
-                'timestamp_seconds' => $vq->timestamp_seconds,
+                'timestamp_seconds' => (int) $vq->timestamp_seconds,
+                'show_at_end' => (bool) $vq->show_at_end,
                 'text' => $payload['text'] ?? '',
                 'options' => $payload['options'] ?? [],
                 'type' => $payload['type'] ?? 'multiple_choice',
@@ -670,6 +677,12 @@
              else if (d.type === 'pattern' && d.id) _learnComp.loadPattern(d.id);
          });
          window.addEventListener('learn-video-ended', () => {
+             if (_learnComp.selectedLecture && _learnComp.showVideoPlayer) {
+                 _learnComp.lectureVideoEndedThisClip = true;
+             }
+             if (_learnComp.currentLessonId && !_learnComp.selectedLecture && _learnComp.showVideoPlayer) {
+                 _learnComp.lessonVideoEndedThisClip = true;
+             }
              if (typeof window.showAutoAdvanceToNext !== 'function') return;
              // درس (فيديو الدرس): currentLessonId يُحدَّد عند loadLesson
              if (_learnComp.currentLessonId && !_learnComp.selectedLecture) {
@@ -769,11 +782,44 @@
         
         <div class="learn-focus-sidebar lg:col-span-4 xl:col-span-3">
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden sticky top-4">
-                <div class="p-4 border-b border-slate-200">
-                    <h3 class="text-gray-900 font-bold text-sm flex items-center gap-2 mb-3">
-                        <span class="w-7 h-7 rounded-lg bg-sky-100 flex items-center justify-center"><i class="fas fa-list text-sky-500 text-xs"></i></span>
-                        المنهج
-                    </h3>
+                <div class="p-4 border-b border-slate-200 bg-white">
+                    
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                        <h3 class="text-gray-900 font-bold text-sm flex items-center gap-2 min-w-0 flex-1">
+                            <span class="w-7 h-7 rounded-lg bg-sky-100 flex items-center justify-center shrink-0"><i class="fas fa-list text-sky-500 text-xs"></i></span>
+                            <span class="truncate"><?php echo e(__('student.learn_curriculum_title')); ?></span>
+                        </h3>
+                        <div class="flex items-center gap-1 shrink-0" role="group" aria-label="<?php echo e(__('student.learn_nav_prev')); ?> / <?php echo e(__('student.learn_nav_next')); ?>">
+                            <button type="button"
+                                    class="learn-sidebar-nav-btn inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white shadow-sm"
+                                    @click="goNavPrev()"
+                                    :disabled="!hasNavPrev()"
+                                    title="<?php echo e(__('student.learn_nav_prev')); ?>"
+                                    aria-label="<?php echo e(__('student.learn_nav_prev')); ?>">
+                                <i class="fas fa-chevron-right text-sm" aria-hidden="true"></i>
+                            </button>
+                            <button type="button"
+                                    class="learn-sidebar-nav-btn inline-flex items-center justify-center w-9 h-9 rounded-lg border border-sky-200 bg-sky-600 text-white hover:bg-sky-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-sky-600 shadow-sm"
+                                    @click="goNavNext()"
+                                    :disabled="!navNextAllowed()"
+                                    title="<?php echo e(__('student.learn_nav_next')); ?>"
+                                    aria-label="<?php echo e(__('student.learn_nav_next')); ?>">
+                                <i class="fas fa-chevron-left text-sm" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-amber-700 font-medium leading-snug mb-2"
+                       x-show="selectedLecture && showVideoPlayer && hasNavNext() && !navNextAllowed()"
+                       x-cloak>
+                        <?php echo e(__('student.learn_nav_next_hint_lecture')); ?>
+
+                    </p>
+                    <p class="text-[10px] text-amber-700 font-medium leading-snug mb-2"
+                       x-show="selectedLesson && showVideoPlayer && hasNavNext() && !navNextAllowed()"
+                       x-cloak>
+                        <?php echo e(__('student.learn_nav_next_hint_lesson')); ?>
+
+                    </p>
                     <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 mb-3">
                         <div class="h-1.5 flex-1 rounded-full bg-slate-200 overflow-hidden">
                             <div class="h-full bg-gradient-to-l from-sky-400 to-sky-500 rounded-full" style="width: <?php echo e(min(100, (float)($progress ?? 0))); ?>%"></div>
@@ -1043,8 +1089,76 @@ function courseFocusMode() {
         watchedSeconds: 0,
         lastReportedTime: null,
         SEEK_THRESHOLD: 2.5,
+        lectureVideoEndedThisClip: false,
+        lessonVideoEndedThisClip: false,
+        getCurrentNavTypeId() {
+            if (this.selectedLecture) return { type: 'lecture', id: this.selectedLecture };
+            if (this.selectedLesson) return { type: 'lesson', id: this.selectedLesson };
+            if (this.selectedPattern) return { type: 'pattern', id: this.selectedPattern };
+            var active = document.querySelector('#learn-curriculum-sidebar .curriculum-item.active');
+            if (active && active.dataset.itemType && active.dataset.itemId) {
+                return { type: active.dataset.itemType, id: active.dataset.itemId };
+            }
+            return null;
+        },
+        hasNavPrev() {
+            var cur = this.getCurrentNavTypeId();
+            if (!cur || !window.learnNavGetPrevForButton) return false;
+            var prev = window.learnNavGetPrevForButton(cur.type, cur.id);
+            return !!(prev && prev.type && prev.id != null && prev.id !== '');
+        },
+        hasNavNext() {
+            var cur = this.getCurrentNavTypeId();
+            if (!cur || !window.learnNavGetNextForButton) return false;
+            var next = window.learnNavGetNextForButton(cur.type, cur.id);
+            if (!next || !next.type || next.id == null || next.id === '') return false;
+            if (window.learnNavIsTargetLocked && window.learnNavIsTargetLocked(next)) return false;
+            return true;
+        },
+        getCurrentLectureMinWatchPercent() {
+            var id = this.selectedLecture;
+            var lectures = this.lecturesData || {};
+            var lec = lectures[id] || lectures[String(id)];
+            if (!lec) return 90;
+            var m = lec.min_watch_percent_to_unlock_next;
+            return (m != null && m !== '') ? parseInt(m, 10) : 90;
+        },
+        navNextAllowed() {
+            if (!this.hasNavNext()) return false;
+            if (this.selectedLecture && this.showVideoPlayer) {
+                var minP = this.getCurrentLectureMinWatchPercent();
+                var pct = Number(this.lectureProgressPercent) || 0;
+                return pct >= minP || !!this.lectureVideoEndedThisClip;
+            }
+            if (this.selectedLesson && this.showVideoPlayer) {
+                var pctL = Number(this.videoProgressPercent) || 0;
+                return pctL >= 90 || !!this.currentLessonCompleted || !!this.lessonVideoEndedThisClip;
+            }
+            return true;
+        },
+        goNavPrev() {
+            var cur = this.getCurrentNavTypeId();
+            if (!cur || !window.learnNavGetPrevForButton) return;
+            var prev = window.learnNavGetPrevForButton(cur.type, cur.id);
+            if (!prev || !prev.type || prev.id == null) return;
+            var nid = parseInt(prev.id, 10);
+            if (isNaN(nid)) nid = prev.id;
+            window.dispatchEvent(new CustomEvent('learn-open-next-item', { detail: { type: prev.type, id: nid } }));
+        },
+        goNavNext() {
+            if (!this.navNextAllowed()) return;
+            var cur = this.getCurrentNavTypeId();
+            if (!cur || !window.learnNavGetNextForButton) return;
+            var next = window.learnNavGetNextForButton(cur.type, cur.id);
+            if (!next || !next.type || next.id == null) return;
+            var nid = parseInt(next.id, 10);
+            if (isNaN(nid)) nid = next.id;
+            window.dispatchEvent(new CustomEvent('learn-open-next-item', { detail: { type: next.type, id: nid } }));
+        },
         async loadLesson(lessonId) {
             if (window._autoplayCancel) window._autoplayCancel();
+            this.lessonVideoEndedThisClip = false;
+            this.lectureVideoEndedThisClip = false;
             this.selectedLesson = lessonId;
             this.selectedLecture = null;
             this.selectedPattern = null;
@@ -1230,6 +1344,8 @@ function courseFocusMode() {
         },
         async loadLecture(lectureId) {
             if (window._autoplayCancel) window._autoplayCancel();
+            this.lectureVideoEndedThisClip = false;
+            this.lessonVideoEndedThisClip = false;
             this.selectedLecture = lectureId;
             this.selectedLesson = null;
             this.selectedPattern = null;
@@ -1304,6 +1420,15 @@ function courseFocusMode() {
                         const container = document.getElementById('learn-video-embed');
                         if (container && embedHtml) container.innerHTML = embedHtml;
                         else if (container) container.innerHTML = '<div class="flex items-center justify-center text-white h-full"><p>لا يمكن عرض الفيديو</p></div>';
+                        // فيديو مباشر (mp4…): لا يمر بـ initLectureVideoWithQuestions — نربط انتهاء التشغيل بالانتقال التلقائي مثل باقي المنصات
+                        if (container && platform === 'direct') {
+                            const vid = container.querySelector('video');
+                            if (vid) {
+                                vid.addEventListener('ended', function onLectureDirectEnded() {
+                                    window.dispatchEvent(new CustomEvent('learn-video-ended'));
+                                });
+                            }
+                        }
                     };
                     this.$nextTick(inject);
                     setTimeout(inject, 50);
@@ -1344,6 +1469,8 @@ function courseFocusMode() {
             this.lectureContent = html;
         },
         loadAssignment(assignmentId) {
+            this.lectureVideoEndedThisClip = false;
+            this.lessonVideoEndedThisClip = false;
             this.selectedLesson = null;
             this.selectedLecture = null;
             this.selectedPattern = null;
@@ -1401,6 +1528,8 @@ function courseFocusMode() {
             });
         },
         loadPattern(patternId) {
+            this.lectureVideoEndedThisClip = false;
+            this.lessonVideoEndedThisClip = false;
             this.selectedLesson = null;
             this.selectedLecture = null;
             this.selectedPattern = patternId;
@@ -1408,6 +1537,8 @@ function courseFocusMode() {
             this.currentLessonVideoUrl = null;
         },
         async loadExam(examId) {
+            this.lectureVideoEndedThisClip = false;
+            this.lessonVideoEndedThisClip = false;
             this.selectedLesson = null;
             this.selectedLecture = null;
             this.selectedPattern = null;
@@ -2058,15 +2189,17 @@ function videoPlayer() {
             if (optionsEl) {
                 optionsEl.innerHTML = '';
                 (q.options || []).forEach(function(opt, i) {
+                    var optStr = (opt != null && typeof opt === 'object') ? (opt.text || opt.label || opt.value || opt.option || String(opt)) : String(opt);
+                    if (!optStr || !optStr.trim()) return;
                     var label = document.createElement('label');
                     label.className = 'flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 cursor-pointer';
                     var radio = document.createElement('input');
                     radio.type = 'radio';
                     radio.name = 'lecture_vq_answer';
-                    radio.value = opt;
+                    radio.value = optStr;
                     radio.className = 'text-sky-500';
                     label.appendChild(radio);
-                    label.appendChild(document.createTextNode(opt));
+                    label.appendChild(document.createTextNode(optStr));
                     optionsEl.appendChild(label);
                 });
             }
@@ -2090,8 +2223,33 @@ function videoPlayer() {
             continueHandler = function() {
                 hideOverlay();
                 if (submitBtn) submitBtn.disabled = false;
-                if (data.on_wrong === 'rewind' && !data.correct && data.rewind_seconds) doRewind(data.rewind_seconds || 0);
-                else doContinue();
+                // أي أسئلة أخرى تظهر في نهاية الفيديو؟
+                for (var j = 0; j < questions.length; j++) {
+                    var qq = questions[j];
+                    if (qq.show_at_end && !shownIds.has(qq.id)) {
+                        if (player && player.pauseVideo) player.pauseVideo();
+                        if (player && player.pause) player.pause();
+                        showQuestion(qq);
+                        return;
+                    }
+                }
+                if (data.on_wrong === 'rewind' && !data.correct && data.rewind_seconds) {
+                    doRewind(data.rewind_seconds || 0);
+                    return;
+                }
+                // انتهت كل أسئلة نهاية الفيديو → الانتقال للعنصر التالي دون انتظار إعادة تحميل الصفحة
+                var hasEnd = false, allEndDone = true;
+                for (var k = 0; k < questions.length; k++) {
+                    if (questions[k].show_at_end) {
+                        hasEnd = true;
+                        if (!shownIds.has(questions[k].id)) allEndDone = false;
+                    }
+                }
+                if (hasEnd && allEndDone && typeof window.showAutoAdvanceToNext === 'function') {
+                    window.showAutoAdvanceToNext('lecture', lectureId);
+                    return;
+                }
+                doContinue();
             };
             if (continueBtn) continueBtn.addEventListener('click', continueHandler);
         }
@@ -2535,6 +2693,31 @@ function videoPlayer() {
         return null;
     }
 
+    function getPrevCurriculumItem(currentType, currentId) {
+        if (!currentType || currentId == null || currentId === '') return null;
+        var root = document.getElementById('learn-curriculum-sidebar');
+        var items = Array.from((root || document).querySelectorAll('.curriculum-item[data-item-type][data-item-id]'));
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].dataset.itemType === currentType && String(items[i].dataset.itemId) === String(currentId)) {
+                if (i > 0) {
+                    var p = items[i - 1];
+                    return { type: p.dataset.itemType, id: p.dataset.itemId, el: p };
+                }
+                return null;
+            }
+        }
+        return null;
+    }
+
+    function learnNavIsTargetLocked(item) {
+        if (!item || !item.el) return false;
+        return String(item.el.dataset.itemLocked || '') === '1';
+    }
+
+    window.learnNavGetNextForButton = getNextCurriculumItem;
+    window.learnNavGetPrevForButton = getPrevCurriculumItem;
+    window.learnNavIsTargetLocked = learnNavIsTargetLocked;
+
     function getItemTitle(el) {
         var titleEl = el && el.querySelector('.curriculum-item-title');
         return titleEl ? titleEl.textContent.trim() : '';
@@ -2557,39 +2740,22 @@ function videoPlayer() {
         }
     }
 
+    /**
+     * الانتقال فوراً للعنصر التالي في المنهج (بدون عدّ تنازلي ولا حاجة لتحديث الصفحة).
+     * يبقى زرّا «تشغيل الآن / إلغاء» في الـ DOM لمن يستدعيهما من مكان آخر فقط.
+     */
     function showAutoAdvance(currentType, currentId) {
+        if (_countdownTimer) { clearInterval(_countdownTimer); _countdownTimer = null; }
+        _nextPending = null;
+        var autoplayOverlay = document.getElementById('autoplay-next-overlay');
+        if (autoplayOverlay) autoplayOverlay.style.display = 'none';
+
         var next = getNextCurriculumItem(currentType, currentId);
-        if (!next) return; // no next item — do nothing
-        _nextPending = next;
-
-        var overlay = document.getElementById('autoplay-next-overlay');
-        var titleEl = document.getElementById('autoplay-next-title');
-        var numEl = document.getElementById('autoplay-countdown-num');
-        var ring = document.getElementById('autoplay-ring');
-        if (!overlay) return;
-
-        var title = getItemTitle(next.el);
-        if (titleEl) titleEl.textContent = title || 'العنصر التالي';
-        overlay.style.display = 'flex';
-
-        var seconds = 5;
-        var circumference = 88; // 2*π*14 ≈ 88
-        if (numEl) numEl.textContent = seconds;
-        if (ring) ring.style.strokeDashoffset = '0';
-
-        if (_countdownTimer) clearInterval(_countdownTimer);
-        _countdownTimer = setInterval(function() {
-            seconds--;
-            if (numEl) numEl.textContent = seconds;
-            var offset = circumference - (circumference * seconds / 5);
-            if (ring) ring.style.strokeDashoffset = String(offset);
-            if (seconds <= 0) {
-                loadNextItem(_nextPending);
-            }
-        }, 1000);
+        if (!next) return;
+        loadNextItem(next);
     }
 
-    window._autoplayNow = function() { loadNextItem(_nextPending); };
+    window._autoplayNow = function() { if (_nextPending) loadNextItem(_nextPending); };
     window._autoplayCancel = function() { hideOverlay(); };
     window.showAutoAdvanceToNext = showAutoAdvance;
 })();

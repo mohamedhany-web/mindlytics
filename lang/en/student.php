@@ -262,4 +262,11 @@ return [
     'notification_details' => 'Notification details',
     'learning_path_info' => 'Learning path info',
     'course_info' => 'Course info',
+
+    // Curriculum navigation on learn page
+    'learn_curriculum_title' => 'Curriculum',
+    'learn_nav_prev' => 'Previous',
+    'learn_nav_next' => 'Next',
+    'learn_nav_next_hint_lecture' => 'Reach the watch percentage set by your instructor or watch until the end of the video to go to the next item.',
+    'learn_nav_next_hint_lesson' => 'Watch most of the video or finish it to go to the next item.',
 ];

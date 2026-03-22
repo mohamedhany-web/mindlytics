@@ -46,6 +46,12 @@
         }
     }
     
+    /* أزرار تنقل المنهج في السايدبار */
+    .learn-sidebar-nav-btn:focus-visible {
+        outline: 2px solid #0ea5e9;
+        outline-offset: 2px;
+    }
+
     /* عناصر المنهج - بطاقات مثل لوحة التحكم */
     .curriculum-item {
         background: #ffffff;
@@ -673,6 +679,12 @@
              else if (d.type === 'pattern' && d.id) _learnComp.loadPattern(d.id);
          });
          window.addEventListener('learn-video-ended', () => {
+             if (_learnComp.selectedLecture && _learnComp.showVideoPlayer) {
+                 _learnComp.lectureVideoEndedThisClip = true;
+             }
+             if (_learnComp.currentLessonId && !_learnComp.selectedLecture && _learnComp.showVideoPlayer) {
+                 _learnComp.lessonVideoEndedThisClip = true;
+             }
              if (typeof window.showAutoAdvanceToNext !== 'function') return;
              // درس (فيديو الدرس): currentLessonId يُحدَّد عند loadLesson
              if (_learnComp.currentLessonId && !_learnComp.selectedLecture) {
@@ -772,11 +784,42 @@
         {{-- بطاقة المنهج --}}
         <div class="learn-focus-sidebar lg:col-span-4 xl:col-span-3">
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden sticky top-4">
-                <div class="p-4 border-b border-slate-200">
-                    <h3 class="text-gray-900 font-bold text-sm flex items-center gap-2 mb-3">
-                        <span class="w-7 h-7 rounded-lg bg-sky-100 flex items-center justify-center"><i class="fas fa-list text-sky-500 text-xs"></i></span>
-                        المنهج
-                    </h3>
+                <div class="p-4 border-b border-slate-200 bg-white">
+                    {{-- عنوان المنهج + أزرار السابق/التالي ثابتة فوق قائمة العناصر (لا تتحرك مع التمرير) --}}
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                        <h3 class="text-gray-900 font-bold text-sm flex items-center gap-2 min-w-0 flex-1">
+                            <span class="w-7 h-7 rounded-lg bg-sky-100 flex items-center justify-center shrink-0"><i class="fas fa-list text-sky-500 text-xs"></i></span>
+                            <span class="truncate">{{ __('student.learn_curriculum_title') }}</span>
+                        </h3>
+                        <div class="flex items-center gap-1 shrink-0" role="group" aria-label="{{ __('student.learn_nav_prev') }} / {{ __('student.learn_nav_next') }}">
+                            <button type="button"
+                                    class="learn-sidebar-nav-btn inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white shadow-sm"
+                                    @click="goNavPrev()"
+                                    :disabled="!hasNavPrev()"
+                                    title="{{ __('student.learn_nav_prev') }}"
+                                    aria-label="{{ __('student.learn_nav_prev') }}">
+                                <i class="fas fa-chevron-right text-sm" aria-hidden="true"></i>
+                            </button>
+                            <button type="button"
+                                    class="learn-sidebar-nav-btn inline-flex items-center justify-center w-9 h-9 rounded-lg border border-sky-200 bg-sky-600 text-white hover:bg-sky-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-sky-600 shadow-sm"
+                                    @click="goNavNext()"
+                                    :disabled="!navNextAllowed()"
+                                    title="{{ __('student.learn_nav_next') }}"
+                                    aria-label="{{ __('student.learn_nav_next') }}">
+                                <i class="fas fa-chevron-left text-sm" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-amber-700 font-medium leading-snug mb-2"
+                       x-show="selectedLecture && showVideoPlayer && hasNavNext() && !navNextAllowed()"
+                       x-cloak>
+                        {{ __('student.learn_nav_next_hint_lecture') }}
+                    </p>
+                    <p class="text-[10px] text-amber-700 font-medium leading-snug mb-2"
+                       x-show="selectedLesson && showVideoPlayer && hasNavNext() && !navNextAllowed()"
+                       x-cloak>
+                        {{ __('student.learn_nav_next_hint_lesson') }}
+                    </p>
                     <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 mb-3">
                         <div class="h-1.5 flex-1 rounded-full bg-slate-200 overflow-hidden">
                             <div class="h-full bg-gradient-to-l from-sky-400 to-sky-500 rounded-full" style="width: {{ min(100, (float)($progress ?? 0)) }}%"></div>
@@ -1046,8 +1089,76 @@ function courseFocusMode() {
         watchedSeconds: 0,
         lastReportedTime: null,
         SEEK_THRESHOLD: 2.5,
+        lectureVideoEndedThisClip: false,
+        lessonVideoEndedThisClip: false,
+        getCurrentNavTypeId() {
+            if (this.selectedLecture) return { type: 'lecture', id: this.selectedLecture };
+            if (this.selectedLesson) return { type: 'lesson', id: this.selectedLesson };
+            if (this.selectedPattern) return { type: 'pattern', id: this.selectedPattern };
+            var active = document.querySelector('#learn-curriculum-sidebar .curriculum-item.active');
+            if (active && active.dataset.itemType && active.dataset.itemId) {
+                return { type: active.dataset.itemType, id: active.dataset.itemId };
+            }
+            return null;
+        },
+        hasNavPrev() {
+            var cur = this.getCurrentNavTypeId();
+            if (!cur || !window.learnNavGetPrevForButton) return false;
+            var prev = window.learnNavGetPrevForButton(cur.type, cur.id);
+            return !!(prev && prev.type && prev.id != null && prev.id !== '');
+        },
+        hasNavNext() {
+            var cur = this.getCurrentNavTypeId();
+            if (!cur || !window.learnNavGetNextForButton) return false;
+            var next = window.learnNavGetNextForButton(cur.type, cur.id);
+            if (!next || !next.type || next.id == null || next.id === '') return false;
+            if (window.learnNavIsTargetLocked && window.learnNavIsTargetLocked(next)) return false;
+            return true;
+        },
+        getCurrentLectureMinWatchPercent() {
+            var id = this.selectedLecture;
+            var lectures = this.lecturesData || {};
+            var lec = lectures[id] || lectures[String(id)];
+            if (!lec) return 90;
+            var m = lec.min_watch_percent_to_unlock_next;
+            return (m != null && m !== '') ? parseInt(m, 10) : 90;
+        },
+        navNextAllowed() {
+            if (!this.hasNavNext()) return false;
+            if (this.selectedLecture && this.showVideoPlayer) {
+                var minP = this.getCurrentLectureMinWatchPercent();
+                var pct = Number(this.lectureProgressPercent) || 0;
+                return pct >= minP || !!this.lectureVideoEndedThisClip;
+            }
+            if (this.selectedLesson && this.showVideoPlayer) {
+                var pctL = Number(this.videoProgressPercent) || 0;
+                return pctL >= 90 || !!this.currentLessonCompleted || !!this.lessonVideoEndedThisClip;
+            }
+            return true;
+        },
+        goNavPrev() {
+            var cur = this.getCurrentNavTypeId();
+            if (!cur || !window.learnNavGetPrevForButton) return;
+            var prev = window.learnNavGetPrevForButton(cur.type, cur.id);
+            if (!prev || !prev.type || prev.id == null) return;
+            var nid = parseInt(prev.id, 10);
+            if (isNaN(nid)) nid = prev.id;
+            window.dispatchEvent(new CustomEvent('learn-open-next-item', { detail: { type: prev.type, id: nid } }));
+        },
+        goNavNext() {
+            if (!this.navNextAllowed()) return;
+            var cur = this.getCurrentNavTypeId();
+            if (!cur || !window.learnNavGetNextForButton) return;
+            var next = window.learnNavGetNextForButton(cur.type, cur.id);
+            if (!next || !next.type || next.id == null) return;
+            var nid = parseInt(next.id, 10);
+            if (isNaN(nid)) nid = next.id;
+            window.dispatchEvent(new CustomEvent('learn-open-next-item', { detail: { type: next.type, id: nid } }));
+        },
         async loadLesson(lessonId) {
             if (window._autoplayCancel) window._autoplayCancel();
+            this.lessonVideoEndedThisClip = false;
+            this.lectureVideoEndedThisClip = false;
             this.selectedLesson = lessonId;
             this.selectedLecture = null;
             this.selectedPattern = null;
@@ -1233,6 +1344,8 @@ function courseFocusMode() {
         },
         async loadLecture(lectureId) {
             if (window._autoplayCancel) window._autoplayCancel();
+            this.lectureVideoEndedThisClip = false;
+            this.lessonVideoEndedThisClip = false;
             this.selectedLecture = lectureId;
             this.selectedLesson = null;
             this.selectedPattern = null;
@@ -1356,6 +1469,8 @@ function courseFocusMode() {
             this.lectureContent = html;
         },
         loadAssignment(assignmentId) {
+            this.lectureVideoEndedThisClip = false;
+            this.lessonVideoEndedThisClip = false;
             this.selectedLesson = null;
             this.selectedLecture = null;
             this.selectedPattern = null;
@@ -1413,6 +1528,8 @@ function courseFocusMode() {
             });
         },
         loadPattern(patternId) {
+            this.lectureVideoEndedThisClip = false;
+            this.lessonVideoEndedThisClip = false;
             this.selectedLesson = null;
             this.selectedLecture = null;
             this.selectedPattern = patternId;
@@ -1420,6 +1537,8 @@ function courseFocusMode() {
             this.currentLessonVideoUrl = null;
         },
         async loadExam(examId) {
+            this.lectureVideoEndedThisClip = false;
+            this.lessonVideoEndedThisClip = false;
             this.selectedLesson = null;
             this.selectedLecture = null;
             this.selectedPattern = null;
@@ -2573,6 +2692,31 @@ function videoPlayer() {
         }
         return null;
     }
+
+    function getPrevCurriculumItem(currentType, currentId) {
+        if (!currentType || currentId == null || currentId === '') return null;
+        var root = document.getElementById('learn-curriculum-sidebar');
+        var items = Array.from((root || document).querySelectorAll('.curriculum-item[data-item-type][data-item-id]'));
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].dataset.itemType === currentType && String(items[i].dataset.itemId) === String(currentId)) {
+                if (i > 0) {
+                    var p = items[i - 1];
+                    return { type: p.dataset.itemType, id: p.dataset.itemId, el: p };
+                }
+                return null;
+            }
+        }
+        return null;
+    }
+
+    function learnNavIsTargetLocked(item) {
+        if (!item || !item.el) return false;
+        return String(item.el.dataset.itemLocked || '') === '1';
+    }
+
+    window.learnNavGetNextForButton = getNextCurriculumItem;
+    window.learnNavGetPrevForButton = getPrevCurriculumItem;
+    window.learnNavIsTargetLocked = learnNavIsTargetLocked;
 
     function getItemTitle(el) {
         var titleEl = el && el.querySelector('.curriculum-item-title');
