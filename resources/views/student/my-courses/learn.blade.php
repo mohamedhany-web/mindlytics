@@ -1307,6 +1307,15 @@ function courseFocusMode() {
                         const container = document.getElementById('learn-video-embed');
                         if (container && embedHtml) container.innerHTML = embedHtml;
                         else if (container) container.innerHTML = '<div class="flex items-center justify-center text-white h-full"><p>لا يمكن عرض الفيديو</p></div>';
+                        // فيديو مباشر (mp4…): لا يمر بـ initLectureVideoWithQuestions — نربط انتهاء التشغيل بالانتقال التلقائي مثل باقي المنصات
+                        if (container && platform === 'direct') {
+                            const vid = container.querySelector('video');
+                            if (vid) {
+                                vid.addEventListener('ended', function onLectureDirectEnded() {
+                                    window.dispatchEvent(new CustomEvent('learn-video-ended'));
+                                });
+                            }
+                        }
                     };
                     this.$nextTick(inject);
                     setTimeout(inject, 50);
@@ -2095,8 +2104,33 @@ function videoPlayer() {
             continueHandler = function() {
                 hideOverlay();
                 if (submitBtn) submitBtn.disabled = false;
-                if (data.on_wrong === 'rewind' && !data.correct && data.rewind_seconds) doRewind(data.rewind_seconds || 0);
-                else doContinue();
+                // أي أسئلة أخرى تظهر في نهاية الفيديو؟
+                for (var j = 0; j < questions.length; j++) {
+                    var qq = questions[j];
+                    if (qq.show_at_end && !shownIds.has(qq.id)) {
+                        if (player && player.pauseVideo) player.pauseVideo();
+                        if (player && player.pause) player.pause();
+                        showQuestion(qq);
+                        return;
+                    }
+                }
+                if (data.on_wrong === 'rewind' && !data.correct && data.rewind_seconds) {
+                    doRewind(data.rewind_seconds || 0);
+                    return;
+                }
+                // انتهت كل أسئلة نهاية الفيديو → الانتقال للعنصر التالي دون انتظار إعادة تحميل الصفحة
+                var hasEnd = false, allEndDone = true;
+                for (var k = 0; k < questions.length; k++) {
+                    if (questions[k].show_at_end) {
+                        hasEnd = true;
+                        if (!shownIds.has(questions[k].id)) allEndDone = false;
+                    }
+                }
+                if (hasEnd && allEndDone && typeof window.showAutoAdvanceToNext === 'function') {
+                    window.showAutoAdvanceToNext('lecture', lectureId);
+                    return;
+                }
+                doContinue();
             };
             if (continueBtn) continueBtn.addEventListener('click', continueHandler);
         }
@@ -2562,39 +2596,22 @@ function videoPlayer() {
         }
     }
 
+    /**
+     * الانتقال فوراً للعنصر التالي في المنهج (بدون عدّ تنازلي ولا حاجة لتحديث الصفحة).
+     * يبقى زرّا «تشغيل الآن / إلغاء» في الـ DOM لمن يستدعيهما من مكان آخر فقط.
+     */
     function showAutoAdvance(currentType, currentId) {
+        if (_countdownTimer) { clearInterval(_countdownTimer); _countdownTimer = null; }
+        _nextPending = null;
+        var autoplayOverlay = document.getElementById('autoplay-next-overlay');
+        if (autoplayOverlay) autoplayOverlay.style.display = 'none';
+
         var next = getNextCurriculumItem(currentType, currentId);
-        if (!next) return; // no next item — do nothing
-        _nextPending = next;
-
-        var overlay = document.getElementById('autoplay-next-overlay');
-        var titleEl = document.getElementById('autoplay-next-title');
-        var numEl = document.getElementById('autoplay-countdown-num');
-        var ring = document.getElementById('autoplay-ring');
-        if (!overlay) return;
-
-        var title = getItemTitle(next.el);
-        if (titleEl) titleEl.textContent = title || 'العنصر التالي';
-        overlay.style.display = 'flex';
-
-        var seconds = 5;
-        var circumference = 88; // 2*π*14 ≈ 88
-        if (numEl) numEl.textContent = seconds;
-        if (ring) ring.style.strokeDashoffset = '0';
-
-        if (_countdownTimer) clearInterval(_countdownTimer);
-        _countdownTimer = setInterval(function() {
-            seconds--;
-            if (numEl) numEl.textContent = seconds;
-            var offset = circumference - (circumference * seconds / 5);
-            if (ring) ring.style.strokeDashoffset = String(offset);
-            if (seconds <= 0) {
-                loadNextItem(_nextPending);
-            }
-        }, 1000);
+        if (!next) return;
+        loadNextItem(next);
     }
 
-    window._autoplayNow = function() { loadNextItem(_nextPending); };
+    window._autoplayNow = function() { if (_nextPending) loadNextItem(_nextPending); };
     window._autoplayCancel = function() { hideOverlay(); };
     window.showAutoAdvanceToNext = showAutoAdvance;
 })();
