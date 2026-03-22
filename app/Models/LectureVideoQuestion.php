@@ -55,33 +55,65 @@ class LectureVideoQuestion extends Model
     }
 
     /**
+     * تطبيع عناصر الخيارات إلى نصوص (يدعم مصفوفة نصوص أو عناصر كمصفوفات/كائنات).
+     */
+    public static function normalizeOptionsForDisplay(mixed $options): array
+    {
+        if (! is_array($options)) {
+            return [];
+        }
+        $out = [];
+        foreach (array_values($options) as $item) {
+            if (is_string($item) || is_numeric($item)) {
+                $out[] = trim((string) $item);
+            } elseif (is_array($item)) {
+                $t = $item['text'] ?? $item['label'] ?? $item['value'] ?? $item['option'] ?? null;
+                $out[] = $t !== null ? trim((string) $t) : '';
+            } elseif (is_object($item)) {
+                $t = $item->text ?? $item->label ?? $item->value ?? null;
+                $out[] = $t !== null ? trim((string) $t) : '';
+            } else {
+                $out[] = '';
+            }
+        }
+
+        return array_values(array_filter($out, fn ($s) => $s !== ''));
+    }
+
+    /**
      * بيانات السؤال جاهزة للعرض (عنوان + خيارات + إجابة صحيحة للتحقق فقط).
      */
     public function getPayloadForStudent(): array
     {
         if ($this->question_source === self::SOURCE_BANK && $this->question_id) {
-            $q = $this->question;
-            if (!$q || !$q->is_active) {
-                return ['text' => '', 'options' => [], 'type' => 'multiple_choice'];
+            $q = $this->relationLoaded('question') ? $this->question : $this->question()->first();
+            if (! $q) {
+                return ['id' => $this->id, 'text' => '', 'options' => [], 'type' => 'multiple_choice', 'points' => $this->points];
             }
-            $options = $q->options;
-            if (is_array($options)) {
-                $options = array_values($options);
-            } else {
-                $options = [];
+            // عرض السؤال المرتبط بالمحاضرة حتى لو أُلغي تفعيله في البنك لاحقاً (تجنب محتوى فارغ للطالب)
+            $text = trim((string) ($q->question ?? ''));
+            $type = $q->type ?? 'multiple_choice';
+            $options = self::normalizeOptionsForDisplay($q->options ?? []);
+
+            if ($type === 'true_false' && count($options) < 2) {
+                $options = ['صح', 'خطأ'];
             }
+
             return [
                 'id' => $this->id,
-                'text' => $q->question,
+                'text' => $text,
                 'options' => $options,
-                'type' => $q->type ?? 'multiple_choice',
+                'type' => $type,
                 'points' => $this->points,
             ];
         }
+
+        $customOpts = is_array($this->custom_options) ? self::normalizeOptionsForDisplay($this->custom_options) : [];
+
         return [
             'id' => $this->id,
-            'text' => $this->custom_question_text ?? '',
-            'options' => is_array($this->custom_options) ? array_values($this->custom_options) : [],
+            'text' => trim((string) ($this->custom_question_text ?? '')),
+            'options' => $customOpts,
             'type' => 'multiple_choice',
             'points' => $this->points,
         ];

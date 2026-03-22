@@ -4,126 +4,142 @@
 @section('header', __('instructor.withdrawal_requests'))
 
 @section('content')
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    {{-- إجمالي الماليات من كله --}}
-    <div class="mb-6">
-        <h2 class="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
-            <i class="fas fa-chart-pie text-amber-600"></i>
-            إجمالي الماليات
+<div class="space-y-6">
+    {{-- عنوان + زر طلب جديد --}}
+    <div class="relative rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50/40 to-white shadow-sm overflow-hidden">
+        <div class="absolute top-0 right-0 w-28 h-28 rounded-full bg-sky-100/50 -translate-y-1/2 translate-x-1/2 pointer-events-none" aria-hidden="true"></div>
+        <div class="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 p-5 sm:p-6">
+            <div class="flex items-center gap-4 min-w-0 flex-1">
+                <div class="w-14 h-14 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-wallet text-sky-600 text-2xl"></i>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-1">{{ __('instructor.instructor_panel') }}</p>
+                    <h1 class="text-xl sm:text-2xl font-bold text-slate-800 truncate">{{ __('instructor.withdrawal_requests') }}</h1>
+                    <p class="text-sm text-slate-500 mt-0.5">{{ __('instructor.finance_overview') }}</p>
+                </div>
+            </div>
+            @if($stats['available_amount'] > 0)
+            <a href="{{ route('instructor.withdrawals.create') }}"
+               class="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white px-5 py-2.5 text-sm font-semibold shadow-sm border border-sky-700/20 transition-colors flex-shrink-0">
+                <i class="fas fa-plus text-sm"></i>
+                {{ __('instructor.new_withdrawal_request') }}
+            </a>
+            @endif
+        </div>
+    </div>
+
+    {{-- إحصائيات --}}
+    <div>
+        <h2 class="text-sm font-bold text-slate-600 uppercase tracking-wide mb-3 flex items-center gap-2">
+            <i class="fas fa-chart-pie text-sky-500 text-xs"></i>
+            {{ __('instructor.finance_overview') }}
         </h2>
-    </div>
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-6 text-white shadow-lg">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-emerald-100 text-sm font-semibold mb-2">{{ __('instructor.total_earned') }}</p>
-                    <p class="text-3xl font-black">{{ number_format($stats['total_earned'], 2) }} ج.م</p>
-                </div>
-                <div class="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center">
-                    <i class="fas fa-money-bill-wave text-2xl"></i>
-                </div>
-            </div>
-        </div>
-        
-        <div class="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-6 text-white shadow-lg">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-blue-100 text-sm font-semibold mb-2">{{ __('instructor.total_withdrawn') }}</p>
-                    <p class="text-3xl font-black">{{ number_format($stats['total_withdrawn'], 2) }} ج.م</p>
-                </div>
-                <div class="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center">
-                    <i class="fas fa-arrow-down text-2xl"></i>
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 transition-shadow hover:shadow-md">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-xs sm:text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">{{ __('instructor.total_earned') }}</p>
+                        <p class="text-2xl sm:text-3xl font-bold text-slate-800 tabular-nums leading-tight">{{ number_format($stats['total_earned'], 2) }}</p>
+                        <p class="text-xs text-slate-400 mt-1">{{ __('public.currency_egp') }}</p>
+                    </div>
+                    <div class="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center flex-shrink-0 border border-slate-100">
+                        <i class="fas fa-money-bill-wave text-emerald-600 text-xl"></i>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-amber-100 text-sm font-semibold mb-2">{{ __('instructor.pending_withdrawals') }}</p>
-                    <p class="text-3xl font-black">{{ number_format($stats['pending_withdrawals'], 2) }} ج.م</p>
-                </div>
-                <div class="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center">
-                    <i class="fas fa-clock text-2xl"></i>
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 transition-shadow hover:shadow-md">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-xs sm:text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">{{ __('instructor.total_withdrawn') }}</p>
+                        <p class="text-2xl sm:text-3xl font-bold text-slate-800 tabular-nums leading-tight">{{ number_format($stats['total_withdrawn'], 2) }}</p>
+                        <p class="text-xs text-slate-400 mt-1">{{ __('public.currency_egp') }}</p>
+                    </div>
+                    <div class="w-14 h-14 rounded-2xl bg-sky-50 flex items-center justify-center flex-shrink-0 border border-slate-100">
+                        <i class="fas fa-arrow-down text-sky-600 text-xl"></i>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl p-6 text-white shadow-lg">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-purple-100 text-sm font-semibold mb-2">{{ __('instructor.available_amount') }}</p>
-                    <p class="text-3xl font-black">{{ number_format($stats['available_amount'], 2) }} ج.م</p>
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 transition-shadow hover:shadow-md">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-xs sm:text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">{{ __('instructor.pending_withdrawals') }}</p>
+                        <p class="text-2xl sm:text-3xl font-bold text-slate-800 tabular-nums leading-tight">{{ number_format($stats['pending_withdrawals'], 2) }}</p>
+                        <p class="text-xs text-slate-400 mt-1">{{ __('public.currency_egp') }}</p>
+                    </div>
+                    <div class="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center flex-shrink-0 border border-slate-100">
+                        <i class="fas fa-clock text-amber-600 text-xl"></i>
+                    </div>
                 </div>
-                <div class="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center">
-                    <i class="fas fa-wallet text-2xl"></i>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 transition-shadow hover:shadow-md">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-xs sm:text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">{{ __('instructor.available_amount') }}</p>
+                        <p class="text-2xl sm:text-3xl font-bold text-slate-800 tabular-nums leading-tight">{{ number_format($stats['available_amount'], 2) }}</p>
+                        <p class="text-xs text-slate-400 mt-1">{{ __('public.currency_egp') }}</p>
+                    </div>
+                    <div class="w-14 h-14 rounded-2xl bg-violet-50 flex items-center justify-center flex-shrink-0 border border-slate-100">
+                        <i class="fas fa-piggy-bank text-violet-600 text-xl"></i>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Create Withdrawal Button -->
-    @if($stats['available_amount'] > 0)
-    <div class="mb-6 flex justify-end">
-        <a href="{{ route('instructor.withdrawals.create') }}" 
-           class="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition-all">
-            <i class="fas fa-plus"></i>
-            {{ __('instructor.new_withdrawal_request') }}
-        </a>
-    </div>
-    @endif
-
-    <!-- Withdrawals List -->
-    <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-        <div class="px-6 py-5 border-b border-gray-200">
-            <h2 class="text-2xl font-black text-gray-900 flex items-center gap-3">
-                <i class="fas fa-money-bill-wave text-amber-600"></i>
+    {{-- جدول الطلبات --}}
+    <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div class="px-5 py-4 sm:px-6 border-b border-slate-200">
+            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <span class="w-9 h-9 rounded-xl bg-sky-50 border border-slate-100 flex items-center justify-center">
+                    <i class="fas fa-list-ul text-sky-600 text-sm"></i>
+                </span>
                 {{ __('instructor.withdrawal_requests') }}
             </h2>
         </div>
-        
+
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+            <table class="min-w-full divide-y divide-slate-200">
+                <thead class="bg-slate-50">
                     <tr>
-                        <th class="px-6 py-4 text-right text-sm font-bold text-gray-900">{{ __('instructor.request_number') }}</th>
-                        <th class="px-6 py-4 text-right text-sm font-bold text-gray-900">{{ __('instructor.amount') }}</th>
-                        <th class="px-6 py-4 text-right text-sm font-bold text-gray-900">{{ __('instructor.payment_method') }}</th>
-                        <th class="px-6 py-4 text-right text-sm font-bold text-gray-900">{{ __('common.status') }}</th>
-                        <th class="px-6 py-4 text-right text-sm font-bold text-gray-900">{{ __('instructor.request_date') }}</th>
-                        <th class="px-6 py-4 text-center text-sm font-bold text-gray-900">{{ __('instructor.actions') }}</th>
+                        <th scope="col" class="px-4 sm:px-6 py-3.5 text-right text-xs font-bold text-slate-600 uppercase tracking-wide">{{ __('instructor.request_number') }}</th>
+                        <th scope="col" class="px-4 sm:px-6 py-3.5 text-right text-xs font-bold text-slate-600 uppercase tracking-wide">{{ __('instructor.amount') }}</th>
+                        <th scope="col" class="px-4 sm:px-6 py-3.5 text-right text-xs font-bold text-slate-600 uppercase tracking-wide">{{ __('instructor.payment_method') }}</th>
+                        <th scope="col" class="px-4 sm:px-6 py-3.5 text-right text-xs font-bold text-slate-600 uppercase tracking-wide">{{ __('common.status') }}</th>
+                        <th scope="col" class="px-4 sm:px-6 py-3.5 text-right text-xs font-bold text-slate-600 uppercase tracking-wide">{{ __('instructor.request_date') }}</th>
+                        <th scope="col" class="px-4 sm:px-6 py-3.5 text-center text-xs font-bold text-slate-600 uppercase tracking-wide">{{ __('instructor.actions') }}</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
+                <tbody class="divide-y divide-slate-200 bg-white">
                     @forelse($withdrawals as $withdrawal)
-                    <tr class="hover:bg-gray-50 transition-colors">
-                        <td class="px-6 py-4">
-                            <p class="font-bold text-gray-900">{{ $withdrawal->request_number ?? '#' . $withdrawal->id }}</p>
+                    <tr class="hover:bg-slate-50/80 transition-colors">
+                        <td class="px-4 sm:px-6 py-4 whitespace-nowrap">
+                            <span class="font-semibold text-slate-900 font-mono text-sm">{{ $withdrawal->request_number ?? '#' . $withdrawal->id }}</span>
                         </td>
-                        <td class="px-6 py-4">
-                            <p class="font-bold text-gray-900 text-lg">{{ number_format($withdrawal->amount, 2) }} ج.م</p>
+                        <td class="px-4 sm:px-6 py-4 whitespace-nowrap">
+                            <span class="text-sm font-bold text-slate-900 tabular-nums">{{ number_format($withdrawal->amount, 2) }} {{ __('public.currency_egp') }}</span>
                         </td>
-                        <td class="px-6 py-4">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
+                        <td class="px-4 sm:px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border bg-sky-50 text-sky-800 border-sky-100">
                                 @if($withdrawal->payment_method == 'bank_transfer')
-                                    <i class="fas fa-university ml-1"></i> {{ __('instructor.bank_transfer') }}
+                                    <i class="fas fa-university text-[10px]"></i> {{ __('instructor.bank_transfer') }}
                                 @elseif($withdrawal->payment_method == 'wallet')
-                                    <i class="fas fa-wallet ml-1"></i> {{ __('instructor.wallet') }}
+                                    <i class="fas fa-wallet text-[10px]"></i> {{ __('instructor.wallet') }}
                                 @elseif($withdrawal->payment_method == 'cash')
-                                    <i class="fas fa-money-bill ml-1"></i> {{ __('instructor.cash') }}
+                                    <i class="fas fa-money-bill text-[10px]"></i> {{ __('instructor.cash') }}
                                 @else
-                                    <i class="fas fa-ellipsis-h ml-1"></i> {{ __('instructor.other') }}
+                                    <i class="fas fa-ellipsis-h text-[10px]"></i> {{ __('instructor.other') }}
                                 @endif
                             </span>
                         </td>
-                        <td class="px-6 py-4">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold
-                                @if($withdrawal->status == 'completed') bg-emerald-100 text-emerald-700
-                                @elseif($withdrawal->status == 'processing') bg-blue-100 text-blue-700
-                                @elseif($withdrawal->status == 'approved') bg-amber-100 text-amber-700
-                                @elseif($withdrawal->status == 'pending') bg-gray-100 text-gray-700
-                                @elseif($withdrawal->status == 'rejected') bg-rose-100 text-rose-700
-                                @else bg-slate-100 text-slate-700
+                        <td class="px-4 sm:px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border
+                                @if($withdrawal->status == 'completed') bg-emerald-50 text-emerald-800 border-emerald-100
+                                @elseif($withdrawal->status == 'processing') bg-sky-50 text-sky-800 border-sky-100
+                                @elseif($withdrawal->status == 'approved') bg-amber-50 text-amber-800 border-amber-100
+                                @elseif($withdrawal->status == 'pending') bg-slate-100 text-slate-700 border-slate-200
+                                @elseif($withdrawal->status == 'rejected') bg-rose-50 text-rose-800 border-rose-100
+                                @else bg-slate-50 text-slate-700 border-slate-100
                                 @endif">
                                 @if($withdrawal->status == 'completed') {{ __('instructor.completed') }}
                                 @elseif($withdrawal->status == 'processing') {{ __('instructor.processing') }}
@@ -135,26 +151,26 @@
                                 @endif
                             </span>
                         </td>
-                        <td class="px-6 py-4">
-                            <p class="text-sm text-gray-600">{{ $withdrawal->created_at->format('Y-m-d H:i') }}</p>
+                        <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-slate-600 tabular-nums">
+                            {{ $withdrawal->created_at->format('Y-m-d H:i') }}
                         </td>
-                        <td class="px-6 py-4 text-center">
+                        <td class="px-4 sm:px-6 py-4 text-center whitespace-nowrap">
                             <div class="flex items-center justify-center gap-2">
-                                <a href="{{ route('instructor.withdrawals.show', $withdrawal) }}" 
-                                   class="inline-flex items-center justify-center w-10 h-10 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl transition-colors"
+                                <a href="{{ route('instructor.withdrawals.show', $withdrawal) }}"
+                                   class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-100 transition-colors"
                                    title="{{ __('common.view') }}">
-                                    <i class="fas fa-eye"></i>
+                                    <i class="fas fa-eye text-sm"></i>
                                 </a>
                                 @if(in_array($withdrawal->status, ['pending', 'approved']))
-                                <form action="{{ route('instructor.withdrawals.cancel', $withdrawal) }}" 
-                                      method="POST" 
+                                <form action="{{ route('instructor.withdrawals.cancel', $withdrawal) }}"
+                                      method="POST"
                                       onsubmit="return confirm('{{ __('instructor.confirm_cancel_withdrawal') }}');"
                                       class="inline">
                                     @csrf
-                                    <button type="submit" 
-                                            class="inline-flex items-center justify-center w-10 h-10 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl transition-colors"
+                                    <button type="submit"
+                                            class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-100 transition-colors"
                                             title="{{ __('instructor.cancel') }}">
-                                        <i class="fas fa-times"></i>
+                                        <i class="fas fa-times text-sm"></i>
                                     </button>
                                 </form>
                                 @endif
@@ -163,14 +179,14 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="px-6 py-12 text-center">
-                            <div class="flex flex-col items-center gap-4">
-                                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-                                    <i class="fas fa-money-bill-wave text-gray-400 text-2xl"></i>
+                        <td colspan="6" class="px-6 py-14 text-center">
+                            <div class="flex flex-col items-center gap-4 max-w-sm mx-auto">
+                                <div class="w-16 h-16 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center">
+                                    <i class="fas fa-money-bill-wave text-slate-400 text-2xl"></i>
                                 </div>
                                 <div>
-                                    <p class="font-bold text-gray-900">{{ __('instructor.no_withdrawals') }}</p>
-                                    <p class="text-sm text-gray-600 mt-1">{{ __('instructor.no_withdrawals_description') }}</p>
+                                    <p class="font-bold text-slate-800">{{ __('instructor.no_withdrawals') }}</p>
+                                    <p class="text-sm text-slate-500 mt-1">{{ __('instructor.no_withdrawals_description') }}</p>
                                 </div>
                             </div>
                         </td>
@@ -179,9 +195,9 @@
                 </tbody>
             </table>
         </div>
-        
+
         @if($withdrawals->hasPages())
-        <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+        <div class="px-5 py-4 sm:px-6 border-t border-slate-200 bg-slate-50/80">
             {{ $withdrawals->links() }}
         </div>
         @endif

@@ -331,7 +331,7 @@ class MyCourseController extends Controller
                 ];
             });
 
-        $videoQuestions = $lecture->videoQuestions()->orderBy('timestamp_seconds')->get()->filter(function ($vq) use ($user) {
+        $videoQuestions = $lecture->videoQuestions()->with('question')->orderBy('timestamp_seconds')->get()->filter(function ($vq) use ($user) {
             $showCount = $vq->show_count;
             if ($showCount === null || $showCount == 0) {
                 return true;

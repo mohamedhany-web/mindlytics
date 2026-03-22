@@ -1189,7 +1189,17 @@ async function loadVideoQuestionsData(lectureId) {
     var listEl = document.getElementById('videoQuestionsList');
     listEl.innerHTML = '<p class="text-slate-500 text-sm"><i class="fas fa-spinner fa-spin ml-1"></i> جاري التحميل...</p>';
     try {
-        var res = await fetch('/instructor/lectures/' + lectureId + '/video-questions', { headers: { 'Accept': 'application/json' } });
+        var res = await fetch('<?php echo e(url('/instructor/lectures')); ?>/' + lectureId + '/video-questions', {
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        if (!res.ok) {
+            listEl.innerHTML = '<p class="text-red-600 text-sm">فشل التحميل (' + res.status + '). تأكد من تسجيل الدخول.</p>';
+            return;
+        }
         var data = await res.json();
         videoQuestionsBankData = data.bank_questions || {};
         var banks = data.question_banks || [];
@@ -1215,7 +1225,7 @@ document.getElementById('vqBankId').addEventListener('change', function() {
     var bankId = this.value;
     var qSelect = document.getElementById('vqQuestionId');
     qSelect.innerHTML = '<option value="">-- اختر السؤال --</option>';
-    var questions = videoQuestionsBankData[bankId] || [];
+    var questions = videoQuestionsBankData[bankId] || videoQuestionsBankData[String(bankId)] || [];
     questions.forEach(function(q) {
         qSelect.innerHTML += '<option value="' + q.id + '">' + (q.text || '').substring(0, 50) + (q.text && q.text.length > 50 ? '...' : '') + '</option>';
     });
@@ -1248,9 +1258,10 @@ async function submitVideoQuestion(e) {
         if (!payload.custom_question_text || !payload.custom_correct_answer) { alert('أدخل نص السؤال والإجابة الصحيحة'); return; }
     }
     try {
-        var res = await fetch('/instructor/lectures/' + videoQuestionsLectureId + '/video-questions', {
+        var res = await fetch('<?php echo e(url('/instructor/lectures')); ?>/' + videoQuestionsLectureId + '/video-questions', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>', 'Accept': 'application/json' },
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             body: JSON.stringify(payload)
         });
         var data = await res.json();
@@ -1277,9 +1288,10 @@ async function submitVideoQuestion(e) {
 async function deleteVideoQuestion(lectureId, vqId) {
     if (!confirm('حذف هذا السؤال؟')) return;
     try {
-        var res = await fetch('/instructor/lectures/' + lectureId + '/video-questions/' + vqId, {
+        var res = await fetch('<?php echo e(url('/instructor/lectures')); ?>/' + lectureId + '/video-questions/' + vqId, {
             method: 'DELETE',
-            headers: { 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>', 'Accept': 'application/json' }
+            credentials: 'same-origin',
+            headers: { 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
         });
         var data = await res.json();
         if (data.success) loadVideoQuestionsData(lectureId);
