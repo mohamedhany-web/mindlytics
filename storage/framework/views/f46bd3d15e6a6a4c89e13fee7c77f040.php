@@ -1,13 +1,11 @@
-@extends('layouts.student-dashboard')
+<?php $__env->startSection('title', $course->localized('title') . ' - ' . __('student.learn')); ?>
+<?php $__env->startSection('header', ''); ?>
 
-@section('title', $course->localized('title') . ' - ' . __('student.learn'))
-@section('header', '')
+<?php $__env->startPush('meta'); ?>
+<meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
+<?php $__env->stopPush(); ?>
 
-@push('meta')
-<meta name="csrf-token" content="{{ csrf_token() }}">
-@endpush
-
-@push('styles')
+<?php $__env->startPush('styles'); ?>
 <style>
     [x-cloak] {
         display: none !important;
@@ -571,9 +569,9 @@
         border: none !important;
     }
 </style>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@php
+<?php
     // تحضير بيانات المحاضرات للـ JavaScript (مع المواد الظاهرة للطالب + تقدم المشاهدة + نسبة فتح التالي)
     $currentUser = auth()->user();
     $lecturesData = $course->lectures->map(function($lecture) use ($course, $currentUser) {
@@ -636,21 +634,21 @@
     })->keyBy('id');
     
     $lecturesDataJson = json_encode($lecturesData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);
-@endphp
+?>
 
-@section('content')
-<script type="application/json" id="learn-lectures-data">{!! $lecturesDataJson !!}</script>
-<script type="application/json" id="learn-next-item-map">{!! json_encode($nextItemByLectureId ?? []) !!}</script>
-<script type="application/json" id="learn-next-lesson-map">{!! json_encode($nextItemByLessonId ?? []) !!}</script>
+<?php $__env->startSection('content'); ?>
+<script type="application/json" id="learn-lectures-data"><?php echo $lecturesDataJson; ?></script>
+<script type="application/json" id="learn-next-item-map"><?php echo json_encode($nextItemByLectureId ?? []); ?></script>
+<script type="application/json" id="learn-next-lesson-map"><?php echo json_encode($nextItemByLessonId ?? []); ?></script>
 <div class="learn-page bg-slate-50/80 min-h-screen pb-8"
-     data-course-id="{{ $course->id }}"
-     data-course-progress="{{ min(100, (float)($progress ?? 0)) }}"
-     data-total-items="{{ $totalLessons ?? 0 }}"
-     data-completed-items="{{ $completedLessons ?? 0 }}"
-     data-lectures-url="{{ route('my-courses.lectures.show', [$course, '_LID_']) }}"
+     data-course-id="<?php echo e($course->id); ?>"
+     data-course-progress="<?php echo e(min(100, (float)($progress ?? 0))); ?>"
+     data-total-items="<?php echo e($totalLessons ?? 0); ?>"
+     data-completed-items="<?php echo e($completedLessons ?? 0); ?>"
+     data-lectures-url="<?php echo e(route('my-courses.lectures.show', [$course, '_LID_'])); ?>"
      :data-font-size="fontSize"
      x-data="courseFocusMode()"
-     @keydown.escape.window="if (focusMode) { focusMode = false } else { window.location.href='{{ route('my-courses.show', $course) }}' }"
+     @keydown.escape.window="if (focusMode) { focusMode = false } else { window.location.href='<?php echo e(route('my-courses.show', $course)); ?>' }"
      @keydown.ctrl.f.window.prevent="document.querySelector('.search-box input')?.focus()"
      @keydown.ctrl.p.window.prevent="printCurriculum()"
      x-init="
@@ -702,7 +700,7 @@
              }
          });
      ">
-    {{-- Auto-advance countdown overlay --}}
+    
     <div id="autoplay-next-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.78);align-items:flex-end;justify-content:center;padding-bottom:80px;" dir="rtl">
         <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px 28px;min-width:320px;max-width:480px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.5);text-align:center;">
             <div style="font-size:13px;color:#94a3b8;margin-bottom:6px;">الفيديو التالي</div>
@@ -726,37 +724,37 @@
         </div>
     </div>
 
-    {{-- Breadcrumb (مخفي في وضع التركيز) --}}
+    
     <nav x-show="!focusMode" class="bg-white border-b border-slate-200 px-4 py-2 lg:px-6" aria-label="Breadcrumb">
         <ol class="w-full flex flex-wrap items-center gap-2 text-sm text-slate-600">
-            <li><a href="{{ route('dashboard') }}" class="hover:text-sky-600 transition-colors">{{ __('auth.dashboard') }}</a></li>
+            <li><a href="<?php echo e(route('dashboard')); ?>" class="hover:text-sky-600 transition-colors"><?php echo e(__('auth.dashboard')); ?></a></li>
             <li class="flex items-center gap-2"><i class="fas fa-chevron-left text-slate-400 text-xs"></i></li>
-            <li><a href="{{ route('my-courses.index') }}" class="hover:text-sky-600 transition-colors">{{ __('student.my_courses') }}</a></li>
+            <li><a href="<?php echo e(route('my-courses.index')); ?>" class="hover:text-sky-600 transition-colors"><?php echo e(__('student.my_courses')); ?></a></li>
             <li class="flex items-center gap-2"><i class="fas fa-chevron-left text-slate-400 text-xs"></i></li>
-            <li><a href="{{ route('my-courses.show', $course) }}" class="hover:text-sky-600 transition-colors truncate max-w-[180px]">{{ $course->localized('title') }}</a></li>
+            <li><a href="<?php echo e(route('my-courses.show', $course)); ?>" class="hover:text-sky-600 transition-colors truncate max-w-[180px]"><?php echo e($course->localized('title')); ?></a></li>
             <li class="flex items-center gap-2"><i class="fas fa-chevron-left text-slate-400 text-xs"></i></li>
-            <li class="text-sky-600 font-medium">{{ __('student.learn') }}</li>
+            <li class="text-sky-600 font-medium"><?php echo e(__('student.learn')); ?></li>
         </ol>
     </nav>
 
-    {{-- بطاقة الرأس (مخفية في وضع التركيز) --}}
+    
     <div x-show="!focusMode" class="w-full px-4 py-4 lg:px-6">
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div class="p-4 lg:p-5 flex flex-wrap items-center justify-between gap-4">
                 <div class="flex items-center gap-3 flex-1 min-w-0">
-                    <a href="{{ route('my-courses.show', $course) }}" 
+                    <a href="<?php echo e(route('my-courses.show', $course)); ?>" 
                        class="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-sky-50 text-slate-600 hover:text-sky-600 border border-slate-200 hover:border-sky-300 transition-all"
-                       title="{{ __('common.back') }}">
+                       title="<?php echo e(__('common.back')); ?>">
                         <i class="fas fa-arrow-right"></i>
                     </a>
                     <div class="min-w-0 flex-1">
-                        <h1 class="text-lg lg:text-xl font-bold text-gray-900 truncate">{{ $course->localized('title') }}</h1>
+                        <h1 class="text-lg lg:text-xl font-bold text-gray-900 truncate"><?php echo e($course->localized('title')); ?></h1>
                         <div class="flex items-center gap-2 mt-1.5 flex-wrap">
                             <div class="h-2 flex-1 max-w-[140px] bg-slate-200 rounded-full overflow-hidden">
-                                <div class="learn-progress-fill h-full bg-gradient-to-l from-sky-400 to-sky-500 rounded-full transition-all duration-500" style="width: {{ min(100, (float)($progress ?? 0)) }}%"></div>
+                                <div class="learn-progress-fill h-full bg-gradient-to-l from-sky-400 to-sky-500 rounded-full transition-all duration-500" style="width: <?php echo e(min(100, (float)($progress ?? 0))); ?>%"></div>
                             </div>
-                            <span class="learn-progress-count text-xs font-semibold text-slate-600 whitespace-nowrap">{{ $completedLessons ?? 0 }}/{{ $totalLessons ?? 0 }}</span>
-                            <span class="learn-progress-pct text-xs font-bold text-sky-600">{{ number_format((float)($progress ?? 0), 0) }}%</span>
+                            <span class="learn-progress-count text-xs font-semibold text-slate-600 whitespace-nowrap"><?php echo e($completedLessons ?? 0); ?>/<?php echo e($totalLessons ?? 0); ?></span>
+                            <span class="learn-progress-pct text-xs font-bold text-sky-600"><?php echo e(number_format((float)($progress ?? 0), 0)); ?>%</span>
                         </div>
                     </div>
                 </div>
@@ -768,7 +766,7 @@
         </div>
     </div>
 
-    {{-- شريط وضع التركيز (يظهر فقط في وضع التركيز) --}}
+    
     <div x-show="focusMode" class="flex items-center justify-between px-3 py-2 border-b border-slate-200 bg-white flex-shrink-0">
         <button @click="focusMode = false" class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-sky-50 hover:border-sky-300 text-slate-600 hover:text-sky-600 text-sm font-medium transition-all">
             <i class="fas fa-compress-arrows-alt"></i>
@@ -776,41 +774,41 @@
         </button>
         <div class="flex items-center gap-2">
             <div class="h-2 w-24 bg-slate-200 rounded-full overflow-hidden">
-                <div class="learn-progress-fill h-full bg-gradient-to-l from-sky-400 to-sky-500 rounded-full transition-all duration-500" style="width: {{ min(100, (float)($progress ?? 0)) }}%"></div>
+                <div class="learn-progress-fill h-full bg-gradient-to-l from-sky-400 to-sky-500 rounded-full transition-all duration-500" style="width: <?php echo e(min(100, (float)($progress ?? 0))); ?>%"></div>
             </div>
-            <span class="learn-progress-count text-xs font-semibold text-slate-600">{{ $completedLessons ?? 0 }}/{{ $totalLessons ?? 0 }}</span>
-            <span class="learn-progress-pct text-xs font-bold text-sky-600">{{ number_format((float)($progress ?? 0), 0) }}%</span>
+            <span class="learn-progress-count text-xs font-semibold text-slate-600"><?php echo e($completedLessons ?? 0); ?>/<?php echo e($totalLessons ?? 0); ?></span>
+            <span class="learn-progress-pct text-xs font-bold text-sky-600"><?php echo e(number_format((float)($progress ?? 0), 0)); ?>%</span>
         </div>
     </div>
 
-    {{-- شبكة عمودين: منهج (يسار) + محتوى (يمين) --}}
+    
     <div class="learn-focus-wrapper w-full px-4 lg:px-6 flex-1 flex flex-col min-h-0">
     <div class="learn-focus-grid w-full grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 flex-1 min-h-0">
-        {{-- بطاقة المنهج --}}
+        
         <div class="learn-focus-sidebar lg:col-span-4 xl:col-span-3">
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden sticky top-4">
                 <div class="p-4 border-b border-slate-200 bg-white">
-                    {{-- عنوان المنهج + أزرار السابق/التالي ثابتة فوق قائمة العناصر (لا تتحرك مع التمرير) --}}
+                    
                     <div class="flex items-center justify-between gap-2 mb-2">
                         <h3 class="text-gray-900 font-bold text-sm flex items-center gap-2 min-w-0 flex-1">
                             <span class="w-7 h-7 rounded-lg bg-sky-100 flex items-center justify-center shrink-0"><i class="fas fa-list text-sky-500 text-xs"></i></span>
-                            <span class="truncate">{{ __('student.learn_curriculum_title') }}</span>
+                            <span class="truncate"><?php echo e(__('student.learn_curriculum_title')); ?></span>
                         </h3>
-                        <div class="flex items-center gap-1 shrink-0" role="group" aria-label="{{ __('student.learn_nav_prev') }} / {{ __('student.learn_nav_next') }}">
+                        <div class="flex items-center gap-1 shrink-0" role="group" aria-label="<?php echo e(__('student.learn_nav_prev')); ?> / <?php echo e(__('student.learn_nav_next')); ?>">
                             <button type="button"
                                     class="learn-sidebar-nav-btn inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white shadow-sm"
                                     @click="goNavPrev()"
                                     :disabled="!hasNavPrev()"
-                                    title="{{ __('student.learn_nav_prev') }}"
-                                    aria-label="{{ __('student.learn_nav_prev') }}">
+                                    title="<?php echo e(__('student.learn_nav_prev')); ?>"
+                                    aria-label="<?php echo e(__('student.learn_nav_prev')); ?>">
                                 <i class="fas fa-chevron-right text-sm" aria-hidden="true"></i>
                             </button>
                             <button type="button"
                                     class="learn-sidebar-nav-btn inline-flex items-center justify-center w-9 h-9 rounded-lg border border-sky-200 bg-sky-600 text-white hover:bg-sky-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-sky-600 shadow-sm"
                                     @click="goNavNext()"
                                     :disabled="!navNextAllowed()"
-                                    title="{{ __('student.learn_nav_next') }}"
-                                    aria-label="{{ __('student.learn_nav_next') }}">
+                                    title="<?php echo e(__('student.learn_nav_next')); ?>"
+                                    aria-label="<?php echo e(__('student.learn_nav_next')); ?>">
                                 <i class="fas fa-chevron-left text-sm" aria-hidden="true"></i>
                             </button>
                         </div>
@@ -818,19 +816,21 @@
                     <p class="text-[10px] text-amber-700 font-medium leading-snug mb-2"
                        x-show="selectedLecture && showVideoPlayer && hasNavNext() && !navNextAllowed()"
                        x-cloak>
-                        {{ __('student.learn_nav_next_hint_lecture') }}
+                        <?php echo e(__('student.learn_nav_next_hint_lecture')); ?>
+
                     </p>
                     <p class="text-[10px] text-amber-700 font-medium leading-snug mb-2"
                        x-show="selectedLesson && showVideoPlayer && hasNavNext() && !navNextAllowed()"
                        x-cloak>
-                        {{ __('student.learn_nav_next_hint_lesson') }}
+                        <?php echo e(__('student.learn_nav_next_hint_lesson')); ?>
+
                     </p>
                     <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 mb-3">
                         <div class="h-1.5 flex-1 rounded-full bg-slate-200 overflow-hidden">
-                            <div class="h-full bg-gradient-to-l from-sky-400 to-sky-500 rounded-full" style="width: {{ min(100, (float)($progress ?? 0)) }}%"></div>
+                            <div class="h-full bg-gradient-to-l from-sky-400 to-sky-500 rounded-full" style="width: <?php echo e(min(100, (float)($progress ?? 0))); ?>%"></div>
                         </div>
-                        <span class="learn-progress-count text-[10px] font-bold text-gray-600 whitespace-nowrap">{{ $completedLessons ?? 0 }}/{{ $totalLessons ?? 0 }}</span>
-                        <span class="learn-progress-pct text-[10px] font-bold text-sky-600">{{ number_format((float)($progress ?? 0), 0) }}%</span>
+                        <span class="learn-progress-count text-[10px] font-bold text-gray-600 whitespace-nowrap"><?php echo e($completedLessons ?? 0); ?>/<?php echo e($totalLessons ?? 0); ?></span>
+                        <span class="learn-progress-pct text-[10px] font-bold text-sky-600"><?php echo e(number_format((float)($progress ?? 0), 0)); ?>%</span>
                     </div>
                     <div class="search-box relative">
                         <input type="text" 
@@ -843,7 +843,7 @@
                 </div>
                 <div id="learn-curriculum-sidebar" class="focus-sidebar-content max-h-[60vh] overflow-y-auto p-3">
                     <!-- الاختبارات في السايدبار -->
-                    @if(isset($sidebarExams) && $sidebarExams->count() > 0)
+                    <?php if(isset($sidebarExams) && $sidebarExams->count() > 0): ?>
                         <div class="mb-4">
                             <div class="curriculum-section-header mb-2"
                                  :class="{ 'collapsed': isSectionCollapsed('sidebar-exams') }"
@@ -855,15 +855,15 @@
                                 <span class="flex items-center gap-1.5">
                                     <i class="fas fa-clipboard-check text-sky-400/90 text-[10px]"></i>
                                     <span>الاختبارات</span>
-                                    <span class="text-gray-500 text-[10px]">({{ $sidebarExams->count() }})</span>
+                                    <span class="text-gray-500 text-[10px]">(<?php echo e($sidebarExams->count()); ?>)</span>
                                 </span>
                                 <i class="fas fa-chevron-down curriculum-section-chevron"></i>
                             </div>
                             <div x-show="!isSectionCollapsed('sidebar-exams')" x-transition>
-                            @foreach($sidebarExams as $exam)
+                            <?php $__currentLoopData = $sidebarExams; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $exam): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                 <div class="curriculum-item" 
-                                     @click="loadExam({{ $exam->id }})"
-                                     x-show="!searchQuery || '{{ strtolower($exam->title) }}'.includes(searchQuery.toLowerCase())">
+                                     @click="loadExam(<?php echo e($exam->id); ?>)"
+                                     x-show="!searchQuery || '<?php echo e(strtolower($exam->title)); ?>'.includes(searchQuery.toLowerCase())">
                                     <div class="flex items-start gap-2">
                                         <div class="flex-shrink-0 mt-0.5">
                                             <div class="w-6 h-6 bg-indigo-500 rounded-md flex items-center justify-center">
@@ -871,37 +871,37 @@
                                             </div>
                                         </div>
                                         <div class="flex-1 min-w-0">
-                                            <div class="curriculum-item-title">{{ $exam->title }}</div>
+                                            <div class="curriculum-item-title"><?php echo e($exam->title); ?></div>
                                             <div class="curriculum-item-meta">
-                                                <span><i class="fas fa-clock text-[10px] ml-0.5"></i> {{ $exam->duration_minutes }} د</span>
-                                                <span><i class="fas fa-star text-[10px] ml-0.5"></i> {{ $exam->total_marks }}</span>
+                                                <span><i class="fas fa-clock text-[10px] ml-0.5"></i> <?php echo e($exam->duration_minutes); ?> د</span>
+                                                <span><i class="fas fa-star text-[10px] ml-0.5"></i> <?php echo e($exam->total_marks); ?></span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            @endforeach
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </div>
                         </div>
-                    @endif
+                    <?php endif; ?>
 
-                    @if(isset($sections) && $sections->count() > 0)
+                    <?php if(isset($sections) && $sections->count() > 0): ?>
                         <!-- عرض المنهج من الأقسام (جذور + أقسام فرعية متداخلة) -->
-                        <script type="application/json" id="learn-section-descriptions">@json($sectionDescriptions ?? [])</script>
-                        @foreach($sections as $section)
-                            @include('student.my-courses.partials.learn-sidebar-section', ['section' => $section, 'depth' => 0])
-                        @endforeach
-                    @else
+                        <script type="application/json" id="learn-section-descriptions"><?php echo json_encode($sectionDescriptions ?? [], 15, 512) ?></script>
+                        <?php $__currentLoopData = $sections; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $section): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <?php echo $__env->make('student.my-courses.partials.learn-sidebar-section', ['section' => $section, 'depth' => 0], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                    <?php else: ?>
                         <!-- لا يوجد منهج (تم إلغاء عرض الدروس) -->
                         <div class="py-6 px-4 text-center">
                             <p class="text-gray-600 text-sm">لا توجد عناصر في المنهج بعد.</p>
                             <p class="text-gray-500 text-xs mt-1">المحاضرات والواجبات والامتحانات تظهر هنا عند إضافتها من المدرب.</p>
                         </div>
-                    @endif
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
 
-        {{-- بطاقة المحتوى --}}
+        
         <div class="learn-focus-content lg:col-span-8 xl:col-span-9">
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[400px]">
                 <div class="focus-main-content-wrapper p-4 lg:p-6">
@@ -917,9 +917,9 @@
                                 <i class="fas fa-play text-emerald-400 text-lg"></i>
                             </div>
                         </div>
-                        <h3 class="text-2xl md:text-3xl font-bold text-gray-900 mb-2">مرحباً في {{ $course->localized('title') }}</h3>
+                        <h3 class="text-2xl md:text-3xl font-bold text-gray-900 mb-2">مرحباً في <?php echo e($course->localized('title')); ?></h3>
                         <p class="text-gray-600 text-base md:text-lg mb-2 max-w-md mx-auto">اختر محاضرة أو واجباً أو امتحاناً من القائمة لبدء التعلم</p>
-                        <p class="text-gray-500 text-sm mb-8">التقدم: {{ $completedLessons ?? 0 }} من {{ $totalLessons ?? 0 }} — {{ number_format((float)($progress ?? 0), 0) }}%</p>
+                        <p class="text-gray-500 text-sm mb-8">التقدم: <?php echo e($completedLessons ?? 0); ?> من <?php echo e($totalLessons ?? 0); ?> — <?php echo e(number_format((float)($progress ?? 0), 0)); ?>%</p>
                     </div>
                     
                     <!-- وصف القسم (يظهر في منطقة المحتوى عند اختيار عنصر من قسم له وصف — وليس في السايدبار) -->
@@ -968,11 +968,11 @@
                             </div>
                         </div>
                         <div class="aspect-video w-full relative bg-black flex-1 min-h-0" x-show="(selectedLesson && showVideoPlayer) || (selectedLecture && showVideoPlayer)">
-                            {{-- محاضرة: نفس أسلوب البوب أب في المنهج — حاوية واحدة و innerHTML مباشر --}}
+                            
                             <div x-show="selectedLecture && showVideoPlayer" class="absolute inset-0 w-full h-full" id="learn-video-embed"></div>
-                            {{-- درس: مشغل الفيديو الحالي --}}
+                            
                             <div x-show="selectedLesson && showVideoPlayer" class="absolute inset-0 w-full h-full">
-                                @include('student.my-courses.partials.video-player')
+                                <?php echo $__env->make('student.my-courses.partials.video-player', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
                             </div>
                         </div>
                     </div>
@@ -1030,7 +1030,7 @@
                                 </button>
                             </div>
                             <div class="pattern-embed-iframe-container flex-1 min-h-[300px] bg-white rounded-b-xl overflow-hidden border-t-0 border-slate-200">
-                                <iframe :src="selectedPattern ? '{{ route('my-courses.learning-patterns.show', [$course, '_PID_']) }}'.replace('_PID_', selectedPattern) + '?embed=1' : ''"
+                                <iframe :src="selectedPattern ? '<?php echo e(route('my-courses.learning-patterns.show', [$course, '_PID_'])); ?>'.replace('_PID_', selectedPattern) + '?embed=1' : ''"
                                         class="pattern-embed-iframe w-full h-full min-h-[300px] border-0"
                                         title="النمط التعليمي"></iframe>
                             </div>
@@ -1042,19 +1042,10 @@
     </div>
     </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
-(function () {
-    /* يُعرَّف مبكراً حتى لا يفشل Alpine قبل تنفيذ سكربت التنقل في نهاية الصفحة */
-    if (typeof window.learnNavGetNextForButton !== 'function') {
-        window.learnNavGetNextForButton = function () { return null; };
-    }
-    if (typeof window.learnNavGetPrevForButton !== 'function') {
-        window.learnNavGetPrevForButton = function () { return null; };
-    }
-})();
 function courseFocusMode() {
     // قراءة بيانات المحاضرات من عنصر script (أدق من data attribute مع روابط طويلة)
     let lecturesData = {};
@@ -1328,7 +1319,7 @@ function courseFocusMode() {
                 const watchTime = this.lastVideoWatchTimeSec || 0;
                 try {
                     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-                    const res = await fetch(`{{ route('my-courses.lesson.progress', [$course, ':lessonId']) }}`.replace(':lessonId', lessonId), {
+                    const res = await fetch(`<?php echo e(route('my-courses.lesson.progress', [$course, ':lessonId'])); ?>`.replace(':lessonId', lessonId), {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
                         body: JSON.stringify({
@@ -1683,7 +1674,7 @@ function courseFocusMode() {
             if (!lessonId || this.currentLessonCompleted) return;
             try {
                 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-                const res = await fetch('/my-courses/{{ $course->id }}/lessons/' + lessonId + '/progress', {
+                const res = await fetch('/my-courses/<?php echo e($course->id); ?>/lessons/' + lessonId + '/progress', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
                     body: JSON.stringify({ completed: true, watch_time: 0 })
@@ -2171,7 +2162,7 @@ function videoPlayer() {
         var resultEmoji = document.getElementById('lecture-vq-result-emoji');
         var resultMessage = document.getElementById('lecture-vq-result-message');
         var continueBtn = document.getElementById('lecture-vq-continue-btn');
-        var isEnglishUi = '{{ app()->getLocale() }}' === 'en';
+        var isEnglishUi = '<?php echo e(app()->getLocale()); ?>' === 'en';
         var correctMessagesAr = [
             'عاش جدا! إجابتك صح وممتازة 🔥👏',
             'برافو عليك يا بطل، شغلك عالي اوي 💪✨',
@@ -2840,4 +2831,6 @@ function videoPlayer() {
     window.showAutoAdvanceToNext = showAutoAdvance;
 })();
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
+
+<?php echo $__env->make('layouts.student-dashboard', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views\student\my-courses\learn.blade.php ENDPATH**/ ?>
