@@ -421,55 +421,17 @@
                         <div class="text-center mb-3">
                             <h2 class="text-lg font-bold text-gray-900 mb-0.5 flex items-center justify-center gap-2">
                                 <i class="fas fa-play-circle text-blue-600 text-base"></i>
-                                مقدمة المسار
+                                {{ __('public.path_intro_card_title') }}
                             </h2>
-                            <p class="text-gray-500 text-sm">شاهد المقدمة</p>
+                            <p class="text-gray-500 text-sm">{{ __('public.path_intro_card_sub') }}</p>
                         </div>
                         @php
-                                $videoUrl = trim((string) ($learningPath->video_url ?? ''));
-                                $videoId = null;
-                                $videoType = null;
-                                $embedUrl = null;
-
-                                if ($videoUrl !== '') {
-                                    // YouTube: watch, youtu.be, embed
-                                    if (preg_match('/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/', $videoUrl, $m)) {
-                                        $videoId = $m[1];
-                                        $videoType = 'youtube';
-                                        $embedUrl = 'https://www.youtube.com/embed/' . $videoId . '?rel=0&modestbranding=1&showinfo=0';
-                                    } elseif (preg_match('/vimeo\.com\/(?:video\/)?(\d+)/', $videoUrl, $m)) {
-                                        $videoId = $m[1];
-                                        $videoType = 'vimeo';
-                                        $embedUrl = 'https://player.vimeo.com/video/' . $videoId;
-                                    } elseif (preg_match('/\.(mp4|webm|ogg)(\?.*)?$/i', $videoUrl)) {
-                                        $videoType = 'html5';
-                                    }
-                                }
-                            @endphp
-                            <div class="custom-video-player-wrapper">
-                            @if($videoType === 'youtube' && $embedUrl)
-                                <div class="intro-video-container">
-                                    <iframe src="{{ $embedUrl }}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen title="مقدمة المسار"></iframe>
-                                </div>
-                            @elseif($videoType === 'vimeo' && $embedUrl)
-                                <div class="intro-video-container">
-                                    <iframe src="{{ $embedUrl }}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="مقدمة المسار"></iframe>
-                                </div>
-                            @elseif($videoType === 'html5')
-                                <div class="intro-video-container" style="padding-bottom: 0; height: auto; min-height: 320px;">
-                                    <video class="w-full rounded-lg" style="max-height: 70vh;" playsinline controls>
-                                        <source src="{{ $videoUrl }}" type="video/mp4">
-                                        المتصفح لا يدعم تشغيل الفيديو.
-                                    </video>
-                                </div>
-                            @else
-                                <div class="bg-gray-100 rounded-lg p-8 text-center">
-                                    <i class="fas fa-exclamation-triangle text-amber-500 text-3xl mb-3"></i>
-                                    <p class="text-gray-700 font-medium mb-1">رابط الفيديو غير مدعوم أو غير صحيح</p>
-                                    <p class="text-sm text-gray-600">استخدم رابط YouTube (مثل: https://www.youtube.com/watch?v=xxxx) أو Vimeo أو رابط مباشر لملف .mp4</p>
-                                </div>
-                            @endif
-                        </div>
+                            $pathIntroVideoUrl = trim((string) ($learningPath->video_url ?? ''));
+                        @endphp
+                        @include('partials.intro-video-embed', [
+                            'url' => $pathIntroVideoUrl,
+                            'title' => __('public.path_intro_video_title'),
+                        ])
                     </div>
                     @else
                     <div class="bg-white rounded-2xl p-4 shadow-lg border border-gray-200">

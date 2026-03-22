@@ -105,6 +105,7 @@ return [
     'path_highlight_4' => 'Recognized certificate upon completion',
     'courses_in_path' => 'Courses in this path',
     'lesson_single' => 'lesson',
+    'lecture_single' => 'lecture',
     'course_fallback_short' => 'Comprehensive programming course',
     'view_btn' => 'View',
     'path_info_title' => 'Path info',
@@ -127,6 +128,8 @@ return [
     'explore_more_paths' => 'Explore more learning paths',
     'video_unsupported' => 'Video link is not supported',
     'no_intro_video' => 'No intro video available',
+    'intro_video_unsupported' => 'This video link is not supported. Use YouTube, Vimeo, or Bunny (mediadelivery embed/play URL or direct .mp4 / .m3u8).',
+    'browser_no_video' => 'Your browser cannot play this video.',
 
     // About page
     'about_hero' => 'About Us',
@@ -203,6 +206,9 @@ return [
     'all_courses' => 'All courses',
     'intro_video_title' => 'Course intro video',
     'intro_video_desc' => 'Watch this video to learn about the course content',
+    'path_intro_video_title' => 'Learning path introduction',
+    'path_intro_card_title' => 'Path introduction',
+    'path_intro_card_sub' => 'Watch the intro',
     'about_course' => 'About the course',
     'course_objectives' => 'Course objectives:',
     'what_you_learn' => 'What you will learn',

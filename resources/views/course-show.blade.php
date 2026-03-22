@@ -1158,54 +1158,19 @@
                         @if($course->video_url ?? null)
                         @php
                             $introVideoUrl = trim((string) ($course->video_url ?? ''));
-                            $introVideoId = null;
-                            $introVideoType = null;
-                            $introEmbedUrl = null;
-                            if ($introVideoUrl !== '') {
-                                if (preg_match('/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/', $introVideoUrl, $m)) {
-                                    $introVideoId = $m[1];
-                                    $introVideoType = 'youtube';
-                                    $introEmbedUrl = 'https://www.youtube.com/embed/' . $introVideoId . '?rel=0&modestbranding=1&showinfo=0';
-                                } elseif (preg_match('/vimeo\.com\/(?:video\/)?(\d+)/', $introVideoUrl, $m)) {
-                                    $introVideoId = $m[1];
-                                    $introVideoType = 'vimeo';
-                                    $introEmbedUrl = 'https://player.vimeo.com/video/' . $introVideoId;
-                                } elseif (preg_match('/\.(mp4|webm|ogg)(\?.*)?$/i', $introVideoUrl)) {
-                                    $introVideoType = 'html5';
-                                }
-                            }
                         @endphp
                         <div class="bg-white rounded-2xl p-4 shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300">
                             <div class="text-center mb-3">
                                 <h2 class="text-lg font-bold text-gray-900 mb-0.5 flex items-center justify-center gap-2">
                                     <i class="fas fa-play-circle text-blue-600 text-base"></i>
-                                    مقدمة الكورس
+                                    {{ __('public.intro_video_title') }}
                                 </h2>
-                                <p class="text-gray-500 text-sm">شاهد المقدمة</p>
+                                <p class="text-gray-500 text-sm">{{ __('public.intro_video_desc') }}</p>
                             </div>
-                            <div class="custom-video-player-wrapper">
-                            @if($introVideoType === 'youtube' && $introEmbedUrl)
-                                <div class="intro-video-container">
-                                    <iframe src="{{ $introEmbedUrl }}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen title="مقدمة الكورس"></iframe>
-                                </div>
-                            @elseif($introVideoType === 'vimeo' && $introEmbedUrl)
-                                <div class="intro-video-container">
-                                    <iframe src="{{ $introEmbedUrl }}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="مقدمة الكورس"></iframe>
-                                </div>
-                            @elseif($introVideoType === 'html5')
-                                <div class="intro-video-container" style="padding-bottom: 0; height: auto; min-height: 320px;">
-                                    <video class="w-full rounded-lg" style="max-height: 70vh;" playsinline controls>
-                                        <source src="{{ $introVideoUrl }}" type="video/mp4">
-                                        المتصفح لا يدعم تشغيل الفيديو.
-                                    </video>
-                                </div>
-                            @else
-                                <div class="bg-gray-100 rounded-lg p-6 text-center">
-                                    <i class="fas fa-exclamation-triangle text-amber-500 text-2xl mb-2"></i>
-                                    <p class="text-gray-700 text-sm font-medium">رابط الفيديو غير مدعوم. استخدم YouTube أو Vimeo أو رابط .mp4</p>
-                                </div>
-                            @endif
-                            </div>
+                            @include('partials.intro-video-embed', [
+                                'url' => $introVideoUrl,
+                                'title' => __('public.intro_video_title'),
+                            ])
                         </div>
                         @else
                         <div class="bg-white rounded-2xl p-4 shadow-lg border border-gray-200">

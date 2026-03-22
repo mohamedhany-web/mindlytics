@@ -1637,4 +1637,4 @@
 </body>
 </html>
 
-<?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views\course-show.blade.php ENDPATH**/ ?>
+<?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/course-show.blade.php ENDPATH**/ ?>

@@ -241,7 +241,7 @@ Route::get('/courses', function () {
     // جلب الكورسات مع العلاقات
     $coursesCollection = $coursesQuery
         ->with(['academicSubject', 'academicYear'])
-        ->withCount('lessons')
+        ->withCount('lectures')
         ->orderBy('is_featured', 'desc')
         ->orderBy('created_at', 'desc')
         ->get();
@@ -256,7 +256,7 @@ Route::get('/courses', function () {
             'price' => (float)($course->price ?? 0),
             'duration_hours' => (int)($course->duration_hours ?? 0),
             'is_featured' => (bool)($course->is_featured ?? false),
-            'lessons_count' => (int)($course->lessons_count ?? 0),
+            'lectures_count' => (int)($course->lectures_count ?? 0),
             'thumbnail' => $course->thumbnail ?? null,
             'academic_subject' => $course->academicSubject ? [
                 'name' => $course->academicSubject->name ?? 'غير محدد'

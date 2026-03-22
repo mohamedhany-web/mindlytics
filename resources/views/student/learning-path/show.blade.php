@@ -5,6 +5,25 @@
 
 @push('styles')
 <style>
+    /* فيديو المقدمة (iframe Bunny / YouTube — نسبة 16:9) */
+    .intro-video-container {
+        position: relative;
+        width: 100%;
+        padding-bottom: 56.25%;
+        height: 0;
+        background: #000;
+        border-radius: 1rem;
+        overflow: hidden;
+    }
+    .intro-video-container iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+
     .progress-ring {
         transform: rotate(-90deg);
     }
@@ -107,31 +126,17 @@
         </div>
     </div>
 
-    <!-- Video Introduction -->
+    <!-- Video Introduction (YouTube / Vimeo / Bunny مباشر أو embed) -->
     @if($learningPath->video_url)
     <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
         <h2 class="text-xl font-black text-gray-900 mb-4 flex items-center gap-2">
             <i class="fas fa-play-circle text-blue-600"></i>
-            مقدمة المسار التعليمي
+            {{ __('public.path_intro_video_title') }}
         </h2>
-        <div class="relative w-full" style="padding-bottom: 56.25%;">
-            @php
-                $videoUrl = $learningPath->video_url;
-                if (strpos($videoUrl, 'youtube.com/watch') !== false || strpos($videoUrl, 'youtu.be/') !== false) {
-                    preg_match('/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/', $videoUrl, $matches);
-                    if (isset($matches[1])) {
-                        $videoUrl = 'https://www.youtube.com/embed/' . $matches[1];
-                    }
-                }
-            @endphp
-            <iframe src="{{ $videoUrl }}" 
-                    frameborder="0" 
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                    allowfullscreen
-                    class="absolute top-0 left-0 w-full h-full rounded-lg"
-                    loading="lazy">
-            </iframe>
-        </div>
+        @include('partials.intro-video-embed', [
+            'url' => trim((string) $learningPath->video_url),
+            'title' => __('public.path_intro_video_title'),
+        ])
     </div>
     @endif
 

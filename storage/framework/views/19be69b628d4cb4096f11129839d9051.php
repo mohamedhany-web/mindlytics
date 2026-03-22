@@ -1,15 +1,15 @@
-@php
+<?php
     $__pageLocale = app()->getLocale();
     $__pageRtl = $__pageLocale === 'ar';
-@endphp
+?>
 <!DOCTYPE html>
-<html lang="{{ $__pageLocale }}" dir="{{ $__pageRtl ? 'rtl' : 'ltr' }}">
+<html lang="<?php echo e($__pageLocale); ?>" dir="<?php echo e($__pageRtl ? 'rtl' : 'ltr'); ?>">
     <head>
         <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>{{ __('public.courses_page_title') }} - {{ __('public.site_suffix') }}</title>
+    <title><?php echo e(__('public.courses_page_title')); ?> - <?php echo e(__('public.site_suffix')); ?></title>
 
     <!-- خط عربي موحّد مع الصفحة الرئيسية -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1029,7 +1029,7 @@
       x-data="{ mobileMenu: false, searchQuery: '' }"
       :class="{ 'overflow-hidden': mobileMenu }">
 
-    @include('components.unified-navbar')
+    <?php echo $__env->make('components.unified-navbar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     
     <main>
 
@@ -1080,10 +1080,11 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full py-16">
             <div class="text-center fade-in-up">
                 <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black mb-6 leading-tight text-gray-900">
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-green-500 to-blue-600 animate-gradient-text">{{ __('public.courses_hero') }}</span>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-green-500 to-blue-600 animate-gradient-text"><?php echo e(__('public.courses_hero')); ?></span>
                 </h1>
                 <p class="text-lg md:text-xl lg:text-2xl text-gray-700 mb-10 leading-relaxed max-w-3xl mx-auto font-medium">
-                    {{ __('public.courses_subtitle') }}
+                    <?php echo e(__('public.courses_subtitle')); ?>
+
                 </p>
                 
                 <!-- Enhanced Search and Filter -->
@@ -1102,7 +1103,7 @@
                             <!-- Search Input -->
                             <input type="text" 
                                    x-model="searchQuery"
-                                   placeholder="{{ __('public.search_course_placeholder') }}" 
+                                   placeholder="<?php echo e(__('public.search_course_placeholder')); ?>" 
                                    class="flex-1 bg-transparent border-0 outline-none text-gray-800 placeholder-gray-400 text-base lg:text-lg transition-all duration-300 focus:placeholder-gray-300 font-medium"
                             >
                             
@@ -1112,10 +1113,10 @@
                                 <div class="relative min-w-[150px] lg:min-w-[160px]">
                                     <select x-model="selectedLevel" 
                                             class="appearance-none bg-transparent border-0 outline-none text-gray-700 text-base lg:text-lg font-medium cursor-pointer pr-8 pl-2 focus:text-blue-600 transition-colors duration-300 w-full py-1">
-                                        <option value="">{{ __('public.all_levels') }}</option>
-                                        <option value="beginner">{{ __('public.level_beginner') }}</option>
-                                        <option value="intermediate">{{ __('public.level_intermediate') }}</option>
-                                        <option value="advanced">{{ __('public.level_advanced') }}</option>
+                                        <option value=""><?php echo e(__('public.all_levels')); ?></option>
+                                        <option value="beginner"><?php echo e(__('public.level_beginner')); ?></option>
+                                        <option value="intermediate"><?php echo e(__('public.level_intermediate')); ?></option>
+                                        <option value="advanced"><?php echo e(__('public.level_advanced')); ?></option>
                                     </select>
                                     <div class="absolute left-2 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400">
                                         <i class="fas fa-chevron-down text-sm"></i>
@@ -1127,7 +1128,7 @@
                             <button class="bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-6 lg:px-8 py-3 rounded-full hover:from-blue-700 hover:via-blue-600 hover:to-green-600 transition-all duration-300 transform hover:scale-110 relative overflow-hidden group shadow-lg hover:shadow-xl flex-shrink-0">
                                 <span class="relative z-10 flex items-center gap-2">
                                     <i class="fas fa-search text-sm"></i>
-                                    <span class="font-bold text-sm lg:text-base">{{ __('public.search_btn') }}</span>
+                                    <span class="font-bold text-sm lg:text-base"><?php echo e(__('public.search_btn')); ?></span>
                                 </span>
                                 <span class="absolute inset-0 bg-white/30 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300"></span>
                             </button>
@@ -1140,7 +1141,7 @@
                                 <i class="fas fa-search text-blue-500 text-lg mr-3"></i>
                                 <input type="text" 
                                        x-model="searchQuery"
-                                       placeholder="{{ __('public.search_course_placeholder_mobile') }}" 
+                                       placeholder="<?php echo e(__('public.search_course_placeholder_mobile')); ?>" 
                                        class="flex-1 bg-transparent border-0 outline-none text-gray-800 placeholder-gray-400 text-base font-medium"
                                 >
                             </div>
@@ -1151,10 +1152,10 @@
                                 <div class="flex-1 relative">
                                     <select x-model="selectedLevel" 
                                             class="appearance-none bg-white border-2 border-gray-200 rounded-2xl px-4 py-3 pr-10 w-full text-gray-700 text-base font-medium cursor-pointer focus:border-blue-500 focus:outline-none transition-colors duration-300">
-                                        <option value="">{{ __('public.all_levels') }}</option>
-                                        <option value="beginner">{{ __('public.level_beginner') }}</option>
-                                        <option value="intermediate">{{ __('public.level_intermediate') }}</option>
-                                        <option value="advanced">{{ __('public.level_advanced') }}</option>
+                                        <option value=""><?php echo e(__('public.all_levels')); ?></option>
+                                        <option value="beginner"><?php echo e(__('public.level_beginner')); ?></option>
+                                        <option value="intermediate"><?php echo e(__('public.level_intermediate')); ?></option>
+                                        <option value="advanced"><?php echo e(__('public.level_advanced')); ?></option>
                                     </select>
                                     <div class="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400">
                                         <i class="fas fa-chevron-down text-sm"></i>
@@ -1178,7 +1179,7 @@
                             <p class="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-xs md:text-sm font-medium shadow-sm">
                                 <i class="fas fa-filter text-xs"></i>
                                 <span class="text-blue-600 font-bold" x-text="filteredCourses.length"></span> 
-                                <span> {{ __('public.course_available') }}</span>
+                                <span> <?php echo e(__('public.course_available')); ?></span>
                             </p>
                         </div>
                     </div>
@@ -1192,93 +1193,95 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-12 fade-in-up">
                 <h2 class="text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 mb-4">
-                    {{ __('public.courses_section_title') }} <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-500">{{ __('public.programming') }}</span>
+                    <?php echo e(__('public.courses_section_title')); ?> <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-500"><?php echo e(__('public.programming')); ?></span>
                 </h2>
-                <p class="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">{{ __('public.courses_section_subtitle') }}</p>
+                <p class="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto"><?php echo e(__('public.courses_section_subtitle')); ?></p>
             </div>
             
             <!-- Courses Grid - نفس تصميم كاردات الصفحة الرئيسية -->
-            @if(isset($courses) && is_array($courses) && count($courses) > 0)
+            <?php if(isset($courses) && is_array($courses) && count($courses) > 0): ?>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-12 auto-rows-fr">
-                @foreach($courses as $index => $course)
-                @php
+                <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <?php
                     $thumbnailPath = $course['thumbnail'] ?? null;
                     $thumbnailPath = $thumbnailPath ? str_replace('\\', '/', $thumbnailPath) : null;
                     $hasThumbnail = $thumbnailPath && !empty(trim($thumbnailPath));
                     $imageUrl = $hasThumbnail ? asset('storage/' . $thumbnailPath) : null;
-                @endphp
-                <div class="group relative fade-in-up bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-blue-200 h-full" style="animation-delay: {{ $index * 0.05 }}s;">
+                ?>
+                <div class="group relative fade-in-up bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-blue-200 h-full" style="animation-delay: <?php echo e($index * 0.05); ?>s;">
                     <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-400 via-green-400 to-purple-400 rounded-2xl blur opacity-0 group-hover:opacity-20 transition-opacity duration-500 -z-10"></div>
                     <div class="relative h-44 sm:h-48 bg-gradient-to-br from-blue-600 via-blue-500 to-green-500 overflow-hidden">
-                        @if($hasThumbnail && $imageUrl)
-                            <img src="{{ $imageUrl }}" alt="{{ $course['title'] ?? __('public.course_fallback') }}" class="absolute inset-0 w-full h-full object-cover">
-                        @else
+                        <?php if($hasThumbnail && $imageUrl): ?>
+                            <img src="<?php echo e($imageUrl); ?>" alt="<?php echo e($course['title'] ?? __('public.course_fallback')); ?>" class="absolute inset-0 w-full h-full object-cover">
+                        <?php else: ?>
                             <div class="absolute inset-0 opacity-10" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px);"></div>
                             <div class="absolute inset-0 flex items-center justify-center">
                                 <div class="relative z-10 transform group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
                                     <i class="fas fa-play-circle text-white text-5xl lg:text-6xl drop-shadow-lg"></i>
                                 </div>
                             </div>
-                        @endif
+                        <?php endif; ?>
                         <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                         <div class="absolute inset-0 bg-gradient-to-t from-black/20 via-black/5 to-transparent"></div>
-                        @if(isset($course['is_featured']) && $course['is_featured'])
+                        <?php if(isset($course['is_featured']) && $course['is_featured']): ?>
                             <span class="absolute top-2 left-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-yellow-900 px-2 py-0.5 rounded-full text-[9px] font-bold shadow-md flex items-center gap-0.5 z-20">
                                 <i class="fas fa-star text-[8px]"></i>
-                                <span>{{ __('public.featured_badge') }}</span>
+                                <span><?php echo e(__('public.featured_badge')); ?></span>
                             </span>
-                        @endif
+                        <?php endif; ?>
                         <div class="absolute bottom-2 right-2 z-20">
                             <div class="bg-white/95 backdrop-blur-md rounded-lg px-2.5 py-1.5 shadow-xl border border-white/50 group-hover:scale-110 transition-transform duration-300">
                                 <span class="text-xs font-bold text-gray-800 flex items-center gap-1.5">
                                     <i class="fas fa-play-circle text-blue-600 text-[11px]"></i>
-                                    <span>{{ $course['lectures_count'] ?? 0 }} {{ __('public.lecture_single') }}</span>
+                                    <span><?php echo e($course['lectures_count'] ?? 0); ?> <?php echo e(__('public.lecture_single')); ?></span>
                                 </span>
                             </div>
                         </div>
                     </div>
                     <div class="p-4 bg-white relative overflow-hidden flex-grow flex flex-col">
                         <div class="absolute inset-0 opacity-[0.02] pointer-events-none" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(59, 130, 246, 0.05) 5px, rgba(59, 130, 246, 0.05) 10px);"></div>
-                        @if(isset($course['academic_subject']['name']))
+                        <?php if(isset($course['academic_subject']['name'])): ?>
                         <div class="mb-2 relative z-10">
                             <span class="inline-flex items-center gap-1.5 text-xs text-gray-500 bg-blue-50 px-2 py-1 rounded-full">
                                 <i class="fas fa-user text-blue-600 text-[10px]"></i>
-                                <span class="text-blue-700 font-medium">{{ Str::limit($course['academic_subject']['name'], 15) }}</span>
+                                <span class="text-blue-700 font-medium"><?php echo e(Str::limit($course['academic_subject']['name'], 15)); ?></span>
                             </span>
                         </div>
-                        @endif
+                        <?php endif; ?>
                         <h3 class="text-base font-black text-gray-900 mb-2 line-clamp-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-green-600 transition-all duration-300 leading-tight relative z-10">
-                            {{ $course['title'] ?? __('public.no_title_fallback') }}
+                            <?php echo e($course['title'] ?? __('public.no_title_fallback')); ?>
+
                         </h3>
                         <p class="text-gray-600 text-xs mb-3 line-clamp-2 leading-relaxed group-hover:text-gray-700 transition-colors duration-300 relative z-10 flex-grow">
-                            {{ Str::limit($course['description'] ?? __('public.course_description_fallback'), 70) }}
+                            <?php echo e(Str::limit($course['description'] ?? __('public.course_description_fallback'), 70)); ?>
+
                         </p>
                         <div class="flex items-center justify-between pt-3 border-t border-gray-100 group-hover:border-blue-100 transition-colors duration-300 relative z-10">
                             <div>
-                                @if(isset($course['price']) && $course['price'] > 0)
+                                <?php if(isset($course['price']) && $course['price'] > 0): ?>
                                     <span class="text-lg font-black text-blue-600 flex items-center gap-1 group-hover:scale-110 transition-transform duration-300">
-                                        <span>{{ number_format($course['price'], 0) }}</span>
-                                        <span class="text-[10px] text-gray-500 font-normal">{{ __('public.currency_egp') }}</span>
+                                        <span><?php echo e(number_format($course['price'], 0)); ?></span>
+                                        <span class="text-[10px] text-gray-500 font-normal"><?php echo e(__('public.currency_egp')); ?></span>
                                     </span>
-                                @else
+                                <?php else: ?>
                                     <span class="text-lg font-black text-green-600 flex items-center gap-1.5 group-hover:scale-110 transition-transform duration-300">
                                         <div class="w-5 h-5 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-md">
                                             <i class="fas fa-gift text-white text-[8px]"></i>
                                         </div>
-                                        <span>{{ __('public.free_price') }}</span>
+                                        <span><?php echo e(__('public.free_price')); ?></span>
                                     </span>
-                                @endif
+                                <?php endif; ?>
                             </div>
-                            <a href="{{ route('public.course.show', $course['id']) }}" class="group/btn relative bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 flex items-center gap-1.5 overflow-hidden">
+                            <a href="<?php echo e(route('public.course.show', $course['id'])); ?>" class="group/btn relative bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 flex items-center gap-1.5 overflow-hidden">
                                 <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300 btn-shimmer"></div>
                                 <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-400 to-green-400 rounded-lg blur opacity-0 group-hover/btn:opacity-50 transition-opacity duration-300"></div>
-                                <span class="relative z-10">{{ __('public.view_details') }}</span>
+                                <span class="relative z-10"><?php echo e(__('public.view_details')); ?></span>
                                 <i class="fas fa-arrow-left text-[10px] relative z-10 group-hover/btn:translate-x-1 transition-transform duration-300"></i>
                             </a>
                         </div>
                     </div>
                 </div>
-                @endforeach
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </div>
             
             <!-- Alpine.js Dynamic Filtering (يمكن استخدامه لاحقاً) -->
@@ -1300,13 +1303,14 @@
                             <i class="fas fa-code text-white text-6xl pulse-animation"></i>
                             <template x-if="course.is_featured">
                                 <div class="absolute top-4 left-4 bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-xs font-bold bounce-animation">
-                                    {{ __('public.featured_badge') }}
+                                    <?php echo e(__('public.featured_badge')); ?>
+
                                 </div>
                             </template>
                             <template x-if="course.level">
                                 <div class="absolute top-4 right-4 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">
                                     <span class="text-white text-xs font-medium" 
-                                          x-text="course.level === 'beginner' ? '{{ __('public.level_beginner') }}' : course.level === 'intermediate' ? '{{ __('public.level_intermediate') }}' : '{{ __('public.level_advanced') }}'"></span>
+                                          x-text="course.level === 'beginner' ? '<?php echo e(__('public.level_beginner')); ?>' : course.level === 'intermediate' ? '<?php echo e(__('public.level_intermediate')); ?>' : '<?php echo e(__('public.level_advanced')); ?>'"></span>
                                 </div>
                             </template>
                         </div>
@@ -1314,7 +1318,7 @@
                         <!-- Course Content -->
                         <div class="p-6">
                             <h3 class="text-xl font-bold text-gray-900 mb-2" x-text="course.title"></h3>
-                            <p class="text-gray-600 mb-4 text-sm" x-text="course.description ? (course.description.substring(0, 100) + '...') : '{{ addslashes(__('public.course_desc_fallback')) }}'"></p>
+                            <p class="text-gray-600 mb-4 text-sm" x-text="course.description ? (course.description.substring(0, 100) + '...') : '<?php echo e(addslashes(__('public.course_desc_fallback'))); ?>'"></p>
                             
                             <!-- Course Info -->
                             <div class="flex items-center justify-between mb-4 text-sm text-gray-500">
@@ -1324,7 +1328,7 @@
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <i class="fas fa-layer-group"></i>
-                                    <span x-text="(course.lectures_count || 0) + ' {{ __('public.lecture_single') }}'"></span>
+                                    <span x-text="(course.lectures_count || 0) + ' <?php echo e(__('public.lecture_single')); ?>'"></span>
                                 </div>
                             </div>
                             
@@ -1345,20 +1349,22 @@
                                         <span class="text-2xl font-black text-sky-600" x-text="course.price + ' ج.م'"></span>
                                     </template>
                                     <template x-if="!course.price || course.price == 0">
-                                        <span class="text-2xl font-black text-green-600">{{ __('public.free_price') }}</span>
+                                        <span class="text-2xl font-black text-green-600"><?php echo e(__('public.free_price')); ?></span>
                                     </template>
                                 </div>
-                                @auth
-                                    <a :href="'{{ url('/') }}/courses/' + course.id" class="btn-primary text-sm px-6 py-2">
+                                <?php if(auth()->guard()->check()): ?>
+                                    <a :href="'<?php echo e(url('/')); ?>/courses/' + course.id" class="btn-primary text-sm px-6 py-2">
                                         <i class="fas fa-eye"></i>
-                                        {{ __('public.view_details') }}
+                                        <?php echo e(__('public.view_details')); ?>
+
                                     </a>
-                                @else
-                                    <a href="{{ route('register') }}" class="btn-primary text-sm px-6 py-2">
+                                <?php else: ?>
+                                    <a href="<?php echo e(route('register')); ?>" class="btn-primary text-sm px-6 py-2">
                                         <i class="fas fa-sign-in-alt"></i>
-                                        {{ __('public.register_to_enroll') }}
+                                        <?php echo e(__('public.register_to_enroll')); ?>
+
                                     </a>
-                                @endauth
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -1371,26 +1377,26 @@
                     <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
                         <i class="fas fa-search text-gray-400 text-3xl"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-4">{{ __('public.no_results') }}</h3>
-                    <p class="text-gray-600 mb-6">{{ __('public.no_results_hint') }}</p>
+                    <h3 class="text-xl font-bold text-gray-900 mb-4"><?php echo e(__('public.no_results')); ?></h3>
+                    <p class="text-gray-600 mb-6"><?php echo e(__('public.no_results_hint')); ?></p>
                 </div>
             </div>
-            @else
+            <?php else: ?>
             <!-- Empty State -->
             <div class="text-center py-12 fade-in-up">
                 <div class="max-w-md mx-auto">
                     <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <i class="fas fa-book text-gray-400 text-4xl"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">{{ __('public.coming_soon') }}</h3>
-                    <p class="text-gray-600 mb-6">{{ __('public.coming_soon_courses') }}</p>
-                    <a href="{{ route('register') }}" class="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                    <h3 class="text-xl font-bold text-gray-900 mb-2"><?php echo e(__('public.coming_soon')); ?></h3>
+                    <p class="text-gray-600 mb-6"><?php echo e(__('public.coming_soon_courses')); ?></p>
+                    <a href="<?php echo e(route('register')); ?>" class="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
                         <i class="fas fa-bell"></i>
-                        <span>{{ __('public.subscribe_updates') }}</span>
+                        <span><?php echo e(__('public.subscribe_updates')); ?></span>
                     </a>
                 </div>
             </div>
-            @endif
+            <?php endif; ?>
         </div>
     </section>
 
@@ -1405,22 +1411,24 @@
         
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center fade-in-up relative z-10">
             <h2 class="text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 mb-6 leading-tight">
-                {{ __('public.cta_programming_title') }}
+                <?php echo e(__('public.cta_programming_title')); ?>
+
             </h2>
             <p class="text-lg md:text-xl text-gray-600 mb-10 font-medium">
-                {{ __('public.cta_programming_desc') }}
+                <?php echo e(__('public.cta_programming_desc')); ?>
+
             </p>
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                <a href="{{ route('register') }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-8 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 relative overflow-hidden group">
+                <a href="<?php echo e(route('register')); ?>" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-8 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 relative overflow-hidden group">
                     <span class="relative z-10 flex items-center gap-2">
                         <i class="fas fa-user-plus"></i>
-                        <span>{{ __('public.register_free_now') }}</span>
+                        <span><?php echo e(__('public.register_free_now')); ?></span>
                     </span>
                     <span class="absolute inset-0 bg-gradient-to-r from-green-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
                 </a>
-                <a href="{{ route('login') }}" class="inline-flex items-center justify-center gap-2 bg-white text-blue-600 px-8 py-4 rounded-full font-bold text-lg border-2 border-blue-600 hover:bg-blue-50 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl relative">
+                <a href="<?php echo e(route('login')); ?>" class="inline-flex items-center justify-center gap-2 bg-white text-blue-600 px-8 py-4 rounded-full font-bold text-lg border-2 border-blue-600 hover:bg-blue-50 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl relative">
                     <span class="flex items-center gap-2">
-                        <span>{{ __('public.have_account') }}</span>
+                        <span><?php echo e(__('public.have_account')); ?></span>
                         <i class="fas fa-arrow-left"></i>
                     </span>
                 </a>
@@ -1431,7 +1439,7 @@
     </main>
     
     <!-- Unified Footer -->
-    @include('components.unified-footer')
+    <?php echo $__env->make('components.unified-footer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -1445,3 +1453,4 @@
     </script>
 </body>
 </html>
+<?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/courses.blade.php ENDPATH**/ ?>

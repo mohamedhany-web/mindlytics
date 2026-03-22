@@ -1046,6 +1046,15 @@
 
 <?php $__env->startPush('scripts'); ?>
 <script>
+(function () {
+    /* يُعرَّف مبكراً حتى لا يفشل Alpine قبل تنفيذ سكربت التنقل في نهاية الصفحة */
+    if (typeof window.learnNavGetNextForButton !== 'function') {
+        window.learnNavGetNextForButton = function () { return null; };
+    }
+    if (typeof window.learnNavGetPrevForButton !== 'function') {
+        window.learnNavGetPrevForButton = function () { return null; };
+    }
+})();
 function courseFocusMode() {
     // قراءة بيانات المحاضرات من عنصر script (أدق من data attribute مع روابط طويلة)
     let lecturesData = {};

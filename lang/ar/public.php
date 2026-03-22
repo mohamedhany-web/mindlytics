@@ -105,6 +105,7 @@ return [
     'path_highlight_4' => 'شهادة إتمام معتمدة في نهاية المسار',
     'courses_in_path' => 'الكورسات في هذا المسار',
     'lesson_single' => 'درس',
+    'lecture_single' => 'محاضرة',
     'course_fallback_short' => 'كورس برمجي شامل',
     'view_btn' => 'عرض',
     'path_info_title' => 'معلومات المسار',
@@ -127,6 +128,8 @@ return [
     'explore_more_paths' => 'استكشف المزيد من المسارات التعليمية',
     'video_unsupported' => 'رابط الفيديو غير مدعوم',
     'no_intro_video' => 'لا يوجد فيديو مقدمة متاح',
+    'intro_video_unsupported' => 'رابط الفيديو غير مدعوم. استخدم YouTube أو Vimeo أو رابط Bunny (تضمين mediadelivery أو رابط مباشر .mp4 / .m3u8).',
+    'browser_no_video' => 'المتصفح لا يدعم تشغيل هذا الفيديو.',
 
     // About page
     'about_hero' => 'من نحن',
@@ -203,6 +206,9 @@ return [
     'all_courses' => 'جميع الكورسات',
     'intro_video_title' => 'فيديو مقدمة الكورس',
     'intro_video_desc' => 'شاهد هذا الفيديو للتعرف على محتوى الكورس',
+    'path_intro_video_title' => 'مقدمة المسار التعليمي',
+    'path_intro_card_title' => 'مقدمة المسار',
+    'path_intro_card_sub' => 'شاهد المقدمة',
     'about_course' => 'عن الكورس',
     'course_objectives' => 'أهداف الكورس:',
     'what_you_learn' => 'ما ستعلمه',

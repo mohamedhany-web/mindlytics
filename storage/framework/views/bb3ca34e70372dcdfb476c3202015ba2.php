@@ -255,9 +255,9 @@ unset($__errorArgs, $__bag); ?>
                                 </label>
                                 <input type="url" name="video_url" value="<?php echo e(old('video_url', $advancedCourse->video_url)); ?>"
                                        class="w-full rounded-2xl border border-gray-200 bg-white/70 px-4 py-3 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition"
-                                       placeholder="https://www.youtube.com/watch?v=VIDEO_ID أو https://youtu.be/VIDEO_ID أو https://vimeo.com/VIDEO_ID">
+                                       placeholder="YouTube / Vimeo / Bunny (embed أو رابط مباشر .mp4)">
                                 <p class="mt-1 text-xs text-gray-500">
-                                    يُعرض في صفحة الكورس على الموقع. الصيغ المدعومة: YouTube، Vimeo، أو رابط مباشر لملف .mp4
+                                    يُعرض في صفحة الكورس العامة. مدعوم: YouTube، Vimeo، <strong>Bunny</strong> — رابط تضمين <code class="text-xs">mediadelivery.net/embed/...</code> أو رابط تشغيل، أو رابط مباشر لملف <code class="text-xs">.mp4</code> / <code class="text-xs">.m3u8</code> من CDN.
                                 </p>
                                 <?php $__errorArgs = ['video_url'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');

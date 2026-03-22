@@ -423,9 +423,10 @@
                         <div class="text-center mb-3">
                             <h2 class="text-lg font-bold text-gray-900 mb-0.5 flex items-center justify-center gap-2">
                                 <i class="fas fa-play-circle text-blue-600 text-base"></i>
-                                مقدمة المسار
+                                <?php echo e(__('public.path_intro_card_title')); ?>
+
                             </h2>
-                            <p class="text-gray-500 text-sm">شاهد المقدمة</p>
+                            <p class="text-gray-500 text-sm"><?php echo e(__('public.path_intro_card_sub')); ?></p>
                         </div>
                         <?php
                             $pathIntroVideoUrl = trim((string) ($learningPath->video_url ?? ''));
@@ -748,4 +749,4 @@
     
 </body>
 </html>
-<?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views\public\learning-path-show.blade.php ENDPATH**/ ?>
+<?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/public/learning-path-show.blade.php ENDPATH**/ ?>
