@@ -47,6 +47,7 @@ class StatisticsCacheService
                     ->whereYear('paid_at', now()->year)
                     ->sum('amount') ?? 0,
                 'total_wallet_balance' => Wallet::where('is_active', true)->sum('balance') ?? 0,
+                'total_wallet_pending' => Wallet::where('is_active', true)->sum('pending_balance') ?? 0,
             ];
 
             return $stats;

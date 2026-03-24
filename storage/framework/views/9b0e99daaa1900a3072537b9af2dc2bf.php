@@ -152,7 +152,7 @@
         </div>
 
     <!-- إحصائيات مالية -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-6">
         <!-- إجمالي الإيرادات -->
         <?php $revenueMetric = $metrics['monthly_revenue'] ?? null; $revenueTrend = $revenueMetric['trend'] ?? null; ?>
         <div class="dashboard-card rounded-2xl p-6 card-hover-effect relative overflow-hidden group border-2 border-emerald-200/50 hover:border-emerald-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(236, 253, 245, 0.95) 50%, rgba(209, 250, 229, 0.9) 100%);">
@@ -203,6 +203,39 @@
                         </span>
                     </div>
                 <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- أموال المحافظ -->
+        <?php
+            $walletAvailable = (float) ($stats['total_wallet_balance'] ?? 0);
+            $walletPending = (float) ($stats['total_wallet_pending'] ?? 0);
+            $walletTotal = $walletAvailable + $walletPending;
+        ?>
+        <div class="dashboard-card rounded-2xl p-6 card-hover-effect relative overflow-hidden group border-2 border-slate-200/80 hover:border-slate-300/90 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(241, 245, 249, 0.95) 50%, rgba(226, 232, 240, 0.9) 100%);">
+            <div class="absolute inset-0 bg-gradient-to-br from-slate-100/60 via-slate-50/40 to-slate-100/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-slate-400/15 to-transparent rounded-full opacity-80" aria-hidden="true"></div>
+            <div class="relative z-10">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-bold text-slate-800/90 mb-1">الأموال في المحافظ</p>
+                        <p class="text-xs text-slate-600/80 mb-2">محافظ نشطة — متاح + معلّق</p>
+                        <p class="text-3xl font-black bg-gradient-to-r from-slate-700 via-slate-600 to-slate-800 bg-clip-text text-transparent drop-shadow-sm"><?php echo e(number_format($walletTotal, 2)); ?> <span class="text-lg">ج.م</span></p>
+                    </div>
+                    <div class="w-16 h-16 bg-gradient-to-br from-slate-600 via-slate-500 to-slate-700 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0 mr-2" style="box-shadow: 0 8px 20px 0 rgba(71, 85, 105, 0.35);">
+                        <i class="fas fa-wallet text-white text-xl"></i>
+                    </div>
+                </div>
+                <dl class="mt-3 space-y-1 text-xs text-slate-700/85">
+                    <div class="flex justify-between gap-2"><dt>رصيد متاح</dt><dd class="font-bold tabular-nums"><?php echo e(number_format($walletAvailable, 2)); ?> ج.م</dd></div>
+                    <div class="flex justify-between gap-2"><dt>رصيد معلّق</dt><dd class="font-bold tabular-nums"><?php echo e(number_format($walletPending, 2)); ?> ج.م</dd></div>
+                </dl>
+                <div class="mt-4 pt-3 border-t border-slate-200/80">
+                    <a href="<?php echo e(route('admin.wallets.index')); ?>" class="text-slate-700 hover:text-slate-900 text-sm font-bold inline-flex items-center gap-2 transition-colors">
+                        إدارة المحافظ
+                        <i class="fas fa-arrow-left text-xs"></i>
+                    </a>
+                </div>
             </div>
         </div>
         
