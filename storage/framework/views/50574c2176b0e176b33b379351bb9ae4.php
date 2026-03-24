@@ -1,15 +1,13 @@
-@extends('layouts.admin')
+<?php $__env->startSection('title', 'إضافة دفعة جديدة'); ?>
+<?php $__env->startSection('header', 'إضافة دفعة جديدة'); ?>
 
-@section('title', 'إضافة دفعة جديدة')
-@section('header', 'إضافة دفعة جديدة')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="space-y-6">
     <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
         <h1 class="text-2xl font-bold text-gray-900 mb-6">إضافة دفعة جديدة</h1>
         
-        <form action="{{ route('admin.payments.store') }}" method="POST" class="space-y-6">
-            @csrf
+        <form action="<?php echo e(route('admin.payments.store')); ?>" method="POST" class="space-y-6">
+            <?php echo csrf_field(); ?>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="md:col-span-2 space-y-2">
@@ -25,55 +23,55 @@
                     <label for="payment-user-select" class="block text-sm font-medium text-gray-700 mb-2">العميل *</label>
                     <select name="user_id" id="payment-user-select" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
                         <option value="">اختر العميل</option>
-                        @foreach($users as $user)
-                        @php
+                        <?php $__currentLoopData = $users; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $user): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <?php
                             $searchBlob = \Illuminate\Support\Str::lower(trim(implode(' ', array_filter([
                                 $user->name ?? '',
                                 $user->email ?? '',
                                 $user->phone ?? '',
                             ]))));
-                        @endphp
-                        <option value="{{ $user->id }}" data-search="{{ e($searchBlob) }}">
-                            {{ $user->name }} — {{ $user->email }}@if(!empty($user->phone)) — {{ $user->phone }}@endif
+                        ?>
+                        <option value="<?php echo e($user->id); ?>" data-search="<?php echo e(e($searchBlob)); ?>">
+                            <?php echo e($user->name); ?> — <?php echo e($user->email); ?><?php if(!empty($user->phone)): ?> — <?php echo e($user->phone); ?><?php endif; ?>
                         </option>
-                        @endforeach
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </select>
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">الفاتورة *</label>
                     <select name="invoice_id" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
-                        @if($invoices->isEmpty())
+                        <?php if($invoices->isEmpty()): ?>
                             <option value="" disabled selected>لا توجد فواتير مستحقة حاليًا</option>
-                        @else
+                        <?php else: ?>
                             <option value="">اختر الفاتورة</option>
-                            @foreach($invoices as $invoice)
-                            <option value="{{ $invoice->id }}">
-                                {{ $invoice->invoice_number }} · {{ $invoice->user->name }} · متبقي {{ number_format($invoice->remaining_amount, 2) }} ج.م
+                            <?php $__currentLoopData = $invoices; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $invoice): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($invoice->id); ?>">
+                                <?php echo e($invoice->invoice_number); ?> · <?php echo e($invoice->user->name); ?> · متبقي <?php echo e(number_format($invoice->remaining_amount, 2)); ?> ج.م
                             </option>
-                            @endforeach
-                        @endif
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                        <?php endif; ?>
                     </select>
-                    @if($invoices->isEmpty())
+                    <?php if($invoices->isEmpty()): ?>
                         <p class="mt-2 text-xs text-amber-600">لا توجد فواتير بحاجة إلى دفع في الوقت الحالي.</p>
-                    @endif
+                    <?php endif; ?>
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">المبلغ *</label>
-                    <input type="number" name="amount" step="0.01" min="0" required value="{{ old('amount') }}" 
+                    <input type="number" name="amount" step="0.01" min="0" required value="<?php echo e(old('amount')); ?>" 
                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">طريقة الدفع *</label>
                     <select name="payment_method" id="payment-method-select" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
-                        <option value="cash" {{ old('payment_method', 'cash') === 'cash' ? 'selected' : '' }}>نقدي</option>
-                        <option value="card" {{ old('payment_method') === 'card' ? 'selected' : '' }}>بطاقة</option>
-                        <option value="bank_transfer" {{ old('payment_method') === 'bank_transfer' ? 'selected' : '' }}>تحويل بنكي</option>
-                        <option value="online" {{ old('payment_method') === 'online' ? 'selected' : '' }}>دفع إلكتروني</option>
-                        <option value="wallet" {{ old('payment_method') === 'wallet' ? 'selected' : '' }}>محفظة</option>
-                        <option value="other" {{ old('payment_method') === 'other' ? 'selected' : '' }}>أخرى</option>
+                        <option value="cash" <?php echo e(old('payment_method', 'cash') === 'cash' ? 'selected' : ''); ?>>نقدي</option>
+                        <option value="card" <?php echo e(old('payment_method') === 'card' ? 'selected' : ''); ?>>بطاقة</option>
+                        <option value="bank_transfer" <?php echo e(old('payment_method') === 'bank_transfer' ? 'selected' : ''); ?>>تحويل بنكي</option>
+                        <option value="online" <?php echo e(old('payment_method') === 'online' ? 'selected' : ''); ?>>دفع إلكتروني</option>
+                        <option value="wallet" <?php echo e(old('payment_method') === 'wallet' ? 'selected' : ''); ?>>محفظة</option>
+                        <option value="other" <?php echo e(old('payment_method') === 'other' ? 'selected' : ''); ?>>أخرى</option>
                     </select>
                 </div>
 
@@ -81,48 +79,62 @@
                     <label for="payment-wallet-select" class="block text-sm font-medium text-gray-800">المحفظة التي استلمت الدفعة *</label>
                     <p class="text-xs text-gray-600">يظهر <strong>الرصيد الحالي</strong> لكل محفظة؛ عند الحفظ يُضاف مبلغ الدفعة إلى رصيد المحفظة المختارة وتُسجَّل حركة إيداع.</p>
                     <select name="wallet_id" id="payment-wallet-select"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 @error('wallet_id') border-red-500 @enderror">
-                        <option value="">{{ $wallets->isEmpty() ? 'لا توجد محافظ مفعّلة' : 'اختر المحفظة' }}</option>
-                        @foreach($wallets as $wallet)
-                            <option value="{{ $wallet->id }}"
-                                    data-balance="{{ $wallet->balance }}"
-                                    {{ (string) old('wallet_id') === (string) $wallet->id ? 'selected' : '' }}>
-                                {{ $wallet->name }} — {{ \App\Models\Wallet::typeLabel($wallet->type) }} — الرصيد {{ number_format($wallet->balance, 2) }} ج.م
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 <?php $__errorArgs = ['wallet_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> border-red-500 <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>">
+                        <option value=""><?php echo e($wallets->isEmpty() ? 'لا توجد محافظ مفعّلة' : 'اختر المحفظة'); ?></option>
+                        <?php $__currentLoopData = $wallets; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $wallet): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($wallet->id); ?>"
+                                    data-balance="<?php echo e($wallet->balance); ?>"
+                                    <?php echo e((string) old('wallet_id') === (string) $wallet->id ? 'selected' : ''); ?>>
+                                <?php echo e($wallet->name); ?> — <?php echo e(\App\Models\Wallet::typeLabel($wallet->type)); ?> — الرصيد <?php echo e(number_format($wallet->balance, 2)); ?> ج.م
                             </option>
-                        @endforeach
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </select>
-                    @error('wallet_id')
-                        <p class="text-sm text-red-600">{{ $message }}</p>
-                    @enderror
+                    <?php $__errorArgs = ['wallet_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                        <p class="text-sm text-red-600"><?php echo e($message); ?></p>
+                    <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                     <p id="payment-wallet-balance-hint" class="hidden text-sm font-medium text-sky-800"></p>
-                    @if($wallets->isEmpty())
+                    <?php if($wallets->isEmpty()): ?>
                         <p class="text-sm text-amber-700">
                             لا توجد محافظ مفعّلة. أنشئ محفظة من
-                            <a href="{{ route('admin.wallets.index') }}" class="font-semibold text-sky-700 underline">إدارة المحافظ</a>.
+                            <a href="<?php echo e(route('admin.wallets.index')); ?>" class="font-semibold text-sky-700 underline">إدارة المحافظ</a>.
                         </p>
-                    @endif
+                    <?php endif; ?>
                 </div>
             </div>
 
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">ملاحظات</label>
-                <textarea name="notes" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500">{{ old('notes') }}</textarea>
+                <textarea name="notes" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"><?php echo e(old('notes')); ?></textarea>
             </div>
 
             <div class="flex gap-4">
                 <button type="submit" class="bg-gradient-to-r from-sky-600 to-sky-700 hover:from-sky-700 hover:to-sky-800 text-white px-6 py-3 rounded-lg font-medium transition-colors shadow-lg shadow-sky-500/30">
                     إضافة الدفعة
                 </button>
-                <a href="{{ route('admin.payments.index') }}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-3 rounded-lg font-medium transition-colors">
+                <a href="<?php echo e(route('admin.payments.index')); ?>" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-3 rounded-lg font-medium transition-colors">
                     إلغاء
                 </a>
             </div>
         </form>
     </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var search = document.getElementById('payment-client-search');
@@ -213,5 +225,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
 
+
+<?php echo $__env->make('layouts.admin', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/admin/payments/create.blade.php ENDPATH**/ ?>

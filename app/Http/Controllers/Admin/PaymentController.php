@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Invoice;
 use App\Models\User;
+use App\Models\Wallet;
+use App\Models\WalletTransaction;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -83,7 +85,9 @@ class PaymentController extends Controller
             ->values();
 
         $users = User::where('role', 'student')->where('is_active', true)->orderBy('name')->get();
-        return view('admin.payments.create', compact('invoices', 'users'));
+        $wallets = Wallet::where('is_active', true)->orderBy('name')->get();
+
+        return view('admin.payments.create', compact('invoices', 'users', 'wallets'));
     }
 
     public function store(Request $request)
@@ -92,6 +96,7 @@ class PaymentController extends Controller
             'invoice_id' => 'required|exists:invoices,id',
             'user_id' => 'required|exists:users,id',
             'payment_method' => 'required|in:cash,card,bank_transfer,online,wallet,other',
+            'wallet_id' => 'nullable|required_if:payment_method,wallet|exists:wallets,id',
             'amount' => 'required|numeric|min:0.01',
             'notes' => 'nullable|string',
         ]);
@@ -113,46 +118,91 @@ class PaymentController extends Controller
             ])->withInput();
         }
 
-        $payment = Payment::create([
-            'payment_number' => 'PAY-' . str_pad(Payment::count() + 1, 8, '0', STR_PAD_LEFT),
-            'invoice_id' => $invoice->id,
-            'user_id' => $validated['user_id'],
-            'payment_method' => $validated['payment_method'],
-            'wallet_id' => $request->wallet_id ?? null,
-            'amount' => $validated['amount'],
-            'currency' => 'EGP',
-            'status' => 'completed',
-            'paid_at' => now(),
-            'processed_by' => auth()->id(),
-            'notes' => $validated['notes'],
-        ]);
+        $walletForPayment = null;
+        if ($validated['payment_method'] === 'wallet') {
+            $walletForPayment = Wallet::where('id', $validated['wallet_id'])->where('is_active', true)->first();
+            if (! $walletForPayment) {
+                return back()->withErrors(['wallet_id' => 'المحفظة غير موجودة أو غير مفعّلة.'])->withInput();
+            }
+        }
 
-        // إنشاء معاملة مالية تلقائياً (إيراد)
-        $transactionNumber = 'TXN-' . str_pad(\App\Models\Transaction::count() + 1, 8, '0', STR_PAD_LEFT);
-        \App\Models\Transaction::create([
-            'transaction_number' => $transactionNumber,
-            'user_id' => $validated['user_id'],
-            'payment_id' => $payment->id,
-            'invoice_id' => $invoice->id,
-            'expense_id' => null,
-            'subscription_id' => null,
-            'type' => 'credit', // دائن (إيراد)
-            'category' => $invoice->type === 'subscription' ? 'subscription' : 'course_payment',
-            'amount' => $validated['amount'],
-            'currency' => 'EGP',
-            'description' => 'دفعة للفاتورة: ' . $invoice->invoice_number . ' - ' . $invoice->description,
-            'status' => 'completed',
-            'metadata' => [
+        try {
+            DB::beginTransaction();
+
+            $payment = Payment::create([
+                'payment_number' => 'PAY-' . str_pad(Payment::count() + 1, 8, '0', STR_PAD_LEFT),
+                'invoice_id' => $invoice->id,
+                'user_id' => $validated['user_id'],
+                'payment_method' => $validated['payment_method'],
+                'wallet_id' => $walletForPayment ? $walletForPayment->id : null,
+                'amount' => $validated['amount'],
+                'currency' => 'EGP',
+                'status' => 'completed',
+                'paid_at' => now(),
+                'processed_by' => auth()->id(),
+                'notes' => $validated['notes'],
+            ]);
+
+            if ($walletForPayment) {
+                $depositNotes = 'إيداع من دفعة فاتورة: ' . $invoice->invoice_number;
+                $walletForPayment->deposit(
+                    (float) $validated['amount'],
+                    $payment->id,
+                    null,
+                    $depositNotes
+                );
+            }
+
+            $transactionNumber = 'TXN-' . str_pad(\App\Models\Transaction::count() + 1, 8, '0', STR_PAD_LEFT);
+            $metadata = [
                 'invoice_id' => $invoice->id,
                 'payment_id' => $payment->id,
                 'payment_method' => $validated['payment_method'],
-            ],
-            'created_by' => auth()->id(),
-        ]);
+            ];
+            if ($walletForPayment) {
+                $metadata['wallet_id'] = $walletForPayment->id;
+            }
 
-        $invoice->refresh();
-        if ($invoice->remaining_amount <= 0 && !$invoice->isPaid()) {
+            $transaction = \App\Models\Transaction::create([
+                'transaction_number' => $transactionNumber,
+                'user_id' => $validated['user_id'],
+                'payment_id' => $payment->id,
+                'invoice_id' => $invoice->id,
+                'expense_id' => null,
+                'subscription_id' => null,
+                'type' => 'credit',
+                'category' => $invoice->type === 'subscription' ? 'subscription' : 'course_payment',
+                'amount' => $validated['amount'],
+                'currency' => 'EGP',
+                'description' => 'دفعة للفاتورة: ' . $invoice->invoice_number . ' - ' . $invoice->description
+                    . ($walletForPayment ? ' — محفظة: ' . ($walletForPayment->name ?? '') : ''),
+                'status' => 'completed',
+                'metadata' => $metadata,
+                'created_by' => auth()->id(),
+            ]);
+
+            if ($walletForPayment) {
+                $walletTransaction = WalletTransaction::where('wallet_id', $walletForPayment->id)
+                    ->where('payment_id', $payment->id)
+                    ->where('type', 'deposit')
+                    ->latest()
+                    ->first();
+                if ($walletTransaction) {
+                    $walletTransaction->update(['transaction_id' => $transaction->id]);
+                }
+            }
+
+            $invoice->refresh();
+            if ($invoice->remaining_amount <= 0 && ! $invoice->isPaid()) {
                 $invoice->markAsPaid();
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('PaymentController@store failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
+            return back()->with('error', 'تعذر حفظ الدفعة: ' . $e->getMessage())->withInput();
         }
 
         return redirect()->route('admin.payments.index')

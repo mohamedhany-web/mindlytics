@@ -73,7 +73,7 @@ class InvoiceController extends Controller
 
     public function create()
     {
-        $users = User::where('role', 'student')->where('is_active', true)->get();
+        $users = User::where('role', 'student')->where('is_active', true)->orderBy('name')->get();
         return view('admin.invoices.create', compact('users'));
     }
 
