@@ -42,12 +42,14 @@ class ActivityLog extends Model
         }
         
         try {
-            return parent::create($attributes);
+            // لا تستخدم parent::create — في Eloquent لا يوجد Model::create()، فيُستدعى __callStatic ثم (new static)->create()
+            // ويُعاد استدعاء هذه الدالة static في حلقة لا نهائية حتى نفاد الذاكرة.
+            return static::query()->create($attributes);
         } catch (\Exception $e) {
             // إذا فشل بسبب session_id (عمود غير موجود)، حاول مرة أخرى بدونه
             if (isset($attributes['session_id']) && (str_contains($e->getMessage(), 'session_id') || str_contains($e->getMessage(), 'no such column'))) {
                 unset($attributes['session_id']);
-                return parent::create($attributes);
+                return static::query()->create($attributes);
             }
             throw $e;
         }

@@ -9,6 +9,16 @@ class Invoice extends Model
 {
     use HasFactory;
 
+    protected static function booted()
+    {
+        static::saving(function (Invoice $invoice) {
+            $d = $invoice->getAttribute('description');
+            if ($d === null || $d === '') {
+                $invoice->setAttribute('description', '-');
+            }
+        });
+    }
+
     protected $fillable = [
         'invoice_number',
         'user_id',

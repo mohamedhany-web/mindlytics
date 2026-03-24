@@ -66,6 +66,14 @@ class AdminController extends Controller
             'course_enrollments_this_month' => \App\Models\StudentCourseEnrollment::whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count(),
         ];
 
+        // إيرادات الشهر السابق لنفس عدد أيام الشهر الحالي (مثلاً 1–24 آذار مقابل 1–24 شباط)
+        $lastDayPrevMonth = (int) $previousPeriodEnd->format('j');
+        $targetDay = min((int) $now->format('j'), $lastDayPrevMonth);
+        $previousMonthMtdEnd = $previousPeriodStart->copy()->addDays($targetDay - 1)->endOfDay();
+        $previousMonthMtdRevenue = (float) (\App\Models\Payment::where('status', 'completed')
+            ->whereBetween('paid_at', [$previousPeriodStart->copy()->startOfDay(), $previousMonthMtdEnd])
+            ->sum('amount') ?? 0);
+
         // مقارنات شهرية
         $monthlyComparisons = [
             'new_users' => $this->calculateChange(
@@ -90,9 +98,7 @@ class AdminController extends Controller
             ),
             'monthly_revenue' => $this->calculateChange(
                 $stats['monthly_revenue'],
-                \App\Models\Payment::where('status', 'completed')
-                    ->whereBetween('paid_at', [$previousPeriodStart, $previousPeriodEnd])
-                    ->sum('amount') ?? 0
+                $previousMonthMtdRevenue
             ),
             'pending_invoices' => $this->calculateChange(
                 \App\Models\Invoice::where('status', 'pending')->whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count(),

@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class InvoiceController extends Controller
 {
@@ -22,10 +21,7 @@ class InvoiceController extends Controller
     public function index(Request $request)
     {
         try {
-            // التحقق من الصلاحيات
-            if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
-                abort(403, 'غير مصرح لك بالوصول لهذه الصفحة');
-            }
+            $this->assertCanManageInvoices();
 
             $query = Invoice::with('user')
                 ->orderBy('created_at', 'desc');
@@ -73,6 +69,8 @@ class InvoiceController extends Controller
 
     public function create()
     {
+        $this->assertCanManageInvoices();
+
         $users = User::where('role', 'student')->where('is_active', true)->orderBy('name')->get();
         return view('admin.invoices.create', compact('users'));
     }
@@ -83,10 +81,7 @@ class InvoiceController extends Controller
      */
     public function store(Request $request)
     {
-        // التحقق من الصلاحيات
-        if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
-            abort(403, 'غير مصرح لك بالوصول لهذه الصفحة');
-        }
+        $this->assertCanManageInvoices();
 
         // Rate Limiting - حماية من Brute Force
         $key = 'create-invoice:' . Auth::id();
@@ -111,53 +106,68 @@ class InvoiceController extends Controller
                 'notes' => 'nullable|string|max:1000',
             ]);
 
-            // Additional sanitization
-            $validated['description'] = $validated['description'] ? strip_tags(trim($validated['description'])) : null;
-            $validated['type'] = strip_tags(trim($validated['type']));
-            $validated['notes'] = $validated['notes'] ? strip_tags(trim($validated['notes'])) : null;
+            // وصف غير فارغ دائماً (NOT NULL / وسيط الفراغ → null / تنظيف المدخلات قد يفرّغ النص)
+            $rawDescription = $validated['description'] ?? null;
+            $validated['description'] = ($rawDescription !== null && $rawDescription !== '')
+                ? strip_tags(trim((string) $rawDescription))
+                : '';
+            if ($validated['description'] === '') {
+                $validated['description'] = '-';
+            }
 
-            $total = $validated['subtotal'] 
-                + ($validated['tax_amount'] ?? 0) 
+            $validated['type'] = strip_tags(trim($validated['type']));
+            $rawNotes = $validated['notes'] ?? null;
+            $validated['notes'] = ($rawNotes !== null && $rawNotes !== '')
+                ? strip_tags(trim((string) $rawNotes))
+                : null;
+
+            $total = $validated['subtotal']
+                + ($validated['tax_amount'] ?? 0)
                 - ($validated['discount_amount'] ?? 0);
 
-            // Mass Assignment Protection - استخدام fillable فقط
-            $invoice = Invoice::create([
-                'invoice_number' => 'INV-' . str_pad(Invoice::count() + 1, 8, '0', STR_PAD_LEFT),
-                'user_id' => (int) $validated['user_id'],
-                'type' => $validated['type'],
-                'description' => $validated['description'],
-                'subtotal' => (float) $validated['subtotal'],
-                'tax_amount' => (float) ($validated['tax_amount'] ?? 0),
-                'discount_amount' => (float) ($validated['discount_amount'] ?? 0),
-                'total_amount' => (float) $total,
-                'status' => 'pending',
-                'due_date' => $validated['due_date'] ? date('Y-m-d', strtotime($validated['due_date'])) : now()->addDays(30)->format('Y-m-d'),
-                'notes' => $validated['notes'],
-                'currency' => 'EGP',
-            ]);
-
-            // Activity Logging
-            ActivityLog::create([
-                'user_id' => Auth::id(),
-                'action' => 'created',
-                'model_type' => 'Invoice',
-                'model_id' => $invoice->id,
-                'description' => 'تم إنشاء فاتورة جديدة: ' . $invoice->invoice_number,
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-            ]);
+            // إدراج عبر Query Builder لتفادي أي تعارض مع نسخ قديمة من Eloquent/أحداث النموذج
+            $invoice = $this->insertInvoiceAsRow($validated, (float) $total);
 
             DB::commit();
+
+            try {
+                ActivityLog::create([
+                    'user_id' => Auth::id(),
+                    'action' => 'created',
+                    'model_type' => 'Invoice',
+                    'model_id' => $invoice->id,
+                    'description' => 'تم إنشاء فاتورة جديدة: ' . $invoice->invoice_number,
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                ]);
+            } catch (\Throwable $logEx) {
+                Log::warning('InvoiceController@store: فشل تسجيل النشاط بعد إنشاء الفاتورة', [
+                    'invoice_id' => $invoice->id,
+                    'exception' => $logEx,
+                ]);
+            }
 
             return redirect()->route('admin.invoices.index')
                 ->with('success', 'تم إنشاء الفاتورة بنجاح');
         } catch (\Illuminate\Validation\ValidationException $e) {
             DB::rollBack();
             return back()->withErrors($e->errors())->withInput();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error('Error in InvoiceController@store: ' . $e->getMessage());
-            return back()->with('error', 'حدث خطأ أثناء إنشاء الفاتورة')->withInput();
+            Log::error('Error in InvoiceController@store: ' . $e->getMessage(), [
+                'exception' => $e,
+            ]);
+            @file_put_contents(
+                storage_path('logs/invoice_store_last_error.txt'),
+                '[' . now()->toIso8601String() . "] " . $e->getMessage() . "\n" . $e->getFile() . ':' . $e->getLine() . "\n" . $e->getTraceAsString(),
+                LOCK_EX
+            );
+            $message = 'حدث خطأ أثناء إنشاء الفاتورة';
+            if (config('app.debug')) {
+                $message .= ': ' . $e->getMessage();
+            }
+
+            return back()->with('error', $message)->withInput();
         }
     }
 
@@ -167,10 +177,7 @@ class InvoiceController extends Controller
      */
     public function show(Invoice $invoice)
     {
-        // التحقق من الصلاحيات
-        if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
-            abort(403, 'غير مصرح لك بالوصول لهذه الصفحة');
-        }
+        $this->assertCanManageInvoices();
 
         try {
             $invoice->load('user', 'payments', 'transactions', 'order', 'subscription', 'expense');
@@ -183,6 +190,8 @@ class InvoiceController extends Controller
 
     public function edit(Invoice $invoice)
     {
+        $this->assertCanManageInvoices();
+
         $users = User::where('role', 'student')->where('is_active', true)->get();
         return view('admin.invoices.edit', compact('invoice', 'users'));
     }
@@ -193,10 +202,7 @@ class InvoiceController extends Controller
      */
     public function update(Request $request, Invoice $invoice)
     {
-        // التحقق من الصلاحيات
-        if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
-            abort(403, 'غير مصرح لك بالوصول لهذه الصفحة');
-        }
+        $this->assertCanManageInvoices();
 
         // Rate Limiting
         $key = 'update-invoice:' . Auth::id();
@@ -221,11 +227,20 @@ class InvoiceController extends Controller
                 'notes' => 'nullable|string|max:1000',
             ]);
 
-            // Additional sanitization
-            $validated['description'] = $validated['description'] ? strip_tags(trim($validated['description'])) : null;
+            $rawDescription = $validated['description'] ?? null;
+            $validated['description'] = ($rawDescription !== null && $rawDescription !== '')
+                ? strip_tags(trim((string) $rawDescription))
+                : '';
+            if ($validated['description'] === '') {
+                $validated['description'] = '-';
+            }
+
             $validated['type'] = strip_tags(trim($validated['type']));
             $validated['status'] = strip_tags(trim($validated['status']));
-            $validated['notes'] = $validated['notes'] ? strip_tags(trim($validated['notes'])) : null;
+            $rawNotes = $validated['notes'] ?? null;
+            $validated['notes'] = ($rawNotes !== null && $rawNotes !== '')
+                ? strip_tags(trim((string) $rawNotes))
+                : null;
 
             $total = $validated['subtotal'] 
                 + ($validated['tax_amount'] ?? 0) 
@@ -263,10 +278,15 @@ class InvoiceController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             DB::rollBack();
             return back()->withErrors($e->errors())->withInput();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error('Error in InvoiceController@update: ' . $e->getMessage());
-            return back()->with('error', 'حدث خطأ أثناء تحديث الفاتورة')->withInput();
+            Log::error('Error in InvoiceController@update: ' . $e->getMessage(), ['exception' => $e]);
+            $message = 'حدث خطأ أثناء تحديث الفاتورة';
+            if (config('app.debug')) {
+                $message .= ': ' . $e->getMessage();
+            }
+
+            return back()->with('error', $message)->withInput();
         }
     }
 
@@ -276,10 +296,7 @@ class InvoiceController extends Controller
      */
     public function destroy(Invoice $invoice)
     {
-        // التحقق من الصلاحيات
-        if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
-            abort(403, 'غير مصرح لك بالوصول لهذه الصفحة');
-        }
+        $this->assertCanManageInvoices();
 
         // Rate Limiting
         $key = 'delete-invoice:' . Auth::id();
@@ -315,5 +332,58 @@ class InvoiceController extends Controller
             Log::error('Error in InvoiceController@destroy: ' . $e->getMessage());
             return back()->with('error', 'حدث خطأ أثناء حذف الفاتورة');
         }
+    }
+
+    /**
+     * مسموح بإدارة الفواتير لمن يملك دور admin أو super_admin (مطابقة لـ Route::middleware role:admin|super_admin).
+     */
+    private function assertCanManageInvoices(): void
+    {
+        if (! Auth::check()) {
+            abort(403, 'غير مصرح لك بالوصول لهذه الصفحة');
+        }
+        $role = strtolower(trim((string) (Auth::user()->role ?? '')));
+        if ($role === 'admin' || Auth::user()->isSuperAdmin()) {
+            return;
+        }
+        abort(403, 'غير مصرح لك بالوصول لهذه الصفحة');
+    }
+
+    /**
+     * إنشاء صف الفاتورة عبر الـ Query Builder حتى يُحفَظ الوصف كنص صريح ولا يعتمد على أحداث Eloquent.
+     */
+    private function insertInvoiceAsRow(array $validated, float $totalAmount): Invoice
+    {
+        $description = (string) ($validated['description'] ?? '');
+        $description = trim(strip_tags($description));
+        if ($description === '') {
+            $description = '-';
+        }
+
+        $dueDate = $validated['due_date']
+            ? date('Y-m-d', strtotime($validated['due_date']))
+            : now()->addDays(30)->format('Y-m-d');
+
+        $now = now();
+        $nextSeq = (int) DB::table('invoices')->count() + 1;
+        $invoiceNumber = 'INV-' . str_pad((string) $nextSeq, 8, '0', STR_PAD_LEFT);
+
+        $id = DB::table('invoices')->insertGetId([
+            'invoice_number' => $invoiceNumber,
+            'user_id' => (int) $validated['user_id'],
+            'type' => $validated['type'],
+            'description' => $description,
+            'subtotal' => round((float) $validated['subtotal'], 2),
+            'tax_amount' => round((float) ($validated['tax_amount'] ?? 0), 2),
+            'discount_amount' => round((float) ($validated['discount_amount'] ?? 0), 2),
+            'total_amount' => round($totalAmount, 2),
+            'status' => 'pending',
+            'due_date' => $dueDate,
+            'notes' => $validated['notes'] ?? null,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        return Invoice::query()->findOrFail($id);
     }
 }

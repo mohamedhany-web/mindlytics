@@ -1143,25 +1143,25 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::resource('invoices', \App\Http\Controllers\Admin\InvoiceController::class)
             ->middleware('throttle:60,1')
             ->except(['update', 'destroy']);
-        Route::post('/invoices/{invoice}', [\App\Http\Controllers\Admin\InvoiceController::class, 'update'])->middleware('throttle:20,5')->name('invoices.update');
+        Route::match(['put', 'patch', 'post'], '/invoices/{invoice}', [\App\Http\Controllers\Admin\InvoiceController::class, 'update'])->middleware('throttle:20,5')->name('invoices.update');
         Route::delete('/invoices/{invoice}', [\App\Http\Controllers\Admin\InvoiceController::class, 'destroy'])->middleware('throttle:10,1')->name('invoices.destroy');
         
         Route::resource('payments', \App\Http\Controllers\Admin\PaymentController::class)
             ->middleware('throttle:60,1')
             ->except(['update', 'destroy']);
-        Route::post('/payments/{payment}', [\App\Http\Controllers\Admin\PaymentController::class, 'update'])->middleware('throttle:20,5')->name('payments.update');
+        Route::match(['put', 'patch', 'post'], '/payments/{payment}', [\App\Http\Controllers\Admin\PaymentController::class, 'update'])->middleware('throttle:20,5')->name('payments.update');
         Route::delete('/payments/{payment}', [\App\Http\Controllers\Admin\PaymentController::class, 'destroy'])->middleware('throttle:10,1')->name('payments.destroy');
         
         Route::resource('transactions', \App\Http\Controllers\Admin\TransactionController::class)
             ->middleware('throttle:60,1')
             ->except(['update', 'destroy']);
-        Route::post('/transactions/{transaction}', [\App\Http\Controllers\Admin\TransactionController::class, 'update'])->middleware('throttle:20,5')->name('transactions.update');
+        Route::match(['put', 'patch', 'post'], '/transactions/{transaction}', [\App\Http\Controllers\Admin\TransactionController::class, 'update'])->middleware('throttle:20,5')->name('transactions.update');
         Route::delete('/transactions/{transaction}', [\App\Http\Controllers\Admin\TransactionController::class, 'destroy'])->middleware('throttle:10,1')->name('transactions.destroy');
         
         Route::resource('wallets', \App\Http\Controllers\Admin\WalletController::class)
             ->middleware('throttle:60,1')
             ->except(['update', 'destroy']);
-        Route::post('/wallets/{wallet}', [\App\Http\Controllers\Admin\WalletController::class, 'update'])->middleware('throttle:20,5')->name('wallets.update');
+        Route::match(['put', 'patch', 'post'], '/wallets/{wallet}', [\App\Http\Controllers\Admin\WalletController::class, 'update'])->middleware('throttle:20,5')->name('wallets.update');
         Route::delete('/wallets/{wallet}', [\App\Http\Controllers\Admin\WalletController::class, 'destroy'])->middleware('throttle:10,1')->name('wallets.destroy');
         
         Route::resource('expenses', \App\Http\Controllers\Admin\ExpenseController::class)->except(['destroy']);

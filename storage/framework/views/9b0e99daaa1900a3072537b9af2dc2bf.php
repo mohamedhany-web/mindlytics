@@ -162,14 +162,15 @@
                 <div class="flex items-center justify-between mb-4">
                     <div>
                         <p class="text-sm font-bold text-emerald-800/80 mb-1">إجمالي الإيرادات</p>
+                        <p class="text-xs text-emerald-700/60 mb-1">مجموع المدفوعات بحالة «مكتمل»</p>
                         <p class="text-3xl font-black bg-gradient-to-r from-emerald-700 via-green-600 to-teal-600 bg-clip-text text-transparent drop-shadow-sm"><?php echo e(number_format($stats['total_revenue'] ?? 0, 2)); ?> <span class="text-lg">ج.م</span></p>
                     </div>
                     <div class="w-16 h-16 bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300" style="box-shadow: 0 8px 20px 0 rgba(16, 185, 129, 0.4);">
                         <i class="fas fa-money-bill-wave text-white text-xl"></i>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
         <!-- إيرادات الشهر -->
         <div class="dashboard-card rounded-2xl p-6 card-hover-effect relative overflow-hidden group border-2 border-blue-200/50 hover:border-blue-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 249, 255, 0.95) 50%, rgba(224, 242, 254, 0.9) 100%);">
@@ -179,6 +180,7 @@
                 <div class="flex items-center justify-between mb-4">
                     <div>
                         <p class="text-sm font-bold text-blue-800/80 mb-1">إيرادات الشهر</p>
+                        <p class="text-xs text-blue-700/60 mb-1">مدفوعات مكتملة في الشهر الحالي — المقارنة مع نفس الأيام من الشهر السابق</p>
                         <p class="text-3xl font-black bg-gradient-to-r from-blue-700 via-sky-600 to-cyan-600 bg-clip-text text-transparent drop-shadow-sm"><?php echo e(number_format($revenueMetric['current'] ?? 0, 2)); ?> <span class="text-lg">ج.م</span></p>
                     </div>
                     <div class="w-16 h-16 bg-gradient-to-br from-blue-500 via-sky-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300" style="box-shadow: 0 8px 20px 0 rgba(59, 130, 246, 0.4);">
