@@ -10,6 +10,29 @@
             <i class="fas fa-check-circle mr-2"></i>{{ session('success') }}
         </div>
     @endif
+    @if(session('import_report') && $employeeTask->task_type === 'video_editing')
+        @php $rep = session('import_report'); @endphp
+        <div class="bg-white border border-slate-200 text-gray-800 px-4 py-3 rounded-lg mb-4 text-sm shadow-sm">
+            <p class="font-semibold text-gray-900 mb-2">تقرير الاستيراد</p>
+            <p>تم استيراد: <strong>{{ $rep['imported'] ?? 0 }}</strong></p>
+            @if(!empty($rep['skipped_duplicates']))
+                <p class="mt-2 text-amber-800">روابط مُتخطاة (مكررة): {{ count($rep['skipped_duplicates']) }}</p>
+                <ul class="list-disc list-inside text-xs text-gray-600 max-h-28 overflow-y-auto mt-1">
+                    @foreach(array_slice($rep['skipped_duplicates'], 0, 12) as $line)
+                        <li>{{ $line }}</li>
+                    @endforeach
+                </ul>
+            @endif
+            @if(!empty($rep['row_errors']))
+                <p class="mt-2 text-red-800">أخطاء في الصفوف: {{ count($rep['row_errors']) }}</p>
+                <ul class="list-disc list-inside text-xs text-gray-600 max-h-28 overflow-y-auto mt-1">
+                    @foreach(array_slice($rep['row_errors'], 0, 12, true) as $rowNum => $err)
+                        <li>صف {{ $rowNum }}: {{ $err }}</li>
+                    @endforeach
+                </ul>
+            @endif
+        </div>
+    @endif
 
     <!-- الهيدر -->
     <div class="dashboard-card rounded-2xl card-hover-effect border-2 border-blue-200/50 hover:border-blue-300/70 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 249, 255, 0.95) 50%, rgba(224, 242, 254, 0.9) 100%);">
@@ -212,10 +235,43 @@
         <div class="p-6 sm:p-8 space-y-4">
             <div class="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 pb-4">
                 <h2 class="text-xl font-bold text-gray-900">التسليمات</h2>
-                <span class="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
-                    {{ $totalDeliverables }} تسليم
-                </span>
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+                        {{ $totalDeliverables }} تسليم
+                    </span>
+                    @if($employeeTask->task_type === 'video_editing')
+                        @php
+                            $totBeforeMin = (int) $employeeTask->deliverables()->sum('duration_before_minutes');
+                            $totAfterMin = (int) $employeeTask->deliverables()->sum('duration_after_minutes');
+                        @endphp
+                        <span class="text-xs sm:text-sm text-gray-600 bg-violet-50 border border-violet-100 px-3 py-1.5 rounded-full">
+                            مجموع الدقائق: قبل {{ $totBeforeMin }} · بعد {{ $totAfterMin }}
+                        </span>
+                    @endif
+                </div>
             </div>
+
+            @if($employeeTask->task_type === 'video_editing')
+                <div class="rounded-xl border border-violet-200 bg-violet-50/40 p-4 space-y-3">
+                    <p class="text-sm font-semibold text-gray-900"><i class="fas fa-file-excel text-green-600 ml-1"></i> استيراد تسليمات المونتاج من Excel</p>
+                    <p class="text-xs text-gray-600">عمود إلزامي: رابط الفيديو (Bunny). لا يُسمح بتكرار نفس الرابط في الملف أو مع تسليمات سابقة.</p>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <a href="{{ route('admin.employee-tasks.deliverables.montage-excel-template', $employeeTask) }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-violet-300 text-violet-800 text-sm font-medium hover:bg-violet-50">
+                            <i class="fas fa-download"></i> تنزيل القالب
+                        </a>
+                    </div>
+                    <form action="{{ route('admin.employee-tasks.deliverables.import-excel', $employeeTask) }}" method="POST" enctype="multipart/form-data" class="flex flex-wrap items-end gap-3">
+                        @csrf
+                        <div class="flex-1 min-w-[200px]">
+                            <label class="block text-xs font-medium text-gray-700 mb-1">ملف Excel</label>
+                            <input type="file" name="excel_file" accept=".xlsx,.xls,.csv" required class="w-full text-sm file:ml-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-violet-100 file:text-violet-800">
+                        </div>
+                        <button type="submit" class="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium">
+                            <i class="fas fa-file-import ml-1"></i> استيراد
+                        </button>
+                    </form>
+                </div>
+            @endif
 
             <!-- بحث في التسليمات -->
             <form method="GET" action="{{ route('admin.employee-tasks.show', $employeeTask) }}" class="flex flex-wrap items-center gap-3">
@@ -260,6 +316,7 @@
                                 <th class="text-right py-3 px-3 text-xs font-bold text-gray-600 uppercase tracking-wide">الرابط / الملف</th>
                                 <th class="text-right py-3 px-3 text-xs font-bold text-gray-600 uppercase tracking-wide">الحالة</th>
                                 <th class="text-right py-3 px-3 text-xs font-bold text-gray-600 uppercase tracking-wide">التاريخ</th>
+                                <th class="text-right py-3 px-3 text-xs font-bold text-gray-600 uppercase tracking-wide whitespace-nowrap">إجراءات</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -317,14 +374,126 @@
                                         </span>
                                     </td>
                                     <td class="py-3 px-3 text-xs text-gray-500">{{ $deliverable->created_at->format('Y-m-d H:i') }}</td>
+                                    <td class="py-3 px-3 text-sm">
+                                        <div class="flex flex-col gap-1.5 items-stretch min-w-[100px]">
+                                            <button type="button" onclick="document.getElementById('admin-edit-{{ $deliverable->id }}').classList.toggle('hidden')" class="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-white border border-gray-300 text-gray-800 hover:bg-gray-50 text-xs font-medium">
+                                                <i class="fas fa-edit"></i> تعديل
+                                            </button>
+                                            <form action="{{ route('admin.employee-tasks.deliverables.destroy', [$employeeTask, $deliverable]) }}" method="POST" onsubmit="return confirm('حذف هذا التسليم نهائياً؟');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="w-full inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 text-xs font-medium">
+                                                    <i class="fas fa-trash-alt"></i> حذف
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
                                 </tr>
                                 @if($deliverable->feedback)
                                     <tr class="border-b border-gray-100 bg-amber-50/30">
-                                        <td colspan="7" class="py-2 px-3 text-sm text-gray-700">
+                                        <td colspan="8" class="py-2 px-3 text-sm text-gray-700">
                                             <span class="font-semibold text-amber-800">ملاحظات المراجع:</span> {{ Str::limit($deliverable->feedback, 120) }}
                                         </td>
                                     </tr>
                                 @endif
+                                <tr id="admin-edit-{{ $deliverable->id }}" class="hidden border-b border-gray-200 bg-slate-50/80">
+                                    <td colspan="8" class="py-4 px-4 text-sm">
+                                        @if($employeeTask->task_type === 'video_editing')
+                                            <p class="font-semibold text-violet-800 mb-3"><i class="fas fa-pen ml-1"></i> تعديل تسليم المونتاج (إدارة)</p>
+                                            <form action="{{ route('admin.employee-tasks.deliverables.update', [$employeeTask, $deliverable]) }}" method="POST" class="space-y-3 max-w-4xl">
+                                                @csrf
+                                                @method('PUT')
+                                                <input type="hidden" name="task_type_context" value="video_editing">
+                                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    <div class="md:col-span-2">
+                                                        <label class="block text-xs font-medium text-gray-700 mb-1">عنوان التسليم</label>
+                                                        <input type="text" name="title" value="{{ old('title', $deliverable->title) }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                                    </div>
+                                                    <div class="md:col-span-2">
+                                                        <label class="block text-xs font-medium text-gray-700 mb-1">رابط الفيديو من Bunny <span class="text-red-500">*</span></label>
+                                                        <input type="url" name="video_link_url" required value="{{ old('video_link_url', $deliverable->link_url) }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-xs font-medium text-gray-700 mb-1">ممن استلمته <span class="text-red-500">*</span></label>
+                                                        <input type="text" name="received_from" required value="{{ old('received_from', $deliverable->received_from) }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-xs font-medium text-gray-700 mb-1">مدة قبل المونتاج (نص)</label>
+                                                        <input type="text" name="duration_before" value="{{ old('duration_before', $deliverable->duration_before) }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-xs font-medium text-gray-700 mb-1">مدة بعد المونتاج (نص)</label>
+                                                        <input type="text" name="duration_after" value="{{ old('duration_after', $deliverable->duration_after) }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-xs font-medium text-gray-700 mb-1">دقائق قبل</label>
+                                                        <input type="number" name="duration_before_minutes" value="{{ old('duration_before_minutes', $deliverable->duration_before_minutes) }}" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-xs font-medium text-gray-700 mb-1">دقائق بعد</label>
+                                                        <input type="number" name="duration_after_minutes" value="{{ old('duration_after_minutes', $deliverable->duration_after_minutes) }}" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                                    </div>
+                                                    <div class="md:col-span-2">
+                                                        <label class="block text-xs font-medium text-gray-700 mb-1">ملاحظات</label>
+                                                        <textarea name="description" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">{{ old('description', $deliverable->description) }}</textarea>
+                                                    </div>
+                                                </div>
+                                                <div class="flex flex-wrap gap-2">
+                                                    <button type="submit" class="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-medium">حفظ</button>
+                                                    <button type="button" onclick="document.getElementById('admin-edit-{{ $deliverable->id }}').classList.add('hidden')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg text-sm">إلغاء</button>
+                                                </div>
+                                            </form>
+                                        @else
+                                            <p class="font-semibold text-blue-800 mb-3"><i class="fas fa-pen ml-1"></i> تعديل التسليم (إدارة)</p>
+                                            <form action="{{ route('admin.employee-tasks.deliverables.update', [$employeeTask, $deliverable]) }}" method="POST" enctype="multipart/form-data" class="space-y-3 max-w-4xl">
+                                                @csrf
+                                                @method('PUT')
+                                                <div>
+                                                    <label class="block text-xs font-medium text-gray-700 mb-1">عنوان التسليم *</label>
+                                                    <input type="text" name="title" required value="{{ old('title', $deliverable->title) }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-xs font-medium text-gray-700 mb-1">الوصف</label>
+                                                    <textarea name="description" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">{{ old('description', $deliverable->description) }}</textarea>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-xs font-medium text-gray-700 mb-1">نوع التسليم *</label>
+                                                    <select name="delivery_type" id="admin_edit_delivery_type_{{ $deliverable->id }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                                        <option value="file" {{ old('delivery_type', $deliverable->delivery_type) === 'file' ? 'selected' : '' }}>ملف</option>
+                                                        <option value="image" {{ old('delivery_type', $deliverable->delivery_type) === 'image' ? 'selected' : '' }}>صورة</option>
+                                                        <option value="link" {{ old('delivery_type', $deliverable->delivery_type) === 'link' ? 'selected' : '' }}>رابط</option>
+                                                    </select>
+                                                </div>
+                                                <div id="admin_edit_file_wrap_{{ $deliverable->id }}">
+                                                    <label class="block text-xs font-medium text-gray-700 mb-1">استبدال الملف (اختياري)</label>
+                                                    <input type="file" name="file" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                                    <p class="text-xs text-gray-500 mt-1">اتركه فارغاً للإبقاء على الملف الحالي</p>
+                                                </div>
+                                                <div id="admin_edit_link_wrap_{{ $deliverable->id }}">
+                                                    <label class="block text-xs font-medium text-gray-700 mb-1">الرابط *</label>
+                                                    <input type="url" name="link_url" value="{{ old('link_url', $deliverable->link_url) }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                                </div>
+                                                <div class="flex flex-wrap gap-2">
+                                                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">حفظ</button>
+                                                    <button type="button" onclick="document.getElementById('admin-edit-{{ $deliverable->id }}').classList.add('hidden')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg text-sm">إلغاء</button>
+                                                </div>
+                                            </form>
+                                            <script>
+                                                (function () {
+                                                    var sel = document.getElementById('admin_edit_delivery_type_{{ $deliverable->id }}');
+                                                    var fw = document.getElementById('admin_edit_file_wrap_{{ $deliverable->id }}');
+                                                    var lw = document.getElementById('admin_edit_link_wrap_{{ $deliverable->id }}');
+                                                    function sync() {
+                                                        if (!sel || !fw || !lw) return;
+                                                        if (sel.value === 'link') { fw.classList.add('hidden'); lw.classList.remove('hidden'); }
+                                                        else { fw.classList.remove('hidden'); lw.classList.add('hidden'); }
+                                                    }
+                                                    if (sel) { sel.addEventListener('change', sync); sync(); }
+                                                })();
+                                            </script>
+                                        @endif
+                                    </td>
+                                </tr>
                             @endforeach
                         </tbody>
                     </table>

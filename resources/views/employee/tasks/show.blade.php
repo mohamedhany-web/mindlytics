@@ -5,6 +5,29 @@
 
 @section('content')
 <div class="space-y-6">
+    @if(session('import_report') && $task->isVideoEditing())
+        @php $rep = session('import_report'); @endphp
+        <div class="bg-white rounded-xl border border-slate-200 p-4 text-sm text-gray-800 shadow-sm">
+            <p class="font-semibold text-gray-900 mb-2">تقرير الاستيراد</p>
+            <p>تم استيراد: <strong>{{ $rep['imported'] ?? 0 }}</strong></p>
+            @if(!empty($rep['skipped_duplicates']))
+                <p class="mt-2 text-amber-800">روابط مُتخطاة (مكررة): {{ count($rep['skipped_duplicates']) }}</p>
+                <ul class="list-disc list-inside text-xs text-gray-600 max-h-32 overflow-y-auto mt-1">
+                    @foreach(array_slice($rep['skipped_duplicates'], 0, 15) as $line)
+                        <li>{{ $line }}</li>
+                    @endforeach
+                </ul>
+            @endif
+            @if(!empty($rep['row_errors']))
+                <p class="mt-2 text-red-800">أخطاء في الصفوف: {{ count($rep['row_errors']) }}</p>
+                <ul class="list-disc list-inside text-xs text-gray-600 max-h-32 overflow-y-auto mt-1">
+                    @foreach(array_slice($rep['row_errors'], 0, 15, true) as $rowNum => $err)
+                        <li>صف {{ $rowNum }}: {{ $err }}</li>
+                    @endforeach
+                </ul>
+            @endif
+        </div>
+    @endif
     <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
         <div class="flex flex-wrap justify-between items-start gap-4 mb-6">
             <div class="flex-1 min-w-0">
@@ -70,6 +93,19 @@
             <p class="text-sm font-medium text-gray-600 mb-2">الوصف</p>
             <p class="text-gray-900 leading-relaxed whitespace-pre-wrap">{{ $task->description }}</p>
         </div>
+        @endif
+
+        @if($task->isVideoEditing())
+            @php
+                $sumBeforeMin = (int) $task->deliverables->sum('duration_before_minutes');
+                $sumAfterMin = (int) $task->deliverables->sum('duration_after_minutes');
+            @endphp
+            @if($task->deliverables->count() > 0)
+                <div class="mb-6 flex flex-wrap gap-3 text-sm text-gray-700">
+                    <span class="inline-flex items-center px-3 py-1.5 rounded-lg bg-violet-50 border border-violet-100">مجموع دقائق قبل: <strong class="mr-1">{{ $sumBeforeMin }}</strong></span>
+                    <span class="inline-flex items-center px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-100">مجموع دقائق بعد: <strong class="mr-1">{{ $sumAfterMin }}</strong></span>
+                </div>
+            @endif
         @endif
 
         <!-- تحديث الحالة -->
@@ -151,12 +187,20 @@
                                 <input type="text" name="received_from" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="اسم الشخص أو المصدر">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">مدة الفيديو قبل المونتاج</label>
-                                <input type="text" name="duration_before" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="مثال: 10:30 أو 45 دقيقة">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">مدة الفيديو قبل المونتاج (نص)</label>
+                                <input type="text" name="duration_before" value="{{ old('duration_before') }}" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="مثال: 10:30 أو 45 دقيقة">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">مدة الفيديو بعد المونتاج</label>
-                                <input type="text" name="duration_after" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="مثال: 8:00 أو 35 دقيقة">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">مدة الفيديو بعد المونتاج (نص)</label>
+                                <input type="text" name="duration_after" value="{{ old('duration_after') }}" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="مثال: 8:00 أو 35 دقيقة">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">دقائق قبل (رقم، اختياري)</label>
+                                <input type="number" name="duration_before_minutes" value="{{ old('duration_before_minutes') }}" min="0" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="يُفضَّل لحساب المجاميع">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">دقائق بعد (رقم، اختياري)</label>
+                                <input type="number" name="duration_after_minutes" value="{{ old('duration_after_minutes') }}" min="0" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="يُفضَّل لحساب المجاميع">
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">ملاحظات (اختياري)</label>
@@ -167,6 +211,26 @@
                             <i class="fas fa-upload mr-2"></i>تسليم المونتاج
                         </button>
                     </form>
+
+                    <div class="mt-6 pt-6 border-t border-violet-200">
+                        <h5 class="text-sm font-semibold text-gray-900 mb-3"><i class="fas fa-file-excel text-green-600 mr-2"></i>استيراد عدة تسليمات من Excel</h5>
+                        <p class="text-xs text-gray-600 mb-3">عمود إلزامي: رابط الفيديو (Bunny). يُمنع تكرار نفس الرابط في الملف أو في التسليمات السابقة.</p>
+                        <div class="flex flex-wrap items-center gap-3 mb-4">
+                            <a href="{{ route('employee.tasks.deliverables.montage-excel-template', $task) }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-violet-300 text-violet-800 text-sm font-medium hover:bg-violet-50">
+                                <i class="fas fa-download"></i> تنزيل القالب
+                            </a>
+                        </div>
+                        <form action="{{ route('employee.tasks.deliverables.import-excel', $task) }}" method="POST" enctype="multipart/form-data" class="flex flex-wrap items-end gap-3">
+                            @csrf
+                            <div class="flex-1 min-w-[200px]">
+                                <label class="block text-xs font-medium text-gray-700 mb-1">ملف Excel (.xlsx)</label>
+                                <input type="file" name="excel_file" accept=".xlsx,.xls,.csv" required class="w-full text-sm text-gray-700 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-violet-100 file:text-violet-800">
+                            </div>
+                            <button type="submit" class="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium">
+                                <i class="fas fa-file-import mr-1"></i> استيراد
+                            </button>
+                        </form>
+                    </div>
                 </div>
             @else
                 <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 mb-6">
@@ -326,6 +390,115 @@
                                     @endif
                                     <p class="text-xs text-gray-400">{{ $deliverable->created_at->format('Y-m-d H:i') }}</p>
                                 </div>
+                                <div class="flex flex-wrap items-center gap-2 shrink-0 justify-end md:flex-col md:items-stretch">
+                                    <button type="button" onclick="document.getElementById('edit-form-{{ $deliverable->id }}').classList.toggle('hidden')" class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-white border border-gray-300 text-gray-800 hover:bg-gray-50 transition-colors">
+                                        <i class="fas fa-edit"></i> تعديل
+                                    </button>
+                                    <form action="{{ route('employee.tasks.deliverables.destroy', [$task, $deliverable]) }}" method="POST" class="inline" onsubmit="return confirm('هل أنت متأكد من حذف هذا التسليم؟');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 transition-colors">
+                                            <i class="fas fa-trash-alt"></i> حذف
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div id="edit-form-{{ $deliverable->id }}" class="hidden mt-4 pt-4 border-t border-gray-200">
+                                @if($task->isVideoEditing())
+                                    <p class="text-sm font-semibold text-violet-800 mb-3"><i class="fas fa-pen mr-1"></i> تعديل تسليم المونتاج</p>
+                                    <form action="{{ route('employee.tasks.deliverables.update', [$task, $deliverable]) }}" method="POST" class="space-y-3">
+                                        @csrf
+                                        @method('PUT')
+                                        <input type="hidden" name="task_type_context" value="video_editing">
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div class="md:col-span-2">
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">عنوان التسليم</label>
+                                                <input type="text" name="title" value="{{ old('title', $deliverable->title) }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                            </div>
+                                            <div class="md:col-span-2">
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">رابط الفيديو من Bunny <span class="text-red-500">*</span></label>
+                                                <input type="url" name="video_link_url" required value="{{ old('video_link_url', $deliverable->link_url) }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">ممن استلمته <span class="text-red-500">*</span></label>
+                                                <input type="text" name="received_from" required value="{{ old('received_from', $deliverable->received_from) }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">مدة قبل المونتاج (نص)</label>
+                                                <input type="text" name="duration_before" value="{{ old('duration_before', $deliverable->duration_before) }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">مدة بعد المونتاج (نص)</label>
+                                                <input type="text" name="duration_after" value="{{ old('duration_after', $deliverable->duration_after) }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">دقائق قبل</label>
+                                                <input type="number" name="duration_before_minutes" value="{{ old('duration_before_minutes', $deliverable->duration_before_minutes) }}" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">دقائق بعد</label>
+                                                <input type="number" name="duration_after_minutes" value="{{ old('duration_after_minutes', $deliverable->duration_after_minutes) }}" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                            </div>
+                                            <div class="md:col-span-2">
+                                                <label class="block text-xs font-medium text-gray-700 mb-1">ملاحظات</label>
+                                                <textarea name="description" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">{{ old('description', $deliverable->description) }}</textarea>
+                                            </div>
+                                        </div>
+                                        <div class="flex flex-wrap gap-2">
+                                            <button type="submit" class="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-medium">حفظ التعديلات</button>
+                                            <button type="button" onclick="document.getElementById('edit-form-{{ $deliverable->id }}').classList.add('hidden')" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm">إلغاء</button>
+                                        </div>
+                                    </form>
+                                @else
+                                    <p class="text-sm font-semibold text-blue-800 mb-3"><i class="fas fa-pen mr-1"></i> تعديل التسليم</p>
+                                    <form action="{{ route('employee.tasks.deliverables.update', [$task, $deliverable]) }}" method="POST" enctype="multipart/form-data" class="space-y-3">
+                                        @csrf
+                                        @method('PUT')
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">عنوان التسليم *</label>
+                                            <input type="text" name="title" required value="{{ old('title', $deliverable->title) }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">الوصف</label>
+                                            <textarea name="description" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">{{ old('description', $deliverable->description) }}</textarea>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">نوع التسليم *</label>
+                                            <select name="delivery_type" id="edit_delivery_type_{{ $deliverable->id }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                                <option value="file" {{ old('delivery_type', $deliverable->delivery_type) === 'file' ? 'selected' : '' }}>ملف</option>
+                                                <option value="image" {{ old('delivery_type', $deliverable->delivery_type) === 'image' ? 'selected' : '' }}>صورة</option>
+                                                <option value="link" {{ old('delivery_type', $deliverable->delivery_type) === 'link' ? 'selected' : '' }}>رابط</option>
+                                            </select>
+                                        </div>
+                                        <div id="edit_file_wrap_{{ $deliverable->id }}">
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">استبدال الملف (اختياري)</label>
+                                            <input type="file" name="file" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                            <p class="text-xs text-gray-500 mt-1">اتركه فارغاً للإبقاء على الملف الحالي</p>
+                                        </div>
+                                        <div id="edit_link_wrap_{{ $deliverable->id }}">
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">الرابط *</label>
+                                            <input type="url" name="link_url" value="{{ old('link_url', $deliverable->link_url) }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="https://">
+                                        </div>
+                                        <div class="flex flex-wrap gap-2">
+                                            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">حفظ التعديلات</button>
+                                            <button type="button" onclick="document.getElementById('edit-form-{{ $deliverable->id }}').classList.add('hidden')" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm">إلغاء</button>
+                                        </div>
+                                    </form>
+                                    <script>
+                                        (function () {
+                                            var sel = document.getElementById('edit_delivery_type_{{ $deliverable->id }}');
+                                            var fw = document.getElementById('edit_file_wrap_{{ $deliverable->id }}');
+                                            var lw = document.getElementById('edit_link_wrap_{{ $deliverable->id }}');
+                                            function sync() {
+                                                if (!sel || !fw || !lw) return;
+                                                if (sel.value === 'link') { fw.classList.add('hidden'); lw.classList.remove('hidden'); }
+                                                else { fw.classList.remove('hidden'); lw.classList.add('hidden'); }
+                                            }
+                                            if (sel) { sel.addEventListener('change', sync); sync(); }
+                                        })();
+                                    </script>
+                                @endif
                             </div>
                         </div>
                     @endforeach

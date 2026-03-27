@@ -659,7 +659,11 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('/tasks', [\App\Http\Controllers\Employee\EmployeeTaskController::class, 'index'])->name('tasks.index');
         Route::get('/tasks/{task}', [\App\Http\Controllers\Employee\EmployeeTaskController::class, 'show'])->name('tasks.show');
         Route::put('/tasks/{task}/status', [\App\Http\Controllers\Employee\EmployeeTaskController::class, 'updateStatus'])->name('tasks.update-status');
+        Route::get('/tasks/{task}/deliverables/montage-excel-template', [\App\Http\Controllers\Employee\EmployeeTaskController::class, 'downloadMontageExcelTemplate'])->name('tasks.deliverables.montage-excel-template');
+        Route::post('/tasks/{task}/deliverables/import-excel', [\App\Http\Controllers\Employee\EmployeeTaskController::class, 'importMontageExcel'])->name('tasks.deliverables.import-excel');
         Route::post('/tasks/{task}/deliverables', [\App\Http\Controllers\Employee\EmployeeTaskController::class, 'submitDeliverable'])->name('tasks.submit-deliverable');
+        Route::match(['put', 'patch'], '/tasks/{task}/deliverables/{deliverable}', [\App\Http\Controllers\Employee\EmployeeTaskController::class, 'updateDeliverable'])->name('tasks.deliverables.update');
+        Route::delete('/tasks/{task}/deliverables/{deliverable}', [\App\Http\Controllers\Employee\EmployeeTaskController::class, 'destroyDeliverable'])->name('tasks.deliverables.destroy');
         
         // طلبات الإجازة
         Route::resource('leaves', \App\Http\Controllers\Employee\EmployeeLeaveController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
@@ -1087,6 +1091,10 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         // إدارة الموظفين
         Route::resource('employees', \App\Http\Controllers\Admin\EmployeeController::class);
         Route::resource('employee-jobs', \App\Http\Controllers\Admin\EmployeeJobController::class);
+        Route::match(['put', 'patch'], 'employee-tasks/{employee_task}/deliverables/{deliverable}', [\App\Http\Controllers\Admin\EmployeeTaskController::class, 'updateDeliverable'])->name('employee-tasks.deliverables.update');
+        Route::delete('employee-tasks/{employee_task}/deliverables/{deliverable}', [\App\Http\Controllers\Admin\EmployeeTaskController::class, 'destroyDeliverable'])->name('employee-tasks.deliverables.destroy');
+        Route::get('employee-tasks/{employee_task}/deliverables/montage-excel-template', [\App\Http\Controllers\Admin\EmployeeTaskController::class, 'downloadMontageExcelTemplate'])->name('employee-tasks.deliverables.montage-excel-template');
+        Route::post('employee-tasks/{employee_task}/deliverables/import-excel', [\App\Http\Controllers\Admin\EmployeeTaskController::class, 'importMontageExcel'])->name('employee-tasks.deliverables.import-excel');
         Route::resource('employee-tasks', \App\Http\Controllers\Admin\EmployeeTaskController::class);
         Route::resource('employee-deductions', \App\Http\Controllers\Admin\EmployeeDeductionController::class);
         

@@ -5,13 +5,24 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Mail\EmployeeTaskAssignedMail;
 use App\Models\EmployeeTask;
+use App\Models\EmployeeTaskDeliverable;
 use App\Models\User;
+use App\Services\EmployeeTaskDeliverableService;
+use App\Services\MontageDeliverablesExcelImportService;
 use Illuminate\Http\Request;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class EmployeeTaskController extends Controller
 {
+    public function __construct(
+        protected EmployeeTaskDeliverableService $deliverableService,
+        protected MontageDeliverablesExcelImportService $montageExcelImport
+    ) {
+    }
+
     /**
      * عرض قائمة المهام
      */
@@ -185,5 +196,64 @@ class EmployeeTaskController extends Controller
         $employeeTask->delete();
         return redirect()->route('admin.employee-tasks.index')
                         ->with('success', 'تم حذف المهمة بنجاح');
+    }
+
+    /**
+     * تعديل تسليم (الإدارة)
+     */
+    public function updateDeliverable(Request $request, EmployeeTask $employee_task, EmployeeTaskDeliverable $deliverable)
+    {
+        $this->deliverableService->updateDeliverable($request, $employee_task, $deliverable);
+
+        return redirect()->back()->with('success', 'تم تحديث التسليم بنجاح');
+    }
+
+    /**
+     * حذف تسليم (الإدارة)
+     */
+    public function destroyDeliverable(EmployeeTask $employee_task, EmployeeTaskDeliverable $deliverable)
+    {
+        $this->deliverableService->destroyDeliverable($employee_task, $deliverable);
+
+        return redirect()->back()->with('success', 'تم حذف التسليم بنجاح');
+    }
+
+    public function downloadMontageExcelTemplate(EmployeeTask $employee_task)
+    {
+        if (! $employee_task->isVideoEditing()) {
+            abort(404);
+        }
+
+        $filename = 'montage-deliverables-template.xlsx';
+
+        return response()->streamDownload(function () {
+            $spreadsheet = new Spreadsheet;
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->fromArray([
+                ['رابط_الفيديو', 'عنوان', 'ممن_استلمته', 'دقائق_قبل', 'دقائق_بعد', 'مدة_قبل', 'مدة_بعد', 'ملاحظات'],
+                ['https://iframe.mediadelivery.net/...', 'مثال', 'المصدر', 12, 10, '12:00', '10:00', ''],
+            ]);
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    public function importMontageExcel(Request $request, EmployeeTask $employee_task)
+    {
+        if (! $employee_task->isVideoEditing()) {
+            abort(404);
+        }
+
+        $request->validate([
+            'excel_file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+        ]);
+
+        $result = $this->montageExcelImport->import($request->file('excel_file'), $employee_task);
+
+        return redirect()->back()
+            ->with('success', $result['message'])
+            ->with('import_report', $result);
     }
 }

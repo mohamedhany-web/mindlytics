@@ -5,12 +5,23 @@ namespace App\Http\Controllers\Employee;
 use App\Http\Controllers\Controller;
 use App\Models\EmployeeTask;
 use App\Models\EmployeeTaskDeliverable;
+use App\Services\EmployeeTaskDeliverableService;
+use App\Services\MontageDeliverablesExcelImportService;
+use App\Support\MontageVideoHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class EmployeeTaskController extends Controller
 {
+    public function __construct(
+        protected EmployeeTaskDeliverableService $deliverableService,
+        protected MontageDeliverablesExcelImportService $montageExcelImport
+    ) {
+    }
+
     /**
      * عرض قائمة مهام الموظف
      */
@@ -134,7 +145,19 @@ class EmployeeTaskController extends Controller
                 'received_from' => 'required|string|max:255',
                 'duration_before' => 'nullable|string|max:100',
                 'duration_after' => 'nullable|string|max:100',
+                'duration_before_minutes' => 'nullable|integer|min:0|max:999999',
+                'duration_after_minutes' => 'nullable|integer|min:0|max:999999',
             ]);
+
+            $hash = MontageVideoHelper::linkUrlHash($validated['video_link_url']);
+            if ($hash && EmployeeTaskDeliverable::query()
+                ->where('task_id', $task->id)
+                ->where('link_url_hash', $hash)
+                ->exists()) {
+                throw ValidationException::withMessages([
+                    'video_link_url' => ['هذا الرابط مُسجّل مسبقاً في تسليمات هذه المهمة.'],
+                ]);
+            }
         } else {
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
@@ -154,6 +177,8 @@ class EmployeeTaskController extends Controller
         $receivedFrom = null;
         $durationBefore = null;
         $durationAfter = null;
+        $beforeMin = null;
+        $afterMin = null;
 
         if ($isVideoEditing) {
             $linkUrl = $validated['video_link_url'];
@@ -161,6 +186,20 @@ class EmployeeTaskController extends Controller
             $receivedFrom = $validated['received_from'] ?? null;
             $durationBefore = $validated['duration_before'] ?? null;
             $durationAfter = $validated['duration_after'] ?? null;
+            $beforeMin = $validated['duration_before_minutes'] ?? null;
+            $afterMin = $validated['duration_after_minutes'] ?? null;
+            if ($beforeMin === null) {
+                $beforeMin = MontageVideoHelper::parseDurationToMinutes($durationBefore);
+            }
+            if ($afterMin === null) {
+                $afterMin = MontageVideoHelper::parseDurationToMinutes($durationAfter);
+            }
+            if ($beforeMin !== null) {
+                $durationBefore = MontageVideoHelper::minutesToDisplay($beforeMin);
+            }
+            if ($afterMin !== null) {
+                $durationAfter = MontageVideoHelper::minutesToDisplay($afterMin);
+            }
         } else {
             if (in_array($validated['delivery_type'], ['file', 'image']) && $request->hasFile('file')) {
                 $file = $request->file('file');
@@ -176,7 +215,7 @@ class EmployeeTaskController extends Controller
             }
         }
 
-        EmployeeTaskDeliverable::create([
+        $createPayload = [
             'task_id' => $task->id,
             'title' => $validated['title'] ?? ('تسليم مونتاج ' . now()->format('Y-m-d H:i')),
             'description' => $validated['description'] ?? null,
@@ -191,7 +230,12 @@ class EmployeeTaskController extends Controller
             'duration_after' => $durationAfter,
             'status' => 'submitted',
             'submitted_at' => now(),
-        ]);
+        ];
+        if ($isVideoEditing) {
+            $createPayload['duration_before_minutes'] = $beforeMin ?? null;
+            $createPayload['duration_after_minutes'] = $afterMin ?? null;
+        }
+        EmployeeTaskDeliverable::create($createPayload);
 
         if ($task->status !== 'completed') {
             $task->update(['status' => 'in_progress']);
@@ -200,5 +244,97 @@ class EmployeeTaskController extends Controller
         $message = $isVideoEditing ? 'تم تسليم المونتاج بنجاح' : 'تم تسليم المهمة بنجاح';
         return redirect()->to(route('employee.tasks.show', $task) . '?open=1')
             ->with('success', $message);
+    }
+
+    /**
+     * تعديل تسليم (موظف صاحب المهمة فقط)
+     */
+    public function updateDeliverable(Request $request, EmployeeTask $task, EmployeeTaskDeliverable $deliverable)
+    {
+        $this->assertEmployeeOwnsDeliverable($task, $deliverable);
+
+        $this->deliverableService->updateDeliverable($request, $task, $deliverable);
+
+        return redirect()->to(route('employee.tasks.show', $task) . '?open=1')
+            ->with('success', 'تم تحديث التسليم بنجاح');
+    }
+
+    /**
+     * حذف تسليم
+     */
+    public function destroyDeliverable(EmployeeTask $task, EmployeeTaskDeliverable $deliverable)
+    {
+        $this->assertEmployeeOwnsDeliverable($task, $deliverable);
+
+        $this->deliverableService->destroyDeliverable($task, $deliverable);
+
+        return redirect()->to(route('employee.tasks.show', $task) . '?open=1')
+            ->with('success', 'تم حذف التسليم');
+    }
+
+    /**
+     * تحميل قالب Excel لتسليمات المونتاج
+     */
+    public function downloadMontageExcelTemplate(EmployeeTask $task)
+    {
+        $user = Auth::user();
+        if (! $user->isEmployee() || $task->employee_id !== $user->id) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+        if (! $task->isVideoEditing()) {
+            abort(404);
+        }
+
+        return $this->streamMontageExcelTemplateResponse();
+    }
+
+    /**
+     * استيراد تسليمات المونتاج من Excel
+     */
+    public function importMontageExcel(Request $request, EmployeeTask $task)
+    {
+        $user = Auth::user();
+        if (! $user->isEmployee() || $task->employee_id !== $user->id) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+        if (! $task->isVideoEditing()) {
+            abort(404);
+        }
+
+        $request->validate([
+            'excel_file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+        ]);
+
+        $result = $this->montageExcelImport->import($request->file('excel_file'), $task);
+
+        return redirect()->to(route('employee.tasks.show', $task) . '?open=1')
+            ->with('success', $result['message'])
+            ->with('import_report', $result);
+    }
+
+    private function streamMontageExcelTemplateResponse()
+    {
+        $filename = 'montage-deliverables-template.xlsx';
+
+        return response()->streamDownload(function () {
+            $spreadsheet = new Spreadsheet;
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->fromArray([
+                ['رابط_الفيديو', 'عنوان', 'ممن_استلمته', 'دقائق_قبل', 'دقائق_بعد', 'مدة_قبل', 'مدة_بعد', 'ملاحظات'],
+                ['https://iframe.mediadelivery.net/...', 'مثال', 'المصدر', 12, 10, '12:00', '10:00', ''],
+            ]);
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    private function assertEmployeeOwnsDeliverable(EmployeeTask $task, EmployeeTaskDeliverable $deliverable): void
+    {
+        $user = Auth::user();
+        if (! $user || ! $user->isEmployee() || (int) $task->employee_id !== (int) $user->id || (int) $deliverable->task_id !== (int) $task->id) {
+            abort(403, 'غير مصرح لك بتعديل أو حذف هذا التسليم');
+        }
     }
 }

@@ -137,17 +137,32 @@ class Wallet extends Model
             throw new \Exception('رصيد المحفظة غير كافي');
         }
 
-        $balanceBefore = $this->balance;
+        $balanceBefore = (float) $this->balance;
         $this->decrement('balance', $amount);
-        
-        return WalletTransaction::create([
+        $balanceAfter = (float) $this->fresh()->balance;
+
+        $table = (new WalletTransaction)->getTable();
+
+        $data = [
             'wallet_id' => $this->id,
             'type' => 'withdrawal',
             'amount' => $amount,
-            'balance_after' => $this->balance,
-            'notes' => $notes,
-            'created_by' => auth()->id(),
-        ]);
+            'balance_after' => $balanceAfter,
+        ];
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'balance_before')) {
+            $data['balance_before'] = $balanceBefore;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'description')) {
+            $data['description'] = $notes ?? '';
+        } elseif (\Illuminate\Support\Facades\Schema::hasColumn($table, 'notes')) {
+            $data['notes'] = $notes;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'created_by')) {
+            $data['created_by'] = auth()->id();
+        }
+
+        return WalletTransaction::create($data);
     }
 
     /**

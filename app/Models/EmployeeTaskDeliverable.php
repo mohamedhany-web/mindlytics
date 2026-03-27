@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\MontageVideoHelper;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -14,8 +15,11 @@ class EmployeeTaskDeliverable extends Model
         'received_from',
         'duration_before',
         'duration_after',
+        'duration_before_minutes',
+        'duration_after_minutes',
         'delivery_type',
         'link_url',
+        'link_url_hash',
         'file_path',
         'file_name',
         'file_type',
@@ -29,9 +33,22 @@ class EmployeeTaskDeliverable extends Model
 
     protected $casts = [
         'file_size' => 'integer',
+        'duration_before_minutes' => 'integer',
+        'duration_after_minutes' => 'integer',
         'reviewed_at' => 'datetime',
         'submitted_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (EmployeeTaskDeliverable $d) {
+            if ($d->delivery_type === 'link' && $d->link_url) {
+                $d->link_url_hash = MontageVideoHelper::linkUrlHash($d->link_url);
+            } else {
+                $d->link_url_hash = null;
+            }
+        });
+    }
 
     /**
      * علاقة مع المهمة
