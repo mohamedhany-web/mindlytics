@@ -75,13 +75,7 @@ class KashierService
             );
             $sentRedirect = $merchantRedirectValue;
 
-            $response = Http::acceptJson()
-                ->withHeaders([
-                    'Authorization' => $this->secret,
-                    'api-key' => $this->apiKey,
-                    'Content-Type' => 'application/json',
-                ])
-                ->post($this->apiBaseUrl . '/v3/payment/sessions', $payload);
+            $response = $this->postPaymentSessionsRequest($payload);
 
             if ($response->successful()) {
                 if ($idx > 0) {
@@ -100,33 +94,43 @@ class KashierService
             }
             $lastMessage = (string) $lastMessage;
 
-            $retryable = str_contains(strtolower($lastMessage), 'merchantredirect')
+            $tryNextVariant = $response->status() === 400
                 && $idx === 0
                 && count($variants) > 1;
 
-            if (!$retryable) {
+            if (!$tryNextVariant) {
                 break;
             }
 
-            Log::warning('Kashier merchantRedirect rejected; retrying with alternate encoding', [
-                'first_variant' => 'plain_or_config',
+            Log::warning('Kashier session HTTP 400, retrying alternate merchantRedirect form', [
                 'plain_redirect' => $plainRedirect,
                 'message' => $lastMessage,
             ]);
         }
 
         if (!$response->successful()) {
+            $payloadForLog = $this->buildPaymentSessionPayload(
+                $orderIdStr,
+                $amountFormatted,
+                $expireAt,
+                $sentRedirect,
+                $description,
+                $customerEmail,
+                $customerReference
+            );
+            $logJson = @json_encode($payloadForLog, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             Log::error('Kashier create session failed', [
                 'status' => $response->status(),
                 'body' => $lastBody ?: $response->body(),
                 'order_id' => $orderIdStr,
                 'merchant_redirect_last_sent' => $sentRedirect,
                 'merchant_redirect_plain' => $plainRedirect,
+                'request_json' => $logJson !== false ? $logJson : null,
                 'api_base' => $this->apiBaseUrl,
             ]);
             $hint = '';
             if (str_contains(strtolower($lastMessage), 'merchantredirect')) {
-                $hint = ' جرّب KASHIER_MERCHANT_REDIRECT_URL=https://نطاقك/checkout/kashier/callback ثم php artisan config:clear. سجّل نفس الرابط في لوحة كاشير إن طُلب. يمكن تعيين KASHIER_ENCODE_MERCHANT_REDIRECT=true لإرسال الرابط مرمّزاً (RFC3986).';
+                $hint = ' تأكد من KASHIER_MERCHANT_REDIRECT_URL وAPP_URL (https) ثم php artisan config:clear. سجّل الرابط في لوحة كاشير. راجع السجل: merchant_redirect_plain.';
             }
             throw new \RuntimeException('فشل إنشاء جلسة الدفع: ' . $lastMessage . $hint);
         }
@@ -167,13 +171,14 @@ class KashierService
             'amount' => $amountFormatted,
             'currency' => $this->currency,
             'orderId' => $orderIdStr,
+            'order' => $orderIdStr,
             'merchantRedirect' => $merchantRedirect,
             'display' => 'ar',
             'type' => 'one-time',
             'allowedMethods' => $this->allowedMethods,
             'merchantId' => $this->mid,
             'mode' => $this->mode,
-            'failureRedirect' => 'FALSE',
+            'failureRedirect' => false,
             'description' => $this->truncateKashierDescription($description ?? 'Order #' . $orderIdStr),
             'manualCapture' => false,
             'saveCard' => 'optional',
@@ -190,6 +195,31 @@ class KashierService
         }
 
         return $payload;
+    }
+
+    /**
+     * طلب إنشاء الجلسة: JSON بدون تهريب الشرطات في الروابط (\/ قد يفسد تحقق Kashier على merchantRedirect).
+     */
+    private function postPaymentSessionsRequest(array $payload): \Illuminate\Http\Client\Response
+    {
+        $json = json_encode(
+            $payload,
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+        );
+
+        $authHeader = $this->secret;
+        if (config('kashier.authorization_bearer', false)) {
+            $authHeader = 'Bearer ' . $this->secret;
+        }
+
+        return Http::acceptJson()
+            ->withHeaders([
+                'Authorization' => $authHeader,
+                'api-key' => $this->apiKey,
+                'Content-Type' => 'application/json; charset=utf-8',
+            ])
+            ->withBody($json, 'application/json; charset=utf-8')
+            ->post($this->apiBaseUrl . '/v3/payment/sessions');
     }
 
     /** وصف الطلب في كاشير: أقل من 120 حرفاً */

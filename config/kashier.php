@@ -49,4 +49,9 @@ return [
      */
     'encode_merchant_redirect' => filter_var(env('KASHIER_ENCODE_MERCHANT_REDIRECT', false), FILTER_VALIDATE_BOOL),
 
+    /*
+     * إن كان true: ترويسة Authorization تصبح "Bearer {secret}" بدل المفتاح الخام (نادر — جرّبه فقط إذا طلبته كاشير).
+     */
+    'authorization_bearer' => filter_var(env('KASHIER_AUTHORIZATION_BEARER', false), FILTER_VALIDATE_BOOL),
+
 ];
