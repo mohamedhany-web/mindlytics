@@ -83,8 +83,9 @@ class AppServiceProvider extends ServiceProvider
             $view->with('platformLogoUrl', $url);
         });
 
-        // إجبار روابط الموقع على HTTPS في الإنتاج (حل مشكلة عدم ظهور الصور عند Mixed Content)
-        if ($this->app->environment('production') && config('app.url')) {
+        // إجبار روابط الموقع على HTTPS: الإنتاج، أو عندما يكون APP_URL أصلاً https (يشمل استضافة خلف بروكسي)
+        $appUrl = (string) config('app.url', '');
+        if ($appUrl !== '' && ($this->app->environment('production') || str_starts_with($appUrl, 'https://'))) {
             URL::forceScheme('https');
             $publicUrl = config('filesystems.disks.public.url');
             if ($publicUrl && str_starts_with($publicUrl, 'http://')) {

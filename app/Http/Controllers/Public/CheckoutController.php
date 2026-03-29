@@ -310,14 +310,57 @@ class CheckoutController extends Controller
 
     /**
      * رابط العودة من كاشير بعد الدفع (يجب أن يكون URL صالحًا — كاشير قد يرفض localhost أو غير https).
+     *
+     * يُبنى من APP_URL + مسار المسار عند الإمكان حتى لا يبقى http:// خلف Cloudflare/البروكسي
+     * بينما الموقع العام يعمل على https:// (مثل mindlytics-academy.com).
      */
     private function getKashierCallbackUrl(): string
     {
-        $configured = config('kashier.merchant_redirect_url');
-        if (!empty($configured)) {
-            return rtrim($configured, '/');
+        $configured = trim((string) config('kashier.merchant_redirect_url', ''));
+        if ($configured !== '') {
+            return $this->normalizeMerchantRedirectUrlForKashier(rtrim($configured, '/'));
         }
-        return url()->route('public.checkout.kashier.callback');
+
+        $base = rtrim((string) config('app.url'), '/');
+        if ($base !== '') {
+            $path = route('public.checkout.kashier.callback', [], false);
+
+            return $this->normalizeMerchantRedirectUrlForKashier($base . $path);
+        }
+
+        return $this->normalizeMerchantRedirectUrlForKashier(
+            url()->route('public.checkout.kashier.callback')
+        );
+    }
+
+    /**
+     * خارج بيئة local: تحويل http:// إلى https:// للنطاقات العامة (متطلب كاشير).
+     */
+    private function normalizeMerchantRedirectUrlForKashier(string $url): string
+    {
+        $url = rtrim(trim($url), '/');
+        if ($url === '') {
+            return $url;
+        }
+
+        if (app()->environment('local')) {
+            return $url;
+        }
+
+        if (! preg_match('#^http://#i', $url)) {
+            return $url;
+        }
+
+        $host = strtolower((string) (parse_url($url, PHP_URL_HOST) ?? ''));
+        $isLocalDevHost = $host === '127.0.0.1'
+            || $host === 'localhost'
+            || str_ends_with($host, '.localhost');
+
+        if ($isLocalDevHost) {
+            return $url;
+        }
+
+        return 'https://' . substr($url, 7);
     }
 
     /**
