@@ -641,11 +641,42 @@ class User extends Authenticatable
     }
 
     /**
+     * موظف بوظيفة مبيعات (رمز الوظيفة sales).
+     */
+    public function isSalesEmployee(): bool
+    {
+        if (! $this->isEmployee()) {
+            return false;
+        }
+        $this->loadMissing('employeeJob');
+
+        return $this->employeeJob && strtolower((string) $this->employeeJob->code) === 'sales';
+    }
+
+    /**
+     * العملاء المحتملون المسندون لموظف المبيعات
+     */
+    public function assignedSalesLeads()
+    {
+        return $this->hasMany(SalesLead::class, 'assigned_to');
+    }
+
+    /**
      * Scope للموظفين
      */
     public function scopeEmployees($query)
     {
         return $query->where('is_employee', true);
+    }
+
+    /**
+     * موظفون بوظيفة مبيعات
+     */
+    public function scopeSalesEmployees($query)
+    {
+        return $query->employees()->whereHas('employeeJob', function ($q) {
+            $q->whereRaw('LOWER(code) = ?', ['sales']);
+        });
     }
 
     /**

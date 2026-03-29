@@ -12,9 +12,11 @@ class WorkshopPublicController extends Controller
 {
     public function show(string $slug)
     {
-        $workshop = Workshop::where('slug', $slug)
-            ->where('is_active', true)
-            ->firstOrFail();
+        $workshop = Workshop::where('slug', $slug)->firstOrFail();
+
+        if (! $workshop->is_active) {
+            return view('public.workshop-ended', compact('workshop'));
+        }
 
         $remaining = $workshop->remaining_seats;
 
@@ -23,9 +25,11 @@ class WorkshopPublicController extends Controller
 
     public function register(Request $request, string $slug)
     {
-        $workshop = Workshop::where('slug', $slug)
-            ->where('is_active', true)
-            ->firstOrFail();
+        $workshop = Workshop::where('slug', $slug)->firstOrFail();
+
+        if (! $workshop->is_active) {
+            return back()->with('error', 'انتهت هذه الورشة ولم يعد التسجيل متاحاً.')->withInput();
+        }
 
         $remaining = $workshop->remaining_seats;
         if ($remaining !== null && $remaining <= 0) {

@@ -57,13 +57,16 @@ class KashierService
                 'بوابة كاشير تقبل فقط روابط HTTPS. للتجربة المحلية يمكنك استخدام http://127.0.0.1 فقط أو ضبط رابط HTTPS في KASHIER_MERCHANT_REDIRECT_URL.'
             );
         }
+        $orderIdStr = (string) $orderId;
         $payload = [
             'expireAt' => $expireAt,
             'maxFailureAttempts' => 3,
             'paymentType' => 'credit',
             'amount' => $amountFormatted,
             'currency' => $this->currency,
-            'order' => $orderId,
+            // v3 body table: orderId (required). بعض الأمثلة تستخدم order — نرسل الاثنين لتوافق الوثائق.
+            'orderId' => $orderIdStr,
+            'order' => $orderIdStr,
             'merchantRedirect' => $redirectUrl,
             'display' => 'ar',
             'type' => 'one-time',
@@ -72,7 +75,7 @@ class KashierService
             'merchantId' => $this->mid,
             'mode' => $this->mode,
             'failureRedirect' => false,
-            'description' => $description ?? 'Order #' . $orderId,
+            'description' => $description ?? 'Order #' . $orderIdStr,
             'manualCapture' => false,
             'saveCard' => 'optional',
             'retrieveSavedCard' => false,
@@ -87,11 +90,13 @@ class KashierService
             ]);
         }
 
-        $response = Http::withHeaders([
-            'Authorization' => $this->secret,
-            'api-key' => $this->apiKey,
-            'Content-Type' => 'application/json',
-        ])->post($this->apiBaseUrl . '/v3/payment/sessions', $payload);
+        $response = Http::acceptJson()
+            ->withHeaders([
+                'Authorization' => $this->secret,
+                'api-key' => $this->apiKey,
+                'Content-Type' => 'application/json',
+            ])
+            ->post($this->apiBaseUrl . '/v3/payment/sessions', $payload);
 
         if (!$response->successful()) {
             $body = $response->json();
@@ -101,25 +106,80 @@ class KashierService
             }
             Log::error('Kashier create session failed', [
                 'status' => $response->status(),
-                'body' => $body,
-                'order_id' => $orderId,
+                'body' => $body ?: $response->body(),
+                'order_id' => $orderIdStr,
                 'merchant_redirect_sent' => $redirectUrl,
+                'api_base' => $this->apiBaseUrl,
             ]);
-            throw new \RuntimeException('فشل إنشاء جلسة الدفع: ' . (string) $message);
+            $hint = '';
+            if (is_string($message) && str_contains($message, 'merchantRedirect')) {
+                $hint = ' تأكد من KASHIER_MERCHANT_REDIRECT_URL أو APP_URL: يجب أن يكون رابط HTTPS عاماً (كاشير غالباً يرفض http وlocalhost).';
+            }
+            throw new \RuntimeException('فشل إنشاء جلسة الدفع: ' . (string) $message . $hint);
         }
 
         $data = $response->json();
-        $sessionUrl = $data['sessionUrl'] ?? $data['url'] ?? $data['redirectUrl'] ?? $data['link'] ?? null;
+        if (!is_array($data)) {
+            Log::error('Kashier session response not JSON', ['raw' => $response->body()]);
+            throw new \RuntimeException('استجابة غير متوقعة من كاشير.');
+        }
+
+        $sessionUrl = $this->resolveSessionUrl($data);
+        $sessionId = $this->resolveSessionId($data);
 
         if (!$sessionUrl) {
-            Log::error('Kashier session response missing redirect URL', ['response' => $data]);
+            Log::error('Kashier session response missing sessionUrl', ['response' => $data]);
             throw new \RuntimeException('لم يُرجع كاشير رابط الدفع.');
         }
 
         return [
             'sessionUrl' => $sessionUrl,
-            'sessionId' => $data['id'] ?? $data['sessionId'] ?? null,
+            'sessionId' => $sessionId,
         ];
+    }
+
+    /**
+     * استخراج رابط واجهة الدفع من أشكال الاستجابة المختلفة، أو بناؤه من معرف الجلسة.
+     */
+    private function resolveSessionUrl(array $data): ?string
+    {
+        $candidates = [
+            $data['sessionUrl'] ?? null,
+            $data['session_url'] ?? null,
+            $data['url'] ?? null,
+            $data['redirectUrl'] ?? null,
+            $data['link'] ?? null,
+            data_get($data, 'data.sessionUrl'),
+            data_get($data, 'data.session_url'),
+            data_get($data, 'data.url'),
+        ];
+        foreach ($candidates as $url) {
+            if (is_string($url) && filter_var(trim($url), FILTER_VALIDATE_URL)) {
+                return trim($url);
+            }
+        }
+
+        $sessionId = $this->resolveSessionId($data);
+        if ($sessionId !== null && $sessionId !== '') {
+            $base = rtrim((string) config('kashier.payments_session_base', 'https://payments.kashier.io'), '/');
+            $built = $base . '/session/' . rawurlencode($sessionId) . '?mode=' . rawurlencode($this->mode);
+
+            return filter_var($built, FILTER_VALIDATE_URL) ? $built : null;
+        }
+
+        return null;
+    }
+
+    private function resolveSessionId(array $data): ?string
+    {
+        $nested = isset($data['data']) && is_array($data['data']) ? $data['data'] : [];
+
+        $id = $data['_id'] ?? $data['id'] ?? $data['sessionId'] ?? null;
+        if ($id === null || $id === '') {
+            $id = $nested['_id'] ?? $nested['id'] ?? $nested['sessionId'] ?? null;
+        }
+
+        return $id !== null && $id !== '' ? (string) $id : null;
     }
 
     /**

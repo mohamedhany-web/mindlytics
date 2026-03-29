@@ -47,6 +47,7 @@
                             @foreach($employees as $employee)
                                 <option value="{{ $employee->id }}"
                                         data-job-name="{{ $employee->employeeJob?->name ?? '' }}"
+                                        data-job-code="{{ $employee->employeeJob?->code ?? '' }}"
                                         {{ old('employee_id') == $employee->id ? 'selected' : '' }}>
                                     {{ $employee->name }}
                                     @if($employee->employee_code)
@@ -71,8 +72,9 @@
                                 class="w-full rounded-2xl border border-gray-200 bg-white/70 px-4 py-3 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition">
                             <option value="general" {{ old('task_type', 'general') == 'general' ? 'selected' : '' }}>مهمة عامة</option>
                             <option value="video_editing" {{ old('task_type') == 'video_editing' ? 'selected' : '' }}>مونتاج فيديو</option>
+                            <option value="sales" {{ old('task_type') == 'sales' ? 'selected' : '' }}>مبيعات</option>
                         </select>
-                        <p class="text-xs text-gray-500 mt-1">مهمة "مونتاج فيديو" تظهر للموظف مع حقول تسليم: الفيديو المستلم، ممن استلمه، مدة قبل/بعد المونتاج</p>
+                        <p class="text-xs text-gray-500 mt-1">مونتاج فيديو: تسليم روابط Bunny والمدة. مبيعات: تسليم كملف/رابط/صورة مع شارة «مبيعات» وربط بمركز المبيعات للموظف.</p>
                         @error('task_type')
                             <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
                         @enderror
@@ -174,7 +176,16 @@ document.addEventListener('DOMContentLoaded', function() {
     employeeSelect.addEventListener('change', function() {
         var opt = this.options[this.selectedIndex];
         var jobName = (opt && opt.getAttribute('data-job-name')) ? opt.getAttribute('data-job-name') : '';
+        var jobCode = (opt && opt.getAttribute('data-job-code')) ? String(opt.getAttribute('data-job-code')).toLowerCase() : '';
+        if (jobCode === 'sales') {
+            taskTypeSelect.value = 'sales';
+            return;
+        }
         if (jobName && /مونتاج|فيديو|مونتاج فيديو|video|editing/i.test(jobName)) {
+            taskTypeSelect.value = 'video_editing';
+            return;
+        }
+        if (jobCode === 'video_editing') {
             taskTypeSelect.value = 'video_editing';
         }
     });

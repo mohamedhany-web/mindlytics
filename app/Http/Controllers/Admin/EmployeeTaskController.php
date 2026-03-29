@@ -57,6 +57,10 @@ class EmployeeTaskController extends Controller
             $query->where('priority', $request->priority);
         }
 
+        if ($request->filled('task_type')) {
+            $query->where('task_type', $request->task_type);
+        }
+
         $tasks = $query->latest()->paginate(20);
 
         $employees = User::employees()->where('is_active', true)->orderBy('name')->get();
@@ -88,7 +92,7 @@ class EmployeeTaskController extends Controller
     {
         $validated = $request->validate([
             'employee_id' => 'required|exists:users,id',
-            'task_type' => 'required|in:general,video_editing',
+            'task_type' => 'required|in:general,video_editing,sales',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'priority' => 'required|in:low,medium,high,urgent',
@@ -162,7 +166,7 @@ class EmployeeTaskController extends Controller
     {
         $validated = $request->validate([
             'employee_id' => 'required|exists:users,id',
-            'task_type' => 'required|in:general,video_editing',
+            'task_type' => 'required|in:general,video_editing,sales',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'priority' => 'required|in:low,medium,high,urgent',

@@ -70,6 +70,7 @@
                             @endforeach
                         </select>
                         @error('employee_job_id')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                        <p class="text-xs text-gray-500 mt-2">لتفعيل <strong>لوحة المبيعات</strong> للموظف، اختر وظيفة «مبيعات» (رمز الوظيفة: <code class="bg-gray-100 px-1 rounded">sales</code>). يمكن إضافتها من «الوظائف» إن لم تكن في القائمة.</p>
                     </div>
 
                     <div>

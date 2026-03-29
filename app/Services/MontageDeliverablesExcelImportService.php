@@ -215,9 +215,9 @@ class MontageDeliverablesExcelImportService
         return $v === null ? null : (is_scalar($v) ? trim((string) $v) : null);
     }
 
-    private function optionalCell(array $row, ?string $colLetter): ?string
+    private function optionalCell(array $row, int|string|null $colIndex): ?string
     {
-        $v = $this->cell($row, $colLetter);
+        $v = $this->cell($row, $colIndex);
 
         return ($v !== null && trim($v) !== '') ? trim($v) : null;
     }
@@ -225,7 +225,10 @@ class MontageDeliverablesExcelImportService
     private function readMinutes(array $row, array $colMap, string $minKey, string $textFallbackKey): ?int
     {
         $direct = $this->optionalCell($row, $colMap[$minKey] ?? null);
-        if ($direct !== null && is_numeric(str_replace([':', ' '], '', $direct))) {
+        if ($direct !== null) {
+            if (! str_contains($direct, ':') && is_numeric(str_replace(',', '.', $direct))) {
+                return min(max(0, (int) round((float) str_replace(',', '.', $direct))), 999999);
+            }
             $parsed = MontageVideoHelper::parseDurationToMinutes($direct);
             if ($parsed !== null) {
                 return $parsed;

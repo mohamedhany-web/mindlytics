@@ -33,6 +33,12 @@ return [
     'allowed_methods' => env('KASHIER_ALLOWED_METHODS', 'card,wallet,bank_installments'),
 
     /*
+     * قاعدة واجهة الدفع (iframe/redirect) عند غياب sessionUrl في الاستجابة.
+     * التوثيق: https://payments.kashier.io/session/{sessionId}?mode=test|live
+     */
+    'payments_session_base' => env('KASHIER_PAYMENTS_SESSION_BASE', 'https://payments.kashier.io'),
+
+    /*
      * رابط العودة بعد الدفع. إن تركته فارغاً يُستخدم رابط التطبيق الحالي.
      * كاشير قد يرفض localhost أو http — للإنتاج استخدم https وربطاً ثابتاً.
      */

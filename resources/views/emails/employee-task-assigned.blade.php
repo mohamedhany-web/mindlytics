@@ -24,6 +24,10 @@
         <p>تم تعيين مهمة جديدة لك من قبل <strong>{{ $task->assigner->name }}</strong>.</p>
 
         <div class="card">
+            <div class="label">نوع المهمة</div>
+            <div class="value">{{ \App\Models\EmployeeTask::taskTypeLabel($task->task_type) }}</div>
+        </div>
+        <div class="card">
             <div class="label">عنوان المهمة</div>
             <div class="value">{{ $task->title }}</div>
         </div>

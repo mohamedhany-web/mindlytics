@@ -51,7 +51,26 @@ class EmployeeJobController extends Controller
      */
     public function create()
     {
-        return view('admin.employee-jobs.create');
+        $allPresets = EmployeeJob::presetJobTemplates();
+        $takenCodes = EmployeeJob::query()
+            ->pluck('code')
+            ->filter()
+            ->map(fn (string $c) => strtolower($c))
+            ->all();
+
+        $jobPresets = [];
+        $presetsSkippedBecauseCodeTaken = [];
+        foreach ($allPresets as $key => $preset) {
+            $codeLower = strtolower((string) ($preset['code'] ?? ''));
+            if ($codeLower !== '' && in_array($codeLower, $takenCodes, true)) {
+                $presetsSkippedBecauseCodeTaken[$key] = $preset;
+
+                continue;
+            }
+            $jobPresets[$key] = $preset;
+        }
+
+        return view('admin.employee-jobs.create', compact('jobPresets', 'presetsSkippedBecauseCodeTaken'));
     }
 
     /**
@@ -67,6 +86,8 @@ class EmployeeJobController extends Controller
             'min_salary' => 'nullable|numeric|min:0',
             'max_salary' => 'nullable|numeric|min:0|gte:min_salary',
             'is_active' => 'boolean',
+        ], [
+            'code.unique' => 'هذا الرمز مستخدم بالفعل لوظيفة أخرى. إن كنت تريد «مبيعات» أو قالباً جاهزاً، راجع قائمة الوظائف أو عدّل الوظيفة الموجودة بدلاً من إنشاء نسخة جديدة.',
         ]);
 
         if (empty($validated['code'])) {
@@ -113,6 +134,8 @@ class EmployeeJobController extends Controller
             'min_salary' => 'nullable|numeric|min:0',
             'max_salary' => 'nullable|numeric|min:0|gte:min_salary',
             'is_active' => 'boolean',
+        ], [
+            'code.unique' => 'هذا الرمز مستخدم بالفعل لوظيفة أخرى.',
         ]);
 
         $validated['is_active'] = $request->has('is_active');

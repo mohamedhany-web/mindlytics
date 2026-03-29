@@ -21,6 +21,23 @@
             </div>
         </div>
         <div class="flex flex-wrap items-center gap-3">
+            @if($workshop->is_active)
+                <form action="{{ route('admin.workshops.deactivate', $workshop) }}" method="POST" onsubmit="return confirm('إيقاف الورشة؟ الرابط العام سيعرض أن الورشة انتهت.');">
+                    @csrf
+                    <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md">
+                        <i class="fas fa-stop-circle"></i>
+                        <span>إيقاف الورشة</span>
+                    </button>
+                </form>
+            @else
+                <form action="{{ route('admin.workshops.activate', $workshop) }}" method="POST">
+                    @csrf
+                    <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md">
+                        <i class="fas fa-play-circle"></i>
+                        <span>تفعيل الورشة</span>
+                    </button>
+                </form>
+            @endif
             <a href="{{ route('admin.workshops.edit', $workshop) }}"
                class="inline-flex items-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md">
                 <i class="fas fa-edit"></i>

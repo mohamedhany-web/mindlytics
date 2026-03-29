@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
 use App\Models\EmployeeTask;
+use App\Models\SalesLead;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -37,6 +38,24 @@ class EmployeeController extends Controller
                 ->count(),
         ];
 
-        return view('employee.dashboard', compact('user', 'tasks', 'stats'));
+        $salesSnapshot = null;
+        if ($user->isSalesEmployee()) {
+            $sq = SalesLead::query()->forAssignee($user->id);
+            $open = fn () => (clone $sq)->openPipeline();
+            $salesSnapshot = [
+                'total' => (clone $sq)->count(),
+                'active' => $open()->count(),
+                'followups_today' => $open()
+                    ->whereNotNull('next_follow_up_at')
+                    ->whereDate('next_follow_up_at', today())
+                    ->count(),
+                'followups_overdue' => $open()
+                    ->whereNotNull('next_follow_up_at')
+                    ->where('next_follow_up_at', '<', now())
+                    ->count(),
+            ];
+        }
+
+        return view('employee.dashboard', compact('user', 'tasks', 'stats', 'salesSnapshot'));
     }
 }

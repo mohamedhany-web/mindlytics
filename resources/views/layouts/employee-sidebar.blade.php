@@ -25,6 +25,24 @@
             <span>مهامي</span>
         </a>
 
+        @if(auth()->user()->isSalesEmployee())
+        <div class="border-t border-slate-700/50 my-2 pt-2">
+            <p class="px-4 text-xs font-semibold text-emerald-400/90 uppercase tracking-wider mb-1">المبيعات</p>
+            <a href="{{ route('employee.sales.dashboard') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.dashboard') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-chart-line text-base"></i>
+                <span>مركز المبيعات</span>
+            </a>
+            <a href="{{ route('employee.sales.leads.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.leads.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-user-plus text-base"></i>
+                <span>العملاء المحتملون</span>
+            </a>
+        </div>
+        @endif
+
         <a href="{{ route('employee.leaves.index') }}" 
            class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.leaves.*') ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">

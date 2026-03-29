@@ -321,9 +321,9 @@ class ExpenseController extends Controller
                     ->first();
                 
                 if ($walletTransaction) {
+                    // لا نستخدم notes هنا: الجدول الأصلي يعرّف description فقط (انظر Wallet::withdraw)
                     $walletTransaction->update([
                         'transaction_id' => $transaction->id,
-                        'notes' => 'سحب من المصروف رقم: ' . $expense->expense_number . ' - ' . $expense->title,
                     ]);
                 }
             }

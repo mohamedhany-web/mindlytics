@@ -75,9 +75,10 @@ class CheckoutController extends Controller
     }
 
     /**
-     * التوجيه لبوابة الدفع كاشير (كورس)
+     * التوجيه لبوابة الدفع كاشير (كورس).
+     * طلبات JSON (صفحة checkout مع iframe): تُرجع session_url و session_id.
      */
-    public function redirectToKashier($courseId)
+    public function redirectToKashier(Request $request, $courseId)
     {
         if (!Auth::check()) {
             return redirect()->route('login')->with('error', 'يجب تسجيل الدخول أولاً');
@@ -92,6 +93,10 @@ class CheckoutController extends Controller
             ->where('status', 'active')
             ->exists();
         if ($isEnrolled) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'أنت مسجل بالفعل في هذا الكورس'], 422);
+            }
+
             return redirect()->route('public.course.show', $course->id)
                 ->with('info', 'أنت مسجل بالفعل في هذا الكورس');
         }
@@ -101,12 +106,20 @@ class CheckoutController extends Controller
             ->where('status', Order::STATUS_PENDING)
             ->first();
         if ($existingOrder) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'لديك طلب قيد الانتظار لهذا الكورس'], 422);
+            }
+
             return redirect()->route('public.course.show', $course->id)
                 ->with('info', 'لديك طلب قيد الانتظار لهذا الكورس');
         }
 
         $amount = (float) ($course->price ?? 0);
         if ($amount <= 0) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'هذا الكورس مجاني يمكنك التسجيل مباشرة.'], 422);
+            }
+
             return redirect()->route('public.course.show', $course->id)
                 ->with('info', 'هذا الكورس مجاني يمكنك التسجيل مباشرة.');
         }
@@ -129,6 +142,10 @@ class CheckoutController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Kashier redirect: order create failed', ['course_id' => $courseId, 'message' => $e->getMessage()]);
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'حدث خطأ أثناء إنشاء الطلب. يرجى المحاولة مرة أخرى.'], 500);
+            }
+
             return redirect()->route('public.course.show', $course->id)
                 ->with('error', 'حدث خطأ أثناء إنشاء الطلب. يرجى المحاولة مرة أخرى.');
         }
@@ -136,27 +153,43 @@ class CheckoutController extends Controller
         $kashier = app(KashierService::class);
         $callbackUrl = $this->getKashierCallbackUrl();
         try {
-            $hppUrl = $kashier->getHppUrl(
+            $session = $kashier->createPaymentSession(
                 (string) $order->id,
                 $amount,
                 $callbackUrl,
-                null,
                 Auth::user()->email,
                 (string) Auth::id(),
                 'Course order #' . $order->id
             );
         } catch (\RuntimeException $e) {
             $order->delete();
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $e->getMessage()], 422);
+            }
+
             return redirect()->route('public.course.checkout', $course->id)
                 ->with('error', $e->getMessage());
         } catch (\Exception $e) {
-            Log::error('Kashier getHppUrl failed', ['course_id' => $courseId, 'message' => $e->getMessage()]);
+            Log::error('Kashier createPaymentSession failed (course)', ['course_id' => $courseId, 'message' => $e->getMessage()]);
             $order->delete();
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'حدث خطأ أثناء إنشاء جلسة الدفع. يرجى المحاولة مرة أخرى.'], 500);
+            }
+
             return redirect()->route('public.course.checkout', $course->id)
                 ->with('error', 'حدث خطأ أثناء التوجيه للدفع. يرجى المحاولة مرة أخرى.');
         }
 
-        return redirect()->away($hppUrl);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'session_url' => $session['sessionUrl'] ?? null,
+                'session_id' => $session['sessionId'] ?? null,
+                'order_id' => $order->id,
+                'amount' => $amount,
+            ]);
+        }
+
+        return redirect()->away($session['sessionUrl'] ?? '');
     }
 
     /**

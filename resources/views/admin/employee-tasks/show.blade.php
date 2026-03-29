@@ -47,6 +47,10 @@
                         <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-100 text-violet-700 text-sm font-semibold mr-2">
                             <i class="fas fa-video"></i> مونتاج فيديو
                         </span>
+                    @elseif($employeeTask->task_type === 'sales')
+                        <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-100 text-emerald-800 text-sm font-semibold mr-2">
+                            <i class="fas fa-handshake"></i> مبيعات
+                        </span>
                     @endif
                     <h1 class="text-3xl font-black text-gray-900 leading-tight">{{ $employeeTask->title }}</h1>
                     <p class="text-gray-600 text-lg">
@@ -131,6 +135,17 @@
                         @else
                             <i class="fas fa-arrow-down"></i>منخفض
                         @endif
+                    </span>
+                </div>
+
+                <div>
+                    <p class="text-sm font-semibold text-gray-600 mb-2">نوع المهمة</p>
+                    <span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border-2
+                        @if($employeeTask->task_type === 'video_editing') bg-violet-50 text-violet-800 border-violet-200
+                        @elseif($employeeTask->task_type === 'sales') bg-emerald-50 text-emerald-800 border-emerald-200
+                        @else bg-slate-50 text-slate-800 border-slate-200
+                        @endif">
+                        {{ \App\Models\EmployeeTask::taskTypeLabel($employeeTask->task_type) }}
                     </span>
                 </div>
 
@@ -254,7 +269,7 @@
             @if($employeeTask->task_type === 'video_editing')
                 <div class="rounded-xl border border-violet-200 bg-violet-50/40 p-4 space-y-3">
                     <p class="text-sm font-semibold text-gray-900"><i class="fas fa-file-excel text-green-600 ml-1"></i> استيراد تسليمات المونتاج من Excel</p>
-                    <p class="text-xs text-gray-600">عمود إلزامي: رابط الفيديو (Bunny). لا يُسمح بتكرار نفس الرابط في الملف أو مع تسليمات سابقة.</p>
+                    <p class="text-xs text-gray-600">عمود إلزامي: رابط الفيديو (Bunny). لا يُسمح بتكرار نفس الرابط في الملف أو مع تسليمات سابقة. أعمدة المدد: «10:30» تُفسَّر <strong>دقيقة:ثانية</strong>؛ للساعات استخدم <strong>س:د:ث</strong> مثل 1:05:00.</p>
                     <div class="flex flex-wrap items-center gap-3">
                         <a href="{{ route('admin.employee-tasks.deliverables.montage-excel-template', $employeeTask) }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-violet-300 text-violet-800 text-sm font-medium hover:bg-violet-50">
                             <i class="fas fa-download"></i> تنزيل القالب
@@ -270,6 +285,13 @@
                             <i class="fas fa-file-import ml-1"></i> استيراد
                         </button>
                     </form>
+                </div>
+            @endif
+
+            @if($employeeTask->task_type === 'sales')
+                <div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 text-sm text-emerald-900">
+                    <i class="fas fa-info-circle ml-1"></i> مهمة مبيعات: التسليمات كملف / رابط / صورة (نفس المهمة العامة). لمتابعة العملاء المحتملين استخدم
+                    <a href="{{ route('admin.sales.leads.index') }}" class="font-bold underline hover:text-emerald-950">قسم المبيعات</a>.
                 </div>
             @endif
 

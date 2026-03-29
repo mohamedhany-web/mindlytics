@@ -69,6 +69,38 @@
                 </a>
             </li>
 
+            @php
+                $salesMenuOpen = request()->routeIs('admin.sales.*');
+            @endphp
+            <li x-data="{ open: {{ $salesMenuOpen ? 'true' : 'false' }} }">
+                <button type="button" @click="open = !open"
+                        class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-handshake w-5 text-emerald-400 group-hover:text-white"></i>
+                        <span class="font-medium">المبيعات</span>
+                    </div>
+                    <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
+                </button>
+                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-emerald-700/40 pr-2">
+                    <li>
+                        <a href="{{ route('admin.sales.leads.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.leads.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-users w-4"></i>
+                            <span>العملاء المحتملون</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.sales.audit-log.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.audit-log.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-clipboard-list w-4"></i>
+                            <span>سجل أنشطة المبيعات</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
             <!-- إدارة النظام -->
             @php
                 $systemManagementOpen = request()->routeIs('admin.users.*') || request()->routeIs('admin.orders.*') || request()->routeIs('admin.notifications.*') || request()->routeIs('admin.employee-notifications.*') || request()->routeIs('admin.activity-log*') || request()->routeIs('admin.two-factor-logs.*') || request()->routeIs('admin.statistics.*') || request()->routeIs('admin.performance.*');

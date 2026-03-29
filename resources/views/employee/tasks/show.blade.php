@@ -5,38 +5,20 @@
 
 @section('content')
 <div class="space-y-6">
-    @if(session('import_report') && $task->isVideoEditing())
-        @php $rep = session('import_report'); @endphp
-        <div class="bg-white rounded-xl border border-slate-200 p-4 text-sm text-gray-800 shadow-sm">
-            <p class="font-semibold text-gray-900 mb-2">تقرير الاستيراد</p>
-            <p>تم استيراد: <strong>{{ $rep['imported'] ?? 0 }}</strong></p>
-            @if(!empty($rep['skipped_duplicates']))
-                <p class="mt-2 text-amber-800">روابط مُتخطاة (مكررة): {{ count($rep['skipped_duplicates']) }}</p>
-                <ul class="list-disc list-inside text-xs text-gray-600 max-h-32 overflow-y-auto mt-1">
-                    @foreach(array_slice($rep['skipped_duplicates'], 0, 15) as $line)
-                        <li>{{ $line }}</li>
-                    @endforeach
-                </ul>
-            @endif
-            @if(!empty($rep['row_errors']))
-                <p class="mt-2 text-red-800">أخطاء في الصفوف: {{ count($rep['row_errors']) }}</p>
-                <ul class="list-disc list-inside text-xs text-gray-600 max-h-32 overflow-y-auto mt-1">
-                    @foreach(array_slice($rep['row_errors'], 0, 15, true) as $rowNum => $err)
-                        <li>صف {{ $rowNum }}: {{ $err }}</li>
-                    @endforeach
-                </ul>
-            @endif
-        </div>
-    @endif
     <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
         <div class="flex flex-wrap justify-between items-start gap-4 mb-6">
             <div class="flex-1 min-w-0">
                 <div class="flex flex-wrap items-center gap-2 mb-2">
                     <h1 class="text-2xl font-bold text-gray-900">{{ $task->title }}</h1>
                     <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold
-                        {{ $task->isVideoEditing() ? 'bg-violet-100 text-violet-800' : 'bg-slate-100 text-slate-700' }}">
+                        @if($task->isVideoEditing()) bg-violet-100 text-violet-800
+                        @elseif($task->isSales()) bg-emerald-100 text-emerald-800
+                        @else bg-slate-100 text-slate-700
+                        @endif">
                         @if($task->isVideoEditing())
                             <i class="fas fa-video"></i> مونتاج فيديو
+                        @elseif($task->isSales())
+                            <i class="fas fa-handshake"></i> مبيعات
                         @else
                             <i class="fas fa-tasks"></i> مهمة عامة
                         @endif
@@ -95,6 +77,13 @@
         </div>
         @endif
 
+        @if($task->isSales() && auth()->user()->isSalesEmployee())
+        <div class="mb-6 rounded-xl border-2 border-emerald-200 bg-emerald-50/60 p-4 flex flex-wrap items-center justify-between gap-3">
+            <p class="text-sm text-emerald-900"><i class="fas fa-chart-line ml-1"></i> مهمة مبيعات: يمكنك ربط عملك بمركز المبيعات والعملاء المحتملين.</p>
+            <a href="{{ route('employee.sales.dashboard') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700">مركز المبيعات</a>
+        </div>
+        @endif
+
         @if($task->isVideoEditing())
             @php
                 $sumBeforeMin = (int) $task->deliverables->sum('duration_before_minutes');
@@ -142,6 +131,10 @@
                             <span class="w-12 h-12 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center shrink-0">
                                 <i class="fas fa-film text-xl"></i>
                             </span>
+                        @elseif($task->isSales())
+                            <span class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                                <i class="fas fa-handshake text-xl"></i>
+                            </span>
                         @else
                             <span class="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
                                 <i class="fas fa-inbox text-xl"></i>
@@ -187,20 +180,21 @@
                                 <input type="text" name="received_from" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="اسم الشخص أو المصدر">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">مدة الفيديو قبل المونتاج (نص)</label>
-                                <input type="text" name="duration_before" value="{{ old('duration_before') }}" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="مثال: 10:30 أو 45 دقيقة">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">مدة قبل المونتاج (نص)</label>
+                                <input type="text" name="duration_before" value="{{ old('duration_before') }}" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="10:30 = دقيقة:ثانية | 45 أو 45 دقيقة">
+                                <p class="text-xs text-gray-500 mt-1">الشكلان «دقيقة:ثانية» (مثل 12:00 = 12 دقيقة) و«س:د:ث» للمدد الطويلة (1:05:00 = ساعة و5 دقائق).</p>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">مدة الفيديو بعد المونتاج (نص)</label>
-                                <input type="text" name="duration_after" value="{{ old('duration_after') }}" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="مثال: 8:00 أو 35 دقيقة">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">مدة بعد المونتاج (نص)</label>
+                                <input type="text" name="duration_after" value="{{ old('duration_after') }}" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="8:15 = دقيقة:ثانية | 35 دقيقة">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">دقائق قبل (رقم، اختياري)</label>
-                                <input type="number" name="duration_before_minutes" value="{{ old('duration_before_minutes') }}" min="0" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="يُفضَّل لحساب المجاميع">
+                                <input type="number" name="duration_before_minutes" value="{{ old('duration_before_minutes') }}" min="0" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="يُحسب المجموع من هنا إن وُجد">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">دقائق بعد (رقم، اختياري)</label>
-                                <input type="number" name="duration_after_minutes" value="{{ old('duration_after_minutes') }}" min="0" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="يُفضَّل لحساب المجاميع">
+                                <input type="number" name="duration_after_minutes" value="{{ old('duration_after_minutes') }}" min="0" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="يُحسب المجموع من هنا إن وُجد">
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">ملاحظات (اختياري)</label>
@@ -213,28 +207,27 @@
                     </form>
 
                     <div class="mt-6 pt-6 border-t border-violet-200">
-                        <h5 class="text-sm font-semibold text-gray-900 mb-3"><i class="fas fa-file-excel text-green-600 mr-2"></i>استيراد عدة تسليمات من Excel</h5>
-                        <p class="text-xs text-gray-600 mb-3">عمود إلزامي: رابط الفيديو (Bunny). يُمنع تكرار نفس الرابط في الملف أو في التسليمات السابقة.</p>
-                        <div class="flex flex-wrap items-center gap-3 mb-4">
+                        <h5 class="text-sm font-semibold text-gray-900 mb-3"><i class="fas fa-file-excel text-green-600 mr-2"></i>Excel — قالب أو تصدير تسليماتك</h5>
+                        <p class="text-xs text-gray-600 mb-3">تصدير يحتوي التسليمات الحالية بنفس أعمدة القالب (للمراجعة أو الأرشفة). الاستيراد الجماعي متاح من لوحة الإدارة فقط.</p>
+                        <div class="flex flex-wrap items-center gap-3">
                             <a href="{{ route('employee.tasks.deliverables.montage-excel-template', $task) }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-violet-300 text-violet-800 text-sm font-medium hover:bg-violet-50">
-                                <i class="fas fa-download"></i> تنزيل القالب
+                                <i class="fas fa-download"></i> تنزيل قالب فارغ
+                            </a>
+                            <a href="{{ route('employee.tasks.deliverables.montage-export', $task) }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium shadow-sm">
+                                <i class="fas fa-file-export"></i> تصدير تسليماتي (.xlsx)
                             </a>
                         </div>
-                        <form action="{{ route('employee.tasks.deliverables.import-excel', $task) }}" method="POST" enctype="multipart/form-data" class="flex flex-wrap items-end gap-3">
-                            @csrf
-                            <div class="flex-1 min-w-[200px]">
-                                <label class="block text-xs font-medium text-gray-700 mb-1">ملف Excel (.xlsx)</label>
-                                <input type="file" name="excel_file" accept=".xlsx,.xls,.csv" required class="w-full text-sm text-gray-700 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-violet-100 file:text-violet-800">
-                            </div>
-                            <button type="submit" class="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium">
-                                <i class="fas fa-file-import mr-1"></i> استيراد
-                            </button>
-                        </form>
                     </div>
                 </div>
             @else
-                <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 mb-6">
-                    <h4 class="text-base font-semibold text-gray-900 mb-4">إضافة تسليم جديد</h4>
+                <div class="rounded-xl p-6 mb-6 @if($task->isSales()) bg-emerald-50/40 border-2 border-emerald-200 @else bg-gray-50 border border-gray-200 @endif">
+                    <h4 class="text-base font-semibold text-gray-900 mb-1 flex items-center gap-2">
+                        @if($task->isSales())<i class="fas fa-handshake text-emerald-600"></i>@endif
+                        إضافة تسليم جديد
+                    </h4>
+                    @if($task->isSales())
+                        <p class="text-xs text-emerald-800 mb-4">تسليم مهمة مبيعات: ملف، صورة، أو رابط (تقرير، عرض، محادثة، إلخ).</p>
+                    @endif
                     <form action="{{ route('employee.tasks.submit-deliverable', $task) }}" method="POST" enctype="multipart/form-data" id="deliverableForm">
                         @csrf
                         <div class="space-y-4">

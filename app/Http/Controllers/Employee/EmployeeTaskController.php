@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\EmployeeTask;
 use App\Models\EmployeeTaskDeliverable;
 use App\Services\EmployeeTaskDeliverableService;
-use App\Services\MontageDeliverablesExcelImportService;
 use App\Support\MontageVideoHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,8 +16,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 class EmployeeTaskController extends Controller
 {
     public function __construct(
-        protected EmployeeTaskDeliverableService $deliverableService,
-        protected MontageDeliverablesExcelImportService $montageExcelImport
+        protected EmployeeTaskDeliverableService $deliverableService
     ) {
     }
 
@@ -43,6 +41,10 @@ class EmployeeTaskController extends Controller
         // فلترة حسب الأولوية
         if ($request->filled('priority')) {
             $query->where('priority', $request->priority);
+        }
+
+        if ($request->filled('task_type')) {
+            $query->where('task_type', $request->task_type);
         }
 
         $tasks = $query->latest()->paginate(15);
@@ -241,7 +243,9 @@ class EmployeeTaskController extends Controller
             $task->update(['status' => 'in_progress']);
         }
 
-        $message = $isVideoEditing ? 'تم تسليم المونتاج بنجاح' : 'تم تسليم المهمة بنجاح';
+        $message = $isVideoEditing
+            ? 'تم تسليم المونتاج بنجاح'
+            : ($task->isSales() ? 'تم تسليم مهمة المبيعات بنجاح' : 'تم تسليم المهمة بنجاح');
         return redirect()->to(route('employee.tasks.show', $task) . '?open=1')
             ->with('success', $message);
     }
@@ -289,9 +293,9 @@ class EmployeeTaskController extends Controller
     }
 
     /**
-     * استيراد تسليمات المونتاج من Excel
+     * تصدير تسليمات المونتاج الحالية إلى Excel (للموظف فقط — بدون استيراد جماعي).
      */
-    public function importMontageExcel(Request $request, EmployeeTask $task)
+    public function exportMontageDeliverables(EmployeeTask $task)
     {
         $user = Auth::user();
         if (! $user->isEmployee() || $task->employee_id !== $user->id) {
@@ -301,15 +305,39 @@ class EmployeeTaskController extends Controller
             abort(404);
         }
 
-        $request->validate([
-            'excel_file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+        $deliverables = $task->deliverables()
+            ->where('delivery_type', 'link')
+            ->whereNotNull('link_url')
+            ->orderBy('id')
+            ->get();
+
+        $filename = 'montage-deliverables-task-' . $task->id . '-' . now()->format('Y-m-d') . '.xlsx';
+
+        return response()->streamDownload(function () use ($deliverables) {
+            $spreadsheet = new Spreadsheet;
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows = [
+                ['رابط_الفيديو', 'عنوان', 'ممن_استلمته', 'دقائق_قبل', 'دقائق_بعد', 'مدة_قبل', 'مدة_بعد', 'ملاحظات'],
+            ];
+            foreach ($deliverables as $d) {
+                $rows[] = [
+                    $d->link_url,
+                    $d->title,
+                    $d->received_from,
+                    $d->duration_before_minutes,
+                    $d->duration_after_minutes,
+                    $d->duration_before,
+                    $d->duration_after,
+                    $d->description,
+                ];
+            }
+            $sheet->fromArray($rows);
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+            $spreadsheet->disconnectWorksheets();
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ]);
-
-        $result = $this->montageExcelImport->import($request->file('excel_file'), $task);
-
-        return redirect()->to(route('employee.tasks.show', $task) . '?open=1')
-            ->with('success', $result['message'])
-            ->with('import_report', $result);
     }
 
     private function streamMontageExcelTemplateResponse()
@@ -321,7 +349,7 @@ class EmployeeTaskController extends Controller
             $sheet = $spreadsheet->getActiveSheet();
             $sheet->fromArray([
                 ['رابط_الفيديو', 'عنوان', 'ممن_استلمته', 'دقائق_قبل', 'دقائق_بعد', 'مدة_قبل', 'مدة_بعد', 'ملاحظات'],
-                ['https://iframe.mediadelivery.net/...', 'مثال', 'المصدر', 12, 10, '12:00', '10:00', ''],
+                ['https://iframe.mediadelivery.net/...', 'مثال', 'المصدر', 12, 11, '12:00', '10:30', '10:30 = دقيقة:ثانية؛ 1:05:00 = ساعة:دقيقة:ثانية'],
             ]);
             $writer = new Xlsx($spreadsheet);
             $writer->save('php://output');

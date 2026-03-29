@@ -111,6 +111,20 @@ class WorkshopController extends Controller
         ]);
     }
 
+    public function deactivate(Workshop $workshop)
+    {
+        $workshop->update(['is_active' => false]);
+
+        return back()->with('success', 'تم إيقاف الورشة. الرابط العام يعرض الآن أن الورشة انتهت ولا يقبل تسجيلات جديدة.');
+    }
+
+    public function activate(Workshop $workshop)
+    {
+        $workshop->update(['is_active' => true]);
+
+        return back()->with('success', 'تم تفعيل الورشة مرة أخرى وعاد رابط الحجز ليعمل.');
+    }
+
     public function edit(Workshop $workshop)
     {
         return view('admin.workshops.edit', compact('workshop'));

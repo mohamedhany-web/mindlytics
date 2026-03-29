@@ -656,11 +656,19 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
     // لوحة الموظفين
     Route::prefix('employee')->name('employee.')->middleware(['auth'])->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Employee\EmployeeController::class, 'dashboard'])->name('dashboard');
+
+        Route::middleware('sales.employee')->prefix('sales')->name('sales.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Employee\SalesDashboardController::class, 'index'])->name('dashboard');
+            Route::get('leads/export', [\App\Http\Controllers\Employee\SalesLeadController::class, 'export'])->name('leads.export');
+            Route::post('leads/{lead}/activities', [\App\Http\Controllers\Employee\SalesLeadController::class, 'storeActivity'])->name('leads.activities.store');
+            Route::resource('leads', \App\Http\Controllers\Employee\SalesLeadController::class);
+        });
+
         Route::get('/tasks', [\App\Http\Controllers\Employee\EmployeeTaskController::class, 'index'])->name('tasks.index');
         Route::get('/tasks/{task}', [\App\Http\Controllers\Employee\EmployeeTaskController::class, 'show'])->name('tasks.show');
         Route::put('/tasks/{task}/status', [\App\Http\Controllers\Employee\EmployeeTaskController::class, 'updateStatus'])->name('tasks.update-status');
         Route::get('/tasks/{task}/deliverables/montage-excel-template', [\App\Http\Controllers\Employee\EmployeeTaskController::class, 'downloadMontageExcelTemplate'])->name('tasks.deliverables.montage-excel-template');
-        Route::post('/tasks/{task}/deliverables/import-excel', [\App\Http\Controllers\Employee\EmployeeTaskController::class, 'importMontageExcel'])->name('tasks.deliverables.import-excel');
+        Route::get('/tasks/{task}/deliverables/montage-export', [\App\Http\Controllers\Employee\EmployeeTaskController::class, 'exportMontageDeliverables'])->name('tasks.deliverables.montage-export');
         Route::post('/tasks/{task}/deliverables', [\App\Http\Controllers\Employee\EmployeeTaskController::class, 'submitDeliverable'])->name('tasks.submit-deliverable');
         Route::match(['put', 'patch'], '/tasks/{task}/deliverables/{deliverable}', [\App\Http\Controllers\Employee\EmployeeTaskController::class, 'updateDeliverable'])->name('tasks.deliverables.update');
         Route::delete('/tasks/{task}/deliverables/{deliverable}', [\App\Http\Controllers\Employee\EmployeeTaskController::class, 'destroyDeliverable'])->name('tasks.deliverables.destroy');
@@ -706,6 +714,13 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
     // مسارات الإدارة - محمية بالـ role middleware للإداريين فقط
     Route::prefix('admin')->name('admin.')->middleware(['role:admin|super_admin'])->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Admin\AdminController::class, 'dashboard'])->name('dashboard');
+
+        Route::prefix('sales')->name('sales.')->group(function () {
+            Route::get('audit-log', [\App\Http\Controllers\Admin\SalesAuditController::class, 'index'])->name('audit-log.index');
+            Route::get('leads/export', [\App\Http\Controllers\Admin\SalesLeadController::class, 'export'])->name('leads.export');
+            Route::post('leads/{lead}/activities', [\App\Http\Controllers\Admin\SalesLeadController::class, 'storeActivity'])->name('leads.activities.store');
+            Route::resource('leads', \App\Http\Controllers\Admin\SalesLeadController::class);
+        });
 
         // بروفايل الأدمن
         Route::get('/profile', [\App\Http\Controllers\Admin\ProfileController::class, 'index'])->name('profile');
@@ -769,6 +784,10 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('/get-subjects-by-year', [\App\Http\Controllers\Admin\AdvancedCourseController::class, 'getSubjectsByYear'])->name('advanced-courses.get-subjects-by-year');
 
         // الاجتماعات / الورش
+        Route::post('workshops/{workshop}/deactivate', [\App\Http\Controllers\Admin\WorkshopController::class, 'deactivate'])
+            ->name('workshops.deactivate');
+        Route::post('workshops/{workshop}/activate', [\App\Http\Controllers\Admin\WorkshopController::class, 'activate'])
+            ->name('workshops.activate');
         Route::resource('workshops', \App\Http\Controllers\Admin\WorkshopController::class);
         Route::get('workshops/{workshop}/export', [\App\Http\Controllers\Admin\WorkshopController::class, 'exportRegistrations'])
             ->name('workshops.export');

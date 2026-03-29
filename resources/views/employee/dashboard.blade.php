@@ -96,6 +96,30 @@
         </div>
     </div>
 
+    @if($salesSnapshot)
+    <div class="rounded-2xl border-2 border-emerald-200/80 bg-gradient-to-l from-emerald-50 via-white to-teal-50/50 p-6 shadow-lg">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div class="flex items-start gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shrink-0">
+                    <i class="fas fa-chart-line text-2xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900">مبيعات — نظرة سريعة</h3>
+                    <p class="text-sm text-gray-600 mt-1">إجمالي: <strong>{{ $salesSnapshot['total'] }}</strong> — نشط: <strong>{{ $salesSnapshot['active'] }}</strong> — متابعات اليوم: <strong>{{ $salesSnapshot['followups_today'] }}</strong>@if(($salesSnapshot['followups_overdue'] ?? 0) > 0) — <span class="text-rose-600 font-semibold">متأخر: {{ $salesSnapshot['followups_overdue'] }}</span>@endif</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('employee.sales.dashboard') }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors">
+                    <i class="fas fa-handshake"></i> مركز المبيعات
+                </a>
+                <a href="{{ route('employee.sales.leads.index') }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white border-2 border-emerald-200 text-emerald-800 text-sm font-semibold hover:bg-emerald-50 transition-colors">
+                    <i class="fas fa-users"></i> العملاء المحتملون
+                </a>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <!-- إحصائيات سريعة -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
         <div class="dashboard-card rounded-2xl p-5 sm:p-6 card-hover-effect relative overflow-hidden group border-2 border-blue-200/50 hover:border-blue-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 249, 255, 0.95) 50%, rgba(224, 242, 254, 0.9) 100%);">

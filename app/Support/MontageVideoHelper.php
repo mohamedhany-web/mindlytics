@@ -33,7 +33,12 @@ class MontageVideoHelper
     }
 
     /**
-     * تحويل مدة نصية إلى دقائق: 45 أو 10:30 أو 1:05:00
+     * تحويل مدة نصية إلى دقائق (مجموع للتقارير).
+     *
+     * - أرقام صحيحة أو عشرية: دقائق (مثل 45 أو 12.5).
+     * - شكل دقيقة:ثانية شائع في الفيديو (مثل 10:30 = 10 د و 30 ث → يُقرب لدقائق).
+     * - ساعة:دقيقة:ثانية (مثل 1:05:00 للمدد الطويلة).
+     * - نص عربي: «45 دقيقة».
      */
     public static function parseDurationToMinutes(?string $value): ?int
     {
@@ -45,20 +50,34 @@ class MontageVideoHelper
             return null;
         }
 
-        if (preg_match('/^\d+$/', $v)) {
-            return min((int) $v, 999999);
-        }
-
-        if (preg_match('/^(\d{1,3}):(\d{2})$/', $v, $m)) {
-            return min((int) $m[1] * 60 + (int) $m[2], 999999);
-        }
-
-        if (preg_match('/^(\d{1,2}):(\d{2}):(\d{2})$/', $v, $m)) {
-            return min((int) $m[1] * 3600 + (int) $m[2] * 60 + (int) $m[3], 999999);
-        }
-
         if (preg_match('/^(\d+)\s*(?:دقيقة|دقائق|min|minutes?)\s*$/iu', $v, $m)) {
             return min((int) $m[1], 999999);
+        }
+
+        if (preg_match('/^(\d{1,3}):(\d{2}):(\d{2})$/', $v, $m)) {
+            $totalSeconds = (int) $m[1] * 3600 + (int) $m[2] * 60 + (int) $m[3];
+
+            return min(max(0, (int) round($totalSeconds / 60.0)), 999999);
+        }
+
+        if (preg_match('/^(\d+):(\d{2})$/', $v, $m)) {
+            $mm = (int) $m[1];
+            $ss = (int) $m[2];
+            if ($ss > 59) {
+                return null;
+            }
+            $totalSeconds = $mm * 60 + $ss;
+
+            return min(max(0, (int) round($totalSeconds / 60.0)), 999999);
+        }
+
+        $vNorm = str_replace(',', '.', $v);
+        if (preg_match('/^\d+\.\d+$/', $vNorm)) {
+            return min(max(0, (int) round((float) $vNorm)), 999999);
+        }
+
+        if (preg_match('/^\d+$/', $v)) {
+            return min((int) $v, 999999);
         }
 
         return null;

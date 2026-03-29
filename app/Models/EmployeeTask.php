@@ -87,6 +87,23 @@ class EmployeeTask extends Model
     }
 
     /**
+     * هل المهمة مخصصة للمبيعات (تسليم كمهمة عامة: ملف/رابط مع تمييز بصري)
+     */
+    public function isSales(): bool
+    {
+        return $this->task_type === 'sales';
+    }
+
+    public static function taskTypeLabel(?string $taskType): string
+    {
+        return match ($taskType) {
+            'video_editing' => 'مونتاج فيديو',
+            'sales' => 'مبيعات',
+            default => 'مهمة عامة',
+        };
+    }
+
+    /**
      * Scope للمهام المتأخرة
      */
     public function scopeOverdue($query)

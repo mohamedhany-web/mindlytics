@@ -21,7 +21,7 @@
 
         <!-- الفلاتر -->
         <div class="mt-6 pt-6 border-t border-gray-200">
-            <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                 <div>
                     <label for="search" class="block text-sm font-medium text-gray-700 mb-1">البحث</label>
                     <input type="text" name="search" id="search" value="{{ request('search') }}" 
@@ -50,11 +50,21 @@
                     </select>
                 </div>
 
-                <div class="flex items-end gap-2">
+                <div>
+                    <label for="task_type" class="block text-sm font-medium text-gray-700 mb-1">نوع المهمة</label>
+                    <select name="task_type" id="task_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">الكل</option>
+                        <option value="general" {{ request('task_type') == 'general' ? 'selected' : '' }}>عامة</option>
+                        <option value="video_editing" {{ request('task_type') == 'video_editing' ? 'selected' : '' }}>مونتاج فيديو</option>
+                        <option value="sales" {{ request('task_type') == 'sales' ? 'selected' : '' }}>مبيعات</option>
+                    </select>
+                </div>
+
+                <div class="flex items-end gap-2 lg:col-span-2">
                     <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
                         <i class="fas fa-search mr-2"></i>بحث
                     </button>
-                    @if(request()->hasAny(['search', 'employee_id', 'status', 'priority']))
+                    @if(request()->hasAny(['search', 'employee_id', 'status', 'priority', 'task_type']))
                         <a href="{{ route('admin.employee-tasks.index') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors">
                             <i class="fas fa-times"></i>
                         </a>
@@ -157,6 +167,11 @@
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4">
                                 <div class="text-sm font-medium text-gray-900">{{ $task->title }}</div>
+                                <span class="inline-flex mt-1 px-2 py-0.5 text-xs font-semibold rounded-full
+                                    @if($task->task_type === 'video_editing') bg-violet-100 text-violet-800
+                                    @elseif($task->task_type === 'sales') bg-emerald-100 text-emerald-800
+                                    @else bg-slate-100 text-slate-700
+                                    @endif">{{ \App\Models\EmployeeTask::taskTypeLabel($task->task_type) }}</span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm text-gray-900">{{ $task->employee->name }}</div>

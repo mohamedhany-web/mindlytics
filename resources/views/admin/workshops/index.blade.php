@@ -52,10 +52,13 @@
                         <td class="px-4 py-3 text-sm">
                             <div class="font-semibold text-slate-900">{{ $ws->title }}</div>
                             <div class="text-xs text-slate-500 mt-0.5">
-                                رابط الحجز:
+                                رابط الصفحة العامة:
                                 <a href="{{ route('public.workshops.show', $ws->slug) }}" target="_blank" class="text-blue-600 hover:underline">
                                     {{ route('public.workshops.show', $ws->slug) }}
                                 </a>
+                                @if(!$ws->is_active)
+                                    <span class="block mt-1 text-amber-700 font-medium">(معطّل — يعرض «انتهت الورشة»)</span>
+                                @endif
                             </div>
                         </td>
                         <td class="px-4 py-3 text-sm text-slate-700">
@@ -91,7 +94,24 @@
                             @endif
                         </td>
                         <td class="px-4 py-3 text-sm">
-                            <div class="flex items-center gap-2">
+                            <div class="flex flex-wrap items-center gap-2">
+                                @if($ws->is_active)
+                                    <form action="{{ route('admin.workshops.deactivate', $ws) }}" method="POST" onsubmit="return confirm('إيقاف الورشة؟ سيظهر الرابط العام أن الورشة انتهت ولن يُقبل تسجيل جديد.');">
+                                        @csrf
+                                        <button type="submit" class="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-900 text-xs font-semibold border border-orange-200">
+                                            <i class="fas fa-stop-circle"></i>
+                                            إيقاف الورشة
+                                        </button>
+                                    </form>
+                                @else
+                                    <form action="{{ route('admin.workshops.activate', $ws) }}" method="POST">
+                                        @csrf
+                                        <button type="submit" class="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-semibold border border-emerald-200">
+                                            <i class="fas fa-play-circle"></i>
+                                            تفعيل
+                                        </button>
+                                    </form>
+                                @endif
                                 <a href="{{ route('admin.workshops.show', $ws) }}" class="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold">
                                     <i class="fas fa-eye"></i>
                                     عرض

@@ -36,7 +36,7 @@
                         <label for="employee_id" class="block text-sm font-semibold text-gray-700 mb-2">الموظف <span class="text-red-500">*</span></label>
                         <select name="employee_id" id="employee_id" required class="w-full rounded-2xl border border-gray-200 bg-white/70 px-4 py-3 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition">
                             @foreach($employees as $employee)
-                                <option value="{{ $employee->id }}" data-job-name="{{ $employee->employeeJob?->name ?? '' }}" {{ old('employee_id', $employeeTask->employee_id) == $employee->id ? 'selected' : '' }}>
+                                <option value="{{ $employee->id }}" data-job-name="{{ $employee->employeeJob?->name ?? '' }}" data-job-code="{{ $employee->employeeJob?->code ?? '' }}" {{ old('employee_id', $employeeTask->employee_id) == $employee->id ? 'selected' : '' }}>
                                     {{ $employee->name }}
                                     @if($employee->employee_code)({{ $employee->employee_code }})@endif
                                     @if($employee->employeeJob) - {{ $employee->employeeJob->name }}@endif
@@ -51,6 +51,7 @@
                         <select name="task_type" id="task_type" required class="w-full rounded-2xl border border-gray-200 bg-white/70 px-4 py-3 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition">
                             <option value="general" {{ old('task_type', $employeeTask->task_type ?? 'general') == 'general' ? 'selected' : '' }}>مهمة عامة</option>
                             <option value="video_editing" {{ old('task_type', $employeeTask->task_type ?? '') == 'video_editing' ? 'selected' : '' }}>مونتاج فيديو</option>
+                            <option value="sales" {{ old('task_type', $employeeTask->task_type ?? '') == 'sales' ? 'selected' : '' }}>مبيعات</option>
                         </select>
                         @error('task_type')<p class="mt-1 text-xs text-rose-500">{{ $message }}</p>@enderror
                     </div>
@@ -123,4 +124,21 @@
         </form>
     </div>
 </div>
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var employeeSelect = document.getElementById('employee_id');
+    var taskTypeSelect = document.getElementById('task_type');
+    if (!employeeSelect || !taskTypeSelect) return;
+    employeeSelect.addEventListener('change', function() {
+        var opt = this.options[this.selectedIndex];
+        var jobName = (opt && opt.getAttribute('data-job-name')) ? opt.getAttribute('data-job-name') : '';
+        var jobCode = (opt && opt.getAttribute('data-job-code')) ? String(opt.getAttribute('data-job-code')).toLowerCase() : '';
+        if (jobCode === 'sales') { taskTypeSelect.value = 'sales'; return; }
+        if (jobName && /مونتاج|فيديو|مونتاج فيديو|video|editing/i.test(jobName)) { taskTypeSelect.value = 'video_editing'; return; }
+        if (jobCode === 'video_editing') { taskTypeSelect.value = 'video_editing'; }
+    });
+});
+</script>
+@endpush
 @endsection
