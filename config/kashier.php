@@ -54,4 +54,14 @@ return [
      */
     'authorization_bearer' => filter_var(env('KASHIER_AUTHORIZATION_BEARER', false), FILTER_VALIDATE_BOOL),
 
+    /*
+     * إن كان true: يُرسل فقط الحقول الأساسية لجلسة الدفع (جرّبه إذا بقي خطأ merchantRedirect).
+     */
+    'session_minimal_payload' => filter_var(env('KASHIER_SESSION_MINIMAL_PAYLOAD', false), FILTER_VALIDATE_BOOL),
+
+    /*
+     * نوع الجلسة في طلب v3: one-time (مثال curl) أو external (جدول الحقول في بعض الوثائق).
+     */
+    'session_type' => env('KASHIER_SESSION_TYPE', 'one-time'),
+
 ];

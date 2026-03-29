@@ -23,12 +23,13 @@ class KashierService
 
     public function __construct()
     {
-        $this->mode = config('kashier.mode', 'test');
+        $mode = strtolower(trim((string) config('kashier.mode', 'test')));
+        $this->mode = in_array($mode, ['test', 'live'], true) ? $mode : 'test';
         $config = config("kashier.{$this->mode}", config('kashier.test'));
-        $this->mid = $config['mid'] ?? '';
-        $this->apiKey = $config['api_key'] ?? '';
-        $this->secret = $config['secret'] ?? '';
-        $this->apiBaseUrl = rtrim($config['api_base_url'] ?? 'https://api.kashier.io', '/');
+        $this->mid = trim((string) ($config['mid'] ?? ''));
+        $this->apiKey = trim((string) ($config['api_key'] ?? ''));
+        $this->secret = trim((string) ($config['secret'] ?? ''));
+        $this->apiBaseUrl = rtrim((string) ($config['api_base_url'] ?? 'https://api.kashier.io'), '/');
         $this->currency = config('kashier.currency', 'EGP');
         $this->allowedMethods = config('kashier.allowed_methods', 'card,wallet,bank_installments');
     }
@@ -49,6 +50,12 @@ class KashierService
         $amountFormatted = number_format((float) $amount, 2, '.', '');
         $expireAt = now()->addHours(2)->utc()->format('Y-m-d\TH:i:s.v\Z');
 
+        if ($this->mid === '' || $this->apiKey === '' || $this->secret === '') {
+            throw new \RuntimeException(
+                'إعدادات كاشير غير مكتملة على السيرفر (KASHIER_*_MID / API_KEY / SECRET لنفس وضع KASHIER_MODE).'
+            );
+        }
+
         $plainRedirect = $this->merchantRedirectForKashier();
         $orderIdStr = (string) $orderId;
 
@@ -58,54 +65,63 @@ class KashierService
             : [$plainRedirect, rawurlencode($plainRedirect)];
         $variants = array_values(array_unique($variants));
 
+        $minimalOnly = (bool) config('kashier.session_minimal_payload', false);
+        $payloadModes = $minimalOnly ? [true] : [false, true];
+
         $response = null;
         $lastMessage = '';
         $lastBody = null;
         $sentRedirect = '';
+        $attempt = 0;
+        $lastPayloadMinimal = false;
 
-        foreach ($variants as $idx => $merchantRedirectValue) {
-            $payload = $this->buildPaymentSessionPayload(
-                $orderIdStr,
-                $amountFormatted,
-                $expireAt,
-                $merchantRedirectValue,
-                $description,
-                $customerEmail,
-                $customerReference
-            );
-            $sentRedirect = $merchantRedirectValue;
+        foreach ($payloadModes as $minimal) {
+            foreach ($variants as $idx => $merchantRedirectValue) {
+                $attempt++;
+                $lastPayloadMinimal = $minimal;
+                $payload = $this->buildPaymentSessionPayload(
+                    $orderIdStr,
+                    $amountFormatted,
+                    $expireAt,
+                    $merchantRedirectValue,
+                    $description,
+                    $customerEmail,
+                    $customerReference,
+                    $minimal
+                );
+                $sentRedirect = $merchantRedirectValue;
 
-            $response = $this->postPaymentSessionsRequest($payload);
+                $response = $this->postPaymentSessionsRequest($payload);
 
-            if ($response->successful()) {
-                if ($idx > 0) {
-                    Log::info('Kashier session created after merchantRedirect variant retry', [
-                        'attempt' => $idx + 1,
-                        'plain_redirect' => $plainRedirect,
-                    ]);
+                if ($response->successful()) {
+                    if ($attempt > 1) {
+                        Log::info('Kashier session created after retry', [
+                            'attempt' => $attempt,
+                            'minimal_payload' => $minimal,
+                            'plain_redirect' => $plainRedirect,
+                        ]);
+                    }
+                    break 2;
                 }
-                break;
+
+                $lastBody = $response->json();
+                $lastMessage = $lastBody['message'] ?? $lastBody['error'] ?? $response->body();
+                if (is_array($lastMessage)) {
+                    $lastMessage = json_encode($lastMessage, JSON_UNESCAPED_UNICODE);
+                }
+                $lastMessage = (string) $lastMessage;
+
+                if ($response->status() !== 400) {
+                    break 2;
+                }
+
+                Log::warning('Kashier session attempt failed (HTTP 400)', [
+                    'attempt' => $attempt,
+                    'minimal_payload' => $minimal,
+                    'merchant_redirect_variant' => $idx,
+                    'message' => $lastMessage,
+                ]);
             }
-
-            $lastBody = $response->json();
-            $lastMessage = $lastBody['message'] ?? $lastBody['error'] ?? $response->body();
-            if (is_array($lastMessage)) {
-                $lastMessage = json_encode($lastMessage, JSON_UNESCAPED_UNICODE);
-            }
-            $lastMessage = (string) $lastMessage;
-
-            $tryNextVariant = $response->status() === 400
-                && $idx === 0
-                && count($variants) > 1;
-
-            if (!$tryNextVariant) {
-                break;
-            }
-
-            Log::warning('Kashier session HTTP 400, retrying alternate merchantRedirect form', [
-                'plain_redirect' => $plainRedirect,
-                'message' => $lastMessage,
-            ]);
         }
 
         if (!$response->successful()) {
@@ -116,7 +132,8 @@ class KashierService
                 $sentRedirect,
                 $description,
                 $customerEmail,
-                $customerReference
+                $customerReference,
+                $lastPayloadMinimal
             );
             $logJson = @json_encode($payloadForLog, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             Log::error('Kashier create session failed', [
@@ -162,8 +179,29 @@ class KashierService
         string $merchantRedirect,
         ?string $description,
         ?string $customerEmail,
-        ?string $customerReference
+        ?string $customerReference,
+        bool $minimal = false
     ): array {
+        $sessionType = (string) config('kashier.session_type', 'one-time');
+        if ($sessionType === '') {
+            $sessionType = 'one-time';
+        }
+
+        if ($minimal) {
+            return [
+                'expireAt' => $expireAt,
+                'maxFailureAttempts' => 3,
+                'amount' => $amountFormatted,
+                'currency' => $this->currency,
+                'orderId' => $orderIdStr,
+                'merchantRedirect' => $merchantRedirect,
+                'merchantId' => $this->mid,
+                'mode' => $this->mode,
+                'display' => 'ar',
+                'type' => $sessionType,
+            ];
+        }
+
         $payload = [
             'expireAt' => $expireAt,
             'maxFailureAttempts' => 3,
@@ -171,10 +209,9 @@ class KashierService
             'amount' => $amountFormatted,
             'currency' => $this->currency,
             'orderId' => $orderIdStr,
-            'order' => $orderIdStr,
             'merchantRedirect' => $merchantRedirect,
             'display' => 'ar',
-            'type' => 'one-time',
+            'type' => $sessionType,
             'allowedMethods' => $this->allowedMethods,
             'merchantId' => $this->mid,
             'mode' => $this->mode,
@@ -216,7 +253,7 @@ class KashierService
             ->withHeaders([
                 'Authorization' => $authHeader,
                 'api-key' => $this->apiKey,
-                'Content-Type' => 'application/json; charset=utf-8',
+                'Content-Type' => 'application/json',
             ])
             ->withBody($json, 'application/json; charset=utf-8')
             ->post($this->apiBaseUrl . '/v3/payment/sessions');
