@@ -44,8 +44,8 @@ return [
     'merchant_redirect_url' => env('KASHIER_MERCHANT_REDIRECT_URL', ''),
 
     /*
-     * إن كان true: يُرسل merchantRedirect بعد rawurlencode (بعض صياغ وثائق كاشير).
-     * الافتراضي false — جرّبه فقط إذا بقي خطأ "must be a valid URL".
+     * false: يُجرّب الرابط الصريح أولاً ثم rawurlencode تلقائياً عند خطأ merchantRedirect.
+     * true: يُرسل المرمّز أولاً (وثائق كاشير تذكر ترميز URI لبعض التكاملات).
      */
     'encode_merchant_redirect' => filter_var(env('KASHIER_ENCODE_MERCHANT_REDIRECT', false), FILTER_VALIDATE_BOOL),
 

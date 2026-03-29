@@ -49,68 +49,86 @@ class KashierService
         $amountFormatted = number_format((float) $amount, 2, '.', '');
         $expireAt = now()->addHours(2)->utc()->format('Y-m-d\TH:i:s.v\Z');
 
-        $redirectUrl = $this->merchantRedirectForKashier();
-        if (config('kashier.encode_merchant_redirect', false)) {
-            $redirectUrl = rawurlencode($redirectUrl);
-        }
+        $plainRedirect = $this->merchantRedirectForKashier();
         $orderIdStr = (string) $orderId;
-        $payload = [
-            'expireAt' => $expireAt,
-            'maxFailureAttempts' => 3,
-            'paymentType' => 'credit',
-            'amount' => $amountFormatted,
-            'currency' => $this->currency,
-            // v3 body table: orderId (required). بعض الأمثلة تستخدم order — نرسل الاثنين لتوافق الوثائق.
-            'orderId' => $orderIdStr,
-            'order' => $orderIdStr,
-            'merchantRedirect' => $redirectUrl,
-            'display' => 'ar',
-            'type' => 'one-time',
-            'allowedMethods' => $this->allowedMethods,
-            'merchantId' => $this->mid,
-            'mode' => $this->mode,
-            'failureRedirect' => false,
-            'description' => $description ?? 'Order #' . $orderIdStr,
-            'manualCapture' => false,
-            'saveCard' => 'optional',
-            'retrieveSavedCard' => false,
-            'interactionSource' => 'ECOMMERCE',
-            'enable3DS' => true,
-        ];
 
-        if ($customerEmail || $customerReference) {
-            $payload['customer'] = array_filter([
-                'email' => $customerEmail,
-                'reference' => $customerReference,
+        $preferEncodedFirst = (bool) config('kashier.encode_merchant_redirect', false);
+        $variants = $preferEncodedFirst
+            ? [rawurlencode($plainRedirect), $plainRedirect]
+            : [$plainRedirect, rawurlencode($plainRedirect)];
+        $variants = array_values(array_unique($variants));
+
+        $response = null;
+        $lastMessage = '';
+        $lastBody = null;
+        $sentRedirect = '';
+
+        foreach ($variants as $idx => $merchantRedirectValue) {
+            $payload = $this->buildPaymentSessionPayload(
+                $orderIdStr,
+                $amountFormatted,
+                $expireAt,
+                $merchantRedirectValue,
+                $description,
+                $customerEmail,
+                $customerReference
+            );
+            $sentRedirect = $merchantRedirectValue;
+
+            $response = Http::acceptJson()
+                ->withHeaders([
+                    'Authorization' => $this->secret,
+                    'api-key' => $this->apiKey,
+                    'Content-Type' => 'application/json',
+                ])
+                ->post($this->apiBaseUrl . '/v3/payment/sessions', $payload);
+
+            if ($response->successful()) {
+                if ($idx > 0) {
+                    Log::info('Kashier session created after merchantRedirect variant retry', [
+                        'attempt' => $idx + 1,
+                        'plain_redirect' => $plainRedirect,
+                    ]);
+                }
+                break;
+            }
+
+            $lastBody = $response->json();
+            $lastMessage = $lastBody['message'] ?? $lastBody['error'] ?? $response->body();
+            if (is_array($lastMessage)) {
+                $lastMessage = json_encode($lastMessage, JSON_UNESCAPED_UNICODE);
+            }
+            $lastMessage = (string) $lastMessage;
+
+            $retryable = str_contains(strtolower($lastMessage), 'merchantredirect')
+                && $idx === 0
+                && count($variants) > 1;
+
+            if (!$retryable) {
+                break;
+            }
+
+            Log::warning('Kashier merchantRedirect rejected; retrying with alternate encoding', [
+                'first_variant' => 'plain_or_config',
+                'plain_redirect' => $plainRedirect,
+                'message' => $lastMessage,
             ]);
         }
 
-        $response = Http::acceptJson()
-            ->withHeaders([
-                'Authorization' => $this->secret,
-                'api-key' => $this->apiKey,
-                'Content-Type' => 'application/json',
-            ])
-            ->post($this->apiBaseUrl . '/v3/payment/sessions', $payload);
-
         if (!$response->successful()) {
-            $body = $response->json();
-            $message = $body['message'] ?? $body['error'] ?? $response->body();
-            if (is_array($message)) {
-                $message = json_encode($message, JSON_UNESCAPED_UNICODE);
-            }
             Log::error('Kashier create session failed', [
                 'status' => $response->status(),
-                'body' => $body ?: $response->body(),
+                'body' => $lastBody ?: $response->body(),
                 'order_id' => $orderIdStr,
-                'merchant_redirect_sent' => $redirectUrl,
+                'merchant_redirect_last_sent' => $sentRedirect,
+                'merchant_redirect_plain' => $plainRedirect,
                 'api_base' => $this->apiBaseUrl,
             ]);
             $hint = '';
-            if (is_string($message) && str_contains($message, 'merchantRedirect')) {
-                $hint = ' تأكد من APP_URL (يفضّل https://) أو KASHIER_MERCHANT_REDIRECT_URL.';
+            if (str_contains(strtolower($lastMessage), 'merchantredirect')) {
+                $hint = ' جرّب KASHIER_MERCHANT_REDIRECT_URL=https://نطاقك/checkout/kashier/callback ثم php artisan config:clear. سجّل نفس الرابط في لوحة كاشير إن طُلب. يمكن تعيين KASHIER_ENCODE_MERCHANT_REDIRECT=true لإرسال الرابط مرمّزاً (RFC3986).';
             }
-            throw new \RuntimeException('فشل إنشاء جلسة الدفع: ' . (string) $message . $hint);
+            throw new \RuntimeException('فشل إنشاء جلسة الدفع: ' . $lastMessage . $hint);
         }
 
         $data = $response->json();
@@ -131,6 +149,61 @@ class KashierService
             'sessionUrl' => $sessionUrl,
             'sessionId' => $sessionId,
         ];
+    }
+
+    private function buildPaymentSessionPayload(
+        string $orderIdStr,
+        string $amountFormatted,
+        string $expireAt,
+        string $merchantRedirect,
+        ?string $description,
+        ?string $customerEmail,
+        ?string $customerReference
+    ): array {
+        $payload = [
+            'expireAt' => $expireAt,
+            'maxFailureAttempts' => 3,
+            'paymentType' => 'credit',
+            'amount' => $amountFormatted,
+            'currency' => $this->currency,
+            'orderId' => $orderIdStr,
+            'merchantRedirect' => $merchantRedirect,
+            'display' => 'ar',
+            'type' => 'one-time',
+            'allowedMethods' => $this->allowedMethods,
+            'merchantId' => $this->mid,
+            'mode' => $this->mode,
+            'failureRedirect' => 'FALSE',
+            'description' => $this->truncateKashierDescription($description ?? 'Order #' . $orderIdStr),
+            'manualCapture' => false,
+            'saveCard' => 'optional',
+            'retrieveSavedCard' => false,
+            'interactionSource' => 'ECOMMERCE',
+            'enable3DS' => true,
+        ];
+
+        if ($customerEmail || $customerReference) {
+            $payload['customer'] = array_filter([
+                'email' => $customerEmail,
+                'reference' => $customerReference,
+            ]);
+        }
+
+        return $payload;
+    }
+
+    /** وصف الطلب في كاشير: أقل من 120 حرفاً */
+    private function truncateKashierDescription(string $text): string
+    {
+        $text = trim($text);
+        if (function_exists('mb_strlen') && mb_strlen($text) > 120) {
+            return mb_substr($text, 0, 117) . '...';
+        }
+        if (strlen($text) > 120) {
+            return substr($text, 0, 117) . '...';
+        }
+
+        return $text;
     }
 
     /**
