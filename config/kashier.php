@@ -39,8 +39,7 @@ return [
     'payments_session_base' => env('KASHIER_PAYMENTS_SESSION_BASE', 'https://payments.kashier.io'),
 
     /*
-     * رابط العودة بعد الدفع. إن تركته فارغاً يُستخدم رابط التطبيق الحالي.
-     * كاشير قد يرفض localhost أو http — للإنتاج استخدم https وربطاً ثابتاً.
+     * رابط العودة بعد الدفع. إن تركته فارغاً يُبنى من APP_URL + /checkout/kashier/callback (مع ترقية http→https).
      */
     'merchant_redirect_url' => env('KASHIER_MERCHANT_REDIRECT_URL', ''),
 

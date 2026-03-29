@@ -35,6 +35,8 @@ class KashierService
 
     /**
      * إنشاء جلسة دفع عبر Kashier API v3 وإرجاع رابط التوجيه
+     *
+     * @param  string  $merchantRedirect  غير مُستخدم؛ يُحسب الرابط عبر merchantRedirectForKashier() من APP_URL أو KASHIER_MERCHANT_REDIRECT_URL
      */
     public function createPaymentSession(
         string $orderId,
@@ -47,14 +49,10 @@ class KashierService
         $amountFormatted = number_format((float) $amount, 2, '.', '');
         $expireAt = now()->addHours(2)->utc()->format('Y-m-d\TH:i:s.v\Z');
 
-        $redirectUrl = trim($merchantRedirect);
+        $redirectUrl = $this->merchantRedirectForKashier();
         if (!filter_var($redirectUrl, FILTER_VALIDATE_URL)) {
-            throw new \InvalidArgumentException('merchantRedirect must be a valid URL. Got: ' . substr($redirectUrl, 0, 80));
-        }
-        // في بيئة الإنتاج نفرض HTTPS، لكن في البيئة المحلية نسمح بـ http://127.0.0.1 أو localhost للتجربة
-        if (!app()->environment('local') && str_starts_with(strtolower($redirectUrl), 'http://')) {
-            throw new \RuntimeException(
-                'بوابة كاشير تقبل فقط روابط HTTPS. للتجربة المحلية يمكنك استخدام http://127.0.0.1 فقط أو ضبط رابط HTTPS في KASHIER_MERCHANT_REDIRECT_URL.'
+            throw new \InvalidArgumentException(
+                'رابط العودة لكاشير غير صالح. ضبط APP_URL أو KASHIER_MERCHANT_REDIRECT_URL. القيمة: ' . substr($redirectUrl, 0, 120)
             );
         }
         $orderIdStr = (string) $orderId;
@@ -113,7 +111,7 @@ class KashierService
             ]);
             $hint = '';
             if (is_string($message) && str_contains($message, 'merchantRedirect')) {
-                $hint = ' تأكد من KASHIER_MERCHANT_REDIRECT_URL أو APP_URL: يجب أن يكون رابط HTTPS عاماً (كاشير غالباً يرفض http وlocalhost).';
+                $hint = ' تأكد من APP_URL (يفضّل https://) أو KASHIER_MERCHANT_REDIRECT_URL.';
             }
             throw new \RuntimeException('فشل إنشاء جلسة الدفع: ' . (string) $message . $hint);
         }
@@ -180,6 +178,39 @@ class KashierService
         }
 
         return $id !== null && $id !== '' ? (string) $id : null;
+    }
+
+    /**
+     * رابط العودة بعد الدفع لكاشير: KASHIER_MERCHANT_REDIRECT_URL إن وُجد، وإلا APP_URL + مسار الـ callback.
+     */
+    public function merchantRedirectForKashier(): string
+    {
+        $configured = trim((string) config('kashier.merchant_redirect_url', ''));
+        if ($configured !== '') {
+            return $this->ensureHttpsScheme(rtrim($configured, '/'));
+        }
+
+        $base = rtrim(trim((string) config('app.url', '')), '/');
+        if ($base !== '') {
+            $path = route('public.checkout.kashier.callback', [], false);
+
+            return $this->ensureHttpsScheme($base . $path);
+        }
+
+        return $this->ensureHttpsScheme((string) url()->route('public.checkout.kashier.callback'));
+    }
+
+    private function ensureHttpsScheme(string $url): string
+    {
+        $url = rtrim(trim($url), '/');
+        if ($url === '') {
+            return $url;
+        }
+        if (preg_match('#^http://#i', $url)) {
+            return 'https://' . substr($url, 7);
+        }
+
+        return $url;
     }
 
     /**
