@@ -50,10 +50,8 @@ class KashierService
         $expireAt = now()->addHours(2)->utc()->format('Y-m-d\TH:i:s.v\Z');
 
         $redirectUrl = $this->merchantRedirectForKashier();
-        if (!filter_var($redirectUrl, FILTER_VALIDATE_URL)) {
-            throw new \InvalidArgumentException(
-                'رابط العودة لكاشير غير صالح. ضبط APP_URL أو KASHIER_MERCHANT_REDIRECT_URL. القيمة: ' . substr($redirectUrl, 0, 120)
-            );
+        if (config('kashier.encode_merchant_redirect', false)) {
+            $redirectUrl = rawurlencode($redirectUrl);
         }
         $orderIdStr = (string) $orderId;
         $payload = [
@@ -69,7 +67,6 @@ class KashierService
             'display' => 'ar',
             'type' => 'one-time',
             'allowedMethods' => $this->allowedMethods,
-            'redirectMethod' => null,
             'merchantId' => $this->mid,
             'mode' => $this->mode,
             'failureRedirect' => false,
@@ -187,22 +184,94 @@ class KashierService
     {
         $configured = trim((string) config('kashier.merchant_redirect_url', ''));
         if ($configured !== '') {
-            return $this->ensureHttpsScheme(rtrim($configured, '/'));
+            return $this->canonicalMerchantRedirectUrl($configured);
         }
 
         $base = rtrim(trim((string) config('app.url', '')), '/');
         if ($base !== '') {
             $path = route('public.checkout.kashier.callback', [], false);
 
-            return $this->ensureHttpsScheme($base . $path);
+            return $this->canonicalMerchantRedirectUrl($base . $path);
         }
 
-        return $this->ensureHttpsScheme((string) url()->route('public.checkout.kashier.callback'));
+        return $this->canonicalMerchantRedirectUrl((string) url()->route('public.checkout.kashier.callback'));
+    }
+
+    /**
+     * رابط مطلق https بصيغة يقبلها تحقق كاشير (نطاق ASCII، مسار موحّد، بدون منفذ 443 الصريح).
+     */
+    private function canonicalMerchantRedirectUrl(string $url): string
+    {
+        $url = trim($url);
+        $url = preg_replace('/^\xEF\xBB\xBF/', '', $url) ?? $url;
+        $url = preg_replace('/[\x{200B}-\x{200D}\x{FEFF}]/u', '', $url) ?? $url;
+
+        if ($url === '') {
+            throw new \InvalidArgumentException('رابط العودة لكاشير فارغ. ضبط APP_URL أو KASHIER_MERCHANT_REDIRECT_URL.');
+        }
+
+        if (! preg_match('#^https?://#i', $url)) {
+            $base = rtrim(trim((string) config('app.url', '')), '/');
+            if ($base === '') {
+                throw new \InvalidArgumentException(
+                    'رابط العودة نسبي أو بدون مخطط وAPP_URL غير مضبوط. مثال: APP_URL=https://mindlytics-academy.com'
+                );
+            }
+            if (! preg_match('#^https?://#i', $base)) {
+                $base = 'https://' . preg_replace('#^http://#i', '', $base);
+            }
+            $url = rtrim($base, '/') . '/' . ltrim($url, '/');
+        }
+
+        $url = $this->ensureHttpsScheme($url);
+
+        $parts = parse_url($url);
+        if ($parts === false || empty($parts['host'])) {
+            throw new \InvalidArgumentException(
+                'رابط العودة لكاشير غير صالح. تحقق من APP_URL وKASHIER_MERCHANT_REDIRECT_URL: ' . substr($url, 0, 120)
+            );
+        }
+
+        $host = strtolower($parts['host']);
+        if (function_exists('idn_to_ascii') && defined('INTL_IDNA_VARIANT_UTS46') && ! str_contains($host, 'xn--')) {
+            $ascii = @idn_to_ascii($host, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46);
+            if ($ascii !== false) {
+                $host = $ascii;
+            }
+        }
+
+        $path = $parts['path'] ?? '';
+        if ($path === '' || $path === '/') {
+            $path = '/checkout/kashier/callback';
+        } else {
+            if ($path[0] !== '/') {
+                $path = '/' . $path;
+            }
+            $path = preg_replace('#/+#', '/', $path) ?? $path;
+        }
+
+        $port = '';
+        if (! empty($parts['port'])) {
+            $p = (int) $parts['port'];
+            if ($p !== 443 && $p !== 80) {
+                $port = ':' . $p;
+            }
+        }
+
+        $query = isset($parts['query']) && $parts['query'] !== '' ? '?' . $parts['query'] : '';
+
+        $canonical = 'https://' . $host . $port . $path . $query;
+
+        if (! filter_var($canonical, FILTER_VALIDATE_URL)) {
+            throw new \InvalidArgumentException('رابط العودة بعد التطبيع مرفوض: ' . substr($canonical, 0, 150));
+        }
+
+        return $canonical;
     }
 
     private function ensureHttpsScheme(string $url): string
     {
-        $url = rtrim(trim($url), '/');
+        $url = trim($url);
         if ($url === '') {
             return $url;
         }
