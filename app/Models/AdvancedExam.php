@@ -126,4 +126,9 @@ class AdvancedExam extends Model
     {
         return $this->morphMany(CurriculumItem::class, 'item');
     }
+
+    public function offlineCurriculumItems()
+    {
+        return $this->morphMany(OfflineCurriculumItem::class, 'item');
+    }
 }

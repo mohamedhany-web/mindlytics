@@ -490,7 +490,7 @@
 
             <!-- إدارة التسجيلات -->
             <?php
-                $enrollmentsOpen = request()->routeIs('admin.online-enrollments.*') || request()->routeIs('admin.offline-enrollments.*') || request()->routeIs('admin.learning-path-enrollments.*');
+                $enrollmentsOpen = request()->routeIs('admin.online-enrollments.*') || request()->routeIs('admin.learning-path-enrollments.*');
             ?>
             <li x-data="{ open: <?php echo e($enrollmentsOpen ? 'true' : 'false'); ?> }">
                 <button @click="open = !open" 
@@ -508,14 +508,6 @@
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.online-enrollments.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : ''); ?>">
                             <i class="fas fa-laptop w-4"></i>
                             <span><?php echo e(__('admin.online_enrollments')); ?></span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="<?php echo e(route('admin.offline-enrollments.index')); ?>" 
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.offline-enrollments.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : ''); ?>">
-                            <i class="fas fa-chalkboard-teacher w-4"></i>
-                            <span><?php echo e(__('admin.offline_enrollments')); ?></span>
                         </a>
                     </li>
                     <li>
@@ -752,7 +744,7 @@
 
             <!-- إدارة الكورسات الأوفلاين -->
             <?php
-                $offlineCoursesOpen = request()->routeIs('admin.offline-courses.*') || request()->routeIs('admin.offline-groups.*') || request()->routeIs('admin.offline-enrollments.*') || request()->routeIs('admin.offline-activities.*') || request()->routeIs('admin.offline-agreements.*') || request()->routeIs('admin.offline-locations.*');
+                $offlineCoursesOpen = request()->routeIs('admin.offline-courses.*') || request()->routeIs('admin.offline-groups.*') || request()->routeIs('admin.offline-enrollments.*') || request()->routeIs('admin.offline-course-bookings.*') || request()->routeIs('admin.offline-activities.*') || request()->routeIs('admin.offline-agreements.*') || request()->routeIs('admin.offline-locations.*');
             ?>
             <li x-data="{ open: <?php echo e($offlineCoursesOpen ? 'true' : 'false'); ?> }">
                 <button @click="open = !open" 
@@ -787,6 +779,32 @@
                             ?>
                             <?php if($activeOfflineCourses > 0): ?>
                                 <span class="mr-auto bg-purple-500 text-white text-xs font-bold rounded-full px-2 py-0.5 shadow-lg"><?php echo e($activeOfflineCourses); ?></span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="<?php echo e(route('admin.offline-enrollments.index')); ?>"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.offline-enrollments.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : ''); ?>">
+                            <i class="fas fa-user-check w-4"></i>
+                            <span><?php echo e(__('admin.offline_enrollments')); ?></span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="<?php echo e(route('admin.offline-course-bookings.index')); ?>"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.offline-course-bookings.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : ''); ?>">
+                            <i class="fas fa-calendar-check w-4"></i>
+                            <span>حجوزات أوفلاين</span>
+                            <?php
+                                try {
+                                    $pendingOfflineBookingsMenu = \App\Models\OfflineCourseBooking::where('status', 'pending')->count();
+                                } catch (\Exception $e) {
+                                    $pendingOfflineBookingsMenu = 0;
+                                }
+                            ?>
+                            <?php if($pendingOfflineBookingsMenu > 0): ?>
+                                <span class="mr-auto bg-amber-500 text-white text-xs font-bold rounded-full px-2 py-0.5"><?php echo e($pendingOfflineBookingsMenu); ?></span>
                             <?php endif; ?>
                         </a>
                     </li>

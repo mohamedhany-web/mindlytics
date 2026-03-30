@@ -85,6 +85,11 @@
             </h3>
             <p class="text-sm text-slate-600 mb-4">إضافة الموارد والمحاضرات والواجبات/الاختبارات للطلاب (واجهات منفصلة عن الكورسات الأونلاين).</p>
             <div class="flex flex-wrap gap-3">
+                <a href="{{ route('instructor.offline-courses.curriculum.index', $offlineCourse) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200 font-semibold transition-colors">
+                    <i class="fas fa-sitemap"></i>
+                    <span>بناء المنهج</span>
+                    <span class="text-indigo-500">({{ $offlineCourse->offlineCourseSections()->count() }} قسم)</span>
+                </a>
                 <a href="{{ route('instructor.offline-courses.resources.index', $offlineCourse) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 font-semibold transition-colors">
                     <i class="fas fa-file-alt"></i>
                     <span>الموارد</span>

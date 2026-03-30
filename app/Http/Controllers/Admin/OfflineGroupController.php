@@ -9,6 +9,7 @@ use App\Models\OfflineGroupSession;
 use App\Models\OfflineLocation;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 
 class OfflineGroupController extends Controller
@@ -40,10 +41,19 @@ class OfflineGroupController extends Controller
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'session_duration_hours' => 'nullable|numeric|min:0.5|max:24',
+            'public_booking_enabled' => 'sometimes|boolean',
+            'public_slug' => ['nullable', 'string', 'max:120', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('offline_course_groups', 'public_slug')],
         ]);
 
         $validated['offline_course_id'] = $offlineCourse->id;
         $validated['status'] = 'active';
+        $validated['public_booking_enabled'] = $request->boolean('public_booking_enabled');
+        if ($validated['public_booking_enabled'] && empty($validated['public_slug'] ?? '')) {
+            $validated['public_slug'] = OfflineCourseGroup::generateUniquePublicSlug($validated['name']);
+        }
+        if (! $validated['public_booking_enabled']) {
+            $validated['public_slug'] = null;
+        }
 
         $group = OfflineCourseGroup::create($validated);
 
@@ -65,7 +75,20 @@ class OfflineGroupController extends Controller
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'session_duration_hours' => 'nullable|numeric|min:0.5|max:24',
             'status' => 'required|in:active,completed,cancelled',
+            'public_booking_enabled' => 'sometimes|boolean',
+            'public_slug' => [
+                'nullable',
+                'string',
+                'max:120',
+                'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+                Rule::unique('offline_course_groups', 'public_slug')->ignore($group->id),
+            ],
         ]);
+
+        $validated['public_booking_enabled'] = $request->boolean('public_booking_enabled');
+        if ($validated['public_booking_enabled'] && empty($validated['public_slug'] ?? '')) {
+            $validated['public_slug'] = OfflineCourseGroup::generateUniquePublicSlug($validated['name'], $group->id);
+        }
 
         $group->update($validated);
 

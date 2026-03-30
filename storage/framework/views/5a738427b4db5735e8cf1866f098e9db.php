@@ -32,6 +32,15 @@
     </select>
 </div>
 <div>
+    <label class="block text-sm font-medium text-gray-700 mb-1">الأولوية <span class="text-red-500">*</span></label>
+    <select name="priority" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+        <?php $__currentLoopData = \App\Models\SalesLead::PRIORITIES; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $k => $label): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <option value="<?php echo e($k); ?>" <?php if(old('priority', $lead->priority ?? 'normal') === $k): echo 'selected'; endif; ?>><?php echo e($label); ?></option>
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+    </select>
+    <p class="text-xs text-gray-500 mt-1">عاجل يظهر في لوحة التحكم ويُرتّب أعلى القائمة عند اختيار ترتيب الأولوية.</p>
+</div>
+<div>
     <label class="block text-sm font-medium text-gray-700 mb-1">قيمة متوقعة (ج.م)</label>
     <input type="number" step="0.01" min="0" name="expected_value" value="<?php echo e(old('expected_value', $lead->expected_value ?? '')); ?>" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
 </div>

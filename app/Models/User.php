@@ -214,6 +214,11 @@ class User extends Authenticatable
         return $this->hasMany(OfflineCourseEnrollment::class, 'user_id');
     }
 
+    public function offlineCourseBookings()
+    {
+        return $this->hasMany(OfflineCourseBooking::class, 'user_id');
+    }
+
     /**
      * مشاريع البورتفوليو (للطالب)
      */

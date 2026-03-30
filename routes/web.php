@@ -385,6 +385,15 @@ Route::get('/workshops/{slug}', [\App\Http\Controllers\Public\WorkshopPublicCont
 Route::post('/workshops/{slug}/register', [\App\Http\Controllers\Public\WorkshopPublicController::class, 'register'])
     ->name('public.workshops.register');
 
+// حجز مجموعة كورس أوفلاين (رابط عام — تصميم مشابه لصفحة الدفع)
+Route::get('/offline-groups/{slug}', [\App\Http\Controllers\Public\OfflineGroupPublicBookingController::class, 'show'])
+    ->where('slug', '[a-z0-9-]+')
+    ->name('public.offline-groups.show');
+Route::post('/offline-groups/{slug}/book', [\App\Http\Controllers\Public\OfflineGroupPublicBookingController::class, 'store'])
+    ->middleware('auth')
+    ->where('slug', '[a-z0-9-]+')
+    ->name('public.offline-groups.book');
+
 // استقبال العودة من بوابة كاشير بعد الدفع (بدون auth لأن كاشير يوجّه المتصفح هنا)
 Route::get('/checkout/kashier/callback', [\App\Http\Controllers\Public\CheckoutController::class, 'kashierCallback'])
     ->name('public.checkout.kashier.callback');
@@ -472,6 +481,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             // الكورسات الأوفلاين للطلاب (واجهات منفصلة عن الأونلاين)
             Route::prefix('offline-courses')->name('student.offline-courses.')->group(function () {
                 Route::get('/', [\App\Http\Controllers\Student\OfflineCourseController::class, 'index'])->name('index');
+                Route::get('/booking/catalog', [\App\Http\Controllers\Student\OfflineCourseBookingController::class, 'catalog'])->name('booking.catalog');
+                Route::get('/{offlineCourse}/booking/create', [\App\Http\Controllers\Student\OfflineCourseBookingController::class, 'create'])->name('booking.create');
+                Route::post('/{offlineCourse}/booking', [\App\Http\Controllers\Student\OfflineCourseBookingController::class, 'store'])->name('booking.store');
                 Route::get('/{offlineCourse}/resources', [\App\Http\Controllers\Student\OfflineCourseController::class, 'resources'])->name('resources');
                 Route::get('/{offlineCourse}/lectures', [\App\Http\Controllers\Student\OfflineCourseController::class, 'lectures'])->name('lectures');
                 Route::get('/{offlineCourse}/activities/{activity}', [\App\Http\Controllers\Student\OfflineCourseController::class, 'activityShow'])->name('activities.show');
@@ -1047,6 +1059,13 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::delete('/{offlineEnrollment}', [\App\Http\Controllers\Admin\OfflineEnrollmentsController::class, 'destroy'])->name('destroy');
         });
 
+        Route::prefix('offline-course-bookings')->name('offline-course-bookings.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\OfflineCourseBookingController::class, 'index'])->name('index');
+            Route::get('/{offlineCourseBooking}', [\App\Http\Controllers\Admin\OfflineCourseBookingController::class, 'show'])->name('show');
+            Route::post('/{offlineCourseBooking}/approve', [\App\Http\Controllers\Admin\OfflineCourseBookingController::class, 'approve'])->name('approve');
+            Route::post('/{offlineCourseBooking}/reject', [\App\Http\Controllers\Admin\OfflineCourseBookingController::class, 'reject'])->name('reject');
+        });
+
         // إدارة تسجيل الطلاب في المسارات التعليمية
         Route::prefix('learning-path-enrollments')->name('learning-path-enrollments.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\LearningPathEnrollmentController::class, 'index'])->name('index');
@@ -1412,6 +1431,18 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::resource('lectures', \App\Http\Controllers\Instructor\OfflineLectureController::class)->parameters(['lecture' => 'lecture']);
             Route::resource('activities', \App\Http\Controllers\Instructor\OfflineActivityController::class)->parameters(['activity' => 'activity']);
             Route::post('activities/{activity}/submissions/{submission}/grade', [\App\Http\Controllers\Instructor\OfflineActivityController::class, 'gradeSubmission'])->name('activities.submissions.grade');
+
+            Route::prefix('curriculum')->name('curriculum.')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Instructor\OfflineCurriculumController::class, 'index'])->name('index');
+                Route::post('/sections', [\App\Http\Controllers\Instructor\OfflineCurriculumController::class, 'storeSection'])->name('sections.store');
+                Route::put('/sections/{section}', [\App\Http\Controllers\Instructor\OfflineCurriculumController::class, 'updateSection'])->name('sections.update');
+                Route::delete('/sections/{section}', [\App\Http\Controllers\Instructor\OfflineCurriculumController::class, 'destroySection'])->name('sections.destroy');
+                Route::post('/sections/{section}/move', [\App\Http\Controllers\Instructor\OfflineCurriculumController::class, 'moveSection'])->name('sections.move');
+                Route::post('/attach-item', [\App\Http\Controllers\Instructor\OfflineCurriculumController::class, 'attachItem'])->name('attach-item');
+                Route::post('/sections/{section}/notes', [\App\Http\Controllers\Instructor\OfflineCurriculumController::class, 'storeNote'])->name('sections.notes.store');
+                Route::post('/items/{item}/move', [\App\Http\Controllers\Instructor\OfflineCurriculumController::class, 'moveItem'])->name('items.move');
+                Route::delete('/items/{item}', [\App\Http\Controllers\Instructor\OfflineCurriculumController::class, 'destroyItem'])->name('items.destroy');
+            });
         });
         Route::get('courses/{course}/curriculum', [\App\Http\Controllers\Instructor\CurriculumController::class, 'index'])->name('courses.curriculum');
         Route::post('courses/{course}/curriculum/exams', [\App\Http\Controllers\Instructor\CurriculumController::class, 'storeExamFromCurriculum'])->name('courses.curriculum.exams.store');

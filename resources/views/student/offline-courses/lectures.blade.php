@@ -27,7 +27,7 @@
         @else
             <ul class="divide-y divide-gray-100">
                 @foreach($lectures as $lecture)
-                    <li class="p-4 sm:p-5 hover:bg-gray-50/50">
+                    <li id="offline-lecture-{{ $lecture->id }}" class="p-4 sm:p-5 hover:bg-gray-50/50 scroll-mt-24">
                         <h3 class="font-semibold text-gray-900 mb-2">{{ $lecture->title }}</h3>
                         @if($lecture->description)
                             <p class="text-sm text-gray-600 mb-3">{{ Str::limit($lecture->description, 200) }}</p>

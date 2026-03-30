@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\OfflineCourse;
 use App\Models\User;
 use App\Models\OfflineLocation;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -85,7 +86,23 @@ class OfflineCourseController extends Controller
             'max_students' => 'required|integer|min:1',
             'status' => 'required|in:draft,active,completed,cancelled',
             'notes' => 'nullable|string',
+            'public_booking_enabled' => 'sometimes|boolean',
+            'booking_opens_at' => 'nullable|date',
+            'booking_closes_at' => 'nullable|date|after_or_equal:booking_opens_at',
         ]);
+
+        $validated['public_booking_enabled'] = $request->boolean('public_booking_enabled');
+        foreach (['booking_opens_at', 'booking_closes_at'] as $k) {
+            if (empty($validated[$k] ?? null)) {
+                $validated[$k] = null;
+            }
+        }
+        if (! empty($validated['booking_closes_at'])) {
+            $dt = Carbon::parse($validated['booking_closes_at']);
+            if ($dt->format('H:i:s') === '00:00:00') {
+                $validated['booking_closes_at'] = $dt->copy()->endOfDay()->format('Y-m-d H:i:s');
+            }
+        }
 
         $course = OfflineCourse::create($validated);
 
@@ -157,7 +174,23 @@ class OfflineCourseController extends Controller
             'max_students' => 'required|integer|min:1',
             'status' => 'required|in:draft,active,completed,cancelled',
             'notes' => 'nullable|string',
+            'public_booking_enabled' => 'sometimes|boolean',
+            'booking_opens_at' => 'nullable|date',
+            'booking_closes_at' => 'nullable|date|after_or_equal:booking_opens_at',
         ]);
+
+        $validated['public_booking_enabled'] = $request->boolean('public_booking_enabled');
+        foreach (['booking_opens_at', 'booking_closes_at'] as $k) {
+            if (empty($validated[$k] ?? null)) {
+                $validated[$k] = null;
+            }
+        }
+        if (! empty($validated['booking_closes_at'])) {
+            $dt = Carbon::parse($validated['booking_closes_at']);
+            if ($dt->format('H:i:s') === '00:00:00') {
+                $validated['booking_closes_at'] = $dt->copy()->endOfDay()->format('Y-m-d H:i:s');
+            }
+        }
 
         $offlineCourse->update($validated);
 

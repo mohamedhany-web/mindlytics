@@ -96,6 +96,19 @@
                 <label class="block text-sm font-medium text-gray-700 mb-1">الوصف</label>
                 <textarea name="description" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">{{ old('description') }}</textarea>
             </div>
+            <div class="md:col-span-2 lg:col-span-3 border-t border-gray-200 pt-4 mt-2">
+                <p class="text-sm font-semibold text-gray-800 mb-3"><i class="fas fa-globe text-purple-600 ml-2"></i>حجز عبر رابط عام (مثل الورش)</p>
+                <input type="hidden" name="public_booking_enabled" value="0">
+                <label class="inline-flex items-center gap-2 cursor-pointer mb-3">
+                    <input type="checkbox" name="public_booking_enabled" value="1" {{ old('public_booking_enabled') ? 'checked' : '' }} class="rounded border-gray-300 text-purple-600 focus:ring-purple-500">
+                    <span class="text-sm text-gray-700">تفعيل صفحة حجز علنية لهذه المجموعة</span>
+                </label>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">المسار في الرابط (إنجليزي، شرطات فقط) — اختياري؛ يُولَّد تلقائياً إن تُرك فارغاً</label>
+                    <input type="text" name="public_slug" value="{{ old('public_slug') }}" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="مثال: cairo-batch-1"
+                           class="w-full max-w-lg px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 font-mono text-sm">
+                </div>
+            </div>
             <div class="md:col-span-2 lg:col-span-3">
                 <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-medium transition-colors">
                     <i class="fas fa-plus mr-2"></i>إضافة المجموعة
@@ -124,7 +137,19 @@
                             <span><i class="fas fa-clock text-amber-500 ml-1"></i> {{ $group->session_duration_hours }} ساعة/جلسة</span>
                         @endif
                         <span><i class="fas fa-calendar-check text-teal-500 ml-1"></i> {{ $group->sessions_count ?? $group->sessions->count() }} جلسة</span>
+                        @php
+                            $pendBook = $group->pendingBookingsCount();
+                            $effRem = $group->effectiveAvailableSeats();
+                        @endphp
+                        <span><i class="fas fa-hourglass-half text-amber-500 ml-1"></i> حجوزات معلقة: {{ $pendBook }}</span>
+                        <span><i class="fas fa-door-open text-cyan-600 ml-1"></i> متاح للحجز (بالرابط): {{ $effRem }}</span>
                     </div>
+                    @if($group->public_booking_enabled && $group->public_slug)
+                        <div class="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm">
+                            <span class="font-semibold text-purple-900"><i class="fas fa-link ml-1"></i> رابط حجز المجموعة:</span>
+                            <a href="{{ route('public.offline-groups.show', $group->public_slug) }}" target="_blank" rel="noopener" class="text-blue-600 hover:underline break-all mr-2">{{ route('public.offline-groups.show', $group->public_slug) }}</a>
+                        </div>
+                    @endif
                 </div>
                 <div class="flex gap-2">
                     @php
@@ -283,6 +308,18 @@
                         <div class="md:col-span-2">
                             <label class="block text-sm font-medium text-gray-700 mb-1">الوصف</label>
                             <textarea name="description" x-model="editGroup.description" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+                        </div>
+                        <div class="md:col-span-2 border-t border-gray-200 pt-4 mt-2">
+                            <p class="text-sm font-semibold text-gray-800 mb-2"><i class="fas fa-link text-purple-600 ml-1"></i>رابط الحجز العام</p>
+                            <input type="hidden" name="public_booking_enabled" value="0">
+                            <label class="inline-flex items-center gap-2 cursor-pointer mb-3">
+                                <input type="checkbox" name="public_booking_enabled" value="1" :checked="editGroup.public_booking_enabled == true || editGroup.public_booking_enabled == 1" class="rounded border-gray-300 text-purple-600 focus:ring-purple-500">
+                                <span class="text-sm text-gray-700">تفعيل صفحة الحجز العلنية</span>
+                            </label>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">المسار (slug)</label>
+                                <input type="text" name="public_slug" x-model="editGroup.public_slug" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 font-mono text-sm" placeholder="يُولَّد تلقائياً إن فُعِّل الحجز وترك فارغاً">
+                            </div>
                         </div>
                     </div>
                     <div class="mt-4 flex justify-end gap-2">

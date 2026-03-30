@@ -8,7 +8,10 @@ use App\Models\OfflineCourseEnrollment;
 use App\Models\OfflineActivity;
 use App\Models\OfflineActivitySubmission;
 use App\Models\OfflineCourseResource;
+use App\Models\OfflineCurriculumItem;
+use App\Models\OfflineCurriculumNote;
 use App\Models\OfflineLecture;
+use App\Models\AdvancedExam;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -86,13 +89,104 @@ class OfflineCourseController extends Controller
             ? $enrollment->group->sessions()->upcoming()->ordered()->take(10)->get()
             : collect();
 
+        $curriculumRoots = $this->curriculumSectionsForStudent($offlineCourse, $enrollment);
+
         return view('student.offline-courses.show', compact(
             'offlineCourse',
             'enrollment',
             'pendingActivities',
             'completedActivities',
-            'upcomingSessions'
+            'upcomingSessions',
+            'curriculumRoots'
         ));
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, \App\Models\OfflineCourseSection>
+     */
+    private function curriculumSectionsForStudent(OfflineCourse $course, OfflineCourseEnrollment $enrollment)
+    {
+        $all = $course->offlineCourseSections()
+            ->where('is_active', true)
+            ->with(['items' => function ($q) {
+                $q->where('is_active', true)->orderBy('order')->orderBy('id')->with('item');
+            }])
+            ->orderBy('order')
+            ->orderBy('id')
+            ->get();
+
+        foreach ($all as $section) {
+            $section->setRelation(
+                'items',
+                $section->items->filter(fn (OfflineCurriculumItem $ci) => $this->offlineCurriculumItemVisible($ci, $enrollment))->values()
+            );
+        }
+
+        foreach ($all as $section) {
+            $section->setRelation('children', $all->where('parent_id', $section->id)->values());
+        }
+
+        return $all->whereNull('parent_id')->values();
+    }
+
+    private function offlineCurriculumItemVisible(OfflineCurriculumItem $ci, OfflineCourseEnrollment $enrollment): bool
+    {
+        $m = $ci->item;
+        if (! $m) {
+            return false;
+        }
+
+        $gid = $enrollment->group_id ? (int) $enrollment->group_id : null;
+
+        if ($m instanceof OfflineLecture) {
+            if (! $m->is_active) {
+                return false;
+            }
+            if ($gid && $m->group_id && (int) $m->group_id !== $gid) {
+                return false;
+            }
+
+            return true;
+        }
+
+        if ($m instanceof OfflineCourseResource) {
+            if (! $m->is_active) {
+                return false;
+            }
+            if ($gid && $m->group_id && (int) $m->group_id !== $gid) {
+                return false;
+            }
+
+            return true;
+        }
+
+        if ($m instanceof OfflineActivity) {
+            if ($m->status !== 'published' || ! $m->is_active) {
+                return false;
+            }
+            if ($gid && $m->group_id && (int) $m->group_id !== $gid) {
+                return false;
+            }
+
+            return true;
+        }
+
+        if ($m instanceof AdvancedExam) {
+            if (! $m->is_active || ! $m->is_published) {
+                return false;
+            }
+            if ((int) ($m->offline_course_id ?? 0) !== (int) $enrollment->offline_course_id) {
+                return false;
+            }
+
+            return true;
+        }
+
+        if ($m instanceof OfflineCurriculumNote) {
+            return true;
+        }
+
+        return false;
     }
 
     /**

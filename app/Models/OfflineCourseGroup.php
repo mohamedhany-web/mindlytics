@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\OfflineGroupSession;
+use Illuminate\Support\Str;
 
 class OfflineCourseGroup extends Model
 {
@@ -24,6 +25,8 @@ class OfflineCourseGroup extends Model
         'location_id',
         'status',
         'is_active',
+        'public_slug',
+        'public_booking_enabled',
     ];
 
     protected $casts = [
@@ -32,6 +35,7 @@ class OfflineCourseGroup extends Model
         'end_date' => 'date',
         'session_duration_hours' => 'decimal:1',
         'is_active' => 'boolean',
+        'public_booking_enabled' => 'boolean',
     ];
 
     /**
@@ -56,6 +60,56 @@ class OfflineCourseGroup extends Model
     public function enrollments(): HasMany
     {
         return $this->hasMany(OfflineCourseEnrollment::class, 'group_id');
+    }
+
+    /**
+     * طلبات حجز معلقة لهذه المجموعة (صفحة الحجز العامة بالرابط).
+     */
+    public function pendingBookings(): HasMany
+    {
+        return $this->hasMany(OfflineCourseBooking::class, 'requested_group_id')
+            ->where('status', OfflineCourseBooking::STATUS_PENDING);
+    }
+
+    public function pendingBookingsCount(): int
+    {
+        return (int) $this->pendingBookings()->count();
+    }
+
+    /**
+     * مقاعد متاحة مع احتساب الطلبات المعلقة على هذه المجموعة.
+     */
+    public function effectiveAvailableSeats(): int
+    {
+        return max(0, $this->availableSeats() - $this->pendingBookingsCount());
+    }
+
+    public function canAcceptPublicBooking(): bool
+    {
+        if (! $this->public_booking_enabled || ! $this->is_active || $this->status !== 'active') {
+            return false;
+        }
+
+        return $this->effectiveAvailableSeats() > 0 && filled($this->public_slug);
+    }
+
+    public static function generateUniquePublicSlug(string $fromName, ?int $exceptId = null): string
+    {
+        $base = Str::slug($fromName) ?: 'group';
+        $slug = $base;
+        $n = 0;
+
+        while (true) {
+            $q = static::query()->where('public_slug', $slug);
+            if ($exceptId !== null) {
+                $q->where('id', '!=', $exceptId);
+            }
+            if (! $q->exists()) {
+                return $slug;
+            }
+            $n++;
+            $slug = $base . '-' . $n;
+        }
     }
 
     /**

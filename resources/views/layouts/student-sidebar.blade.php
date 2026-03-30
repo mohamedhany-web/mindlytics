@@ -146,29 +146,43 @@
             </a>
             @endif
 
-            <!-- Offline Courses -->
+            <!-- الكورسات الأوفلاين (مجموعة واحدة: حجز + كورساتي) -->
             @if($isStudent || $user->hasPermission('student.view.my-courses'))
-            <a href="{{ route('student.offline-courses.index') }}" 
-               @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="nav-card block {{ request()->routeIs('student.offline-courses.*') ? 'active' : '' }}">
-                <div class="flex items-center gap-3">
+            @php
+                $offlineStudentNavOpen = request()->routeIs('student.offline-courses.*');
+                try {
+                    $offlineCountSidebar = auth()->user()->offlineEnrollments()->where('status', 'active')->count();
+                } catch (\Exception $e) {
+                    $offlineCountSidebar = 0;
+                }
+            @endphp
+            <div class="rounded-xl border border-purple-100/80 bg-gradient-to-br from-purple-50/40 to-white overflow-hidden" x-data="{ open: {{ $offlineStudentNavOpen ? 'true' : 'false' }} }">
+                <button type="button" @click="open = !open"
+                        class="w-full flex items-center gap-3 px-3 py-2.5 text-right transition-colors hover:bg-purple-50/90 {{ $offlineStudentNavOpen ? 'bg-purple-50/70' : '' }}">
                     <div class="nav-icon bg-gradient-to-br from-purple-500 to-purple-700 text-white flex-shrink-0">
                         <i class="fas fa-chalkboard-teacher text-sm"></i>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.my_offline_courses') }}</div>
-                        @php
-                            try {
-                                $offlineCount = auth()->user()->offlineEnrollments()->where('status', 'active')->count();
-                            } catch (\Exception $e) {
-                                $offlineCount = 0;
-                            }
-                        @endphp
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ $offlineCount }} {{ __('student.offline_course') }}</div>
+                        <div class="font-black text-gray-900 text-sm leading-tight">الكورسات الأوفلاين</div>
+                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ $offlineCountSidebar }} {{ __('student.offline_course') }} نشط</div>
                     </div>
-                    <i class="fas fa-chevron-left text-gray-400 text-xs flex-shrink-0"></i>
+                    <i class="fas fa-chevron-down text-gray-500 text-xs flex-shrink-0 transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
+                </button>
+                <div x-show="open" x-transition class="mr-3 mt-0.5 mb-2 space-y-0.5 border-r-2 border-purple-200/80 pr-2">
+                    <a href="{{ route('student.offline-courses.booking.catalog') }}"
+                       @click="if (window.innerWidth < 1024) sidebarOpen = false"
+                       class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors {{ request()->routeIs('student.offline-courses.booking.*') ? 'bg-purple-600 text-white font-semibold' : 'text-gray-700 hover:bg-purple-100/80' }}">
+                        <i class="fas fa-calendar-plus w-4 text-center opacity-90"></i>
+                        <span>حجز كورس أوفلاين</span>
+                    </a>
+                    <a href="{{ route('student.offline-courses.index') }}"
+                       @click="if (window.innerWidth < 1024) sidebarOpen = false"
+                       class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors {{ request()->routeIs('student.offline-courses.*') && !request()->routeIs('student.offline-courses.booking.*') ? 'bg-purple-600 text-white font-semibold' : 'text-gray-700 hover:bg-purple-100/80' }}">
+                        <i class="fas fa-book-reader w-4 text-center opacity-90"></i>
+                        <span>{{ __('student.my_offline_courses') }}</span>
+                    </a>
                 </div>
-            </a>
+            </div>
             @endif
 
             <!-- مجتمع الذكاء الاصطناعي -->

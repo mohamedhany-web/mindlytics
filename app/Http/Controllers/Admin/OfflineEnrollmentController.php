@@ -10,6 +10,7 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Support\OfflineEnrollmentProvisioner;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -72,36 +73,21 @@ class OfflineEnrollmentController extends Controller
             $paidAmount = min((float) ($validated['paid_amount'] ?? 0), $coursePrice);
         }
 
-        $remainingAmount = max(0, $coursePrice - $paidAmount);
-        $paymentStatus = 'unpaid';
-        if ($paidAmount >= $coursePrice && $coursePrice > 0) {
-            $paymentStatus = 'paid';
-        } elseif ($paidAmount > 0) {
-            $paymentStatus = 'partial';
-        }
-
         DB::beginTransaction();
         try {
-            $enrollment = OfflineCourseEnrollment::create([
-                'user_id' => $validated['user_id'],
-                'offline_course_id' => $offlineCourse->id,
-                'group_id' => $validated['group_id'],
-                'status' => $validated['status'],
-                'enrolled_at' => now(),
-                'total_amount' => $coursePrice,
-                'paid_amount' => $paidAmount,
-                'remaining_amount' => $remainingAmount,
-                'payment_status' => $paymentStatus,
-                'payment_method' => $validated['payment_method'] ?? null,
-                'payment_notes' => $validated['payment_notes'] ?? null,
-            ]);
-
-            $offlineCourse->incrementStudents();
-            $group->increment('current_students');
-
-            if ($paidAmount > 0) {
-                $this->createFinancialRecords($enrollment, $offlineCourse, $paidAmount, $coursePrice, $validated);
-            }
+            OfflineEnrollmentProvisioner::create(
+                $offlineCourse,
+                (int) $validated['user_id'],
+                (int) $validated['group_id'],
+                $validated['status'],
+                $coursePrice,
+                $paidAmount,
+                [
+                    'payment_method' => $validated['payment_method'] ?? null,
+                    'payment_notes' => $validated['payment_notes'] ?? null,
+                ],
+                null
+            );
 
             DB::commit();
 
@@ -181,35 +167,6 @@ class OfflineEnrollmentController extends Controller
             DB::rollBack();
             return back()->withErrors(['error' => 'حدث خطأ أثناء الحذف']);
         }
-    }
-
-    private function createFinancialRecords(OfflineCourseEnrollment $enrollment, OfflineCourse $course, float $paidAmount, float $totalAmount, array $data): void
-    {
-        $invoiceNumber = 'OFF-INV-' . str_pad($enrollment->id, 6, '0', STR_PAD_LEFT);
-
-        $invoice = Invoice::create([
-            'invoice_number' => $invoiceNumber,
-            'user_id' => $enrollment->user_id,
-            'type' => 'offline_course',
-            'description' => "تسجيل في كورس أوفلاين: {$course->title}",
-            'subtotal' => $totalAmount,
-            'tax_amount' => 0,
-            'discount_amount' => 0,
-            'total_amount' => $totalAmount,
-            'status' => $paidAmount >= $totalAmount ? 'paid' : 'pending',
-            'due_date' => now()->addDays(30),
-            'paid_at' => $paidAmount >= $totalAmount ? now() : null,
-            'items' => [[
-                'description' => "كورس أوفلاين: {$course->title}",
-                'quantity' => 1,
-                'unit_price' => $totalAmount,
-                'total' => $totalAmount,
-            ]],
-        ]);
-
-        $enrollment->update(['invoice_id' => $invoice->id]);
-
-        $this->createPaymentRecord($enrollment, $paidAmount, $data, $invoice);
     }
 
     private function createPaymentRecord(OfflineCourseEnrollment $enrollment, float $amount, array $data, ?Invoice $invoice = null): void

@@ -5,29 +5,6 @@
 
 <?php $__env->startSection('content'); ?>
 <div class="space-y-6">
-    <?php if(session('import_report') && $task->isVideoEditing()): ?>
-        <?php $rep = session('import_report'); ?>
-        <div class="bg-white rounded-xl border border-slate-200 p-4 text-sm text-gray-800 shadow-sm">
-            <p class="font-semibold text-gray-900 mb-2">تقرير الاستيراد</p>
-            <p>تم استيراد: <strong><?php echo e($rep['imported'] ?? 0); ?></strong></p>
-            <?php if(!empty($rep['skipped_duplicates'])): ?>
-                <p class="mt-2 text-amber-800">روابط مُتخطاة (مكررة): <?php echo e(count($rep['skipped_duplicates'])); ?></p>
-                <ul class="list-disc list-inside text-xs text-gray-600 max-h-32 overflow-y-auto mt-1">
-                    <?php $__currentLoopData = array_slice($rep['skipped_duplicates'], 0, 15); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $line): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                        <li><?php echo e($line); ?></li>
-                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                </ul>
-            <?php endif; ?>
-            <?php if(!empty($rep['row_errors'])): ?>
-                <p class="mt-2 text-red-800">أخطاء في الصفوف: <?php echo e(count($rep['row_errors'])); ?></p>
-                <ul class="list-disc list-inside text-xs text-gray-600 max-h-32 overflow-y-auto mt-1">
-                    <?php $__currentLoopData = array_slice($rep['row_errors'], 0, 15, true); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $rowNum => $err): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                        <li>صف <?php echo e($rowNum); ?>: <?php echo e($err); ?></li>
-                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                </ul>
-            <?php endif; ?>
-        </div>
-    <?php endif; ?>
     <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
         <div class="flex flex-wrap justify-between items-start gap-4 mb-6">
             <div class="flex-1 min-w-0">
@@ -212,20 +189,21 @@ unset($__errorArgs, $__bag); ?>
                                 <input type="text" name="received_from" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="اسم الشخص أو المصدر">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">مدة الفيديو قبل المونتاج (نص)</label>
-                                <input type="text" name="duration_before" value="<?php echo e(old('duration_before')); ?>" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="مثال: 10:30 أو 45 دقيقة">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">مدة قبل المونتاج (نص)</label>
+                                <input type="text" name="duration_before" value="<?php echo e(old('duration_before')); ?>" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="10:30 = دقيقة:ثانية | 45 أو 45 دقيقة">
+                                <p class="text-xs text-gray-500 mt-1">الشكلان «دقيقة:ثانية» (مثل 12:00 = 12 دقيقة) و«س:د:ث» للمدد الطويلة (1:05:00 = ساعة و5 دقائق).</p>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">مدة الفيديو بعد المونتاج (نص)</label>
-                                <input type="text" name="duration_after" value="<?php echo e(old('duration_after')); ?>" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="مثال: 8:00 أو 35 دقيقة">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">مدة بعد المونتاج (نص)</label>
+                                <input type="text" name="duration_after" value="<?php echo e(old('duration_after')); ?>" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="8:15 = دقيقة:ثانية | 35 دقيقة">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">دقائق قبل (رقم، اختياري)</label>
-                                <input type="number" name="duration_before_minutes" value="<?php echo e(old('duration_before_minutes')); ?>" min="0" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="يُفضَّل لحساب المجاميع">
+                                <input type="number" name="duration_before_minutes" value="<?php echo e(old('duration_before_minutes')); ?>" min="0" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="يُحسب المجموع من هنا إن وُجد">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">دقائق بعد (رقم، اختياري)</label>
-                                <input type="number" name="duration_after_minutes" value="<?php echo e(old('duration_after_minutes')); ?>" min="0" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="يُفضَّل لحساب المجاميع">
+                                <input type="number" name="duration_after_minutes" value="<?php echo e(old('duration_after_minutes')); ?>" min="0" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500" placeholder="يُحسب المجموع من هنا إن وُجد">
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">ملاحظات (اختياري)</label>
@@ -238,23 +216,16 @@ unset($__errorArgs, $__bag); ?>
                     </form>
 
                     <div class="mt-6 pt-6 border-t border-violet-200">
-                        <h5 class="text-sm font-semibold text-gray-900 mb-3"><i class="fas fa-file-excel text-green-600 mr-2"></i>استيراد عدة تسليمات من Excel</h5>
-                        <p class="text-xs text-gray-600 mb-3">عمود إلزامي: رابط الفيديو (Bunny). يُمنع تكرار نفس الرابط في الملف أو في التسليمات السابقة.</p>
-                        <div class="flex flex-wrap items-center gap-3 mb-4">
+                        <h5 class="text-sm font-semibold text-gray-900 mb-3"><i class="fas fa-file-excel text-green-600 mr-2"></i>Excel — قالب أو تصدير تسليماتك</h5>
+                        <p class="text-xs text-gray-600 mb-3">تصدير يحتوي التسليمات الحالية بنفس أعمدة القالب (للمراجعة أو الأرشفة). الاستيراد الجماعي متاح من لوحة الإدارة فقط.</p>
+                        <div class="flex flex-wrap items-center gap-3">
                             <a href="<?php echo e(route('employee.tasks.deliverables.montage-excel-template', $task)); ?>" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-violet-300 text-violet-800 text-sm font-medium hover:bg-violet-50">
-                                <i class="fas fa-download"></i> تنزيل القالب
+                                <i class="fas fa-download"></i> تنزيل قالب فارغ
+                            </a>
+                            <a href="<?php echo e(route('employee.tasks.deliverables.montage-export', $task)); ?>" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium shadow-sm">
+                                <i class="fas fa-file-export"></i> تصدير تسليماتي (.xlsx)
                             </a>
                         </div>
-                        <form action="<?php echo e(route('employee.tasks.deliverables.import-excel', $task)); ?>" method="POST" enctype="multipart/form-data" class="flex flex-wrap items-end gap-3">
-                            <?php echo csrf_field(); ?>
-                            <div class="flex-1 min-w-[200px]">
-                                <label class="block text-xs font-medium text-gray-700 mb-1">ملف Excel (.xlsx)</label>
-                                <input type="file" name="excel_file" accept=".xlsx,.xls,.csv" required class="w-full text-sm text-gray-700 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-violet-100 file:text-violet-800">
-                            </div>
-                            <button type="submit" class="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium">
-                                <i class="fas fa-file-import mr-1"></i> استيراد
-                            </button>
-                        </form>
                     </div>
                 </div>
             <?php else: ?>

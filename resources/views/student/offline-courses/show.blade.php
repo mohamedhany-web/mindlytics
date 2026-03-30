@@ -75,6 +75,21 @@
         </div>
     </div>
 
+    @if($curriculumRoots->isNotEmpty())
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="p-5 sm:p-6 border-b border-gray-100 bg-gradient-to-l from-sky-50/80 to-white">
+            <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <i class="fas fa-sitemap text-sky-600"></i>
+                منهج الكورس (التوصيف)
+            </h2>
+            <p class="text-sm text-gray-500 mt-1">ترتيب المحتوى كما جهّزه المدرب؛ اضغط للانتقال لكل عنصر.</p>
+        </div>
+        <div class="p-4 sm:p-6 space-y-4">
+            @include('student.offline-courses.partials.curriculum-sections', ['sections' => $curriculumRoots, 'offlineCourse' => $offlineCourse])
+        </div>
+    </div>
+    @endif
+
     <!-- حالة الدفع -->
     @if((float)$enrollment->total_amount > 0)
     <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">

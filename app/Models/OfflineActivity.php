@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class OfflineActivity extends Model
 {
@@ -59,5 +60,10 @@ class OfflineActivity extends Model
     public function submissions(): HasMany
     {
         return $this->hasMany(OfflineActivitySubmission::class, 'activity_id');
+    }
+
+    public function offlineCurriculumItems(): MorphMany
+    {
+        return $this->morphMany(OfflineCurriculumItem::class, 'item');
     }
 }

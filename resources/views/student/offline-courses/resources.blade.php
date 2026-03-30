@@ -27,7 +27,7 @@
         @else
             <ul class="divide-y divide-gray-100">
                 @foreach($resources as $resource)
-                    <li class="p-4 sm:p-5 hover:bg-gray-50/50">
+                    <li id="offline-resource-{{ $resource->id }}" class="p-4 sm:p-5 hover:bg-gray-50/50 scroll-mt-24">
                         <div class="flex flex-wrap items-center justify-between gap-3">
                             <div class="min-w-0 flex-1">
                                 <h3 class="font-semibold text-gray-900">{{ $resource->title }}</h3>
