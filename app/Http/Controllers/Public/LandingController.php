@@ -46,9 +46,8 @@ class LandingController extends Controller
         // خانة الشهادات في الصفحة الرئيسية تعرض نفس عدد الطلاب النشطين (حسب الطلب)
         $statsCertificates = $statsLearners;
 
-        $secondsLecture = (int) (LectureWatchProgress::query()->sum('watch_time_seconds') ?? 0);
-        $secondsLesson = (int) (LessonProgress::query()->sum('watch_time') ?? 0);
-        $statsMinutesWatched = (int) floor(($secondsLecture + $secondsLesson) / 60);
+        // إحصائية أهم للزائر: عدد المسارات التعليمية النشطة (Academic Years)
+        $statsLearningPaths = AcademicYear::query()->where('is_active', true)->count();
 
         return view('welcome', compact(
             'popupAd',
@@ -56,7 +55,7 @@ class LandingController extends Controller
             'statsLearners',
             'statsCourses',
             'statsCertificates',
-            'statsMinutesWatched'
+            'statsLearningPaths'
         ));
     }
 

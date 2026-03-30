@@ -96,6 +96,7 @@ class OfflineCourseBookingController extends Controller
                 'required_if:payment_method,wallet',
                 Rule::exists('wallets', 'id')->where('is_active', true)->whereIn('type', ['vodafone_cash', 'instapay', 'bank_transfer']),
             ],
+            'transfer_name' => ['required', 'string', 'max:255'],
             'student_notes' => 'nullable|string|max:2000',
         ];
 
@@ -108,6 +109,7 @@ class OfflineCourseBookingController extends Controller
         $validated = $request->validate($rules, [
             'payment_method.required' => 'طريقة الدفع مطلوبة',
             'wallet_id.required_if' => 'يجب اختيار المحفظة أو قناة التحويل',
+            'transfer_name.required' => 'الاسم مطلوب',
             'payment_proof.required' => 'صورة إيصال التحويل مطلوبة لهذا الكورس',
         ]);
 
@@ -123,6 +125,7 @@ class OfflineCourseBookingController extends Controller
             'wallet_id' => $validated['wallet_id'] ?? null,
             'payment_method' => $validated['payment_method'],
             'payment_proof' => $proofPath,
+            'transfer_name' => $validated['transfer_name'],
             'student_notes' => $validated['student_notes'] ?? null,
             'status' => OfflineCourseBooking::STATUS_PENDING,
         ]);

@@ -20,6 +20,7 @@ class OfflineCourseBooking extends Model
         'wallet_id',
         'payment_method',
         'payment_proof',
+        'transfer_name',
         'student_notes',
         'status',
         'admin_notes',

@@ -9,6 +9,7 @@ use App\Models\AdvancedCourse;
 use App\Models\StudentCourseEnrollment;
 use App\Models\LearningPathEnrollment;
 use App\Models\Order;
+use App\Models\LearningPathReview;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -211,8 +212,32 @@ class LearningPathController extends Controller
             
             $isEnrolled = $enrollment && $enrollment->status === 'active';
         }
+
+        $approvedReviews = LearningPathReview::query()
+            ->where('academic_year_id', $academicYear->id)
+            ->where('is_approved', true)
+            ->with('user')
+            ->latest()
+            ->limit(20)
+            ->get();
+        $reviewsAvg = (float) (LearningPathReview::query()
+            ->where('academic_year_id', $academicYear->id)
+            ->where('is_approved', true)
+            ->avg('rating') ?? 0);
+        $reviewsCount = (int) LearningPathReview::query()
+            ->where('academic_year_id', $academicYear->id)
+            ->where('is_approved', true)
+            ->count();
         
-        return view('public.learning-path-show', compact('learningPath', 'relatedPaths', 'isEnrolled', 'enrollment'));
+        return view('public.learning-path-show', compact(
+            'learningPath',
+            'relatedPaths',
+            'isEnrolled',
+            'enrollment',
+            'approvedReviews',
+            'reviewsAvg',
+            'reviewsCount'
+        ));
     }
 
     /**

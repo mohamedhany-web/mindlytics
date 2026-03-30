@@ -31,6 +31,7 @@
             @endif
             <div><dt class="text-gray-500">سعر الكورس</dt><dd class="text-gray-800">{{ number_format((float) $offlineCourseBooking->course->price, 2) }} ج.م</dd></div>
             <div><dt class="text-gray-500">طريقة الدفع</dt><dd class="text-gray-800">{{ $offlineCourseBooking->payment_method === 'wallet' ? 'محفظة إلكترونية' : 'تحويل بنكي' }}</dd></div>
+            <div><dt class="text-gray-500">الاسم</dt><dd class="text-gray-800">{{ $offlineCourseBooking->transfer_name ?: '—' }}</dd></div>
             @if($offlineCourseBooking->wallet)
                 <div><dt class="text-gray-500">قناة التحويل</dt><dd class="text-gray-800">{{ \App\Models\Wallet::typeLabel($offlineCourseBooking->wallet->type) }} @if($offlineCourseBooking->wallet->name) — {{ $offlineCourseBooking->wallet->name }} @endif</dd></div>
             @endif

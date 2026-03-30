@@ -1513,6 +1513,87 @@
                             </div>
                         </div>
                         @endif
+
+                        <!-- Reviews -->
+                        <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-200">
+                            <div class="flex items-start justify-between gap-4 mb-4">
+                                <div>
+                                    <h3 class="text-xl font-black text-gray-900">التقييمات والمراجعات</h3>
+                                    <p class="text-sm text-gray-600 mt-1">
+                                        <span class="font-bold text-yellow-600">{{ number_format((float) ($reviewsAvg ?? 0), 1) }}</span>
+                                        <span class="text-gray-400">/ 5</span>
+                                        <span class="text-gray-500">— ({{ number_format((int) ($reviewsCount ?? 0)) }} مراجعة)</span>
+                                    </p>
+                                </div>
+                            </div>
+
+                            @if(session('success'))
+                                <div class="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold">
+                                    {{ session('success') }}
+                                </div>
+                            @endif
+                            @if($errors->any())
+                                <div class="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm">
+                                    {{ $errors->first() }}
+                                </div>
+                            @endif
+
+                            @auth
+                                @if($isEnrolled ?? false)
+                                    <form action="{{ route('public.course.reviews.store', $course->id) }}" method="POST" class="mb-6 space-y-3">
+                                        @csrf
+                                        <div>
+                                            <label class="block text-sm font-bold text-gray-800 mb-2">تقييمك <span class="text-rose-500">*</span></label>
+                                            <select name="rating" required class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500">
+                                                <option value="">اختر التقييم</option>
+                                                @for($i=5; $i>=1; $i--)
+                                                    <option value="{{ $i }}" @selected((string) old('rating') === (string) $i)>{{ $i }} / 5</option>
+                                                @endfor
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-bold text-gray-800 mb-2">اكتب مراجعتك <span class="text-rose-500">*</span></label>
+                                            <textarea name="comment" rows="3" required class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500" placeholder="شارك رأيك في الكورس">{{ old('comment') }}</textarea>
+                                        </div>
+                                        <button type="submit" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transition-all">
+                                            <i class="fas fa-paper-plane"></i>
+                                            نشر
+                                        </button>
+                                    </form>
+                                @else
+                                    <div class="mb-6 p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-sm font-semibold">
+                                        يجب أن تكون مسجلاً في الكورس لتتمكن من إضافة تقييم.
+                                    </div>
+                                @endif
+                            @endauth
+                            @guest
+                                <div class="mb-6 p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-sm font-semibold">
+                                    <a class="text-blue-700 hover:underline" href="{{ route('login', ['redirect' => url()->current()]) }}">سجّل دخولك</a>
+                                    لإضافة تقييم.
+                                </div>
+                            @endguest
+
+                            @if(isset($approvedReviews) && $approvedReviews->count() > 0)
+                                <div class="space-y-4">
+                                    @foreach($approvedReviews as $r)
+                                        <div class="p-4 rounded-xl border border-gray-200 bg-gray-50">
+                                            <div class="flex items-center justify-between gap-3">
+                                                <div class="font-bold text-gray-900 text-sm">{{ $r->user->name ?? 'طالب' }}</div>
+                                                <div class="flex items-center gap-1 text-xs">
+                                                    @for($i = 1; $i <= 5; $i++)
+                                                        <i class="fas fa-star {{ $i <= (int) $r->rating ? 'text-yellow-400' : 'text-gray-300' }}"></i>
+                                                    @endfor
+                                                </div>
+                                            </div>
+                                            <div class="text-gray-700 text-sm mt-2 whitespace-pre-wrap">{{ $r->comment ?? $r->review ?? '' }}</div>
+                                            <div class="text-xs text-gray-400 mt-2">{{ $r->created_at?->format('Y-m-d') }}</div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="text-sm text-gray-500">لا توجد مراجعات منشورة بعد.</div>
+                            @endif
+                        </div>
                     </div>
                 </div>
             </div>

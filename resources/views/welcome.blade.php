@@ -2388,18 +2388,18 @@
 
             <!-- Statistics Section (أرقام حقيقية من قاعدة البيانات) -->
             @php
-                $m = (int) ($statsMinutesWatched ?? 0);
+                $m = (int) ($statsLearningPaths ?? 0);
                 $c = (int) ($statsCertificates ?? 0);
                 $co = (int) ($statsCourses ?? 0);
                 $l = (int) ($statsLearners ?? 0);
             @endphp
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 max-w-5xl mx-auto">
-                <!-- Stat 1: دقائق المشاهدة -->
+                <!-- Stat 1: المسارات التعليمية -->
                 <div class="stat-card p-6 fade-in-up" style="animation-delay: 0.1s;">
                     <div class="counter-wrapper">
                         <div class="text-3xl md:text-4xl font-black text-blue-600 mb-2 counter" data-target="{{ $m }}" data-suffix="">{{ number_format($m) }}</div>
                     </div>
-                    <div class="text-gray-600 font-medium">{{ __('landing.stats.minutes_watched') }}</div>
+                    <div class="text-gray-600 font-medium">المسارات التعليمية</div>
                 </div>
 
                 <!-- Stat 2: الشهادات -->

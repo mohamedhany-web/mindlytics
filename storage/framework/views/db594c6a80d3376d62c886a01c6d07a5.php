@@ -690,6 +690,93 @@
         </div>
     </section>
 
+    <!-- Reviews -->
+    <section class="py-10 bg-gradient-to-b from-gray-50 via-white to-gray-50 relative z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                <div class="flex items-start justify-between gap-4 mb-4">
+                    <div>
+                        <h2 class="text-2xl font-black text-gray-900">التقييمات والمراجعات</h2>
+                        <p class="text-sm text-gray-600 mt-1">
+                            <span class="font-bold text-yellow-600"><?php echo e(number_format((float) ($reviewsAvg ?? 0), 1)); ?></span>
+                            <span class="text-gray-400">/ 5</span>
+                            <span class="text-gray-500">— (<?php echo e(number_format((int) ($reviewsCount ?? 0))); ?> مراجعة)</span>
+                        </p>
+                    </div>
+                </div>
+
+                <?php if(session('success')): ?>
+                    <div class="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold">
+                        <?php echo e(session('success')); ?>
+
+                    </div>
+                <?php endif; ?>
+                <?php if($errors->any()): ?>
+                    <div class="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm">
+                        <?php echo e($errors->first()); ?>
+
+                    </div>
+                <?php endif; ?>
+
+                <?php if(auth()->guard()->check()): ?>
+                    <?php if($isEnrolled ?? false): ?>
+                        <form action="<?php echo e(route('public.learning-path.reviews.store', $learningPath->slug)); ?>" method="POST" class="mb-6 space-y-3">
+                            <?php echo csrf_field(); ?>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-800 mb-2">تقييمك <span class="text-rose-500">*</span></label>
+                                <select name="rating" required class="w-full max-w-md rounded-xl border border-slate-200 px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500">
+                                    <option value="">اختر التقييم</option>
+                                    <?php for($i=5; $i>=1; $i--): ?>
+                                        <option value="<?php echo e($i); ?>" <?php if((string) old('rating') === (string) $i): echo 'selected'; endif; ?>><?php echo e($i); ?> / 5</option>
+                                    <?php endfor; ?>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-800 mb-2">اكتب مراجعتك <span class="text-rose-500">*</span></label>
+                                <textarea name="comment" rows="3" required class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500" placeholder="شارك رأيك في المسار"><?php echo e(old('comment')); ?></textarea>
+                            </div>
+                            <button type="submit" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transition-all">
+                                <i class="fas fa-paper-plane"></i>
+                                نشر
+                            </button>
+                        </form>
+                    <?php else: ?>
+                        <div class="mb-6 p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-sm font-semibold">
+                            يجب أن تكون مشتركاً في المسار لتتمكن من إضافة تقييم.
+                        </div>
+                    <?php endif; ?>
+                <?php endif; ?>
+                <?php if(auth()->guard()->guest()): ?>
+                    <div class="mb-6 p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-sm font-semibold">
+                        <a class="text-blue-700 hover:underline" href="<?php echo e(route('login', ['redirect' => url()->current()])); ?>">سجّل دخولك</a>
+                        لإضافة تقييم.
+                    </div>
+                <?php endif; ?>
+
+                <?php if(isset($approvedReviews) && $approvedReviews->count() > 0): ?>
+                    <div class="space-y-4">
+                        <?php $__currentLoopData = $approvedReviews; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $r): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <div class="p-4 rounded-xl border border-gray-200 bg-gray-50">
+                                <div class="flex items-center justify-between gap-3">
+                                    <div class="font-bold text-gray-900 text-sm"><?php echo e($r->user->name ?? 'طالب'); ?></div>
+                                    <div class="flex items-center gap-1 text-xs">
+                                        <?php for($i = 1; $i <= 5; $i++): ?>
+                                            <i class="fas fa-star <?php echo e($i <= (int) $r->rating ? 'text-yellow-400' : 'text-gray-300'); ?>"></i>
+                                        <?php endfor; ?>
+                                    </div>
+                                </div>
+                                <div class="text-gray-700 text-sm mt-2 whitespace-pre-wrap"><?php echo e($r->comment ?? ''); ?></div>
+                                <div class="text-xs text-gray-400 mt-2"><?php echo e($r->created_at?->format('Y-m-d')); ?></div>
+                            </div>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                    </div>
+                <?php else: ?>
+                    <div class="text-sm text-gray-500">لا توجد مراجعات منشورة بعد.</div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </section>
+
     <!-- Related Paths -->
     <?php if(isset($relatedPaths) && $relatedPaths->count() > 0): ?>
     <section class="py-12 md:py-16 bg-gradient-to-b from-gray-50 via-white to-gray-50">

@@ -52,6 +52,14 @@
             بعد التحويل ارفع إيصالاً واضحاً. يمكنك عند التحويل البنكي اختيار حساب المنصة من القائمة أعلاه إن وُجد.
         </div>
 
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">الاسم *</label>
+            <input type="text" name="transfer_name" value="{{ old('transfer_name') }}" required
+                   class="w-full rounded-lg border-gray-300 focus:ring-purple-500 focus:border-purple-500"
+                   placeholder="اكتب اسمك / اسم صاحب التحويل كما يظهر في الإيصال">
+            @error('transfer_name')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
+        </div>
+
         @if((float) $offlineCourse->price > 0)
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">صورة إيصال التحويل *</label>

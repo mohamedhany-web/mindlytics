@@ -1045,7 +1045,7 @@
 
             <!-- الإنجازات والشارات -->
             @php
-                $achievementsOpen = request()->routeIs('admin.achievements.*') || request()->routeIs('admin.badges.*') || request()->routeIs('admin.reviews.*');
+                $achievementsOpen = request()->routeIs('admin.achievements.*') || request()->routeIs('admin.badges.*') || request()->routeIs('admin.reviews.*') || request()->routeIs('admin.learning-path-reviews.*');
             @endphp
             <li x-data="{ open: {{ $achievementsOpen ? 'true' : 'false' }} }">
                 <button @click="open = !open" 
@@ -1079,6 +1079,14 @@
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.reviews.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
                             <i class="fas fa-star-half-alt w-4"></i>
                             <span>{{ __('admin.reviews_ratings') }}</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.learning-path-reviews.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.learning-path-reviews.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
+                            <i class="fas fa-route w-4"></i>
+                            <span>تقييمات المسارات</span>
                         </a>
                     </li>
                 </ul>

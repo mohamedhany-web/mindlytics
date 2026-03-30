@@ -334,8 +334,38 @@ Route::get('/course/{id}', function ($id) {
         ->limit(3)
         ->get();
 
-    return view('course-show', compact('course', 'relatedCourses', 'isEnrolled', 'sections', 'previewVideoLessons'));
+    $approvedReviews = \App\Models\CourseReview::query()
+        ->where('course_id', $course->id)
+        ->where('is_approved', true)
+        ->with('user')
+        ->latest()
+        ->limit(20)
+        ->get();
+
+    $reviewsAvg = (float) (\App\Models\CourseReview::query()
+        ->where('course_id', $course->id)
+        ->where('is_approved', true)
+        ->avg('rating') ?? 0);
+    $reviewsCount = (int) \App\Models\CourseReview::query()
+        ->where('course_id', $course->id)
+        ->where('is_approved', true)
+        ->count();
+
+    return view('course-show', compact(
+        'course',
+        'relatedCourses',
+        'isEnrolled',
+        'sections',
+        'previewVideoLessons',
+        'approvedReviews',
+        'reviewsAvg',
+        'reviewsCount'
+    ));
 })->name('public.course.show');
+
+Route::post('/course/{courseId}/reviews', [\App\Http\Controllers\Public\PublicReviewController::class, 'storeCourse'])
+    ->middleware('auth')
+    ->name('public.course.reviews.store');
 
 // صفحة إتمام الطلب (Checkout)
 Route::get('/course/{courseId}/checkout', [\App\Http\Controllers\Public\CheckoutController::class, 'show'])
@@ -364,6 +394,11 @@ Route::get('/learning-paths', [\App\Http\Controllers\Public\LearningPathControll
 Route::get('/learning-path/{slug}', [\App\Http\Controllers\Public\LearningPathController::class, 'show'])
     ->where('slug', '[a-z0-9-]+')
     ->name('public.learning-path.show');
+
+Route::post('/learning-path/{slug}/reviews', [\App\Http\Controllers\Public\PublicReviewController::class, 'storeLearningPath'])
+    ->middleware('auth')
+    ->where('slug', '[a-z0-9-]+')
+    ->name('public.learning-path.reviews.store');
 
 // صفحة إتمام الطلب للمسارات التعليمية (Checkout)
 Route::get('/learning-path/{slug}/checkout', [\App\Http\Controllers\Public\CheckoutController::class, 'showLearningPath'])
@@ -1351,6 +1386,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::resource('achievements', \App\Http\Controllers\Admin\AchievementController::class);
         Route::resource('badges', \App\Http\Controllers\Admin\BadgeController::class);
         Route::resource('reviews', \App\Http\Controllers\Admin\ReviewController::class);
+        Route::resource('learning-path-reviews', \App\Http\Controllers\Admin\LearningPathReviewController::class)
+            ->only(['index', 'show', 'update', 'destroy'])
+            ->parameters(['learning-path-reviews' => 'learningPathReview']);
 
         // إدارة المحاضرات (مسار الكورس قبل الـ resource لتفادي التعارض)
         Route::get('/lectures/course/{course}', [\App\Http\Controllers\Admin\LectureController::class, 'indexByCourse'])->name('lectures.by-course');

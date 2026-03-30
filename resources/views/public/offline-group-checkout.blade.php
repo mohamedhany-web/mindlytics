@@ -91,11 +91,6 @@
                                         <span>{{ $group->start_date->format('Y-m-d') }} @if($group->end_date) → {{ $group->end_date->format('Y-m-d') }} @endif</span>
                                     </div>
                                 @endif
-                                <div class="flex items-center gap-2">
-                                    <i class="fas fa-user-friends text-emerald-600"></i>
-                                    <span class="font-semibold text-gray-900">مقاعد متاحة للحجز الآن: {{ $effectiveRemaining }}</span>
-                                    <span class="text-gray-500">/ {{ $group->max_students }} سعة المجموعة</span>
-                                </div>
                             </div>
                             <div class="flex items-center justify-between mb-2">
                                 <span class="text-gray-600 text-sm">سعر الكورس:</span>
@@ -177,6 +172,13 @@
                                                 <option value="wallet">محفظة إلكترونية</option>
                                             @endif
                                         </select>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-800 mb-2">الاسم <span class="text-rose-500">*</span></label>
+                                        <input type="text" name="transfer_name" value="{{ old('transfer_name') }}" required
+                                               class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500"
+                                               placeholder="اكتب اسمك / اسم صاحب التحويل كما يظهر في الإيصال">
                                     </div>
 
                                     @if($wallets->isNotEmpty())
