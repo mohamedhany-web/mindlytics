@@ -25,6 +25,9 @@
         $myCoursesCount = $teachingCourseIds->count();
         $totalStudents = $teachingCourseIds->isEmpty() ? 0 : \App\Models\StudentCourseEnrollment::whereIn('advanced_course_id', $teachingCourseIds)->where('status', 'active')->distinct('user_id')->count('user_id');
         $myOfflineCoursesCount = \App\Models\OfflineCourse::where('instructor_id', $user->id)->count();
+        $myOnlineStudentsCount = \App\Models\OfflineCourseEnrollment::whereHas('course', function ($q) use ($user) {
+            $q->where('instructor_id', $user->id);
+        })->where('enrollment_channel', 'online')->where('status', 'active')->count();
     ?>
     <div class="p-3 md:p-4 border-b border-slate-200 bg-slate-50/50">
         <div class="grid grid-cols-2 gap-2">
@@ -85,13 +88,25 @@
             <?php if($isInstructor || $user->hasPermission('instructor.view.courses')): ?>
             <a href="<?php echo e(route('instructor.offline-courses.index')); ?>" 
                @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.offline-courses.*') ? 'bg-amber-50 border border-amber-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.offline-courses.*') && request('channel', 'offline') === 'offline' ? 'bg-amber-50 border border-amber-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
                 <div class="w-9 h-9 rounded-lg bg-amber-500 text-white flex items-center justify-center flex-shrink-0">
                     <i class="fas fa-map-marker-alt text-sm"></i>
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="font-bold text-slate-800 text-sm"><?php echo e(__('instructor.my_offline_courses')); ?></div>
                     <div class="text-xs text-slate-500 mt-0.5"><?php echo e($myOfflineCoursesCount ?? 0); ?> <?php echo e(__('instructor.offline_course')); ?></div>
+                </div>
+                <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
+            </a>
+            <a href="<?php echo e(route('instructor.offline-courses.index', ['channel' => 'online'])); ?>"
+               @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.offline-courses.*') && request('channel') === 'online' ? 'bg-indigo-50 border border-indigo-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
+                <div class="w-9 h-9 rounded-lg bg-indigo-500 text-white flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-laptop-house text-sm"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="font-bold text-slate-800 text-sm">كورسات الأونلاين</div>
+                    <div class="text-xs text-slate-500 mt-0.5"><?php echo e($myOnlineStudentsCount); ?> طالب نشط</div>
                 </div>
                 <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
             </a>

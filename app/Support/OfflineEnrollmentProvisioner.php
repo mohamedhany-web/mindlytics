@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Invoice;
 use App\Models\OfflineCourse;
 use App\Models\OfflineCourseEnrollment;
+use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Transaction;
 use App\Models\Wallet;
@@ -28,7 +29,8 @@ class OfflineEnrollmentProvisioner
         float $coursePrice,
         float $paidAmount,
         array $paymentMeta,
-        ?string $enrollmentNotes = null
+        ?string $enrollmentNotes = null,
+        string $enrollmentChannel = 'offline'
     ): OfflineCourseEnrollment {
         $remainingAmount = max(0, $coursePrice - $paidAmount);
         $paymentStatus = 'unpaid';
@@ -42,6 +44,7 @@ class OfflineEnrollmentProvisioner
             'user_id' => $userId,
             'offline_course_id' => $course->id,
             'group_id' => $groupId,
+            'enrollment_channel' => $enrollmentChannel,
             'status' => $enrollmentStatus,
             'enrolled_at' => now(),
             'total_amount' => $coursePrice,
@@ -56,7 +59,11 @@ class OfflineEnrollmentProvisioner
         $course->incrementStudents();
         $group = $course->groups()->find($groupId);
         if ($group) {
-            $group->increment('current_students');
+            if ($enrollmentChannel === 'online') {
+                $group->increment('current_students_online');
+            } else {
+                $group->increment('current_students');
+            }
         }
 
         if ($paidAmount > 0) {
@@ -100,7 +107,29 @@ class OfflineEnrollmentProvisioner
 
         $enrollment->update(['invoice_id' => $invoice->id]);
 
-        self::createPaymentRecord($enrollment, $course, $paidAmount, $data, $invoice);
+        $payment = self::createPaymentRecord($enrollment, $course, $paidAmount, $data, $invoice);
+
+        // Ensure offline/online approved bookings appear in student's "orders".
+        Order::updateOrCreate(
+            ['invoice_id' => $invoice->id],
+            [
+                'user_id' => $enrollment->user_id,
+                'advanced_course_id' => null,
+                'academic_year_id' => null,
+                'coupon_id' => null,
+                'original_amount' => $totalAmount,
+                'discount_amount' => 0,
+                'amount' => $totalAmount,
+                'payment_method' => $data['payment_method'] ?? 'bank_transfer',
+                'wallet_id' => isset($data['wallet_id']) && (int) $data['wallet_id'] > 0 ? (int) $data['wallet_id'] : null,
+                'payment_proof' => null,
+                'payment_id' => $payment?->id,
+                'status' => Order::STATUS_APPROVED,
+                'notes' => trim(($data['payment_notes'] ?? $data['notes'] ?? '') . "\n" . "طلب كورس " . ($enrollment->enrollment_channel === 'online' ? 'أونلاين' : 'أوفلاين') . ": " . ($course->title ?? '')),
+                'approved_at' => now(),
+                'approved_by' => Auth::id(),
+            ]
+        );
     }
 
     /**
@@ -112,10 +141,10 @@ class OfflineEnrollmentProvisioner
         float $amount,
         array $data,
         ?Invoice $invoice = null
-    ): void {
+    ): ?Payment {
         $invoice = $invoice ?? $enrollment->invoice;
         if (! $invoice) {
-            return;
+            return null;
         }
 
         $paymentNumber = 'OFF-PAY-' . str_pad((string) (Payment::count() + 1), 6, '0', STR_PAD_LEFT);
@@ -215,5 +244,7 @@ class OfflineEnrollmentProvisioner
         if ($enrollment->payment_status === 'paid' && $invoice->status !== 'paid') {
             $invoice->markAsPaid();
         }
+
+        return $payment;
     }
 }

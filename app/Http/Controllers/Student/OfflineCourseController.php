@@ -24,21 +24,24 @@ class OfflineCourseController extends Controller
     public function index()
     {
         $user = Auth::user();
+        $channel = request('channel') === 'online' ? 'online' : 'offline';
         
         $enrollments = $user->offlineEnrollments()
             ->with(['course.instructor', 'course.locationModel', 'group'])
+            ->where('enrollment_channel', $channel)
             ->where('status', 'active')
             ->latest('enrolled_at')
-            ->paginate(12);
+            ->paginate(12)
+            ->withQueryString();
 
         $stats = [
-            'total_offline' => $user->offlineEnrollments()->where('status', 'active')->count(),
+            'total_offline' => $user->offlineEnrollments()->where('enrollment_channel', $channel)->where('status', 'active')->count(),
             'total_activities' => OfflineActivity::whereHas('course.enrollments', function($q) use ($user) {
                 $q->where('user_id', $user->id)->where('status', 'active');
             })->count(),
         ];
 
-        return view('student.offline-courses.index', compact('enrollments', 'stats'));
+        return view('student.offline-courses.index', compact('enrollments', 'stats', 'channel'));
     }
 
     /**
@@ -47,9 +50,11 @@ class OfflineCourseController extends Controller
     public function show(OfflineCourse $offlineCourse)
     {
         $user = Auth::user();
+        $channel = request('channel') === 'online' ? 'online' : 'offline';
         
         $enrollment = $user->offlineEnrollments()
             ->where('offline_course_id', $offlineCourse->id)
+            ->where('enrollment_channel', $channel)
             ->where('status', 'active')
             ->firstOrFail();
 
@@ -97,7 +102,8 @@ class OfflineCourseController extends Controller
             'pendingActivities',
             'completedActivities',
             'upcomingSessions',
-            'curriculumRoots'
+            'curriculumRoots',
+            'channel'
         ));
     }
 
@@ -195,8 +201,10 @@ class OfflineCourseController extends Controller
     public function resources(OfflineCourse $offlineCourse)
     {
         $user = Auth::user();
+        $channel = request('channel') === 'online' ? 'online' : 'offline';
         $enrollment = $user->offlineEnrollments()
             ->where('offline_course_id', $offlineCourse->id)
+            ->where('enrollment_channel', $channel)
             ->where('status', 'active')
             ->firstOrFail();
 
@@ -208,7 +216,7 @@ class OfflineCourseController extends Controller
         }
         $resources = $query->get();
 
-        return view('student.offline-courses.resources', compact('offlineCourse', 'enrollment', 'resources'));
+        return view('student.offline-courses.resources', compact('offlineCourse', 'enrollment', 'resources', 'channel'));
     }
 
     /**
@@ -217,8 +225,10 @@ class OfflineCourseController extends Controller
     public function lectures(OfflineCourse $offlineCourse)
     {
         $user = Auth::user();
+        $channel = request('channel') === 'online' ? 'online' : 'offline';
         $enrollment = $user->offlineEnrollments()
             ->where('offline_course_id', $offlineCourse->id)
+            ->where('enrollment_channel', $channel)
             ->where('status', 'active')
             ->firstOrFail();
 
@@ -230,7 +240,7 @@ class OfflineCourseController extends Controller
         }
         $lectures = $query->get();
 
-        return view('student.offline-courses.lectures', compact('offlineCourse', 'enrollment', 'lectures'));
+        return view('student.offline-courses.lectures', compact('offlineCourse', 'enrollment', 'lectures', 'channel'));
     }
 
     /**
@@ -239,8 +249,10 @@ class OfflineCourseController extends Controller
     public function activityShow(OfflineCourse $offlineCourse, OfflineActivity $activity)
     {
         $user = Auth::user();
+        $channel = request('channel') === 'online' ? 'online' : 'offline';
         $enrollment = $user->offlineEnrollments()
             ->where('offline_course_id', $offlineCourse->id)
+            ->where('enrollment_channel', $channel)
             ->where('status', 'active')
             ->firstOrFail();
 
@@ -255,7 +267,7 @@ class OfflineCourseController extends Controller
             ->where('student_id', $user->id)
             ->first();
 
-        return view('student.offline-courses.activity-show', compact('offlineCourse', 'enrollment', 'activity', 'submission'));
+        return view('student.offline-courses.activity-show', compact('offlineCourse', 'enrollment', 'activity', 'submission', 'channel'));
     }
 
     /**
@@ -264,8 +276,10 @@ class OfflineCourseController extends Controller
     public function activitySubmit(Request $request, OfflineCourse $offlineCourse, OfflineActivity $activity)
     {
         $user = Auth::user();
+        $channel = request('channel') === 'online' ? 'online' : 'offline';
         $enrollment = $user->offlineEnrollments()
             ->where('offline_course_id', $offlineCourse->id)
+            ->where('enrollment_channel', $channel)
             ->where('status', 'active')
             ->firstOrFail();
 
@@ -299,7 +313,7 @@ class OfflineCourseController extends Controller
         $submission->save();
 
         return redirect()
-            ->route('student.offline-courses.activities.show', [$offlineCourse, $activity])
+            ->route('student.offline-courses.activities.show', [$offlineCourse, $activity, 'channel' => $channel])
             ->with('success', 'تم تسليم النشاط بنجاح');
     }
 }

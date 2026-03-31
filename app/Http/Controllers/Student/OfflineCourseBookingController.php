@@ -30,7 +30,11 @@ class OfflineCourseBookingController extends Controller
             abort(404);
         }
 
-        if ($user->offlineEnrollments()->where('offline_course_id', $offlineCourse->id)->where('status', 'active')->exists()) {
+        if ($user->offlineEnrollments()
+            ->where('offline_course_id', $offlineCourse->id)
+            ->where('enrollment_channel', 'offline')
+            ->where('status', 'active')
+            ->exists()) {
             return redirect()->route('student.offline-courses.booking.catalog')
                 ->with('info', 'أنت مسجل بالفعل في هذا الكورس.');
         }
@@ -65,7 +69,11 @@ class OfflineCourseBookingController extends Controller
             abort(404);
         }
 
-        if ($user->offlineEnrollments()->where('offline_course_id', $offlineCourse->id)->where('status', 'active')->exists()) {
+        if ($user->offlineEnrollments()
+            ->where('offline_course_id', $offlineCourse->id)
+            ->where('enrollment_channel', 'offline')
+            ->where('status', 'active')
+            ->exists()) {
             return back()->withErrors(['error' => 'أنت مسجل بالفعل في هذا الكورس']);
         }
 
@@ -126,6 +134,7 @@ class OfflineCourseBookingController extends Controller
             'payment_method' => $validated['payment_method'],
             'payment_proof' => $proofPath,
             'transfer_name' => $validated['transfer_name'],
+            'booking_channel' => 'offline',
             'student_notes' => $validated['student_notes'] ?? null,
             'status' => OfflineCourseBooking::STATUS_PENDING,
         ]);

@@ -14,10 +14,16 @@ class OfflineCourseController extends Controller
     public function index(Request $request)
     {
         $instructor = Auth::user();
+        $channel = $request->query('channel') === 'online' ? 'online' : 'offline';
 
         $query = OfflineCourse::where('instructor_id', $instructor->id)
             ->with(['locationModel'])
-            ->withCount(['groups', 'enrollments']);
+            ->withCount('groups')
+            ->withCount([
+                'enrollments as enrollments_count' => function ($q) use ($channel) {
+                    $q->where('enrollment_channel', $channel);
+                },
+            ]);
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -30,7 +36,7 @@ class OfflineCourseController extends Controller
             });
         }
 
-        $courses = $query->orderBy('start_date', 'desc')->paginate(12);
+        $courses = $query->orderBy('start_date', 'desc')->paginate(12)->withQueryString();
 
         $stats = [
             'total' => OfflineCourse::where('instructor_id', $instructor->id)->count(),
@@ -39,29 +45,38 @@ class OfflineCourseController extends Controller
             'completed' => OfflineCourse::where('instructor_id', $instructor->id)->where('status', 'completed')->count(),
             'total_students' => OfflineCourseEnrollment::whereHas('course', function ($q) use ($instructor) {
                 $q->where('instructor_id', $instructor->id);
-            })->where('status', 'active')->count(),
+            })->where('enrollment_channel', $channel)->where('status', 'active')->count(),
         ];
 
-        return view('instructor.offline-courses.index', compact('courses', 'stats'));
+        return view('instructor.offline-courses.index', compact('courses', 'stats', 'channel'));
     }
 
-    public function show(OfflineCourse $offlineCourse)
+    public function show(Request $request, OfflineCourse $offlineCourse)
     {
         $instructor = Auth::user();
+        $channel = $request->query('channel') === 'online' ? 'online' : 'offline';
         if ($offlineCourse->instructor_id !== $instructor->id) {
             abort(403, 'غير مسموح لك بعرض هذا الكورس');
         }
 
-        $offlineCourse->load(['locationModel', 'instructor', 'groups.sessions', 'enrollments.student']);
+        $offlineCourse->load([
+            'locationModel',
+            'instructor',
+            'groups.sessions',
+            'enrollments' => function ($q) use ($channel) {
+                $q->where('enrollment_channel', $channel);
+            },
+            'enrollments.student',
+        ]);
 
         $stats = [
-            'total_students' => $offlineCourse->enrollments()->count(),
-            'active_students' => $offlineCourse->enrollments()->where('status', 'active')->count(),
+            'total_students' => $offlineCourse->enrollments()->where('enrollment_channel', $channel)->count(),
+            'active_students' => $offlineCourse->enrollments()->where('enrollment_channel', $channel)->where('status', 'active')->count(),
             'total_groups' => $offlineCourse->groups()->count(),
             'total_activities' => $offlineCourse->activities()->count(),
         ];
 
-        return view('instructor.offline-courses.show', compact('offlineCourse', 'stats'));
+        return view('instructor.offline-courses.show', compact('offlineCourse', 'stats', 'channel'));
     }
 
     /**

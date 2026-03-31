@@ -8,7 +8,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
     <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
-    <title>حجز مجموعة أوفلاين — <?php echo e($group->name); ?> | Mindlytics</title>
+    <title>حجز مجموعة <?php echo e($bookingModeLabel ?? 'أوفلاين'); ?> — <?php echo e($group->name); ?> | Mindlytics</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -55,10 +55,10 @@
                 <nav class="mb-6 text-gray-600 text-sm flex flex-wrap items-center gap-1">
                     <a href="<?php echo e(url('/')); ?>" class="hover:text-blue-600 transition-colors">الرئيسية</a>
                     <span class="text-gray-400">/</span>
-                    <span class="text-gray-900 font-medium">حجز مجموعة أوفلاين</span>
+                    <span class="text-gray-900 font-medium">حجز مجموعة <?php echo e($bookingModeLabel ?? 'أوفلاين'); ?></span>
                 </nav>
                 <div class="text-center mb-4">
-                    <h1 class="text-3xl md:text-4xl font-black text-gray-900 mb-2">حجز مجموعة حضورية</h1>
+                    <h1 class="text-3xl md:text-4xl font-black text-gray-900 mb-2">حجز مجموعة <?php echo e($bookingModeLabel ?? 'أوفلاين'); ?></h1>
                     <p class="text-lg text-gray-600"><?php echo e($course->title); ?></p>
                     <p class="text-blue-700 font-bold mt-2 text-xl"><?php echo e($group->name); ?></p>
                 </div>
@@ -163,7 +163,7 @@
                                     <p class="text-xs text-gray-600">تحويل بنكي أو محافظ إلكترونية (فودافون كاش، إنستاباي، …) حسب القنوات المفعّلة في المنصة. ارفع إيصال التحويل بعد الدفع.</p>
                                 </div>
 
-                                <form action="<?php echo e(route('public.offline-groups.book', $group->public_slug)); ?>" method="POST" enctype="multipart/form-data" class="space-y-5">
+                                <form action="<?php echo e($formRoute ?? route('public.offline-groups.book', $group->public_slug)); ?>" method="POST" enctype="multipart/form-data" class="space-y-5">
                                     <?php echo csrf_field(); ?>
                                     <div>
                                         <label class="block text-sm font-bold text-gray-800 mb-2">طريقة التحويل <span class="text-rose-500">*</span></label>

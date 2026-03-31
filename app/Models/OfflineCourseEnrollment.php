@@ -11,6 +11,7 @@ class OfflineCourseEnrollment extends Model
         'user_id',
         'offline_course_id',
         'group_id',
+        'enrollment_channel',
         'enrolled_at',
         'status',
         'progress',

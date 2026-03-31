@@ -28,7 +28,7 @@
                             @if($m->description)
                                 <p class="text-xs text-slate-500 mt-0.5 line-clamp-2">{{ Str::limit(strip_tags($m->description), 120) }}</p>
                             @endif
-                            <a href="{{ route('student.offline-courses.lectures', $offlineCourse) }}#offline-lecture-{{ $m->id }}" class="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-violet-600 hover:text-violet-800">
+                            <a href="{{ route('student.offline-courses.lectures', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? request('channel', 'offline'))]) }}#offline-lecture-{{ $m->id }}" class="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-violet-600 hover:text-violet-800">
                                 عرض المحاضرة <i class="fas fa-arrow-left text-xs"></i>
                             </a>
                         </div>
@@ -39,7 +39,7 @@
                             @if($m->description)
                                 <p class="text-xs text-slate-500 mt-0.5 line-clamp-2">{{ Str::limit(strip_tags($m->description), 120) }}</p>
                             @endif
-                            <a href="{{ route('student.offline-courses.resources', $offlineCourse) }}#offline-resource-{{ $m->id }}" class="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-sky-600 hover:text-sky-800">
+                            <a href="{{ route('student.offline-courses.resources', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? request('channel', 'offline'))]) }}#offline-resource-{{ $m->id }}" class="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-sky-600 hover:text-sky-800">
                                 فتح المورد <i class="fas fa-arrow-left text-xs"></i>
                             </a>
                         </div>
@@ -48,7 +48,7 @@
                         <div class="min-w-0 flex-1">
                             <p class="font-semibold text-slate-900">{{ $m->title }}</p>
                             <p class="text-[11px] text-slate-500 mt-0.5">{{ $m->type }}</p>
-                            <a href="{{ route('student.offline-courses.activities.show', [$offlineCourse, $m]) }}" class="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-amber-700 hover:text-amber-900">
+                            <a href="{{ route('student.offline-courses.activities.show', ['offlineCourse' => $offlineCourse, 'activity' => $m, 'channel' => ($channel ?? request('channel', 'offline'))]) }}" class="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-amber-700 hover:text-amber-900">
                                 عرض / تسليم <i class="fas fa-arrow-left text-xs"></i>
                             </a>
                         </div>

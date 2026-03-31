@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'تفاصيل الكورس الأوفلاين - ' . $offlineCourse->title)
-@section('header', 'تفاصيل الكورس الأوفلاين')
+@section('title', (($channel ?? 'offline') === 'online' ? 'تفاصيل الكورس الأونلاين' : 'تفاصيل الكورس الأوفلاين') . ' - ' . $offlineCourse->title)
+@section('header', ($channel ?? 'offline') === 'online' ? 'تفاصيل الكورس الأونلاين' : 'تفاصيل الكورس الأوفلاين')
 
 @section('content')
 <div class="space-y-6">
@@ -10,7 +10,9 @@
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div class="flex-1 min-w-0">
                 <nav class="text-sm text-slate-500 mb-2">
-                    <a href="{{ route('instructor.offline-courses.index') }}" class="hover:text-amber-600 transition-colors">كورساتي الأوفلاين</a>
+                    <a href="{{ route('instructor.offline-courses.index', ['channel' => ($channel ?? 'offline')]) }}" class="hover:text-amber-600 transition-colors">
+                        {{ ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : 'كورساتي الأوفلاين' }}
+                    </a>
                     <span class="mx-2">/</span>
                     <span class="text-slate-700 font-semibold truncate block sm:inline">{{ $offlineCourse->title }}</span>
                 </nav>
@@ -32,12 +34,13 @@
                         <i class="fas {{ $offlineCourse->status === 'active' ? 'fa-check-circle' : ($offlineCourse->status === 'completed' ? 'fa-flag-checkered' : 'fa-pen') }}"></i>
                         {{ $statusLabel }}
                     </span>
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-100 text-amber-800">
-                        <i class="fas fa-map-marker-alt"></i> أوفلاين
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold {{ ($channel ?? 'offline') === 'online' ? 'bg-indigo-100 text-indigo-800' : 'bg-amber-100 text-amber-800' }}">
+                        <i class="fas {{ ($channel ?? 'offline') === 'online' ? 'fa-laptop-house' : 'fa-map-marker-alt' }}"></i>
+                        {{ ($channel ?? 'offline') === 'online' ? 'أونلاين' : 'أوفلاين' }}
                     </span>
                 </div>
             </div>
-            <a href="{{ route('instructor.offline-courses.index') }}" class="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors">
+            <a href="{{ route('instructor.offline-courses.index', ['channel' => ($channel ?? 'offline')]) }}" class="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors">
                 <i class="fas fa-arrow-right"></i>
                 <span>العودة</span>
             </a>
@@ -85,22 +88,22 @@
             </h3>
             <p class="text-sm text-slate-600 mb-4">إضافة الموارد والمحاضرات والواجبات/الاختبارات للطلاب (واجهات منفصلة عن الكورسات الأونلاين).</p>
             <div class="flex flex-wrap gap-3">
-                <a href="{{ route('instructor.offline-courses.curriculum.index', $offlineCourse) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200 font-semibold transition-colors">
+                <a href="{{ route('instructor.offline-courses.curriculum.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200 font-semibold transition-colors">
                     <i class="fas fa-sitemap"></i>
                     <span>بناء المنهج</span>
                     <span class="text-indigo-500">({{ $offlineCourse->offlineCourseSections()->count() }} قسم)</span>
                 </a>
-                <a href="{{ route('instructor.offline-courses.resources.index', $offlineCourse) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 font-semibold transition-colors">
+                <a href="{{ route('instructor.offline-courses.resources.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 font-semibold transition-colors">
                     <i class="fas fa-file-alt"></i>
                     <span>الموارد</span>
                     <span class="text-sky-500">({{ $offlineCourse->resources()->count() }})</span>
                 </a>
-                <a href="{{ route('instructor.offline-courses.lectures.index', $offlineCourse) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200 font-semibold transition-colors">
+                <a href="{{ route('instructor.offline-courses.lectures.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200 font-semibold transition-colors">
                     <i class="fas fa-chalkboard-teacher"></i>
                     <span>المحاضرات</span>
                     <span class="text-violet-500">({{ $offlineCourse->offlineLectures()->count() }})</span>
                 </a>
-                <a href="{{ route('instructor.offline-courses.activities.index', $offlineCourse) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 font-semibold transition-colors">
+                <a href="{{ route('instructor.offline-courses.activities.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 font-semibold transition-colors">
                     <i class="fas fa-tasks"></i>
                     <span>الواجبات والاختبارات</span>
                     <span class="text-amber-500">({{ $offlineCourse->activities()->count() }})</span>

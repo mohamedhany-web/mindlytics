@@ -20,6 +20,7 @@ class OfflineEnrollmentController extends Controller
     public function index(OfflineCourse $offlineCourse)
     {
         $enrollments = $offlineCourse->enrollments()
+            ->where('enrollment_channel', 'offline')
             ->with(['student', 'group', 'invoice'])
             ->latest('enrolled_at')
             ->paginate(20);
@@ -27,13 +28,16 @@ class OfflineEnrollmentController extends Controller
         $students = User::where('role', 'student')
             ->where('is_active', true)
             ->whereDoesntHave('offlineEnrollments', function($q) use ($offlineCourse) {
-                $q->where('offline_course_id', $offlineCourse->id);
+                $q->where('offline_course_id', $offlineCourse->id)
+                    ->where('enrollment_channel', 'offline');
             })
             ->get();
 
         $groups = $offlineCourse->groups()
             ->where('is_active', true)
-            ->withCount('enrollments')
+            ->withCount(['enrollments as enrollments_count' => function ($q) {
+                $q->where('enrollment_channel', 'offline');
+            }])
             ->get();
 
         return view('admin.offline-courses.enrollments.index', compact('offlineCourse', 'enrollments', 'students', 'groups'));
@@ -53,6 +57,7 @@ class OfflineEnrollmentController extends Controller
 
         $existing = OfflineCourseEnrollment::where('user_id', $validated['user_id'])
             ->where('offline_course_id', $offlineCourse->id)
+            ->where('enrollment_channel', 'offline')
             ->exists();
 
         if ($existing) {
@@ -155,7 +160,11 @@ class OfflineEnrollmentController extends Controller
             if ($enrollment->group_id) {
                 $group = $offlineCourse->groups()->find($enrollment->group_id);
                 if ($group) {
-                    $group->decrement('current_students');
+                    if (($enrollment->enrollment_channel ?? 'offline') === 'online') {
+                        $group->decrement('current_students_online');
+                    } else {
+                        $group->decrement('current_students');
+                    }
                 }
             }
 

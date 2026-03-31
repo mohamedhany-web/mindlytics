@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', __('student.offline_courses_title'))
-@section('header', __('student.offline_courses_title'))
+@section('title', ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : __('student.offline_courses_title'))
+@section('header', ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : __('student.offline_courses_title'))
 
 @push('styles')
 <style>
@@ -33,8 +33,8 @@
 <div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
     <!-- الهيدر -->
     <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
-        <h1 class="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{{ __('student.offline_courses_title') }}</h1>
-        <p class="text-sm text-gray-500">{{ __('student.offline_courses_subtitle') }}</p>
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{{ ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : __('student.offline_courses_title') }}</h1>
+        <p class="text-sm text-gray-500">{{ ($channel ?? 'offline') === 'online' ? 'جميع الكورسات الأونلاين التي تم تفعيلها لك' : __('student.offline_courses_subtitle') }}</p>
     </div>
 
     <!-- الإحصائيات -->
@@ -69,14 +69,16 @@
             @php
                 $course = $enrollment->course;
             @endphp
-            <a href="{{ route('student.offline-courses.show', $course->id) }}" class="offline-card block overflow-hidden">
+            <a href="{{ route('student.offline-courses.show', ['offlineCourse' => $course->id, 'channel' => ($channel ?? 'offline')]) }}" class="offline-card block overflow-hidden">
                 <div class="h-32 bg-sky-100 flex items-center justify-center text-sky-600 flex-shrink-0">
                     <i class="fas fa-chalkboard-teacher text-3xl"></i>
                 </div>
                 <div class="p-4">
                     <div class="flex items-start justify-between gap-2 mb-2">
                         <h3 class="text-base font-bold text-gray-900 line-clamp-2 leading-snug flex-1 min-w-0">{{ $course->title }}</h3>
-                        <span class="px-2 py-0.5 rounded-md text-xs font-semibold bg-sky-100 text-sky-700 flex-shrink-0">{{ __('student.offline_badge') }}</span>
+                        <span class="px-2 py-0.5 rounded-md text-xs font-semibold {{ ($channel ?? 'offline') === 'online' ? 'bg-indigo-100 text-indigo-700' : 'bg-sky-100 text-sky-700' }} flex-shrink-0">
+                            {{ ($channel ?? 'offline') === 'online' ? 'أونلاين' : __('student.offline_badge') }}
+                        </span>
                     </div>
                     <p class="text-xs text-gray-500 mb-2">
                         {{ $course->instructor->name ?? '—' }}

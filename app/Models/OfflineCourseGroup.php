@@ -27,6 +27,10 @@ class OfflineCourseGroup extends Model
         'is_active',
         'public_slug',
         'public_booking_enabled',
+        'online_slug',
+        'online_booking_enabled',
+        'max_students_online',
+        'current_students_online',
     ];
 
     protected $casts = [
@@ -36,6 +40,7 @@ class OfflineCourseGroup extends Model
         'session_duration_hours' => 'decimal:1',
         'is_active' => 'boolean',
         'public_booking_enabled' => 'boolean',
+        'online_booking_enabled' => 'boolean',
     ];
 
     /**
@@ -65,32 +70,40 @@ class OfflineCourseGroup extends Model
     /**
      * طلبات حجز معلقة لهذه المجموعة (صفحة الحجز العامة بالرابط).
      */
-    public function pendingBookings(): HasMany
+    public function pendingBookings(string $channel = 'offline'): HasMany
     {
         return $this->hasMany(OfflineCourseBooking::class, 'requested_group_id')
+            ->where('booking_channel', $channel)
             ->where('status', OfflineCourseBooking::STATUS_PENDING);
     }
 
-    public function pendingBookingsCount(): int
+    public function pendingBookingsCount(string $channel = 'offline'): int
     {
-        return (int) $this->pendingBookings()->count();
+        return (int) $this->pendingBookings($channel)->count();
     }
 
     /**
      * مقاعد متاحة مع احتساب الطلبات المعلقة على هذه المجموعة.
      */
-    public function effectiveAvailableSeats(): int
+    public function effectiveAvailableSeats(string $channel = 'offline'): int
     {
-        return max(0, $this->availableSeats() - $this->pendingBookingsCount());
+        return max(0, $this->availableSeats($channel) - $this->pendingBookingsCount($channel));
     }
 
-    public function canAcceptPublicBooking(): bool
+    public function canAcceptPublicBooking(string $channel = 'offline'): bool
     {
-        if (! $this->public_booking_enabled || ! $this->is_active || $this->status !== 'active') {
+        $enabled = $channel === 'online'
+            ? (bool) $this->online_booking_enabled
+            : (bool) $this->public_booking_enabled;
+        $slug = $channel === 'online'
+            ? $this->online_slug
+            : $this->public_slug;
+
+        if (! $enabled || ! $this->is_active || $this->status !== 'active') {
             return false;
         }
 
-        return $this->effectiveAvailableSeats() > 0 && filled($this->public_slug);
+        return $this->effectiveAvailableSeats($channel) > 0 && filled($slug);
     }
 
     public static function generateUniquePublicSlug(string $fromName, ?int $exceptId = null): string
@@ -101,6 +114,25 @@ class OfflineCourseGroup extends Model
 
         while (true) {
             $q = static::query()->where('public_slug', $slug);
+            if ($exceptId !== null) {
+                $q->where('id', '!=', $exceptId);
+            }
+            if (! $q->exists()) {
+                return $slug;
+            }
+            $n++;
+            $slug = $base . '-' . $n;
+        }
+    }
+
+    public static function generateUniqueOnlineSlug(string $fromName, ?int $exceptId = null): string
+    {
+        $base = Str::slug($fromName) ?: 'group-online';
+        $slug = $base;
+        $n = 0;
+
+        while (true) {
+            $q = static::query()->where('online_slug', $slug);
             if ($exceptId !== null) {
                 $q->where('id', '!=', $exceptId);
             }
@@ -141,8 +173,12 @@ class OfflineCourseGroup extends Model
         return $this->sessions()->upcoming()->ordered();
     }
 
-    public function availableSeats(): int
+    public function availableSeats(string $channel = 'offline'): int
     {
+        if ($channel === 'online') {
+            return max(0, (int) $this->max_students_online - (int) $this->current_students_online);
+        }
+
         return max(0, $this->max_students - $this->current_students);
     }
 
@@ -157,10 +193,12 @@ class OfflineCourseGroup extends Model
     /**
      * التحقق من إمكانية التسجيل
      */
-    public function canEnroll(): bool
+    public function canEnroll(string $channel = 'offline'): bool
     {
+        $available = $this->availableSeats($channel);
+
         return $this->is_active 
             && $this->status === 'active' 
-            && $this->current_students < $this->max_students;
+            && $available > 0;
     }
 }

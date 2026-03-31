@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('title', __('instructor.my_offline_courses') . ' - Mindlytics')
-@section('header', __('instructor.my_offline_courses'))
+@section('title', (($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : __('instructor.my_offline_courses')) . ' - Mindlytics')
+@section('header', (($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : __('instructor.my_offline_courses')))
 
 @section('content')
 <div class="space-y-6">
     <div class="rounded-2xl p-5 sm:p-6 bg-white border border-slate-200 shadow-sm">
-        <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 mb-1">{{ __('instructor.my_offline_courses') }}</h1>
-        <p class="text-sm text-slate-500">{{ __('instructor.offline_courses_subtitle') }}</p>
+        <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 mb-1">{{ ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : __('instructor.my_offline_courses') }}</h1>
+        <p class="text-sm text-slate-500">{{ ($channel ?? 'offline') === 'online' ? 'إدارة مجموعات وطلاب الأونلاين وحضور الاجتماعات' : __('instructor.offline_courses_subtitle') }}</p>
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -61,6 +61,7 @@
     <!-- الفلاتر -->
     <div class="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm">
         <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <input type="hidden" name="channel" value="{{ $channel ?? 'offline' }}">
             <div>
                 <label for="search" class="block text-sm font-semibold text-slate-700 mb-2">{{ __('common.search') }}</label>
                 <input type="text" name="search" id="search" value="{{ request('search') }}"
@@ -82,7 +83,7 @@
                     <span>{{ __('common.search') }}</span>
                 </button>
                 @if(request()->anyFilled(['search', 'status']))
-                    <a href="{{ route('instructor.offline-courses.index') }}" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors inline-flex items-center justify-center">
+                    <a href="{{ route('instructor.offline-courses.index', ['channel' => ($channel ?? 'offline')]) }}" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors inline-flex items-center justify-center">
                         <i class="fas fa-times"></i>
                     </a>
                 @endif
@@ -177,7 +178,7 @@
                 </div>
 
                 <div class="px-5 py-4 border-t border-slate-200">
-                    <a href="{{ route('instructor.offline-courses.show', $course) }}"
+                    <a href="{{ route('instructor.offline-courses.show', ['offline_course' => $course, 'channel' => ($channel ?? 'offline')]) }}"
                        class="w-full inline-flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2.5 rounded-xl font-semibold transition-colors">
                         <i class="fas fa-eye"></i>
                         <span>{{ __('instructor.view_details') }}</span>

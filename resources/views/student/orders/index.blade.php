@@ -30,8 +30,10 @@
                                 <h3 class="text-base sm:text-lg font-bold text-gray-900">
                                     @if($order->academic_year_id && $order->learningPath)
                                         {{ $order->learningPath->name ?? __('student.learning_path_label') }}
-                                    @else
+                                    @elseif($order->course)
                                         {{ $order->course->title ?? __('student.course_undefined') }}
+                                    @else
+                                        {{ \Illuminate\Support\Str::before($order->notes ?? __('student.course_undefined'), "\n") ?: __('student.course_undefined') }}
                                     @endif
                                 </h3>
                                 <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold {{ $order->status == 'pending' ? 'bg-amber-100 text-amber-800' : ($order->status == 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800') }}">

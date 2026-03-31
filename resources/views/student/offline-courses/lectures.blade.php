@@ -6,7 +6,7 @@
 @section('content')
 <div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
     <div class="mb-4">
-        <a href="{{ route('student.offline-courses.show', $offlineCourse) }}" class="inline-flex items-center text-sky-600 hover:text-sky-700 text-sm font-medium">
+        <a href="{{ route('student.offline-courses.show', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="inline-flex items-center text-sky-600 hover:text-sky-700 text-sm font-medium">
             <i class="fas fa-arrow-right ml-2"></i>
             العودة لصفحة الكورس
         </a>

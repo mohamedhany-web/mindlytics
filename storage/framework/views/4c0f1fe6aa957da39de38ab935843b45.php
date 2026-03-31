@@ -107,6 +107,26 @@
                            class="w-full max-w-lg px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 font-mono text-sm">
                 </div>
             </div>
+            <div class="md:col-span-2 lg:col-span-3 border-t border-gray-200 pt-4 mt-2">
+                <p class="text-sm font-semibold text-gray-800 mb-3"><i class="fas fa-video text-indigo-600 ml-2"></i>حجز أونلاين عبر رابط عام</p>
+                <input type="hidden" name="online_booking_enabled" value="0">
+                <label class="inline-flex items-center gap-2 cursor-pointer mb-3">
+                    <input type="checkbox" name="online_booking_enabled" value="1" <?php echo e(old('online_booking_enabled') ? 'checked' : ''); ?> class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                    <span class="text-sm text-gray-700">تفعيل صفحة حجز أونلاين لهذه المجموعة</span>
+                </label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">رابط الأونلاين (slug)</label>
+                        <input type="text" name="online_slug" value="<?php echo e(old('online_slug')); ?>" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="مثال: cairo-batch-1-online"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">سعة الأونلاين</label>
+                        <input type="number" name="max_students_online" value="<?php echo e(old('max_students_online', 0)); ?>" min="0"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+            </div>
             <div class="md:col-span-2 lg:col-span-3">
                 <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-medium transition-colors">
                     <i class="fas fa-plus mr-2"></i>إضافة المجموعة
@@ -137,16 +157,26 @@
                         <?php endif; ?>
                         <span><i class="fas fa-calendar-check text-teal-500 ml-1"></i> <?php echo e($group->sessions_count ?? $group->sessions->count()); ?> جلسة</span>
                         <?php
-                            $pendBook = $group->pendingBookingsCount();
-                            $effRem = $group->effectiveAvailableSeats();
+                            $pendBook = $group->pendingBookingsCount('offline');
+                            $effRem = $group->effectiveAvailableSeats('offline');
+                            $pendBookOnline = $group->pendingBookingsCount('online');
+                            $effRemOnline = $group->effectiveAvailableSeats('online');
                         ?>
                         <span><i class="fas fa-hourglass-half text-amber-500 ml-1"></i> حجوزات معلقة: <?php echo e($pendBook); ?></span>
                         <span><i class="fas fa-door-open text-cyan-600 ml-1"></i> متاح للحجز (بالرابط): <?php echo e($effRem); ?></span>
+                        <span><i class="fas fa-video text-indigo-500 ml-1"></i> حجوزات أونلاين معلقة: <?php echo e($pendBookOnline); ?></span>
+                        <span><i class="fas fa-signal text-indigo-700 ml-1"></i> متاح أونلاين: <?php echo e($effRemOnline); ?></span>
                     </div>
                     <?php if($group->public_booking_enabled && $group->public_slug): ?>
                         <div class="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm">
                             <span class="font-semibold text-purple-900"><i class="fas fa-link ml-1"></i> رابط حجز المجموعة:</span>
                             <a href="<?php echo e(route('public.offline-groups.show', $group->public_slug)); ?>" target="_blank" rel="noopener" class="text-blue-600 hover:underline break-all mr-2"><?php echo e(route('public.offline-groups.show', $group->public_slug)); ?></a>
+                        </div>
+                    <?php endif; ?>
+                    <?php if($group->online_booking_enabled && $group->online_slug): ?>
+                        <div class="mt-3 p-3 bg-indigo-50 border border-indigo-200 rounded-lg text-sm">
+                            <span class="font-semibold text-indigo-900"><i class="fas fa-link ml-1"></i> رابط حجز الأونلاين:</span>
+                            <a href="<?php echo e(route('public.online-groups.show', $group->online_slug)); ?>" target="_blank" rel="noopener" class="text-blue-600 hover:underline break-all mr-2"><?php echo e(route('public.online-groups.show', $group->online_slug)); ?></a>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -319,6 +349,24 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">المسار (slug)</label>
                                 <input type="text" name="public_slug" x-model="editGroup.public_slug" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 font-mono text-sm" placeholder="يُولَّد تلقائياً إن فُعِّل الحجز وترك فارغاً">
+                            </div>
+                            <div class="mt-4 border-t border-gray-200 pt-4">
+                                <p class="text-sm font-semibold text-gray-800 mb-2"><i class="fas fa-video text-indigo-600 ml-1"></i>رابط الحجز الأونلاين</p>
+                                <input type="hidden" name="online_booking_enabled" value="0">
+                                <label class="inline-flex items-center gap-2 cursor-pointer mb-3">
+                                    <input type="checkbox" name="online_booking_enabled" value="1" :checked="editGroup.online_booking_enabled == true || editGroup.online_booking_enabled == 1" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                    <span class="text-sm text-gray-700">تفعيل صفحة الحجز الأونلاين</span>
+                                </label>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">رابط الأونلاين (slug)</label>
+                                        <input type="text" name="online_slug" x-model="editGroup.online_slug" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">سعة الأونلاين</label>
+                                        <input type="number" name="max_students_online" x-model="editGroup.max_students_online" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

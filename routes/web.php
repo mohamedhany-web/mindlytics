@@ -429,6 +429,15 @@ Route::post('/offline-groups/{slug}/book', [\App\Http\Controllers\Public\Offline
     ->where('slug', '[a-z0-9-]+')
     ->name('public.offline-groups.book');
 
+// حجز مجموعة كورس أونلاين (موازي للأوفلاين وبفصل كامل في المقاعد والحجوزات)
+Route::get('/online-groups/{slug}', [\App\Http\Controllers\Public\OfflineGroupPublicBookingController::class, 'showOnline'])
+    ->where('slug', '[a-z0-9-]+')
+    ->name('public.online-groups.show');
+Route::post('/online-groups/{slug}/book', [\App\Http\Controllers\Public\OfflineGroupPublicBookingController::class, 'storeOnline'])
+    ->middleware('auth')
+    ->where('slug', '[a-z0-9-]+')
+    ->name('public.online-groups.book');
+
 // استقبال العودة من بوابة كاشير بعد الدفع (بدون auth لأن كاشير يوجّه المتصفح هنا)
 Route::get('/checkout/kashier/callback', [\App\Http\Controllers\Public\CheckoutController::class, 'kashierCallback'])
     ->name('public.checkout.kashier.callback');
@@ -1099,6 +1108,12 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/{offlineCourseBooking}', [\App\Http\Controllers\Admin\OfflineCourseBookingController::class, 'show'])->name('show');
             Route::post('/{offlineCourseBooking}/approve', [\App\Http\Controllers\Admin\OfflineCourseBookingController::class, 'approve'])->name('approve');
             Route::post('/{offlineCourseBooking}/reject', [\App\Http\Controllers\Admin\OfflineCourseBookingController::class, 'reject'])->name('reject');
+        });
+        Route::prefix('online-course-bookings')->name('online-course-bookings.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\OnlineCourseBookingController::class, 'index'])->name('index');
+            Route::get('/{offlineCourseBooking}', [\App\Http\Controllers\Admin\OnlineCourseBookingController::class, 'show'])->name('show');
+            Route::post('/{offlineCourseBooking}/approve', [\App\Http\Controllers\Admin\OnlineCourseBookingController::class, 'approve'])->name('approve');
+            Route::post('/{offlineCourseBooking}/reject', [\App\Http\Controllers\Admin\OnlineCourseBookingController::class, 'reject'])->name('reject');
         });
 
         // إدارة تسجيل الطلاب في المسارات التعليمية

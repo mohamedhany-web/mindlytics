@@ -744,7 +744,7 @@
 
             <!-- إدارة الكورسات الأوفلاين -->
             <?php
-                $offlineCoursesOpen = request()->routeIs('admin.offline-courses.*') || request()->routeIs('admin.offline-groups.*') || request()->routeIs('admin.offline-enrollments.*') || request()->routeIs('admin.offline-course-bookings.*') || request()->routeIs('admin.offline-activities.*') || request()->routeIs('admin.offline-agreements.*') || request()->routeIs('admin.offline-locations.*');
+                $offlineCoursesOpen = request()->routeIs('admin.offline-courses.*') || request()->routeIs('admin.offline-groups.*') || request()->routeIs('admin.offline-enrollments.*') || request()->routeIs('admin.offline-course-bookings.*') || request()->routeIs('admin.online-course-bookings.*') || request()->routeIs('admin.offline-activities.*') || request()->routeIs('admin.offline-agreements.*') || request()->routeIs('admin.offline-locations.*');
             ?>
             <li x-data="{ open: <?php echo e($offlineCoursesOpen ? 'true' : 'false'); ?> }">
                 <button @click="open = !open" 
@@ -798,13 +798,31 @@
                             <span>حجوزات أوفلاين</span>
                             <?php
                                 try {
-                                    $pendingOfflineBookingsMenu = \App\Models\OfflineCourseBooking::where('status', 'pending')->count();
+                                    $pendingOfflineBookingsMenu = \App\Models\OfflineCourseBooking::where('status', 'pending')->where('booking_channel', 'offline')->count();
                                 } catch (\Exception $e) {
                                     $pendingOfflineBookingsMenu = 0;
                                 }
                             ?>
                             <?php if($pendingOfflineBookingsMenu > 0): ?>
                                 <span class="mr-auto bg-amber-500 text-white text-xs font-bold rounded-full px-2 py-0.5"><?php echo e($pendingOfflineBookingsMenu); ?></span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="<?php echo e(route('admin.online-course-bookings.index')); ?>"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.online-course-bookings.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : ''); ?>">
+                            <i class="fas fa-laptop-house w-4"></i>
+                            <span>حجوزات أونلاين</span>
+                            <?php
+                                try {
+                                    $pendingOnlineBookingsMenu = \App\Models\OfflineCourseBooking::where('status', 'pending')->where('booking_channel', 'online')->count();
+                                } catch (\Exception $e) {
+                                    $pendingOnlineBookingsMenu = 0;
+                                }
+                            ?>
+                            <?php if($pendingOnlineBookingsMenu > 0): ?>
+                                <span class="mr-auto bg-indigo-500 text-white text-xs font-bold rounded-full px-2 py-0.5"><?php echo e($pendingOnlineBookingsMenu); ?></span>
                             <?php endif; ?>
                         </a>
                     </li>

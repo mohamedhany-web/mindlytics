@@ -151,9 +151,11 @@
             @php
                 $offlineStudentNavOpen = request()->routeIs('student.offline-courses.*');
                 try {
-                    $offlineCountSidebar = auth()->user()->offlineEnrollments()->where('status', 'active')->count();
+                    $offlineCountSidebar = auth()->user()->offlineEnrollments()->where('enrollment_channel', 'offline')->where('status', 'active')->count();
+                    $onlineCountSidebar = auth()->user()->offlineEnrollments()->where('enrollment_channel', 'online')->where('status', 'active')->count();
                 } catch (\Exception $e) {
                     $offlineCountSidebar = 0;
+                    $onlineCountSidebar = 0;
                 }
             @endphp
             <div class="rounded-xl border border-purple-100/80 bg-gradient-to-br from-purple-50/40 to-white overflow-hidden" x-data="{ open: {{ $offlineStudentNavOpen ? 'true' : 'false' }} }">
@@ -177,9 +179,18 @@
                     </a>
                     <a href="{{ route('student.offline-courses.index') }}"
                        @click="if (window.innerWidth < 1024) sidebarOpen = false"
-                       class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors {{ request()->routeIs('student.offline-courses.*') && !request()->routeIs('student.offline-courses.booking.*') ? 'bg-purple-600 text-white font-semibold' : 'text-gray-700 hover:bg-purple-100/80' }}">
+                       class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors {{ request()->routeIs('student.offline-courses.*') && request('channel', 'offline') === 'offline' && !request()->routeIs('student.offline-courses.booking.*') ? 'bg-purple-600 text-white font-semibold' : 'text-gray-700 hover:bg-purple-100/80' }}">
                         <i class="fas fa-book-reader w-4 text-center opacity-90"></i>
                         <span>{{ __('student.my_offline_courses') }}</span>
+                    </a>
+                    <a href="{{ route('student.offline-courses.index', ['channel' => 'online']) }}"
+                       @click="if (window.innerWidth < 1024) sidebarOpen = false"
+                       class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors {{ request()->routeIs('student.offline-courses.*') && request('channel') === 'online' ? 'bg-indigo-600 text-white font-semibold' : 'text-gray-700 hover:bg-indigo-100/80' }}">
+                        <i class="fas fa-laptop-house w-4 text-center opacity-90"></i>
+                        <span>كورساتي الأونلاين</span>
+                        @if($onlineCountSidebar > 0)
+                            <span class="mr-auto text-[11px] bg-indigo-500 text-white px-1.5 py-0.5 rounded-full">{{ $onlineCountSidebar }}</span>
+                        @endif
                     </a>
                 </div>
             </div>
