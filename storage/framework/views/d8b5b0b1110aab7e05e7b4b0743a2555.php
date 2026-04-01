@@ -82,6 +82,8 @@ unset($__errorArgs, $__bag); ?>
                             <option value="general" <?php echo e(old('task_type', 'general') == 'general' ? 'selected' : ''); ?>>مهمة عامة</option>
                             <option value="video_editing" <?php echo e(old('task_type') == 'video_editing' ? 'selected' : ''); ?>>مونتاج فيديو</option>
                             <option value="sales" <?php echo e(old('task_type') == 'sales' ? 'selected' : ''); ?>>مبيعات</option>
+                            <option value="design" <?php echo e(old('task_type') == 'design' ? 'selected' : ''); ?>>تصميم (مشرف/مصمم)</option>
+                            <option value="design_moderator_delivery" <?php echo e(old('task_type') == 'design_moderator_delivery' ? 'selected' : ''); ?>>تسليم نهائي (مشرف)</option>
                         </select>
                         <p class="text-xs text-gray-500 mt-1">مونتاج فيديو: تسليم روابط Bunny والمدة. مبيعات: تسليم كملف/رابط/صورة مع شارة «مبيعات» وربط بمركز المبيعات للموظف.</p>
                         <?php $__errorArgs = ['task_type'];

@@ -52,6 +52,8 @@
                             <option value="general" {{ old('task_type', $employeeTask->task_type ?? 'general') == 'general' ? 'selected' : '' }}>مهمة عامة</option>
                             <option value="video_editing" {{ old('task_type', $employeeTask->task_type ?? '') == 'video_editing' ? 'selected' : '' }}>مونتاج فيديو</option>
                             <option value="sales" {{ old('task_type', $employeeTask->task_type ?? '') == 'sales' ? 'selected' : '' }}>مبيعات</option>
+                            <option value="design" {{ old('task_type', $employeeTask->task_type ?? '') == 'design' ? 'selected' : '' }}>تصميم (مشرف/مصمم)</option>
+                            <option value="design_moderator_delivery" {{ old('task_type', $employeeTask->task_type ?? '') == 'design_moderator_delivery' ? 'selected' : '' }}>تسليم نهائي (مشرف)</option>
                         </select>
                         @error('task_type')<p class="mt-1 text-xs text-rose-500">{{ $message }}</p>@enderror
                     </div>

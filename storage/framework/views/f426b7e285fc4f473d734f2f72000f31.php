@@ -105,6 +105,7 @@ $message = $__bag->first($__errorArgs[0]); ?><p class="text-red-500 text-xs mt-1
 if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
 unset($__errorArgs, $__bag); ?>
+                        <p class="text-xs text-gray-500 mt-2">لتفعيل <strong>لوحة المبيعات</strong> للموظف، اختر وظيفة «مبيعات» (رمز الوظيفة: <code class="bg-gray-100 px-1 rounded">sales</code>). يمكن إضافتها من «الوظائف» إن لم تكن في القائمة.</p>
                     </div>
 
                     <div>

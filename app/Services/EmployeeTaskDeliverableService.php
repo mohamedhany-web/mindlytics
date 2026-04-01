@@ -6,11 +6,14 @@ use App\Models\EmployeeTask;
 use App\Models\EmployeeTaskDeliverable;
 use App\Support\MontageVideoHelper;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class EmployeeTaskDeliverableService
 {
+    public function __construct(
+        protected EmployeeDeliverableStorageService $deliverableStorage
+    ) {}
+
     /**
      * تحديث تسليم مهمة (موظف أو إدمن بعد التحقق من الصلاحية).
      */
@@ -113,27 +116,26 @@ class EmployeeTaskDeliverableService
         }
 
         $filePath = $deliverable->file_path;
+        $fileDisk = $deliverable->file_disk;
         $fileName = $deliverable->file_name;
         $fileType = $deliverable->file_type;
         $fileSize = $deliverable->file_size;
         $linkUrl = $deliverable->link_url;
 
         if (in_array($validated['delivery_type'], ['file', 'image'], true) && $request->hasFile('file')) {
-            if ($deliverable->file_path && Storage::disk('public')->exists($deliverable->file_path)) {
-                Storage::disk('public')->delete($deliverable->file_path);
-            }
+            $this->deliverableStorage->deleteIfExists($deliverable->file_path, $deliverable->file_disk);
             $file = $request->file('file');
             $fileName = $file->getClientOriginalName();
             $fileType = $file->getClientMimeType();
             $fileSize = $file->getSize();
-            $folder = $validated['delivery_type'] === 'image' ? 'employee-deliverables/images' : 'employee-deliverables/files';
-            $filePath = $file->store($folder, 'public');
+            $stored = $this->deliverableStorage->storeUploadedFile($file, $validated['delivery_type']);
+            $filePath = $stored['path'];
+            $fileDisk = $stored['disk'];
             $linkUrl = null;
         } elseif ($validated['delivery_type'] === 'link') {
-            if ($deliverable->file_path && Storage::disk('public')->exists($deliverable->file_path)) {
-                Storage::disk('public')->delete($deliverable->file_path);
-            }
+            $this->deliverableStorage->deleteIfExists($deliverable->file_path, $deliverable->file_disk);
             $filePath = null;
+            $fileDisk = null;
             $fileName = null;
             $fileType = null;
             $fileSize = null;
@@ -146,6 +148,7 @@ class EmployeeTaskDeliverableService
             'delivery_type' => $validated['delivery_type'],
             'link_url' => $linkUrl,
             'file_path' => $filePath,
+            'file_disk' => $fileDisk,
             'file_name' => $fileName,
             'file_type' => $fileType,
             'file_size' => $fileSize,
@@ -160,9 +163,7 @@ class EmployeeTaskDeliverableService
     {
         $this->assertDeliverableBelongsToTask($task, $deliverable);
 
-        if ($deliverable->file_path && Storage::disk('public')->exists($deliverable->file_path)) {
-            Storage::disk('public')->delete($deliverable->file_path);
-        }
+        $this->deliverableStorage->deleteIfExists($deliverable->file_path, $deliverable->file_disk);
 
         $deliverable->delete();
     }

@@ -21,7 +21,7 @@
     <div class="box">
         <h1>تم تعيين مهمة جديدة لك</h1>
         <p>مرحباً {{ $task->employee->name }}،</p>
-        <p>تم تعيين مهمة جديدة لك من قبل <strong>{{ $task->assigner->name }}</strong>.</p>
+        <p>تم تعيين مهمة جديدة لك من قبل <strong>{{ $task->assigner->name ?? 'الإدارة' }}</strong>.</p>
 
         <div class="card">
             <div class="label">نوع المهمة</div>

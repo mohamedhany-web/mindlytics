@@ -12,11 +12,14 @@
                     <h1 class="text-2xl font-bold text-gray-900">{{ $task->title }}</h1>
                     <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold
                         @if($task->isVideoEditing()) bg-violet-100 text-violet-800
+                        @elseif($task->isDesign()) bg-sky-100 text-sky-800
                         @elseif($task->isSales()) bg-emerald-100 text-emerald-800
                         @else bg-slate-100 text-slate-700
                         @endif">
                         @if($task->isVideoEditing())
                             <i class="fas fa-video"></i> مونتاج فيديو
+                        @elseif($task->isDesign())
+                            <i class="fas fa-paint-brush"></i> تصميم
                         @elseif($task->isSales())
                             <i class="fas fa-handshake"></i> مبيعات
                         @else
@@ -69,6 +72,10 @@
                 </div>
             </div>
         </div>
+
+        @if($task->isDesign() || $task->isVideoEditing())
+            @include('employee.tasks.partials.deliverables-summary-table')
+        @endif
 
         @if($task->description)
         <div class="mb-6 pt-6 border-t border-gray-200">
@@ -367,8 +374,8 @@
                                         <div class="flex items-center gap-2 text-sm">
                                             <i class="fas fa-file-video text-violet-500"></i>
                                             <span class="text-gray-700">{{ $deliverable->file_name }}</span>
-                                            @if($deliverable->file_path)
-                                                <a href="{{ Storage::url($deliverable->file_path) }}" target="_blank" class="text-blue-600 hover:text-blue-800">
+                                            @if($deliverable->publicFileUrl())
+                                                <a href="{{ $deliverable->publicFileUrl() }}" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-800">
                                                     <i class="fas fa-download"></i> تحميل
                                                 </a>
                                             @endif

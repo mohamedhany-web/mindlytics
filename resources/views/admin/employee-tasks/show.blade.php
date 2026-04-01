@@ -143,6 +143,8 @@
                     <span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border-2
                         @if($employeeTask->task_type === 'video_editing') bg-violet-50 text-violet-800 border-violet-200
                         @elseif($employeeTask->task_type === 'sales') bg-emerald-50 text-emerald-800 border-emerald-200
+                        @elseif($employeeTask->task_type === 'design') bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200
+                        @elseif($employeeTask->task_type === 'design_moderator_delivery') bg-indigo-50 text-indigo-800 border-indigo-200
                         @else bg-slate-50 text-slate-800 border-slate-200
                         @endif">
                         {{ \App\Models\EmployeeTask::taskTypeLabel($employeeTask->task_type) }}
@@ -373,8 +375,8 @@
                                             <a href="{{ $deliverable->link_url }}" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-800 break-all line-clamp-2">
                                                 {{ Str::limit($deliverable->link_url, 45) }} <i class="fas fa-external-link-alt text-xs"></i>
                                             </a>
-                                        @elseif($deliverable->file_path)
-                                            <a href="{{ Storage::url($deliverable->file_path) }}" target="_blank" class="text-blue-600 hover:text-blue-800">
+                                        @elseif($deliverable->publicFileUrl())
+                                            <a href="{{ $deliverable->publicFileUrl() }}" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-800">
                                                 {{ Str::limit($deliverable->file_name, 30) }} <i class="fas fa-download text-xs"></i>
                                             </a>
                                         @else

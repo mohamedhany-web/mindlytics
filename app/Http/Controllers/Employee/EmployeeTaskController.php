@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
+use App\Models\DesignTaskCycle;
 use App\Models\EmployeeTask;
 use App\Models\EmployeeTaskDeliverable;
+use App\Services\EmployeeDeliverableStorageService;
 use App\Services\EmployeeTaskDeliverableService;
 use App\Support\MontageVideoHelper;
 use Illuminate\Http\Request;
@@ -16,9 +18,9 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 class EmployeeTaskController extends Controller
 {
     public function __construct(
-        protected EmployeeTaskDeliverableService $deliverableService
-    ) {
-    }
+        protected EmployeeTaskDeliverableService $deliverableService,
+        protected EmployeeDeliverableStorageService $deliverableStorage
+    ) {}
 
     /**
      * عرض قائمة مهام الموظف
@@ -26,8 +28,8 @@ class EmployeeTaskController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        
-        if (!$user->isEmployee()) {
+
+        if (! $user->isEmployee()) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -69,15 +71,15 @@ class EmployeeTaskController extends Controller
     public function show(EmployeeTask $task)
     {
         $user = Auth::user();
-        
-        if (!$user->isEmployee() || $task->employee_id !== $user->id) {
+
+        if (! $user->isEmployee() || $task->employee_id !== $user->id) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
         $task->load(['assigner', 'deliverables' => function ($q) {
             $q->with('reviewer')->orderByDesc('created_at');
         }]);
-        
+
         return view('employee.tasks.show', compact('task'));
     }
 
@@ -87,8 +89,8 @@ class EmployeeTaskController extends Controller
     public function updateStatus(Request $request, EmployeeTask $task)
     {
         $user = Auth::user();
-        
-        if (!$user->isEmployee() || $task->employee_id !== $user->id) {
+
+        if (! $user->isEmployee() || $task->employee_id !== $user->id) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -98,7 +100,7 @@ class EmployeeTaskController extends Controller
         ]);
 
         // تحديث التواريخ بناءً على الحالة
-        if ($validated['status'] === 'in_progress' && !$task->started_at) {
+        if ($validated['status'] === 'in_progress' && ! $task->started_at) {
             $validated['started_at'] = now();
         }
 
@@ -108,6 +110,14 @@ class EmployeeTaskController extends Controller
         }
 
         $task->update($validated);
+
+        $task->refresh();
+        if (($validated['status'] ?? '') === 'in_progress' && $task->isDesign()) {
+            DesignTaskCycle::syncDesignerTaskInProgress($task);
+        }
+        if (($validated['status'] ?? '') === 'completed' && $task->isDesignModeratorDelivery()) {
+            DesignTaskCycle::syncAfterModeratorDeliveryCompleted($task);
+        }
 
         return back()->with('success', 'تم تحديث حالة المهمة بنجاح');
     }
@@ -119,7 +129,7 @@ class EmployeeTaskController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->isEmployee() || $task->employee_id !== $user->id) {
+        if (! $user->isEmployee() || $task->employee_id !== $user->id) {
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
@@ -139,7 +149,7 @@ class EmployeeTaskController extends Controller
                         $allowed = str_contains($hostLower, 'bunny')
                             || str_contains($hostLower, 'b-cdn')
                             || str_contains($hostLower, 'mediadelivery');
-                        if (!$host || !$allowed) {
+                        if (! $host || ! $allowed) {
                             $fail('رابط الفيديو يجب أن يكون من Bunny (bunny.net أو b-cdn.net أو mediadelivery.net) فقط.');
                         }
                     },
@@ -171,6 +181,7 @@ class EmployeeTaskController extends Controller
         }
 
         $filePath = null;
+        $fileDisk = null;
         $fileName = null;
         $fileType = null;
         $fileSize = null;
@@ -208,8 +219,9 @@ class EmployeeTaskController extends Controller
                 $fileName = $file->getClientOriginalName();
                 $fileType = $file->getClientMimeType();
                 $fileSize = $file->getSize();
-                $folder = $validated['delivery_type'] === 'image' ? 'employee-deliverables/images' : 'employee-deliverables/files';
-                $filePath = $file->store($folder, 'public');
+                $stored = $this->deliverableStorage->storeUploadedFile($file, $validated['delivery_type']);
+                $filePath = $stored['path'];
+                $fileDisk = $stored['disk'];
             }
             $deliveryType = $validated['delivery_type'];
             if ($deliveryType === 'link') {
@@ -219,11 +231,12 @@ class EmployeeTaskController extends Controller
 
         $createPayload = [
             'task_id' => $task->id,
-            'title' => $validated['title'] ?? ('تسليم مونتاج ' . now()->format('Y-m-d H:i')),
+            'title' => $validated['title'] ?? ('تسليم مونتاج '.now()->format('Y-m-d H:i')),
             'description' => $validated['description'] ?? null,
             'delivery_type' => $deliveryType,
             'link_url' => $linkUrl ?? ($isVideoEditing ? $validated['video_link_url'] : null),
             'file_path' => $filePath,
+            'file_disk' => $fileDisk,
             'file_name' => $fileName,
             'file_type' => $fileType,
             'file_size' => $fileSize,
@@ -243,10 +256,14 @@ class EmployeeTaskController extends Controller
             $task->update(['status' => 'in_progress']);
         }
 
+        $task->refresh();
+        DesignTaskCycle::syncAfterDesignerDeliverable($task);
+
         $message = $isVideoEditing
             ? 'تم تسليم المونتاج بنجاح'
             : ($task->isSales() ? 'تم تسليم مهمة المبيعات بنجاح' : 'تم تسليم المهمة بنجاح');
-        return redirect()->to(route('employee.tasks.show', $task) . '?open=1')
+
+        return redirect()->to(route('employee.tasks.show', $task).'?open=1')
             ->with('success', $message);
     }
 
@@ -259,7 +276,7 @@ class EmployeeTaskController extends Controller
 
         $this->deliverableService->updateDeliverable($request, $task, $deliverable);
 
-        return redirect()->to(route('employee.tasks.show', $task) . '?open=1')
+        return redirect()->to(route('employee.tasks.show', $task).'?open=1')
             ->with('success', 'تم تحديث التسليم بنجاح');
     }
 
@@ -272,7 +289,7 @@ class EmployeeTaskController extends Controller
 
         $this->deliverableService->destroyDeliverable($task, $deliverable);
 
-        return redirect()->to(route('employee.tasks.show', $task) . '?open=1')
+        return redirect()->to(route('employee.tasks.show', $task).'?open=1')
             ->with('success', 'تم حذف التسليم');
     }
 
@@ -311,7 +328,7 @@ class EmployeeTaskController extends Controller
             ->orderBy('id')
             ->get();
 
-        $filename = 'montage-deliverables-task-' . $task->id . '-' . now()->format('Y-m-d') . '.xlsx';
+        $filename = 'montage-deliverables-task-'.$task->id.'-'.now()->format('Y-m-d').'.xlsx';
 
         return response()->streamDownload(function () use ($deliverables) {
             $spreadsheet = new Spreadsheet;

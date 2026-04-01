@@ -629,6 +629,16 @@ class User extends Authenticatable
         return $this->hasMany(EmployeeTask::class, 'assigned_by');
     }
 
+    public function moderatedDesignCycles()
+    {
+        return $this->hasMany(DesignTaskCycle::class, 'moderator_id');
+    }
+
+    public function designerDesignCycles()
+    {
+        return $this->hasMany(DesignTaskCycle::class, 'designer_employee_id');
+    }
+
     /**
      * علاقة مع طلبات الإجازة
      */
@@ -659,6 +669,32 @@ class User extends Authenticatable
     }
 
     /**
+     * موظف بوظيفة مشرف محتوى (رمز الوظيفة moderator).
+     */
+    public function isModeratorEmployee(): bool
+    {
+        if (! $this->isEmployee()) {
+            return false;
+        }
+        $this->loadMissing('employeeJob');
+
+        return $this->employeeJob && strtolower((string) $this->employeeJob->code) === 'moderator';
+    }
+
+    /**
+     * موظف بوظيفة مصمم (رمز الوظيفة designer).
+     */
+    public function isDesignerEmployee(): bool
+    {
+        if (! $this->isEmployee()) {
+            return false;
+        }
+        $this->loadMissing('employeeJob');
+
+        return $this->employeeJob && strtolower((string) $this->employeeJob->code) === 'designer';
+    }
+
+    /**
      * العملاء المحتملون المسندون لموظف المبيعات
      */
     public function assignedSalesLeads()
@@ -681,6 +717,20 @@ class User extends Authenticatable
     {
         return $query->employees()->whereHas('employeeJob', function ($q) {
             $q->whereRaw('LOWER(code) = ?', ['sales']);
+        });
+    }
+
+    public function scopeModeratorEmployees($query)
+    {
+        return $query->employees()->whereHas('employeeJob', function ($q) {
+            $q->whereRaw('LOWER(code) = ?', ['moderator']);
+        });
+    }
+
+    public function scopeDesignerEmployees($query)
+    {
+        return $query->employees()->whereHas('employeeJob', function ($q) {
+            $q->whereRaw('LOWER(code) = ?', ['designer']);
         });
     }
 

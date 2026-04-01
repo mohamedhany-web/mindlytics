@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\MontageVideoHelper;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class EmployeeTaskDeliverable extends Model
 {
@@ -21,6 +22,7 @@ class EmployeeTaskDeliverable extends Model
         'link_url',
         'link_url_hash',
         'file_path',
+        'file_disk',
         'file_name',
         'file_type',
         'file_size',
@@ -64,6 +66,32 @@ class EmployeeTaskDeliverable extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    /**
+     * رابط عام لتحميل/عرض الملف (public محلي أو R2 حسب file_disk).
+     */
+    public function publicFileUrl(): ?string
+    {
+        if (! $this->file_path || ! in_array($this->delivery_type, ['file', 'image'], true)) {
+            return null;
+        }
+        $disk = $this->file_disk ?: 'public';
+        try {
+            return Storage::disk($disk)->url($this->file_path);
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    public static function deliveryTypeLabel(?string $type): string
+    {
+        return match ($type) {
+            'file' => 'ملف',
+            'image' => 'صورة',
+            'link' => 'رابط',
+            default => $type ?? '—',
+        };
     }
 
     /**

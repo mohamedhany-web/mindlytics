@@ -839,7 +839,7 @@
 
             <!-- إدارة الموظفين -->
             <?php
-                $employeesOpen = request()->routeIs('admin.employees.*') || request()->routeIs('admin.employee-jobs.*') || request()->routeIs('admin.employee-tasks.*') || request()->routeIs('admin.employee-deductions.*') || request()->routeIs('admin.leaves.*') || request()->routeIs('admin.tasks.*') || request()->routeIs('admin.instructor-requests.*');
+                $employeesOpen = request()->routeIs('admin.employees.*') || request()->routeIs('admin.employee-jobs.*') || request()->routeIs('admin.employee-tasks.*') || request()->routeIs('admin.design-task-cycles.*') || request()->routeIs('admin.moderator-marketing-plans.*') || request()->routeIs('admin.employee-deductions.*') || request()->routeIs('admin.leaves.*') || request()->routeIs('admin.tasks.*') || request()->routeIs('admin.instructor-requests.*');
             ?>
             <li x-data="{ open: <?php echo e($employeesOpen ? 'true' : 'false'); ?> }">
                 <button @click="open = !open" 
@@ -883,6 +883,30 @@
                             <?php if($pendingTasks > 0): ?>
                                 <span class="mr-auto bg-yellow-500 text-white text-xs font-bold rounded-full px-2 py-0.5 shadow-lg"><?php echo e($pendingTasks); ?></span>
                             <?php endif; ?>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="<?php echo e(route('admin.design-task-cycles.index')); ?>"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.design-task-cycles.index') || request()->routeIs('admin.design-task-cycles.show') ? 'bg-fuchsia-600/30 text-white font-semibold border-r-2 border-fuchsia-400' : ''); ?>">
+                            <i class="fas fa-palette w-4"></i>
+                            <span>دورات التصميم (مشرف/مصمم)</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="<?php echo e(route('admin.design-task-cycles.performance-report')); ?>"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.design-task-cycles.performance-report') ? 'bg-fuchsia-600/30 text-white font-semibold border-r-2 border-fuchsia-400' : ''); ?>">
+                            <i class="fas fa-chart-pie w-4"></i>
+                            <span>تقرير أداء التصميم (شهري)</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="<?php echo e(route('admin.moderator-marketing-plans.index')); ?>"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.moderator-marketing-plans.*') ? 'bg-pink-600/30 text-white font-semibold border-r-2 border-pink-400' : ''); ?>">
+                            <i class="fas fa-bullhorn w-4"></i>
+                            <span>خطط تسويق المشرفين</span>
                         </a>
                     </li>
                     <li>

@@ -42,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'landing.locale' => \App\Http\Middleware\SetLandingLocale::class,
             'community.contributor' => \App\Http\Middleware\EnsureCommunityContributor::class,
             'sales.employee' => \App\Http\Middleware\EnsureSalesEmployee::class,
+            'moderator.employee' => \App\Http\Middleware\EnsureModeratorEmployee::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

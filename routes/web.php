@@ -720,6 +720,34 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::resource('leads', \App\Http\Controllers\Employee\SalesLeadController::class);
         });
 
+        Route::middleware('moderator.employee')->prefix('design-cycles')->name('design-cycles.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'store'])->name('store');
+            Route::post('/{design_task_cycle}/planner-items', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'storePlannerItem'])->name('planner-items.store');
+            Route::patch('/{design_task_cycle}/planner-items/{design_cycle_moderator_planner_item}', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'updatePlannerItem'])->name('planner-items.update');
+            Route::delete('/{design_task_cycle}/planner-items/{design_cycle_moderator_planner_item}', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'destroyPlannerItem'])->name('planner-items.destroy');
+            Route::get('/{design_task_cycle}', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'show'])->name('show');
+            Route::post('/{design_task_cycle}/moderator-delivery', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'storeModeratorDelivery'])->name('moderator-delivery.store');
+            Route::post('/{design_task_cycle}/cancel', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'cancel'])->name('cancel');
+        });
+
+        Route::middleware('moderator.employee')->prefix('marketing-plans')->name('marketing-plans.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Employee\ModeratorMarketingPlanController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Employee\ModeratorMarketingPlanController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Employee\ModeratorMarketingPlanController::class, 'store'])->name('store');
+            Route::get('/{marketing_plan}', [\App\Http\Controllers\Employee\ModeratorMarketingPlanController::class, 'show'])->name('show');
+            Route::get('/{marketing_plan}/edit', [\App\Http\Controllers\Employee\ModeratorMarketingPlanController::class, 'edit'])->name('edit');
+            Route::put('/{marketing_plan}', [\App\Http\Controllers\Employee\ModeratorMarketingPlanController::class, 'update'])->name('update');
+            Route::delete('/{marketing_plan}', [\App\Http\Controllers\Employee\ModeratorMarketingPlanController::class, 'destroy'])->name('destroy');
+            Route::post('/{marketing_plan}/platforms', [\App\Http\Controllers\Employee\ModeratorMarketingPlanController::class, 'storePlatform'])->name('platforms.store');
+            Route::put('/{marketing_plan}/platforms/{platform}', [\App\Http\Controllers\Employee\ModeratorMarketingPlanController::class, 'updatePlatform'])->name('platforms.update');
+            Route::delete('/{marketing_plan}/platforms/{platform}', [\App\Http\Controllers\Employee\ModeratorMarketingPlanController::class, 'destroyPlatform'])->name('platforms.destroy');
+            Route::post('/{marketing_plan}/events', [\App\Http\Controllers\Employee\ModeratorMarketingPlanController::class, 'storeEvent'])->name('events.store');
+            Route::put('/{marketing_plan}/events/{event}', [\App\Http\Controllers\Employee\ModeratorMarketingPlanController::class, 'updateEvent'])->name('events.update');
+            Route::delete('/{marketing_plan}/events/{event}', [\App\Http\Controllers\Employee\ModeratorMarketingPlanController::class, 'destroyEvent'])->name('events.destroy');
+        });
+
         Route::get('/tasks', [\App\Http\Controllers\Employee\EmployeeTaskController::class, 'index'])->name('tasks.index');
         Route::get('/tasks/{task}', [\App\Http\Controllers\Employee\EmployeeTaskController::class, 'show'])->name('tasks.show');
         Route::put('/tasks/{task}/status', [\App\Http\Controllers\Employee\EmployeeTaskController::class, 'updateStatus'])->name('tasks.update-status');
@@ -1184,6 +1212,19 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('employee-tasks/{employee_task}/deliverables/montage-excel-template', [\App\Http\Controllers\Admin\EmployeeTaskController::class, 'downloadMontageExcelTemplate'])->name('employee-tasks.deliverables.montage-excel-template');
         Route::post('employee-tasks/{employee_task}/deliverables/import-excel', [\App\Http\Controllers\Admin\EmployeeTaskController::class, 'importMontageExcel'])->name('employee-tasks.deliverables.import-excel');
         Route::resource('employee-tasks', \App\Http\Controllers\Admin\EmployeeTaskController::class);
+
+        Route::get('design-task-cycles/performance-report', [\App\Http\Controllers\Admin\DesignTaskCycleController::class, 'performanceReport'])->name('design-task-cycles.performance-report');
+        Route::get('design-task-cycles/performance-report/excel', [\App\Http\Controllers\Admin\DesignTaskCycleController::class, 'performanceReportExcel'])->name('design-task-cycles.performance-report.excel');
+        Route::prefix('design-task-cycles')->name('design-task-cycles.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\DesignTaskCycleController::class, 'index'])->name('index');
+            Route::post('{design_task_cycle}/notes', [\App\Http\Controllers\Admin\DesignTaskCycleController::class, 'updateNotes'])->name('notes.update');
+            Route::post('{design_task_cycle}/cancel', [\App\Http\Controllers\Admin\DesignTaskCycleController::class, 'cancel'])->name('cancel');
+            Route::get('{design_task_cycle}', [\App\Http\Controllers\Admin\DesignTaskCycleController::class, 'show'])->name('show');
+        });
+
+        Route::get('moderator-marketing-plans', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'index'])->name('moderator-marketing-plans.index');
+        Route::get('moderator-marketing-plans/{plan}', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'show'])->name('moderator-marketing-plans.show');
+
         Route::resource('employee-deductions', \App\Http\Controllers\Admin\EmployeeDeductionController::class);
         
         // إدارة الإجازات

@@ -3,25 +3,23 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Mail\EmployeeTaskAssignedMail;
 use App\Models\EmployeeTask;
 use App\Models\EmployeeTaskDeliverable;
 use App\Models\User;
+use App\Services\EmployeeTaskAssignmentNotifier;
 use App\Services\EmployeeTaskDeliverableService;
 use App\Services\MontageDeliverablesExcelImportService;
 use Illuminate\Http\Request;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class EmployeeTaskController extends Controller
 {
     public function __construct(
         protected EmployeeTaskDeliverableService $deliverableService,
-        protected MontageDeliverablesExcelImportService $montageExcelImport
-    ) {
-    }
+        protected MontageDeliverablesExcelImportService $montageExcelImport,
+        protected EmployeeTaskAssignmentNotifier $taskAssignmentNotifier
+    ) {}
 
     /**
      * عرض قائمة المهام
@@ -33,12 +31,12 @@ class EmployeeTaskController extends Controller
         // البحث
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%")
-                  ->orWhereHas('employee', function($q) use ($search) {
-                      $q->where('name', 'like', "%{$search}%");
-                  });
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhereHas('employee', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -82,6 +80,7 @@ class EmployeeTaskController extends Controller
     public function create()
     {
         $employees = User::employees()->where('is_active', true)->orderBy('name')->get();
+
         return view('admin.employee-tasks.create', compact('employees'));
     }
 
@@ -92,7 +91,7 @@ class EmployeeTaskController extends Controller
     {
         $validated = $request->validate([
             'employee_id' => 'required|exists:users,id',
-            'task_type' => 'required|in:general,video_editing,sales',
+            'task_type' => 'required|in:general,video_editing,sales,design,design_moderator_delivery',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'priority' => 'required|in:low,medium,high,urgent',
@@ -105,20 +104,10 @@ class EmployeeTaskController extends Controller
 
         $task = EmployeeTask::create($validated);
 
-        try {
-            $employee = $task->employee;
-            if ($employee && $employee->email) {
-                Mail::to($employee->email)->send(new EmployeeTaskAssignedMail($task));
-            }
-        } catch (\Throwable $e) {
-            Log::warning('Failed to send employee task assigned email: ' . $e->getMessage(), [
-                'task_id' => $task->id,
-                'employee_id' => $task->employee_id,
-            ]);
-        }
+        $this->taskAssignmentNotifier->notifyAssigned($task->fresh());
 
         return redirect()->route('admin.employee-tasks.show', $task)
-                        ->with('success', 'تم إضافة المهمة بنجاح');
+            ->with('success', 'تم إضافة المهمة بنجاح');
     }
 
     /**
@@ -156,6 +145,7 @@ class EmployeeTaskController extends Controller
     public function edit(EmployeeTask $employeeTask)
     {
         $employees = User::employees()->where('is_active', true)->orderBy('name')->get();
+
         return view('admin.employee-tasks.edit', compact('employeeTask', 'employees'));
     }
 
@@ -164,9 +154,11 @@ class EmployeeTaskController extends Controller
      */
     public function update(Request $request, EmployeeTask $employeeTask)
     {
+        $previousEmployeeId = (int) $employeeTask->employee_id;
+
         $validated = $request->validate([
             'employee_id' => 'required|exists:users,id',
-            'task_type' => 'required|in:general,video_editing,sales',
+            'task_type' => 'required|in:general,video_editing,sales,design,design_moderator_delivery',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'priority' => 'required|in:low,medium,high,urgent',
@@ -177,7 +169,7 @@ class EmployeeTaskController extends Controller
         ]);
 
         // تحديث التواريخ بناءً على الحالة
-        if ($validated['status'] === 'in_progress' && !$employeeTask->started_at) {
+        if ($validated['status'] === 'in_progress' && ! $employeeTask->started_at) {
             $validated['started_at'] = now();
         }
 
@@ -188,8 +180,12 @@ class EmployeeTaskController extends Controller
 
         $employeeTask->update($validated);
 
+        if ($previousEmployeeId !== (int) $validated['employee_id']) {
+            $this->taskAssignmentNotifier->notifyAssigned($employeeTask->fresh());
+        }
+
         return redirect()->route('admin.employee-tasks.show', $employeeTask)
-                        ->with('success', 'تم تحديث المهمة بنجاح');
+            ->with('success', 'تم تحديث المهمة بنجاح');
     }
 
     /**
@@ -198,8 +194,9 @@ class EmployeeTaskController extends Controller
     public function destroy(EmployeeTask $employeeTask)
     {
         $employeeTask->delete();
+
         return redirect()->route('admin.employee-tasks.index')
-                        ->with('success', 'تم حذف المهمة بنجاح');
+            ->with('success', 'تم حذف المهمة بنجاح');
     }
 
     /**

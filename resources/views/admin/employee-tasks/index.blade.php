@@ -57,6 +57,8 @@
                         <option value="general" {{ request('task_type') == 'general' ? 'selected' : '' }}>عامة</option>
                         <option value="video_editing" {{ request('task_type') == 'video_editing' ? 'selected' : '' }}>مونتاج فيديو</option>
                         <option value="sales" {{ request('task_type') == 'sales' ? 'selected' : '' }}>مبيعات</option>
+                        <option value="design" {{ request('task_type') == 'design' ? 'selected' : '' }}>تصميم</option>
+                        <option value="design_moderator_delivery" {{ request('task_type') == 'design_moderator_delivery' ? 'selected' : '' }}>تسليم مشرف</option>
                     </select>
                 </div>
 
@@ -170,6 +172,8 @@
                                 <span class="inline-flex mt-1 px-2 py-0.5 text-xs font-semibold rounded-full
                                     @if($task->task_type === 'video_editing') bg-violet-100 text-violet-800
                                     @elseif($task->task_type === 'sales') bg-emerald-100 text-emerald-800
+                                    @elseif($task->task_type === 'design') bg-fuchsia-100 text-fuchsia-800
+                                    @elseif($task->task_type === 'design_moderator_delivery') bg-indigo-100 text-indigo-800
                                     @else bg-slate-100 text-slate-700
                                     @endif">{{ \App\Models\EmployeeTask::taskTypeLabel($task->task_type) }}</span>
                             </td>

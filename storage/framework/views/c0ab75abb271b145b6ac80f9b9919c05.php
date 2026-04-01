@@ -12,11 +12,14 @@
                     <h1 class="text-2xl font-bold text-gray-900"><?php echo e($task->title); ?></h1>
                     <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold
                         <?php if($task->isVideoEditing()): ?> bg-violet-100 text-violet-800
+                        <?php elseif($task->isDesign()): ?> bg-sky-100 text-sky-800
                         <?php elseif($task->isSales()): ?> bg-emerald-100 text-emerald-800
                         <?php else: ?> bg-slate-100 text-slate-700
                         <?php endif; ?>">
                         <?php if($task->isVideoEditing()): ?>
                             <i class="fas fa-video"></i> مونتاج فيديو
+                        <?php elseif($task->isDesign()): ?>
+                            <i class="fas fa-paint-brush"></i> تصميم
                         <?php elseif($task->isSales()): ?>
                             <i class="fas fa-handshake"></i> مبيعات
                         <?php else: ?>
@@ -70,6 +73,10 @@
                 </div>
             </div>
         </div>
+
+        <?php if($task->isDesign() || $task->isVideoEditing()): ?>
+            <?php echo $__env->make('employee.tasks.partials.deliverables-summary-table', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+        <?php endif; ?>
 
         <?php if($task->description): ?>
         <div class="mb-6 pt-6 border-t border-gray-200">

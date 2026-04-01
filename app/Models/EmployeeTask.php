@@ -21,6 +21,7 @@ class EmployeeTask extends Model
         'completed_at',
         'progress',
         'notes',
+        'design_cycle_id',
     ];
 
     protected $casts = [
@@ -52,6 +53,11 @@ class EmployeeTask extends Model
     public function deliverables(): HasMany
     {
         return $this->hasMany(EmployeeTaskDeliverable::class, 'task_id');
+    }
+
+    public function designCycle(): BelongsTo
+    {
+        return $this->belongsTo(DesignTaskCycle::class, 'design_cycle_id');
     }
 
     /**
@@ -94,11 +100,23 @@ class EmployeeTask extends Model
         return $this->task_type === 'sales';
     }
 
+    public function isDesign(): bool
+    {
+        return $this->task_type === 'design';
+    }
+
+    public function isDesignModeratorDelivery(): bool
+    {
+        return $this->task_type === 'design_moderator_delivery';
+    }
+
     public static function taskTypeLabel(?string $taskType): string
     {
         return match ($taskType) {
             'video_editing' => 'مونتاج فيديو',
             'sales' => 'مبيعات',
+            'design' => 'تصميم (دورة مشرف/مصمم)',
+            'design_moderator_delivery' => 'تسليم نهائي (مشرف)',
             default => 'مهمة عامة',
         };
     }
