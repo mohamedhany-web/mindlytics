@@ -3,13 +3,20 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdvancedCourse;
 use App\Models\InstallmentAgreement;
 use App\Models\InstallmentPayment;
 use App\Models\InstallmentPlan;
+use App\Models\OfflineCourse;
+use App\Models\OfflineCourseEnrollment;
+use App\Models\OfflineCourseGroup;
 use App\Models\StudentCourseEnrollment;
+use App\Models\User;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Transaction;
+use App\Support\OfflineEnrollmentProvisioner;
+use App\Services\InstructorCoursePercentageService;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -26,7 +33,7 @@ class InstallmentAgreementController extends Controller
 
     public function index(Request $request): View
     {
-        $agreements = InstallmentAgreement::with(['student', 'course', 'plan'])
+        $agreements = InstallmentAgreement::with(['student', 'course', 'offlineEnrollment.course', 'plan'])
             ->when($request->filled('status'), fn (Builder $query) => $query->where('status', $request->string('status')))
             ->latest()
             ->paginate(20)
@@ -35,6 +42,187 @@ class InstallmentAgreementController extends Controller
         $statuses = $this->statusOptions();
 
         return view('admin.installments.agreements.index', compact('agreements', 'statuses'));
+    }
+
+    public function createManualBooking(Request $request): View
+    {
+        $plans = InstallmentPlan::active()->with('course')->orderBy('name')->get();
+        $onlineCourses = AdvancedCourse::active()->orderBy('title')->get(['id', 'title', 'price']);
+        $offlineCourses = OfflineCourse::active()->with(['groups' => fn ($q) => $q->where('is_active', true)->where('status', 'active')->orderBy('name')])->orderBy('title')->get(['id', 'title', 'price']);
+        $statuses = $this->statusOptions();
+        $selectedPlanId = $request->integer('plan_id');
+
+        $offlineCoursesGroups = $offlineCourses->map(fn (OfflineCourse $c) => [
+            'id' => $c->id,
+            'groups' => $c->groups->map(fn (OfflineCourseGroup $g) => ['id' => $g->id, 'name' => $g->name])->values(),
+        ])->values();
+
+        return view('admin.installments.agreements.manual-booking', compact(
+            'plans',
+            'onlineCourses',
+            'offlineCourses',
+            'offlineCoursesGroups',
+            'statuses',
+            'selectedPlanId'
+        ));
+    }
+
+    public function storeManualBooking(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'student_email' => ['required', 'email'],
+            'course_mode' => ['required', 'in:online,offline'],
+            'installment_plan_id' => ['required', 'exists:installment_plans,id'],
+            'advanced_course_id' => ['required_if:course_mode,online', 'nullable', 'exists:advanced_courses,id'],
+            'offline_course_id' => ['required_if:course_mode,offline', 'nullable', 'exists:offline_courses,id'],
+            'offline_group_id' => ['required_if:course_mode,offline', 'nullable', 'exists:offline_course_groups,id'],
+            'total_amount' => ['nullable', 'numeric', 'min:0'],
+            'deposit_amount' => ['nullable', 'numeric', 'min:0'],
+            'installments_count' => ['nullable', 'integer', 'min:1', 'max:60'],
+            'start_date' => ['required', 'date'],
+            'status' => ['nullable', 'in:' . implode(',', array_keys($this->statusOptions()))],
+            'notes' => ['nullable', 'string'],
+        ], [
+            'student_email.required' => 'البريد الإلكتروني للطالب مطلوب.',
+            'course_mode.required' => 'نوع الكورس (أونلاين / أوفلاين) مطلوب.',
+        ]);
+
+        $plan = InstallmentPlan::findOrFail($data['installment_plan_id']);
+        if (! $plan->is_active) {
+            return back()->withErrors(['installment_plan_id' => 'الخطة المختارة غير مفعّلة.'])->withInput();
+        }
+
+        $user = User::where('email', $data['student_email'])->first();
+        if (! $user) {
+            return back()->withErrors(['student_email' => 'لا يوجد حساب بهذا البريد. أنشئ حساب الطالب أولاً ثم أعد المحاولة.'])->withInput();
+        }
+
+        if ($data['course_mode'] === 'online') {
+            if ($plan->advanced_course_id && (int) $plan->advanced_course_id !== (int) $data['advanced_course_id']) {
+                return back()->withErrors(['installment_plan_id' => 'الخطة مربوطة بكورس أونلاين آخر. اختر خطة بدون كورس محدد أو تطابق الكورس.'])->withInput();
+            }
+
+            $advancedCourse = AdvancedCourse::findOrFail($data['advanced_course_id']);
+            $enrollment = StudentCourseEnrollment::where('user_id', $user->id)
+                ->where('advanced_course_id', $advancedCourse->id)
+                ->first();
+
+            if (! $enrollment) {
+                $enrollment = StudentCourseEnrollment::create([
+                    'user_id' => $user->id,
+                    'advanced_course_id' => $advancedCourse->id,
+                    'status' => 'active',
+                    'notes' => trim('تسجيل يدوي مع تقسيط' . (! empty($data['notes'] ?? '') ? "\n" . $data['notes'] : '')),
+                    'enrolled_at' => now(),
+                    'activated_at' => now(),
+                    'activated_by' => $request->user()?->id,
+                ]);
+                InstructorCoursePercentageService::processEnrollmentActivation($enrollment->fresh());
+            }
+
+            if (InstallmentAgreement::where('student_course_enrollment_id', $enrollment->id)
+                ->whereIn('status', [InstallmentAgreement::STATUS_ACTIVE, InstallmentAgreement::STATUS_OVERDUE])
+                ->exists()) {
+                return back()->withErrors(['student_email' => 'هناك خطة تقسيط نشطة بالفعل لهذا التسجيل الأونلاين.'])->withInput();
+            }
+
+            $totalAmount = $data['total_amount'] ?? $plan->total_amount ?? $advancedCourse->price ?? 0;
+            $depositAmount = $data['deposit_amount'] ?? $plan->deposit_amount ?? 0;
+            if ($totalAmount < $depositAmount) {
+                return back()->withErrors(['deposit_amount' => 'الدفعة المقدمة أكبر من إجمالي المبلغ.'])->withInput();
+            }
+
+            $agreement = InstallmentAgreement::create([
+                'installment_plan_id' => $plan->id,
+                'student_course_enrollment_id' => $enrollment->id,
+                'offline_course_enrollment_id' => null,
+                'user_id' => $user->id,
+                'advanced_course_id' => $advancedCourse->id,
+                'total_amount' => $totalAmount,
+                'deposit_amount' => $depositAmount,
+                'installments_count' => $data['installments_count'] ?? $plan->installments_count,
+                'start_date' => $data['start_date'],
+                'status' => $data['status'] ?? InstallmentAgreement::STATUS_ACTIVE,
+                'notes' => $data['notes'] ?? null,
+                'created_by' => $request->user()?->id,
+            ]);
+        } else {
+            if ($plan->advanced_course_id !== null) {
+                return back()->withErrors(['installment_plan_id' => 'للكورسات الأوفلاين استخدم خطة تقسيط غير مربوطة بكورس أونلاين (حقل الكورس في الخطة فارغ).'])->withInput();
+            }
+
+            $offlineCourse = OfflineCourse::findOrFail($data['offline_course_id']);
+            $group = OfflineCourseGroup::where('id', $data['offline_group_id'])
+                ->where('offline_course_id', $offlineCourse->id)
+                ->first();
+            if (! $group) {
+                return back()->withErrors(['offline_group_id' => 'المجموعة لا تنتمي لهذا الكورس الأوفلاين.'])->withInput();
+            }
+
+            if (! $offlineCourse->canEnroll()) {
+                return back()->withErrors(['offline_course_id' => 'الكورس الأوفلاين غير متاح للتسجيل أو وصل للحد الأقصى.'])->withInput();
+            }
+            if (! $group->canEnroll('offline')) {
+                return back()->withErrors(['offline_group_id' => 'المجموعة غير متاحة أو ممتلئة.'])->withInput();
+            }
+
+            $existingOffline = OfflineCourseEnrollment::where('user_id', $user->id)
+                ->where('offline_course_id', $offlineCourse->id)
+                ->where('enrollment_channel', 'offline')
+                ->first();
+
+            if ($existingOffline) {
+                if (InstallmentAgreement::where('offline_course_enrollment_id', $existingOffline->id)
+                    ->whereIn('status', [InstallmentAgreement::STATUS_ACTIVE, InstallmentAgreement::STATUS_OVERDUE])
+                    ->exists()) {
+                    return back()->withErrors(['student_email' => 'هناك خطة تقسيط نشطة بالفعل لهذا التسجيل الأوفلاين.'])->withInput();
+                }
+                $offlineEnrollment = $existingOffline;
+            } else {
+                $offlineEnrollment = OfflineEnrollmentProvisioner::create(
+                    $offlineCourse,
+                    $user->id,
+                    $group->id,
+                    'active',
+                    (float) $offlineCourse->price,
+                    0.0,
+                    ['payment_method' => 'installment', 'payment_notes' => 'تسجيل يدوي مع تقسيط'],
+                    isset($data['notes']) ? 'تسجيل يدوي مع تقسيط' . "\n" . $data['notes'] : 'تسجيل يدوي مع تقسيط',
+                    'offline'
+                );
+            }
+
+            $totalAmount = $data['total_amount'] ?? $plan->total_amount ?? $offlineCourse->price ?? 0;
+            $depositAmount = $data['deposit_amount'] ?? $plan->deposit_amount ?? 0;
+            if ($totalAmount < $depositAmount) {
+                return back()->withErrors(['deposit_amount' => 'الدفعة المقدمة أكبر من إجمالي المبلغ.'])->withInput();
+            }
+
+            $offlineEnrollment->total_amount = $totalAmount;
+            $offlineEnrollment->remaining_amount = max(0, $totalAmount - (float) $offlineEnrollment->paid_amount);
+            $offlineEnrollment->updatePaymentStatus();
+            $offlineEnrollment->save();
+
+            $agreement = InstallmentAgreement::create([
+                'installment_plan_id' => $plan->id,
+                'student_course_enrollment_id' => null,
+                'offline_course_enrollment_id' => $offlineEnrollment->id,
+                'user_id' => $user->id,
+                'advanced_course_id' => null,
+                'total_amount' => $totalAmount,
+                'deposit_amount' => $depositAmount,
+                'installments_count' => $data['installments_count'] ?? $plan->installments_count,
+                'start_date' => $data['start_date'],
+                'status' => $data['status'] ?? InstallmentAgreement::STATUS_ACTIVE,
+                'notes' => $data['notes'] ?? null,
+                'created_by' => $request->user()?->id,
+            ]);
+        }
+
+        $agreement->payments()->delete();
+        $agreement->generateSchedule(Carbon::parse($agreement->start_date));
+
+        return redirect()->route('admin.installments.agreements.show', $agreement)->with('success', 'تم إنشاء الحجز وخطة التقسيط بنجاح.');
     }
 
     public function create(Request $request): View
@@ -108,7 +296,7 @@ class InstallmentAgreementController extends Controller
 
     public function show(InstallmentAgreement $agreement): View
     {
-        $agreement->load(['student', 'course', 'plan', 'payments' => function ($query) {
+        $agreement->load(['student', 'course', 'offlineEnrollment.course', 'plan', 'payments' => function ($query) {
             $query->orderBy('sequence_number');
         }]);
 
@@ -121,6 +309,7 @@ class InstallmentAgreementController extends Controller
 
     public function edit(InstallmentAgreement $agreement): View
     {
+        $agreement->load(['student', 'course', 'offlineEnrollment.course']);
         $plans = InstallmentPlan::active()->with('course')->orderBy('name')->get();
         $statuses = $this->statusOptions();
 
@@ -163,20 +352,28 @@ class InstallmentAgreementController extends Controller
                 // التحقق من عدم وجود Payment مرتبط بالفعل
                 if (!$payment->payment_id) {
                     $agreement = $payment->agreement;
-                    
+                    $agreement->loadMissing(['enrollment', 'offlineEnrollment', 'course', 'offlineEnrollment.course']);
+
+                    $linkedEnrollment = $agreement->student_course_enrollment_id
+                        ? $agreement->enrollment
+                        : $agreement->offlineEnrollment;
+
+                    $courseTitle = $agreement->display_course_title;
+                    $invoiceType = $agreement->student_course_enrollment_id ? 'course' : 'offline_course';
+
                     // إنشاء أو الحصول على Invoice للتقسيط
-                    $invoice = $agreement->enrollment->invoice_id 
-                        ? Invoice::find($agreement->enrollment->invoice_id)
+                    $invoice = $linkedEnrollment?->invoice_id
+                        ? Invoice::find($linkedEnrollment->invoice_id)
                         : null;
-                    
+
                     // إذا لم يكن هناك Invoice، أنشئ واحدة
                     if (!$invoice) {
                         $invoiceNumber = 'INV-' . str_pad(Invoice::count() + 1, 8, '0', STR_PAD_LEFT);
                         $invoice = Invoice::create([
                             'invoice_number' => $invoiceNumber,
                             'user_id' => $agreement->user_id,
-                            'type' => 'course',
-                            'description' => 'فاتورة تقسيط - ' . ($agreement->course->title ?? 'كورس'),
+                            'type' => $invoiceType,
+                            'description' => 'فاتورة تقسيط - ' . $courseTitle,
                             'subtotal' => $payment->amount,
                             'tax_amount' => 0,
                             'discount_amount' => 0,
@@ -187,7 +384,7 @@ class InstallmentAgreementController extends Controller
                             'notes' => 'فاتورة قسط تقسيط رقم: ' . $payment->sequence_number,
                             'items' => [
                                 [
-                                    'description' => 'قسط تقسيط - ' . ($agreement->course->title ?? 'كورس'),
+                                    'description' => 'قسط تقسيط - ' . $courseTitle,
                                     'quantity' => 1,
                                     'price' => $payment->amount,
                                     'total' => $payment->amount,
@@ -225,7 +422,7 @@ class InstallmentAgreementController extends Controller
                         'category' => 'course_payment',
                         'amount' => $payment->amount,
                         'currency' => 'EGP',
-                        'description' => 'دفعة قسط تقسيط - ' . ($agreement->course->title ?? 'كورس') . ' - قسط رقم: ' . $payment->sequence_number,
+                        'description' => 'دفعة قسط تقسيط - ' . $courseTitle . ' - قسط رقم: ' . $payment->sequence_number,
                         'status' => 'completed',
                         'metadata' => [
                             'installment_agreement_id' => $agreement->id,

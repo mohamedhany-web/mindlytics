@@ -1,4 +1,4 @@
-﻿@extends('layouts.admin')
+@extends('layouts.admin')
 
 @section('title', 'إنشاء اتفاقية تقسيط')
 @section('header', 'إنشاء اتفاقية تقسيط')
@@ -27,6 +27,10 @@
                 </p>
             </div>
             <div class="flex flex-wrap gap-3 justify-end">
+                <a href="{{ route('admin.installments.agreements.manual-booking') }}" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white/20 text-white font-semibold border border-white/30 hover:bg-white/30 transition-all">
+                    <i class="fas fa-user-plus"></i>
+                    حجز يدوي + تقسيط
+                </a>
                 <a href="{{ route('admin.installments.agreements.index') }}" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white text-emerald-700 font-semibold shadow-lg hover:shadow-xl transition-all">
                     <i class="fas fa-arrow-right"></i>
                     العودة للاتفاقيات

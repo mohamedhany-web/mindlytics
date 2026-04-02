@@ -1,4 +1,4 @@
-﻿@extends('layouts.admin')
+@extends('layouts.admin')
 
 @section('title', 'اتفاقيات التقسيط')
 @section('header', 'اتفاقيات التقسيط')
@@ -33,6 +33,10 @@
                 <a href="{{ route('admin.installments.plans.index') }}" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white/20 text-white font-semibold border border-white/30 hover:bg-white/30 transition-all">
                     <i class="fas fa-layer-group"></i>
                     إدارة الخطط
+                </a>
+                <a href="{{ route('admin.installments.agreements.manual-booking') }}" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white/20 text-white font-semibold border border-white/30 hover:bg-white/30 transition-all">
+                    <i class="fas fa-user-plus"></i>
+                    حجز يدوي + تقسيط
                 </a>
                 <a href="{{ route('admin.installments.agreements.create') }}" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white text-sky-700 font-semibold shadow-lg hover:shadow-xl transition-all">
                     <i class="fas fa-plus"></i>
@@ -120,7 +124,7 @@
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <p class="text-sm font-semibold text-gray-900">{{ $agreement->student->name ?? 'طالب غير معروف' }}</p>
-                                <p class="text-xs text-sky-600 mt-1">{{ $agreement->course->title ?? 'خطة عامة' }}</p>
+                                <p class="text-xs text-sky-600 mt-1">{{ $agreement->display_course_title }}</p>
                                 <p class="text-[11px] text-gray-500 mt-1">بداية {{ optional($agreement->start_date)->format('Y-m-d') }}</p>
                             </div>
                             <span class="inline-flex items-center_gap-2 px-3 py-1 rounded-full text-xs font-semibold

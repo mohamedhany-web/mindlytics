@@ -8,7 +8,7 @@
     $agreement = $agreement ?? null;
     $plan = $agreement?->plan;
     $student = $agreement?->student;
-    $course = $agreement?->course;
+    $courseModeLabel = $agreement?->student_course_enrollment_id ? 'أونلاين' : ($agreement?->offline_course_enrollment_id ? 'أوفلاين' : '—');
     $payments = $agreement?->payments ?? collect();
     $pendingPayments = $payments->where('status', \App\Models\InstallmentPayment::STATUS_PENDING)->sortBy('due_date');
     $nextPayment = $pendingPayments->first();
@@ -35,7 +35,7 @@
                     </span>
                 </div>
                 <p class="mt-3 text-white/80 max-w-2xl">
-                    الكورس: {{ $course->title ?? 'خطة عامة' }} — بدأت في {{ optional($agreement->start_date)->format('Y-m-d') }}. تتبع أدناه جدول الأقساط والمبالغ المستحقة.
+                    {{ $courseModeLabel }} — {{ $agreement->display_course_title }} — بدأت في {{ optional($agreement->start_date)->format('Y-m-d') }}. تتبع أدناه جدول الأقساط والمبالغ المستحقة.
                 </p>
             </div>
             <div class="flex flex-wrap gap-3 justify-end">
@@ -86,8 +86,8 @@
                     </div>
                     <div>
                         <p class="text-xs text-gray-500 uppercase">الكورس</p>
-                        <p class="mt-2 text-base font-semibold text-gray-900">{{ $course->title ?? 'خطة عامة' }}</p>
-                        <p class="text-xs text-gray-500">سعر الكورس: {{ number_format($course->price ?? 0, 2) }} ج.م</p>
+                        <p class="mt-2 text-base font-semibold text-gray-900">{{ $agreement->display_course_title }}</p>
+                        <p class="text-xs text-gray-500">النوع: {{ $courseModeLabel }} — مرجع السعر: {{ number_format($agreement->display_course_price, 2) }} ج.م</p>
                     </div>
                     <div>
                         <p class="text-xs text-gray-500 uppercase">الخطة</p>

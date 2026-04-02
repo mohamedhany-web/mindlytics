@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OfflineCourseEnrollment extends Model
 {
@@ -62,6 +63,11 @@ class OfflineCourseEnrollment extends Model
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
+    }
+
+    public function installmentAgreements(): HasMany
+    {
+        return $this->hasMany(InstallmentAgreement::class, 'offline_course_enrollment_id');
     }
 
     public function isActive(): bool

@@ -15,6 +15,7 @@ class InstallmentAgreement extends Model
     protected $fillable = [
         'installment_plan_id',
         'student_course_enrollment_id',
+        'offline_course_enrollment_id',
         'user_id',
         'advanced_course_id',
         'total_amount',
@@ -46,6 +47,41 @@ class InstallmentAgreement extends Model
     public function enrollment(): BelongsTo
     {
         return $this->belongsTo(StudentCourseEnrollment::class, 'student_course_enrollment_id');
+    }
+
+    public function offlineEnrollment(): BelongsTo
+    {
+        return $this->belongsTo(OfflineCourseEnrollment::class, 'offline_course_enrollment_id');
+    }
+
+    /**
+     * كيان الكورس للعرض (أونلاين أو أوفلاين).
+     */
+    public function displayCourse(): AdvancedCourse|OfflineCourse|null
+    {
+        $this->loadMissing(['course', 'offlineEnrollment.course']);
+        if ($this->advanced_course_id && $this->course) {
+            return $this->course;
+        }
+        if ($this->offline_course_enrollment_id && $this->offlineEnrollment?->course) {
+            return $this->offlineEnrollment->course;
+        }
+
+        return null;
+    }
+
+    public function getDisplayCourseTitleAttribute(): string
+    {
+        $c = $this->displayCourse();
+
+        return $c?->title ?? 'خطة عامة';
+    }
+
+    public function getDisplayCoursePriceAttribute(): float
+    {
+        $c = $this->displayCourse();
+
+        return (float) ($c?->price ?? 0);
     }
 
     public function student(): BelongsTo

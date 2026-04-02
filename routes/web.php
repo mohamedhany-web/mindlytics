@@ -1358,6 +1358,10 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         });
         Route::prefix('installments')->name('installments.')->group(function () {
             Route::resource('plans', \App\Http\Controllers\Admin\InstallmentPlanController::class);
+            Route::get('agreements/manual-booking', [\App\Http\Controllers\Admin\InstallmentAgreementController::class, 'createManualBooking'])
+                ->name('agreements.manual-booking');
+            Route::post('agreements/manual-booking', [\App\Http\Controllers\Admin\InstallmentAgreementController::class, 'storeManualBooking'])
+                ->name('agreements.manual-booking.store');
             Route::resource('agreements', \App\Http\Controllers\Admin\InstallmentAgreementController::class);
             Route::post('/agreements/payments/{payment}/mark', [\App\Http\Controllers\Admin\InstallmentAgreementController::class, 'markPayment'])
                 ->name('agreements.mark-payment');
