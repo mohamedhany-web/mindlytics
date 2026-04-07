@@ -10,6 +10,7 @@ use App\Services\SalesLeadsExcelExportService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SalesLeadController extends Controller
@@ -184,6 +185,36 @@ class SalesLeadController extends Controller
         return back()->with('success', 'تم تسجيل النشاط');
     }
 
+    public function storeCsat(Request $request, SalesLead $lead)
+    {
+        $this->authorizeOwn($lead);
+
+        if ($lead->stage !== 'won') {
+            return back()->withErrors(['csat_rating' => 'التقييم متاح عند مرحلة «مكتمل / فوز» فقط.']);
+        }
+
+        $data = $request->validate([
+            'csat_rating' => 'required|integer|min:1|max:5',
+            'csat_comment' => 'nullable|string|max:1000',
+        ]);
+
+        $lead->update([
+            'csat_rating' => $data['csat_rating'],
+            'csat_comment' => $data['csat_comment'] ?? null,
+            'csat_recorded_at' => now(),
+        ]);
+
+        SalesAuditService::log(
+            'sales_lead_csat_recorded',
+            $lead->fresh(),
+            null,
+            ['csat_rating' => $data['csat_rating']],
+            'تسجيل CSAT للعميل: '.$lead->name
+        );
+
+        return back()->with('success', 'تم حفظ تقييم رضا العميل.');
+    }
+
     private function indexQuery(Request $request): Builder
     {
         $query = SalesLead::query()->forAssignee(Auth::id())->with('assignee');
@@ -292,7 +323,7 @@ class SalesLeadController extends Controller
 
     private function validatedLead(Request $request): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:50',
             'email' => 'nullable|email|max:255',
@@ -305,6 +336,35 @@ class SalesLeadController extends Controller
             'notes' => 'nullable|string|max:5000',
             'next_follow_up_at' => 'nullable|date',
             'lost_reason' => 'nullable|string|max:500',
+            'lost_reason_code' => 'nullable|string|in:' . implode(',', array_keys(SalesLead::LOSS_REASONS)),
+            'lost_reason_custom' => 'nullable|string|max:500',
         ]);
+
+        if (($validated['stage'] ?? null) === 'lost') {
+            $code = (string) ($validated['lost_reason_code'] ?? '');
+            if ($code === '') {
+                throw ValidationException::withMessages([
+                    'lost_reason_code' => ['سبب الخسارة مطلوب عند اختيار مرحلة خسارة.'],
+                ]);
+            }
+
+            if ($code === 'other') {
+                $custom = trim((string) ($validated['lost_reason_custom'] ?? ''));
+                if ($custom === '') {
+                    throw ValidationException::withMessages([
+                        'lost_reason_custom' => ['اكتب سبب الخسارة عند اختيار "أخرى".'],
+                    ]);
+                }
+                $validated['lost_reason'] = $custom;
+            } else {
+                $validated['lost_reason'] = SalesLead::LOSS_REASONS[$code] ?? null;
+            }
+        } else {
+            $validated['lost_reason'] = null;
+        }
+
+        unset($validated['lost_reason_code'], $validated['lost_reason_custom']);
+
+        return $validated;
     }
 }

@@ -108,6 +108,10 @@ class SalesLeadController extends Controller
 
         $lead->update($validated);
 
+        if ($request->filled('csat_rating')) {
+            $lead->forceFill(['csat_recorded_at' => now()])->save();
+        }
+
         if ((int) $oldAssignee !== (int) $lead->assigned_to) {
             SalesAuditService::log(
                 'sales_lead_reassigned',
@@ -319,11 +323,42 @@ class SalesLeadController extends Controller
             'notes' => 'nullable|string|max:5000',
             'next_follow_up_at' => 'nullable|date',
             'lost_reason' => 'nullable|string|max:500',
+            'lost_reason_code' => 'nullable|string|in:' . implode(',', array_keys(SalesLead::LOSS_REASONS)),
+            'lost_reason_custom' => 'nullable|string|max:500',
         ];
         if ($admin) {
             $rules['assigned_to'] = 'required|exists:users,id';
+            $rules['csat_rating'] = 'nullable|integer|min:1|max:5';
+            $rules['csat_comment'] = 'nullable|string|max:1000';
         }
 
-        return $request->validate($rules);
+        $validated = $request->validate($rules);
+
+        if (($validated['stage'] ?? null) === 'lost') {
+            $code = (string) ($validated['lost_reason_code'] ?? '');
+            if ($code === '') {
+                throw ValidationException::withMessages([
+                    'lost_reason_code' => ['سبب الخسارة مطلوب عند اختيار مرحلة خسارة.'],
+                ]);
+            }
+
+            if ($code === 'other') {
+                $custom = trim((string) ($validated['lost_reason_custom'] ?? ''));
+                if ($custom === '') {
+                    throw ValidationException::withMessages([
+                        'lost_reason_custom' => ['اكتب سبب الخسارة عند اختيار "أخرى".'],
+                    ]);
+                }
+                $validated['lost_reason'] = $custom;
+            } else {
+                $validated['lost_reason'] = SalesLead::LOSS_REASONS[$code] ?? null;
+            }
+        } else {
+            $validated['lost_reason'] = null;
+        }
+
+        unset($validated['lost_reason_code'], $validated['lost_reason_custom']);
+
+        return $validated;
     }
 }

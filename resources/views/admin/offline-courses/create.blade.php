@@ -135,7 +135,7 @@
             <!-- الحجز العام للطلاب -->
             <div class="border-b border-gray-200 pb-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">الحجز العام (الطلاب)</h2>
-                <p class="text-sm text-gray-600 mb-2">الكورس يجب أن يكون <strong>نشطاً</strong> ليعمل الحجز. تواريخ الحجز تُستخدم لرابط المجموعة وللكتالوج.</p>
+                <p class="text-sm text-gray-600 mb-2">الكورس يجب أن يكون <strong>نشطاً</strong> ليعمل الحجز. تواريخ الحجز تُستخدم لرابط المجموعة ولطلبات الحجز عبر الرابط المباشر.</p>
                 <p class="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-4">«نهاية الحجز» إن وُضعت بوقت 12:00 ص ليوم ما تُحفظ كنهاية <strong>ذلك اليوم كاملاً</strong>.</p>
                 <div class="space-y-4">
                     <label class="inline-flex items-center gap-2 cursor-pointer">
@@ -157,6 +157,22 @@
                     </div>
                     @error('booking_closes_at')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                 </div>
+            </div>
+
+            <!-- بوابة الطالب — كورسات الأونلاين -->
+            <div class="border-b border-gray-200 pb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-2">بوابة الطالب (كورس أونلاين)</h2>
+                <p class="text-sm text-gray-600 mb-4">عند تسجيل الطالب في مجموعة أونلاين، لا يظهر الكورس في «كورساتي الأونلاين» إلا بعد تفعيل الخيار التالي.</p>
+                <label class="inline-flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="student_online_portal_enabled" value="1" {{ old('student_online_portal_enabled') ? 'checked' : '' }}
+                           class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                    <span class="text-sm font-medium text-gray-800">إظهار هذا الكورس للطلاب في بوابة الأونلاين</span>
+                </label>
+                <label class="inline-flex items-center gap-2 cursor-pointer mt-4">
+                    <input type="checkbox" name="online_only" value="1" {{ old('online_only') ? 'checked' : '' }}
+                           class="rounded border-gray-300 text-violet-600 focus:ring-violet-500">
+                    <span class="text-sm font-medium text-gray-800">كورس أونلاين فقط (يظهر مبرزاً في «إدارة الأونلاين»)</span>
+                </label>
             </div>
 
             <!-- القسم الإداري -->

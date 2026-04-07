@@ -11,6 +11,18 @@ use Illuminate\Support\Facades\Auth;
 
 class OfflineCourseController extends Controller
 {
+    public function onlineIndex(Request $request)
+    {
+        $request->merge(['channel' => 'online']);
+        return $this->index($request);
+    }
+
+    public function onlineShow(Request $request, OfflineCourse $offlineCourse)
+    {
+        $request->merge(['channel' => 'online']);
+        return $this->show($request, $offlineCourse);
+    }
+
     public function index(Request $request)
     {
         $instructor = Auth::user();

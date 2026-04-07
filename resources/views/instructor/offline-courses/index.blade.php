@@ -5,9 +5,22 @@
 
 @section('content')
 <div class="space-y-6">
+    @php
+        $isOnline = ($channel ?? 'offline') === 'online';
+        $pageTitle = $isOnline ? 'كورساتي الأونلاين' : __('instructor.my_offline_courses');
+        $pageSubtitle = $isOnline
+            ? 'هذه القائمة مخصصة للكورسات الأونلاين: متابعة مجموعات الأونلاين، السعة الأونلاين، والطلاب المسجلين أونلاين فقط.'
+            : 'هذه القائمة مخصصة للكورسات الأوفلاين: إدارة الحضور داخل القاعات، مجموعات الحضور، والجلسات الميدانية.';
+        $studentCountLabel = $isOnline ? 'طلاب أونلاين نشطون' : 'طلاب حضور نشطون';
+        $locationLabel = $isOnline ? 'منصة/رابط التنفيذ' : __('instructor.location');
+        $emptyTitle = $isOnline ? 'لا توجد كورسات أونلاين مخصصة لك حالياً' : __('instructor.no_offline_courses');
+        $emptyDesc = $isOnline
+            ? 'عند إسناد كورس أونلاين لك سيظهر هنا مع توصيفه وإحصاءاته الخاصة بقناة الأونلاين.'
+            : __('instructor.no_offline_courses_desc');
+    @endphp
     <div class="rounded-2xl p-5 sm:p-6 bg-white border border-slate-200 shadow-sm">
-        <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 mb-1">{{ ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : __('instructor.my_offline_courses') }}</h1>
-        <p class="text-sm text-slate-500">{{ ($channel ?? 'offline') === 'online' ? 'إدارة مجموعات وطلاب الأونلاين وحضور الاجتماعات' : __('instructor.offline_courses_subtitle') }}</p>
+        <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 mb-1">{{ $pageTitle }}</h1>
+        <p class="text-sm text-slate-500">{{ $pageSubtitle }}</p>
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -51,6 +64,7 @@
             <div>
                 <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">{{ __('instructor.total_students') }}</p>
                 <p class="text-2xl sm:text-3xl font-bold text-slate-800">{{ $stats['total_students'] ?? 0 }}</p>
+                <p class="text-xs text-slate-500 mt-1">{{ $studentCountLabel }}</p>
             </div>
             <div class="w-12 h-12 rounded-xl bg-sky-50 flex items-center justify-center">
                 <i class="fas fa-user-graduate text-sky-600 text-lg"></i>
@@ -129,7 +143,7 @@
                                 <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
                                     <i class="fas fa-map-marker-alt text-amber-600 text-xs"></i>
                                 </div>
-                                <span class="text-slate-500">{{ __('instructor.location') }}:</span>
+                                <span class="text-slate-500">{{ $locationLabel }}:</span>
                                 <span class="text-slate-800 font-medium">{{ $course->locationModel->name ?? $course->location }}</span>
                             </div>
                         @elseif($course->location)
@@ -178,7 +192,9 @@
                 </div>
 
                 <div class="px-5 py-4 border-t border-slate-200">
-                    <a href="{{ route('instructor.offline-courses.show', ['offline_course' => $course, 'channel' => ($channel ?? 'offline')]) }}"
+                    <a href="{{ ($channel ?? 'offline') === 'online'
+                        ? route('instructor.online-group-courses.show', ['offlineCourse' => $course])
+                        : route('instructor.offline-courses.show', ['offline_course' => $course, 'channel' => ($channel ?? 'offline')]) }}"
                        class="w-full inline-flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2.5 rounded-xl font-semibold transition-colors">
                         <i class="fas fa-eye"></i>
                         <span>{{ __('instructor.view_details') }}</span>
@@ -198,8 +214,8 @@
             <div class="w-24 h-24 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-4">
                 <i class="fas fa-map-marker-alt text-4xl text-amber-500"></i>
             </div>
-            <h3 class="text-xl sm:text-2xl font-bold text-slate-800 mb-2">{{ __('instructor.no_offline_courses') }}</h3>
-            <p class="text-slate-500 max-w-md mx-auto">{{ __('instructor.no_offline_courses_desc') }}</p>
+            <h3 class="text-xl sm:text-2xl font-bold text-slate-800 mb-2">{{ $emptyTitle }}</h3>
+            <p class="text-slate-500 max-w-md mx-auto">{{ $emptyDesc }}</p>
         </div>
     @endif
 </div>

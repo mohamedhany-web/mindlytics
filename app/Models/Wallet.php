@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -69,6 +70,14 @@ class Wallet extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * محافظ المنصة للتحصيل فقط (أنشئت من الإدارة، بدون ربط بحساب طالب/شخصي).
+     */
+    public function scopeAcademyWallets(Builder $query): Builder
+    {
+        return $query->whereNull('user_id');
     }
 
     /**

@@ -15,6 +15,7 @@ class OfflineLecture extends Model
         'title',
         'description',
         'scheduled_at',
+        'meeting_url',
         'duration_minutes',
         'recording_url',
         'download_links',

@@ -148,7 +148,6 @@
                     </h3>
                     <div class="flex flex-wrap gap-4 mt-2 text-sm text-gray-600">
                         <span><i class="fas fa-chalkboard-teacher text-blue-500 ml-1"></i> {{ $group->instructor->name ?? '—' }}</span>
-                        <span><i class="fas fa-user-friends text-green-500 ml-1"></i> {{ $group->current_students ?? 0 }}/{{ $group->max_students }} طالب</span>
                         <span><i class="fas fa-map-marker-alt text-red-500 ml-1"></i> {{ $group->locationModel?->name ?? $group->location ?? '—' }}</span>
                         @if($group->start_date)
                             <span><i class="fas fa-calendar text-indigo-500 ml-1"></i> {{ $group->start_date->format('Y-m-d') }} → {{ $group->end_date?->format('Y-m-d') ?? '—' }}</span>
@@ -156,17 +155,39 @@
                         @if($group->session_duration_hours)
                             <span><i class="fas fa-clock text-amber-500 ml-1"></i> {{ $group->session_duration_hours }} ساعة/جلسة</span>
                         @endif
-                        <span><i class="fas fa-calendar-check text-teal-500 ml-1"></i> {{ $group->sessions_count ?? $group->sessions->count() }} جلسة</span>
-                        @php
-                            $pendBook = $group->pendingBookingsCount('offline');
-                            $effRem = $group->effectiveAvailableSeats('offline');
-                            $pendBookOnline = $group->pendingBookingsCount('online');
-                            $effRemOnline = $group->effectiveAvailableSeats('online');
-                        @endphp
-                        <span><i class="fas fa-hourglass-half text-amber-500 ml-1"></i> حجوزات معلقة: {{ $pendBook }}</span>
-                        <span><i class="fas fa-door-open text-cyan-600 ml-1"></i> متاح للحجز (بالرابط): {{ $effRem }}</span>
-                        <span><i class="fas fa-video text-indigo-500 ml-1"></i> حجوزات أونلاين معلقة: {{ $pendBookOnline }}</span>
-                        <span><i class="fas fa-signal text-indigo-700 ml-1"></i> متاح أونلاين: {{ $effRemOnline }}</span>
+                        <span><i class="fas fa-calendar-check text-teal-500 ml-1"></i> {{ $group->sessions_count ?? $group->sessions->count() }} جلسة — <span class="text-gray-500">موحّدة للقناتين</span></span>
+                    </div>
+                    @php
+                        $pendBook = $group->pendingBookingsCount('offline');
+                        $effRem = $group->effectiveAvailableSeats('offline');
+                        $pendBookOnline = $group->pendingBookingsCount('online');
+                        $effRemOnline = $group->effectiveAvailableSeats('online');
+                    @endphp
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div class="rounded-xl border-2 border-emerald-200 bg-emerald-50/60 p-4">
+                            <h4 class="font-bold text-emerald-900 text-sm mb-2"><i class="fas fa-building ml-1"></i> قناة الحضور (أوفلاين)</h4>
+                            <p class="text-sm text-gray-800">
+                                مسجّلون: <strong>{{ $group->offline_enrollments_count ?? 0 }}</strong>
+                                — السعة: <strong>{{ $group->current_students ?? 0 }}/{{ $group->max_students }}</strong>
+                            </p>
+                            <p class="text-xs text-gray-600 mt-1">حجز عبر الرابط: معلق {{ $pendBook }} · متاح {{ $effRem }}</p>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <a href="{{ route('admin.offline-courses.enrollments.index', [$offlineCourse, 'channel' => 'offline']) }}" class="text-xs font-semibold text-blue-700 hover:underline">تسجيلات الحضور</a>
+                                <a href="{{ route('admin.offline-course-bookings.index', ['offline_course_id' => $offlineCourse->id]) }}" class="text-xs font-semibold text-amber-800 hover:underline">حجوزات أوفلاين</a>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border-2 border-indigo-200 bg-indigo-50/60 p-4">
+                            <h4 class="font-bold text-indigo-900 text-sm mb-2"><i class="fas fa-video ml-1"></i> قناة الأونلاين</h4>
+                            <p class="text-sm text-gray-800">
+                                مسجّلون: <strong>{{ $group->online_enrollments_count ?? 0 }}</strong>
+                                — السعة: <strong>{{ $group->current_students_online ?? 0 }}/{{ $group->max_students_online }}</strong>
+                            </p>
+                            <p class="text-xs text-gray-600 mt-1">حجز أونلاين: معلق {{ $pendBookOnline }} · متاح {{ $effRemOnline }}</p>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <a href="{{ route('admin.offline-courses.enrollments.index', [$offlineCourse, 'channel' => 'online']) }}" class="text-xs font-semibold text-indigo-800 hover:underline">تسجيلات الأونلاين</a>
+                                <a href="{{ route('admin.online-course-bookings.index', ['offline_course_id' => $offlineCourse->id]) }}" class="text-xs font-semibold text-amber-800 hover:underline">حجوزات أونلاين</a>
+                            </div>
+                        </div>
                     </div>
                     @if($group->public_booking_enabled && $group->public_slug)
                         <div class="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm">
@@ -206,7 +227,10 @@
         <!-- جلسات المجموعة -->
         <div class="p-6">
             <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
-                <h4 class="font-bold text-gray-800"><i class="fas fa-calendar-alt text-indigo-600 ml-2"></i>جدول الجلسات ({{ $group->sessions->count() }})</h4>
+                <div>
+                    <h4 class="font-bold text-gray-800"><i class="fas fa-calendar-alt text-indigo-600 ml-2"></i>جدول الجلسات ({{ $group->sessions->count() }})</h4>
+                    <p class="text-xs text-gray-500 mt-1 mr-1">نفس المواعيد تُطبَّق على الحضور والأونلاين لهذه المجموعة.</p>
+                </div>
                 <div class="flex gap-2">
                     <button type="button" @click="openBulkModal({{ $group->id }})" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
                         <i class="fas fa-magic mr-1"></i>إنشاء جلسات تلقائياً

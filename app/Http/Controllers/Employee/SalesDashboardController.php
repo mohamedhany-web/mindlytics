@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
 use App\Models\SalesLead;
+use App\Services\SalesKpiService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 
@@ -68,13 +69,51 @@ class SalesDashboardController extends Controller
             ->limit(6)
             ->get();
 
+        $slaCutoffHours = 24;
+        $noFirstResponseLeads = $open()
+            ->whereNull('last_contacted_at')
+            ->where('created_at', '<=', now()->subHours($slaCutoffHours))
+            ->orderBy('created_at')
+            ->limit(6)
+            ->get();
+
+        $taskQueue = collect()
+            ->merge($overdueLeads->map(fn ($lead) => [
+                'lead' => $lead,
+                'priority' => 1,
+                'reason' => 'متابعة متأخرة',
+                'next_action' => 'اتصال فوري وتحديث موعد المتابعة',
+            ]))
+            ->merge($noFirstResponseLeads->map(fn ($lead) => [
+                'lead' => $lead,
+                'priority' => 2,
+                'reason' => 'تجاوز SLA لأول رد',
+                'next_action' => 'أول تواصل الآن (مكالمة أو واتساب)',
+            ]))
+            ->merge($staleLeads->map(fn ($lead) => [
+                'lead' => $lead,
+                'priority' => 3,
+                'reason' => 'Lead راكد بلا تفاعل',
+                'next_action' => 'إعادة تنشيط العميل بعرض/قيمة جديدة',
+            ]))
+            ->sortBy('priority')
+            ->unique(fn ($item) => $item['lead']->id)
+            ->take(10)
+            ->values();
+
+        $kpiQuick = app(SalesKpiService::class)->buildReport($user);
+
         return view('employee.sales.dashboard', compact(
             'stats',
             'funnel',
             'followupsToday',
             'recentLeads',
             'overdueLeads',
-            'staleLeads'
+            'staleLeads',
+            'taskQueue',
+            'noFirstResponseLeads',
+            'slaCutoffHours',
+            'kpiQuick'
         ));
     }
 

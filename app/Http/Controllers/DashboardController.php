@@ -15,6 +15,8 @@ use App\Models\LectureAssignment;
 use App\Models\Exam;
 use App\Models\Certificate;
 use App\Models\LectureVideoQuestionAnswer;
+use App\Models\OfflineCourseEnrollment;
+use App\Models\OfflineCourseBooking;
 
 class DashboardController extends Controller
 {
@@ -207,6 +209,44 @@ class DashboardController extends Controller
 
         $activeCourseIds = $activeCourses->pluck('id')->filter()->unique()->values();
 
+        $offlineActiveEnrollments = OfflineCourseEnrollment::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
+            ->where('enrollment_channel', 'offline')
+            ->with(['course.instructor', 'group'])
+            ->latest('enrolled_at')
+            ->take(5)
+            ->get();
+
+        $onlineActiveEnrollments = OfflineCourseEnrollment::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
+            ->where('enrollment_channel', 'online')
+            ->with(['course.instructor', 'group'])
+            ->latest('enrolled_at')
+            ->take(5)
+            ->get();
+
+        $visibleOfflineBookingsCount = OfflineCourseBooking::query()
+            ->where('user_id', $user->id)
+            ->where('booking_channel', 'offline')
+            ->whereIn('status', [OfflineCourseBooking::STATUS_PENDING, OfflineCourseBooking::STATUS_APPROVED])
+            ->whereNotIn('offline_course_id', $offlineActiveEnrollments->pluck('offline_course_id'))
+            ->count();
+
+        $visibleOnlineBookingsCount = OfflineCourseBooking::query()
+            ->where('user_id', $user->id)
+            ->where('booking_channel', 'online')
+            ->whereIn('status', [OfflineCourseBooking::STATUS_PENDING, OfflineCourseBooking::STATUS_APPROVED])
+            ->whereNotIn('offline_course_id', $onlineActiveEnrollments->pluck('offline_course_id'))
+            ->count();
+
+        $allLearningItemsCount = $activeCourses->count()
+            + $offlineActiveEnrollments->count()
+            + $onlineActiveEnrollments->count()
+            + $visibleOfflineBookingsCount
+            + $visibleOnlineBookingsCount;
+
         // تحميل بيانات التسجيلات لضمان توفر التقدم
         $enrollments = $user->courseEnrollments()
             ->whereIn('advanced_course_id', $activeCourseIds)
@@ -232,7 +272,7 @@ class DashboardController extends Controller
             ->get();
 
         $stats = [
-            'active_courses' => $activeCourses->count(),
+            'active_courses' => $allLearningItemsCount,
             'pending_orders' => Order::where('user_id', $user->id)->where('status', 'pending')->count(),
             'completed_courses' => $user->courseEnrollments()->where('status', 'completed')->count(),
             'total_progress' => $this->calculateOverallProgress($user),
@@ -307,7 +347,11 @@ class DashboardController extends Controller
                 'upcomingAssignments',
                 'upcomingExams',
                 'recentExamAttempts',
-                'recentCertificates'
+                'recentCertificates',
+                'offlineActiveEnrollments',
+                'onlineActiveEnrollments',
+                'visibleOfflineBookingsCount',
+                'visibleOnlineBookingsCount'
             )
         );
     }

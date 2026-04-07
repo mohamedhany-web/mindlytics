@@ -1,12 +1,10 @@
-
-
 <?php $__env->startSection('title', $offlineCourse->title); ?>
 <?php $__env->startSection('header', $offlineCourse->title); ?>
 
 <?php $__env->startSection('content'); ?>
 <div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
     <div class="mb-4">
-        <a href="<?php echo e(route('student.offline-courses.index')); ?>" class="inline-flex items-center text-sky-600 hover:text-sky-700 text-sm font-medium">
+        <a href="<?php echo e(route(($studentRouteGroup ?? 'student.offline-courses') . '.index')); ?>" class="inline-flex items-center text-sky-600 hover:text-sky-700 text-sm font-medium">
             <i class="fas fa-arrow-right ml-2"></i>
             العودة للقائمة
         </a>
@@ -65,10 +63,10 @@
             <?php endif; ?>
             <!-- روابط المحتوى الأوفلاين -->
             <div class="pt-4 border-t border-gray-100 flex flex-wrap gap-3">
-                <a href="<?php echo e(route('student.offline-courses.resources', $offlineCourse)); ?>" class="inline-flex items-center gap-2 px-3 py-2 bg-sky-50 text-sky-700 rounded-lg border border-sky-100 font-medium text-sm hover:bg-sky-100">
+                <a href="<?php echo e(route(($studentRouteGroup ?? 'student.offline-courses') . '.resources', $offlineCourse)); ?>" class="inline-flex items-center gap-2 px-3 py-2 bg-sky-50 text-sky-700 rounded-lg border border-sky-100 font-medium text-sm hover:bg-sky-100">
                     <i class="fas fa-file-alt"></i> الموارد
                 </a>
-                <a href="<?php echo e(route('student.offline-courses.lectures', $offlineCourse)); ?>" class="inline-flex items-center gap-2 px-3 py-2 bg-violet-50 text-violet-700 rounded-lg border border-violet-100 font-medium text-sm hover:bg-violet-100">
+                <a href="<?php echo e(route(($studentRouteGroup ?? 'student.offline-courses') . '.lectures', $offlineCourse)); ?>" class="inline-flex items-center gap-2 px-3 py-2 bg-violet-50 text-violet-700 rounded-lg border border-violet-100 font-medium text-sm hover:bg-violet-100">
                     <i class="fas fa-chalkboard-teacher"></i> المحاضرات
                 </a>
             </div>
@@ -85,7 +83,7 @@
             <p class="text-sm text-gray-500 mt-1">ترتيب المحتوى كما جهّزه المدرب؛ اضغط للانتقال لكل عنصر.</p>
         </div>
         <div class="p-4 sm:p-6 space-y-4">
-            <?php echo $__env->make('student.offline-courses.partials.curriculum-sections', ['sections' => $curriculumRoots, 'offlineCourse' => $offlineCourse], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+            <?php echo $__env->make('student.offline-courses.partials.curriculum-sections', ['sections' => $curriculumRoots, 'offlineCourse' => $offlineCourse, 'channel' => $channel, 'studentRouteGroup' => $studentRouteGroup], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
         </div>
     </div>
     <?php endif; ?>
@@ -211,7 +209,7 @@
                             <span><i class="fas fa-star text-amber-500 ml-1"></i><?php echo e($activity->max_score); ?> نقطة</span>
                         </div>
                     </div>
-                    <a href="<?php echo e(route('student.offline-courses.activities.show', [$offlineCourse, $activity])); ?>" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200 hover:bg-amber-200 flex-shrink-0">
+                    <a href="<?php echo e(route(($studentRouteGroup ?? 'student.offline-courses') . '.activities.show', [$offlineCourse, $activity])); ?>" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200 hover:bg-amber-200 flex-shrink-0">
                         عرض / تسليم
                     </a>
                 </div>
@@ -244,7 +242,7 @@
                             </p>
                         <?php endif; ?>
                     </div>
-                    <a href="<?php echo e(route('student.offline-courses.activities.show', [$offlineCourse, $activity])); ?>" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 hover:bg-emerald-200 flex-shrink-0">
+                    <a href="<?php echo e(route(($studentRouteGroup ?? 'student.offline-courses') . '.activities.show', [$offlineCourse, $activity])); ?>" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 hover:bg-emerald-200 flex-shrink-0">
                         عرض
                     </a>
                 </div>

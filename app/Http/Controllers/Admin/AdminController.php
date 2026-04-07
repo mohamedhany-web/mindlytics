@@ -45,7 +45,7 @@ class AdminController extends Controller
         
         $stats = array_merge($cachedStats, [
             // البيانات الديناميكية التي تحتاج تحديث فوري
-            'wallets' => \App\Models\Wallet::where('is_active', true)->get(),
+            'wallets' => \App\Models\Wallet::academyWallets()->where('is_active', true)->get(),
             'recent_activities' => ActivityLog::with('user')
                                             ->latest()
                                             ->take(10)

@@ -60,7 +60,8 @@ class CheckoutController extends Controller
         }
 
         // جلب المحافظ الإلكترونية النشطة
-        $wallets = \App\Models\Wallet::where('is_active', true)
+        $wallets = \App\Models\Wallet::academyWallets()
+            ->where('is_active', true)
             ->whereNotNull('type')
             ->whereIn('type', ['vodafone_cash', 'instapay', 'bank_transfer'])
             ->where(function($query) {
@@ -769,7 +770,8 @@ class CheckoutController extends Controller
         }
 
         // جلب المحافظ الإلكترونية النشطة
-        $wallets = \App\Models\Wallet::where('is_active', true)
+        $wallets = \App\Models\Wallet::academyWallets()
+            ->where('is_active', true)
             ->whereNotNull('type')
             ->whereIn('type', ['vodafone_cash', 'instapay', 'bank_transfer'])
             ->where(function($query) {

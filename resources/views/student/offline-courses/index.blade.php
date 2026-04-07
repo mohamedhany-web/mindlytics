@@ -34,7 +34,7 @@
     <!-- الهيدر -->
     <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
         <h1 class="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{{ ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : __('student.offline_courses_title') }}</h1>
-        <p class="text-sm text-gray-500">{{ ($channel ?? 'offline') === 'online' ? 'جميع الكورسات الأونلاين التي تم تفعيلها لك' : __('student.offline_courses_subtitle') }}</p>
+        <p class="text-sm text-gray-500">{{ ($channel ?? 'offline') === 'online' ? 'تظهر هنا فقط الكورسات الأونلاين التي فعّلتها الإدارة في «بوابة الطالب للأونلاين».' : __('student.offline_courses_subtitle') }}</p>
     </div>
 
     <!-- الإحصائيات -->
@@ -69,7 +69,7 @@
             @php
                 $course = $enrollment->course;
             @endphp
-            <a href="{{ route('student.offline-courses.show', ['offlineCourse' => $course->id, 'channel' => ($channel ?? 'offline')]) }}" class="offline-card block overflow-hidden">
+            <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.show', $course->id) }}" class="offline-card block overflow-hidden">
                 <div class="h-32 bg-sky-100 flex items-center justify-center text-sky-600 flex-shrink-0">
                     <i class="fas fa-chalkboard-teacher text-3xl"></i>
                 </div>
@@ -128,6 +128,7 @@
                 </div>
             </a>
         @empty
+            @if(($bookings ?? collect())->isEmpty())
             <div class="col-span-full rounded-xl p-10 sm:p-12 text-center bg-gray-50 border border-dashed border-gray-200">
                 <div class="w-16 h-16 bg-sky-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-sky-600">
                     <i class="fas fa-chalkboard-teacher text-2xl"></i>
@@ -135,7 +136,52 @@
                 <h3 class="text-lg font-bold text-gray-900 mb-2">{{ __('student.no_offline_courses') }}</h3>
                 <p class="text-sm text-gray-500">{{ __('student.no_offline_courses_desc') }}</p>
             </div>
+            @endif
         @endforelse
+
+        @foreach(($bookings ?? collect()) as $booking)
+            @php
+                $course = $booking->course;
+                $bookingStatusClass = $booking->status === 'approved'
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-amber-100 text-amber-700';
+                $bookingStatusText = $booking->status === 'approved' ? 'حجز مقبول' : 'حجز قيد المراجعة';
+            @endphp
+            @if($course)
+                <div class="offline-card block overflow-hidden border-dashed border-2">
+                    <div class="h-32 bg-amber-50 flex items-center justify-center text-amber-600 flex-shrink-0">
+                        <i class="fas fa-hourglass-half text-3xl"></i>
+                    </div>
+                    <div class="p-4">
+                        <div class="flex items-start justify-between gap-2 mb-2">
+                            <h3 class="text-base font-bold text-gray-900 line-clamp-2 leading-snug flex-1 min-w-0">{{ $course->title }}</h3>
+                            <span class="px-2 py-0.5 rounded-md text-xs font-semibold {{ $bookingStatusClass }} flex-shrink-0">
+                                {{ $bookingStatusText }}
+                            </span>
+                        </div>
+                        <p class="text-xs text-gray-500 mb-2">
+                            {{ $course->instructor->name ?? '—' }}
+                            @if($course->locationModel || $course->location)
+                                · {{ $course->locationModel->name ?? $course->location ?? '—' }}
+                            @endif
+                        </p>
+                        <div class="text-xs text-gray-600 mb-2">
+                            <i class="fas fa-calendar-alt ml-1"></i>تاريخ الحجز: {{ optional($booking->created_at)->format('Y-m-d') }}
+                        </div>
+                        @if($booking->requestedGroup || $booking->assignedGroup)
+                            <div class="text-xs text-gray-600 mb-2">
+                                <i class="fas fa-users-cog ml-1"></i>
+                                المجموعة:
+                                {{ $booking->assignedGroup->name ?? $booking->requestedGroup->name ?? '—' }}
+                            </div>
+                        @endif
+                        <div class="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-md px-2 py-1">
+                            سيظهر الكورس كـ "مفعّل" بعد اعتماد التسجيل النهائي من الإدارة.
+                        </div>
+                    </div>
+                </div>
+            @endif
+        @endforeach
     </div>
 
     @if($enrollments->hasPages())

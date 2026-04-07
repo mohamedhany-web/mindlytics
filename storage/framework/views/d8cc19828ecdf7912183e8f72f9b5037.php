@@ -28,7 +28,7 @@
                             <?php if($m->description): ?>
                                 <p class="text-xs text-slate-500 mt-0.5 line-clamp-2"><?php echo e(Str::limit(strip_tags($m->description), 120)); ?></p>
                             <?php endif; ?>
-                            <a href="<?php echo e(route('student.offline-courses.lectures', $offlineCourse)); ?>#offline-lecture-<?php echo e($m->id); ?>" class="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-violet-600 hover:text-violet-800">
+                            <a href="<?php echo e(route(($studentRouteGroup ?? 'student.offline-courses') . '.lectures', $offlineCourse)); ?>#offline-lecture-<?php echo e($m->id); ?>" class="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-violet-600 hover:text-violet-800">
                                 عرض المحاضرة <i class="fas fa-arrow-left text-xs"></i>
                             </a>
                         </div>
@@ -39,7 +39,7 @@
                             <?php if($m->description): ?>
                                 <p class="text-xs text-slate-500 mt-0.5 line-clamp-2"><?php echo e(Str::limit(strip_tags($m->description), 120)); ?></p>
                             <?php endif; ?>
-                            <a href="<?php echo e(route('student.offline-courses.resources', $offlineCourse)); ?>#offline-resource-<?php echo e($m->id); ?>" class="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-sky-600 hover:text-sky-800">
+                            <a href="<?php echo e(route(($studentRouteGroup ?? 'student.offline-courses') . '.resources', $offlineCourse)); ?>#offline-resource-<?php echo e($m->id); ?>" class="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-sky-600 hover:text-sky-800">
                                 فتح المورد <i class="fas fa-arrow-left text-xs"></i>
                             </a>
                         </div>
@@ -48,7 +48,7 @@
                         <div class="min-w-0 flex-1">
                             <p class="font-semibold text-slate-900"><?php echo e($m->title); ?></p>
                             <p class="text-[11px] text-slate-500 mt-0.5"><?php echo e($m->type); ?></p>
-                            <a href="<?php echo e(route('student.offline-courses.activities.show', [$offlineCourse, $m])); ?>" class="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-amber-700 hover:text-amber-900">
+                            <a href="<?php echo e(route(($studentRouteGroup ?? 'student.offline-courses') . '.activities.show', [$offlineCourse, $m])); ?>" class="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-amber-700 hover:text-amber-900">
                                 عرض / تسليم <i class="fas fa-arrow-left text-xs"></i>
                             </a>
                         </div>
@@ -71,7 +71,7 @@
         </div>
         <?php if($section->children && $section->children->isNotEmpty()): ?>
             <div class="px-3 pb-3 space-y-3 border-t border-slate-100 bg-slate-50/30">
-                <?php echo $__env->make('student.offline-courses.partials.curriculum-sections', ['sections' => $section->children, 'offlineCourse' => $offlineCourse], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+                <?php echo $__env->make('student.offline-courses.partials.curriculum-sections', ['sections' => $section->children, 'offlineCourse' => $offlineCourse, 'channel' => $channel ?? 'offline', 'studentRouteGroup' => $studentRouteGroup ?? 'student.offline-courses'], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
             </div>
         <?php endif; ?>
     </div>

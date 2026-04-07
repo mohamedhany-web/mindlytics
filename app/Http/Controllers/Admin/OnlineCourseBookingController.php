@@ -75,6 +75,9 @@ class OnlineCourseBookingController extends Controller
             && (int) $validated['group_id'] !== (int) $offlineCourseBooking->requested_group_id) {
             return back()->withErrors(['error' => 'هذا الطلب مرتبط بمجموعة محددة من رابط الحجز؛ يجب الموافقة على نفس المجموعة.']);
         }
+        if (! $group->online_booking_enabled || ! filled($group->online_slug)) {
+            return back()->withErrors(['error' => 'المجموعة المختارة غير مفعلة للحجز الأونلاين.']);
+        }
         if (! $group->canEnroll('online')) {
             return back()->withErrors(['error' => 'المجموعة المختارة غير متاحة أو ممتلئة للأونلاين']);
         }
@@ -131,6 +134,9 @@ class OnlineCourseBookingController extends Controller
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
+            if ($e->getMessage() === 'DUPLICATE_ENROLLMENT') {
+                return back()->withErrors(['error' => 'الطالب لديه تسجيل أونلاين نشط بالفعل في هذا الكورس.']);
+            }
             report($e);
             return back()->withErrors(['error' => 'تعذر إتمام الموافقة. حاول مرة أخرى أو راجع السجلات.']);
         }

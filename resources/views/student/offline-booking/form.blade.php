@@ -6,8 +6,8 @@
 @section('content')
 <div class="w-full px-4 sm:px-6 lg:px-8 py-6 max-w-2xl mx-auto space-y-6">
     <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
-        <a href="{{ route('student.offline-courses.booking.catalog') }}" class="text-sm text-purple-600 hover:text-purple-800 font-medium">
-            <i class="fas fa-arrow-right ml-1"></i> العودة لقائمة الحجز
+        <a href="{{ route('student.offline-courses.index') }}" class="text-sm text-purple-600 hover:text-purple-800 font-medium">
+            <i class="fas fa-arrow-right ml-1"></i> العودة لكورساتي الأوفلاين
         </a>
         <h1 class="text-xl font-bold text-gray-900 mt-3">{{ $offlineCourse->title }}</h1>
         <p class="text-gray-600 mt-1">السعر: <span class="font-bold text-gray-900">{{ number_format((float) $offlineCourse->price, 2) }} ج.م</span></p>

@@ -12,16 +12,6 @@ use Illuminate\Validation\Rule;
 
 class OfflineCourseBookingController extends Controller
 {
-    public function catalog()
-    {
-        $courses = OfflineCourse::withOpenPublicBooking()
-            ->with(['instructor', 'locationModel'])
-            ->latest()
-            ->paginate(12);
-
-        return view('student.offline-booking.catalog', compact('courses'));
-    }
-
     public function create(OfflineCourse $offlineCourse)
     {
         $user = Auth::user();
@@ -35,7 +25,7 @@ class OfflineCourseBookingController extends Controller
             ->where('enrollment_channel', 'offline')
             ->where('status', 'active')
             ->exists()) {
-            return redirect()->route('student.offline-courses.booking.catalog')
+            return redirect()->route('student.offline-courses.index')
                 ->with('info', 'أنت مسجل بالفعل في هذا الكورس.');
         }
 
@@ -43,11 +33,12 @@ class OfflineCourseBookingController extends Controller
             ->where('offline_course_id', $offlineCourse->id)
             ->where('status', OfflineCourseBooking::STATUS_PENDING)
             ->exists()) {
-            return redirect()->route('student.offline-courses.booking.catalog')
+            return redirect()->route('student.offline-courses.index')
                 ->with('info', 'لديك طلب حجز قيد المراجعة لهذا الكورس.');
         }
 
-        $wallets = Wallet::where('is_active', true)
+        $wallets = Wallet::academyWallets()
+            ->where('is_active', true)
             ->whereNotNull('type')
             ->whereIn('type', ['vodafone_cash', 'instapay', 'bank_transfer'])
             ->where(function ($query) {
@@ -86,7 +77,8 @@ class OfflineCourseBookingController extends Controller
 
         $coursePrice = (float) $offlineCourse->price;
 
-        $walletChannelsExist = Wallet::where('is_active', true)
+        $walletChannelsExist = Wallet::academyWallets()
+            ->where('is_active', true)
             ->whereNotNull('type')
             ->whereIn('type', ['vodafone_cash', 'instapay', 'bank_transfer'])
             ->where(function ($query) {
@@ -139,7 +131,7 @@ class OfflineCourseBookingController extends Controller
             'status' => OfflineCourseBooking::STATUS_PENDING,
         ]);
 
-        return redirect()->route('student.offline-courses.booking.catalog')
+        return redirect()->route('student.offline-courses.index')
             ->with('success', 'تم إرسال طلب الحجز وسيتم المراجعة قريباً.');
     }
 }

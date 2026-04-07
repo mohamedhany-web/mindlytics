@@ -30,7 +30,8 @@ class WalletController extends Controller
                 abort(403, 'غير مصرح لك بالوصول لهذه الصفحة');
             }
 
-            $query = Wallet::with('user')
+            $query = Wallet::academyWallets()
+                ->with('user')
                 ->orderBy('created_at', 'desc');
 
             // فلترة حسب الحالة - حماية من SQL Injection
@@ -47,9 +48,11 @@ class WalletController extends Controller
                 $search = strip_tags(trim($request->search));
                 $search = preg_replace('/[^a-zA-Z0-9\u0600-\u06FF\s@.-]/', '', $search);
                 if (strlen($search) > 0 && strlen($search) <= 255) {
-                    $query->whereHas('user', function($uq) use ($search) {
-                        $uq->where('name', 'like', "%{$search}%")
-                          ->orWhere('phone', 'like', "%{$search}%");
+                    $query->where(function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                            ->orWhere('account_holder', 'like', "%{$search}%")
+                            ->orWhere('bank_name', 'like', "%{$search}%")
+                            ->orWhere('account_number', 'like', "%{$search}%");
                     });
                 }
             }
@@ -57,31 +60,41 @@ class WalletController extends Controller
             $wallets = $query->paginate(12);
 
             $stats = [
-                'total' => Wallet::count(),
-                'active' => Wallet::where('is_active', true)->count(),
-                'inactive' => Wallet::where('is_active', false)->count(),
-                'total_balance' => (float) Wallet::sum('balance'),
-                'pending_balance' => (float) Wallet::sum('pending_balance'),
+                'total' => Wallet::academyWallets()->count(),
+                'active' => Wallet::academyWallets()->where('is_active', true)->count(),
+                'inactive' => Wallet::academyWallets()->where('is_active', false)->count(),
+                'total_balance' => (float) Wallet::academyWallets()->sum('balance'),
+                'pending_balance' => (float) Wallet::academyWallets()->sum('pending_balance'),
             ];
 
-            $totalTransactions = WalletTransaction::count();
+            $platformWalletIds = Wallet::academyWallets()->pluck('id');
+            $totalTransactions = $platformWalletIds->isEmpty()
+                ? 0
+                : WalletTransaction::whereIn('wallet_id', $platformWalletIds)->count();
 
             $currentMonthRange = [
                 Carbon::now()->startOfMonth(),
                 Carbon::now()->endOfMonth(),
             ];
 
-            $currentMonthDeposits = WalletTransaction::where('type', 'deposit')
-                ->whereBetween('created_at', $currentMonthRange)
-                ->sum('amount');
+            $currentMonthDeposits = $platformWalletIds->isEmpty()
+                ? 0
+                : WalletTransaction::whereIn('wallet_id', $platformWalletIds)
+                    ->where('type', 'deposit')
+                    ->whereBetween('created_at', $currentMonthRange)
+                    ->sum('amount');
 
-            $currentMonthWithdrawals = WalletTransaction::where('type', 'withdrawal')
-                ->whereBetween('created_at', $currentMonthRange)
-                ->sum('amount');
+            $currentMonthWithdrawals = $platformWalletIds->isEmpty()
+                ? 0
+                : WalletTransaction::whereIn('wallet_id', $platformWalletIds)
+                    ->where('type', 'withdrawal')
+                    ->whereBetween('created_at', $currentMonthRange)
+                    ->sum('amount');
 
             $typeDistribution = collect();
             if (Schema::hasColumn('wallets', 'type')) {
-                $typeDistribution = Wallet::selectRaw('type, COUNT(*) as wallets_count, SUM(balance) as total_balance')
+                $typeDistribution = Wallet::academyWallets()
+                    ->selectRaw('type, COUNT(*) as wallets_count, SUM(balance) as total_balance')
                     ->groupBy('type')
                     ->get()
                     ->map(function ($row) {
@@ -94,7 +107,8 @@ class WalletController extends Controller
                     });
             }
 
-            $recentWallets = Wallet::with('user')
+            $recentWallets = Wallet::academyWallets()
+                ->with('user')
                 ->latest()
                 ->take(5)
                 ->get();
@@ -116,6 +130,7 @@ class WalletController extends Controller
 
     public function show(Wallet $wallet)
     {
+        $this->abortUnlessAcademyWallet($wallet);
         $wallet->load(['user']);
 
         $transactionsQuery = $wallet->transactions();
@@ -174,6 +189,7 @@ class WalletController extends Controller
 
     public function transactions(Wallet $wallet)
     {
+        $this->abortUnlessAcademyWallet($wallet);
         $wallet->load(['user', 'transactions' => function ($query) {
             $query->latest();
         }]);
@@ -186,6 +202,7 @@ class WalletController extends Controller
 
     public function reports(Wallet $wallet)
     {
+        $this->abortUnlessAcademyWallet($wallet);
         $wallet->load(['user', 'reports' => function ($query) {
             $query->latest();
         }]);
@@ -198,6 +215,7 @@ class WalletController extends Controller
 
     public function generateReport(Request $request, Wallet $wallet)
     {
+        $this->abortUnlessAcademyWallet($wallet);
         $data = $request->validate([
             'from' => 'nullable|date',
             'to' => 'nullable|date|after_or_equal:from',
@@ -324,11 +342,13 @@ class WalletController extends Controller
 
     public function edit(Wallet $wallet)
     {
+        $this->abortUnlessAcademyWallet($wallet);
         return view('admin.wallets.edit', compact('wallet'));
     }
 
     public function update(Request $request, Wallet $wallet)
     {
+        $this->abortUnlessAcademyWallet($wallet);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'type' => 'required|in:vodafone_cash,instapay,bank_transfer,cash,other',
@@ -355,8 +375,16 @@ class WalletController extends Controller
 
     public function destroy(Wallet $wallet)
     {
+        $this->abortUnlessAcademyWallet($wallet);
         $wallet->delete();
         return redirect()->route('admin.wallets.index')
             ->with('success', 'تم حذف المحفظة بنجاح');
+    }
+
+    private function abortUnlessAcademyWallet(Wallet $wallet): void
+    {
+        if ($wallet->user_id !== null) {
+            abort(404);
+        }
     }
 }

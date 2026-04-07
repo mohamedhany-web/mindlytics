@@ -3,22 +3,26 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Invoice;
-use App\Models\Payment;
-use App\Models\Transaction;
 use App\Models\Expense;
+use App\Models\InstallmentAgreement;
+use App\Models\InstallmentPayment;
+use App\Models\Invoice;
+use App\Models\OfflineCourseEnrollment;
 use App\Models\Order;
+use App\Models\Payment;
+use App\Models\Subscription;
+use App\Models\Transaction;
 use App\Models\Wallet;
-use App\Models\User;
+use App\Models\WithdrawalRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Response;
 use Carbon\Carbon;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AccountingReportsController extends Controller
@@ -141,7 +145,8 @@ class AccountingReportsController extends Controller
         $startDate = $dates['start'];
         $endDate = $dates['end'];
         $stats = $this->getGeneralStats($startDate, $endDate);
-        $items = Wallet::withCount('transactions')
+        $items = Wallet::academyWallets()
+            ->withCount('transactions')
             ->orderBy('balance', 'desc')
             ->paginate(25)
             ->withQueryString();
@@ -173,6 +178,18 @@ class AccountingReportsController extends Controller
         }
 
         switch ($period) {
+            case 'custom':
+                if ($startDate && $endDate) {
+                    return [
+                        'start' => Carbon::parse($startDate)->startOfDay(),
+                        'end' => Carbon::parse($endDate)->endOfDay(),
+                    ];
+                }
+
+                return [
+                    'start' => Carbon::now()->startOfMonth()->startOfDay(),
+                    'end' => Carbon::now()->endOfMonth()->endOfDay(),
+                ];
             case 'day':
                 return [
                     'start' => Carbon::today()->startOfDay(),
@@ -253,10 +270,10 @@ class AccountingReportsController extends Controller
 
         // محافظ المنصة (إجماليات دون ربط بفترة — حالة حاليّة)
         $walletStats = [
-            'total_wallets' => Wallet::count(),
-            'active_wallets' => Wallet::where('is_active', true)->count(),
-            'total_balance' => (float) Wallet::sum('balance'),
-            'pending_balance' => (float) Wallet::sum('pending_balance'),
+            'total_wallets' => Wallet::academyWallets()->count(),
+            'active_wallets' => Wallet::academyWallets()->where('is_active', true)->count(),
+            'total_balance' => (float) Wallet::academyWallets()->sum('balance'),
+            'pending_balance' => (float) Wallet::academyWallets()->sum('pending_balance'),
         ];
 
         // الطلبات (كورسات ومسارات)
@@ -273,6 +290,23 @@ class AccountingReportsController extends Controller
             'approved_amount' => $ordersApproved,
         ];
 
+        $academyStats = [
+            'subscriptions_new_period' => Subscription::whereBetween('created_at', [$startDate, $endDate])->count(),
+            'subscriptions_value_period' => (float) Subscription::whereBetween('created_at', [$startDate, $endDate])->sum('price'),
+            'withdrawals_completed_period' => (float) WithdrawalRequest::where('status', WithdrawalRequest::STATUS_COMPLETED)
+                ->whereBetween('processed_at', [$startDate, $endDate])
+                ->sum('amount'),
+            'withdrawals_pending_amount' => (float) WithdrawalRequest::where('status', WithdrawalRequest::STATUS_PENDING)->sum('amount'),
+            'installment_agreements_active' => InstallmentAgreement::whereIn('status', [
+                InstallmentAgreement::STATUS_ACTIVE,
+                InstallmentAgreement::STATUS_OVERDUE,
+            ])->count(),
+            'installment_contracts_value_period' => (float) InstallmentAgreement::whereBetween('created_at', [$startDate, $endDate])->sum('total_amount'),
+            'installment_pending_scheduled' => (float) InstallmentPayment::where('status', InstallmentPayment::STATUS_PENDING)->sum('amount'),
+            'offline_collected_period' => (float) OfflineCourseEnrollment::whereBetween('enrolled_at', [$startDate, $endDate])->sum('paid_amount'),
+            'offline_outstanding_total' => (float) OfflineCourseEnrollment::query()->sum('remaining_amount'),
+        ];
+
         return [
             'total_revenue' => $totalRevenue,
             'total_expenses' => $totalExpenses,
@@ -285,6 +319,7 @@ class AccountingReportsController extends Controller
             'total_transactions' => $totalTransactions,
             'wallet_stats' => $walletStats,
             'order_stats' => $orderStats,
+            'academy_stats' => $academyStats,
         ];
     }
 
@@ -523,23 +558,61 @@ class AccountingReportsController extends Controller
             $this->addWalletsSheet($spreadsheet, $sheetIndex, $headerStyle, $headerFont, $border);
             $sheetIndex++;
             $this->addOrdersSheet($spreadsheet, $sheetIndex, $startDate, $endDate, $headerStyle, $headerFont, $border);
-        } elseif (in_array($type, ['invoices', 'payments', 'transactions', 'expenses', 'wallets', 'orders'])) {
-            if ($type === 'invoices') $this->addInvoicesSheet($spreadsheet, 1, $startDate, $endDate, $headerStyle, $headerFont, $border);
-            if ($type === 'payments') $this->addPaymentsSheet($spreadsheet, 1, $startDate, $endDate, $headerStyle, $headerFont, $border);
-            if ($type === 'transactions') $this->addTransactionsSheet($spreadsheet, 1, $startDate, $endDate, $headerStyle, $headerFont, $border);
-            if ($type === 'expenses') $this->addExpensesSheet($spreadsheet, 1, $startDate, $endDate, $headerStyle, $headerFont, $border);
-            if ($type === 'wallets') $this->addWalletsSheet($spreadsheet, 1, $headerStyle, $headerFont, $border);
-            if ($type === 'orders') $this->addOrdersSheet($spreadsheet, 1, $startDate, $endDate, $headerStyle, $headerFont, $border);
+            $sheetIndex++;
+            $this->addSubscriptionsSheet($spreadsheet, $sheetIndex, $startDate, $endDate, $headerStyle, $headerFont, $border);
+            $sheetIndex++;
+            $this->addWithdrawalsSheet($spreadsheet, $sheetIndex, $startDate, $endDate, $headerStyle, $headerFont, $border);
+            $sheetIndex++;
+            $this->addInstallmentsSheet($spreadsheet, $sheetIndex, $startDate, $endDate, $headerStyle, $headerFont, $border);
+            $sheetIndex++;
+            $this->addOfflineEnrollmentsSheet($spreadsheet, $sheetIndex, $startDate, $endDate, $headerStyle, $headerFont, $border);
+            $sheetIndex++;
+            $this->addChartOfAccountsSheet($spreadsheet, $sheetIndex, $headerStyle, $headerFont, $border);
+        } elseif (in_array($type, ['invoices', 'payments', 'transactions', 'expenses', 'wallets', 'orders', 'subscriptions', 'withdrawals', 'installments', 'offline_enrollments', 'chart'], true)) {
+            if ($type === 'invoices') {
+                $this->addInvoicesSheet($spreadsheet, 1, $startDate, $endDate, $headerStyle, $headerFont, $border);
+            }
+            if ($type === 'payments') {
+                $this->addPaymentsSheet($spreadsheet, 1, $startDate, $endDate, $headerStyle, $headerFont, $border);
+            }
+            if ($type === 'transactions') {
+                $this->addTransactionsSheet($spreadsheet, 1, $startDate, $endDate, $headerStyle, $headerFont, $border);
+            }
+            if ($type === 'expenses') {
+                $this->addExpensesSheet($spreadsheet, 1, $startDate, $endDate, $headerStyle, $headerFont, $border);
+            }
+            if ($type === 'wallets') {
+                $this->addWalletsSheet($spreadsheet, 1, $headerStyle, $headerFont, $border);
+            }
+            if ($type === 'orders') {
+                $this->addOrdersSheet($spreadsheet, 1, $startDate, $endDate, $headerStyle, $headerFont, $border);
+            }
+            if ($type === 'subscriptions') {
+                $this->addSubscriptionsSheet($spreadsheet, 1, $startDate, $endDate, $headerStyle, $headerFont, $border);
+            }
+            if ($type === 'withdrawals') {
+                $this->addWithdrawalsSheet($spreadsheet, 1, $startDate, $endDate, $headerStyle, $headerFont, $border);
+            }
+            if ($type === 'installments') {
+                $this->addInstallmentsSheet($spreadsheet, 1, $startDate, $endDate, $headerStyle, $headerFont, $border);
+            }
+            if ($type === 'offline_enrollments') {
+                $this->addOfflineEnrollmentsSheet($spreadsheet, 1, $startDate, $endDate, $headerStyle, $headerFont, $border);
+            }
+            if ($type === 'chart') {
+                $this->addChartOfAccountsSheet($spreadsheet, 1, $headerStyle, $headerFont, $border);
+            }
         }
 
-        $filename = 'التقارير_المالية_Mindlytics_' . $startDate->format('Y-m-d') . '_' . $endDate->format('Y-m-d') . '.xlsx';
+        $filenameAscii = 'Mindlytics_accounting_' . $startDate->format('Y-m-d') . '_' . $endDate->format('Y-m-d') . '.xlsx';
+        $filenameUtf8 = 'تقارير_مالية_Mindlytics_' . $startDate->format('Y-m-d') . '_' . $endDate->format('Y-m-d') . '.xlsx';
 
         return new StreamedResponse(function () use ($spreadsheet) {
             $writer = new Xlsx($spreadsheet);
             $writer->save('php://output');
         }, 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="' . $filenameAscii . '"; filename*=UTF-8\'\'' . rawurlencode($filenameUtf8),
             'Cache-Control' => 'max-age=0',
         ]);
     }
@@ -577,6 +650,16 @@ class AccountingReportsController extends Controller
             ['طلبات معلقة', $stats['order_stats']['pending_orders']],
             ['إجمالي مبالغ الطلبات', number_format($stats['order_stats']['total_amount'], 2) . ' ج.م'],
             ['مبالغ الطلبات المعتمدة', number_format($stats['order_stats']['approved_amount'], 2) . ' ج.م'],
+            ['—', '—'],
+            ['اشتراكات جديدة (الفترة)', $stats['academy_stats']['subscriptions_new_period'] ?? 0],
+            ['قيمة اشتراكات جديدة (الفترة)', number_format($stats['academy_stats']['subscriptions_value_period'] ?? 0, 2) . ' ج.م'],
+            ['سحوبات مكتملة (الفترة)', number_format($stats['academy_stats']['withdrawals_completed_period'] ?? 0, 2) . ' ج.م'],
+            ['سحوبات معلقة (مبلغ حالي)', number_format($stats['academy_stats']['withdrawals_pending_amount'] ?? 0, 2) . ' ج.م'],
+            ['اتفاقيات تقسيط نشطة/متأخرة', $stats['academy_stats']['installment_agreements_active'] ?? 0],
+            ['قيمة عقود تقسيط (إنشاء في الفترة)', number_format($stats['academy_stats']['installment_contracts_value_period'] ?? 0, 2) . ' ج.م'],
+            ['مجموع أقساط مستحقة (جدول)', number_format($stats['academy_stats']['installment_pending_scheduled'] ?? 0, 2) . ' ج.م'],
+            ['تحصيلات تسجيل أوفلاين (الفترة)', number_format($stats['academy_stats']['offline_collected_period'] ?? 0, 2) . ' ج.م'],
+            ['متبقي أوفلاين (إجمالي)', number_format($stats['academy_stats']['offline_outstanding_total'] ?? 0, 2) . ' ج.م'],
         ];
         foreach ($items as $item) {
             $sheet->setCellValue('A' . $row, $item[0]);
@@ -690,7 +773,7 @@ class AccountingReportsController extends Controller
             $sheet->getStyle($col . '1')->applyFromArray($headerStyle);
             $col++;
         }
-        $expenses = Expense::whereBetween('created_at', [$startDate, $endDate])->orderBy('created_at', 'desc')->get();
+        $expenses = Expense::whereBetween('expense_date', [$startDate, $endDate])->orderBy('expense_date', 'desc')->get();
         $row = 2;
         foreach ($expenses as $e) {
             $sheet->setCellValue('A' . $row, $e->expense_number ?? 'N/A');
@@ -719,7 +802,7 @@ class AccountingReportsController extends Controller
             $sheet->getStyle($col . '1')->applyFromArray($headerStyle);
             $col++;
         }
-        $wallets = Wallet::withCount('transactions')->orderBy('balance', 'desc')->get();
+        $wallets = Wallet::academyWallets()->withCount('transactions')->orderBy('balance', 'desc')->get();
         $row = 2;
         foreach ($wallets as $w) {
             $sheet->setCellValue('A' . $row, $w->name ?? '-');
@@ -766,7 +849,248 @@ class AccountingReportsController extends Controller
             $sheet->getStyle('A' . $row . ':I' . $row)->applyFromArray($border);
             $row++;
         }
-        for ($c = 0; $c < 9; $c++) $sheet->getColumnDimensionByColumn($c + 1)->setAutoSize(true);
+        for ($c = 0; $c < 9; $c++) {
+            $sheet->getColumnDimensionByColumn($c + 1)->setAutoSize(true);
+        }
+    }
+
+    private function addSubscriptionsSheet(
+        Spreadsheet $spreadsheet,
+        int $index,
+        Carbon $startDate,
+        Carbon $endDate,
+        array $headerStyle,
+        array $headerFont,
+        array $border
+    ): void {
+        $sheet = $spreadsheet->createSheet($index);
+        $sheet->setTitle('الاشتراكات');
+        $sheet->setRightToLeft(true);
+        $headers = ['المعرف', 'الطالب', 'نوع الاشتراك', 'الخطة', 'السعر', 'الحالة', 'بداية', 'نهاية', 'تاريخ الإنشاء'];
+        $col = 'A';
+        foreach ($headers as $h) {
+            $sheet->setCellValue($col . '1', $h);
+            $sheet->getStyle($col . '1')->applyFromArray($headerStyle);
+            $col++;
+        }
+        $rows = Subscription::with('user')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->orderBy('created_at', 'desc')
+            ->get();
+        $row = 2;
+        foreach ($rows as $s) {
+            $sheet->setCellValue('A' . $row, $s->id);
+            $sheet->setCellValue('B' . $row, $s->user->name ?? '—');
+            $sheet->setCellValue('C' . $row, Subscription::typeLabel($s->subscription_type));
+            $sheet->setCellValue('D' . $row, $s->plan_name ?? '—');
+            $sheet->setCellValue('E' . $row, (float) $s->price);
+            $sheet->setCellValue('F' . $row, $s->status ?? '—');
+            $sheet->setCellValue('G' . $row, $s->start_date ? $s->start_date->format('Y-m-d') : '—');
+            $sheet->setCellValue('H' . $row, $s->end_date ? $s->end_date->format('Y-m-d') : '—');
+            $sheet->setCellValue('I' . $row, $s->created_at->format('Y-m-d H:i'));
+            $sheet->getStyle('A' . $row . ':I' . $row)->applyFromArray($border);
+            $row++;
+        }
+        $sheet->getStyle('E2:E' . max(1, $row - 1))->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1);
+        for ($c = 0; $c < 9; $c++) {
+            $sheet->getColumnDimensionByColumn($c + 1)->setAutoSize(true);
+        }
+    }
+
+    private function addWithdrawalsSheet(
+        Spreadsheet $spreadsheet,
+        int $index,
+        Carbon $startDate,
+        Carbon $endDate,
+        array $headerStyle,
+        array $headerFont,
+        array $border
+    ): void {
+        $sheet = $spreadsheet->createSheet($index);
+        $sheet->setTitle('السحوبات');
+        $sheet->setRightToLeft(true);
+        $headers = ['رقم الطلب', 'المدرب', 'المبلغ', 'الحالة', 'طريقة الدفع', 'البنك', 'تاريخ الإنشاء', 'تاريخ المعالجة'];
+        $col = 'A';
+        foreach ($headers as $h) {
+            $sheet->setCellValue($col . '1', $h);
+            $sheet->getStyle($col . '1')->applyFromArray($headerStyle);
+            $col++;
+        }
+        $rows = WithdrawalRequest::with('instructor')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->orderBy('created_at', 'desc')
+            ->get();
+        $row = 2;
+        foreach ($rows as $w) {
+            $sheet->setCellValue('A' . $row, $w->request_number ?? $w->id);
+            $sheet->setCellValue('B' . $row, $w->instructor->name ?? '—');
+            $sheet->setCellValue('C' . $row, (float) $w->amount);
+            $sheet->setCellValue('D' . $row, $w->status_label ?? $w->status);
+            $sheet->setCellValue('E' . $row, $w->payment_method_label ?? $w->payment_method);
+            $sheet->setCellValue('F' . $row, $w->bank_name ?? '—');
+            $sheet->setCellValue('G' . $row, $w->created_at->format('Y-m-d H:i'));
+            $sheet->setCellValue('H' . $row, $w->processed_at ? $w->processed_at->format('Y-m-d H:i') : '—');
+            $sheet->getStyle('A' . $row . ':H' . $row)->applyFromArray($border);
+            $row++;
+        }
+        $sheet->getStyle('C2:C' . max(1, $row - 1))->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1);
+        for ($c = 0; $c < 8; $c++) {
+            $sheet->getColumnDimensionByColumn($c + 1)->setAutoSize(true);
+        }
+    }
+
+    private function addInstallmentsSheet(
+        Spreadsheet $spreadsheet,
+        int $index,
+        Carbon $startDate,
+        Carbon $endDate,
+        array $headerStyle,
+        array $headerFont,
+        array $border
+    ): void {
+        $sheet = $spreadsheet->createSheet($index);
+        $sheet->setTitle('التقسيط');
+        $sheet->setRightToLeft(true);
+        $headers = ['رقم الاتفاقية', 'الطالب', 'إجمالي العقد', 'المقدم', 'عدد الأقساط', 'الحالة', 'بداية', 'تاريخ الإنشاء'];
+        $col = 'A';
+        foreach ($headers as $h) {
+            $sheet->setCellValue($col . '1', $h);
+            $sheet->getStyle($col . '1')->applyFromArray($headerStyle);
+            $col++;
+        }
+        $rows = InstallmentAgreement::with('student')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->orderBy('created_at', 'desc')
+            ->get();
+        $row = 2;
+        foreach ($rows as $a) {
+            $sheet->setCellValue('A' . $row, $a->id);
+            $sheet->setCellValue('B' . $row, $a->student->name ?? '—');
+            $sheet->setCellValue('C' . $row, (float) $a->total_amount);
+            $sheet->setCellValue('D' . $row, (float) $a->deposit_amount);
+            $sheet->setCellValue('E' . $row, (int) $a->installments_count);
+            $sheet->setCellValue('F' . $row, $a->status);
+            $sheet->setCellValue('G' . $row, $a->start_date ? $a->start_date->format('Y-m-d') : '—');
+            $sheet->setCellValue('H' . $row, $a->created_at->format('Y-m-d H:i'));
+            $sheet->getStyle('A' . $row . ':H' . $row)->applyFromArray($border);
+            $row++;
+        }
+        $sheet->getStyle('C2:D' . max(1, $row - 1))->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1);
+        for ($c = 0; $c < 8; $c++) {
+            $sheet->getColumnDimensionByColumn($c + 1)->setAutoSize(true);
+        }
+    }
+
+    private function addOfflineEnrollmentsSheet(
+        Spreadsheet $spreadsheet,
+        int $index,
+        Carbon $startDate,
+        Carbon $endDate,
+        array $headerStyle,
+        array $headerFont,
+        array $border
+    ): void {
+        $sheet = $spreadsheet->createSheet($index);
+        $sheet->setTitle('تسجيل أوفلاين');
+        $sheet->setRightToLeft(true);
+        $headers = ['المعرف', 'الطالب', 'الكورس', 'القناة', 'إجمالي', 'مدفوع', 'متبقي', 'حالة السداد', 'تاريخ التسجيل'];
+        $col = 'A';
+        foreach ($headers as $h) {
+            $sheet->setCellValue($col . '1', $h);
+            $sheet->getStyle($col . '1')->applyFromArray($headerStyle);
+            $col++;
+        }
+        $rows = OfflineCourseEnrollment::with(['student', 'course'])
+            ->whereBetween('enrolled_at', [$startDate, $endDate])
+            ->orderBy('enrolled_at', 'desc')
+            ->get();
+        $row = 2;
+        foreach ($rows as $e) {
+            $sheet->setCellValue('A' . $row, $e->id);
+            $sheet->setCellValue('B' . $row, $e->student->name ?? '—');
+            $sheet->setCellValue('C' . $row, $e->course->title ?? '—');
+            $sheet->setCellValue('D' . $row, $e->enrollment_channel ?? '—');
+            $sheet->setCellValue('E' . $row, (float) $e->total_amount);
+            $sheet->setCellValue('F' . $row, (float) $e->paid_amount);
+            $sheet->setCellValue('G' . $row, (float) $e->remaining_amount);
+            $sheet->setCellValue('H' . $row, $e->payment_status ?? '—');
+            $sheet->setCellValue('I' . $row, $e->enrolled_at ? $e->enrolled_at->format('Y-m-d H:i') : '—');
+            $sheet->getStyle('A' . $row . ':I' . $row)->applyFromArray($border);
+            $row++;
+        }
+        $sheet->getStyle('E2:G' . max(1, $row - 1))->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1);
+        for ($c = 0; $c < 9; $c++) {
+            $sheet->getColumnDimensionByColumn($c + 1)->setAutoSize(true);
+        }
+    }
+
+    private function addChartOfAccountsSheet(
+        Spreadsheet $spreadsheet,
+        int $index,
+        array $headerStyle,
+        array $headerFont,
+        array $border
+    ): void {
+        $sheet = $spreadsheet->createSheet($index);
+        $sheet->setTitle('شجرة الحسابات');
+        $sheet->setRightToLeft(true);
+        $headers = ['المستوى', 'الكود', 'اسم الحساب', 'النوع', 'مصدر في النظام'];
+        $col = 'A';
+        foreach ($headers as $h) {
+            $sheet->setCellValue($col . '1', $h);
+            $sheet->getStyle($col . '1')->applyFromArray($headerStyle);
+            $col++;
+        }
+        $flat = [];
+        foreach (config('accounting_chart.roots', []) as $root) {
+            $flat[] = ['level' => 0, 'code' => $root['code'] ?? '', 'name' => $root['name'] ?? '', 'type' => $root['type'] ?? '', 'source' => ''];
+            $flat = array_merge($flat, $this->flattenChartChildren($root['children'] ?? [], 1));
+        }
+        $row = 2;
+        foreach ($flat as $item) {
+            $sheet->setCellValue('A' . $row, $item['level']);
+            $sheet->setCellValue('B' . $row, $item['code']);
+            $sheet->setCellValue('C' . $row, $item['name']);
+            $sheet->setCellValue('D' . $row, $item['type']);
+            $sheet->setCellValue('E' . $row, $item['source'] ?? '');
+            $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray($border);
+            $row++;
+        }
+        foreach (range('A', 'E') as $c) {
+            $sheet->getColumnDimension($c)->setAutoSize(true);
+        }
+    }
+
+    /**
+     * @return array<int, array{level: int, code: string, name: string, type: string, source: string}>
+     */
+    private function flattenChartChildren(array $nodes, int $level): array
+    {
+        $out = [];
+        foreach ($nodes as $node) {
+            $isGroup = ! empty($node['children']);
+            $name = ($node['name'] ?? '');
+            if ($isGroup) {
+                $out[] = [
+                    'level' => $level,
+                    'code' => $node['code'] ?? '',
+                    'name' => $name,
+                    'type' => $node['type'] ?? '',
+                    'source' => '',
+                ];
+                $out = array_merge($out, $this->flattenChartChildren($node['children'], $level + 1));
+            } else {
+                $out[] = [
+                    'level' => $level,
+                    'code' => $node['code'] ?? '',
+                    'name' => $name,
+                    'type' => $node['type'] ?? '',
+                    'source' => $node['source'] ?? '',
+                ];
+            }
+        }
+
+        return $out;
     }
 
 }

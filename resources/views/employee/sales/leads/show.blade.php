@@ -8,6 +8,7 @@
         'note' => ['icon' => 'fas fa-note-sticky', 'bubble' => 'bg-amber-100 text-amber-800', 'accent' => 'border-amber-300'],
         'call' => ['icon' => 'fas fa-phone', 'bubble' => 'bg-sky-100 text-sky-800', 'accent' => 'border-sky-300'],
         'meeting' => ['icon' => 'fas fa-users', 'bubble' => 'bg-violet-100 text-violet-800', 'accent' => 'border-violet-300'],
+        'follow_up' => ['icon' => 'fas fa-redo', 'bubble' => 'bg-teal-100 text-teal-800', 'accent' => 'border-teal-300'],
         'whatsapp' => ['icon' => 'fab fa-whatsapp', 'bubble' => 'bg-green-100 text-green-800', 'accent' => 'border-green-400'],
         'email' => ['icon' => 'fas fa-envelope', 'bubble' => 'bg-slate-100 text-slate-800', 'accent' => 'border-slate-300'],
         'stage_change' => ['icon' => 'fas fa-shuffle', 'bubble' => 'bg-indigo-100 text-indigo-800', 'accent' => 'border-indigo-300'],
@@ -190,6 +191,32 @@
                         <dd class="font-medium text-gray-900">{{ $lead->last_contacted_at?->format('Y-m-d H:i') ?? '—' }}</dd>
                     </div>
                 </dl>
+                @if($lead->stage === 'won')
+                    <div class="rounded-xl border border-amber-200 bg-amber-50/90 p-4 space-y-3">
+                        <p class="text-sm font-bold text-amber-900 flex items-center gap-2"><i class="fas fa-star"></i> تقييم رضا العميل (CSAT)</p>
+                        @if($lead->csat_rating)
+                            <p class="text-sm text-gray-800">التقييم الحالي: <strong>{{ $lead->csat_rating }}/5</strong>@if($lead->csat_recorded_at) — {{ $lead->csat_recorded_at->format('Y-m-d') }}@endif</p>
+                            @if($lead->csat_comment)<p class="text-xs text-gray-600 whitespace-pre-wrap">{{ $lead->csat_comment }}</p>@endif
+                        @endif
+                        <form method="post" action="{{ route('employee.sales.leads.csat.store', $lead) }}" class="space-y-2">
+                            @csrf
+                            @error('csat_rating')<p class="text-xs text-rose-600">{{ $message }}</p>@enderror
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">التقييم (1–5)</label>
+                                <select name="csat_rating" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                    @for($i = 5; $i >= 1; $i--)
+                                        <option value="{{ $i }}" @selected((int) old('csat_rating', $lead->csat_rating ?? 5) === $i)>{{ $i }}</option>
+                                    @endfor
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">ملاحظة</label>
+                                <textarea name="csat_comment" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">{{ old('csat_comment', $lead->csat_comment) }}</textarea>
+                            </div>
+                            <button type="submit" class="w-full py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold">حفظ التقييم</button>
+                        </form>
+                    </div>
+                @endif
                 @if($lead->isOpen() && ($lead->isFollowUpOverdue() || $lead->isStaleContact()))
                     <div class="rounded-xl border border-rose-200 bg-rose-50/80 p-3 text-sm text-rose-900">
                         @if($lead->isFollowUpOverdue())

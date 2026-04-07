@@ -17,15 +17,19 @@ class OfflineResourceController extends Controller
     public function index(OfflineCourse $offlineCourse)
     {
         $this->authorizeInstructor($offlineCourse);
+        $channel = request()->query('channel') === 'online' ? 'online' : 'offline';
 
         $resources = $offlineCourse->resources()
             ->with('group')
+            ->when($channel === 'online', function ($q) {
+                $q->whereHas('group', fn ($g) => $g->where('online_booking_enabled', true));
+            })
             ->ordered()
             ->get();
 
-        $groups = $offlineCourse->groups()->orderBy('name')->get();
+        $groups = $this->groupsForChannel($offlineCourse, $channel);
 
-        return view('instructor.offline-courses.resources.index', compact('offlineCourse', 'resources', 'groups'));
+        return view('instructor.offline-courses.resources.index', compact('offlineCourse', 'resources', 'groups', 'channel'));
     }
 
     /**
@@ -34,10 +38,11 @@ class OfflineResourceController extends Controller
     public function create(OfflineCourse $offlineCourse)
     {
         $this->authorizeInstructor($offlineCourse);
+        $channel = request()->query('channel') === 'online' ? 'online' : 'offline';
 
-        $groups = $offlineCourse->groups()->orderBy('name')->get();
+        $groups = $this->groupsForChannel($offlineCourse, $channel);
 
-        return view('instructor.offline-courses.resources.create', compact('offlineCourse', 'groups'));
+        return view('instructor.offline-courses.resources.create', compact('offlineCourse', 'groups', 'channel'));
     }
 
     /**
@@ -46,6 +51,7 @@ class OfflineResourceController extends Controller
     public function store(Request $request, OfflineCourse $offlineCourse)
     {
         $this->authorizeInstructor($offlineCourse);
+        $channel = $request->query('channel') === 'online' ? 'online' : 'offline';
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -68,6 +74,14 @@ class OfflineResourceController extends Controller
         $validated['instructor_id'] = Auth::id();
         $validated['offline_course_id'] = $offlineCourse->id;
         $validated['group_id'] = $validated['group_id'] ?? null;
+        if ($validated['group_id']) {
+            $allowedGroupExists = $this->groupsForChannel($offlineCourse, $channel)
+                ->where('id', (int) $validated['group_id'])
+                ->exists();
+            if (! $allowedGroupExists) {
+                return back()->withErrors(['group_id' => 'المجموعة المختارة غير متاحة لهذا النوع من الكورسات.'])->withInput();
+            }
+        }
         $validated['order'] = $offlineCourse->resources()->max('order') + 1;
         $validated['is_active'] = true;
 
@@ -92,7 +106,7 @@ class OfflineResourceController extends Controller
         OfflineCourseResource::create($validated);
 
         return redirect()
-            ->route('instructor.offline-courses.resources.index', $offlineCourse)
+            ->route('instructor.offline-courses.resources.index', ['offlineCourse' => $offlineCourse, 'channel' => $channel])
             ->with('success', 'تم إضافة المورد بنجاح');
     }
 
@@ -102,13 +116,14 @@ class OfflineResourceController extends Controller
     public function edit(OfflineCourse $offlineCourse, OfflineCourseResource $resource)
     {
         $this->authorizeInstructor($offlineCourse);
+        $channel = request()->query('channel') === 'online' ? 'online' : 'offline';
         if ($resource->offline_course_id !== $offlineCourse->id) {
             abort(404);
         }
 
-        $groups = $offlineCourse->groups()->orderBy('name')->get();
+        $groups = $this->groupsForChannel($offlineCourse, $channel);
 
-        return view('instructor.offline-courses.resources.edit', compact('offlineCourse', 'resource', 'groups'));
+        return view('instructor.offline-courses.resources.edit', compact('offlineCourse', 'resource', 'groups', 'channel'));
     }
 
     /**
@@ -117,6 +132,7 @@ class OfflineResourceController extends Controller
     public function update(Request $request, OfflineCourse $offlineCourse, OfflineCourseResource $resource)
     {
         $this->authorizeInstructor($offlineCourse);
+        $channel = $request->query('channel') === 'online' ? 'online' : 'offline';
         if ($resource->offline_course_id !== $offlineCourse->id) {
             abort(404);
         }
@@ -137,6 +153,14 @@ class OfflineResourceController extends Controller
         $resource->description = $validated['description'] ?? null;
         $resource->type = $validated['type'];
         $resource->group_id = $validated['group_id'] ?? null;
+        if ($resource->group_id) {
+            $allowedGroupExists = $this->groupsForChannel($offlineCourse, $channel)
+                ->where('id', (int) $resource->group_id)
+                ->exists();
+            if (! $allowedGroupExists) {
+                return back()->withErrors(['group_id' => 'المجموعة المختارة غير متاحة لهذا النوع من الكورسات.'])->withInput();
+            }
+        }
         $resource->is_active = $request->boolean('is_active');
 
         if ($validated['type'] === 'link') {
@@ -170,7 +194,7 @@ class OfflineResourceController extends Controller
         $resource->save();
 
         return redirect()
-            ->route('instructor.offline-courses.resources.index', $offlineCourse)
+            ->route('instructor.offline-courses.resources.index', ['offlineCourse' => $offlineCourse, 'channel' => $channel])
             ->with('success', 'تم تحديث المورد بنجاح');
     }
 
@@ -180,6 +204,7 @@ class OfflineResourceController extends Controller
     public function destroy(OfflineCourse $offlineCourse, OfflineCourseResource $resource)
     {
         $this->authorizeInstructor($offlineCourse);
+        $channel = request()->query('channel') === 'online' ? 'online' : 'offline';
         if ($resource->offline_course_id !== $offlineCourse->id) {
             abort(404);
         }
@@ -192,8 +217,21 @@ class OfflineResourceController extends Controller
         $resource->delete();
 
         return redirect()
-            ->route('instructor.offline-courses.resources.index', $offlineCourse)
+            ->route('instructor.offline-courses.resources.index', ['offlineCourse' => $offlineCourse, 'channel' => $channel])
             ->with('success', 'تم حذف المورد');
+    }
+
+    private function groupsForChannel(OfflineCourse $offlineCourse, string $channel)
+    {
+        $q = $offlineCourse->groups()->orderBy('name');
+        if ($channel === 'online') {
+            $q->where(function ($g) {
+                $g->where('online_booking_enabled', true)
+                    ->orWhere('current_students_online', '>', 0);
+            });
+        }
+
+        return $q;
     }
 
     private function authorizeInstructor(OfflineCourse $offlineCourse): void

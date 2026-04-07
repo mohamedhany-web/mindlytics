@@ -10,7 +10,8 @@ class SalesActivity extends Model
     public const TYPES = [
         'note' => 'ملاحظة',
         'call' => 'مكالمة',
-        'meeting' => 'اجتماع',
+        'meeting' => 'اجتماع / ديمو',
+        'follow_up' => 'متابعة',
         'whatsapp' => 'واتساب',
         'email' => 'بريد',
         'stage_change' => 'تغيير مرحلة',

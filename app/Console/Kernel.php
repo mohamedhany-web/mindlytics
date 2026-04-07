@@ -40,6 +40,12 @@ class Kernel extends ConsoleKernel
                  ->dailyAt('08:00')
                  ->runInBackground()
                  ->withoutOverlapping();
+
+        // تذكيرات المبيعات اليومية + تصعيد SLA للإدارة
+        $schedule->command('sales:send-followup-reminders')
+                 ->dailyAt('09:00')
+                 ->runInBackground()
+                 ->withoutOverlapping();
     }
 
     /**

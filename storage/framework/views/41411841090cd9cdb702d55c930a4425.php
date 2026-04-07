@@ -191,26 +191,62 @@
     </div>
 
     <!-- الروابط السريعة -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="bg-white rounded-xl shadow-lg p-4 border border-gray-200">
+        <h2 class="text-sm font-bold text-gray-800 mb-3"><i class="fas fa-layer-group text-gray-500 ml-2"></i>المجموعات موحّدة في الجدول؛ التسجيلات والحجوزات مفصولة حسب القناة</h2>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <a href="<?php echo e(route('admin.offline-courses.groups.index', $offlineCourse)); ?>" class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-200 group">
             <div class="flex items-center gap-4">
                 <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
                     <i class="fas fa-users-cog text-2xl"></i>
                 </div>
                 <div>
-                    <h3 class="font-bold text-gray-900 text-lg">المجموعات</h3>
-                    <p class="text-sm text-gray-600"><?php echo e($stats['total_groups']); ?> مجموعة</p>
+                    <h3 class="font-bold text-gray-900 text-lg">المجموعات والجلسات</h3>
+                    <p class="text-sm text-gray-600"><?php echo e($stats['total_groups']); ?> مجموعة · جدول موحّد للقناتين</p>
                 </div>
             </div>
         </a>
-        <a href="<?php echo e(route('admin.offline-courses.enrollments.index', $offlineCourse)); ?>" class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-200 group">
+        <a href="<?php echo e(route('admin.offline-courses.enrollments.index', [$offlineCourse, 'channel' => 'offline'])); ?>" class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-200 border-r-4 border-r-emerald-500 group">
             <div class="flex items-center gap-4">
-                <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
-                    <i class="fas fa-user-graduate text-2xl"></i>
+                <div class="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
+                    <i class="fas fa-building text-2xl"></i>
                 </div>
                 <div>
-                    <h3 class="font-bold text-gray-900 text-lg">التسجيلات</h3>
-                    <p class="text-sm text-gray-600"><?php echo e($stats['total_students']); ?> طالب</p>
+                    <h3 class="font-bold text-gray-900 text-lg">تسجيلات الحضور</h3>
+                    <p class="text-sm text-gray-600"><?php echo e($stats['students_offline_channel'] ?? 0); ?> تسجيل · نشط <?php echo e($stats['active_offline_channel'] ?? 0); ?></p>
+                </div>
+            </div>
+        </a>
+        <a href="<?php echo e(route('admin.offline-courses.enrollments.index', [$offlineCourse, 'channel' => 'online'])); ?>" class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-200 border-r-4 border-r-indigo-500 group">
+            <div class="flex items-center gap-4">
+                <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
+                    <i class="fas fa-video text-2xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-900 text-lg">تسجيلات الأونلاين</h3>
+                    <p class="text-sm text-gray-600"><?php echo e($stats['students_online_channel'] ?? 0); ?> تسجيل · نشط <?php echo e($stats['active_online_channel'] ?? 0); ?></p>
+                </div>
+            </div>
+        </a>
+        <a href="<?php echo e(route('admin.offline-course-bookings.index', ['offline_course_id' => $offlineCourse->id])); ?>" class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-200 border-r-4 border-r-amber-400 group">
+            <div class="flex items-center gap-4">
+                <div class="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
+                    <i class="fas fa-clipboard-list text-2xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-900 text-lg">حجوزات أوفلاين</h3>
+                    <p class="text-sm text-gray-600">معلّقة: <?php echo e($stats['pending_offline_bookings'] ?? 0); ?></p>
+                </div>
+            </div>
+        </a>
+        <a href="<?php echo e(route('admin.online-course-bookings.index', ['offline_course_id' => $offlineCourse->id])); ?>" class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-200 border-r-4 border-r-violet-400 group">
+            <div class="flex items-center gap-4">
+                <div class="w-16 h-16 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
+                    <i class="fas fa-inbox text-2xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-900 text-lg">حجوزات أونلاين</h3>
+                    <p class="text-sm text-gray-600">معلّقة: <?php echo e($stats['pending_online_bookings'] ?? 0); ?></p>
                 </div>
             </div>
         </a>

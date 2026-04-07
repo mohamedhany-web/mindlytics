@@ -443,6 +443,35 @@
                             </div>
                         </a>
                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                        <?php
+                            $hasOfflineOrOnline = (($offlineActiveEnrollments ?? collect())->count() + ($onlineActiveEnrollments ?? collect())->count() + (int)($visibleOfflineBookingsCount ?? 0) + (int)($visibleOnlineBookingsCount ?? 0)) > 0;
+                        ?>
+                        <?php if($hasOfflineOrOnline): ?>
+                            <div class="space-y-3">
+                                <div class="rounded-xl border border-sky-200 bg-sky-50 p-4">
+                                    <h3 class="text-sm font-bold text-sky-800 mb-2">كورساتك غير العادية متاحة</h3>
+                                    <p class="text-xs text-sky-700 mb-3">لا توجد كورسات عادية مفعلة حالياً، لكن لديك كورسات أوفلاين/أونلاين أو حجوزات مرتبطة.</p>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                        <a href="<?php echo e(route('student.offline-courses.index')); ?>" class="px-3 py-2 rounded-lg bg-white border border-sky-200 text-sky-800 hover:bg-sky-100">
+                                            أوفلاين مفعّل: <?php echo e(($offlineActiveEnrollments ?? collect())->count()); ?>
+
+                                        </a>
+                                        <a href="<?php echo e(route('student.online-courses.index')); ?>" class="px-3 py-2 rounded-lg bg-white border border-indigo-200 text-indigo-800 hover:bg-indigo-50">
+                                            أونلاين مفعّل: <?php echo e(($onlineActiveEnrollments ?? collect())->count()); ?>
+
+                                        </a>
+                                        <a href="<?php echo e(route('student.offline-courses.index')); ?>" class="px-3 py-2 rounded-lg bg-white border border-amber-200 text-amber-800 hover:bg-amber-50">
+                                            حجوزات أوفلاين: <?php echo e((int)($visibleOfflineBookingsCount ?? 0)); ?>
+
+                                        </a>
+                                        <a href="<?php echo e(route('student.online-courses.index')); ?>" class="px-3 py-2 rounded-lg bg-white border border-violet-200 text-violet-800 hover:bg-violet-50">
+                                            حجوزات أونلاين: <?php echo e((int)($visibleOnlineBookingsCount ?? 0)); ?>
+
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php else: ?>
                         <div class="text-center py-12 text-gray-500">
                             <div class="w-20 h-20 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                                 <i class="fas fa-book-open text-3xl text-gray-400"></i>
@@ -454,6 +483,7 @@
                                 <span><?php echo e(__('student.explore_courses')); ?></span>
                             </a>
                         </div>
+                        <?php endif; ?>
                     <?php endif; ?>
                 </div>
             </div>

@@ -1,21 +1,21 @@
 @extends('layouts.app')
 
-@section('title', $lecture->title . ' - محاضرة أوفلاين')
+@section('title', $lecture->title . ' - محاضرة ' . (($channel ?? 'offline') === 'online' ? 'أونلاين' : 'أوفلاين'))
 @section('header', $lecture->title)
 
 @section('content')
 <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
     <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-5">
         <nav class="text-sm text-slate-500 mb-2">
-            <a href="{{ route('instructor.offline-courses.index') }}" class="hover:text-amber-600">كورساتي الأوفلاين</a>
+            <a href="{{ route('instructor.offline-courses.index', ['channel' => ($channel ?? 'offline')]) }}" class="hover:text-amber-600">{{ ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : 'كورساتي الأوفلاين' }}</a>
             <span class="mx-2">/</span>
-            <a href="{{ route('instructor.offline-courses.lectures.index', $offlineCourse) }}" class="hover:text-amber-600">المحاضرات</a>
+            <a href="{{ route('instructor.offline-courses.lectures.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="hover:text-amber-600">المحاضرات</a>
             <span class="mx-2">/</span>
             <span class="text-slate-700 font-semibold">{{ $lecture->title }}</span>
         </nav>
         <div class="flex flex-wrap items-center justify-between gap-4">
             <h1 class="text-xl font-bold text-slate-800">{{ $lecture->title }}</h1>
-            <a href="{{ route('instructor.offline-courses.lectures.edit', [$offlineCourse, $lecture]) }}" class="px-4 py-2 bg-violet-600 text-white rounded-xl font-semibold hover:bg-violet-700">تعديل</a>
+            <a href="{{ route('instructor.offline-courses.lectures.edit', ['offlineCourse' => $offlineCourse, 'lecture' => $lecture, 'channel' => ($channel ?? 'offline')]) }}" class="px-4 py-2 bg-violet-600 text-white rounded-xl font-semibold hover:bg-violet-700">تعديل</a>
         </div>
     </div>
 
@@ -30,6 +30,12 @@
             <div>
                 <h3 class="text-sm font-bold text-slate-600 mb-2">الموعد</h3>
                 <p class="text-slate-700">{{ $lecture->scheduled_at->format('Y-m-d H:i') }} @if($lecture->duration_minutes)({{ $lecture->duration_minutes }} دقيقة)@endif</p>
+            </div>
+        @endif
+        @if($lecture->meeting_url)
+            <div>
+                <h3 class="text-sm font-bold text-slate-600 mb-2">رابط الميتينج</h3>
+                <a href="{{ $lecture->meeting_url }}" target="_blank" rel="noopener" class="text-indigo-600 hover:underline font-medium">{{ $lecture->meeting_url }}</a>
             </div>
         @endif
         @if($lecture->recording_url)

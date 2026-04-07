@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class PaymentController extends Controller
 {
@@ -29,35 +30,59 @@ class PaymentController extends Controller
                 abort(403, 'غير مصرح لك بالوصول لهذه الصفحة');
             }
 
-            $query = Payment::with(['user', 'invoice', 'wallet', 'installmentPayment', 'transactions'])
-                ->orderBy('created_at', 'desc');
+            $query = Payment::with(['user', 'invoice', 'wallet', 'installmentPayment', 'transactions']);
 
             // فلترة حسب الحالة - حماية من SQL Injection
             if ($request->filled('status')) {
                 $status = strip_tags(trim($request->status));
                 $status = preg_replace('/[^a-z_]/', '', $status);
-                if (in_array($status, ['pending', 'completed', 'processing', 'failed', 'cancelled', 'refunded'])) {
+                if (in_array($status, ['pending', 'completed', 'processing', 'failed', 'cancelled', 'refunded'], true)) {
                     $query->where('status', $status);
+                }
+            }
+
+            if ($request->filled('date_from')) {
+                try {
+                    $query->whereDate('created_at', '>=', Carbon::parse($request->date_from)->format('Y-m-d'));
+                } catch (\Throwable $e) {
+                }
+            }
+            if ($request->filled('date_to')) {
+                try {
+                    $query->whereDate('created_at', '<=', Carbon::parse($request->date_to)->format('Y-m-d'));
+                } catch (\Throwable $e) {
                 }
             }
 
             // البحث - حماية من XSS و SQL Injection
             if ($request->filled('search')) {
-                $search = strip_tags(trim($request->search));
-                $search = preg_replace('/[^a-zA-Z0-9\u0600-\u06FF\s@.-]/', '', $search);
+                $search = strip_tags(trim((string) $request->search));
+                $search = preg_replace('/[^a-zA-Z0-9\u0600-\u06FF\s@._-]/u', '', $search);
                 if (strlen($search) > 0 && strlen($search) <= 255) {
-                    $query->where(function($q) use ($search) {
-                        $q->where('payment_number', 'like', "%{$search}%")
-                          ->orWhere('reference_number', 'like', "%{$search}%")
-                          ->orWhereHas('user', function($uq) use ($search) {
-                              $uq->where('name', 'like', "%{$search}%")
-                                ->orWhere('phone', 'like', "%{$search}%");
-                          });
+                    $like = '%'.$search.'%';
+                    $query->where(function ($q) use ($like) {
+                        $q->where('payment_number', 'like', $like)
+                            ->orWhere('reference_number', 'like', $like)
+                            ->orWhereHas('user', function ($uq) use ($like) {
+                                $uq->where('name', 'like', $like)
+                                    ->orWhere('phone', 'like', $like)
+                                    ->orWhere('email', 'like', $like);
+                            });
                     });
                 }
             }
 
-            $payments = $query->paginate(20);
+            $sort = $request->get('sort', 'created_at');
+            $dir = strtolower((string) $request->get('dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+            $allowedSort = ['created_at', 'amount', 'payment_number', 'paid_at'];
+            if (! in_array($sort, $allowedSort, true)) {
+                $sort = 'created_at';
+            }
+            $query->orderBy($sort, $dir);
+
+            $perPage = min(100, max(10, (int) $request->get('per_page', 25)));
+
+            $payments = $query->paginate($perPage)->withQueryString();
 
             // إحصائيات سريعة
             $stats = [
@@ -85,7 +110,7 @@ class PaymentController extends Controller
             ->values();
 
         $users = User::where('role', 'student')->where('is_active', true)->orderBy('name')->get();
-        $wallets = Wallet::where('is_active', true)->orderBy('name')->get();
+        $wallets = Wallet::academyWallets()->where('is_active', true)->orderBy('name')->get();
 
         return view('admin.payments.create', compact('invoices', 'users', 'wallets'));
     }
@@ -120,7 +145,10 @@ class PaymentController extends Controller
 
         $walletForPayment = null;
         if ($validated['payment_method'] === 'wallet') {
-            $walletForPayment = Wallet::where('id', $validated['wallet_id'])->where('is_active', true)->first();
+            $walletForPayment = Wallet::academyWallets()
+                ->where('id', $validated['wallet_id'])
+                ->where('is_active', true)
+                ->first();
             if (! $walletForPayment) {
                 return back()->withErrors(['wallet_id' => 'المحفظة غير موجودة أو غير مفعّلة.'])->withInput();
             }

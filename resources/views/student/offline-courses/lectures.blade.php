@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
 @section('title', 'محاضرات الكورس - ' . $offlineCourse->title)
-@section('header', 'محاضرات الكورس الأوفلاين')
+@section('header', 'محاضرات الكورس ' . (($channel ?? 'offline') === 'online' ? 'الأونلاين' : 'الأوفلاين'))
 
 @section('content')
 <div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
     <div class="mb-4">
-        <a href="{{ route('student.offline-courses.show', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="inline-flex items-center text-sky-600 hover:text-sky-700 text-sm font-medium">
+        <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.show', $offlineCourse) }}" class="inline-flex items-center text-sky-600 hover:text-sky-700 text-sm font-medium">
             <i class="fas fa-arrow-right ml-2"></i>
             العودة لصفحة الكورس
         </a>
@@ -16,7 +16,7 @@
         <div class="p-5 sm:p-6 border-b border-gray-100">
             <h1 class="text-xl font-bold text-gray-900 flex items-center gap-2">
                 <i class="fas fa-chalkboard-teacher text-violet-500"></i>
-                محاضرات الكورس (أوفلاين) — {{ $offlineCourse->title }}
+                محاضرات الكورس ({{ ($channel ?? 'offline') === 'online' ? 'أونلاين' : 'أوفلاين' }}) — {{ $offlineCourse->title }}
             </h1>
         </div>
         @if($lectures->isEmpty())
@@ -36,6 +36,11 @@
                             <p class="text-xs text-gray-500 mb-2"><i class="fas fa-calendar ml-1"></i>{{ $lecture->scheduled_at->format('Y-m-d H:i') }}</p>
                         @endif
                         <div class="flex flex-wrap gap-2 mt-2">
+                            @if(($channel ?? 'offline') === 'online' && $lecture->meeting_url)
+                                <a href="{{ $lecture->meeting_url }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-200">
+                                    <i class="fas fa-video"></i> دخول المحاضرة المباشرة
+                                </a>
+                            @endif
                             @if($lecture->recording_url)
                                 <a href="{{ $lecture->recording_url }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 px-3 py-1.5 bg-violet-100 text-violet-700 rounded-lg text-sm font-medium hover:bg-violet-200">
                                     <i class="fas fa-play"></i> تسجيل المحاضرة

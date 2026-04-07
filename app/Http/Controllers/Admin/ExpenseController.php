@@ -104,7 +104,8 @@ class ExpenseController extends Controller
      */
     public function create()
     {
-        $wallets = Wallet::where('is_active', true)
+        $wallets = Wallet::academyWallets()
+            ->where('is_active', true)
             ->whereNotNull('type')
             ->whereIn('type', ['vodafone_cash', 'instapay', 'bank_transfer'])
             ->orderBy('type')
@@ -190,7 +191,8 @@ class ExpenseController extends Controller
      */
     public function edit(Expense $expense)
     {
-        $wallets = Wallet::where('is_active', true)
+        $wallets = Wallet::academyWallets()
+            ->where('is_active', true)
             ->whereNotNull('type')
             ->whereIn('type', ['vodafone_cash', 'instapay', 'bank_transfer'])
             ->orderBy('type')

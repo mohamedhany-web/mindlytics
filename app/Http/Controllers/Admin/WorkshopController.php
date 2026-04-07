@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Mail\WorkshopAcceptanceMail;
+use App\Models\SalesLead;
+use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopRegistration;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Response;
@@ -70,7 +73,93 @@ class WorkshopController extends Controller
             ->whereNull('acceptance_email_sent_at')
             ->count();
 
-        return view('admin.workshops.show', compact('workshop', 'registrations', 'filterMode', 'emailPendingCount'));
+        $salesReps = User::salesEmployees()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return view('admin.workshops.show', compact('workshop', 'registrations', 'filterMode', 'emailPendingCount', 'salesReps'));
+    }
+
+    public function convertRegistrationsToLeads(Request $request, Workshop $workshop)
+    {
+        $validated = $request->validate([
+            'assigned_to' => 'required|integer|exists:users,id',
+        ]);
+
+        $assigneeId = (int) $validated['assigned_to'];
+
+        if (! User::salesEmployees()->where('is_active', true)->whereKey($assigneeId)->exists()) {
+            return back()->with('error', 'يرجى اختيار موظف مبيعات فعّال.');
+        }
+
+        $created = 0;
+        $skipped = 0;
+
+        DB::transaction(function () use ($workshop, $assigneeId, &$created, &$skipped) {
+            $workshop->registrations()->orderBy('id')->chunk(200, function ($chunk) use ($workshop, $assigneeId, &$created, &$skipped) {
+                foreach ($chunk as $reg) {
+                    $marker = '[workshop_registration:' . $reg->id . ']';
+
+                    $alreadyConverted = SalesLead::query()
+                        ->where('assigned_to', $assigneeId)
+                        ->where('notes', 'like', '%' . $marker . '%')
+                        ->exists();
+
+                    if ($alreadyConverted) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    $duplicateByContact = SalesLead::query()
+                        ->where('assigned_to', $assigneeId)
+                        ->where(function ($q) use ($reg) {
+                            if (! empty($reg->phone)) {
+                                $q->orWhere('phone', $reg->phone);
+                            }
+                            if (! empty($reg->email)) {
+                                $q->orWhere('email', $reg->email);
+                            }
+                        })
+                        ->exists();
+
+                    if ($duplicateByContact) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    $attendanceLabel = $reg->attendance_mode === 'offline'
+                        ? 'أوفلاين'
+                        : ($reg->attendance_mode === 'online' ? 'أونلاين' : 'غير محدد');
+
+                    $notes = trim(
+                        "تم التحويل تلقائياً من تسجيل ورشة.\n"
+                        . "[workshop:{$workshop->id}] [workshop_registration:{$reg->id}]\n"
+                        . "اسم الورشة: {$workshop->title}\n"
+                        . "نوع الحضور: {$attendanceLabel}\n"
+                        . "تاريخ التسجيل: " . optional($reg->created_at)->format('Y-m-d H:i')
+                        . (! empty($reg->notes) ? "\nملاحظات التسجيل: {$reg->notes}" : '')
+                    );
+
+                    SalesLead::create([
+                        'assigned_to' => $assigneeId,
+                        'created_by' => auth()->id(),
+                        'name' => $reg->name ?: 'عميل محتمل من ورشة',
+                        'phone' => $reg->phone,
+                        'email' => $reg->email,
+                        'source' => 'event',
+                        'stage' => 'new',
+                        'priority' => 'normal',
+                        'interest' => 'الاهتمام بورشة: ' . $workshop->title,
+                        'notes' => $notes,
+                    ]);
+
+                    $created++;
+                }
+            });
+        });
+
+        return back()->with('success', "تم تحويل {$created} تسجيل إلى Leads، وتم تخطي {$skipped} سجل (مكرر أو محوّل مسبقاً).");
     }
 
     /**

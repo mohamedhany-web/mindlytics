@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\OfflineCourse;
+use App\Models\OfflineCourseBooking;
 use App\Models\User;
 use App\Models\OfflineLocation;
 use Carbon\Carbon;
@@ -87,11 +88,15 @@ class OfflineCourseController extends Controller
             'status' => 'required|in:draft,active,completed,cancelled',
             'notes' => 'nullable|string',
             'public_booking_enabled' => 'sometimes|boolean',
+            'student_online_portal_enabled' => 'sometimes|boolean',
+            'online_only' => 'sometimes|boolean',
             'booking_opens_at' => 'nullable|date',
             'booking_closes_at' => 'nullable|date|after_or_equal:booking_opens_at',
         ]);
 
         $validated['public_booking_enabled'] = $request->boolean('public_booking_enabled');
+        $validated['student_online_portal_enabled'] = $request->boolean('student_online_portal_enabled');
+        $validated['online_only'] = $request->boolean('online_only');
         foreach (['booking_opens_at', 'booking_closes_at'] as $k) {
             if (empty($validated[$k] ?? null)) {
                 $validated[$k] = null;
@@ -133,6 +138,18 @@ class OfflineCourseController extends Controller
         $stats = [
             'total_students' => $offlineCourse->enrollments()->count(),
             'active_students' => $offlineCourse->enrollments()->where('status', 'active')->count(),
+            'students_offline_channel' => $offlineCourse->enrollments()->where('enrollment_channel', 'offline')->count(),
+            'students_online_channel' => $offlineCourse->enrollments()->where('enrollment_channel', 'online')->count(),
+            'active_offline_channel' => $offlineCourse->enrollments()->where('enrollment_channel', 'offline')->where('status', 'active')->count(),
+            'active_online_channel' => $offlineCourse->enrollments()->where('enrollment_channel', 'online')->where('status', 'active')->count(),
+            'pending_offline_bookings' => OfflineCourseBooking::where('offline_course_id', $offlineCourse->id)
+                ->where('booking_channel', 'offline')
+                ->where('status', OfflineCourseBooking::STATUS_PENDING)
+                ->count(),
+            'pending_online_bookings' => OfflineCourseBooking::where('offline_course_id', $offlineCourse->id)
+                ->where('booking_channel', 'online')
+                ->where('status', OfflineCourseBooking::STATUS_PENDING)
+                ->count(),
             'total_groups' => $offlineCourse->groups()->count(),
             'total_activities' => $offlineCourse->activities()->count(),
             'completed_activities' => $offlineCourse->activities()->where('status', 'completed')->count(),
@@ -175,11 +192,15 @@ class OfflineCourseController extends Controller
             'status' => 'required|in:draft,active,completed,cancelled',
             'notes' => 'nullable|string',
             'public_booking_enabled' => 'sometimes|boolean',
+            'student_online_portal_enabled' => 'sometimes|boolean',
+            'online_only' => 'sometimes|boolean',
             'booking_opens_at' => 'nullable|date',
             'booking_closes_at' => 'nullable|date|after_or_equal:booking_opens_at',
         ]);
 
         $validated['public_booking_enabled'] = $request->boolean('public_booking_enabled');
+        $validated['student_online_portal_enabled'] = $request->boolean('student_online_portal_enabled');
+        $validated['online_only'] = $request->boolean('online_only');
         foreach (['booking_opens_at', 'booking_closes_at'] as $k) {
             if (empty($validated[$k] ?? null)) {
                 $validated[$k] = null;

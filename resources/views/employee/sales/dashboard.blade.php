@@ -20,6 +20,35 @@
         </div>
     </div>
 
+    @php $kq = $kpiQuick ?? null; @endphp
+    @if($kq)
+    <section class="rounded-2xl border-2 border-slate-200 bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 text-white p-5 md:p-6 shadow-xl">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+                <p class="text-xs font-bold text-emerald-300 uppercase tracking-wider mb-1">المؤشر المركّب (الشهر الحالي)</p>
+                <p class="text-4xl font-black tabular-nums">{{ $kq['composite_month'] }}<span class="text-lg font-bold text-white/70">/100</span></p>
+                <p class="text-xs text-white/70 mt-2 max-w-xl">40٪ نتائج · 30٪ نشاط · 20٪ جودة · 10٪ التزام CRM — تفاصيل كاملة من «KPIs والأداء».</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                @foreach(($kq['month']['pillars'] ?? []) as $pk => $pv)
+                    <span class="inline-flex flex-col rounded-xl bg-white/10 border border-white/20 px-3 py-2 text-center min-w-[100px]">
+                        <span class="text-[10px] text-white/60">{{ $pk }}</span>
+                        <span class="text-lg font-black">{{ $pv['score'] ?? '—' }}</span>
+                    </span>
+                @endforeach
+                <a href="{{ route('employee.sales.kpi.index') }}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold px-5 py-3 text-sm">
+                    <i class="fas fa-bullseye"></i> لوحة KPIs
+                </a>
+            </div>
+        </div>
+        @if(!empty($kq['alert_flags']))
+            <div class="mt-4 rounded-xl border border-amber-400/50 bg-amber-500/20 px-4 py-3 text-sm text-amber-100 space-y-1">
+                @foreach($kq['alert_flags'] as $f)<p><i class="fas fa-exclamation-triangle ml-1"></i>{{ $f }}</p>@endforeach
+            </div>
+        @endif
+    </section>
+    @endif
+
     <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 md:gap-4">
         <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
             <div class="flex items-center justify-between mb-2">
@@ -112,6 +141,29 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-xl border border-indigo-200 shadow-sm overflow-hidden">
+            <div class="px-5 py-4 border-b border-indigo-100 flex justify-between items-center bg-indigo-50/50">
+                <h2 class="font-bold text-gray-900">Task Queue اليومية (الأولوية)</h2>
+                <span class="text-xs text-indigo-700 font-semibold">Next Best Action</span>
+            </div>
+            <ul class="divide-y divide-gray-100">
+                @forelse(($taskQueue ?? collect()) as $item)
+                    @php $lead = $item['lead']; @endphp
+                    <li class="px-5 py-3 hover:bg-indigo-50/20">
+                        <a href="{{ route('employee.sales.leads.show', $lead) }}" class="block">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="font-semibold text-gray-900">{{ $lead->name }}</span>
+                                <span class="text-[11px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold">{{ $item['reason'] }}</span>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-600">{{ $item['next_action'] }}</p>
+                        </a>
+                    </li>
+                @empty
+                    <li class="px-5 py-8 text-center text-gray-500 text-sm">لا توجد عناصر حرجة في القائمة الآن.</li>
+                @endforelse
+            </ul>
+        </div>
+
         <div class="bg-white rounded-xl border border-rose-200 shadow-sm overflow-hidden">
             <div class="px-5 py-4 border-b border-rose-100 flex justify-between items-center bg-rose-50/50">
                 <h2 class="font-bold text-gray-900">متابعات متأخرة</h2>
@@ -130,6 +182,28 @@
                 @endforelse
             </ul>
         </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-xl border border-violet-200 shadow-sm overflow-hidden">
+            <div class="px-5 py-4 border-b border-violet-100 flex justify-between items-center bg-violet-50/40">
+                <h2 class="font-bold text-gray-900">تنبيه SLA: أول رد متأخر ({{ $slaCutoffHours ?? 24 }} ساعة+)</h2>
+                <span class="text-xs text-violet-700 font-semibold">فوري</span>
+            </div>
+            <ul class="divide-y divide-gray-100">
+                @forelse(($noFirstResponseLeads ?? collect()) as $l)
+                <li class="px-5 py-3 hover:bg-violet-50/30">
+                    <a href="{{ route('employee.sales.leads.show', $l) }}" class="flex justify-between gap-2">
+                        <span class="font-medium text-gray-900">{{ $l->name }}</span>
+                        <span class="text-xs text-violet-700 font-semibold">{{ $l->created_at?->diffForHumans() }}</span>
+                    </a>
+                </li>
+                @empty
+                <li class="px-5 py-8 text-center text-gray-500 text-sm">ممتاز، لا يوجد تأخير في أول رد ضمن معيار SLA الحالي.</li>
+                @endforelse
+            </ul>
+        </div>
+
         <div class="bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden">
             <div class="px-5 py-4 border-b border-amber-100 flex justify-between items-center bg-amber-50/40">
                 <h2 class="font-bold text-gray-900">يحتاجون تواصلاً ({{ \App\Models\SalesLead::STALE_CONTACT_DAYS }}+ يوم)</h2>

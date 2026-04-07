@@ -57,6 +57,51 @@
     <textarea name="notes" rows="3" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">{{ old('notes', $lead->notes ?? '') }}</textarea>
 </div>
 <div class="md:col-span-2">
-    <label class="block text-sm font-medium text-gray-700 mb-1">سبب الخسارة (إن وُجد)</label>
-    <input type="text" name="lost_reason" value="{{ old('lost_reason', $lead->lost_reason ?? '') }}" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+    @php
+        $savedLostReason = old('lost_reason', $lead->lost_reason ?? '');
+        $matchedLossCode = collect(\App\Models\SalesLead::LOSS_REASONS)->search($savedLostReason, true);
+        $lossCode = old('lost_reason_code', $matchedLossCode !== false ? $matchedLossCode : '');
+        $lossCustom = old('lost_reason_custom', ($matchedLossCode === false ? $savedLostReason : ''));
+    @endphp
+    <label class="block text-sm font-medium text-gray-700 mb-1">سبب الخسارة (إلزامي عند مرحلة "خسارة")</label>
+    <select name="lost_reason_code" id="lost_reason_code" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+        <option value="">— اختر السبب —</option>
+        @foreach(\App\Models\SalesLead::LOSS_REASONS as $k => $label)
+            <option value="{{ $k }}" @selected((string) $lossCode === (string) $k)>{{ $label }}</option>
+        @endforeach
+    </select>
+    @error('lost_reason_code')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
 </div>
+<div class="md:col-span-2" id="lost_reason_custom_wrap" style="display: {{ ($lossCode === 'other') ? 'block' : 'none' }};">
+    <label class="block text-sm font-medium text-gray-700 mb-1">اكتب سبب الخسارة</label>
+    <input type="text" name="lost_reason_custom" id="lost_reason_custom" value="{{ $lossCustom }}" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+    @error('lost_reason_custom')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
+</div>
+
+<script>
+    (function () {
+        const setupLossReasonToggle = () => {
+            const select = document.getElementById('lost_reason_code');
+            const stage = document.querySelector('select[name="stage"]');
+            const customWrap = document.getElementById('lost_reason_custom_wrap');
+            const customInput = document.getElementById('lost_reason_custom');
+            if (!select || !stage || !customWrap || !customInput) return;
+
+            const refresh = () => {
+                customWrap.style.display = select.value === 'other' ? 'block' : 'none';
+                select.required = stage.value === 'lost';
+                customInput.required = stage.value === 'lost' && select.value === 'other';
+            };
+
+            select.addEventListener('change', refresh);
+            stage.addEventListener('change', refresh);
+            refresh();
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupLossReasonToggle, { once: true });
+        } else {
+            setupLossReasonToggle();
+        }
+    })();
+</script>

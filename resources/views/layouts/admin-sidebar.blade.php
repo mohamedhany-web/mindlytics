@@ -98,6 +98,22 @@
                             <span>سجل أنشطة المبيعات</span>
                         </a>
                     </li>
+                    <li>
+                        <a href="{{ route('admin.sales.kpi.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.kpi.index') && !request()->routeIs('admin.sales.kpi.targets*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-bullseye w-4"></i>
+                            <span>مراقبة KPIs المبيعات</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.sales.kpi.targets') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.kpi.targets*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-sliders-h w-4"></i>
+                            <span>أهداف المبيعات</span>
+                        </a>
+                    </li>
                 </ul>
             </li>
 
@@ -297,7 +313,7 @@
 
             <!-- إدارة المحاسبة -->
             @php
-                $accountingOpen = request()->routeIs('admin.invoices.*') || request()->routeIs('admin.payments.*') || request()->routeIs('admin.transactions.*') || request()->routeIs('admin.wallets.*') || request()->routeIs('admin.expenses.*') || request()->routeIs('admin.subscriptions.*') || request()->routeIs('admin.installments.*') || request()->routeIs('admin.accounting.*') || request()->routeIs('admin.salaries.*') || request()->routeIs('admin.employee-agreements.*');
+                $accountingOpen = request()->routeIs('admin.invoices.*') || request()->routeIs('admin.payments.*') || request()->routeIs('admin.transactions.*') || request()->routeIs('admin.wallets.*') || request()->routeIs('admin.expenses.*') || request()->routeIs('admin.subscriptions.*') || request()->routeIs('admin.installments.*') || request()->routeIs('admin.accounting.*') || request()->routeIs('admin.salaries.*') || request()->routeIs('admin.employee-agreements.*') || request()->routeIs('admin.accounting.hub') || request()->routeIs('admin.accounting.chart');
             @endphp
             <li x-data="{ open: {{ $accountingOpen ? 'true' : 'false' }} }">
                 <button @click="open = !open" 
@@ -309,6 +325,32 @@
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
                 <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-slate-600/50 pr-2">
+                    <li>
+                        <a href="{{ route('admin.accounting.hub') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.accounting.hub') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
+                            <i class="fas fa-th-large w-4"></i>
+                            <span>مركز المحاسبة</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.accounting.chart') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.accounting.chart') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
+                            <i class="fas fa-sitemap w-4"></i>
+                            <span>شجرة الحسابات</span>
+                        </a>
+                    </li>
+                    @if(Route::has('admin.accounting.installments'))
+                    <li>
+                        <a href="{{ route('admin.accounting.installments') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.accounting.installments') ? 'bg-violet-600/35 text-white font-semibold shadow-md border-r-2 border-violet-400' : '' }}">
+                            <i class="fas fa-percentage w-4"></i>
+                            <span>لوحة التقسيط</span>
+                        </a>
+                    </li>
+                    @endif
                     <li>
                         <a href="{{ route('admin.invoices.index') }}" 
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -415,7 +457,7 @@
                     <li>
                         <a href="{{ route('admin.accounting.reports') }}" 
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.accounting.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.accounting.reports') || request()->routeIs('admin.accounting.reports.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
                             <i class="fas fa-chart-pie w-4"></i>
                             <span>{{ __('admin.accounting_reports') }}</span>
                         </a>
@@ -741,9 +783,68 @@
                 </ul>
             </li>
 
+            <!-- إدارة الأونلاين (كورسات وجداول حضوري/أونلاين) -->
+            @php
+                $onlineManagementOpen = request()->routeIs('admin.online-management.*') || request()->routeIs('admin.online-course-bookings.*');
+            @endphp
+            <li x-data="{ open: {{ $onlineManagementOpen ? 'true' : 'false' }} }">
+                <button @click="open = !open"
+                        class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-laptop-house w-5 text-indigo-400 group-hover:text-white"></i>
+                        <span class="font-medium">إدارة الأونلاين</span>
+                    </div>
+                    <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
+                </button>
+                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-slate-600/50 pr-2">
+                    <li>
+                        <a href="{{ route('admin.online-management.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.online-management.index') || request()->routeIs('admin.online-management.courses.*') ? 'bg-indigo-600/35 text-white font-semibold border-r-2 border-indigo-400' : '' }}">
+                            <i class="fas fa-book-open w-4"></i>
+                            <span>كورسات الأونلاين</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.online-management.courses.create') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.online-management.courses.create') ? 'bg-indigo-600/35 text-white font-semibold border-r-2 border-indigo-400' : '' }}">
+                            <i class="fas fa-plus-circle w-4"></i>
+                            <span>كورس أونلاين فقط (جديد)</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.online-management.enroll') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.online-management.enroll') ? 'bg-emerald-600/35 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-user-check w-4"></i>
+                            <span>تسجيل طالب (إيميل)</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.online-course-bookings.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.online-course-bookings.*') ? 'bg-indigo-600/35 text-white font-semibold border-r-2 border-indigo-400' : '' }}">
+                            <i class="fas fa-inbox w-4"></i>
+                            <span>حجوزات الأونلاين</span>
+                            @php
+                                try {
+                                    $pendingOnlineBookingsMenu2 = \App\Models\OfflineCourseBooking::where('status', 'pending')->where('booking_channel', 'online')->count();
+                                } catch (\Exception $e) {
+                                    $pendingOnlineBookingsMenu2 = 0;
+                                }
+                            @endphp
+                            @if($pendingOnlineBookingsMenu2 > 0)
+                                <span class="mr-auto bg-amber-500 text-white text-xs font-bold rounded-full px-2 py-0.5">{{ $pendingOnlineBookingsMenu2 }}</span>
+                            @endif
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
             <!-- إدارة الكورسات الأوفلاين -->
             @php
-                $offlineCoursesOpen = request()->routeIs('admin.offline-courses.*') || request()->routeIs('admin.offline-groups.*') || request()->routeIs('admin.offline-enrollments.*') || request()->routeIs('admin.offline-course-bookings.*') || request()->routeIs('admin.online-course-bookings.*') || request()->routeIs('admin.offline-activities.*') || request()->routeIs('admin.offline-agreements.*') || request()->routeIs('admin.offline-locations.*');
+                $offlineCoursesOpen = request()->routeIs('admin.offline-courses.*') || request()->routeIs('admin.offline-groups.*') || request()->routeIs('admin.offline-enrollments.*') || request()->routeIs('admin.offline-course-bookings.*') || request()->routeIs('admin.offline-activities.*') || request()->routeIs('admin.offline-agreements.*') || request()->routeIs('admin.offline-locations.*');
             @endphp
             <li x-data="{ open: {{ $offlineCoursesOpen ? 'true' : 'false' }} }">
                 <button @click="open = !open" 
@@ -804,24 +905,6 @@
                             @endphp
                             @if($pendingOfflineBookingsMenu > 0)
                                 <span class="mr-auto bg-amber-500 text-white text-xs font-bold rounded-full px-2 py-0.5">{{ $pendingOfflineBookingsMenu }}</span>
-                            @endif
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.online-course-bookings.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.online-course-bookings.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
-                            <i class="fas fa-laptop-house w-4"></i>
-                            <span>حجوزات أونلاين</span>
-                            @php
-                                try {
-                                    $pendingOnlineBookingsMenu = \App\Models\OfflineCourseBooking::where('status', 'pending')->where('booking_channel', 'online')->count();
-                                } catch (\Exception $e) {
-                                    $pendingOnlineBookingsMenu = 0;
-                                }
-                            @endphp
-                            @if($pendingOnlineBookingsMenu > 0)
-                                <span class="mr-auto bg-indigo-500 text-white text-xs font-bold rounded-full px-2 py-0.5">{{ $pendingOnlineBookingsMenu }}</span>
                             @endif
                         </a>
                     </li>

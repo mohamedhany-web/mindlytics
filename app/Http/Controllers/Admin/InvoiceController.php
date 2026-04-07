@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class InvoiceController extends Controller
 {
@@ -23,34 +24,65 @@ class InvoiceController extends Controller
         try {
             $this->assertCanManageInvoices();
 
-            $query = Invoice::with('user')
-                ->orderBy('created_at', 'desc');
+            $query = Invoice::with('user');
 
-            // فلترة حسب الحالة - حماية من SQL Injection
+            $allowedStatuses = ['draft', 'pending', 'paid', 'partial', 'overdue', 'cancelled', 'refunded'];
             if ($request->filled('status')) {
-                $status = strip_tags(trim($request->status));
-                $status = preg_replace('/[^a-z_]/', '', $status); // السماح فقط بالأحرف الصغيرة والشرطة السفلية
-                if (in_array($status, ['pending', 'paid', 'overdue', 'cancelled'])) {
+                $status = preg_replace('/[^a-z_]/', '', strip_tags(trim((string) $request->status)));
+                if (in_array($status, $allowedStatuses, true)) {
                     $query->where('status', $status);
                 }
             }
 
-            // البحث - حماية من XSS و SQL Injection
+            $allowedTypes = ['course', 'subscription', 'membership', 'learning_path', 'offline_course', 'other'];
+            if ($request->filled('type')) {
+                $type = preg_replace('/[^a-z_]/', '', strip_tags(trim((string) $request->type)));
+                if (in_array($type, $allowedTypes, true)) {
+                    $query->where('type', $type);
+                }
+            }
+
+            if ($request->filled('date_from')) {
+                try {
+                    $query->whereDate('created_at', '>=', Carbon::parse($request->date_from)->format('Y-m-d'));
+                } catch (\Throwable $e) {
+                }
+            }
+            if ($request->filled('date_to')) {
+                try {
+                    $query->whereDate('created_at', '<=', Carbon::parse($request->date_to)->format('Y-m-d'));
+                } catch (\Throwable $e) {
+                }
+            }
+
             if ($request->filled('search')) {
-                $search = strip_tags(trim($request->search));
-                $search = preg_replace('/[^a-zA-Z0-9\u0600-\u06FF\s@.-]/', '', $search);
+                $search = strip_tags(trim((string) $request->search));
+                $search = preg_replace('/[^a-zA-Z0-9\u0600-\u06FF\s@._-]/u', '', $search);
                 if (strlen($search) > 0 && strlen($search) <= 255) {
-                    $query->where(function($q) use ($search) {
-                        $q->where('invoice_number', 'like', "%{$search}%")
-                          ->orWhereHas('user', function($uq) use ($search) {
-                              $uq->where('name', 'like', "%{$search}%")
-                                ->orWhere('phone', 'like', "%{$search}%");
-                          });
+                    $like = '%'.$search.'%';
+                    $query->where(function ($q) use ($like) {
+                        $q->where('invoice_number', 'like', $like)
+                            ->orWhere('description', 'like', $like)
+                            ->orWhereHas('user', function ($uq) use ($like) {
+                                $uq->where('name', 'like', $like)
+                                    ->orWhere('phone', 'like', $like)
+                                    ->orWhere('email', 'like', $like);
+                            });
                     });
                 }
             }
 
-            $invoices = $query->paginate(20);
+            $sort = $request->get('sort', 'created_at');
+            $dir = strtolower((string) $request->get('dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+            $allowedSort = ['created_at', 'total_amount', 'due_date', 'invoice_number'];
+            if (! in_array($sort, $allowedSort, true)) {
+                $sort = 'created_at';
+            }
+            $query->orderBy($sort, $dir);
+
+            $perPage = min(100, max(10, (int) $request->get('per_page', 25)));
+
+            $invoices = $query->paginate($perPage)->withQueryString();
 
             // إحصائيات سريعة
             $stats = [

@@ -26,6 +26,8 @@ class OfflineCourse extends Model
         'status',
         'is_active',
         'public_booking_enabled',
+        'student_online_portal_enabled',
+        'online_only',
         'booking_opens_at',
         'booking_closes_at',
         'notes',
@@ -37,6 +39,8 @@ class OfflineCourse extends Model
         'price' => 'decimal:2',
         'is_active' => 'boolean',
         'public_booking_enabled' => 'boolean',
+        'student_online_portal_enabled' => 'boolean',
+        'online_only' => 'boolean',
         'booking_opens_at' => 'datetime',
         'booking_closes_at' => 'datetime',
     ];
@@ -216,7 +220,7 @@ class OfflineCourse extends Model
     }
 
     /**
-     * نافذة الحجز في كتالوج الطلاب: مفعّل + الجدول الزمني.
+     * نافذة الحجز عند مشاركة رابط مباشر للطالب: «الحجز العام» مفعّل + الجدول الزمني.
      */
     public function isPublicBookingWindowOpen(): bool
     {

@@ -5,13 +5,24 @@
 
 @section('content')
 <div class="w-full space-y-6">
+    <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-sky-200 bg-sky-50/80 px-4 py-3 text-sm">
+        <a href="{{ route('admin.accounting.hub') }}" class="inline-flex items-center gap-2 font-semibold text-sky-800 hover:text-sky-950">
+            <i class="fas fa-th-large"></i>
+            مركز المحاسبة
+        </a>
+        <span class="text-slate-300">|</span>
+        <a href="{{ route('admin.accounting.chart') }}" class="inline-flex items-center gap-2 font-semibold text-sky-800 hover:text-sky-950">
+            <i class="fas fa-sitemap"></i>
+            شجرة الحسابات
+        </a>
+    </div>
     <!-- فلترة الفترة الزمنية -->
     <section class="rounded-3xl bg-white/95 backdrop-blur border border-slate-200 shadow-lg overflow-hidden">
         <div class="px-5 py-6 sm:px-8 lg:px-12 border-b border-slate-200">
             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <div>
                     <h2 class="text-2xl font-bold text-slate-900">التقارير المحاسبية</h2>
-                    <p class="text-sm text-slate-500 mt-1">تقارير شاملة عن جميع العمليات المالية</p>
+                    <p class="text-sm text-slate-500 mt-1">تقارير شاملة عن جميع العمليات المالية في الأكاديمية مع تصدير Excel منسّق</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-3">
                     <a href="{{ route('admin.accounting.reports.export', array_merge(request()->all(), ['type' => 'all'])) }}" 
@@ -65,6 +76,31 @@
                                    class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg">
                                     <i class="fas fa-shopping-cart w-4"></i>
                                     الطلبات
+                                </a>
+                                <a href="{{ route('admin.accounting.reports.export', array_merge(request()->all(), ['type' => 'subscriptions'])) }}" 
+                                   class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg">
+                                    <i class="fas fa-calendar-check w-4"></i>
+                                    الاشتراكات
+                                </a>
+                                <a href="{{ route('admin.accounting.reports.export', array_merge(request()->all(), ['type' => 'withdrawals'])) }}" 
+                                   class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg">
+                                    <i class="fas fa-hand-holding-usd w-4"></i>
+                                    سحوبات المدربين
+                                </a>
+                                <a href="{{ route('admin.accounting.reports.export', array_merge(request()->all(), ['type' => 'installments'])) }}" 
+                                   class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg">
+                                    <i class="fas fa-handshake w-4"></i>
+                                    اتفاقيات التقسيط
+                                </a>
+                                <a href="{{ route('admin.accounting.reports.export', array_merge(request()->all(), ['type' => 'offline_enrollments'])) }}" 
+                                   class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg">
+                                    <i class="fas fa-building w-4"></i>
+                                    تسجيلات أوفلاين
+                                </a>
+                                <a href="{{ route('admin.accounting.reports.export', array_merge(request()->all(), ['type' => 'chart'])) }}" 
+                                   class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg">
+                                    <i class="fas fa-sitemap w-4"></i>
+                                    شجرة الحسابات (جدول)
                                 </a>
                             </div>
                         </div>
@@ -197,6 +233,25 @@
                     </div>
                 </div>
                 <p class="text-xs text-slate-500">مبالغ معتمدة: <strong>{{ number_format($stats['order_stats']['approved_amount'], 2) }} ج.م</strong></p>
+            </div>
+        </div>
+        @php $as = $stats['academy_stats'] ?? []; @endphp
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 p-5 sm:p-8 pt-0">
+            <div class="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 to-cyan-50 p-6">
+                <p class="text-xs font-semibold uppercase tracking-widest text-teal-600">الأكاديمية — اشتراكات جديدة</p>
+                <p class="mt-2 text-2xl font-black text-teal-800">{{ $as['subscriptions_new_period'] ?? 0 }}</p>
+                <p class="text-xs text-slate-600 mt-1">قيمة: {{ number_format($as['subscriptions_value_period'] ?? 0, 2) }} ج.م</p>
+            </div>
+            <div class="rounded-2xl border border-fuchsia-200 bg-gradient-to-br from-fuchsia-50 to-pink-50 p-6">
+                <p class="text-xs font-semibold uppercase tracking-widest text-fuchsia-600">التقسيط</p>
+                <p class="mt-2 text-2xl font-black text-fuchsia-800">{{ $as['installment_agreements_active'] ?? 0 }} <span class="text-sm font-semibold text-fuchsia-600">اتفاقية نشطة</span></p>
+                <p class="text-xs text-slate-600 mt-1">عقود بالفترة: {{ number_format($as['installment_contracts_value_period'] ?? 0, 2) }} ج.م · أقساط معلقة: {{ number_format($as['installment_pending_scheduled'] ?? 0, 2) }} ج.م</p>
+            </div>
+            <div class="rounded-2xl border border-stone-200 bg-gradient-to-br from-stone-50 to-neutral-50 p-6">
+                <p class="text-xs font-semibold uppercase tracking-widest text-stone-600">سحوبات وأوفلاين</p>
+                <p class="text-sm text-slate-700 mt-2">سحب مكتمل بالفترة: <strong>{{ number_format($as['withdrawals_completed_period'] ?? 0, 2) }} ج.م</strong></p>
+                <p class="text-sm text-slate-700">سحب معلق: <strong>{{ number_format($as['withdrawals_pending_amount'] ?? 0, 2) }} ج.م</strong></p>
+                <p class="text-xs text-slate-500 mt-2">أوفلاين محصّل بالفترة: {{ number_format($as['offline_collected_period'] ?? 0, 2) }} ج.م · متبقي إجمالي: {{ number_format($as['offline_outstanding_total'] ?? 0, 2) }} ج.م</p>
             </div>
         </div>
     </section>

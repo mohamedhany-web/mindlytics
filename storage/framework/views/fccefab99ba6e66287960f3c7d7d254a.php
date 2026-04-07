@@ -146,13 +146,18 @@
             </a>
             <?php endif; ?>
 
-            <!-- الكورسات الأوفلاين (مجموعة واحدة: حجز + كورساتي) -->
+            <!-- كورساتي الأوفلاين (منفصلة عن الأونلاين) -->
             <?php if($isStudent || $user->hasPermission('student.view.my-courses')): ?>
             <?php
                 $offlineStudentNavOpen = request()->routeIs('student.offline-courses.*');
+                $onlineStudentNavOpen = request()->routeIs('student.online-courses.*');
                 try {
                     $offlineCountSidebar = auth()->user()->offlineEnrollments()->where('enrollment_channel', 'offline')->where('status', 'active')->count();
-                    $onlineCountSidebar = auth()->user()->offlineEnrollments()->where('enrollment_channel', 'online')->where('status', 'active')->count();
+                    $onlineCountSidebar = auth()->user()->offlineEnrollments()
+                        ->where('enrollment_channel', 'online')
+                        ->where('status', 'active')
+                        ->whereHas('course', fn ($q) => $q->where('student_online_portal_enabled', true))
+                        ->count();
                 } catch (\Exception $e) {
                     $offlineCountSidebar = 0;
                     $onlineCountSidebar = 0;
@@ -171,26 +176,37 @@
                     <i class="fas fa-chevron-down text-gray-500 text-xs flex-shrink-0 transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
                 </button>
                 <div x-show="open" x-transition class="mr-3 mt-0.5 mb-2 space-y-0.5 border-r-2 border-purple-200/80 pr-2">
-                    <a href="<?php echo e(route('student.offline-courses.booking.catalog')); ?>"
-                       @click="if (window.innerWidth < 1024) sidebarOpen = false"
-                       class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors <?php echo e(request()->routeIs('student.offline-courses.booking.*') ? 'bg-purple-600 text-white font-semibold' : 'text-gray-700 hover:bg-purple-100/80'); ?>">
-                        <i class="fas fa-calendar-plus w-4 text-center opacity-90"></i>
-                        <span>حجز كورس أوفلاين</span>
-                    </a>
                     <a href="<?php echo e(route('student.offline-courses.index')); ?>"
                        @click="if (window.innerWidth < 1024) sidebarOpen = false"
-                       class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors <?php echo e(request()->routeIs('student.offline-courses.*') && request('channel', 'offline') === 'offline' && !request()->routeIs('student.offline-courses.booking.*') ? 'bg-purple-600 text-white font-semibold' : 'text-gray-700 hover:bg-purple-100/80'); ?>">
+                       class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors <?php echo e(request()->routeIs('student.offline-courses.*') && !request()->routeIs('student.offline-courses.booking.*') ? 'bg-purple-600 text-white font-semibold' : 'text-gray-700 hover:bg-purple-100/80'); ?>">
                         <i class="fas fa-book-reader w-4 text-center opacity-90"></i>
                         <span><?php echo e(__('student.my_offline_courses')); ?></span>
                     </a>
-                    <a href="<?php echo e(route('student.offline-courses.index', ['channel' => 'online'])); ?>"
+                </div>
+            </div>
+
+            <!-- كورساتي الأونلاين (مسار /online-courses؛ تظهر بعد تفعيل البوابة من الإدارة) -->
+            <div class="rounded-xl border border-indigo-100/80 bg-gradient-to-br from-indigo-50/40 to-white overflow-hidden" x-data="{ openOnline: <?php echo e($onlineStudentNavOpen ? 'true' : 'false'); ?> }">
+                <button type="button" @click="openOnline = !openOnline"
+                        class="w-full flex items-center gap-3 px-3 py-2.5 text-right transition-colors hover:bg-indigo-50/90 <?php echo e($onlineStudentNavOpen ? 'bg-indigo-50/70' : ''); ?>">
+                    <div class="nav-icon bg-gradient-to-br from-indigo-500 to-indigo-700 text-white flex-shrink-0">
+                        <i class="fas fa-laptop-house text-sm"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-black text-gray-900 text-sm leading-tight">كورساتي الأونلاين</div>
+                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">المجموعات المفعّلة في بوابة الطالب</div>
+                    </div>
+                    <?php if($onlineCountSidebar > 0): ?>
+                        <span class="text-[11px] bg-indigo-500 text-white px-1.5 py-0.5 rounded-full font-semibold"><?php echo e($onlineCountSidebar); ?></span>
+                    <?php endif; ?>
+                    <i class="fas fa-chevron-down text-gray-500 text-xs flex-shrink-0 transition-transform duration-200" :class="openOnline ? 'rotate-180' : ''"></i>
+                </button>
+                <div x-show="openOnline" x-transition class="mr-3 mt-0.5 mb-2 space-y-0.5 border-r-2 border-indigo-200/80 pr-2">
+                    <a href="<?php echo e(route('student.online-courses.index')); ?>"
                        @click="if (window.innerWidth < 1024) sidebarOpen = false"
-                       class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors <?php echo e(request()->routeIs('student.offline-courses.*') && request('channel') === 'online' ? 'bg-indigo-600 text-white font-semibold' : 'text-gray-700 hover:bg-indigo-100/80'); ?>">
-                        <i class="fas fa-laptop-house w-4 text-center opacity-90"></i>
-                        <span>كورساتي الأونلاين</span>
-                        <?php if($onlineCountSidebar > 0): ?>
-                            <span class="mr-auto text-[11px] bg-indigo-500 text-white px-1.5 py-0.5 rounded-full"><?php echo e($onlineCountSidebar); ?></span>
-                        <?php endif; ?>
+                       class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors <?php echo e(request()->routeIs('student.online-courses.*') ? 'bg-indigo-600 text-white font-semibold' : 'text-gray-700 hover:bg-indigo-100/80'); ?>">
+                        <i class="fas fa-book-open w-4 text-center opacity-90"></i>
+                        <span>قائمة كورسات الأونلاين</span>
                     </a>
                 </div>
             </div>

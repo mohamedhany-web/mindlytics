@@ -17,8 +17,13 @@ class OfflineGroupController extends Controller
     public function index(OfflineCourse $offlineCourse)
     {
         $groups = $offlineCourse->groups()
-            ->with(['instructor', 'locationModel', 'sessions' => fn($q) => $q->ordered()])
-            ->withCount(['sessions', 'enrollments'])
+            ->with(['instructor', 'locationModel', 'sessions' => fn ($q) => $q->ordered()])
+            ->withCount([
+                'sessions',
+                'enrollments',
+                'enrollments as offline_enrollments_count' => fn ($q) => $q->where('enrollment_channel', 'offline'),
+                'enrollments as online_enrollments_count' => fn ($q) => $q->where('enrollment_channel', 'online'),
+            ])
             ->latest()
             ->get();
 

@@ -30,7 +30,8 @@ class CourseController extends Controller
             ->exists();
 
         // جلب المحافظ الإلكترونية النشطة المتاحة للتحويل
-        $availableWallets = \App\Models\Wallet::where('is_active', true)
+        $availableWallets = \App\Models\Wallet::academyWallets()
+            ->where('is_active', true)
             ->whereNotNull('type')
             ->whereIn('type', ['vodafone_cash', 'instapay', 'bank_transfer'])
             ->where(function($query) {

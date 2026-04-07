@@ -98,9 +98,9 @@
                 </div>
                 <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
             </a>
-            <a href="<?php echo e(route('instructor.offline-courses.index', ['channel' => 'online'])); ?>"
+            <a href="<?php echo e(route('instructor.online-group-courses.index')); ?>"
                @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.offline-courses.*') && request('channel') === 'online' ? 'bg-indigo-50 border border-indigo-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors <?php echo e(request()->routeIs('instructor.online-group-courses.*') ? 'bg-indigo-50 border border-indigo-200' : 'hover:bg-slate-50 border border-transparent'); ?>">
                 <div class="w-9 h-9 rounded-lg bg-indigo-500 text-white flex items-center justify-center flex-shrink-0">
                     <i class="fas fa-laptop-house text-sm"></i>
                 </div>

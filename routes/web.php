@@ -522,12 +522,26 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
                 ->middleware(['ownership:course,course'])
                 ->name('my-courses.show');
             
-            // الكورسات الأوفلاين للطلاب (واجهات منفصلة عن الأونلاين)
+            // الكورسات الأوفلاين للطلاب (مسار مستقل عن الأونلاين)
             Route::prefix('offline-courses')->name('student.offline-courses.')->group(function () {
                 Route::get('/', [\App\Http\Controllers\Student\OfflineCourseController::class, 'index'])->name('index');
-                Route::get('/booking/catalog', [\App\Http\Controllers\Student\OfflineCourseBookingController::class, 'catalog'])->name('booking.catalog');
+                Route::get('/booking/catalog', function () {
+                    return redirect()
+                        ->route('student.offline-courses.index')
+                        ->with('info', 'تم إيقاف صفحة كتالوج الحجز العام. للتسجيل تواصل مع الإدارة أو استخدم رابط الحجز المباشر إن وُجد.');
+                });
                 Route::get('/{offlineCourse}/booking/create', [\App\Http\Controllers\Student\OfflineCourseBookingController::class, 'create'])->name('booking.create');
                 Route::post('/{offlineCourse}/booking', [\App\Http\Controllers\Student\OfflineCourseBookingController::class, 'store'])->name('booking.store');
+                Route::get('/{offlineCourse}/resources', [\App\Http\Controllers\Student\OfflineCourseController::class, 'resources'])->name('resources');
+                Route::get('/{offlineCourse}/lectures', [\App\Http\Controllers\Student\OfflineCourseController::class, 'lectures'])->name('lectures');
+                Route::get('/{offlineCourse}/activities/{activity}', [\App\Http\Controllers\Student\OfflineCourseController::class, 'activityShow'])->name('activities.show');
+                Route::post('/{offlineCourse}/activities/{activity}/submit', [\App\Http\Controllers\Student\OfflineCourseController::class, 'activitySubmit'])->name('activities.submit');
+                Route::get('/{offlineCourse}', [\App\Http\Controllers\Student\OfflineCourseController::class, 'show'])->name('show');
+            });
+
+            // كورسات الأونلاين (مجموعات أونلاين) — مسار وقائمة منفصلان؛ الظهور بعد تفعيل «بوابة الطالب» من الإدارة
+            Route::prefix('online-courses')->name('student.online-courses.')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Student\OfflineCourseController::class, 'index'])->name('index');
                 Route::get('/{offlineCourse}/resources', [\App\Http\Controllers\Student\OfflineCourseController::class, 'resources'])->name('resources');
                 Route::get('/{offlineCourse}/lectures', [\App\Http\Controllers\Student\OfflineCourseController::class, 'lectures'])->name('lectures');
                 Route::get('/{offlineCourse}/activities/{activity}', [\App\Http\Controllers\Student\OfflineCourseController::class, 'activityShow'])->name('activities.show');
@@ -715,8 +729,10 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
 
         Route::middleware('sales.employee')->prefix('sales')->name('sales.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Employee\SalesDashboardController::class, 'index'])->name('dashboard');
+            Route::get('kpi', [\App\Http\Controllers\Employee\SalesKpiController::class, 'index'])->name('kpi.index');
             Route::get('leads/export', [\App\Http\Controllers\Employee\SalesLeadController::class, 'export'])->name('leads.export');
             Route::post('leads/{lead}/activities', [\App\Http\Controllers\Employee\SalesLeadController::class, 'storeActivity'])->name('leads.activities.store');
+            Route::post('leads/{lead}/csat', [\App\Http\Controllers\Employee\SalesLeadController::class, 'storeCsat'])->name('leads.csat.store');
             Route::resource('leads', \App\Http\Controllers\Employee\SalesLeadController::class);
         });
 
@@ -785,6 +801,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         
         // التقارير والإحصائيات
         Route::get('/reports', [\App\Http\Controllers\Employee\EmployeeReportController::class, 'index'])->name('reports');
+        Route::get('/documentation', [\App\Http\Controllers\Employee\EmployeeController::class, 'documentation'])->name('documentation');
         
         // الإعدادات
         Route::get('/settings', [\App\Http\Controllers\Employee\EmployeeSettingsController::class, 'index'])->name('settings');
@@ -801,6 +818,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
 
         Route::prefix('sales')->name('sales.')->group(function () {
             Route::get('audit-log', [\App\Http\Controllers\Admin\SalesAuditController::class, 'index'])->name('audit-log.index');
+            Route::get('kpi', [\App\Http\Controllers\Admin\SalesKpiController::class, 'index'])->name('kpi.index');
+            Route::get('kpi/targets', [\App\Http\Controllers\Admin\SalesKpiController::class, 'targets'])->name('kpi.targets');
+            Route::put('kpi/targets', [\App\Http\Controllers\Admin\SalesKpiController::class, 'updateTargets'])->name('kpi.targets.update');
             Route::get('leads/export', [\App\Http\Controllers\Admin\SalesLeadController::class, 'export'])->name('leads.export');
             Route::post('leads/{lead}/activities', [\App\Http\Controllers\Admin\SalesLeadController::class, 'storeActivity'])->name('leads.activities.store');
             Route::resource('leads', \App\Http\Controllers\Admin\SalesLeadController::class);
@@ -881,6 +901,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             ->name('workshops.send-whatsapp');
         Route::post('workshops/{workshop}/checkin', [\App\Http\Controllers\Admin\WorkshopController::class, 'checkin'])
             ->name('workshops.checkin');
+        Route::post('workshops/{workshop}/convert-to-leads', [\App\Http\Controllers\Admin\WorkshopController::class, 'convertRegistrationsToLeads'])
+            ->name('workshops.convert-to-leads');
         Route::get('/courses/{course}/lessons-list', function(\App\Models\AdvancedCourse $course) {
             return response()->json($course->lessons()->active()->select('id', 'title')->get());
         });
@@ -1144,6 +1166,15 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('/{offlineCourseBooking}/reject', [\App\Http\Controllers\Admin\OnlineCourseBookingController::class, 'reject'])->name('reject');
         });
 
+        // إدارة الأونلاين — كورسات بمجموعات مفعّل لها الأونلاين + كورس أونلاين فقط + تسجيل بالإيميل
+        Route::prefix('online-management')->name('online-management.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\OnlineManagementController::class, 'index'])->name('index');
+            Route::get('/courses/create', [\App\Http\Controllers\Admin\OnlineManagementController::class, 'createCourse'])->name('courses.create');
+            Route::post('/courses', [\App\Http\Controllers\Admin\OnlineManagementController::class, 'storeCourse'])->name('courses.store');
+            Route::get('/enroll', [\App\Http\Controllers\Admin\OnlineManagementController::class, 'enrollForm'])->name('enroll');
+            Route::post('/enroll', [\App\Http\Controllers\Admin\OnlineManagementController::class, 'enrollStore'])->name('enroll.store');
+        });
+
         // إدارة تسجيل الطلاب في المسارات التعليمية
         Route::prefix('learning-path-enrollments')->name('learning-path-enrollments.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\LearningPathEnrollmentController::class, 'index'])->name('index');
@@ -1313,6 +1344,10 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::delete('/subscriptions/{subscription}', [\App\Http\Controllers\Admin\SubscriptionController::class, 'destroy'])->middleware('throttle:10,1')->name('subscriptions.destroy');
         Route::get('/accounting/instructor-accounts', [\App\Http\Controllers\Admin\InstructorAccountController::class, 'index'])->name('accounting.instructor-accounts.index');
         Route::get('/accounting/instructor-accounts/{instructor}', [\App\Http\Controllers\Admin\InstructorAccountController::class, 'show'])->name('accounting.instructor-accounts.show');
+
+        Route::get('/accounting/hub', [\App\Http\Controllers\Admin\AccountingHubController::class, 'hub'])->name('accounting.hub');
+        Route::get('/accounting/chart-of-accounts', [\App\Http\Controllers\Admin\AccountingHubController::class, 'chart'])->name('accounting.chart');
+        Route::get('/accounting/installments', [\App\Http\Controllers\Admin\AccountingInstallmentsController::class, 'index'])->name('accounting.installments');
 
         Route::get('/accounting/reports', [\App\Http\Controllers\Admin\AccountingReportsController::class, 'index'])->name('accounting.reports');
         Route::get('/accounting/reports/export', [\App\Http\Controllers\Admin\AccountingReportsController::class, 'export'])->name('accounting.reports.export');
@@ -1518,6 +1553,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::post('/personal-branding/submit', [\App\Http\Controllers\Instructor\PersonalBrandingController::class, 'submit'])->name('personal-branding.submit');
 
         Route::resource('courses', \App\Http\Controllers\Instructor\CourseController::class)->only(['index', 'show']);
+        Route::get('online-group-courses', [\App\Http\Controllers\Instructor\OfflineCourseController::class, 'onlineIndex'])->name('online-group-courses.index');
+        Route::get('online-group-courses/{offlineCourse}', [\App\Http\Controllers\Instructor\OfflineCourseController::class, 'onlineShow'])->name('online-group-courses.show');
         Route::resource('offline-courses', \App\Http\Controllers\Instructor\OfflineCourseController::class)->only(['index', 'show'])->parameters(['offline_course' => 'offlineCourse']);
 
         // تقويم المدرب (جلسات الأوفلاين)

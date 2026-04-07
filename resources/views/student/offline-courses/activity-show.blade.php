@@ -6,7 +6,7 @@
 @section('content')
 <div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
     <div class="mb-4">
-        <a href="{{ route('student.offline-courses.show', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="inline-flex items-center text-sky-600 hover:text-sky-700 text-sm font-medium">
+        <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.show', $offlineCourse) }}" class="inline-flex items-center text-sky-600 hover:text-sky-700 text-sm font-medium">
             <i class="fas fa-arrow-right ml-2"></i>
             العودة لصفحة الكورس
         </a>
@@ -54,7 +54,7 @@
             @if($activity->status !== 'published')
                 <p class="text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">هذا النشاط غير متاح للتسليم حالياً.</p>
             @elseif(!$submission || $submission->status !== 'graded')
-                <form action="{{ route('student.offline-courses.activities.submit', ['offlineCourse' => $offlineCourse, 'activity' => $activity, 'channel' => ($channel ?? 'offline')]) }}" method="post" enctype="multipart/form-data" class="space-y-4">
+                <form action="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.activities.submit', [$offlineCourse, $activity]) }}" method="post" enctype="multipart/form-data" class="space-y-4">
                     @csrf
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">نص التقديم (اختياري)</label>

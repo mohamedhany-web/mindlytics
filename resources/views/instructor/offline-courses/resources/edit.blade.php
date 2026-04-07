@@ -1,15 +1,15 @@
 @extends('layouts.app')
 
-@section('title', 'تعديل مورد - كورس أوفلاين')
+@section('title', 'تعديل مورد - كورس ' . (($channel ?? 'offline') === 'online' ? 'أونلاين' : 'أوفلاين'))
 @section('header', 'تعديل مورد')
 
 @section('content')
 <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
     <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-5">
         <nav class="text-sm text-slate-500 mb-2">
-            <a href="{{ route('instructor.offline-courses.index') }}" class="hover:text-amber-600">كورساتي الأوفلاين</a>
+            <a href="{{ route('instructor.offline-courses.index', ['channel' => ($channel ?? 'offline')]) }}" class="hover:text-amber-600">{{ ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : 'كورساتي الأوفلاين' }}</a>
             <span class="mx-2">/</span>
-            <a href="{{ route('instructor.offline-courses.resources.index', $offlineCourse) }}" class="hover:text-amber-600">الموارد</a>
+            <a href="{{ route('instructor.offline-courses.resources.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="hover:text-amber-600">الموارد</a>
             <span class="mx-2">/</span>
             <span class="text-slate-700 font-semibold">تعديل</span>
         </nav>
@@ -17,7 +17,7 @@
     </div>
 
     <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-6">
-        <form action="{{ route('instructor.offline-courses.resources.update', [$offlineCourse, $resource]) }}" method="post" enctype="multipart/form-data">
+        <form action="{{ route('instructor.offline-courses.resources.update', ['offlineCourse' => $offlineCourse, 'resource' => $resource, 'channel' => ($channel ?? 'offline')]) }}" method="post" enctype="multipart/form-data">
             @csrf
             @method('PUT')
             <div class="space-y-4">
@@ -79,7 +79,7 @@
             </div>
             <div class="mt-6 flex gap-3">
                 <button type="submit" class="px-4 py-2.5 bg-sky-600 text-white rounded-xl font-semibold hover:bg-sky-700">حفظ</button>
-                <a href="{{ route('instructor.offline-courses.resources.index', $offlineCourse) }}" class="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-semibold hover:bg-slate-200">إلغاء</a>
+                <a href="{{ route('instructor.offline-courses.resources.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-semibold hover:bg-slate-200">إلغاء</a>
             </div>
         </form>
     </div>

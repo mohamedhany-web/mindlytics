@@ -76,12 +76,12 @@
                             <td class="px-3 py-2">
                                 <?php if($d->delivery_type === 'link' && $d->link_url): ?>
                                     <a href="<?php echo e($d->link_url); ?>" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-800 break-all max-w-[14rem] inline-block"><?php echo e(\Illuminate\Support\Str::limit($d->link_url, 42)); ?></a>
-                                <?php elseif($d->delivery_type === 'image' && $d->file_path): ?>
-                                    <a href="<?php echo e(\Illuminate\Support\Facades\Storage::url($d->file_path)); ?>" target="_blank" rel="noopener" class="inline-block">
-                                        <img src="<?php echo e(\Illuminate\Support\Facades\Storage::url($d->file_path)); ?>" alt="" class="max-h-14 rounded border border-gray-200 object-cover">
+                                <?php elseif($d->delivery_type === 'image' && $d->publicFileUrl()): ?>
+                                    <a href="<?php echo e($d->publicFileUrl()); ?>" target="_blank" rel="noopener" class="inline-block">
+                                        <img src="<?php echo e($d->publicFileUrl()); ?>" alt="" class="max-h-14 rounded border border-gray-200 object-cover">
                                     </a>
-                                <?php elseif($d->file_path): ?>
-                                    <a href="<?php echo e(\Illuminate\Support\Facades\Storage::url($d->file_path)); ?>" target="_blank" class="text-sky-600 hover:text-sky-800 font-medium"><i class="fas fa-file-download ml-1"></i><?php echo e(\Illuminate\Support\Str::limit($d->file_name ?? 'ملف', 24)); ?></a>
+                                <?php elseif($d->publicFileUrl()): ?>
+                                    <a href="<?php echo e($d->publicFileUrl()); ?>" target="_blank" rel="noopener" class="text-sky-600 hover:text-sky-800 font-medium"><i class="fas fa-file-download ml-1"></i><?php echo e(\Illuminate\Support\Str::limit($d->file_name ?? 'ملف', 24)); ?></a>
                                 <?php else: ?>
                                     <span class="text-gray-400">—</span>
                                 <?php endif; ?>

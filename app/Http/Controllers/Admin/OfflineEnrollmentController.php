@@ -10,6 +10,7 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\Wallet;
 use App\Support\OfflineEnrollmentProvisioner;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,30 +18,58 @@ use Illuminate\Support\Facades\DB;
 
 class OfflineEnrollmentController extends Controller
 {
-    public function index(OfflineCourse $offlineCourse)
+    public function index(Request $request, OfflineCourse $offlineCourse)
     {
+        $channel = $request->query('channel', 'offline');
+        if (! in_array($channel, ['offline', 'online'], true)) {
+            $channel = 'offline';
+        }
+
         $enrollments = $offlineCourse->enrollments()
-            ->where('enrollment_channel', 'offline')
+            ->where('enrollment_channel', $channel)
             ->with(['student', 'group', 'invoice'])
             ->latest('enrolled_at')
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
         $students = User::where('role', 'student')
             ->where('is_active', true)
-            ->whereDoesntHave('offlineEnrollments', function($q) use ($offlineCourse) {
+            ->whereDoesntHave('offlineEnrollments', function ($q) use ($offlineCourse, $channel) {
                 $q->where('offline_course_id', $offlineCourse->id)
-                    ->where('enrollment_channel', 'offline');
+                    ->where('enrollment_channel', $channel);
             })
             ->get();
 
         $groups = $offlineCourse->groups()
             ->where('is_active', true)
-            ->withCount(['enrollments as enrollments_count' => function ($q) {
-                $q->where('enrollment_channel', 'offline');
-            }])
+            ->withCount([
+                'enrollments as offline_enrollments_count' => function ($q) {
+                    $q->where('enrollment_channel', 'offline');
+                },
+                'enrollments as online_enrollments_count' => function ($q) {
+                    $q->where('enrollment_channel', 'online');
+                },
+            ])
+            ->get();
+        $wallets = Wallet::academyWallets()
+            ->where('is_active', true)
+            ->orderBy('name')
             ->get();
 
-        return view('admin.offline-courses.enrollments.index', compact('offlineCourse', 'enrollments', 'students', 'groups'));
+        $channelCounts = [
+            'offline' => $offlineCourse->enrollments()->where('enrollment_channel', 'offline')->count(),
+            'online' => $offlineCourse->enrollments()->where('enrollment_channel', 'online')->count(),
+        ];
+
+        return view('admin.offline-courses.enrollments.index', compact(
+            'offlineCourse',
+            'enrollments',
+            'students',
+            'groups',
+            'wallets',
+            'channel',
+            'channelCounts'
+        ));
     }
 
     public function store(Request $request, OfflineCourse $offlineCourse)
@@ -48,25 +77,36 @@ class OfflineEnrollmentController extends Controller
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'group_id' => 'required|exists:offline_course_groups,id',
+            'enrollment_channel' => 'required|in:offline,online',
             'status' => 'required|in:pending,active',
             'payment_type' => 'required|in:full,partial,free',
             'paid_amount' => 'required_if:payment_type,partial|nullable|numeric|min:0',
-            'payment_method' => 'nullable|string|max:100',
+            'payment_method' => 'nullable|required_if:payment_type,full,partial|in:cash,wallet',
+            'wallet_id' => 'nullable|required_if:payment_method,wallet|exists:wallets,id',
             'payment_notes' => 'nullable|string',
         ]);
 
+        $enrollmentChannel = $validated['enrollment_channel'];
+
         $existing = OfflineCourseEnrollment::where('user_id', $validated['user_id'])
             ->where('offline_course_id', $offlineCourse->id)
-            ->where('enrollment_channel', 'offline')
+            ->where('enrollment_channel', $enrollmentChannel)
             ->exists();
 
         if ($existing) {
-            return back()->withErrors(['error' => 'الطالب مسجل بالفعل في هذا الكورس']);
+            return back()->withErrors(['error' => 'الطالب مسجل بالفعل في هذا الكورس على نفس القناة (أوفلاين أو أونلاين).']);
         }
 
-        $group = OfflineCourseGroup::findOrFail($validated['group_id']);
-        if (!$group->canEnroll()) {
-            return back()->withErrors(['error' => 'المجموعة ممتلئة أو غير متاحة للتسجيل']);
+        $group = OfflineCourseGroup::where('id', $validated['group_id'])
+            ->where('offline_course_id', $offlineCourse->id)
+            ->firstOrFail();
+
+        if (! $group->canEnroll($enrollmentChannel)) {
+            $msg = $enrollmentChannel === 'online'
+                ? 'سعة الأونلاين للمجموعة ممتلئة أو المجموعة غير متاحة. زِد «سعة الأونلاين» أو اختر مجموعة أخرى.'
+                : 'سعة الحضور بالمركز للمجموعة ممتلئة أو المجموعة غير متاحة.';
+
+            return back()->withErrors(['error' => $msg]);
         }
 
         $coursePrice = (float) $offlineCourse->price;
@@ -76,6 +116,20 @@ class OfflineEnrollmentController extends Controller
             $paidAmount = $coursePrice;
         } elseif ($validated['payment_type'] === 'partial') {
             $paidAmount = min((float) ($validated['paid_amount'] ?? 0), $coursePrice);
+        }
+
+        $paymentMethod = $validated['payment_method'] ?? 'cash';
+        $walletId = isset($validated['wallet_id']) ? (int) $validated['wallet_id'] : null;
+        if ($paidAmount > 0 && $paymentMethod === 'wallet') {
+            $wallet = Wallet::academyWallets()
+                ->where('is_active', true)
+                ->whereKey($walletId)
+                ->first();
+            if (! $wallet) {
+                return back()->withErrors(['wallet_id' => 'اختر محفظة أكاديمية نشطة وصحيحة'])->withInput();
+            }
+        } else {
+            $walletId = null;
         }
 
         DB::beginTransaction();
@@ -88,16 +142,20 @@ class OfflineEnrollmentController extends Controller
                 $coursePrice,
                 $paidAmount,
                 [
-                    'payment_method' => $validated['payment_method'] ?? null,
+                    'payment_method' => $paymentMethod,
+                    'wallet_id' => $walletId,
                     'payment_notes' => $validated['payment_notes'] ?? null,
                 ],
-                null
+                null,
+                $enrollmentChannel
             );
 
             DB::commit();
 
-            return redirect()->route('admin.offline-courses.enrollments.index', $offlineCourse)
-                            ->with('success', 'تم تسجيل الطالب بنجاح');
+            return redirect()->route('admin.offline-courses.enrollments.index', [
+                'offlineCourse' => $offlineCourse,
+                'channel' => $enrollmentChannel,
+            ])->with('success', 'تم تسجيل الطالب بنجاح');
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Offline enrollment error', ['error' => $e->getMessage()]);
@@ -107,6 +165,8 @@ class OfflineEnrollmentController extends Controller
 
     public function updateStatus(Request $request, OfflineCourse $offlineCourse, OfflineCourseEnrollment $enrollment)
     {
+        abort_unless((int) $enrollment->offline_course_id === (int) $offlineCourse->id, 404);
+
         $validated = $request->validate([
             'status' => 'required|in:pending,active,completed,suspended,cancelled',
         ]);
@@ -121,6 +181,8 @@ class OfflineEnrollmentController extends Controller
      */
     public function addPayment(Request $request, OfflineCourse $offlineCourse, OfflineCourseEnrollment $enrollment)
     {
+        abort_unless((int) $enrollment->offline_course_id === (int) $offlineCourse->id, 404);
+
         $validated = $request->validate([
             'amount' => 'required|numeric|min:0.01',
             'payment_method' => 'nullable|string|max:100',
@@ -154,6 +216,8 @@ class OfflineEnrollmentController extends Controller
 
     public function destroy(OfflineCourse $offlineCourse, OfflineCourseEnrollment $enrollment)
     {
+        abort_unless((int) $enrollment->offline_course_id === (int) $offlineCourse->id, 404);
+
         DB::beginTransaction();
         try {
             $offlineCourse->decrementStudents();

@@ -320,7 +320,8 @@ class OfflineGroupPublicBookingController extends Controller
 
     private function wallets()
     {
-        return Wallet::where('is_active', true)
+        return Wallet::academyWallets()
+            ->where('is_active', true)
             ->whereNotNull('type')
             ->whereIn('type', ['vodafone_cash', 'instapay', 'bank_transfer'])
             ->where(function ($query) {

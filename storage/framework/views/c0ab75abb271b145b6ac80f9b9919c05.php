@@ -1,5 +1,3 @@
-
-
 <?php $__env->startSection('title', 'تفاصيل المهمة'); ?>
 <?php $__env->startSection('header', 'تفاصيل المهمة'); ?>
 
@@ -385,8 +383,8 @@ unset($__errorArgs, $__bag); ?>
                                         <div class="flex items-center gap-2 text-sm">
                                             <i class="fas fa-file-video text-violet-500"></i>
                                             <span class="text-gray-700"><?php echo e($deliverable->file_name); ?></span>
-                                            <?php if($deliverable->file_path): ?>
-                                                <a href="<?php echo e(Storage::url($deliverable->file_path)); ?>" target="_blank" class="text-blue-600 hover:text-blue-800">
+                                            <?php if($deliverable->publicFileUrl()): ?>
+                                                <a href="<?php echo e($deliverable->publicFileUrl()); ?>" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-800">
                                                     <i class="fas fa-download"></i> تحميل
                                                 </a>
                                             <?php endif; ?>

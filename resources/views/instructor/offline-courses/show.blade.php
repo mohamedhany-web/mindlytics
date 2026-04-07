@@ -4,13 +4,22 @@
 @section('header', ($channel ?? 'offline') === 'online' ? 'تفاصيل الكورس الأونلاين' : 'تفاصيل الكورس الأوفلاين')
 
 @section('content')
+@php
+    $isOnline = ($channel ?? 'offline') === 'online';
+    $contentTitle = $isOnline ? 'إدارة محتوى الكورس الأونلاين' : 'إدارة محتوى الكورس الأوفلاين';
+    $contentDescription = $isOnline
+        ? 'إعداد المحتوى المخصص لطلاب الأونلاين: المحاضرات وروابط الحضور والموارد والأنشطة الرقمية لقناة الأونلاين.'
+        : 'إدارة محتوى الحضور داخل القاعة: الموارد والمحاضرات والواجبات/الاختبارات الخاصة بطلاب الأوفلاين.';
+@endphp
 <div class="space-y-6">
     <!-- الهيدر -->
     <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-5 sm:p-6">
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div class="flex-1 min-w-0">
                 <nav class="text-sm text-slate-500 mb-2">
-                    <a href="{{ route('instructor.offline-courses.index', ['channel' => ($channel ?? 'offline')]) }}" class="hover:text-amber-600 transition-colors">
+                    <a href="{{ ($channel ?? 'offline') === 'online'
+                        ? route('instructor.online-group-courses.index')
+                        : route('instructor.offline-courses.index', ['channel' => ($channel ?? 'offline')]) }}" class="hover:text-amber-600 transition-colors">
                         {{ ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : 'كورساتي الأوفلاين' }}
                     </a>
                     <span class="mx-2">/</span>
@@ -40,7 +49,9 @@
                     </span>
                 </div>
             </div>
-            <a href="{{ route('instructor.offline-courses.index', ['channel' => ($channel ?? 'offline')]) }}" class="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors">
+            <a href="{{ ($channel ?? 'offline') === 'online'
+                ? route('instructor.online-group-courses.index')
+                : route('instructor.offline-courses.index', ['channel' => ($channel ?? 'offline')]) }}" class="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors">
                 <i class="fas fa-arrow-right"></i>
                 <span>العودة</span>
             </a>
@@ -84,9 +95,9 @@
         <div class="p-5 sm:p-6 border-b border-slate-200">
             <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
                 <i class="fas fa-folder-open text-amber-500"></i>
-                إدارة محتوى الكورس الأوفلاين
+                {{ $contentTitle }}
             </h3>
-            <p class="text-sm text-slate-600 mb-4">إضافة الموارد والمحاضرات والواجبات/الاختبارات للطلاب (واجهات منفصلة عن الكورسات الأونلاين).</p>
+            <p class="text-sm text-slate-600 mb-4">{{ $contentDescription }}</p>
             <div class="flex flex-wrap gap-3">
                 <a href="{{ route('instructor.offline-courses.curriculum.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200 font-semibold transition-colors">
                     <i class="fas fa-sitemap"></i>

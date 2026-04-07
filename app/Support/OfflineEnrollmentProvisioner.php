@@ -32,6 +32,16 @@ class OfflineEnrollmentProvisioner
         ?string $enrollmentNotes = null,
         string $enrollmentChannel = 'offline'
     ): OfflineCourseEnrollment {
+        $alreadyActive = OfflineCourseEnrollment::query()
+            ->where('user_id', $userId)
+            ->where('offline_course_id', $course->id)
+            ->where('enrollment_channel', $enrollmentChannel)
+            ->where('status', 'active')
+            ->exists();
+        if ($alreadyActive) {
+            throw new \RuntimeException('DUPLICATE_ENROLLMENT');
+        }
+
         $remainingAmount = max(0, $coursePrice - $paidAmount);
         $paymentStatus = 'unpaid';
         if ($paidAmount >= $coursePrice && $coursePrice > 0) {

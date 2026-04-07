@@ -18,6 +18,9 @@
                 </nav>
                 <h1 class="text-2xl font-bold text-gray-900">تسجيلات الطلاب: <?php echo e($offlineCourse->title); ?></h1>
                 <p class="text-gray-600 mt-1">سعر الكورس: <span class="font-bold text-green-700"><?php echo e(number_format($offlineCourse->price, 2)); ?> ج.م</span></p>
+                <p class="text-sm text-gray-500 mt-2 max-w-3xl">
+                    المجموعة الواحدة تشترك في <strong>نفس المواعيد والجلسات</strong>؛ ويُفصل فقط <strong>من حضر بالمركز (أوفلاين)</strong> عن <strong>من سجّل على قناة الأونلاين</strong> من حيث السعة والتسجيلات.
+                </p>
             </div>
             <a href="<?php echo e(route('admin.offline-courses.show', $offlineCourse)); ?>" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center">
                 <i class="fas fa-arrow-right mr-2"></i>العودة للكورس
@@ -36,11 +39,34 @@
         </div>
     <?php endif; ?>
 
+    <!-- تبويب القناة: أوفلاين / أونلاين -->
+    <div class="bg-white rounded-xl shadow-lg p-4 border border-gray-200 flex flex-wrap gap-2 items-center">
+        <span class="text-sm font-semibold text-gray-600 ml-2">عرض القائمة:</span>
+        <a href="<?php echo e(route('admin.offline-courses.enrollments.index', ['offlineCourse' => $offlineCourse, 'channel' => 'offline'])); ?>"
+           class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors <?php echo e($channel === 'offline' ? 'bg-blue-600 text-white shadow' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'); ?>">
+            <i class="fas fa-building ml-1"></i> تسجيلات الحضور (أوفلاين)
+            <span class="opacity-90">(<?php echo e($channelCounts['offline']); ?>)</span>
+        </a>
+        <a href="<?php echo e(route('admin.offline-courses.enrollments.index', ['offlineCourse' => $offlineCourse, 'channel' => 'online'])); ?>"
+           class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors <?php echo e($channel === 'online' ? 'bg-indigo-600 text-white shadow' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'); ?>">
+            <i class="fas fa-video ml-1"></i> تسجيلات الأونلاين
+            <span class="opacity-90">(<?php echo e($channelCounts['online']); ?>)</span>
+        </a>
+    </div>
+
     <!-- تسجيل طالب جديد -->
-    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-        <h2 class="text-lg font-bold text-gray-900 mb-4"><i class="fas fa-user-plus text-blue-600 ml-2"></i>تسجيل طالب جديد</h2>
+    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200 border-t-4 <?php echo e($channel === 'online' ? 'border-t-indigo-500' : 'border-t-blue-500'); ?>">
+        <h2 class="text-lg font-bold text-gray-900 mb-1">
+            <i class="fas fa-user-plus text-blue-600 ml-2"></i>تسجيل طالب جديد
+            <?php if($channel === 'online'): ?>
+                <span class="text-sm font-normal text-indigo-700">— على قناة <strong>الأونلاين</strong> (يُحتسب ضمن سعة الأونلاين للمجموعة)</span>
+            <?php else: ?>
+                <span class="text-sm font-normal text-blue-800">— على قناة <strong>الحضور بالمركز</strong> (يُحتسب ضمن سعة الحضور)</span>
+            <?php endif; ?>
+        </h2>
         <form action="<?php echo e(route('admin.offline-courses.enrollments.store', $offlineCourse)); ?>" method="POST" class="space-y-4">
             <?php echo csrf_field(); ?>
+            <input type="hidden" name="enrollment_channel" value="<?php echo e($channel); ?>">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">البحث بالإيميل</label>
@@ -67,8 +93,11 @@
                         <option value="">اختر المجموعة</option>
                         <?php $__currentLoopData = $groups; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $g): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <option value="<?php echo e($g->id); ?>">
-                                <?php echo e($g->name); ?> (<?php echo e($g->enrollments_count ?? $g->current_students); ?>/<?php echo e($g->max_students); ?>)
+                                <?php echo e($g->name); ?>
+
                                 <?php if($g->start_date): ?> — يبدأ <?php echo e($g->start_date->format('Y-m-d')); ?> <?php endif; ?>
+                                | حضور <?php echo e($g->current_students); ?>/<?php echo e($g->max_students); ?> (<?php echo e($g->offline_enrollments_count ?? 0); ?> سجل)
+                                | أونلاين <?php echo e($g->current_students_online); ?>/<?php echo e($g->max_students_online); ?> (<?php echo e($g->online_enrollments_count ?? 0); ?> سجل)
                             </option>
                         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </select>
@@ -102,13 +131,38 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">طريقة الدفع</label>
-                        <select name="payment_method" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                            <option value="cash">نقدي</option>
-                            <option value="bank_transfer">تحويل بنكي</option>
-                            <option value="card">بطاقة ائتمان</option>
-                            <option value="wallet">محفظة إلكترونية</option>
-                            <option value="other">أخرى</option>
+                        <select name="payment_method" id="payment_method" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="cash" <?php echo e(old('payment_method', 'cash') === 'cash' ? 'selected' : ''); ?>>نقدي</option>
+                            <option value="wallet" <?php echo e(old('payment_method') === 'wallet' ? 'selected' : ''); ?>>تحويل على محفظة</option>
                         </select>
+                        <?php $__errorArgs = ['payment_method'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="text-red-500 text-xs mt-1"><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                    </div>
+                    <div id="wallet_wrap">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">المحفظة</label>
+                        <select name="wallet_id" id="wallet_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="">اختر المحفظة</option>
+                            <?php $__currentLoopData = $wallets; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $wallet): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <option value="<?php echo e($wallet->id); ?>" <?php if((string) old('wallet_id') === (string) $wallet->id): echo 'selected'; endif; ?>>
+                                    <?php echo e($wallet->name); ?> — <?php echo e(\App\Models\Wallet::typeLabel($wallet->type)); ?>
+
+                                </option>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                        </select>
+                        <?php $__errorArgs = ['wallet_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="text-red-500 text-xs mt-1"><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">ملاحظات الدفع</label>
@@ -128,8 +182,17 @@
 
     <!-- قائمة التسجيلات -->
     <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-bold text-gray-900">قائمة التسجيلات (<?php echo e($enrollments->total()); ?>)</h2>
+        <div class="px-6 py-4 border-b border-gray-200 flex flex-wrap justify-between items-center gap-2">
+            <h2 class="text-lg font-bold text-gray-900">
+                قائمة تسجيلات <?php echo e($channel === 'online' ? 'الأونلاين' : 'الحضور (أوفلاين)'); ?>
+
+                (<?php echo e($enrollments->total()); ?>)
+            </h2>
+            <?php if($channel === 'online'): ?>
+                <span class="text-xs font-semibold px-2 py-1 rounded-full bg-indigo-100 text-indigo-800">قناة أونلاين</span>
+            <?php else: ?>
+                <span class="text-xs font-semibold px-2 py-1 rounded-full bg-blue-100 text-blue-800">قناة حضور بالمركز</span>
+            <?php endif; ?>
         </div>
         <?php if($enrollments->count() > 0): ?>
             <div class="overflow-x-auto">
@@ -326,6 +389,31 @@ function enrollmentsPage() {
         }
     };
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+    const paymentTypeEl = document.querySelector('select[name="payment_type"]');
+    const paymentMethodEl = document.getElementById('payment_method');
+    const walletWrapEl = document.getElementById('wallet_wrap');
+    const walletSelectEl = document.getElementById('wallet_id');
+
+    function toggleWalletField() {
+        const requiresPayment = paymentTypeEl && paymentTypeEl.value !== 'free';
+        const isWallet = paymentMethodEl && paymentMethodEl.value === 'wallet';
+        if (walletWrapEl) {
+            walletWrapEl.style.display = requiresPayment && isWallet ? '' : 'none';
+        }
+        if (walletSelectEl) {
+            walletSelectEl.required = requiresPayment && isWallet;
+            if (!requiresPayment || !isWallet) {
+                walletSelectEl.value = '';
+            }
+        }
+    }
+
+    if (paymentTypeEl) paymentTypeEl.addEventListener('change', toggleWalletField);
+    if (paymentMethodEl) paymentMethodEl.addEventListener('change', toggleWalletField);
+    toggleWalletField();
+});
 </script>
 <?php $__env->stopSection(); ?>
 

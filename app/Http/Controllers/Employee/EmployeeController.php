@@ -58,4 +58,18 @@ class EmployeeController extends Controller
 
         return view('employee.dashboard', compact('user', 'tasks', 'stats', 'salesSnapshot'));
     }
+
+    /**
+     * صفحة Documentation للموظف (شرح النظام + المتطلبات + roadmap).
+     */
+    public function documentation()
+    {
+        $user = Auth::user();
+
+        if (! $user || ! $user->isEmployee()) {
+            abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        return view('employee.documentation.index');
+    }
 }

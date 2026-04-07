@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'إضافة مورد - كورس أوفلاين')
+@section('title', 'إضافة مورد - كورس ' . (($channel ?? 'offline') === 'online' ? 'أونلاين' : 'أوفلاين'))
 @section('header', 'إضافة مورد')
 
 @section('content')
@@ -8,11 +8,11 @@
     <!-- هيدر الصفحة (عرض الصفحة) -->
     <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-5 sm:p-6 mb-6">
         <nav class="text-sm text-slate-500 mb-2">
-            <a href="{{ route('instructor.offline-courses.index') }}" class="hover:text-amber-600 transition-colors">كورساتي الأوفلاين</a>
+            <a href="{{ route('instructor.offline-courses.index', ['channel' => ($channel ?? 'offline')]) }}" class="hover:text-amber-600 transition-colors">{{ ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : 'كورساتي الأوفلاين' }}</a>
             <span class="mx-2">/</span>
-            <a href="{{ route('instructor.offline-courses.show', $offlineCourse) }}" class="hover:text-amber-600 transition-colors">{{ $offlineCourse->title }}</a>
+            <a href="{{ route('instructor.offline-courses.show', ['offline_course' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="hover:text-amber-600 transition-colors">{{ $offlineCourse->title }}</a>
             <span class="mx-2">/</span>
-            <a href="{{ route('instructor.offline-courses.resources.index', $offlineCourse) }}" class="hover:text-amber-600 transition-colors">الموارد</a>
+            <a href="{{ route('instructor.offline-courses.resources.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="hover:text-amber-600 transition-colors">الموارد</a>
             <span class="mx-2">/</span>
             <span class="text-slate-700 font-semibold">إضافة مورد</span>
         </nav>
@@ -21,7 +21,7 @@
                 <i class="fas fa-file-alt text-lg"></i>
             </div>
             <div class="min-w-0 flex-1">
-                <h1 class="text-xl sm:text-2xl font-bold text-slate-800">إضافة مورد (أوفلاين)</h1>
+                <h1 class="text-xl sm:text-2xl font-bold text-slate-800">إضافة مورد ({{ ($channel ?? 'offline') === 'online' ? 'أونلاين' : 'أوفلاين' }})</h1>
                 <p class="text-sm text-slate-600 mt-0.5">رفع ملف واحد أو عدة ملفات (PDF، Word، صور، إلخ) أو إضافة رابط</p>
             </div>
         </div>
@@ -29,7 +29,7 @@
 
     <!-- بطاقة النموذج -->
     <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-6 sm:p-8">
-        <form action="{{ route('instructor.offline-courses.resources.store', $offlineCourse) }}" method="post" enctype="multipart/form-data">
+        <form action="{{ route('instructor.offline-courses.resources.store', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" method="post" enctype="multipart/form-data">
             @csrf
             <div class="space-y-4">
                 <div>
@@ -76,7 +76,7 @@
             </div>
             <div class="mt-6 flex gap-3">
                 <button type="submit" class="px-4 py-2.5 bg-sky-600 text-white rounded-xl font-semibold hover:bg-sky-700">حفظ</button>
-                <a href="{{ route('instructor.offline-courses.resources.index', $offlineCourse) }}" class="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-semibold hover:bg-slate-200">إلغاء</a>
+                <a href="{{ route('instructor.offline-courses.resources.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-semibold hover:bg-slate-200">إلغاء</a>
             </div>
         </form>
     </div>

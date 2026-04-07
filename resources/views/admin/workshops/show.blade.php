@@ -48,6 +48,20 @@
                 <i class="fas fa-file-excel"></i>
                 <span>تحميل بيانات المسجلين (CSV)</span>
             </a>
+            <form action="{{ route('admin.workshops.convert-to-leads', $workshop) }}" method="POST" class="flex items-center gap-2 flex-wrap" onsubmit="return confirm('تحويل كل تسجيلات الورشة إلى Leads في قسم المبيعات؟ سيتم تخطي المكرر تلقائياً.');">
+                @csrf
+                <select name="assigned_to" required class="rounded-xl border border-slate-300 px-3 py-2.5 text-xs font-semibold text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500 min-w-[180px]">
+                    <option value="">اختر موظف مبيعات</option>
+                    @foreach(($salesReps ?? collect()) as $rep)
+                        <option value="{{ $rep->id }}">{{ $rep->name }}</option>
+                    @endforeach
+                </select>
+                <button type="submit"
+                        class="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md">
+                    <i class="fas fa-right-left"></i>
+                    <span>تحويل المسجلين إلى Leads</span>
+                </button>
+            </form>
             <button type="button"
                     @click="$dispatch('open-checkin-modal')"
                     class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md">

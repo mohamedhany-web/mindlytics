@@ -1,7 +1,7 @@
 
 
-<?php $__env->startSection('title', __('student.offline_courses_title')); ?>
-<?php $__env->startSection('header', __('student.offline_courses_title')); ?>
+<?php $__env->startSection('title', ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : __('student.offline_courses_title')); ?>
+<?php $__env->startSection('header', ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : __('student.offline_courses_title')); ?>
 
 <?php $__env->startPush('styles'); ?>
 <style>
@@ -33,8 +33,8 @@
 <div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
     <!-- الهيدر -->
     <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
-        <h1 class="text-xl sm:text-2xl font-bold text-gray-900 mb-1"><?php echo e(__('student.offline_courses_title')); ?></h1>
-        <p class="text-sm text-gray-500"><?php echo e(__('student.offline_courses_subtitle')); ?></p>
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-900 mb-1"><?php echo e(($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : __('student.offline_courses_title')); ?></h1>
+        <p class="text-sm text-gray-500"><?php echo e(($channel ?? 'offline') === 'online' ? 'تظهر هنا فقط الكورسات الأونلاين التي فعّلتها الإدارة في «بوابة الطالب للأونلاين».' : __('student.offline_courses_subtitle')); ?></p>
     </div>
 
     <!-- الإحصائيات -->
@@ -69,14 +69,17 @@
             <?php
                 $course = $enrollment->course;
             ?>
-            <a href="<?php echo e(route('student.offline-courses.show', $course->id)); ?>" class="offline-card block overflow-hidden">
+            <a href="<?php echo e(route(($studentRouteGroup ?? 'student.offline-courses') . '.show', $course->id)); ?>" class="offline-card block overflow-hidden">
                 <div class="h-32 bg-sky-100 flex items-center justify-center text-sky-600 flex-shrink-0">
                     <i class="fas fa-chalkboard-teacher text-3xl"></i>
                 </div>
                 <div class="p-4">
                     <div class="flex items-start justify-between gap-2 mb-2">
                         <h3 class="text-base font-bold text-gray-900 line-clamp-2 leading-snug flex-1 min-w-0"><?php echo e($course->title); ?></h3>
-                        <span class="px-2 py-0.5 rounded-md text-xs font-semibold bg-sky-100 text-sky-700 flex-shrink-0"><?php echo e(__('student.offline_badge')); ?></span>
+                        <span class="px-2 py-0.5 rounded-md text-xs font-semibold <?php echo e(($channel ?? 'offline') === 'online' ? 'bg-indigo-100 text-indigo-700' : 'bg-sky-100 text-sky-700'); ?> flex-shrink-0">
+                            <?php echo e(($channel ?? 'offline') === 'online' ? 'أونلاين' : __('student.offline_badge')); ?>
+
+                        </span>
                     </div>
                     <p class="text-xs text-gray-500 mb-2">
                         <?php echo e($course->instructor->name ?? '—'); ?>
@@ -130,6 +133,7 @@
                 </div>
             </a>
         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+            <?php if(($bookings ?? collect())->isEmpty()): ?>
             <div class="col-span-full rounded-xl p-10 sm:p-12 text-center bg-gray-50 border border-dashed border-gray-200">
                 <div class="w-16 h-16 bg-sky-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-sky-600">
                     <i class="fas fa-chalkboard-teacher text-2xl"></i>
@@ -137,7 +141,57 @@
                 <h3 class="text-lg font-bold text-gray-900 mb-2"><?php echo e(__('student.no_offline_courses')); ?></h3>
                 <p class="text-sm text-gray-500"><?php echo e(__('student.no_offline_courses_desc')); ?></p>
             </div>
+            <?php endif; ?>
         <?php endif; ?>
+
+        <?php $__currentLoopData = ($bookings ?? collect()); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $booking): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <?php
+                $course = $booking->course;
+                $bookingStatusClass = $booking->status === 'approved'
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-amber-100 text-amber-700';
+                $bookingStatusText = $booking->status === 'approved' ? 'حجز مقبول' : 'حجز قيد المراجعة';
+            ?>
+            <?php if($course): ?>
+                <div class="offline-card block overflow-hidden border-dashed border-2">
+                    <div class="h-32 bg-amber-50 flex items-center justify-center text-amber-600 flex-shrink-0">
+                        <i class="fas fa-hourglass-half text-3xl"></i>
+                    </div>
+                    <div class="p-4">
+                        <div class="flex items-start justify-between gap-2 mb-2">
+                            <h3 class="text-base font-bold text-gray-900 line-clamp-2 leading-snug flex-1 min-w-0"><?php echo e($course->title); ?></h3>
+                            <span class="px-2 py-0.5 rounded-md text-xs font-semibold <?php echo e($bookingStatusClass); ?> flex-shrink-0">
+                                <?php echo e($bookingStatusText); ?>
+
+                            </span>
+                        </div>
+                        <p class="text-xs text-gray-500 mb-2">
+                            <?php echo e($course->instructor->name ?? '—'); ?>
+
+                            <?php if($course->locationModel || $course->location): ?>
+                                · <?php echo e($course->locationModel->name ?? $course->location ?? '—'); ?>
+
+                            <?php endif; ?>
+                        </p>
+                        <div class="text-xs text-gray-600 mb-2">
+                            <i class="fas fa-calendar-alt ml-1"></i>تاريخ الحجز: <?php echo e(optional($booking->created_at)->format('Y-m-d')); ?>
+
+                        </div>
+                        <?php if($booking->requestedGroup || $booking->assignedGroup): ?>
+                            <div class="text-xs text-gray-600 mb-2">
+                                <i class="fas fa-users-cog ml-1"></i>
+                                المجموعة:
+                                <?php echo e($booking->assignedGroup->name ?? $booking->requestedGroup->name ?? '—'); ?>
+
+                            </div>
+                        <?php endif; ?>
+                        <div class="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-md px-2 py-1">
+                            سيظهر الكورس كـ "مفعّل" بعد اعتماد التسجيل النهائي من الإدارة.
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
     </div>
 
     <?php if($enrollments->hasPages()): ?>

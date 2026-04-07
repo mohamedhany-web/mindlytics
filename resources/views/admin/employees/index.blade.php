@@ -187,6 +187,13 @@
                        class="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white text-sm rounded-lg font-medium transition-colors">
                         <i class="fas fa-edit mr-1"></i>تعديل
                     </a>
+                    <form action="{{ route('admin.employees.destroy', $employee) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من حذف الموظف؟ لا يمكن التراجع بعد الحذف.');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg font-medium transition-colors">
+                            <i class="fas fa-trash mr-1"></i>حذف
+                        </button>
+                    </form>
                 </div>
             </div>
             @endforeach

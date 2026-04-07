@@ -33,15 +33,48 @@ class InstallmentAgreementController extends Controller
 
     public function index(Request $request): View
     {
-        $agreements = InstallmentAgreement::with(['student', 'course', 'offlineEnrollment.course', 'plan'])
-            ->when($request->filled('status'), fn (Builder $query) => $query->where('status', $request->string('status')))
+        $base = $this->filteredAgreementsQuery($request);
+
+        $summary = [
+            'total_count' => (clone $base)->count(),
+            'active' => (clone $base)->where('status', InstallmentAgreement::STATUS_ACTIVE)->count(),
+            'overdue' => (clone $base)->where('status', InstallmentAgreement::STATUS_OVERDUE)->count(),
+            'completed' => (clone $base)->where('status', InstallmentAgreement::STATUS_COMPLETED)->count(),
+            'total_amount' => (float) (clone $base)->sum('total_amount'),
+            'deposit_amount' => (float) (clone $base)->sum('deposit_amount'),
+        ];
+
+        $agreements = (clone $base)
+            ->with(['student', 'course', 'offlineEnrollment.course', 'plan', 'payments'])
             ->latest()
             ->paginate(20)
             ->withQueryString();
 
         $statuses = $this->statusOptions();
+        $courseTypes = [
+            '' => 'كل أنواع الكورسات',
+            'online' => 'كورس أونلاين (تسجيل منصة)',
+            'offline' => 'كورس أوفلاين (حضوري)',
+        ];
 
-        return view('admin.installments.agreements.index', compact('agreements', 'statuses'));
+        return view('admin.installments.agreements.index', compact('agreements', 'statuses', 'summary', 'courseTypes'));
+    }
+
+    protected function filteredAgreementsQuery(Request $request): Builder
+    {
+        return InstallmentAgreement::query()
+            ->when($request->filled('status'), fn (Builder $q) => $q->where('status', $request->input('status')))
+            ->when($request->input('course_type') === 'online', fn (Builder $q) => $q->whereNotNull('student_course_enrollment_id'))
+            ->when($request->input('course_type') === 'offline', fn (Builder $q) => $q->whereNotNull('offline_course_enrollment_id'))
+            ->when($request->filled('search'), function (Builder $q) use ($request) {
+                $raw = $request->input('search');
+                $term = '%' . addcslashes((string) $raw, '%_\\') . '%';
+                $q->whereHas('student', function (Builder $s) use ($term) {
+                    $s->where('name', 'like', $term)
+                        ->orWhere('email', 'like', $term)
+                        ->orWhere('phone', 'like', $term);
+                });
+            });
     }
 
     public function createManualBooking(Request $request): View

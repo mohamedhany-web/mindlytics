@@ -36,6 +36,17 @@ class SalesLead extends Model
         'urgent' => 'عاجل',
     ];
 
+    public const LOSS_REASONS = [
+        'price_high' => 'السعر مرتفع',
+        'no_budget' => 'لا يوجد ميزانية',
+        'competitor' => 'اختار منافس',
+        'not_decision_maker' => 'ليس صاحب قرار',
+        'timing' => 'التوقيت غير مناسب',
+        'no_follow_up' => 'عدم الاستجابة للمتابعة',
+        'wrong_fit' => 'غير مناسب للاحتياج',
+        'other' => 'أخرى',
+    ];
+
     /** بعد كم يوم بلا تواصل نعتبر العميل «يحتاج متابعة» في التقارير */
     public const STALE_CONTACT_DAYS = 10;
 
@@ -56,6 +67,9 @@ class SalesLead extends Model
         'last_contacted_at',
         'closed_at',
         'lost_reason',
+        'csat_rating',
+        'csat_comment',
+        'csat_recorded_at',
     ];
 
     protected function casts(): array
@@ -65,6 +79,7 @@ class SalesLead extends Model
             'next_follow_up_at' => 'datetime',
             'last_contacted_at' => 'datetime',
             'closed_at' => 'datetime',
+            'csat_recorded_at' => 'datetime',
         ];
     }
 

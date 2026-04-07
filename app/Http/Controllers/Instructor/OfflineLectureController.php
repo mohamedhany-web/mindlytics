@@ -17,15 +17,19 @@ class OfflineLectureController extends Controller
     public function index(OfflineCourse $offlineCourse)
     {
         $this->authorizeInstructor($offlineCourse);
+        $channel = request()->query('channel') === 'online' ? 'online' : 'offline';
 
         $lectures = $offlineCourse->offlineLectures()
             ->with('group')
+            ->when($channel === 'online', function ($q) {
+                $q->whereHas('group', fn ($g) => $g->where('online_booking_enabled', true));
+            })
             ->ordered()
             ->get();
 
-        $groups = $offlineCourse->groups()->orderBy('name')->get();
+        $groups = $this->groupsForChannel($offlineCourse, $channel);
 
-        return view('instructor.offline-courses.lectures.index', compact('offlineCourse', 'lectures', 'groups'));
+        return view('instructor.offline-courses.lectures.index', compact('offlineCourse', 'lectures', 'groups', 'channel'));
     }
 
     /**
@@ -34,10 +38,11 @@ class OfflineLectureController extends Controller
     public function create(OfflineCourse $offlineCourse)
     {
         $this->authorizeInstructor($offlineCourse);
+        $channel = request()->query('channel') === 'online' ? 'online' : 'offline';
 
-        $groups = $offlineCourse->groups()->orderBy('name')->get();
+        $groups = $this->groupsForChannel($offlineCourse, $channel);
 
-        return view('instructor.offline-courses.lectures.create', compact('offlineCourse', 'groups'));
+        return view('instructor.offline-courses.lectures.create', compact('offlineCourse', 'groups', 'channel'));
     }
 
     /**
@@ -46,11 +51,13 @@ class OfflineLectureController extends Controller
     public function store(Request $request, OfflineCourse $offlineCourse)
     {
         $this->authorizeInstructor($offlineCourse);
+        $channel = $request->query('channel') === 'online' ? 'online' : 'offline';
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'scheduled_at' => 'nullable|date',
+            'meeting_url' => 'nullable|url',
             'duration_minutes' => 'nullable|integer|min:0|max:600',
             'recording_url' => 'nullable|url',
             'notes' => 'nullable|string',
@@ -66,6 +73,14 @@ class OfflineLectureController extends Controller
         $validated['instructor_id'] = Auth::id();
         $validated['offline_course_id'] = $offlineCourse->id;
         $validated['group_id'] = $validated['group_id'] ?? null;
+        if ($validated['group_id']) {
+            $allowedGroupExists = $this->groupsForChannel($offlineCourse, $channel)
+                ->where('id', (int) $validated['group_id'])
+                ->exists();
+            if (! $allowedGroupExists) {
+                return back()->withErrors(['group_id' => 'المجموعة المختارة غير متاحة لهذا النوع من الكورسات.'])->withInput();
+            }
+        }
         $validated['order'] = $offlineCourse->offlineLectures()->max('order') + 1;
         $validated['is_active'] = true;
 
@@ -93,7 +108,7 @@ class OfflineLectureController extends Controller
         OfflineLecture::create($validated);
 
         return redirect()
-            ->route('instructor.offline-courses.lectures.index', $offlineCourse)
+            ->route('instructor.offline-courses.lectures.index', ['offlineCourse' => $offlineCourse, 'channel' => $channel])
             ->with('success', 'تم إضافة المحاضرة بنجاح');
     }
 
@@ -103,13 +118,14 @@ class OfflineLectureController extends Controller
     public function show(OfflineCourse $offlineCourse, OfflineLecture $lecture)
     {
         $this->authorizeInstructor($offlineCourse);
+        $channel = request()->query('channel') === 'online' ? 'online' : 'offline';
         if ($lecture->offline_course_id !== $offlineCourse->id) {
             abort(404);
         }
 
         $lecture->load('group');
 
-        return view('instructor.offline-courses.lectures.show', compact('offlineCourse', 'lecture'));
+        return view('instructor.offline-courses.lectures.show', compact('offlineCourse', 'lecture', 'channel'));
     }
 
     /**
@@ -118,13 +134,14 @@ class OfflineLectureController extends Controller
     public function edit(OfflineCourse $offlineCourse, OfflineLecture $lecture)
     {
         $this->authorizeInstructor($offlineCourse);
+        $channel = request()->query('channel') === 'online' ? 'online' : 'offline';
         if ($lecture->offline_course_id !== $offlineCourse->id) {
             abort(404);
         }
 
-        $groups = $offlineCourse->groups()->orderBy('name')->get();
+        $groups = $this->groupsForChannel($offlineCourse, $channel);
 
-        return view('instructor.offline-courses.lectures.edit', compact('offlineCourse', 'lecture', 'groups'));
+        return view('instructor.offline-courses.lectures.edit', compact('offlineCourse', 'lecture', 'groups', 'channel'));
     }
 
     /**
@@ -133,6 +150,7 @@ class OfflineLectureController extends Controller
     public function update(Request $request, OfflineCourse $offlineCourse, OfflineLecture $lecture)
     {
         $this->authorizeInstructor($offlineCourse);
+        $channel = $request->query('channel') === 'online' ? 'online' : 'offline';
         if ($lecture->offline_course_id !== $offlineCourse->id) {
             abort(404);
         }
@@ -141,6 +159,7 @@ class OfflineLectureController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'scheduled_at' => 'nullable|date',
+            'meeting_url' => 'nullable|url',
             'duration_minutes' => 'nullable|integer|min:0|max:600',
             'recording_url' => 'nullable|url',
             'notes' => 'nullable|string',
@@ -155,10 +174,19 @@ class OfflineLectureController extends Controller
         $lecture->title = $validated['title'];
         $lecture->description = $validated['description'] ?? null;
         $lecture->scheduled_at = $validated['scheduled_at'] ?? null;
+        $lecture->meeting_url = $validated['meeting_url'] ?? null;
         $lecture->duration_minutes = $validated['duration_minutes'] ?? null;
         $lecture->recording_url = $validated['recording_url'] ?? null;
         $lecture->notes = $validated['notes'] ?? null;
         $lecture->group_id = $validated['group_id'] ?? null;
+        if ($lecture->group_id) {
+            $allowedGroupExists = $this->groupsForChannel($offlineCourse, $channel)
+                ->where('id', (int) $lecture->group_id)
+                ->exists();
+            if (! $allowedGroupExists) {
+                return back()->withErrors(['group_id' => 'المجموعة المختارة غير متاحة لهذا النوع من الكورسات.'])->withInput();
+            }
+        }
         $lecture->is_active = $request->boolean('is_active');
 
         $links = [];
@@ -183,7 +211,7 @@ class OfflineLectureController extends Controller
         $lecture->save();
 
         return redirect()
-            ->route('instructor.offline-courses.lectures.index', $offlineCourse)
+            ->route('instructor.offline-courses.lectures.index', ['offlineCourse' => $offlineCourse, 'channel' => $channel])
             ->with('success', 'تم تحديث المحاضرة بنجاح');
     }
 
@@ -193,6 +221,7 @@ class OfflineLectureController extends Controller
     public function destroy(OfflineCourse $offlineCourse, OfflineLecture $lecture)
     {
         $this->authorizeInstructor($offlineCourse);
+        $channel = request()->query('channel') === 'online' ? 'online' : 'offline';
         if ($lecture->offline_course_id !== $offlineCourse->id) {
             abort(404);
         }
@@ -207,8 +236,21 @@ class OfflineLectureController extends Controller
         $lecture->delete();
 
         return redirect()
-            ->route('instructor.offline-courses.lectures.index', $offlineCourse)
+            ->route('instructor.offline-courses.lectures.index', ['offlineCourse' => $offlineCourse, 'channel' => $channel])
             ->with('success', 'تم حذف المحاضرة');
+    }
+
+    private function groupsForChannel(OfflineCourse $offlineCourse, string $channel)
+    {
+        $q = $offlineCourse->groups()->orderBy('name');
+        if ($channel === 'online') {
+            $q->where(function ($g) {
+                $g->where('online_booking_enabled', true)
+                    ->orWhere('current_students_online', '>', 0);
+            });
+        }
+
+        return $q;
     }
 
     private function authorizeInstructor(OfflineCourse $offlineCourse): void
