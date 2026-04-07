@@ -12,6 +12,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Support\OfflineEnrollmentProvisioner;
+use App\Services\AutoInstallmentAgreementService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -150,6 +151,18 @@ class OfflineEnrollmentController extends Controller
                 $enrollmentChannel
             );
 
+            $createdEnrollment = OfflineCourseEnrollment::query()
+                ->where('user_id', (int) $validated['user_id'])
+                ->where('offline_course_id', $offlineCourse->id)
+                ->where('group_id', (int) $validated['group_id'])
+                ->where('enrollment_channel', $enrollmentChannel)
+                ->latest('id')
+                ->first();
+
+            if ($createdEnrollment && (float) $createdEnrollment->remaining_amount > 0 && (float) $createdEnrollment->paid_amount > 0) {
+                app(AutoInstallmentAgreementService::class)->ensureFromOfflineEnrollment($createdEnrollment, auth()->id());
+            }
+
             DB::commit();
 
             return redirect()->route('admin.offline-courses.enrollments.index', [
@@ -204,6 +217,9 @@ class OfflineEnrollmentController extends Controller
             $enrollment->save();
 
             $this->createPaymentRecord($enrollment, $payAmount, $validated);
+            if ((float) $enrollment->remaining_amount > 0 && (float) $enrollment->paid_amount > 0) {
+                app(AutoInstallmentAgreementService::class)->ensureFromOfflineEnrollment($enrollment, auth()->id());
+            }
 
             DB::commit();
 

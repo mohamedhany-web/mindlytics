@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
 use App\Models\ActivityLog;
+use App\Services\AutoInstallmentAgreementService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -223,6 +224,9 @@ class PaymentController extends Controller
             $invoice->refresh();
             if ($invoice->remaining_amount <= 0 && ! $invoice->isPaid()) {
                 $invoice->markAsPaid();
+            }
+            if ((float) $invoice->remaining_amount > 0) {
+                app(AutoInstallmentAgreementService::class)->ensureFromInvoice($invoice, auth()->id());
             }
 
             DB::commit();
