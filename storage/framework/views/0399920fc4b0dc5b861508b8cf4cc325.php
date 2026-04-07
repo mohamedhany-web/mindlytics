@@ -93,6 +93,44 @@ unset($__errorArgs, $__bag); ?>
                 <span class="text-sm text-gray-700">تسجيل كمدفوع بالكامل (يُنشئ سجلات مالية عند وجود سعر للكورس)</span>
             </label>
 
+            <div id="online-payment-box" class="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 rounded-lg border border-gray-200 bg-gray-50">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">طريقة الدفع (عند الدفع الكامل)</label>
+                    <select name="payment_method" id="online_payment_method" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                        <option value="cash" <?php if(old('payment_method', 'cash') === 'cash'): echo 'selected'; endif; ?>>نقدي</option>
+                        <option value="wallet" <?php if(old('payment_method') === 'wallet'): echo 'selected'; endif; ?>>تحويل على محفظة</option>
+                    </select>
+                    <?php $__errorArgs = ['payment_method'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="text-red-500 text-xs mt-1"><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                </div>
+                <div id="online_wallet_wrapper">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">المحفظة</label>
+                    <select name="wallet_id" id="online_wallet_id" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                        <option value="">اختر المحفظة</option>
+                        <?php $__currentLoopData = $wallets; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $wallet): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($wallet->id); ?>" <?php if((string) old('wallet_id') === (string) $wallet->id): echo 'selected'; endif; ?>>
+                                <?php echo e($wallet->name); ?> — <?php echo e(\App\Models\Wallet::typeLabel($wallet->type)); ?>
+
+                            </option>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                    </select>
+                    <?php $__errorArgs = ['wallet_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="text-red-500 text-xs mt-1"><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                </div>
+            </div>
+
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">ملاحظات للتسجيل</label>
                 <textarea name="notes" rows="2" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"><?php echo e(old('notes')); ?></textarea>
@@ -113,6 +151,11 @@ unset($__errorArgs, $__bag); ?>
 document.addEventListener('DOMContentLoaded', function () {
     const courseEl = document.getElementById('offline_course_id');
     const groupEl = document.getElementById('group_id');
+    const fullPaidEl = document.querySelector('input[name="mark_fully_paid"]');
+    const paymentMethodEl = document.getElementById('online_payment_method');
+    const walletWrapEl = document.getElementById('online_wallet_wrapper');
+    const walletSelectEl = document.getElementById('online_wallet_id');
+    const paymentBoxEl = document.getElementById('online-payment-box');
     if (!courseEl || !groupEl) return;
 
     function filterGroups() {
@@ -139,6 +182,28 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     courseEl.addEventListener('change', filterGroups);
     filterGroups();
+
+    function togglePaymentFields() {
+        const isFullyPaid = !!(fullPaidEl && fullPaidEl.checked);
+        const isWallet = paymentMethodEl && paymentMethodEl.value === 'wallet';
+
+        if (paymentBoxEl) {
+            paymentBoxEl.style.display = isFullyPaid ? '' : 'none';
+        }
+        if (walletWrapEl) {
+            walletWrapEl.style.display = isFullyPaid && isWallet ? '' : 'none';
+        }
+        if (walletSelectEl) {
+            walletSelectEl.required = isFullyPaid && isWallet;
+            if (!isFullyPaid || !isWallet) {
+                walletSelectEl.value = '';
+            }
+        }
+    }
+
+    if (fullPaidEl) fullPaidEl.addEventListener('change', togglePaymentFields);
+    if (paymentMethodEl) paymentMethodEl.addEventListener('change', togglePaymentFields);
+    togglePaymentFields();
 });
 </script>
 <?php $__env->stopPush(); ?>

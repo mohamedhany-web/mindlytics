@@ -188,11 +188,11 @@ class DesignTaskCycleController extends Controller
     public function updatePlannerItem(
         Request $request,
         DesignTaskCycle $designTaskCycle,
-        DesignCycleModeratorPlannerItem $design_cycle_moderator_planner_item
+        DesignCycleModeratorPlannerItem $planner_item
     ) {
         $user = Auth::user();
         abort_unless((int) $designTaskCycle->moderator_id === (int) $user->id, 403);
-        abort_unless((int) $design_cycle_moderator_planner_item->design_task_cycle_id === (int) $designTaskCycle->id, 404);
+        abort_unless((int) $planner_item->design_task_cycle_id === (int) $designTaskCycle->id, 404);
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:500'],
@@ -211,20 +211,20 @@ class DesignTaskCycleController extends Controller
             }
         }
 
-        $design_cycle_moderator_planner_item->update($data);
+        $planner_item->update($data);
 
         return back()->with('success', 'تم تحديث البند.');
     }
 
     public function destroyPlannerItem(
         DesignTaskCycle $designTaskCycle,
-        DesignCycleModeratorPlannerItem $design_cycle_moderator_planner_item
+        DesignCycleModeratorPlannerItem $planner_item
     ) {
         $user = Auth::user();
         abort_unless((int) $designTaskCycle->moderator_id === (int) $user->id, 403);
-        abort_unless((int) $design_cycle_moderator_planner_item->design_task_cycle_id === (int) $designTaskCycle->id, 404);
+        abort_unless((int) $planner_item->design_task_cycle_id === (int) $designTaskCycle->id, 404);
 
-        $design_cycle_moderator_planner_item->delete();
+        $planner_item->delete();
 
         return back()->with('success', 'تم حذف البند.');
     }

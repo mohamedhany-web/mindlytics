@@ -741,8 +741,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/create', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'create'])->name('create');
             Route::post('/', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'store'])->name('store');
             Route::post('/{design_task_cycle}/planner-items', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'storePlannerItem'])->name('planner-items.store');
-            Route::patch('/{design_task_cycle}/planner-items/{design_cycle_moderator_planner_item}', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'updatePlannerItem'])->name('planner-items.update');
-            Route::delete('/{design_task_cycle}/planner-items/{design_cycle_moderator_planner_item}', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'destroyPlannerItem'])->name('planner-items.destroy');
+            Route::patch('/{design_task_cycle}/planner-items/{planner_item}', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'updatePlannerItem'])->name('planner-items.update');
+            Route::delete('/{design_task_cycle}/planner-items/{planner_item}', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'destroyPlannerItem'])->name('planner-items.destroy');
             Route::get('/{design_task_cycle}', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'show'])->name('show');
             Route::post('/{design_task_cycle}/moderator-delivery', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'storeModeratorDelivery'])->name('moderator-delivery.store');
             Route::post('/{design_task_cycle}/cancel', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'cancel'])->name('cancel');
