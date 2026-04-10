@@ -8,6 +8,13 @@
     <?php if(session('success')): ?>
         <div class="bg-green-100 border border-green-400 text-green-800 px-4 py-3 rounded-lg"><?php echo e(session('success')); ?></div>
     <?php endif; ?>
+    <?php if(!empty(session('sales_duplicate_warnings'))): ?>
+        <div class="bg-amber-50 border border-amber-300 text-amber-950 px-4 py-3 rounded-lg text-sm space-y-1">
+            <?php $__currentLoopData = session('sales_duplicate_warnings'); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $w): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <p><i class="fas fa-exclamation-triangle ml-1"></i><?php echo e($w); ?></p>
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+        </div>
+    <?php endif; ?>
 
     <div class="flex flex-wrap items-center justify-between gap-3">
         <a href="<?php echo e(route('admin.sales.leads.index')); ?>" class="text-sm text-gray-600 hover:text-emerald-600"><i class="fas fa-arrow-right ml-1"></i> القائمة</a>
@@ -25,6 +32,12 @@
         <div class="flex flex-wrap gap-2 items-center justify-between">
             <div class="flex flex-wrap gap-2">
                 <span class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-sm font-semibold"><?php echo e(\App\Models\SalesLead::stageLabel($lead->stage)); ?></span>
+                <?php $pr = $lead->priority ?? 'normal'; ?>
+                <span class="px-3 py-1 rounded-full text-xs font-bold
+                    <?php if($pr === 'urgent'): ?> bg-rose-100 text-rose-800
+                    <?php elseif($pr === 'high'): ?> bg-orange-100 text-orange-800
+                    <?php elseif($pr === 'low'): ?> bg-slate-100 text-slate-700
+                    <?php else: ?> bg-gray-100 text-gray-800 <?php endif; ?>"><?php echo e(\App\Models\SalesLead::priorityLabel($pr)); ?></span>
                 <span class="text-sm text-gray-500"><?php echo e(\App\Models\SalesLead::sourceLabel($lead->source)); ?></span>
             </div>
             <p class="text-sm text-gray-600">مسند إلى: <strong><?php echo e($lead->assignee->name ?? '—'); ?></strong></p>
@@ -34,7 +47,8 @@
             <div><dt class="text-gray-500">البريد</dt><dd class="font-medium"><?php echo e($lead->email ?? '—'); ?></dd></div>
             <div><dt class="text-gray-500">الشركة</dt><dd class="font-medium"><?php echo e($lead->company ?? '—'); ?></dd></div>
             <div><dt class="text-gray-500">قيمة متوقعة</dt><dd class="font-medium"><?php echo e($lead->expected_value !== null ? number_format($lead->expected_value, 2) . ' ج.م' : '—'); ?></dd></div>
-            <div class="sm:col-span-2"><dt class="text-gray-500">متابعة تالية</dt><dd class="font-medium"><?php echo e($lead->next_follow_up_at?->format('Y-m-d H:i') ?? '—'); ?></dd></div>
+            <div class="sm:col-span-2"><dt class="text-gray-500">متابعة تالية</dt><dd class="font-medium <?php if($lead->isFollowUpOverdue()): ?> text-rose-600 <?php endif; ?>"><?php echo e($lead->next_follow_up_at?->format('Y-m-d H:i') ?? '—'); ?></dd></div>
+            <div class="sm:col-span-2"><dt class="text-gray-500">آخر تواصل مسجّل</dt><dd class="font-medium"><?php echo e($lead->last_contacted_at?->format('Y-m-d H:i') ?? '—'); ?></dd></div>
             <?php if($lead->interest): ?>
             <div class="sm:col-span-2"><dt class="text-gray-500">الاهتمام</dt><dd class="text-gray-800 whitespace-pre-wrap"><?php echo e($lead->interest); ?></dd></div>
             <?php endif; ?>

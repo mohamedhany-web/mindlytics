@@ -95,6 +95,55 @@ class SalesKpiService
     }
 
     /**
+     * مقاييس فعلية لأي فترة زمنية (للتقارير والتصدير).
+     *
+     * @return array<string, mixed>
+     */
+    public function metricsForPeriod(int $userId, Carbon $start, Carbon $end): array
+    {
+        return $this->metricsBucket(
+            $userId,
+            $start->copy()->startOfDay(),
+            $end->copy()->endOfDay()
+        );
+    }
+
+    /**
+     * تقرير KPI للفترة المختارة (أهداف النتائج تُقاس بنسبة أيام الفترة إلى 30 يوماً تقريباً).
+     *
+     * @return array<string, mixed>
+     */
+    public function buildPeriodReport(User $rep, Carbon $start, Carbon $end): array
+    {
+        $start = $start->copy()->startOfDay();
+        $end = $end->copy()->endOfDay();
+        $targets = $this->mergedTargets($rep, $end->copy()->startOfMonth());
+        $m = $this->metricsBucket($rep->id, $start, $end);
+        $periodDays = max(1, (int) $start->diffInDays($end) + 1);
+        $activityDaysFactor = max(1, (int) round($periodDays * 22 / 30));
+        $resultsScale = $periodDays / 30.0;
+
+        $monthlyScores = $this->pillarLinesFromMetrics($m, $targets, $activityDaysFactor, $resultsScale);
+        $weights = config('sales_kpi.weights', []);
+        $weightedTotal = 0.0;
+        foreach ($weights as $k => $wgt) {
+            $weightedTotal += ($monthlyScores['pillars'][$k]['score'] ?? 0) * (float) $wgt;
+        }
+
+        return [
+            'period_start' => $start,
+            'period_end' => $end,
+            'period_days' => $periodDays,
+            'targets' => $targets,
+            'metrics' => $m,
+            'pillars' => $monthlyScores['pillars'],
+            'kpi_lines' => $monthlyScores['lines'],
+            'composite' => round($weightedTotal, 1),
+            'alert_flags' => $this->alertFlags($monthlyScores['pillars'], $weightedTotal, $m),
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function metricsBucket(int $userId, Carbon $start, Carbon $end): array
@@ -320,15 +369,26 @@ class SalesKpiService
     private function scoreMonthlyPillars(int $userId, Carbon $monthStart, Carbon $monthEnd, array $t): array
     {
         $m = $this->metricsBucket($userId, $monthStart, $monthEnd);
-
-        $dealsMonthlyTarget = (float) $t['deals_weekly'] * 4.33;
-        $leadsMonthlyTarget = (float) $t['leads_weekly'] * 4.33;
         $dim = (int) $monthStart->daysInMonth;
         $activityDaysFactor = max(1, (int) round($dim * 22 / 30));
 
+        return $this->pillarLinesFromMetrics($m, $t, $activityDaysFactor, 1.0);
+    }
+
+    /**
+     * @param  array<string, mixed>  $m
+     * @param  array<string, mixed>  $t
+     * @return array{pillars: array<string, array{score: float, label: string}>, lines: array<string, array<string, mixed>>}
+     */
+    private function pillarLinesFromMetrics(array $m, array $t, int $activityDaysFactor, float $resultsScale): array
+    {
+        $dealsMonthlyTarget = (float) $t['deals_weekly'] * 4.33 * $resultsScale;
+        $leadsMonthlyTarget = (float) $t['leads_weekly'] * 4.33 * $resultsScale;
+        $revenueTarget = (float) $t['revenue_monthly'] * $resultsScale;
+
         $lines = [
             'new_leads_month' => ['label' => 'Leads جديدة (الشهر)', 'actual' => $m['new_leads'], 'target' => round($leadsMonthlyTarget, 0)],
-            'revenue' => ['label' => 'إيرادات (قيمة متوقعة للصفقات المكتملة)', 'actual' => $m['revenue_closed'], 'target' => $t['revenue_monthly']],
+            'revenue' => ['label' => 'إيرادات (قيمة متوقعة للصفقات المكتملة)', 'actual' => $m['revenue_closed'], 'target' => round($revenueTarget, 0)],
             'won_deals' => ['label' => 'صفقات مغلقة (فوز)', 'actual' => $m['won_closed'], 'target' => round($dealsMonthlyTarget, 0)],
             'avg_deal' => ['label' => 'متوسط قيمة الصفقة', 'actual' => $m['avg_deal_size'], 'target' => null],
             'calls_month' => ['label' => 'مكالمات', 'actual' => $m['calls'], 'target' => round((float) $t['calls_daily'] * $activityDaysFactor, 0)],
@@ -347,7 +407,7 @@ class SalesKpiService
         ];
 
         $results = $this->meanScores([
-            $this->achievementUp((float) $m['revenue_closed'], (float) $t['revenue_monthly']),
+            $this->achievementUp((float) $m['revenue_closed'], max(1.0, $revenueTarget)),
             $this->achievementUp((float) $m['won_closed'], max(1.0, $dealsMonthlyTarget)),
             $this->achievementUp((float) $m['new_leads'], max(1.0, $leadsMonthlyTarget)),
             $m['conversion_pct'] !== null
