@@ -19,16 +19,17 @@
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Alpine.js -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    {{-- سكربت فواتيرك يجب أن يُنفَّذ قبل Alpine حتى تكون fawaterkCheckout متاحة عند تهيئة الصفحة --}}
     @if(($platformPaymentMode ?? '') === 'fawaterak' && isset($course) && ($fawaterakCheckoutReady ?? false))
     <script src="{{ route('public.fawaterk.plugin') }}" defer></script>
     @endif
+
+    <!-- Alpine.js (بعد سكربت فواتيرك في ترتيب defer) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     
     <style>
         * {
@@ -655,20 +656,29 @@
                                 </p>
                                 <p class="text-sm text-indigo-900/90">بعد الضغط على «متابعة للدفع» تُحمَّل إضافة فواتيرك داخل الصفحة. اختر طريقة الدفع وأكمل العملية؛ عند النجاح يُفعَّل الكورس تلقائياً.</p>
                             </div>
-                            <div id="fawaterkDivId" class="min-h-[420px] w-full rounded-2xl border border-slate-200 bg-white shadow-inner overflow-hidden"></div>
+                            <div class="relative min-h-[420px] w-full rounded-2xl border border-slate-200 bg-slate-50/50 shadow-inner overflow-hidden">
+                                {{-- الحاوية يجب أن تبقى فارغة؛ الإضافة تملأها بمكونات الدفع --}}
+                                <div id="fawaterkDivId" class="min-h-[420px] w-full"></div>
+                                <div id="fawaterk-waiting-hint" class="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center text-slate-500 pointer-events-none z-10 bg-slate-50/90 backdrop-blur-[1px]">
+                                    <i class="fas fa-spinner fa-spin text-2xl text-indigo-400"></i>
+                                    <p class="text-sm font-medium text-slate-600">جاري تحميل طرق الدفع من فواتيرك…</p>
+                                    <p class="text-xs text-slate-500 max-w-md">إن استمرت المنطقة فارغة، تأكد من إضافة نفس عنوان الموقع في لوحة فواتيرك (تكامل iframe) ومطابقته لـ <code class="bg-white px-1 rounded border text-slate-700">APP_URL</code> أو <code class="bg-white px-1 rounded border text-slate-700">FAWATERAK_IFRAME_DOMAIN</code> (بروتوكول ونطاق مطابقان لما يُستخدم في المتصفح).</p>
+                                </div>
+                            </div>
                             <div
                                 x-data="checkoutFawaterakHandler('{{ route('public.course.checkout.fawaterak.prepare', $course->id) }}')"
+                                x-init="boot()"
                                 class="mt-6 space-y-4"
                             >
                                 <form @submit.prevent="startPayment">
                                     @csrf
                                     <div class="flex flex-col sm:flex-row gap-4">
                                         <button type="submit"
-                                                :disabled="isSubmitting"
+                                                :disabled="isSubmitting || pluginLoadError"
                                                 class="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 text-white px-6 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
                                             <i class="fas fa-lock" x-show="!isSubmitting"></i>
                                             <i class="fas fa-spinner fa-spin" x-show="isSubmitting" x-cloak></i>
-                                            <span x-text="isSubmitting ? 'جاري التجهيز...' : 'متابعة للدفع'"></span>
+                                            <span x-text="isSubmitting ? 'جاري التجهيز...' : (pluginLoadError ? 'تعذر التحميل' : 'تحديث / إعادة تحميل الدفع')"></span>
                                         </button>
                                         <a href="{{ route('public.course.show', $course->id) }}"
                                            :class="{ 'pointer-events-none opacity-50': isSubmitting }"
@@ -820,13 +830,49 @@
 
     <script>
         function checkoutFawaterakHandler(prepareUrl) {
+            const hideWaitingHint = () => {
+                const el = document.getElementById('fawaterk-waiting-hint');
+                if (el) {
+                    el.classList.add('hidden');
+                }
+            };
+
             return {
                 isSubmitting: false,
                 error: '',
+                pluginLoadError: false,
+                async waitForFawaterkPlugin(maxAttempts = 80, intervalMs = 100) {
+                    for (let i = 0; i < maxAttempts; i++) {
+                        if (typeof fawaterkCheckout === 'function') {
+                            return true;
+                        }
+                        await new Promise((r) => setTimeout(r, intervalMs));
+                    }
+                    return false;
+                },
+                async boot() {
+                    this.pluginLoadError = false;
+                    this.error = '';
+                    const ok = await this.waitForFawaterkPlugin();
+                    if (!ok) {
+                        this.pluginLoadError = true;
+                        this.error = 'تعذر تحميل سكربت فواتيرك. تحقق من أن المسار /js/checkout-pay-widget.v1.js يعمل، أو من مفاتيح البيئة واتصال الخادم بفواتيرك.';
+                        hideWaitingHint();
+                        return;
+                    }
+                    await this.startPayment();
+                },
                 async startPayment() {
                     this.isSubmitting = true;
                     this.error = '';
+                    this.pluginLoadError = false;
                     try {
+                        if (typeof fawaterkCheckout !== 'function') {
+                            const ok = await this.waitForFawaterkPlugin(40, 100);
+                            if (!ok) {
+                                throw new Error('لم يُحمَّل سكربت فواتيرك بعد. حدّث الصفحة وحاول مرة أخرى.');
+                            }
+                        }
                         const csrfMeta = document.querySelector('meta[name=\"csrf-token\"]');
                         const token = csrfMeta ? csrfMeta.getAttribute('content') : (document.querySelector('input[name=\"_token\"]')?.value || '');
                         const response = await fetch(prepareUrl, {
@@ -835,6 +881,7 @@
                                 'X-CSRF-TOKEN': token,
                                 'Accept': 'application/json',
                                 'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
                             },
                             body: JSON.stringify({}),
                         });
@@ -845,13 +892,17 @@
                         if (data.mode !== 'iframe' || !data.pluginConfig) {
                             throw new Error('استجابة غير صالحة من الخادم.');
                         }
-                        if (typeof fawaterkCheckout !== 'function') {
-                            throw new Error('لم يُحمَّل سكربت فواتيرك بعد. حدّث الصفحة وحاول مرة أخرى.');
+                        hideWaitingHint();
+                        try {
+                            fawaterkCheckout(data.pluginConfig);
+                        } catch (pluginErr) {
+                            console.error('fawaterkCheckout threw', pluginErr);
+                            throw new Error('فشل تشغيل واجهة فواتيرك. تحقق من تطابق نطاق الموقع مع لوحة فواتيرك (iframe) ومن مفتاح الـ hash.');
                         }
-                        fawaterkCheckout(data.pluginConfig);
                     } catch (e) {
                         this.error = e.message || 'حدث خطأ أثناء الاتصال بفواتيرك.';
                         console.error('Fawaterak checkout error', e);
+                        hideWaitingHint();
                     } finally {
                         this.isSubmitting = false;
                     }
