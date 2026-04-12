@@ -600,9 +600,14 @@ class CheckoutController extends Controller
         $cartTotal = (string) round($amount, 2);
         $currency = config('fawaterak.currency', 'EGP');
 
+        $browserHostname = $request->input('browser_hostname');
+        $browserHostname = is_string($browserHostname) ? $browserHostname : null;
+
         $pluginConfig = [
             'envType' => $fawaterak->envType(),
-            'hashKey' => $fawaterak->generateHashKey(),
+            'hashKey' => $fawaterak->generateHashKey($browserHostname),
+            // الإضافة الحالية تستخدم token لطلبات API (قد لا يظهر في مثال الوثائق القصير)
+            'token' => $fawaterak->checkoutPluginBearerToken(),
             'version' => (string) config('fawaterak.version', '0'),
             'redirectOutIframe' => true,
             'style' => [

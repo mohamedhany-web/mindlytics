@@ -652,7 +652,7 @@
                                         <i class="fas fa-exclamation-triangle text-2xl text-amber-800"></i>
                                     </div>
                                     <h3 class="text-lg font-black text-amber-950 mb-2">فواتيرك غير جاهزة</h3>
-                                    <p class="text-sm text-amber-900 max-w-lg mx-auto leading-relaxed">تأكد من تفعيل البوابة من الإدارة ومن ضبط <code class="bg-amber-100/80 px-1 rounded">FAWATERAK_VENDOR_KEY</code> و <code class="bg-amber-100/80 px-1 rounded">FAWATERAK_PROVIDER_KEY</code> و<code class="bg-amber-100/80 px-1 rounded">FAWATERAK_INTEGRATION=iframe</code> في ملف البيئة.</p>
+                                    <p class="text-sm text-amber-900 max-w-lg mx-auto leading-relaxed">تأكد من تفعيل البوابة من الإدارة ومن ضبط <code class="bg-amber-100/80 px-1 rounded">FAWATERAK_VENDOR_KEY</code> و <code class="bg-amber-100/80 px-1 rounded">FAWATERAK_PROVIDER_KEY</code> و<code class="bg-amber-100/80 px-1 rounded">FAWATERAK_INTEGRATION=iframe</code> في ملف البيئة. إن ظهرت من المتصفح «Invalid Token» جرّب <code class="bg-amber-100/80 px-1 rounded">FAWATERAK_PLUGIN_BEARER_TOKEN</code> إذا كان Bearer الإضافة عند فواتيرك يختلف عن مفتاح الـ Vendor، وراجع تطابق بيئة <code class="bg-amber-100/80 px-1 rounded">FAWATERAK_ENV</code> مع لوحة فواتيرك.</p>
                                 </div>
                             <?php elseif($__payMode === 'fawaterak' && isset($course) && ($fawaterakCheckoutReady ?? false)): ?>
                             <div class="mb-6 p-5 bg-indigo-50 rounded-xl border-2 border-indigo-200">
@@ -668,7 +668,7 @@
                                 <div id="fawaterk-waiting-hint" class="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center text-slate-500 pointer-events-none z-10 bg-slate-50/90 backdrop-blur-[1px]">
                                     <i class="fas fa-spinner fa-spin text-2xl text-indigo-400"></i>
                                     <p class="text-sm font-medium text-slate-600">جاري تحميل طرق الدفع من فواتيرك…</p>
-                                    <p class="text-xs text-slate-500 max-w-md">إن استمرت المنطقة فارغة، تأكد من إضافة نفس عنوان الموقع في لوحة فواتيرك (تكامل iframe) ومطابقته لـ <code class="bg-white px-1 rounded border text-slate-700">APP_URL</code> أو <code class="bg-white px-1 rounded border text-slate-700">FAWATERAK_IFRAME_DOMAIN</code> (بروتوكول ونطاق مطابقان لما يُستخدم في المتصفح).</p>
+                                    <p class="text-xs text-slate-500 max-w-md">حسب وثائق فواتيرك: نطاقات الـ iframe تُسجَّل بـ <strong class="font-semibold text-slate-600">HTTPS فقط</strong> بدون <code class="bg-white px-1 rounded border text-slate-700">/</code> في النهاية (مثال <code class="bg-white px-1 rounded border text-slate-700">https://127.0.0.1</code> بدون المنفذ). التوقيع يستخدم <code class="bg-white px-1 rounded border text-slate-700">Domain=https://hostname&ProviderKey=…</code> مع API Key كسر HMAC. للتطوير المحلي استخدم HTTPS محلياً أو <code class="bg-white px-1 rounded border text-slate-700">FAWATERAK_IFRAME_DOMAIN</code>. إن غيّرت <code class="bg-white px-1 rounded border text-slate-700">FAWATERAK_VERSION</code> عن 0 أضف <code class="bg-white px-1 rounded border text-slate-700">?version=…</code> في إدخال النطاق باللوحة كما في الوثائق.</p>
                                 </div>
                             </div>
                             <div
@@ -889,7 +889,11 @@
                                 'Content-Type': 'application/json',
                                 'X-Requested-With': 'XMLHttpRequest',
                             },
-                            body: JSON.stringify({}),
+                            body: JSON.stringify({
+                                browser_hostname: (typeof window !== 'undefined' && window.location && window.location.hostname)
+                                    ? window.location.hostname
+                                    : '',
+                            }),
                         });
                         const data = await response.json().catch(() => ({}));
                         if (!response.ok) {
