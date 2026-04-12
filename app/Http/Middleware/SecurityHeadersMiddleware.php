@@ -28,6 +28,7 @@ class SecurityHeadersMiddleware
         if (!config('app.debug') || !env('DISABLE_CSP', true)) {
             $csp = "default-src 'self'; " .
                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' " .
+                   "https://app.fawaterk.com " .
                    "https://cdn.tailwindcss.com " .
                    "https://cdn.jsdelivr.net " .
                    "https://cdnjs.cloudflare.com " .
@@ -45,6 +46,7 @@ class SecurityHeadersMiddleware
                    "img-src 'self' data: https: blob:; " .
                    "connect-src 'self' https: ws: wss:; " .
                    "frame-src 'self' " .
+                   "https://app.fawaterk.com " .
                    "https://www.youtube.com " .
                    "https://player.vimeo.com " .
                    "https://www.google.com; " .

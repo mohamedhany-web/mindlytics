@@ -63,11 +63,32 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="space-y-4">
                         <div class="flex items-center justify-between py-2 border-b border-slate-100">
-                            <span class="text-sm text-slate-500">المبلغ</span>
+                            <span class="text-sm text-slate-500">المبلغ (إجمالي محصّل)</span>
                             <span class="text-2xl font-black text-emerald-600">
                                 {{ number_format($payment->amount, 2) }} ج.م
                             </span>
                         </div>
+                        @if($payment->gateway_fee_amount && (float) $payment->gateway_fee_amount > 0)
+                        <div class="flex items-center justify-between py-2 border-b border-slate-100">
+                            <span class="text-sm text-slate-500">عمولة بوابة الدفع</span>
+                            <span class="text-lg font-bold text-amber-700">{{ number_format($payment->gateway_fee_amount, 2) }} ج.م</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2 border-b border-slate-100">
+                            <span class="text-sm text-slate-500">صافي بعد العمولة (تقديري)</span>
+                            <span class="text-lg font-bold text-violet-800">{{ number_format((float) $payment->amount - (float) $payment->gateway_fee_amount, 2) }} ج.م</span>
+                        </div>
+                        @if($payment->gateway_fee_detail)
+                        <div class="py-2 border-b border-slate-100 text-xs text-slate-500">
+                            تفاصيل احتساب العمولة: <code class="bg-slate-100 px-1 rounded">{{ json_encode($payment->gateway_fee_detail, JSON_UNESCAPED_UNICODE) }}</code>
+                        </div>
+                        @endif
+                        @endif
+                        @if($payment->order_id)
+                        <div class="flex items-center justify-between py-2 border-b border-slate-100">
+                            <span class="text-sm text-slate-500">طلب الشراء</span>
+                            <a href="{{ route('admin.orders.show', $payment->order_id) }}" class="text-sm font-semibold text-sky-700 hover:underline">طلب #{{ $payment->order_id }}</a>
+                        </div>
+                        @endif
                         <div class="flex items-center justify-between py-2 border-b border-slate-100">
                             <span class="text-sm text-slate-500">العملة</span>
                             <span class="text-sm font-semibold text-slate-900">{{ $payment->currency ?? 'EGP' }}</span>
@@ -100,12 +121,25 @@
                         @if($payment->payment_gateway)
                         <div class="flex items-center justify-between py-2 border-b border-slate-100">
                             <span class="text-sm text-slate-500">بوابة الدفع</span>
-                            <span class="text-sm font-semibold text-slate-900">{{ $payment->payment_gateway }}</span>
+                            <span class="text-sm font-semibold text-slate-900">{{ \App\Models\Payment::gatewayLabel($payment->payment_gateway) }}</span>
                         </div>
                         @endif
                     </div>
                 </div>
             </div>
+
+            @if($payment->proof_path)
+            <div class="rounded-2xl border border-amber-200 bg-amber-50/80 p-6">
+                <h3 class="text-base font-bold text-amber-950 mb-3">إيصال مرفوع من الطالب</h3>
+                <a href="{{ asset('storage/' . $payment->proof_path) }}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-sm font-semibold text-amber-800 hover:underline">
+                    <i class="fas fa-external-link-alt"></i>
+                    فتح الصورة في نافذة جديدة
+                </a>
+                <div class="mt-4 rounded-xl border border-amber-200/80 bg-white p-2 max-w-md">
+                    <img src="{{ asset('storage/' . $payment->proof_path) }}" alt="إيصال" class="max-h-64 w-full object-contain rounded-lg">
+                </div>
+            </div>
+            @endif
 
             <!-- معلومات العميل -->
             @if($payment->user)

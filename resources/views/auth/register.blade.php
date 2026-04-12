@@ -7,6 +7,9 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ __('auth.register') }} - {{ config('app.name') }}</title>
 
+    <link rel="icon" href="{{ $platformFaviconUrl ?? asset('favicon.ico') }}">
+    <link rel="apple-touch-icon" href="{{ $platformLogoUrl ?? asset('logo-removebg-preview.png') }}">
+
     {{-- تحميل صورة الخلفية مبكراً لسرعة الظهور --}}
     <link rel="preload" href="{{ $authBackgroundUrl ?? asset('images/brainstorm-meeting.jpg') }}" as="image">
 

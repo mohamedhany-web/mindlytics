@@ -59,11 +59,6 @@ class MyCourseController extends Controller
                 'lessons.progress' => function($query) use ($user) {
                     $query->where('user_id', $user->id);
                 },
-                'lectures' => function($query) {
-                    $query->orderBy('scheduled_at', 'desc');
-                },
-                'lectures.lesson',
-                'lectures.instructor',
                 'sections.items.item' => function($query) use ($user) {
                     // جلب تقدم الدروس والأنماط في العناصر
                     if ($query->getModel() instanceof \App\Models\CourseLesson) {
@@ -107,16 +102,12 @@ class MyCourseController extends Controller
 
         $coursePoints = LectureVideoQuestionAnswer::totalScoreForUserInCourse($user->id, $course->id);
 
-        // تجميع المحاضرات حسب الدرس (للتوافق مع الكود القديم)
-        $lecturesByLesson = $course->lectures->groupBy('course_lesson_id');
-
         return view('student.my-courses.show', compact(
             'course', 
             'progress', 
             'totalLessons', 
             'completedLessons', 
             'coursePoints',
-            'lecturesByLesson',
             'sections'
         ));
     }

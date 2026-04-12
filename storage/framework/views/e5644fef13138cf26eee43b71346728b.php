@@ -1,9 +1,7 @@
-@extends('layouts.app')
+<?php $__env->startSection('title', $course->localized('title') . ' - ' . __('student.my_courses')); ?>
+<?php $__env->startSection('header', $course->localized('title')); ?>
 
-@section('title', $course->localized('title') . ' - ' . __('student.my_courses'))
-@section('header', $course->localized('title'))
-
-@push('styles')
+<?php $__env->startPush('styles'); ?>
 <style>
     @keyframes shimmer {
         0% { transform: translateX(-100%); }
@@ -812,16 +810,16 @@
         }
     }
 </style>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="min-h-screen bg-gray-50 py-6" 
      x-data="courseFocusMode()"
      @scroll.window="updateProgressBar()">
     <div class="w-full px-4 sm:px-6 lg:px-8">
         <!-- العودة -->
         <div class="mb-4">
-            <a href="{{ route('my-courses.index') }}" class="inline-flex items-center text-sky-600 hover:text-sky-700 text-sm font-medium">
+            <a href="<?php echo e(route('my-courses.index')); ?>" class="inline-flex items-center text-sky-600 hover:text-sky-700 text-sm font-medium">
                 <i class="fas fa-arrow-right ml-2"></i>
                 العودة إلى كورساتي
             </a>
@@ -832,16 +830,16 @@
             <div class="flex flex-col lg:flex-row">
                 <!-- صورة الكورس -->
                 <div class="lg:w-2/5 h-52 lg:h-72 bg-sky-100 flex items-center justify-center relative overflow-hidden flex-shrink-0">
-                    @if($course->thumbnail)
-                        <img src="{{ asset('storage/' . $course->thumbnail) }}" alt="{{ $course->localized('title') }}" class="w-full h-full object-cover">
-                    @else
+                    <?php if($course->thumbnail): ?>
+                        <img src="<?php echo e(asset('storage/' . $course->thumbnail)); ?>" alt="<?php echo e($course->localized('title')); ?>" class="w-full h-full object-cover">
+                    <?php else: ?>
                         <div class="text-sky-600 text-center">
                             <i class="fas fa-graduation-cap text-4xl"></i>
-                            <p class="text-sm font-medium mt-2 text-sky-700">{{ $course->academicSubject->name ?? 'كورس' }}</p>
+                            <p class="text-sm font-medium mt-2 text-sky-700"><?php echo e($course->academicSubject->name ?? 'كورس'); ?></p>
                         </div>
-                    @endif
+                    <?php endif; ?>
                     <div class="absolute top-3 left-3 bg-white rounded-lg px-3 py-1.5 shadow-sm border border-gray-100">
-                        <span class="text-sm font-bold text-sky-600">{{ $progress }}%</span>
+                        <span class="text-sm font-bold text-sky-600"><?php echo e($progress); ?>%</span>
                     </div>
                 </div>
 
@@ -849,9 +847,10 @@
                 <div class="lg:flex-1 p-5 sm:p-6 lg:p-8">
                     <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
                         <div class="min-w-0 flex-1">
-                            <h1 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2 leading-tight">{{ $course->localized('title') }}</h1>
+                            <h1 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2 leading-tight"><?php echo e($course->localized('title')); ?></h1>
                             <p class="text-sm text-gray-500">
-                                {{ $course->academicYear->name ?? '—' }} · {{ $course->academicSubject->name ?? '—' }} · {{ $course->teacher->name ?? '—' }}
+                                <?php echo e($course->academicYear->name ?? '—'); ?> · <?php echo e($course->academicSubject->name ?? '—'); ?> · <?php echo e($course->teacher->name ?? '—'); ?>
+
                             </p>
                         </div>
                         <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500 text-white">
@@ -859,35 +858,35 @@
                         </span>
                     </div>
 
-                    @if($course->description)
-                        <p class="text-sm text-gray-600 mb-4 leading-relaxed line-clamp-2">{{ Str::limit($course->description, 180) }}</p>
-                    @endif
+                    <?php if($course->description): ?>
+                        <p class="text-sm text-gray-600 mb-4 leading-relaxed line-clamp-2"><?php echo e(Str::limit($course->description, 180)); ?></p>
+                    <?php endif; ?>
 
                     <!-- التقدم والإحصائيات -->
                     <div class="flex flex-wrap items-center gap-4 sm:gap-6 mb-5">
                         <div class="flex-1 min-w-[200px]">
                             <div class="flex items-center justify-between text-sm mb-1.5">
                                 <span class="font-medium text-gray-600">التقدم</span>
-                                <span class="font-bold text-sky-600">{{ $progress }}%</span>
+                                <span class="font-bold text-sky-600"><?php echo e($progress); ?>%</span>
                             </div>
                             <div class="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                                <div class="h-full bg-sky-500 rounded-full transition-all duration-500" style="width: {{ min($progress, 100) }}%;"></div>
+                                <div class="h-full bg-sky-500 rounded-full transition-all duration-500" style="width: <?php echo e(min($progress, 100)); ?>%;"></div>
                             </div>
-                            <p class="text-xs text-gray-500 mt-1">{{ $progress }}% مكتمل</p>
+                            <p class="text-xs text-gray-500 mt-1"><?php echo e($progress); ?>% مكتمل</p>
                         </div>
                         <div class="flex gap-4">
                             <div class="text-center px-4 py-2 bg-amber-50 rounded-lg border border-amber-100">
-                                <span class="text-lg font-bold text-amber-600 block"><i class="fas fa-star text-amber-500 ml-1"></i>{{ number_format((float)($coursePoints ?? 0), 0) }}</span>
+                                <span class="text-lg font-bold text-amber-600 block"><i class="fas fa-star text-amber-500 ml-1"></i><?php echo e(number_format((float)($coursePoints ?? 0), 0)); ?></span>
                                 <span class="text-xs text-gray-600">نقاط</span>
                             </div>
                             <div class="text-center px-4 py-2 bg-emerald-50 rounded-lg border border-emerald-100">
-                                <span class="text-lg font-bold text-emerald-600 block">{{ $completedLessons }}</span>
+                                <span class="text-lg font-bold text-emerald-600 block"><?php echo e($completedLessons); ?></span>
                                 <span class="text-xs text-gray-600">مكتمل</span>
                             </div>
                         </div>
                     </div>
 
-                    <a href="{{ route('my-courses.learn', $course) }}" 
+                    <a href="<?php echo e(route('my-courses.learn', $course)); ?>" 
                        class="inline-flex items-center justify-center gap-2 bg-sky-500 hover:bg-sky-600 text-white px-6 py-3 rounded-lg font-semibold text-sm transition-colors">
                         <i class="fas fa-play"></i>
                         ابدأ التعلم
@@ -911,7 +910,7 @@
                             <i class="fas fa-info-circle text-sky-500"></i>
                             وصف الكورس
                         </h3>
-                        <p class="text-sm text-gray-700 leading-relaxed">{{ $course->description ?? 'لا يوجد وصف متاح' }}</p>
+                        <p class="text-sm text-gray-700 leading-relaxed"><?php echo e($course->description ?? 'لا يوجد وصف متاح'); ?></p>
                     </div>
                     <div class="bg-gray-50 rounded-xl p-5 border border-gray-100">
                         <h3 class="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -921,11 +920,11 @@
                         <div class="space-y-3">
                             <div class="flex items-center justify-between py-2.5 px-3 bg-white rounded-lg border border-gray-100">
                                 <span class="text-sm text-gray-600 flex items-center gap-2"><i class="fas fa-layer-group text-sky-500 w-4"></i> المستوى</span>
-                                <span class="text-sm font-semibold text-gray-900">{{ $course->level ?? '—' }}</span>
+                                <span class="text-sm font-semibold text-gray-900"><?php echo e($course->level ?? '—'); ?></span>
                             </div>
                             <div class="flex items-center justify-between py-2.5 px-3 bg-white rounded-lg border border-gray-100">
                                 <span class="text-sm text-gray-600 flex items-center gap-2"><i class="fas fa-clock text-sky-500 w-4"></i> المدة</span>
-                                <span class="text-sm font-semibold text-gray-900">{{ $course->duration_hours }} ساعة</span>
+                                <span class="text-sm font-semibold text-gray-900"><?php echo e($course->duration_hours); ?> ساعة</span>
                             </div>
                         </div>
                     </div>
@@ -971,9 +970,9 @@
                         
                         <!-- عنوان الكورس -->
                         <div class="flex items-center gap-3">
-                            <h1 class="text-xl font-black text-gray-900">{{ $course->localized('title') }}</h1>
+                            <h1 class="text-xl font-black text-gray-900"><?php echo e($course->localized('title')); ?></h1>
                             <span class="text-sm text-gray-500">|</span>
-                            <span class="text-sm text-gray-600">{{ $course->academicYear->name ?? 'غير محدد' }} - {{ $course->academicSubject->name ?? 'غير محدد' }}</span>
+                            <span class="text-sm text-gray-600"><?php echo e($course->academicYear->name ?? 'غير محدد'); ?> - <?php echo e($course->academicSubject->name ?? 'غير محدد'); ?></span>
                         </div>
                     </div>
                     
@@ -1012,7 +1011,7 @@
                         <!-- حالة فارغة -->
                         <div x-show="!selectedLesson" class="empty-content-state">
                             <i class="fas fa-graduation-cap"></i>
-                            <h3 class="text-xl font-black text-gray-900 mb-2 mt-4">مرحباً في {{ $course->localized('title') }}</h3>
+                            <h3 class="text-xl font-black text-gray-900 mb-2 mt-4">مرحباً في <?php echo e($course->localized('title')); ?></h3>
                             <p class="text-sm text-gray-600">اختر درساً من القائمة الجانبية أو استخدم «ابدأ التعلم» من الصفحة الرئيسية للكورس</p>
                         </div>
                         
@@ -1048,20 +1047,21 @@
                     </div>
                     
                     <div class="focus-sidebar-content">
-                        @if(isset($sections) && $sections->count() > 0)
+                        <?php if(isset($sections) && $sections->count() > 0): ?>
                             <!-- عرض المنهج من الأقسام -->
-                            @foreach($sections as $section)
+                            <?php $__currentLoopData = $sections; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $section): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                 <div class="mb-6">
                                     <div class="curriculum-section-header mb-3">
                                         <i class="fas fa-folder ml-2"></i>
-                                        {{ $section->title }}
+                                        <?php echo e($section->title); ?>
+
                                     </div>
-                                    @if($section->description)
-                                        <p class="text-xs text-gray-400 mb-3 px-2">{{ $section->description }}</p>
-                                    @endif
+                                    <?php if($section->description): ?>
+                                        <p class="text-xs text-gray-400 mb-3 px-2"><?php echo e($section->description); ?></p>
+                                    <?php endif; ?>
                                     
-                                    @foreach($section->activeItems as $curriculumItem)
-                                        @php
+                                    <?php $__currentLoopData = $section->activeItems; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $curriculumItem): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                        <?php
                                             $item = $curriculumItem->item;
                                             // تخطي العناصر المحذوفة
                                             if (!$item) continue;
@@ -1090,115 +1090,115 @@
                                                 $isCurrent = !$isCompleted && ($curriculumItem->order == 1 || $allPreviousCompleted);
                                                 $isLocked = !$isCurrent && !$isCompleted;
                                             }
-                                        @endphp
+                                        ?>
                                         
-                                        <div class="curriculum-item {{ $isCompleted ? 'completed' : '' }} {{ $isCurrent ? 'active' : '' }} {{ $isLocked ? 'locked' : '' }}"
-                                             @if($item instanceof \App\Models\CourseLesson)
-                                                 @click="if ({{ $isLocked ? 'true' : 'false' }}) return; selectedLesson = {{ $item->id }}; loadLesson({{ $item->id }})"
-                                             @elseif($item instanceof \App\Models\Assignment)
-                                                 @click="loadAssignment({{ $item->id }})"
-                                             @elseif($item instanceof \App\Models\AdvancedExam || $item instanceof \App\Models\Exam)
-                                                 @click="loadExam({{ $item->id }})"
-                                             @endif
-                                             x-show="!searchQuery || '{{ strtolower($item->title) }}'.includes(searchQuery.toLowerCase())">
+                                        <div class="curriculum-item <?php echo e($isCompleted ? 'completed' : ''); ?> <?php echo e($isCurrent ? 'active' : ''); ?> <?php echo e($isLocked ? 'locked' : ''); ?>"
+                                             <?php if($item instanceof \App\Models\CourseLesson): ?>
+                                                 @click="if (<?php echo e($isLocked ? 'true' : 'false'); ?>) return; selectedLesson = <?php echo e($item->id); ?>; loadLesson(<?php echo e($item->id); ?>)"
+                                             <?php elseif($item instanceof \App\Models\Assignment): ?>
+                                                 @click="loadAssignment(<?php echo e($item->id); ?>)"
+                                             <?php elseif($item instanceof \App\Models\AdvancedExam || $item instanceof \App\Models\Exam): ?>
+                                                 @click="loadExam(<?php echo e($item->id); ?>)"
+                                             <?php endif; ?>
+                                             x-show="!searchQuery || '<?php echo e(strtolower($item->title)); ?>'.includes(searchQuery.toLowerCase())">
                                             <div class="flex items-start gap-3">
                                                 <div class="flex-shrink-0 mt-1">
-                                                    @if($item instanceof \App\Models\CourseLesson)
-                                                        @if($isCompleted)
+                                                    <?php if($item instanceof \App\Models\CourseLesson): ?>
+                                                        <?php if($isCompleted): ?>
                                                             <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
                                                                 <i class="fas fa-check text-white text-xs"></i>
                                                             </div>
-                                                        @elseif($isCurrent)
+                                                        <?php elseif($isCurrent): ?>
                                                             <div class="w-8 h-8 bg-[#2CA9BD] rounded-lg flex items-center justify-center animate-pulse">
                                                                 <i class="fas fa-play text-white text-xs"></i>
                                                             </div>
-                                                        @else
+                                                        <?php else: ?>
                                                             <div class="w-8 h-8 bg-gray-600 rounded-lg flex items-center justify-center">
                                                                 <i class="fas fa-lock text-white text-xs"></i>
                                                             </div>
-                                                        @endif
-                                                    @elseif($item instanceof \App\Models\Assignment)
+                                                        <?php endif; ?>
+                                                    <?php elseif($item instanceof \App\Models\Assignment): ?>
                                                         <div class="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
                                                             <i class="fas fa-tasks text-white text-xs"></i>
                                                         </div>
-                                                    @elseif($item instanceof \App\Models\AdvancedExam || $item instanceof \App\Models\Exam)
+                                                    <?php elseif($item instanceof \App\Models\AdvancedExam || $item instanceof \App\Models\Exam): ?>
                                                         <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
                                                             <i class="fas fa-clipboard-check text-white text-xs"></i>
                                                         </div>
-                                                    @endif
+                                                    <?php endif; ?>
                                                 </div>
                                                 <div class="flex-1 min-w-0">
-                                                    <div class="curriculum-item-title">{{ $item->title }}</div>
+                                                    <div class="curriculum-item-title"><?php echo e($item->title); ?></div>
                                                     <div class="curriculum-item-meta">
-                                                        @if($item instanceof \App\Models\CourseLesson)
+                                                        <?php if($item instanceof \App\Models\CourseLesson): ?>
                                                             <span><i class="fas fa-video ml-1"></i> درس</span>
-                                                            @if($item->duration_minutes)
-                                                                <span><i class="fas fa-clock ml-1"></i> {{ $item->duration_minutes }} دقيقة</span>
-                                                            @endif
-                                                        @elseif($item instanceof \App\Models\Assignment)
+                                                            <?php if($item->duration_minutes): ?>
+                                                                <span><i class="fas fa-clock ml-1"></i> <?php echo e($item->duration_minutes); ?> دقيقة</span>
+                                                            <?php endif; ?>
+                                                        <?php elseif($item instanceof \App\Models\Assignment): ?>
                                                             <span><i class="fas fa-tasks ml-1"></i> واجب</span>
-                                                            @if($item->due_date)
-                                                                <span><i class="fas fa-calendar ml-1"></i> {{ $item->due_date->format('Y/m/d') }}</span>
-                                                            @endif
-                                                        @elseif($item instanceof \App\Models\AdvancedExam || $item instanceof \App\Models\Exam)
+                                                            <?php if($item->due_date): ?>
+                                                                <span><i class="fas fa-calendar ml-1"></i> <?php echo e($item->due_date->format('Y/m/d')); ?></span>
+                                                            <?php endif; ?>
+                                                        <?php elseif($item instanceof \App\Models\AdvancedExam || $item instanceof \App\Models\Exam): ?>
                                                             <span><i class="fas fa-clipboard-check ml-1"></i> امتحان</span>
-                                                            @if($item->start_date)
-                                                                <span><i class="fas fa-calendar ml-1"></i> {{ $item->start_date->format('Y/m/d') }}</span>
-                                                            @endif
-                                                        @endif
+                                                            <?php if($item->start_date): ?>
+                                                                <span><i class="fas fa-calendar ml-1"></i> <?php echo e($item->start_date->format('Y/m/d')); ?></span>
+                                                            <?php endif; ?>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    @endforeach
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                 </div>
-                            @endforeach
-                        @else
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                        <?php else: ?>
                             <!-- عرض الدروس القديمة (للتوافق) -->
                             <div class="curriculum-section-header">
                                 <i class="fas fa-book ml-2"></i>
-                                الدروس ({{ $totalLessons }})
+                                الدروس (<?php echo e($totalLessons); ?>)
                             </div>
-                            @foreach($course->lessons->sortBy('order') as $index => $lesson)
-                                @php
+                            <?php $__currentLoopData = $course->lessons->sortBy('order'); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $lesson): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <?php
                                     $lessonProgress = $lesson->progress->first();
                                     $isCompleted = $lessonProgress && $lessonProgress->is_completed;
                                     $isCurrentLesson = !$isCompleted && ($index == 0 || $course->lessons->take($index)->every(function($prevLesson) {
                                         return $prevLesson->progress->isNotEmpty() && $prevLesson->progress->first()->is_completed;
                                     }));
-                                @endphp
-                                <div class="curriculum-item {{ $isCompleted ? 'completed' : '' }} {{ $isCurrentLesson ? 'active' : '' }} {{ !$isCurrentLesson && !$isCompleted ? 'locked' : '' }}"
-                                     @click="if (!$isCurrentLesson && !$isCompleted) return; selectedLesson = {{ $lesson->id }}; loadLesson({{ $lesson->id }})"
-                                     x-show="!searchQuery || '{{ strtolower($lesson->title) }}'.includes(searchQuery.toLowerCase())">
+                                ?>
+                                <div class="curriculum-item <?php echo e($isCompleted ? 'completed' : ''); ?> <?php echo e($isCurrentLesson ? 'active' : ''); ?> <?php echo e(!$isCurrentLesson && !$isCompleted ? 'locked' : ''); ?>"
+                                     @click="if (!$isCurrentLesson && !$isCompleted) return; selectedLesson = <?php echo e($lesson->id); ?>; loadLesson(<?php echo e($lesson->id); ?>)"
+                                     x-show="!searchQuery || '<?php echo e(strtolower($lesson->title)); ?>'.includes(searchQuery.toLowerCase())">
                                     <div class="flex items-start gap-3">
                                         <div class="flex-shrink-0 mt-1">
-                                            @if($isCompleted)
+                                            <?php if($isCompleted): ?>
                                                 <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
                                                     <i class="fas fa-check text-white text-xs"></i>
                                                 </div>
-                                            @elseif($isCurrentLesson)
+                                            <?php elseif($isCurrentLesson): ?>
                                                 <div class="w-8 h-8 bg-[#2CA9BD] rounded-lg flex items-center justify-center animate-pulse">
                                                     <i class="fas fa-play text-white text-xs"></i>
                                                 </div>
-                                            @else
+                                            <?php else: ?>
                                                 <div class="w-8 h-8 bg-gray-600 rounded-lg flex items-center justify-center">
                                                     <i class="fas fa-lock text-white text-xs"></i>
                                                 </div>
-                                            @endif
+                                            <?php endif; ?>
                                         </div>
                                         <div class="flex-1 min-w-0">
-                                            <div class="curriculum-item-title">{{ $lesson->title }}</div>
+                                            <div class="curriculum-item-title"><?php echo e($lesson->title); ?></div>
                                             <div class="curriculum-item-meta">
-                                                <span><i class="fas fa-clock ml-1"></i> {{ $lesson->duration_minutes ?? 0 }} دقيقة</span>
-                                                @if($lesson->video_url)
+                                                <span><i class="fas fa-clock ml-1"></i> <?php echo e($lesson->duration_minutes ?? 0); ?> دقيقة</span>
+                                                <?php if($lesson->video_url): ?>
                                                     <span><i class="fas fa-video ml-1"></i> فيديو</span>
-                                                @endif
+                                                <?php endif; ?>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            @endforeach
-                        @endif
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                        <?php endif; ?>
                     </div>
                 </div>
                 
@@ -1261,7 +1261,7 @@
     </div>
 </div>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 function courseFocusMode() {
     return {
@@ -1275,7 +1275,7 @@ function courseFocusMode() {
         selectedLesson: null,
         lessonContent: '',
         loadLesson(lessonId) {
-            const lessonUrl = '{{ route('my-courses.lesson.watch', [$course, ':lessonId']) }}'.replace(':lessonId', lessonId);
+            const lessonUrl = '<?php echo e(route('my-courses.lesson.watch', [$course, ':lessonId'])); ?>'.replace(':lessonId', lessonId);
             window.open(lessonUrl, '_blank');
         },
         toggleSection(section) {
@@ -1323,6 +1323,8 @@ function courseFocusMode() {
     };
 }
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/student/my-courses/show.blade.php ENDPATH**/ ?>

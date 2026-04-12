@@ -42,8 +42,8 @@ class CalendarNotificationService
                     'type' => 'reminder',
                     'priority' => 'normal',
                     'audience' => 'student',
-                    'action_url' => route('my-courses.show', $course->id) . '#lectures',
-                    'action_text' => 'عرض المحاضرة',
+                    'action_url' => route('my-courses.learn', $course->id),
+                    'action_text' => 'الذهاب للكورس',
                     'data' => [
                         'lecture_id' => $lecture->id,
                         'course_id' => $course->id,
@@ -65,8 +65,8 @@ class CalendarNotificationService
                         'type' => 'reminder',
                         'priority' => 'high',
                         'audience' => 'student',
-                        'action_url' => route('my-courses.show', $course->id) . '#lectures',
-                        'action_text' => 'عرض المحاضرة',
+                        'action_url' => route('my-courses.learn', $course->id),
+                        'action_text' => 'الذهاب للكورس',
                         'expires_at' => $lecture->scheduled_at,
                         'data' => [
                             'lecture_id' => $lecture->id,
@@ -87,7 +87,7 @@ class CalendarNotificationService
                         'type' => 'reminder',
                         'priority' => 'urgent',
                         'audience' => 'student',
-                        'action_url' => $lecture->teams_meeting_link ?? route('my-courses.show', $course->id) . '#lectures',
+                        'action_url' => $lecture->teams_meeting_link ?? route('my-courses.learn', $course->id),
                         'action_text' => 'انضم للمحاضرة',
                         'expires_at' => $lecture->scheduled_at,
                         'data' => [

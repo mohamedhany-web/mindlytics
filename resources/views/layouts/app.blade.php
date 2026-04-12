@@ -12,10 +12,10 @@
     <title>{{ config('app.name', 'Mindlytics') }} - @yield('title', __('auth.dashboard'))</title>
 
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ $platformLogoUrl ?? asset('logo-removebg-preview.png') }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ $platformLogoUrl ?? asset('logo-removebg-preview.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ $platformLogoUrl ?? asset('logo-removebg-preview.png') }}">
+    <link rel="icon" href="{{ $platformFaviconUrl ?? asset('favicon.ico') }}">
+    <link rel="apple-touch-icon" href="{{ $platformLogoUrl ?? asset('logo-removebg-preview.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ $platformFaviconUrl ?? asset('favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ $platformFaviconUrl ?? asset('favicon.ico') }}">
 
     <!-- خط عربي أصيل -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

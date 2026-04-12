@@ -74,6 +74,14 @@ class Order extends Model
         return $this->belongsTo(Payment::class);
     }
 
+    /**
+     * مدفوعات مرتبطة بالطلب (عمولة البوابة وسجل المحاسبة).
+     */
+    public function gatewayPayments()
+    {
+        return $this->hasMany(Payment::class, 'order_id');
+    }
+
     public function coupon()
     {
         return $this->belongsTo(Coupon::class);

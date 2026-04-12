@@ -3,10 +3,13 @@
     <div class="p-6 border-b-2 border-slate-700/50 bg-gradient-to-br from-slate-800/90 via-slate-800/80 to-slate-900/90 flex-shrink-0 backdrop-blur-sm" style="margin-top: 0 !important; padding-top: 1.5rem !important;">
         <div class="flex items-center gap-4">
             <div class="relative">
-                <div class="w-16 h-16 rounded-2xl flex items-center justify-center shadow-xl bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 border-2 border-blue-400/30">
-                    <span class="text-3xl font-black text-white drop-shadow-lg">M</span>
+                <div class="w-16 h-16 rounded-2xl flex items-center justify-center shadow-xl bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 border-2 border-blue-400/30 overflow-hidden p-1.5">
+                    <img src="<?php echo e($platformLogoUrl ?? asset('logo-removebg-preview.png')); ?>"
+                         alt="<?php echo e(config('app.name')); ?>"
+                         class="w-full h-full object-contain object-center"
+                         onerror="this.onerror=null;this.src='<?php echo e(asset('logo-removebg-preview.png')); ?>';">
                 </div>
-                <div class="absolute -inset-1 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 rounded-2xl blur opacity-30 animate-pulse"></div>
+                <div class="absolute -inset-1 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 rounded-2xl blur opacity-30 animate-pulse pointer-events-none"></div>
             </div>
             <div>
                 <h2 class="text-xl font-black bg-gradient-to-r from-blue-300 via-blue-200 to-blue-100 bg-clip-text text-transparent tracking-tight">Mindlytics</h2>
@@ -127,7 +130,7 @@
 
             <!-- إدارة النظام -->
             <?php
-                $systemManagementOpen = request()->routeIs('admin.users.*') || request()->routeIs('admin.orders.*') || request()->routeIs('admin.notifications.*') || request()->routeIs('admin.employee-notifications.*') || request()->routeIs('admin.activity-log*') || request()->routeIs('admin.two-factor-logs.*') || request()->routeIs('admin.statistics.*') || request()->routeIs('admin.performance.*');
+                $systemManagementOpen = request()->routeIs('admin.system-settings.*') || request()->routeIs('admin.users.*') || request()->routeIs('admin.orders.*') || request()->routeIs('admin.notifications.*') || request()->routeIs('admin.employee-notifications.*') || request()->routeIs('admin.activity-log*') || request()->routeIs('admin.two-factor-logs.*') || request()->routeIs('admin.statistics.*') || request()->routeIs('admin.performance.*');
             ?>
             <li x-data="{ open: <?php echo e($systemManagementOpen ? 'true' : 'false'); ?> }">
                 <button @click="open = !open" 
@@ -139,6 +142,14 @@
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
                 <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-slate-600/50 pr-2">
+                    <li>
+                        <a href="<?php echo e(route('admin.system-settings.index')); ?>"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.system-settings.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : ''); ?>">
+                            <i class="fas fa-palette w-4"></i>
+                            <span>إعدادات النظام</span>
+                        </a>
+                    </li>
                     <li>
                         <a href="<?php echo e(route('admin.users.index')); ?>" 
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -321,7 +332,7 @@
 
             <!-- إدارة المحاسبة -->
             <?php
-                $accountingOpen = request()->routeIs('admin.invoices.*') || request()->routeIs('admin.payments.*') || request()->routeIs('admin.transactions.*') || request()->routeIs('admin.wallets.*') || request()->routeIs('admin.expenses.*') || request()->routeIs('admin.subscriptions.*') || request()->routeIs('admin.installments.*') || request()->routeIs('admin.accounting.*') || request()->routeIs('admin.salaries.*') || request()->routeIs('admin.employee-agreements.*') || request()->routeIs('admin.accounting.hub') || request()->routeIs('admin.accounting.chart');
+                $accountingOpen = request()->routeIs('admin.invoices.*') || request()->routeIs('admin.payments.*') || request()->routeIs('admin.transactions.*') || request()->routeIs('admin.wallets.*') || request()->routeIs('admin.expenses.*') || request()->routeIs('admin.subscriptions.*') || request()->routeIs('admin.installments.*') || request()->routeIs('admin.accounting.*') || request()->routeIs('admin.salaries.*') || request()->routeIs('admin.employee-agreements.*') || request()->routeIs('admin.accounting.hub') || request()->routeIs('admin.accounting.chart') || request()->routeIs('admin.accounting.gateway-operations');
             ?>
             <li x-data="{ open: <?php echo e($accountingOpen ? 'true' : 'false'); ?> }">
                 <button @click="open = !open" 
@@ -356,6 +367,16 @@
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.accounting.installments') ? 'bg-violet-600/35 text-white font-semibold shadow-md border-r-2 border-violet-400' : ''); ?>">
                             <i class="fas fa-percentage w-4"></i>
                             <span>لوحة التقسيط</span>
+                        </a>
+                    </li>
+                    <?php endif; ?>
+                    <?php if(Route::has('admin.accounting.gateway-operations')): ?>
+                    <li>
+                        <a href="<?php echo e(route('admin.accounting.gateway-operations')); ?>"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.accounting.gateway-operations') ? 'bg-indigo-600/35 text-white font-semibold shadow-md border-r-2 border-indigo-400' : ''); ?>">
+                            <i class="fas fa-plug w-4"></i>
+                            <span>بوابات الدفع</span>
                         </a>
                     </li>
                     <?php endif; ?>

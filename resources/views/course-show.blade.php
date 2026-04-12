@@ -971,10 +971,18 @@
       :class="{ 'overflow-hidden': mobileMenu }">
 
     @include('components.unified-navbar')
+
+    @if(session('payment_success_modal'))
+        @include('components.payment-success-modal', [
+            'message' => session('success'),
+            'redirectUrl' => session('payment_success_redirect_url') ?? (Auth::check() && Auth::user()->isStudent() ? route('my-courses.learn', $course->id) : null),
+            'seconds' => 5,
+        ])
+    @endif
     
     <main class="pt-0 mt-0">
     {{-- رسائل النجاح / المعلومات / الأخطاء بعد إتمام الطلب أو أي إجراء --}}
-    @if(session('success'))
+    @if(session('success') && !session('payment_success_modal'))
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 lg:pt-24 pb-2" x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 8000)">
             <div class="rounded-xl border-2 border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 px-4 py-4 shadow-lg flex items-start gap-3">
                 <i class="fas fa-check-circle text-green-600 text-2xl flex-shrink-0 mt-0.5"></i>
@@ -1527,7 +1535,7 @@
                                 </div>
                             </div>
 
-                            @if(session('success'))
+                            @if(session('success') && !session('payment_success_modal'))
                                 <div class="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold">
                                     {{ session('success') }}
                                 </div>

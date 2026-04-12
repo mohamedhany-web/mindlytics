@@ -7,11 +7,11 @@
     <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
     <title><?php echo $__env->yieldContent('title', __('auth.dashboard')); ?> - <?php echo e(config('app.name')); ?></title>
     
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="<?php echo e(asset('favicon.ico')); ?>">
-    <link rel="apple-touch-icon" sizes="180x180" href="<?php echo e(asset('logo-removebg-preview.png')); ?>">
-    <link rel="icon" type="image/png" sizes="32x32" href="<?php echo e(asset('logo-removebg-preview.png')); ?>">
-    <link rel="icon" type="image/png" sizes="16x16" href="<?php echo e(asset('logo-removebg-preview.png')); ?>">
+    <!-- Favicon & أيقونات المنصة (من إعدادات النظام) -->
+    <link rel="icon" href="<?php echo e($platformFaviconUrl ?? asset('favicon.ico')); ?>">
+    <link rel="apple-touch-icon" href="<?php echo e($platformLogoUrl ?? asset('logo-removebg-preview.png')); ?>">
+    <link rel="icon" type="image/png" sizes="32x32" href="<?php echo e($platformFaviconUrl ?? asset('favicon.ico')); ?>">
+    <link rel="icon" type="image/png" sizes="16x16" href="<?php echo e($platformFaviconUrl ?? asset('favicon.ico')); ?>">
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">

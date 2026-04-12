@@ -381,6 +381,17 @@ Route::post('/course/{courseId}/checkout/kashier', [\App\Http\Controllers\Public
     ->middleware('auth')
     ->name('public.course.checkout.kashier');
 
+// فواتيرك (iframe): تجهيز الإضافة + بروكسي السكربت
+Route::get('/js/checkout-pay-widget.v1.js', \App\Http\Controllers\Public\FawaterkPluginController::class)
+    ->name('public.fawaterk.plugin');
+Route::post('/course/{courseId}/checkout/fawaterak/prepare', [\App\Http\Controllers\Public\CheckoutController::class, 'fawaterakPrepare'])
+    ->middleware('auth')
+    ->name('public.course.checkout.fawaterak.prepare');
+Route::get('/checkout/fawaterak/{status}', [\App\Http\Controllers\Public\CheckoutController::class, 'fawaterakReturn'])
+    ->middleware('auth')
+    ->where('status', 'success|fail|pending')
+    ->name('public.checkout.fawaterak.return');
+
 // تسجيل مجاني للكورسات المجانية
 Route::post('/course/{courseId}/enroll-free', [\App\Http\Controllers\Public\CheckoutController::class, 'enrollFree'])
     ->middleware('auth')
@@ -976,6 +987,10 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         // إدارة الكورسات القديمة
         Route::resource('courses', \App\Http\Controllers\Admin\CourseController::class);
 
+        // إعدادات النظام (الهوية البصرية: اللوجو والأيقونة)
+        Route::get('/system-settings', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'index'])->name('system-settings.index');
+        Route::put('/system-settings', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'update'])->name('system-settings.update');
+
         // سجل النشاطات
         Route::get('/activity-log', [\App\Http\Controllers\Admin\ActivityLogController::class, 'index'])->name('activity-log');
         Route::get('/activity-log/{activityLog}', [\App\Http\Controllers\Admin\ActivityLogController::class, 'show'])->name('activity-log.show');
@@ -1350,6 +1365,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('/accounting/hub', [\App\Http\Controllers\Admin\AccountingHubController::class, 'hub'])->name('accounting.hub');
         Route::get('/accounting/chart-of-accounts', [\App\Http\Controllers\Admin\AccountingHubController::class, 'chart'])->name('accounting.chart');
         Route::get('/accounting/installments', [\App\Http\Controllers\Admin\AccountingInstallmentsController::class, 'index'])->name('accounting.installments');
+        Route::get('/accounting/gateway-operations', [\App\Http\Controllers\Admin\AccountingGatewayOperationsController::class, 'index'])->name('accounting.gateway-operations');
 
         Route::get('/accounting/reports', [\App\Http\Controllers\Admin\AccountingReportsController::class, 'index'])->name('accounting.reports');
         Route::get('/accounting/reports/export', [\App\Http\Controllers\Admin\AccountingReportsController::class, 'export'])->name('accounting.reports.export');
@@ -1526,6 +1542,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
     // مسارات الطلاب - محمية للطلاب فقط
     Route::prefix('student')->name('student.')->middleware(['role:student'])->group(function () {
         Route::resource('invoices', \App\Http\Controllers\Student\InvoiceController::class)->only(['index', 'show']);
+        Route::post('invoices/{invoice}/payment-proof', [\App\Http\Controllers\Student\InvoiceController::class, 'storePaymentProof'])
+            ->name('invoices.payment-proof');
         Route::resource('wallet', \App\Http\Controllers\Student\WalletController::class)->only(['index', 'show']);
         Route::resource('certificates', \App\Http\Controllers\Student\CertificateController::class)->only(['index', 'show']);
         Route::resource('achievements', \App\Http\Controllers\Student\AchievementController::class)->only(['index', 'show']);

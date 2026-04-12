@@ -1,16 +1,16 @@
-@php
+<?php
     $__pageLocale = app()->getLocale();
     $__pageRtl = $__pageLocale === 'ar';
-@endphp
+?>
 <!DOCTYPE html>
-<html lang="{{ $__pageLocale }}" dir="{{ $__pageRtl ? 'rtl' : 'ltr' }}">
+<html lang="<?php echo e($__pageLocale); ?>" dir="<?php echo e($__pageRtl ? 'rtl' : 'ltr'); ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>إتمام الطلب - {{ isset($course) ? $course->localized('title') : ($learningPath->name ?? 'الطلب') }} - Mindlytics</title>
+    <title>إتمام الطلب - <?php echo e(isset($course) ? $course->localized('title') : ($learningPath->name ?? 'الطلب')); ?> - Mindlytics</title>
 
     <!-- خط عربي -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,9 +26,9 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    @if(($platformPaymentMode ?? '') === 'fawaterak' && isset($course) && ($fawaterakCheckoutReady ?? false))
-    <script src="{{ route('public.fawaterk.plugin') }}" defer></script>
-    @endif
+    <?php if(($platformPaymentMode ?? '') === 'fawaterak' && isset($course) && ($fawaterakCheckoutReady ?? false)): ?>
+    <script src="<?php echo e(route('public.fawaterk.plugin')); ?>" defer></script>
+    <?php endif; ?>
     
     <style>
         * {
@@ -376,7 +376,7 @@
       x-data="{ mobileMenu: false }"
       :class="{ 'overflow-hidden': mobileMenu }">
 
-    @include('components.unified-navbar')
+    <?php echo $__env->make('components.unified-navbar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     
     <main>
         <!-- Hero Section -->
@@ -403,15 +403,15 @@
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                 <!-- Breadcrumb -->
                 <nav class="mb-6 text-gray-600 text-sm flex items-center fade-in-up">
-                    <a href="{{ url('/') }}" class="hover:text-blue-600 transition-colors">الرئيسية</a>
+                    <a href="<?php echo e(url('/')); ?>" class="hover:text-blue-600 transition-colors">الرئيسية</a>
                     <span class="mx-2 text-gray-400">/</span>
-                    <a href="{{ route('public.courses') }}" class="hover:text-blue-600 transition-colors">الكورسات</a>
+                    <a href="<?php echo e(route('public.courses')); ?>" class="hover:text-blue-600 transition-colors">الكورسات</a>
                     <span class="mx-2 text-gray-400">/</span>
-                    @if(isset($course))
-                        <a href="{{ route('public.course.show', $course->id) }}" class="hover:text-blue-600 transition-colors">{{ Str::limit($course->localized('title') ?: 'الكورس', 30) }}</a>
-                    @elseif(isset($learningPath))
-                        <a href="{{ route('public.learning-path.show', Str::slug($learningPath->name)) }}" class="hover:text-blue-600 transition-colors">{{ Str::limit($learningPath->name ?? 'المسار', 30) }}</a>
-                    @endif
+                    <?php if(isset($course)): ?>
+                        <a href="<?php echo e(route('public.course.show', $course->id)); ?>" class="hover:text-blue-600 transition-colors"><?php echo e(Str::limit($course->localized('title') ?: 'الكورس', 30)); ?></a>
+                    <?php elseif(isset($learningPath)): ?>
+                        <a href="<?php echo e(route('public.learning-path.show', Str::slug($learningPath->name))); ?>" class="hover:text-blue-600 transition-colors"><?php echo e(Str::limit($learningPath->name ?? 'المسار', 30)); ?></a>
+                    <?php endif; ?>
                     <span class="mx-2 text-gray-400">/</span>
                     <span class="text-gray-900 font-medium">إتمام الطلب</span>
                 </nav>
@@ -421,7 +421,8 @@
                         إتمام الطلب
                     </h1>
                     <p class="text-lg md:text-xl text-gray-600">
-                        خطوة أخيرة للحصول على {{ isset($course) ? 'الكورس' : 'المسار التعليمي' }}
+                        خطوة أخيرة للحصول على <?php echo e(isset($course) ? 'الكورس' : 'المسار التعليمي'); ?>
+
                     </p>
                 </div>
             </div>
@@ -443,26 +444,29 @@
                             <div class="mb-6 pb-6 border-b border-gray-200">
                                 <div class="flex items-start gap-3 mb-3">
                                     <div class="w-14 h-14 bg-gradient-to-br from-blue-600 to-green-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                                        @if(isset($course))
+                                        <?php if(isset($course)): ?>
                                             <i class="fas fa-code text-white text-xl"></i>
-                                        @else
+                                        <?php else: ?>
                                             <i class="fas fa-route text-white text-xl"></i>
-                                        @endif
+                                        <?php endif; ?>
                                     </div>
                                     <div class="flex-1 min-w-0">
                                         <h4 class="font-bold text-gray-900 text-base mb-1 line-clamp-2">
-                                            @if(isset($course))
-                                                {{ $course->localized('title') }}
-                                            @else
-                                                {{ $learningPath->name }}
-                                            @endif
+                                            <?php if(isset($course)): ?>
+                                                <?php echo e($course->localized('title')); ?>
+
+                                            <?php else: ?>
+                                                <?php echo e($learningPath->name); ?>
+
+                                            <?php endif; ?>
                                         </h4>
                                         <p class="text-sm text-gray-500">
-                                            @if(isset($course))
-                                                {{ $course->academicSubject->name ?? 'غير محدد' }}
-                                            @else
+                                            <?php if(isset($course)): ?>
+                                                <?php echo e($course->academicSubject->name ?? 'غير محدد'); ?>
+
+                                            <?php else: ?>
                                                 مسار تعليمي شامل
-                                            @endif
+                                            <?php endif; ?>
                                         </p>
                                     </div>
                                 </div>
@@ -473,14 +477,14 @@
                                 <div class="flex items-center justify-between">
                                     <span class="text-gray-600 text-sm">السعر:</span>
                                     <span class="text-xl font-black text-blue-600">
-                                        {{ number_format((isset($course) ? $course->price : $learningPath->price) ?? 0, 2) }} 
+                                        <?php echo e(number_format((isset($course) ? $course->price : $learningPath->price) ?? 0, 2)); ?> 
                                         <span class="text-sm text-gray-600">ج.م</span>
                                     </span>
                                 </div>
                                 <div class="flex items-center justify-between pt-4 border-t-2 border-gray-300">
                                     <span class="text-gray-900 font-bold text-lg">الإجمالي:</span>
                                     <span class="text-2xl font-black text-green-600">
-                                        {{ number_format((isset($course) ? $course->price : $learningPath->price) ?? 0, 2) }} 
+                                        <?php echo e(number_format((isset($course) ? $course->price : $learningPath->price) ?? 0, 2)); ?> 
                                         <span class="text-base text-gray-600">ج.م</span>
                                     </span>
                                 </div>
@@ -488,7 +492,7 @@
 
                             <!-- Course/Learning Path Features -->
                             <div class="space-y-3">
-                                <h4 class="text-sm font-bold text-gray-900 mb-3">مميزات {{ isset($course) ? 'الكورس' : 'المسار' }}:</h4>
+                                <h4 class="text-sm font-bold text-gray-900 mb-3">مميزات <?php echo e(isset($course) ? 'الكورس' : 'المسار'); ?>:</h4>
                                 <div class="space-y-2 text-sm text-gray-600">
                                     <div class="flex items-center gap-2">
                                         <i class="fas fa-check-circle text-green-500"></i>
@@ -519,84 +523,86 @@
                                 طرق الدفع المتاحة
                             </h2>
                             
-                            @if(session('error'))
+                            <?php if(session('error')): ?>
                                 <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl fade-in-up">
                                     <p class="text-red-700 text-sm flex items-center gap-2">
                                         <i class="fas fa-exclamation-circle"></i>
-                                        {{ session('error') }}
+                                        <?php echo e(session('error')); ?>
+
                                     </p>
                                 </div>
-                            @endif
+                            <?php endif; ?>
 
-                            @if($errors->any())
+                            <?php if($errors->any()): ?>
                                 <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl fade-in-up">
                                     <ul class="list-disc list-inside space-y-1 text-red-700 text-sm">
-                                        @foreach($errors->all() as $error)
-                                            <li>{{ $error }}</li>
-                                        @endforeach
+                                        <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $error): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                            <li><?php echo e($error); ?></li>
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                     </ul>
                                 </div>
-                            @endif
+                            <?php endif; ?>
 
-                            @if(session('success'))
+                            <?php if(session('success')): ?>
                                 <div class="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl fade-in-up">
                                     <p class="text-green-700 text-sm flex items-center gap-2">
                                         <i class="fas fa-check-circle"></i>
-                                        {{ session('success') }}
+                                        <?php echo e(session('success')); ?>
+
                                     </p>
                                 </div>
-                            @endif
+                            <?php endif; ?>
 
-                            @php
+                            <?php
                                 $__payMode = $platformPaymentMode ?? 'kashier';
                                 $__completeUrl = isset($course)
                                     ? route('public.course.checkout.complete', $course->id)
                                     : route('public.learning-path.checkout.complete', Str::slug($learningPath->name));
-                            @endphp
+                            ?>
 
-                            @if($__payMode === 'manual')
+                            <?php if($__payMode === 'manual'): ?>
                                 <div class="mb-6 p-5 bg-emerald-50 rounded-xl border-2 border-emerald-200">
                                     <p class="text-sm font-bold text-emerald-900 mb-2 flex items-center gap-2">
                                         <i class="fas fa-university"></i>
                                         دفع يدوي — تحويل ثم رفع إيصال
                                     </p>
-                                    <p class="text-sm text-emerald-800">حوّل المبلغ إلى أحد وسائل الدفع المعروضة أدناه، ثم ارفع صورة واضحة للإيصال. سيتم مراجعة طلبك وتفعيل {{ isset($course) ? 'الكورس' : 'المسار' }} بعد الموافقة.</p>
+                                    <p class="text-sm text-emerald-800">حوّل المبلغ إلى أحد وسائل الدفع المعروضة أدناه، ثم ارفع صورة واضحة للإيصال. سيتم مراجعة طلبك وتفعيل <?php echo e(isset($course) ? 'الكورس' : 'المسار'); ?> بعد الموافقة.</p>
                                 </div>
 
-                                @if($wallets->isEmpty())
+                                <?php if($wallets->isEmpty()): ?>
                                     <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-sm">
                                         لا توجد محافظ أو حسابات تحويل مضبوطة حالياً. يرجى التواصل مع الإدارة.
                                     </div>
-                                @else
+                                <?php else: ?>
                                     <div class="mb-6 space-y-3">
                                         <p class="text-sm font-bold text-gray-900">بيانات التحويل</p>
                                         <div class="grid gap-3">
-                                            @foreach($wallets as $w)
+                                            <?php $__currentLoopData = $wallets; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $w): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                                 <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm">
-                                                    <p class="font-bold text-gray-900">{{ $w->name ?? 'محفظة' }} — {{ \App\Models\Wallet::typeLabel($w->type) }}</p>
-                                                    @if($w->account_number)
-                                                        <p class="text-gray-700 mt-1 font-mono">{{ $w->account_number }}</p>
-                                                    @endif
-                                                    @if($w->notes)
-                                                        <p class="text-gray-600 mt-2 text-xs">{{ $w->notes }}</p>
-                                                    @endif
+                                                    <p class="font-bold text-gray-900"><?php echo e($w->name ?? 'محفظة'); ?> — <?php echo e(\App\Models\Wallet::typeLabel($w->type)); ?></p>
+                                                    <?php if($w->account_number): ?>
+                                                        <p class="text-gray-700 mt-1 font-mono"><?php echo e($w->account_number); ?></p>
+                                                    <?php endif; ?>
+                                                    <?php if($w->notes): ?>
+                                                        <p class="text-gray-600 mt-2 text-xs"><?php echo e($w->notes); ?></p>
+                                                    <?php endif; ?>
                                                 </div>
-                                            @endforeach
+                                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                         </div>
                                     </div>
-                                @endif
+                                <?php endif; ?>
 
-                                <form method="post" action="{{ $__completeUrl }}" enctype="multipart/form-data" class="space-y-5">
-                                    @csrf
+                                <form method="post" action="<?php echo e($__completeUrl); ?>" enctype="multipart/form-data" class="space-y-5">
+                                    <?php echo csrf_field(); ?>
                                     <div>
                                         <label class="block text-sm font-bold text-gray-800 mb-2">طريقة الدفع</label>
                                         <div class="flex flex-wrap gap-4">
                                             <label class="inline-flex items-center gap-2 cursor-pointer">
-                                                <input type="radio" name="payment_method" value="bank_transfer" class="text-blue-600" {{ old('payment_method', 'bank_transfer') === 'bank_transfer' ? 'checked' : '' }} required>
+                                                <input type="radio" name="payment_method" value="bank_transfer" class="text-blue-600" <?php echo e(old('payment_method', 'bank_transfer') === 'bank_transfer' ? 'checked' : ''); ?> required>
                                                 <span>تحويل بنكي</span>
                                             </label>
                                             <label class="inline-flex items-center gap-2 cursor-pointer">
-                                                <input type="radio" name="payment_method" value="wallet" class="text-blue-600" {{ old('payment_method') === 'wallet' ? 'checked' : '' }}>
+                                                <input type="radio" name="payment_method" value="wallet" class="text-blue-600" <?php echo e(old('payment_method') === 'wallet' ? 'checked' : ''); ?>>
                                                 <span>محفظة إلكترونية</span>
                                             </label>
                                         </div>
@@ -605,9 +611,9 @@
                                         <label class="block text-sm font-bold text-gray-800 mb-2">المحفظة / الحساب المستخدم <span class="text-gray-500 font-normal">(عند اختيار محفظة)</span></label>
                                         <select name="wallet_id" class="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm">
                                             <option value="">— اختياري لتحويل بنكي —</option>
-                                            @foreach($wallets as $w)
-                                                <option value="{{ $w->id }}" @selected((string) old('wallet_id') === (string) $w->id)>{{ $w->name }} ({{ $w->type }})</option>
-                                            @endforeach
+                                            <?php $__currentLoopData = $wallets; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $w): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                <option value="<?php echo e($w->id); ?>" <?php if((string) old('wallet_id') === (string) $w->id): echo 'selected'; endif; ?>><?php echo e($w->name); ?> (<?php echo e($w->type); ?>)</option>
+                                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                         </select>
                                     </div>
                                     <div>
@@ -619,19 +625,19 @@
                                     </div>
                                     <div>
                                         <label class="block text-sm font-bold text-gray-800 mb-2">ملاحظات (اختياري)</label>
-                                        <textarea name="notes" rows="2" class="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm" placeholder="رقم العملية، اسم المحوّل...">{{ old('notes') }}</textarea>
+                                        <textarea name="notes" rows="2" class="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm" placeholder="رقم العملية، اسم المحوّل..."><?php echo e(old('notes')); ?></textarea>
                                     </div>
                                     <div class="flex flex-col sm:flex-row gap-3">
                                         <button type="submit" class="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-4 rounded-full font-bold text-lg shadow-lg hover:shadow-xl transition-all">
                                             <i class="fas fa-paper-plane"></i>
                                             إرسال الطلب للمراجعة
                                         </button>
-                                        <a href="{{ isset($course) ? route('public.course.show', $course->id) : route('public.learning-path.show', Str::slug($learningPath->name)) }}" class="inline-flex items-center justify-center gap-2 bg-white text-gray-700 px-6 py-4 rounded-full font-bold border-2 border-gray-300 hover:bg-gray-50">
+                                        <a href="<?php echo e(isset($course) ? route('public.course.show', $course->id) : route('public.learning-path.show', Str::slug($learningPath->name))); ?>" class="inline-flex items-center justify-center gap-2 bg-white text-gray-700 px-6 py-4 rounded-full font-bold border-2 border-gray-300 hover:bg-gray-50">
                                             إلغاء
                                         </a>
                                     </div>
                                 </form>
-                            @elseif($__payMode === 'fawaterak' && !isset($course))
+                            <?php elseif($__payMode === 'fawaterak' && !isset($course)): ?>
                                 <div class="p-8 rounded-2xl border-2 border-dashed border-indigo-200 bg-gradient-to-br from-indigo-50 to-slate-50 text-center">
                                     <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-indigo-100 flex items-center justify-center">
                                         <i class="fas fa-route text-2xl text-indigo-700"></i>
@@ -639,7 +645,7 @@
                                     <h3 class="text-lg font-black text-slate-900 mb-2">المسارات التعليمية وفواتيرك</h3>
                                     <p class="text-sm text-slate-700 max-w-lg mx-auto leading-relaxed">واجهة الدفع عبر فواتيرك (iframe) مفعّلة لشراء <strong>الكورسات</strong> فقط. لمسارك التعليمي يمكن استخدام <strong>الدفع اليدوي</strong> بعد تغيير وضع الدفع من إعدادات النظام، أو التواصل مع الإدارة.</p>
                                 </div>
-                            @elseif($__payMode === 'fawaterak' && isset($course) && !($fawaterakCheckoutReady ?? false))
+                            <?php elseif($__payMode === 'fawaterak' && isset($course) && !($fawaterakCheckoutReady ?? false)): ?>
                                 <div class="p-8 rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/80 text-center">
                                     <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-amber-100 flex items-center justify-center">
                                         <i class="fas fa-exclamation-triangle text-2xl text-amber-800"></i>
@@ -647,7 +653,7 @@
                                     <h3 class="text-lg font-black text-amber-950 mb-2">فواتيرك غير جاهزة</h3>
                                     <p class="text-sm text-amber-900 max-w-lg mx-auto leading-relaxed">تأكد من تفعيل البوابة من الإدارة ومن ضبط <code class="bg-amber-100/80 px-1 rounded">FAWATERAK_VENDOR_KEY</code> و <code class="bg-amber-100/80 px-1 rounded">FAWATERAK_PROVIDER_KEY</code> و<code class="bg-amber-100/80 px-1 rounded">FAWATERAK_INTEGRATION=iframe</code> في ملف البيئة.</p>
                                 </div>
-                            @elseif($__payMode === 'fawaterak' && isset($course) && ($fawaterakCheckoutReady ?? false))
+                            <?php elseif($__payMode === 'fawaterak' && isset($course) && ($fawaterakCheckoutReady ?? false)): ?>
                             <div class="mb-6 p-5 bg-indigo-50 rounded-xl border-2 border-indigo-200">
                                 <p class="text-sm font-bold text-indigo-950 mb-2 flex items-center gap-2">
                                     <i class="fas fa-receipt"></i>
@@ -657,11 +663,11 @@
                             </div>
                             <div id="fawaterkDivId" class="min-h-[420px] w-full rounded-2xl border border-slate-200 bg-white shadow-inner overflow-hidden"></div>
                             <div
-                                x-data="checkoutFawaterakHandler('{{ route('public.course.checkout.fawaterak.prepare', $course->id) }}')"
+                                x-data="checkoutFawaterakHandler('<?php echo e(route('public.course.checkout.fawaterak.prepare', $course->id)); ?>')"
                                 class="mt-6 space-y-4"
                             >
                                 <form @submit.prevent="startPayment">
-                                    @csrf
+                                    <?php echo csrf_field(); ?>
                                     <div class="flex flex-col sm:flex-row gap-4">
                                         <button type="submit"
                                                 :disabled="isSubmitting"
@@ -670,7 +676,7 @@
                                             <i class="fas fa-spinner fa-spin" x-show="isSubmitting" x-cloak></i>
                                             <span x-text="isSubmitting ? 'جاري التجهيز...' : 'متابعة للدفع'"></span>
                                         </button>
-                                        <a href="{{ route('public.course.show', $course->id) }}"
+                                        <a href="<?php echo e(route('public.course.show', $course->id)); ?>"
                                            :class="{ 'pointer-events-none opacity-50': isSubmitting }"
                                            class="inline-flex items-center justify-center gap-2 bg-white text-gray-700 px-6 py-4 rounded-full font-bold text-lg border-2 border-gray-300 hover:bg-gray-50 transition-all duration-300">
                                             <i class="fas fa-arrow-right"></i>
@@ -684,7 +690,7 @@
                                     </p>
                                 </form>
                             </div>
-                            @else
+                            <?php else: ?>
                             <!-- طرق الدفع المسموحة من كاشير -->
                             <div class="mb-6 p-5 bg-slate-50 rounded-xl border-2 border-slate-200">
                                 <p class="text-sm font-bold text-gray-900 mb-4">يمكنك الدفع بإحدى الطرق التالية:</p>
@@ -723,14 +729,14 @@
                                 </p>
                             </div>
 
-                            {{-- نموذج الدفع أونلاين (كاشير) + iframe / مودال ضمن نطاق Alpine --}}
+                            
                             <div
-                                x-data="checkoutKashierHandler('{{ isset($course) ? 'course' : 'path' }}', '{{ isset($course) ? route('public.course.checkout.kashier', $course->id) : route('public.learning-path.checkout.kashier', Str::slug($learningPath->name)) }}')"
-                                @if(!isset($course)) x-init="startPayment()" @endif
+                                x-data="checkoutKashierHandler('<?php echo e(isset($course) ? 'course' : 'path'); ?>', '<?php echo e(isset($course) ? route('public.course.checkout.kashier', $course->id) : route('public.learning-path.checkout.kashier', Str::slug($learningPath->name))); ?>')"
+                                <?php if(!isset($course)): ?> x-init="startPayment()" <?php endif; ?>
                                 class="space-y-6"
                             >
                             <form @submit.prevent="startPayment">
-                                @csrf
+                                <?php echo csrf_field(); ?>
                                 <div class="flex flex-col sm:flex-row gap-4">
                                     <button type="submit" 
                                             :disabled="isSubmitting"
@@ -739,7 +745,7 @@
                                         <i class="fas fa-spinner fa-spin" x-show="isSubmitting" x-cloak></i>
                                         <span x-text="isSubmitting ? 'جاري فتح صفحة الدفع...' : 'متابعة للدفع'"></span>
                                     </button>
-                                    <a href="{{ isset($course) ? route('public.course.show', $course->id) : route('public.learning-path.show', Str::slug($learningPath->name)) }}" 
+                                    <a href="<?php echo e(isset($course) ? route('public.course.show', $course->id) : route('public.learning-path.show', Str::slug($learningPath->name))); ?>" 
                                        :class="{ 'pointer-events-none opacity-50': isSubmitting }"
                                        class="inline-flex items-center justify-center gap-2 bg-white text-gray-700 px-6 py-4 rounded-full font-bold text-lg border-2 border-gray-300 hover:bg-gray-50 transition-all duration-300">
                                         <i class="fas fa-arrow-right"></i>
@@ -754,8 +760,8 @@
                                 </p>
                             </form>
 
-                            {{-- في حالة مسار تعليمي: عرض الـ iframe مباشرة داخل الصفحة --}}
-                            @if(!isset($course))
+                            
+                            <?php if(!isset($course)): ?>
                                 <div class="mt-6">
                                     <template x-if="!error">
                                         <div>
@@ -774,7 +780,7 @@
                                         </div>
                                     </template>
                                 </div>
-                            @endif
+                            <?php endif; ?>
 
                             <!-- مودال الدفع (iframe) -->
                             <div x-show="showModal && kind === 'course'" x-cloak class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
@@ -808,7 +814,7 @@
                                 </div>
                             </div>
                             </div>
-                            @endif
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -816,7 +822,7 @@
         </section>
     </main>
 
-    @include('components.unified-footer')
+    <?php echo $__env->make('components.unified-footer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
     <script>
         function checkoutFawaterakHandler(prepareUrl) {
@@ -929,3 +935,4 @@
     </script>
 </body>
 </html>
+<?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/public/checkout.blade.php ENDPATH**/ ?>

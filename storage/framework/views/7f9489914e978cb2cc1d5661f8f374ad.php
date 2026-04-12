@@ -12,10 +12,10 @@
     <title><?php echo e(config('app.name', 'Mindlytics')); ?> - <?php echo $__env->yieldContent('title', __('auth.dashboard')); ?></title>
 
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="<?php echo e(asset('favicon.ico')); ?>">
-    <link rel="apple-touch-icon" sizes="180x180" href="<?php echo e($platformLogoUrl ?? asset('logo-removebg-preview.png')); ?>">
-    <link rel="icon" type="image/png" sizes="32x32" href="<?php echo e($platformLogoUrl ?? asset('logo-removebg-preview.png')); ?>">
-    <link rel="icon" type="image/png" sizes="16x16" href="<?php echo e($platformLogoUrl ?? asset('logo-removebg-preview.png')); ?>">
+    <link rel="icon" href="<?php echo e($platformFaviconUrl ?? asset('favicon.ico')); ?>">
+    <link rel="apple-touch-icon" href="<?php echo e($platformLogoUrl ?? asset('logo-removebg-preview.png')); ?>">
+    <link rel="icon" type="image/png" sizes="32x32" href="<?php echo e($platformFaviconUrl ?? asset('favicon.ico')); ?>">
+    <link rel="icon" type="image/png" sizes="16x16" href="<?php echo e($platformFaviconUrl ?? asset('favicon.ico')); ?>">
 
     <!-- خط عربي أصيل -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

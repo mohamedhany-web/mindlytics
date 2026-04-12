@@ -15,6 +15,18 @@
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-3">
+                    <?php if(Route::has('admin.accounting.installments')): ?>
+                    <a href="<?php echo e(route('admin.accounting.installments')); ?>" class="inline-flex items-center gap-2 rounded-2xl bg-violet-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-violet-400">
+                        <i class="fas fa-percentage"></i>
+                        لوحة التقسيط
+                    </a>
+                    <?php endif; ?>
+                    <?php if(Route::has('admin.accounting.gateway-operations')): ?>
+                    <a href="<?php echo e(route('admin.accounting.gateway-operations')); ?>" class="inline-flex items-center gap-2 rounded-2xl bg-indigo-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-indigo-400">
+                        <i class="fas fa-plug"></i>
+                        بوابات الدفع
+                    </a>
+                    <?php endif; ?>
                     <a href="<?php echo e(route('admin.accounting.chart')); ?>" class="inline-flex items-center gap-2 rounded-2xl bg-white/15 px-4 py-2.5 text-sm font-semibold border border-white/20 hover:bg-white/25">
                         <i class="fas fa-sitemap"></i>
                         شجرة الحسابات
@@ -66,6 +78,19 @@
                 <p class="text-lg font-bold text-teal-200"><?php echo e(number_format($snapshot['offline_paid_month'], 2)); ?></p>
             </div>
         </div>
+        <?php if(Route::has('admin.accounting.gateway-operations')): ?>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-px bg-white/10 border-t border-white/10">
+            <div class="bg-slate-900/50 p-4 lg:col-span-2">
+                <p class="text-[11px] text-white/55">بوابات الدفع — إجمالي محصّل (الشهر)</p>
+                <p class="text-lg font-bold text-indigo-200"><?php echo e(number_format($snapshot['gateway_online_month_gross'] ?? 0, 2)); ?> <span class="text-xs text-white/45">ج.م</span></p>
+            </div>
+            <div class="bg-slate-900/50 p-4 lg:col-span-2">
+                <p class="text-[11px] text-white/55">عمولات بوابات الدفع (الشهر)</p>
+                <p class="text-lg font-bold text-amber-200"><?php echo e(number_format($snapshot['gateway_fees_month'] ?? 0, 2)); ?> <span class="text-xs text-white/45">ج.م</span></p>
+                <a href="<?php echo e(route('admin.accounting.gateway-operations')); ?>" class="mt-2 inline-flex text-[11px] font-semibold text-white/80 hover:text-white underline">سجل العمليات والربط المحاسبي</a>
+            </div>
+        </div>
+        <?php endif; ?>
     </section>
 
     <?php $__currentLoopData = $sections; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $section): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>

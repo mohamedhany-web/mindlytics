@@ -639,6 +639,13 @@
 @endphp
 
 @section('content')
+@if(session('payment_success_modal'))
+    @include('components.payment-success-modal', [
+        'message' => session('success'),
+        'redirectUrl' => session('payment_success_redirect_url'),
+        'seconds' => 5,
+    ])
+@endif
 <script type="application/json" id="learn-lectures-data">{!! $lecturesDataJson !!}</script>
 <script type="application/json" id="learn-next-item-map">{!! json_encode($nextItemByLectureId ?? []) !!}</script>
 <script type="application/json" id="learn-next-lesson-map">{!! json_encode($nextItemByLessonId ?? []) !!}</script>

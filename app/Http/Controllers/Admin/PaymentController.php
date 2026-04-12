@@ -243,7 +243,7 @@ class PaymentController extends Controller
 
     public function show(Payment $payment)
     {
-        $payment->load('user', 'invoice', 'processedBy');
+        $payment->load('user', 'invoice', 'order', 'processedBy', 'transactions');
         return view('admin.payments.show', compact('payment'));
     }
 

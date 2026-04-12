@@ -43,6 +43,12 @@ class AccountingHubController extends Controller
             'installment_pending_total' => (float) InstallmentPayment::where('status', InstallmentPayment::STATUS_PENDING)->sum('amount'),
             'offline_paid_month' => (float) OfflineCourseEnrollment::whereBetween('enrolled_at', [$monthStart, $monthEnd])
                 ->sum('paid_amount'),
+            'gateway_online_month_gross' => (float) Payment::gatewayOnline()
+                ->whereBetween('paid_at', [$monthStart, $monthEnd])
+                ->sum('amount'),
+            'gateway_fees_month' => (float) Payment::gatewayOnline()
+                ->whereBetween('paid_at', [$monthStart, $monthEnd])
+                ->sum('gateway_fee_amount'),
         ];
 
         $sections = $this->hubSections();
@@ -68,6 +74,7 @@ class AccountingHubController extends Controller
                 'items' => [
                     ['label' => 'التقارير المحاسبية الشاملة', 'route' => 'admin.accounting.reports', 'icon' => 'fa-chart-pie', 'hint' => 'فلاتر زمنية، رسوم بيانية، تصدير Excel'],
                     ['label' => 'شجرة الحسابات', 'route' => 'admin.accounting.chart', 'icon' => 'fa-sitemap', 'hint' => 'خريطة الحسابات وربطها بوحدات النظام'],
+                    ['label' => 'عمليات بوابات الدفع', 'route' => 'admin.accounting.gateway-operations', 'icon' => 'fa-plug', 'hint' => 'كاشير، فواتيرك، عمولات، ربط طلبات وفواتير ومعاملات'],
                 ],
             ],
             [
@@ -75,6 +82,7 @@ class AccountingHubController extends Controller
                 'items' => [
                     ['label' => 'الفواتير', 'route' => 'admin.invoices.index', 'icon' => 'fa-file-invoice'],
                     ['label' => 'المدفوعات', 'route' => 'admin.payments.index', 'icon' => 'fa-credit-card'],
+                    ['label' => 'عمليات بوابات الدفع', 'route' => 'admin.accounting.gateway-operations', 'icon' => 'fa-network-wired', 'hint' => 'سجل أونلاين مرتبط بالطلبات'],
                     ['label' => 'المعاملات المالية', 'route' => 'admin.transactions.index', 'icon' => 'fa-exchange-alt'],
                     ['label' => 'المحافظ البنكية والنقدية', 'route' => 'admin.wallets.index', 'icon' => 'fa-wallet'],
                     ['label' => 'المصروفات', 'route' => 'admin.expenses.index', 'icon' => 'fa-receipt'],

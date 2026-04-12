@@ -27,6 +27,7 @@ return [
                             'children' => [
                                 ['code' => '1111', 'name' => 'محافظ المنصة (بنوك / فودافون / إنستاباي)', 'type' => 'asset', 'source' => 'wallets', 'route' => 'admin.wallets.index', 'icon' => 'fa-wallet'],
                                 ['code' => '1112', 'name' => 'مدفوعات مكتملة — سجل المدفوعات', 'type' => 'asset', 'source' => 'payments', 'route' => 'admin.payments.index', 'icon' => 'fa-credit-card'],
+                                ['code' => '1113', 'name' => 'عمليات بوابات الدفع (كاشير / فواتيرك)', 'type' => 'asset', 'source' => 'gateway_payments', 'route' => 'admin.accounting.gateway-operations', 'icon' => 'fa-plug'],
                             ],
                         ],
                         [
@@ -144,6 +145,7 @@ return [
                     'children' => [
                         ['code' => '511', 'name' => 'مصروفات مسجلة — جدول المصروفات', 'type' => 'expense', 'source' => 'expenses', 'route' => 'admin.expenses.index', 'icon' => 'fa-receipt'],
                         ['code' => '512', 'name' => 'معاملات مدينة — سجل المعاملات', 'type' => 'expense', 'source' => 'transactions', 'route' => 'admin.transactions.index', 'icon' => 'fa-exchange-alt'],
+                        ['code' => '515', 'name' => 'عمولات بوابات الدفع (قيد fee)', 'type' => 'expense', 'source' => 'gateway_fees', 'route' => 'admin.accounting.gateway-operations', 'icon' => 'fa-percentage'],
                         ['code' => '513', 'name' => 'أتعاب مدربين — حسابات المدربين', 'type' => 'expense', 'source' => 'instructor_accounts', 'route' => 'admin.accounting.instructor-accounts.index', 'icon' => 'fa-user-tie'],
                     ],
                 ],

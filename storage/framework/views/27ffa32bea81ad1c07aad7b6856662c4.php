@@ -9,10 +9,10 @@
     <title><?php echo e(config('app.name', 'Mindlytics')); ?> - <?php echo $__env->yieldContent('title', __('auth.dashboard')); ?></title>
 
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="<?php echo e(asset('favicon.ico')); ?>">
-    <link rel="apple-touch-icon" sizes="180x180" href="<?php echo e(asset('logo-removebg-preview.png')); ?>">
-    <link rel="icon" type="image/png" sizes="32x32" href="<?php echo e(asset('logo-removebg-preview.png')); ?>">
-    <link rel="icon" type="image/png" sizes="16x16" href="<?php echo e(asset('logo-removebg-preview.png')); ?>">
+    <link rel="icon" href="<?php echo e($platformFaviconUrl ?? asset('favicon.ico')); ?>">
+    <link rel="apple-touch-icon" href="<?php echo e($platformLogoUrl ?? asset('logo-removebg-preview.png')); ?>">
+    <link rel="icon" type="image/png" sizes="32x32" href="<?php echo e($platformFaviconUrl ?? asset('favicon.ico')); ?>">
+    <link rel="icon" type="image/png" sizes="16x16" href="<?php echo e($platformFaviconUrl ?? asset('favicon.ico')); ?>">
 
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -674,7 +674,7 @@ x-init="
             <!-- Main Content -->
             <main class="flex-1 overflow-auto bg-gray-50 min-w-0 w-full">
                 <div class="w-full max-w-full p-4 sm:p-6 lg:p-8">
-                    <?php if(session('success')): ?>
+                    <?php if(session('success') && !session('payment_success_modal')): ?>
                         <div class="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm font-medium">
                             <?php echo e(session('success')); ?>
 

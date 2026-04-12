@@ -103,7 +103,7 @@ class CalendarController extends Controller
                 'type' => 'lecture',
                 'color' => '#3B82F6',
                 'priority' => 'medium',
-                'url' => route('my-courses.show', $lecture->course_id) . '#lectures',
+                'url' => route('my-courses.learn', $lecture->course_id),
                 'location' => $lecture->teams_meeting_link,
             ]);
         }
@@ -211,7 +211,7 @@ class CalendarController extends Controller
                 'type' => 'assignment',
                 'color' => '#F59E0B',
                 'priority' => 'high',
-                'url' => route('my-courses.show', $assignment->lecture->course_id) . '#lectures',
+                'url' => route('my-courses.learn', $assignment->lecture->course_id),
             ]);
         }
 

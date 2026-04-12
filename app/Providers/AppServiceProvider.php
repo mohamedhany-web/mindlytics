@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use App\Support\SiteBranding;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
@@ -75,12 +76,28 @@ class AppServiceProvider extends ServiceProvider
                 $disk->put($logoPath, File::get($logoSource));
             }
         }
-        // حساب رابط اللوجو عند عرض الصفحة (مثل authBackgroundUrl) لضمان ظهور الصورة مع الطلب الحالي
-        View::composer(['layouts.instructor-sidebar', 'layouts.student-sidebar', 'layouts.app', 'layouts.admin'], function ($view) use ($disk, $logoPath) {
-            $url = $disk->exists($logoPath)
-                ? asset('storage/' . $logoPath)
-                : asset('logo-removebg-preview.png');
-            $view->with('platformLogoUrl', $url);
+        $brandingViews = [
+            'layouts.admin',
+            'layouts.admin-sidebar',
+            'layouts.public',
+            'layouts.student-dashboard',
+            'layouts.employee',
+            'layouts.admin-community',
+            'layouts.app',
+            'layouts.instructor-sidebar',
+            'layouts.student-sidebar',
+            'auth.login',
+            'auth.register',
+            'auth.forgot-password',
+            'auth.reset-password',
+            'auth.two-factor.setup',
+            'auth.two-factor.challenge',
+            'welcome',
+            'community.layouts.guest',
+        ];
+        View::composer($brandingViews, function ($view) {
+            $view->with('platformLogoUrl', SiteBranding::logoUrl());
+            $view->with('platformFaviconUrl', SiteBranding::faviconUrl());
         });
 
         // إجبار روابط الموقع على HTTPS: الإنتاج، أو عندما يكون APP_URL أصلاً https (يشمل استضافة خلف بروكسي)

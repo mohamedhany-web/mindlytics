@@ -9,10 +9,10 @@
     <title>{{ config('app.name', 'Mindlytics') }} - @yield('title', __('auth.dashboard'))</title>
 
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('logo-removebg-preview.png') }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('logo-removebg-preview.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('logo-removebg-preview.png') }}">
+    <link rel="icon" href="{{ $platformFaviconUrl ?? asset('favicon.ico') }}">
+    <link rel="apple-touch-icon" href="{{ $platformLogoUrl ?? asset('logo-removebg-preview.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ $platformFaviconUrl ?? asset('favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ $platformFaviconUrl ?? asset('favicon.ico') }}">
 
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -653,7 +653,7 @@ x-init="
             <!-- Main Content -->
             <main class="flex-1 overflow-auto bg-gray-50 min-w-0 w-full">
                 <div class="w-full max-w-full p-4 sm:p-6 lg:p-8">
-                    @if(session('success'))
+                    @if(session('success') && !session('payment_success_modal'))
                         <div class="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm font-medium">
                             {{ session('success') }}
                         </div>
