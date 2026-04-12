@@ -893,14 +893,16 @@
                             throw new Error('استجابة غير صالحة من الخادم.');
                         }
                         hideWaitingHint();
-                        try {
-                            fawaterkCheckout(data.pluginConfig);
-                        } catch (pluginErr) {
-                            console.error('fawaterkCheckout threw', pluginErr);
-                            throw new Error('فشل تشغيل واجهة فواتيرك. تحقق من تطابق نطاق الموقع مع لوحة فواتيرك (iframe) ومن مفتاح الـ hash.');
+                        const mount = document.getElementById('fawaterkDivId');
+                        if (mount) {
+                            mount.innerHTML = '';
                         }
+                        fawaterkCheckout(data.pluginConfig);
                     } catch (e) {
-                        this.error = e.message || 'حدث خطأ أثناء الاتصال بفواتيرك.';
+                        const msg = (e && typeof e.message === 'string' && e.message.trim() !== '')
+                            ? e.message
+                            : (typeof e === 'string' ? e : (e != null ? String(e) : ''));
+                        this.error = msg || 'حدث خطأ أثناء الاتصال بفواتيرك.';
                         console.error('Fawaterak checkout error', e);
                         hideWaitingHint();
                     } finally {
