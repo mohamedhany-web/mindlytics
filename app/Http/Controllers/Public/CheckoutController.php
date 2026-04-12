@@ -543,6 +543,49 @@ class CheckoutController extends Controller
             return response()->json(['message' => 'يرجى إضافة بريد إلكتروني صالح في الملف الشخصي قبل الدفع.'], 422);
         }
 
+        $browserHostname = $request->input('browser_hostname');
+        $browserHostname = is_string($browserHostname) ? $browserHostname : null;
+        $browserScheme = $request->input('browser_protocol');
+        $browserScheme = is_string($browserScheme) ? $browserScheme : null;
+        if ($fawaterak->normalizeBrowserScheme($browserScheme) === null) {
+            $browserScheme = $request->getScheme().':';
+        }
+
+        $fawaterakWarning = null;
+        if (config('fawaterak.iframe_preflight', true)) {
+            try {
+                $pf = $fawaterak->preflightGetPaymentMethods($browserHostname, $browserScheme);
+                if ($pf->status() === 400) {
+                    $domainUsed = $fawaterak->hashDomain($browserHostname, $browserScheme);
+                    $overrideRaw = trim((string) config('fawaterak.iframe_domain', ''));
+                    $overrideNorm = $overrideRaw !== '' ? rtrim($overrideRaw, '/') : '';
+
+                    $message = 'رفض فواتيرك التحقق من توقيع الـ iframe (HMAC). النطاق المستخدم في التوقيع: '.$domainUsed.'. ';
+                    if ($overrideNorm !== '' && $overrideNorm !== $domainUsed) {
+                        $message .= 'تعارض: لديك FAWATERAK_IFRAME_DOMAIN='.$overrideNorm.' بينما التوقيع يتبع المتصفح ('.$domainUsed.'). احذف السطر من .env أو افتح الموقع بنفس البروتوكول المسجّل في لوحة فواتيرك (غالباً HTTPS). ';
+                    }
+                    $message .= '(1) تفعيل التاجر وطريقة دفع واحدة على الأقل. (2) تطابق FAWATERAK_ENV مع نوع المفاتيح (test/live). (3) إن وُجد في اللوحة سر توقيع منفصل عن API Key ضعه في FAWATERAK_HMAC_SECRET — إن نجحت طلبات بدون HASH ورفضت مع HASH فالسبب غالباً السر وليس Bearer. (4) أضف نفس الأصل في «IFrame domains» بدون / أخيرة وبدون منفذ؛ وثائق فواتيرك تشترط غالباً HTTPS فقط، فجرّب تشغيل الموقع محلياً بـ https إن بقيت على http.';
+
+                    return response()->json([
+                        'message' => $message,
+                        'code' => 'fawaterak_hmac_rejected',
+                        'hash_domain' => $domainUsed,
+                        'iframe_domain_env' => $overrideNorm !== '' ? $overrideNorm : null,
+                    ], 422);
+                }
+                if ($pf->successful()) {
+                    $payload = $pf->json();
+                    if (($payload['status'] ?? '') === 'success'
+                        && is_array($payload['data'] ?? null)
+                        && count($payload['data']) === 0) {
+                        $fawaterakWarning = 'لا توجد طرق دفع مفعّلة في لوحة فواتيرك؛ أضف طريقة دفع واحدة على الأقل.';
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Fawaterak iframe preflight failed', ['message' => $e->getMessage()]);
+            }
+        }
+
         $existingOrder = Order::where('user_id', Auth::id())
             ->where('advanced_course_id', $course->id)
             ->where('status', Order::STATUS_PENDING)
@@ -600,12 +643,9 @@ class CheckoutController extends Controller
         $cartTotal = (string) round($amount, 2);
         $currency = config('fawaterak.currency', 'EGP');
 
-        $browserHostname = $request->input('browser_hostname');
-        $browserHostname = is_string($browserHostname) ? $browserHostname : null;
-
         $pluginConfig = [
             'envType' => $fawaterak->envType(),
-            'hashKey' => $fawaterak->generateHashKey($browserHostname),
+            'hashKey' => $fawaterak->generateHashKey($browserHostname, $browserScheme),
             // الإضافة الحالية تستخدم token لطلبات API (قد لا يظهر في مثال الوثائق القصير)
             'token' => $fawaterak->checkoutPluginBearerToken(),
             'version' => (string) config('fawaterak.version', '0'),
@@ -644,12 +684,17 @@ class CheckoutController extends Controller
             ],
         ];
 
-        return response()->json([
+        $json = [
             'mode' => 'iframe',
             'pluginScriptUrl' => $fawaterak->proxiedPluginScriptUrl(),
             'pluginConfig' => $pluginConfig,
             'order_id' => $order->id,
-        ]);
+        ];
+        if ($fawaterakWarning !== null) {
+            $json['fawaterak_warning'] = $fawaterakWarning;
+        }
+
+        return response()->json($json);
     }
 
     /**

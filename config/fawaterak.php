@@ -20,9 +20,13 @@ return [
     'hmac_secret' => env('FAWATERAK_HMAC_SECRET', ''),
 
     /**
-     * نطاق يدوي لسلسلة الـ HMAC إن اختلف عن الاشتقاق (يجب أن يطابق ما في لوحة فواتيرك: https://host بدون / أخيرة).
+     * نطاق يدوي لسلسلة الـ HMAC عندما لا يُرسل hostname موثوق من المتصفح.
+     * يجب أن يطابق ما تُرسله الإضافة وما سجّلته في لوحة فواتيرك (بدون / أخيرة، بدون منفذ).
      */
     'iframe_domain' => env('FAWATERAK_IFRAME_DOMAIN', ''),
+
+    /** طلب تجريبي لـ getPaymentmethods مع HASH قبل إرجاع pluginConfig (يوضح سبب «Invalid Token» بدل تنبيه المتصفح) */
+    'iframe_preflight' => env('FAWATERAK_IFRAME_PREFLIGHT', true),
 
     'currency' => env('FAWATERAK_CURRENCY', 'EGP'),
 

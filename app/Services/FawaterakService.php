@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\URL;
 
 class FawaterakService
@@ -21,6 +22,13 @@ class FawaterakService
         $e = strtolower(trim((string) config('fawaterak.env', 'test')));
 
         return $e === 'live' ? 'live' : 'test';
+    }
+
+    public function apiBaseUrl(): string
+    {
+        return $this->envType() === 'live'
+            ? 'https://app.fawaterk.com'
+            : 'https://staging.fawaterk.com';
     }
 
     public function isConfigured(): bool
@@ -83,24 +91,48 @@ class FawaterakService
     }
 
     /**
-     * قيمة Domain في سلسلة الـ HMAC (مع ProviderKey).
-     *
-     * الوثائق الرسمية: «Each Domain must be in the HTTPS protocol and without "/" at the end»
-     * والصيغة: Domain=YOUR_WEBSITE_DOMAIN&ProviderKey=… حيث YOUR_WEBSITE_DOMAIN يُسجَّل في لوحة فواتيرك
-     * (Integrations → Fawaterak → IFrame domains) بنفس الشكل: https://hostname بدون منفذ وبدون شرطة أخيرة.
-     *
-     * @param  string|null  $browserHostname  اختياري: window.location.hostname عند التطابق مع APP_URL أو loopback في local/testing
+     * @return 'http'|'https'|null
      */
-    public function hashDomain(?string $browserHostname = null): string
+    public function normalizeBrowserScheme(?string $raw): ?string
     {
-        $override = trim((string) config('fawaterak.iframe_domain', ''));
-        if ($override !== '') {
-            return rtrim($override, '/');
+        if ($raw === null) {
+            return null;
+        }
+        $s = strtolower(trim($raw));
+        if ($s === '' || $s === ':') {
+            return null;
+        }
+        if (str_ends_with($s, ':')) {
+            $s = rtrim($s, ':');
+        }
+        if ($s === 'http') {
+            return 'http';
+        }
+        if ($s === 'https') {
+            return 'https';
         }
 
+        return null;
+    }
+
+    /**
+     * قيمة Domain في سلسلة الـ HMAC (مع ProviderKey).
+     *
+     * يجب أن تطابق ترويسة FAWATERAK-DOMAIN التي تبنيها إضافة فواتيرك (بروتوكول الصفحة + hostname، بدون منفذ).
+     * عند توفر hostname موثوق من المتصفح يُفضَّل ذلك على FAWATERAK_IFRAME_DOMAIN لتفادي تعارض http/https.
+     *
+     * الوثائق تطلب تسجيل نطاقات iframe بصيغة HTTPS في اللوحة؛ للتطوير على http محلياً قد تحتاج تسجيل
+     * نفس الأصل الذي يظهر في المتصفح أو استخدام HTTPS محلي.
+     *
+     * @param  string|null  $browserHostname  من صفحة الدفع (window.location.hostname)
+     * @param  string|null  $browserScheme    من صفحة الدفع (window.location.protocol) أو ناتج getScheme()
+     */
+    public function hashDomain(?string $browserHostname = null, ?string $browserScheme = null): string
+    {
         $root = rtrim(trim((string) config('app.url', '')), '/');
         $appHost = strtolower((string) (parse_url($root, PHP_URL_HOST) ?: ''));
         $browserHost = $this->normalizeCheckoutHostname($browserHostname);
+        $sch = $this->normalizeBrowserScheme($browserScheme);
 
         if ($browserHost !== null) {
             $loopback = ['127.0.0.1', 'localhost', '::1'];
@@ -109,8 +141,20 @@ class FawaterakService
 
             if ($browserHost === $appHost
                 || (app()->environment(['local', 'testing']) && $bothLoopback)) {
-                return 'https://'.$browserHost;
+                $scheme = $sch ?? 'https';
+
+                return $scheme.'://'.$browserHost;
             }
+        }
+
+        $override = trim((string) config('fawaterak.iframe_domain', ''));
+        if ($override !== '') {
+            return rtrim($override, '/');
+        }
+
+        $appScheme = strtolower((string) (parse_url($root, PHP_URL_SCHEME) ?: ''));
+        if ($appScheme !== 'http' && $appScheme !== 'https') {
+            $appScheme = 'https';
         }
 
         if ($appHost === '') {
@@ -124,20 +168,37 @@ class FawaterakService
             return $root;
         }
 
-        return 'https://'.$appHost;
+        return $appScheme.'://'.$appHost;
     }
 
     /**
-     * HMAC-SHA256 حسب وثائق فواتيرك (iframe): hash_hmac('sha256', "Domain=…&ProviderKey=…", FAWATERAK_VENDOR_KEY, false).
+     * HMAC-SHA256 حسب وثائق فواتيرك (iframe): hash_hmac('sha256', "Domain=…&ProviderKey=…", secret, false).
      */
-    public function generateHashKey(?string $browserHostname = null): string
+    public function generateHashKey(?string $browserHostname = null, ?string $browserScheme = null): string
     {
         $secretKey = $this->iframeHmacSecret();
-        $domain = $this->hashDomain($browserHostname);
+        $domain = $this->hashDomain($browserHostname, $browserScheme);
         $providerKey = $this->providerKey();
         $queryParam = 'Domain='.$domain.'&ProviderKey='.$providerKey;
 
         return hash_hmac('sha256', $queryParam, $secretKey, false);
+    }
+
+    /**
+     * نفس طلب الإضافة تقريباً: التحقق من قبول التوقيع قبل فتح الـ iframe.
+     */
+    public function preflightGetPaymentMethods(?string $browserHostname, ?string $browserScheme): \Illuminate\Http\Client\Response
+    {
+        $domain = $this->hashDomain($browserHostname, $browserScheme);
+
+        return Http::timeout(25)->withHeaders([
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+            'Authorization' => 'Bearer '.$this->checkoutPluginBearerToken(),
+            'FAWATERAK-HASH-KEY' => $this->generateHashKey($browserHostname, $browserScheme),
+            'FAWATERAK-DOMAIN' => $domain,
+            'DOMAIN-VERSION' => (string) config('fawaterak.version', '0'),
+        ])->get($this->apiBaseUrl().'/api/v2/getPaymentmethods');
     }
 
     public function remotePluginUrl(): string

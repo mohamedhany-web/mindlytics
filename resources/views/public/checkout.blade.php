@@ -887,6 +887,9 @@
                                 browser_hostname: (typeof window !== 'undefined' && window.location && window.location.hostname)
                                     ? window.location.hostname
                                     : '',
+                                browser_protocol: (typeof window !== 'undefined' && window.location && window.location.protocol)
+                                    ? window.location.protocol
+                                    : '',
                             }),
                         });
                         const data = await response.json().catch(() => ({}));
@@ -895,6 +898,9 @@
                         }
                         if (data.mode !== 'iframe' || !data.pluginConfig) {
                             throw new Error('استجابة غير صالحة من الخادم.');
+                        }
+                        if (data.fawaterak_warning && typeof console !== 'undefined' && console.warn) {
+                            console.warn('Fawaterak:', data.fawaterak_warning);
                         }
                         hideWaitingHint();
                         const mount = document.getElementById('fawaterkDivId');
