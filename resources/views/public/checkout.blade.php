@@ -897,6 +897,8 @@
                         if (mount) {
                             mount.innerHTML = '';
                         }
+                        {{-- سكربت فواتيرك يستدعي getEnvUrl() التي تقرأ المتغيّر العام pluginConfig وليس الوسيط فقط --}}
+                        window.pluginConfig = data.pluginConfig;
                         fawaterkCheckout(data.pluginConfig);
                     } catch (e) {
                         const msg = (e && typeof e.message === 'string' && e.message.trim() !== '')

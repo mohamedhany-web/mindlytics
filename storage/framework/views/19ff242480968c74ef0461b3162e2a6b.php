@@ -903,6 +903,8 @@
                         if (mount) {
                             mount.innerHTML = '';
                         }
+                        
+                        window.pluginConfig = data.pluginConfig;
                         fawaterkCheckout(data.pluginConfig);
                     } catch (e) {
                         const msg = (e && typeof e.message === 'string' && e.message.trim() !== '')
