@@ -9,6 +9,22 @@
     $netMonth = ($currentMonthDeposits ?? 0) - ($currentMonthWithdrawals ?? 0);
 @endphp
 <div class="space-y-6">
+    @if(session('success'))
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <ul class="space-y-1">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <!-- الهيدر -->
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
         <div class="px-6 py-5 bg-slate-50 border-b border-slate-200 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -143,6 +159,65 @@
             <p class="text-xs text-slate-600">{{ htmlspecialchars('الإيداعات ناقص السحوبات خلال ' . \Carbon\Carbon::now()->translatedFormat('F')) }}.</p>
         </div>
     </div>
+
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-sm p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-black text-slate-900">تحويل بين المحافظ</h2>
+            <span class="text-xs font-semibold px-3 py-1 rounded-full bg-sky-100 text-sky-700">
+                محافظ الأكاديمية النشطة فقط
+            </span>
+        </div>
+
+        @if(($transferWallets ?? collect())->count() > 1)
+            <form action="{{ route('admin.wallets.transfer') }}" method="POST" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                @csrf
+                <div>
+                    <label for="from_wallet_id" class="block text-xs font-semibold text-slate-600 mb-1">من محفظة</label>
+                    <select id="from_wallet_id" name="from_wallet_id" class="w-full rounded-xl border-slate-300 focus:border-sky-500 focus:ring-sky-500" required>
+                        <option value="">اختر المحفظة المصدر</option>
+                        @foreach($transferWallets as $walletOption)
+                            <option value="{{ $walletOption->id }}" @selected(old('from_wallet_id') == $walletOption->id)>
+                                {{ $walletOption->name ?? ('محفظة #' . $walletOption->id) }} - {{ number_format($walletOption->balance, 2) }} ج.م
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label for="to_wallet_id" class="block text-xs font-semibold text-slate-600 mb-1">إلى محفظة</label>
+                    <select id="to_wallet_id" name="to_wallet_id" class="w-full rounded-xl border-slate-300 focus:border-sky-500 focus:ring-sky-500" required>
+                        <option value="">اختر المحفظة الوجهة</option>
+                        @foreach($transferWallets as $walletOption)
+                            <option value="{{ $walletOption->id }}" @selected(old('to_wallet_id') == $walletOption->id)>
+                                {{ $walletOption->name ?? ('محفظة #' . $walletOption->id) }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label for="amount" class="block text-xs font-semibold text-slate-600 mb-1">المبلغ</label>
+                    <input id="amount" name="amount" type="number" min="0.01" step="0.01" value="{{ old('amount') }}" class="w-full rounded-xl border-slate-300 focus:border-sky-500 focus:ring-sky-500" required>
+                </div>
+
+                <div>
+                    <label for="notes" class="block text-xs font-semibold text-slate-600 mb-1">ملاحظة (اختياري)</label>
+                    <input id="notes" name="notes" type="text" maxlength="500" value="{{ old('notes') }}" class="w-full rounded-xl border-slate-300 focus:border-sky-500 focus:ring-sky-500">
+                </div>
+
+                <div class="md:col-span-2 xl:col-span-4">
+                    <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-600 text-white text-sm font-semibold hover:bg-sky-700 transition-all">
+                        <i class="fas fa-right-left"></i>
+                        تنفيذ التحويل
+                    </button>
+                </div>
+            </form>
+        @else
+            <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                يجب توفر محافظتين نشطتين على الأقل لتفعيل التحويل بين المحافظ.
+            </div>
+        @endif
+    </section>
 
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div class="xl:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-6">

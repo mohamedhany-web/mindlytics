@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class WalletController extends Controller
 {
@@ -113,6 +114,12 @@ class WalletController extends Controller
                 ->take(5)
                 ->get();
 
+            $transferWallets = Wallet::academyWallets()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->orderBy('id')
+                ->get();
+
             return view('admin.wallets.index', compact(
                 'wallets',
                 'stats',
@@ -120,7 +127,8 @@ class WalletController extends Controller
                 'currentMonthDeposits',
                 'currentMonthWithdrawals',
                 'typeDistribution',
-                'recentWallets'
+                'recentWallets',
+                'transferWallets'
             ));
         } catch (\Exception $e) {
             Log::error('Error in WalletController@index: ' . $e->getMessage());
@@ -379,6 +387,60 @@ class WalletController extends Controller
         $wallet->delete();
         return redirect()->route('admin.wallets.index')
             ->with('success', 'تم حذف المحفظة بنجاح');
+    }
+
+    public function transfer(Request $request)
+    {
+        if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
+            abort(403, 'غير مصرح لك بإجراء التحويل');
+        }
+
+        $validated = $request->validate([
+            'from_wallet_id' => [
+                'required',
+                'integer',
+                Rule::exists('wallets', 'id')->where(fn ($query) => $query->whereNull('user_id')->where('is_active', true)),
+            ],
+            'to_wallet_id' => [
+                'required',
+                'integer',
+                'different:from_wallet_id',
+                Rule::exists('wallets', 'id')->where(fn ($query) => $query->whereNull('user_id')->where('is_active', true)),
+            ],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ], [
+            'to_wallet_id.different' => 'يجب اختيار محفظتين مختلفتين',
+        ]);
+
+        $amount = round((float) $validated['amount'], 2);
+
+        DB::transaction(function () use ($validated, $amount) {
+            $fromWallet = Wallet::academyWallets()->where('id', $validated['from_wallet_id'])->lockForUpdate()->firstOrFail();
+            $toWallet = Wallet::academyWallets()->where('id', $validated['to_wallet_id'])->lockForUpdate()->firstOrFail();
+
+            if ((float) $fromWallet->balance < $amount) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'amount' => 'الرصيد غير كاف في المحفظة المصدر',
+                ]);
+            }
+
+            $reference = 'ADM-WTR-' . now()->format('YmdHis') . '-' . str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT);
+            $notes = trim((string) ($validated['notes'] ?? ''));
+
+            $withdrawDescription = "تحويل إداري إلى {$toWallet->name} (مرجع: {$reference})";
+            $depositDescription = "تحويل إداري من {$fromWallet->name} (مرجع: {$reference})";
+
+            if ($notes !== '') {
+                $withdrawDescription .= " - {$notes}";
+                $depositDescription .= " - {$notes}";
+            }
+
+            $fromWallet->withdraw($amount, $withdrawDescription);
+            $toWallet->deposit($amount, null, null, $depositDescription);
+        });
+
+        return redirect()->route('admin.wallets.index')->with('success', 'تم التحويل بين المحافظ بنجاح');
     }
 
     private function abortUnlessAcademyWallet(Wallet $wallet): void

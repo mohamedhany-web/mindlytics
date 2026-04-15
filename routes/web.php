@@ -1346,6 +1346,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::resource('wallets', \App\Http\Controllers\Admin\WalletController::class)
             ->middleware('throttle:60,1')
             ->except(['update', 'destroy']);
+        Route::post('/wallets/transfer', [\App\Http\Controllers\Admin\WalletController::class, 'transfer'])->middleware('throttle:20,5')->name('wallets.transfer');
         Route::match(['put', 'patch', 'post'], '/wallets/{wallet}', [\App\Http\Controllers\Admin\WalletController::class, 'update'])->middleware('throttle:20,5')->name('wallets.update');
         Route::delete('/wallets/{wallet}', [\App\Http\Controllers\Admin\WalletController::class, 'destroy'])->middleware('throttle:10,1')->name('wallets.destroy');
         
