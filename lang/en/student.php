@@ -206,6 +206,17 @@ return [
     'transaction_default' => 'Transaction',
     'no_transactions' => 'No transactions yet',
     'deposit_label' => 'Deposit',
+    'wallet_transfer_title' => 'Transfer between wallets',
+    'wallet_transfer_from' => 'From wallet',
+    'wallet_transfer_to' => 'To wallet',
+    'wallet_transfer_select_wallet' => 'Select wallet',
+    'wallet_transfer_button' => 'Transfer now',
+    'wallet_transfer_need_two_wallets' => 'You need at least two wallets to transfer between them.',
+    'wallet_transfer_success' => 'Amount transferred between wallets successfully.',
+    'wallet_transfer_insufficient_balance' => 'Insufficient balance in the source wallet.',
+    'wallet_transfer_different_wallets' => 'Please choose two different wallets.',
+    'wallet_transfer_out_description' => 'Transfer to :to (Ref: :reference)',
+    'wallet_transfer_in_description' => 'Transfer from :from (Ref: :reference)',
 
     // Invoices
     'invoices_title' => 'My invoices',

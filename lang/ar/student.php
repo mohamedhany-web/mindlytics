@@ -206,6 +206,17 @@ return [
     'transaction_default' => 'معاملة',
     'no_transactions' => 'لا توجد معاملات حتى الآن',
     'deposit_label' => 'إيداع',
+    'wallet_transfer_title' => 'تحويل بين المحافظ',
+    'wallet_transfer_from' => 'من محفظة',
+    'wallet_transfer_to' => 'إلى محفظة',
+    'wallet_transfer_select_wallet' => 'اختر المحفظة',
+    'wallet_transfer_button' => 'تنفيذ التحويل',
+    'wallet_transfer_need_two_wallets' => 'يجب أن يكون لديك محافظتان على الأقل لتتمكن من التحويل بينهما.',
+    'wallet_transfer_success' => 'تم تحويل المبلغ بين المحافظ بنجاح.',
+    'wallet_transfer_insufficient_balance' => 'الرصيد غير كاف في المحفظة المصدر.',
+    'wallet_transfer_different_wallets' => 'يجب اختيار محفظتين مختلفتين.',
+    'wallet_transfer_out_description' => 'تحويل إلى :to (مرجع: :reference)',
+    'wallet_transfer_in_description' => 'تحويل من :from (مرجع: :reference)',
 
     // Invoices
     'invoices_title' => 'فواتيري',

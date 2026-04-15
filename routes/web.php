@@ -1545,6 +1545,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::post('invoices/{invoice}/payment-proof', [\App\Http\Controllers\Student\InvoiceController::class, 'storePaymentProof'])
             ->name('invoices.payment-proof');
         Route::resource('wallet', \App\Http\Controllers\Student\WalletController::class)->only(['index', 'show']);
+        Route::post('wallet/transfer', [\App\Http\Controllers\Student\WalletController::class, 'transfer'])->name('wallet.transfer');
         Route::resource('certificates', \App\Http\Controllers\Student\CertificateController::class)->only(['index', 'show']);
         Route::resource('achievements', \App\Http\Controllers\Student\AchievementController::class)->only(['index', 'show']);
         Route::resource('assignments', \App\Http\Controllers\Student\AssignmentController::class)->only(['index', 'show']);
