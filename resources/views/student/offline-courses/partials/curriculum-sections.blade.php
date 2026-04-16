@@ -1,11 +1,32 @@
 @foreach($sections as $section)
-    <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-        <div class="px-4 py-3 bg-gradient-to-l from-sky-50 to-indigo-50 border-b border-slate-100">
-            <h3 class="font-bold text-slate-900 text-base">{{ $section->title }}</h3>
-            @if($section->description && ! $section->parent_id)
-                <p class="text-sm text-slate-600 mt-1 leading-relaxed whitespace-pre-line">{{ $section->description }}</p>
-            @endif
-        </div>
+    @php
+        $itemsCount = $section->items->count();
+        $childrenCount = $section->children?->count() ?? 0;
+    @endphp
+    <details class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm group" @if($loop->first && !($section->parent_id)) open @endif>
+        <summary class="px-4 py-3 bg-gradient-to-l from-sky-50 to-indigo-50 border-b border-slate-100 cursor-pointer list-none">
+            <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <h3 class="font-bold text-slate-900 text-base">{{ $section->title }}</h3>
+                    @if($section->description && ! $section->parent_id)
+                        <p class="text-sm text-slate-600 mt-1 leading-relaxed whitespace-pre-line">{{ $section->description }}</p>
+                    @endif
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <span class="text-[11px] px-2 py-1 rounded-full bg-white border border-slate-200 text-slate-600 font-semibold">
+                        {{ $itemsCount }} عنصر
+                    </span>
+                    @if($childrenCount > 0)
+                        <span class="text-[11px] px-2 py-1 rounded-full bg-white border border-slate-200 text-slate-600 font-semibold">
+                            {{ $childrenCount }} قسم فرعي
+                        </span>
+                    @endif
+                    <span class="w-7 h-7 rounded-md bg-white border border-slate-200 text-slate-600 inline-flex items-center justify-center transition-transform group-open:rotate-180">
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </span>
+                </div>
+            </div>
+        </summary>
         <div class="p-4 space-y-2">
             @forelse($section->items as $cItem)
                 @php $m = $cItem->item; @endphp
@@ -28,7 +49,7 @@
                             @if($m->description)
                                 <p class="text-xs text-slate-500 mt-0.5 line-clamp-2">{{ Str::limit(strip_tags($m->description), 120) }}</p>
                             @endif
-                            <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.lectures', $offlineCourse) }}#offline-lecture-{{ $m->id }}" class="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-violet-600 hover:text-violet-800">
+                            <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.lectures', $offlineCourse) }}#offline-lecture-{{ $m->id }}" class="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-violet-100 text-violet-700 border border-violet-200 hover:bg-violet-200">
                                 عرض المحاضرة <i class="fas fa-arrow-left text-xs"></i>
                             </a>
                         </div>
@@ -39,7 +60,7 @@
                             @if($m->description)
                                 <p class="text-xs text-slate-500 mt-0.5 line-clamp-2">{{ Str::limit(strip_tags($m->description), 120) }}</p>
                             @endif
-                            <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.resources', $offlineCourse) }}#offline-resource-{{ $m->id }}" class="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-sky-600 hover:text-sky-800">
+                            <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.resources', $offlineCourse) }}#offline-resource-{{ $m->id }}" class="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-sky-100 text-sky-700 border border-sky-200 hover:bg-sky-200">
                                 فتح المورد <i class="fas fa-arrow-left text-xs"></i>
                             </a>
                         </div>
@@ -48,7 +69,7 @@
                         <div class="min-w-0 flex-1">
                             <p class="font-semibold text-slate-900">{{ $m->title }}</p>
                             <p class="text-[11px] text-slate-500 mt-0.5">{{ $m->type }}</p>
-                            <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.activities.show', [$offlineCourse, $m]) }}" class="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-amber-700 hover:text-amber-900">
+                            <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.activities.show', [$offlineCourse, $m]) }}" class="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200 hover:bg-amber-200">
                                 عرض / تسليم <i class="fas fa-arrow-left text-xs"></i>
                             </a>
                         </div>
@@ -59,7 +80,7 @@
                             @if($m->description)
                                 <p class="text-xs text-slate-500 mt-0.5 line-clamp-2">{{ Str::limit(strip_tags($m->description), 100) }}</p>
                             @endif
-                            <a href="{{ route('student.exams.show', $m->id) }}" class="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-emerald-700 hover:text-emerald-900">
+                            <a href="{{ route('student.exams.show', $m->id) }}" class="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 hover:bg-emerald-200">
                                 صفحة الاختبار <i class="fas fa-arrow-left text-xs"></i>
                             </a>
                         </div>
@@ -74,5 +95,5 @@
                 @include('student.offline-courses.partials.curriculum-sections', ['sections' => $section->children, 'offlineCourse' => $offlineCourse, 'channel' => $channel ?? 'offline', 'studentRouteGroup' => $studentRouteGroup ?? 'student.offline-courses'])
             </div>
         @endif
-    </div>
+    </details>
 @endforeach

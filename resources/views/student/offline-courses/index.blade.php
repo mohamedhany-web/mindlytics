@@ -90,7 +90,6 @@
                         <p class="text-xs text-gray-600 line-clamp-2 mb-3">{{ Str::limit($course->description, 80) }}</p>
                     @endif
                     <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500 mb-2">
-                        <span><i class="fas fa-users ml-1"></i>{{ $course->current_students ?? 0 }} / {{ $course->max_students ?? '—' }}</span>
                         @if($enrollment->group)
                             <span class="truncate max-w-[120px]" title="{{ $enrollment->group->name }}"><i class="fas fa-users-cog ml-1"></i>{{ $enrollment->group->name }}</span>
                         @endif

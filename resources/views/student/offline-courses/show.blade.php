@@ -12,6 +12,35 @@
         </a>
     </div>
 
+    @php
+        $resourcesCount = $offlineCourse->resources()
+            ->active()
+            ->when($enrollment->group_id, fn ($q) => $q->where(function ($x) use ($enrollment) {
+                $x->whereNull('group_id')->orWhere('group_id', $enrollment->group_id);
+            }))
+            ->count();
+
+        $lecturesCount = $offlineCourse->offlineLectures()
+            ->active()
+            ->when($enrollment->group_id, fn ($q) => $q->where(function ($x) use ($enrollment) {
+                $x->whereNull('group_id')->orWhere('group_id', $enrollment->group_id);
+            }))
+            ->count();
+
+        $activitiesCount = $offlineCourse->activities()
+            ->where('status', 'published')
+            ->when($enrollment->group_id, fn ($q) => $q->where(function ($x) use ($enrollment) {
+                $x->whereNull('group_id')->orWhere('group_id', $enrollment->group_id);
+            }))
+            ->count();
+
+        $examsCount = \App\Models\AdvancedExam::query()
+            ->where('offline_course_id', $offlineCourse->id)
+            ->where('is_active', true)
+            ->where('is_published', true)
+            ->count();
+    @endphp
+
     <!-- معلومات الكورس -->
     <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div class="p-5 sm:p-6">
@@ -71,8 +100,57 @@
                 <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.lectures', $offlineCourse) }}" class="inline-flex items-center gap-2 px-3 py-2 bg-violet-50 text-violet-700 rounded-lg border border-violet-100 font-medium text-sm hover:bg-violet-100">
                     <i class="fas fa-chalkboard-teacher"></i> المحاضرات
                 </a>
+                <a href="{{ route('student.exams.index') }}" class="inline-flex items-center gap-2 px-3 py-2 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 font-medium text-sm hover:bg-emerald-100">
+                    <i class="fas fa-clipboard-check"></i> الاختبارات
+                </a>
             </div>
         </div>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.resources', $offlineCourse) }}" class="group bg-white rounded-xl border border-sky-100 shadow-sm p-4 hover:shadow-md hover:border-sky-200 transition-all">
+            <div class="flex items-center justify-between">
+                <span class="w-10 h-10 rounded-lg bg-sky-100 text-sky-600 inline-flex items-center justify-center">
+                    <i class="fas fa-file-alt"></i>
+                </span>
+                <span class="text-xs px-2 py-1 rounded-full bg-sky-50 text-sky-700 font-semibold">{{ $resourcesCount }}</span>
+            </div>
+            <p class="mt-3 text-sm font-bold text-gray-900">الموارد</p>
+            <p class="text-xs text-gray-500 mt-1">فتح وتحميل الملفات التعليمية</p>
+        </a>
+
+        <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.lectures', $offlineCourse) }}" class="group bg-white rounded-xl border border-violet-100 shadow-sm p-4 hover:shadow-md hover:border-violet-200 transition-all">
+            <div class="flex items-center justify-between">
+                <span class="w-10 h-10 rounded-lg bg-violet-100 text-violet-600 inline-flex items-center justify-center">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                </span>
+                <span class="text-xs px-2 py-1 rounded-full bg-violet-50 text-violet-700 font-semibold">{{ $lecturesCount }}</span>
+            </div>
+            <p class="mt-3 text-sm font-bold text-gray-900">المحاضرات</p>
+            <p class="text-xs text-gray-500 mt-1">الدروس المتاحة لمجموعتك</p>
+        </a>
+
+        <a href="#activities-required" class="group bg-white rounded-xl border border-amber-100 shadow-sm p-4 hover:shadow-md hover:border-amber-200 transition-all">
+            <div class="flex items-center justify-between">
+                <span class="w-10 h-10 rounded-lg bg-amber-100 text-amber-700 inline-flex items-center justify-center">
+                    <i class="fas fa-tasks"></i>
+                </span>
+                <span class="text-xs px-2 py-1 rounded-full bg-amber-50 text-amber-700 font-semibold">{{ $activitiesCount }}</span>
+            </div>
+            <p class="mt-3 text-sm font-bold text-gray-900">الأنشطة</p>
+            <p class="text-xs text-gray-500 mt-1">المطلوب تسليمه ومتابعته</p>
+        </a>
+
+        <a href="{{ route('student.exams.index') }}" class="group bg-white rounded-xl border border-emerald-100 shadow-sm p-4 hover:shadow-md hover:border-emerald-200 transition-all">
+            <div class="flex items-center justify-between">
+                <span class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 inline-flex items-center justify-center">
+                    <i class="fas fa-clipboard-check"></i>
+                </span>
+                <span class="text-xs px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 font-semibold">{{ $examsCount }}</span>
+            </div>
+            <p class="mt-3 text-sm font-bold text-gray-900">الاختبارات</p>
+            <p class="text-xs text-gray-500 mt-1">الدخول والبدء من واجهة الطالب</p>
+        </a>
     </div>
 
     @if($curriculumRoots->isNotEmpty())
@@ -186,38 +264,42 @@
     @endif
 
     <!-- الأنشطة المطلوبة -->
-    @if($pendingActivities->count() > 0)
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" id="activities-required">
         <div class="p-5 sm:p-6">
             <h2 class="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <i class="fas fa-tasks text-amber-500"></i>
                 الأنشطة المطلوبة
             </h2>
-            <div class="space-y-3">
-                @foreach($pendingActivities as $activity)
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-lg border border-gray-100 hover:bg-gray-50/50 transition-colors">
-                    <div class="flex-1 min-w-0">
-                        <h3 class="font-semibold text-gray-900 mb-1">{{ $activity->title }}</h3>
-                        @if($activity->description)
-                            <p class="text-sm text-gray-600 mb-2 line-clamp-2">{{ Str::limit($activity->description, 120) }}</p>
-                        @endif
-                        <div class="flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                            <span><i class="fas fa-tag text-sky-500 ml-1"></i>{{ $activity->type }}</span>
-                            @if($activity->due_date)
-                                <span><i class="fas fa-calendar text-sky-500 ml-1"></i>{{ $activity->due_date->format('Y-m-d') }}</span>
+            @if($pendingActivities->count() > 0)
+                <div class="space-y-3">
+                    @foreach($pendingActivities as $activity)
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-lg border border-gray-100 hover:bg-gray-50/50 transition-colors">
+                        <div class="flex-1 min-w-0">
+                            <h3 class="font-semibold text-gray-900 mb-1">{{ $activity->title }}</h3>
+                            @if($activity->description)
+                                <p class="text-sm text-gray-600 mb-2 line-clamp-2">{{ Str::limit($activity->description, 120) }}</p>
                             @endif
-                            <span><i class="fas fa-star text-amber-500 ml-1"></i>{{ $activity->max_score }} نقطة</span>
+                            <div class="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                                <span><i class="fas fa-tag text-sky-500 ml-1"></i>{{ $activity->type }}</span>
+                                @if($activity->due_date)
+                                    <span><i class="fas fa-calendar text-sky-500 ml-1"></i>{{ $activity->due_date->format('Y-m-d') }}</span>
+                                @endif
+                                <span><i class="fas fa-star text-amber-500 ml-1"></i>{{ $activity->max_score }} نقطة</span>
+                            </div>
                         </div>
+                        <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.activities.show', [$offlineCourse, $activity]) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200 hover:bg-amber-200 flex-shrink-0">
+                            عرض / تسليم
+                        </a>
                     </div>
-                    <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.activities.show', [$offlineCourse, $activity]) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200 hover:bg-amber-200 flex-shrink-0">
-                        عرض / تسليم
-                    </a>
+                    @endforeach
                 </div>
-                @endforeach
-            </div>
+            @else
+                <div class="rounded-lg border border-gray-100 bg-gray-50 p-4 text-sm text-gray-600">
+                    لا توجد أنشطة مطلوبة حالياً.
+                </div>
+            @endif
         </div>
     </div>
-    @endif
 
     <!-- الأنشطة المكتملة -->
     @if($completedActivities->count() > 0)

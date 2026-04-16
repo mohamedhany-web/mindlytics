@@ -1,12 +1,10 @@
-
-
 <?php $__env->startSection('title', 'موارد الكورس - ' . $offlineCourse->title); ?>
 <?php $__env->startSection('header', 'موارد الكورس الأوفلاين'); ?>
 
 <?php $__env->startSection('content'); ?>
 <div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
     <div class="mb-4">
-        <a href="<?php echo e(route('student.offline-courses.show', $offlineCourse)); ?>" class="inline-flex items-center text-sky-600 hover:text-sky-700 text-sm font-medium">
+        <a href="<?php echo e(route(($studentRouteGroup ?? 'student.offline-courses') . '.show', $offlineCourse)); ?>" class="inline-flex items-center text-sky-600 hover:text-sky-700 text-sm font-medium">
             <i class="fas fa-arrow-right ml-2"></i>
             العودة لصفحة الكورس
         </a>

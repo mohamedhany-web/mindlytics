@@ -27,7 +27,7 @@ class OfflineResourceController extends Controller
             ->ordered()
             ->get();
 
-        $groups = $this->groupsForChannel($offlineCourse, $channel);
+        $groups = $this->groupsForChannel($offlineCourse, $channel)->get();
 
         return view('instructor.offline-courses.resources.index', compact('offlineCourse', 'resources', 'groups', 'channel'));
     }
@@ -40,7 +40,7 @@ class OfflineResourceController extends Controller
         $this->authorizeInstructor($offlineCourse);
         $channel = request()->query('channel') === 'online' ? 'online' : 'offline';
 
-        $groups = $this->groupsForChannel($offlineCourse, $channel);
+        $groups = $this->groupsForChannel($offlineCourse, $channel)->get();
 
         return view('instructor.offline-courses.resources.create', compact('offlineCourse', 'groups', 'channel'));
     }
@@ -121,7 +121,7 @@ class OfflineResourceController extends Controller
             abort(404);
         }
 
-        $groups = $this->groupsForChannel($offlineCourse, $channel);
+        $groups = $this->groupsForChannel($offlineCourse, $channel)->get();
 
         return view('instructor.offline-courses.resources.edit', compact('offlineCourse', 'resource', 'groups', 'channel'));
     }

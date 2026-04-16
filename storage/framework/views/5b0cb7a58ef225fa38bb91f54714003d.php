@@ -93,7 +93,6 @@
                         <p class="text-xs text-gray-600 line-clamp-2 mb-3"><?php echo e(Str::limit($course->description, 80)); ?></p>
                     <?php endif; ?>
                     <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500 mb-2">
-                        <span><i class="fas fa-users ml-1"></i><?php echo e($course->current_students ?? 0); ?> / <?php echo e($course->max_students ?? '—'); ?></span>
                         <?php if($enrollment->group): ?>
                             <span class="truncate max-w-[120px]" title="<?php echo e($enrollment->group->name); ?>"><i class="fas fa-users-cog ml-1"></i><?php echo e($enrollment->group->name); ?></span>
                         <?php endif; ?>
