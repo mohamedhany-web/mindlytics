@@ -43,7 +43,7 @@
                                     </a>
                                 @else
                                     @foreach($resource->getAllFiles() as $file)
-                                        <a href="{{ asset('storage/' . $file['path']) }}" download="{{ $file['name'] ?? 'download' }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-100 text-sky-700 rounded-lg text-sm font-medium hover:bg-sky-200">
+                                        <a href="{{ offline_course_resource_file_url($file) }}" download="{{ $file['name'] ?? 'download' }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-100 text-sky-700 rounded-lg text-sm font-medium hover:bg-sky-200">
                                             <i class="fas fa-download"></i>
                                             {{ Str::limit($file['name'] ?? 'تحميل', 25) }}
                                         </a>

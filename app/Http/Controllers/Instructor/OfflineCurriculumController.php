@@ -10,7 +10,9 @@ use App\Models\OfflineCourseResource;
 use App\Models\OfflineCourseSection;
 use App\Models\OfflineCurriculumItem;
 use App\Models\OfflineCurriculumNote;
+use App\Models\OfflineGroupSession;
 use App\Models\OfflineLecture;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -37,8 +39,23 @@ class OfflineCurriculumController extends Controller
     {
         $this->authorizeOfflineCourse($offlineCourse);
 
+        $curriculumChannel = request()->query('channel') === 'online' ? 'online' : 'offline';
+
+        $groupSessions = OfflineGroupSession::query()
+            ->forOfflineCourse($offlineCourse, $curriculumChannel)
+            ->with('group')
+            ->orderBy('session_date')
+            ->orderBy('start_time')
+            ->get();
+
         $allSections = $offlineCourse->offlineCourseSections()
-            ->with(['items' => fn ($q) => $q->orderBy('order')->with('item')])
+            ->with(['items' => function ($q) {
+                $q->orderBy('order')->with(['item' => function (MorphTo $morph) {
+                    $morph->morphWith([
+                        OfflineLecture::class => ['groupSession.group'],
+                    ]);
+                }]);
+            }])
             ->orderBy('order')
             ->get();
 
@@ -49,11 +66,46 @@ class OfflineCurriculumController extends Controller
 
         $sectionsFlat = $this->flattenSectionsForSelect($sections);
 
-        $lectures = $offlineCourse->offlineLectures()->orderBy('order')->get();
-        $resources = $offlineCourse->resources()->orderBy('order')->get();
-        $activities = $offlineCourse->activities()->orderBy('created_at', 'desc')->get();
+        $sectionIds = $allSections->pluck('id');
+
+        $usedLectureIds = OfflineCurriculumItem::query()
+            ->whereIn('offline_course_section_id', $sectionIds)
+            ->where('item_type', OfflineLecture::class)
+            ->pluck('item_id');
+
+        $usedResourceIds = OfflineCurriculumItem::query()
+            ->whereIn('offline_course_section_id', $sectionIds)
+            ->where('item_type', OfflineCourseResource::class)
+            ->pluck('item_id');
+
+        $usedActivityIds = OfflineCurriculumItem::query()
+            ->whereIn('offline_course_section_id', $sectionIds)
+            ->where('item_type', OfflineActivity::class)
+            ->pluck('item_id');
+
+        $usedExamIds = OfflineCurriculumItem::query()
+            ->whereIn('offline_course_section_id', $sectionIds)
+            ->where('item_type', AdvancedExam::class)
+            ->pluck('item_id');
+
+        $lectures = $offlineCourse->offlineLectures()
+            ->when($usedLectureIds->isNotEmpty(), fn ($q) => $q->whereNotIn('id', $usedLectureIds))
+            ->orderBy('order')
+            ->get();
+
+        $resources = $offlineCourse->resources()
+            ->when($usedResourceIds->isNotEmpty(), fn ($q) => $q->whereNotIn('id', $usedResourceIds))
+            ->orderBy('order')
+            ->get();
+
+        $activities = $offlineCourse->activities()
+            ->when($usedActivityIds->isNotEmpty(), fn ($q) => $q->whereNotIn('id', $usedActivityIds))
+            ->orderBy('created_at', 'desc')
+            ->get();
+
         $exams = AdvancedExam::query()
             ->where('offline_course_id', $offlineCourse->id)
+            ->when($usedExamIds->isNotEmpty(), fn ($q) => $q->whereNotIn('id', $usedExamIds))
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -64,7 +116,9 @@ class OfflineCurriculumController extends Controller
             'lectures',
             'resources',
             'activities',
-            'exams'
+            'exams',
+            'groupSessions',
+            'curriculumChannel'
         ));
     }
 

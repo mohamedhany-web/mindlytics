@@ -543,6 +543,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
                 });
                 Route::get('/{offlineCourse}/booking/create', [\App\Http\Controllers\Student\OfflineCourseBookingController::class, 'create'])->name('booking.create');
                 Route::post('/{offlineCourse}/booking', [\App\Http\Controllers\Student\OfflineCourseBookingController::class, 'store'])->name('booking.store');
+                Route::get('/{offlineCourse}/curriculum', [\App\Http\Controllers\Student\OfflineCourseController::class, 'curriculum'])->name('curriculum');
+                Route::get('/{offlineCourse}/schedule', [\App\Http\Controllers\Student\OfflineCourseController::class, 'schedule'])->name('schedule');
                 Route::get('/{offlineCourse}/resources', [\App\Http\Controllers\Student\OfflineCourseController::class, 'resources'])->name('resources');
                 Route::get('/{offlineCourse}/lectures', [\App\Http\Controllers\Student\OfflineCourseController::class, 'lectures'])->name('lectures');
                 Route::get('/{offlineCourse}/activities/{activity}', [\App\Http\Controllers\Student\OfflineCourseController::class, 'activityShow'])->name('activities.show');
@@ -553,13 +555,15 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             // كورسات الأونلاين (مجموعات أونلاين) — مسار وقائمة منفصلان؛ الظهور بعد تفعيل «بوابة الطالب» من الإدارة
             Route::prefix('online-courses')->name('student.online-courses.')->group(function () {
                 Route::get('/', [\App\Http\Controllers\Student\OfflineCourseController::class, 'index'])->name('index');
+                Route::get('/{offlineCourse}/curriculum', [\App\Http\Controllers\Student\OfflineCourseController::class, 'curriculum'])->name('curriculum');
+                Route::get('/{offlineCourse}/schedule', [\App\Http\Controllers\Student\OfflineCourseController::class, 'schedule'])->name('schedule');
                 Route::get('/{offlineCourse}/resources', [\App\Http\Controllers\Student\OfflineCourseController::class, 'resources'])->name('resources');
                 Route::get('/{offlineCourse}/lectures', [\App\Http\Controllers\Student\OfflineCourseController::class, 'lectures'])->name('lectures');
                 Route::get('/{offlineCourse}/activities/{activity}', [\App\Http\Controllers\Student\OfflineCourseController::class, 'activityShow'])->name('activities.show');
                 Route::post('/{offlineCourse}/activities/{activity}/submit', [\App\Http\Controllers\Student\OfflineCourseController::class, 'activitySubmit'])->name('activities.submit');
                 Route::get('/{offlineCourse}', [\App\Http\Controllers\Student\OfflineCourseController::class, 'show'])->name('show');
             });
-            
+
             // المسار التعليمي للطالب
             Route::get('/student/learning-path/{slug}', [\App\Http\Controllers\Student\LearningPathController::class, 'show'])->name('student.learning-path.show');
         Route::get('/my-courses/{course}/learn', [\App\Http\Controllers\Student\MyCourseController::class, 'learn'])
@@ -1585,6 +1589,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         // موارد ومحاضرات وأنشطة الكورسات الأوفلاين (واجهات منفصلة عن الأونلاين)
         Route::prefix('offline-courses/{offlineCourse}')->name('offline-courses.')->group(function () {
             Route::resource('resources', \App\Http\Controllers\Instructor\OfflineResourceController::class)->except(['show'])->parameters(['resource' => 'resource']);
+            Route::get('lectures/sessions/{session}', [\App\Http\Controllers\Instructor\OfflineLectureController::class, 'showGroupSession'])->name('lectures.sessions.show');
             Route::resource('lectures', \App\Http\Controllers\Instructor\OfflineLectureController::class)->parameters(['lecture' => 'lecture']);
             Route::resource('activities', \App\Http\Controllers\Instructor\OfflineActivityController::class)->parameters(['activity' => 'activity']);
             Route::post('activities/{activity}/submissions/{submission}/grade', [\App\Http\Controllers\Instructor\OfflineActivityController::class, 'gradeSubmission'])->name('activities.submissions.grade');

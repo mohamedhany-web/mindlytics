@@ -7,7 +7,7 @@
 <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
     <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-5">
         <nav class="text-sm text-slate-500 mb-2">
-            <a href="{{ route('instructor.offline-courses.lectures.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="hover:text-amber-600">المحاضرات</a>
+            <a href="{{ route('instructor.offline-courses.lectures.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="hover:text-amber-600">الجلسات</a>
             <span class="mx-2">/</span>
             <span class="text-slate-700 font-semibold">تعديل</span>
         </nav>
@@ -24,20 +24,35 @@
                     <input type="text" name="title" value="{{ old('title', $lecture->title) }}" required class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-violet-500">
                     @error('title')<p class="text-red-500 text-sm mt-1">{{ $message }}</p>@enderror
                 </div>
+                @include('instructor.offline-courses.lectures.partials.session-select', [
+                    'groupSessions' => $groupSessions ?? collect(),
+                    'required' => ($hasGroupSessions ?? false),
+                    'value' => old('offline_group_session_id', $lecture->offline_group_session_id),
+                ])
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1">الوصف</label>
                     <textarea name="description" rows="3" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-violet-500">{{ old('description', $lecture->description) }}</textarea>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">موعد المحاضرة</label>
-                        <input type="datetime-local" name="scheduled_at" value="{{ old('scheduled_at', $lecture->scheduled_at ? $lecture->scheduled_at->format('Y-m-d\TH:i') : '') }}" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-violet-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">المدة (دقيقة)</label>
-                        <input type="number" name="duration_minutes" value="{{ old('duration_minutes', $lecture->duration_minutes) }}" min="0" max="600" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-violet-500">
-                    </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">برنامج اليوم (نقطة لكل سطر)</label>
+                    <textarea name="session_agenda" rows="5" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-violet-500 font-mono text-sm">{{ old('session_agenda', $lecture->session_agenda) }}</textarea>
+                    @error('session_agenda')<p class="text-red-500 text-sm mt-1">{{ $message }}</p>@enderror
                 </div>
+                @include('instructor.offline-courses.lectures.partials.offline-mindmap-field', ['variant' => 'default', 'value' => old('offline_attendee_mindmap', $lecture->offline_attendee_mindmap)])
+                @if(!($hasGroupSessions ?? false))
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">موعد المحاضرة</label>
+                            <input type="datetime-local" name="scheduled_at" value="{{ old('scheduled_at', $lecture->scheduled_at ? $lecture->scheduled_at->format('Y-m-d\TH:i') : '') }}" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-violet-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">المدة (دقيقة)</label>
+                            <input type="number" name="duration_minutes" value="{{ old('duration_minutes', $lecture->duration_minutes) }}" min="0" max="600" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-violet-500">
+                        </div>
+                    </div>
+                @else
+                    <p class="text-xs text-slate-500 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">عند ربط المحاضرة بجلسة، يُحدَّد الموعد والمدة من الجلسة (يمكنك تغيير الجلسة من القائمة أعلاه).</p>
+                @endif
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1">رابط الميتينج (للأونلاين)</label>
                     <input type="url" name="meeting_url" value="{{ old('meeting_url', $lecture->meeting_url) }}" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-violet-500">

@@ -84,14 +84,24 @@
                     </div>
                 </div>
             </div>
-            <?php if($offlineCourse->description): ?>
+            <?php if(filled($offlineCourse->description)): ?>
             <div class="pt-4 border-t border-gray-100">
-                <p class="text-xs font-medium text-gray-500 mb-2">الوصف</p>
-                <p class="text-sm text-gray-700 leading-relaxed"><?php echo e($offlineCourse->description); ?></p>
+                <p class="text-xs font-medium text-gray-500 mb-2">نبذة عن الكورس</p>
+                <p class="text-sm text-gray-700 leading-relaxed"><?php echo e(\Illuminate\Support\Str::limit($offlineCourse->description, 280)); ?></p>
+                <a href="<?php echo e(route(($studentRouteGroup ?? 'student.offline-courses') . '.curriculum', $offlineCourse)); ?>" class="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-sky-700 hover:text-sky-900">
+                    عرض التوصيف الكامل والمنهج
+                    <i class="fas fa-chevron-left text-xs"></i>
+                </a>
             </div>
             <?php endif; ?>
             <!-- روابط المحتوى الأوفلاين -->
             <div class="pt-4 border-t border-gray-100 flex flex-wrap gap-3">
+                <a href="<?php echo e(route(($studentRouteGroup ?? 'student.offline-courses') . '.curriculum', $offlineCourse)); ?>" class="inline-flex items-center gap-2 px-3 py-2 bg-slate-50 text-slate-800 rounded-lg border border-slate-200 font-medium text-sm hover:bg-slate-100">
+                    <i class="fas fa-sitemap"></i> المنهج والتوصيف
+                </a>
+                <a href="<?php echo e(route(($studentRouteGroup ?? 'student.offline-courses') . '.schedule', $offlineCourse)); ?>" class="inline-flex items-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-800 rounded-lg border border-indigo-100 font-medium text-sm hover:bg-indigo-100">
+                    <i class="fas fa-calendar-alt"></i> التقويم
+                </a>
                 <a href="<?php echo e(route(($studentRouteGroup ?? 'student.offline-courses') . '.resources', $offlineCourse)); ?>" class="inline-flex items-center gap-2 px-3 py-2 bg-sky-50 text-sky-700 rounded-lg border border-sky-100 font-medium text-sm hover:bg-sky-100">
                     <i class="fas fa-file-alt"></i> الموارد
                 </a>
@@ -105,7 +115,29 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <a href="<?php echo e(route(($studentRouteGroup ?? 'student.offline-courses') . '.curriculum', $offlineCourse)); ?>" class="group bg-white rounded-xl border border-slate-200 shadow-sm p-4 hover:shadow-md hover:border-slate-300 transition-all">
+            <div class="flex items-center justify-between">
+                <span class="w-10 h-10 rounded-lg bg-slate-100 text-slate-700 inline-flex items-center justify-center">
+                    <i class="fas fa-sitemap"></i>
+                </span>
+                <span class="text-xs px-2 py-1 rounded-full bg-slate-50 text-slate-600 font-semibold">منهج</span>
+            </div>
+            <p class="mt-3 text-sm font-bold text-gray-900">المنهج والتوصيف</p>
+            <p class="text-xs text-gray-500 mt-1">وصف الكورس، نبذة المدرب، وهيكل المحتوى</p>
+        </a>
+
+        <a href="<?php echo e(route(($studentRouteGroup ?? 'student.offline-courses') . '.schedule', $offlineCourse)); ?>" class="group bg-white rounded-xl border border-indigo-100 shadow-sm p-4 hover:shadow-md hover:border-indigo-200 transition-all">
+            <div class="flex items-center justify-between">
+                <span class="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-700 inline-flex items-center justify-center">
+                    <i class="fas fa-calendar-alt"></i>
+                </span>
+                <span class="text-xs px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 font-semibold">جدول</span>
+            </div>
+            <p class="mt-3 text-sm font-bold text-gray-900">تقويم الجلسات</p>
+            <p class="text-xs text-gray-500 mt-1">كل الجلسات والمواعيد والاختبارات المجدولة</p>
+        </a>
+
         <a href="<?php echo e(route(($studentRouteGroup ?? 'student.offline-courses') . '.resources', $offlineCourse)); ?>" class="group bg-white rounded-xl border border-sky-100 shadow-sm p-4 hover:shadow-md hover:border-sky-200 transition-all">
             <div class="flex items-center justify-between">
                 <span class="w-10 h-10 rounded-lg bg-sky-100 text-sky-600 inline-flex items-center justify-center">
@@ -151,17 +183,27 @@
         </a>
     </div>
 
-    <?php if($curriculumRoots->isNotEmpty()): ?>
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div class="p-5 sm:p-6 border-b border-gray-100 bg-gradient-to-l from-sky-50/80 to-white">
-            <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-                <i class="fas fa-sitemap text-sky-600"></i>
-                منهج الكورس (التوصيف)
-            </h2>
-            <p class="text-sm text-gray-500 mt-1">ترتيب المحتوى كما جهّزه المدرب؛ اضغط للانتقال لكل عنصر.</p>
-        </div>
-        <div class="p-4 sm:p-6 space-y-4">
-            <?php echo $__env->make('student.offline-courses.partials.curriculum-sections', ['sections' => $curriculumRoots, 'offlineCourse' => $offlineCourse, 'channel' => $channel, 'studentRouteGroup' => $studentRouteGroup], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+    <?php if($enrollment->group): ?>
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="flex items-start gap-3">
+                <span class="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 inline-flex items-center justify-center shrink-0">
+                    <i class="fas fa-calendar-check text-lg"></i>
+                </span>
+                <div>
+                    <h2 class="text-base font-bold text-gray-900">الجلسات والمواعيد</h2>
+                    <p class="text-sm text-gray-500 mt-1">
+                        مجموعة <span class="font-semibold text-gray-700"><?php echo e($enrollment->group->name); ?></span>
+                        <?php if(($enrollment->group->sessions_count ?? 0) > 0): ?>
+                            — <?php echo e($enrollment->group->sessions_count); ?> جلسة مسجّلة
+                        <?php endif; ?>
+                    </p>
+                </div>
+            </div>
+            <a href="<?php echo e(route(($studentRouteGroup ?? 'student.offline-courses') . '.schedule', $offlineCourse)); ?>" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 shadow-sm shrink-0">
+                <i class="fas fa-calendar-alt"></i>
+                فتح التقويم الكامل
+            </a>
         </div>
     </div>
     <?php endif; ?>
@@ -197,67 +239,6 @@
                         <?php echo e(number_format($enrollment->remaining_amount, 2)); ?> ج.م
                     </p>
                 </div>
-            </div>
-        </div>
-    </div>
-    <?php endif; ?>
-
-    <!-- جدول الجلسات القادمة -->
-    <?php if($enrollment->group && $upcomingSessions->count() > 0): ?>
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div class="p-5 sm:p-6">
-            <h2 class="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <i class="fas fa-calendar-alt text-indigo-500"></i>
-                الجلسات القادمة
-                <?php if($enrollment->group->start_date): ?>
-                    <span class="text-xs font-normal text-gray-500 mr-2">
-                        (يبدأ <?php echo e($enrollment->group->start_date->format('Y-m-d')); ?>)
-                    </span>
-                <?php endif; ?>
-            </h2>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200 text-sm">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-4 py-2 text-right font-medium text-gray-500">#</th>
-                            <th class="px-4 py-2 text-right font-medium text-gray-500">التاريخ</th>
-                            <th class="px-4 py-2 text-right font-medium text-gray-500">الوقت</th>
-                            <th class="px-4 py-2 text-right font-medium text-gray-500">المدة</th>
-                            <th class="px-4 py-2 text-right font-medium text-gray-500">المكان</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                        <?php $__currentLoopData = $upcomingSessions; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $session): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                        <tr class="<?php echo e($session->session_date->isToday() ? 'bg-blue-50' : ''); ?>">
-                            <td class="px-4 py-2 text-gray-500"><?php echo e($i + 1); ?></td>
-                            <td class="px-4 py-2 font-medium text-gray-900">
-                                <?php echo e($session->session_date->format('Y-m-d')); ?>
-
-                                <span class="text-xs text-gray-500">(<?php echo e($session->session_date->translatedFormat('l')); ?>)</span>
-                                <?php if($session->session_date->isToday()): ?>
-                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-800 mr-1">اليوم</span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="px-4 py-2 text-gray-700"><?php echo e(\Carbon\Carbon::parse($session->start_time)->format('h:i A')); ?> - <?php echo e(\Carbon\Carbon::parse($session->end_time)->format('h:i A')); ?></td>
-                            <td class="px-4 py-2 text-gray-700"><?php echo e($session->duration_minutes); ?> دقيقة</td>
-                            <td class="px-4 py-2 text-gray-700"><?php echo e($session->location ?? $enrollment->group->location ?? '—'); ?></td>
-                        </tr>
-                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                    </tbody>
-                </table>
-            </div>
-            <?php if($enrollment->group->sessions->count() > 10): ?>
-                <p class="text-xs text-gray-500 mt-3 text-center">يوجد <?php echo e($enrollment->group->sessions->count()); ?> جلسة إجمالاً. يتم عرض أقرب 10 جلسات.</p>
-            <?php endif; ?>
-        </div>
-    </div>
-    <?php elseif($enrollment->group && $enrollment->group->start_date): ?>
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 sm:p-6">
-        <div class="flex items-center gap-3 text-indigo-700 bg-indigo-50 rounded-lg p-4">
-            <i class="fas fa-calendar-check text-2xl"></i>
-            <div>
-                <p class="font-bold">موعد بدء الكورس</p>
-                <p class="text-sm"><?php echo e($enrollment->group->start_date->format('Y-m-d')); ?> — المجموعة: <?php echo e($enrollment->group->name); ?></p>
             </div>
         </div>
     </div>

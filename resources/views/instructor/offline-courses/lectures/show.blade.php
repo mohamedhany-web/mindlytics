@@ -9,7 +9,7 @@
         <nav class="text-sm text-slate-500 mb-2">
             <a href="{{ route('instructor.offline-courses.index', ['channel' => ($channel ?? 'offline')]) }}" class="hover:text-amber-600">{{ ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : 'كورساتي الأوفلاين' }}</a>
             <span class="mx-2">/</span>
-            <a href="{{ route('instructor.offline-courses.lectures.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="hover:text-amber-600">المحاضرات</a>
+            <a href="{{ route('instructor.offline-courses.lectures.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="hover:text-amber-600">الجلسات</a>
             <span class="mx-2">/</span>
             <span class="text-slate-700 font-semibold">{{ $lecture->title }}</span>
         </nav>
@@ -20,12 +20,39 @@
     </div>
 
     <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-6 space-y-4">
+        @if($lecture->groupSession)
+            <div>
+                <h3 class="text-sm font-bold text-slate-600 mb-2">جلسة التقويم</h3>
+                <p class="text-slate-800 font-medium">
+                    {{ $lecture->groupSession->session_date->format('Y/m/d') }}
+                    @php $gst = $lecture->groupSession->start_time; @endphp
+                    {{ is_string($gst) ? substr($gst, 0, 5) : $gst }}
+                    @if($lecture->groupSession->group)
+                        — {{ $lecture->groupSession->group->name }}
+                    @endif
+                    @if($lecture->groupSession->title)
+                        — {{ $lecture->groupSession->title }}
+                    @endif
+                </p>
+            </div>
+        @endif
         @if($lecture->description)
             <div>
                 <h3 class="text-sm font-bold text-slate-600 mb-2">الوصف</h3>
                 <p class="text-slate-700 whitespace-pre-line">{{ $lecture->description }}</p>
             </div>
         @endif
+        @if(filled($lecture->session_agenda))
+            <div>
+                <h3 class="text-sm font-bold text-slate-600 mb-2">برنامج اليوم</h3>
+                <ul class="text-slate-700 text-sm space-y-1 list-disc list-inside">
+                    @foreach(array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $lecture->session_agenda)))) as $line)
+                        <li>{{ $line }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+        @include('partials.offline-mindmap-visual', ['text' => $lecture->offline_attendee_mindmap])
         @if($lecture->scheduled_at)
             <div>
                 <h3 class="text-sm font-bold text-slate-600 mb-2">الموعد</h3>

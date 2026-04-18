@@ -4,7 +4,7 @@
 <?php $__env->startSection('header', 'موارد الكورس ' . (($channel ?? 'offline') === 'online' ? 'الأونلاين' : 'الأوفلاين')); ?>
 
 <?php $__env->startSection('content'); ?>
-<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+<div class="w-full max-w-full space-y-6">
     <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-5 sm:p-6">
         <nav class="text-sm text-slate-500 mb-2">
             <a href="<?php echo e(route('instructor.offline-courses.index', ['channel' => ($channel ?? 'offline')])); ?>" class="hover:text-amber-600"><?php echo e(($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : 'كورساتي الأوفلاين'); ?></a>
@@ -14,13 +14,17 @@
             <span class="text-slate-700 font-semibold">الموارد</span>
         </nav>
         <div class="flex flex-wrap items-center justify-between gap-4">
-            <h1 class="text-xl sm:text-2xl font-bold text-slate-800 flex items-center gap-2">
-                <i class="fas fa-file-alt text-sky-500"></i>
-                موارد الكورس (<?php echo e(($channel ?? 'offline') === 'online' ? 'أونلاين' : 'أوفلاين'); ?>)
-            </h1>
-            <a href="<?php echo e(route('instructor.offline-courses.resources.create', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')])); ?>" class="inline-flex items-center gap-2 px-4 py-2.5 bg-sky-600 text-white rounded-xl font-semibold hover:bg-sky-700 transition-colors">
+            <div class="min-w-0 flex-1">
+                <h1 class="text-xl sm:text-2xl font-bold text-slate-800 flex flex-wrap items-center gap-2">
+                    <i class="fas fa-file-alt text-sky-500"></i>
+                    موارد الكورس (<?php echo e(($channel ?? 'offline') === 'online' ? 'أونلاين' : 'أوفلاين'); ?>)
+                </h1>
+                <p class="mt-1 text-sm font-semibold text-slate-600 truncate" title="<?php echo e($offlineCourse->title); ?>">الكورس: <?php echo e($offlineCourse->title); ?></p>
+                <p class="mt-0.5 text-xs text-slate-500">كل الموارد هنا مرتبطة بهذا الكورس فقط.</p>
+            </div>
+            <a href="<?php echo e(route('instructor.offline-courses.resources.create', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')])); ?>" class="inline-flex shrink-0 items-center gap-2 px-4 py-2.5 bg-sky-600 text-white rounded-xl font-semibold hover:bg-sky-700 transition-colors">
                 <i class="fas fa-plus"></i>
-                إضافة مورد
+                إضافة مورد لهذا الكورس
             </a>
         </div>
     </div>
@@ -34,7 +38,7 @@
             <div class="p-12 text-center text-slate-500">
                 <i class="fas fa-folder-open text-4xl mb-3 opacity-50"></i>
                 <p>لا توجد موارد بعد. أضف ملفات أو روابط للطلاب.</p>
-                <a href="<?php echo e(route('instructor.offline-courses.resources.create', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')])); ?>" class="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-sky-600 text-white rounded-xl font-semibold hover:bg-sky-700">إضافة مورد</a>
+                <a href="<?php echo e(route('instructor.offline-courses.resources.create', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')])); ?>" class="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-sky-600 text-white rounded-xl font-semibold hover:bg-sky-700">إضافة مورد لهذا الكورس</a>
             </div>
         <?php else: ?>
             <ul class="divide-y divide-slate-100">

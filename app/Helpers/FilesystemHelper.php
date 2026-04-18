@@ -1,5 +1,51 @@
 <?php
 
+use Illuminate\Support\Facades\Storage;
+
+if (!function_exists('offline_course_resources_disk')) {
+    /**
+     * قرص تخزين ملفات موارد الكورس الأوفلاين/الأونلاين (رفع المدرب).
+     *
+     * @return string 'r2' أو 'public'
+     */
+    function offline_course_resources_disk(): string
+    {
+        $envDisk = env('FILESYSTEM_DISK_OFFLINE_RESOURCES');
+        if ($envDisk !== null && $envDisk !== '' && in_array($envDisk, ['r2', 'public'], true)) {
+            return $envDisk;
+        }
+
+        return config('filesystems.offline_course_resources_disk', 'r2');
+    }
+}
+
+if (!function_exists('offline_course_resource_file_url')) {
+    /**
+     * رابط تحميل/عرض ملف مورد كورس (يدعم public محلي و Cloudflare R2).
+     *
+     * @param  array{path?: string, name?: string, disk?: string, url?: string}|null  $file
+     */
+    function offline_course_resource_file_url(?array $file): string
+    {
+        if (empty($file) || empty($file['path'])) {
+            return '#';
+        }
+        if (! empty($file['url'])) {
+            return $file['url'];
+        }
+        $path = $file['path'];
+        $disk = $file['disk'] ?? 'public';
+        if ($disk === 'public') {
+            return asset('storage/'.ltrim($path, '/'));
+        }
+        try {
+            return Storage::disk($disk)->url($path);
+        } catch (\Throwable $e) {
+            return asset('storage/'.ltrim($path, '/'));
+        }
+    }
+}
+
 if (!function_exists('community_disk')) {
     /**
      * قرص تخزين ملفات المجتمع (تقديمات المساهمين).

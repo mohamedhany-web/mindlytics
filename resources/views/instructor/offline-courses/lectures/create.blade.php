@@ -12,7 +12,11 @@
             <span class="mx-2">/</span>
             <a href="{{ route('instructor.offline-courses.show', ['offline_course' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="hover:text-amber-600 transition-colors">{{ $offlineCourse->title }}</a>
             <span class="mx-2">/</span>
-            <a href="{{ route('instructor.offline-courses.lectures.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="hover:text-amber-600 transition-colors">المحاضرات</a>
+            @if(old('curriculum_section_id', $curriculumSectionId ?? null))
+                <a href="{{ route('instructor.offline-courses.curriculum.index', $offlineCourse) }}?channel={{ urlencode($channel ?? 'offline') }}" class="hover:text-amber-600 transition-colors">المنهج</a>
+                <span class="mx-2">/</span>
+            @endif
+            <a href="{{ route('instructor.offline-courses.lectures.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="hover:text-amber-600 transition-colors">الجلسات</a>
             <span class="mx-2">/</span>
             <span class="text-slate-700 font-semibold">إضافة محاضرة</span>
         </nav>
@@ -22,7 +26,13 @@
             </div>
             <div class="min-w-0 flex-1">
                 <h1 class="text-xl sm:text-2xl font-bold text-slate-800">إضافة محاضرة ({{ ($channel ?? 'offline') === 'online' ? 'أونلاين' : 'أوفلاين' }})</h1>
-                <p class="text-sm text-slate-600 mt-0.5">إضافة محاضرة مع روابط تسجيل أو تحميل ومرفقات للطلاب</p>
+                <p class="text-sm text-slate-600 mt-0.5">
+                    @if(old('curriculum_section_id', $curriculumSectionId ?? null))
+                        ستُضاف المحاضرة تلقائياً إلى القسم الذي اخترته في المنهج بعد الحفظ.
+                    @else
+                        إضافة محاضرة مع برنامج اليوم، تسجيل، روابط تحميل ومرفقات للطلاب.
+                    @endif
+                </p>
             </div>
         </div>
     </div>
@@ -31,26 +41,46 @@
     <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-6 sm:p-8">
         <form action="{{ route('instructor.offline-courses.lectures.store', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" method="post" enctype="multipart/form-data">
             @csrf
+            @if(old('curriculum_section_id', $curriculumSectionId ?? null))
+                <input type="hidden" name="curriculum_section_id" value="{{ old('curriculum_section_id', $curriculumSectionId) }}">
+            @endif
+            @error('curriculum_section_id')<p class="text-red-500 text-sm">{{ $message }}</p>@enderror
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1">عنوان المحاضرة <span class="text-red-500">*</span></label>
                     <input type="text" name="title" value="{{ old('title') }}" required class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-violet-500" placeholder="مثال: المحاضرة الأولى">
                     @error('title')<p class="text-red-500 text-sm mt-1">{{ $message }}</p>@enderror
                 </div>
+                @include('instructor.offline-courses.lectures.partials.session-select', [
+                    'groupSessions' => $groupSessions ?? collect(),
+                    'required' => ($hasGroupSessions ?? false),
+                    'value' => old('offline_group_session_id'),
+                ])
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1">الوصف</label>
-                    <textarea name="description" rows="3" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-violet-500">{{ old('description') }}</textarea>
+                    <textarea name="description" rows="3" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-violet-500" placeholder="شرح عام للمحاضرة أو أهدافها">{{ old('description') }}</textarea>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">موعد المحاضرة</label>
-                        <input type="datetime-local" name="scheduled_at" value="{{ old('scheduled_at') }}" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-violet-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">المدة (دقيقة)</label>
-                        <input type="number" name="duration_minutes" value="{{ old('duration_minutes') }}" min="0" max="600" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-violet-500">
-                    </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">برنامج اليوم (نقاط)</label>
+                    <textarea name="session_agenda" rows="5" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-violet-500 font-mono text-sm" placeholder="اكتب كل نقطة في سطر منفصل، مثال:&#10;- مراجعة الدرس السابق&#10;- شرح الوحدة الجديدة&#10;- تطبيق عملي">{{ old('session_agenda') }}</textarea>
+                    <p class="text-xs text-slate-500 mt-1">يُعرض للطلاب كقائمة نقاط داخل صفحة الكورس والمنهج.</p>
+                    @error('session_agenda')<p class="text-red-500 text-sm mt-1">{{ $message }}</p>@enderror
                 </div>
+                @include('instructor.offline-courses.lectures.partials.offline-mindmap-field', ['variant' => 'default', 'value' => old('offline_attendee_mindmap')])
+                @if(!($hasGroupSessions ?? false))
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">موعد المحاضرة</label>
+                            <input type="datetime-local" name="scheduled_at" value="{{ old('scheduled_at') }}" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-violet-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">المدة (دقيقة)</label>
+                            <input type="number" name="duration_minutes" value="{{ old('duration_minutes') }}" min="0" max="600" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-violet-500">
+                        </div>
+                    </div>
+                @else
+                    <p class="text-xs text-slate-500 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">عند اختيار جلسة من التقويم، يُحدَّد موعد المحاضرة ومدتها تلقائياً من بيانات الجلسة.</p>
+                @endif
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1">رابط الميتينج (للأونلاين)</label>
                     <input type="url" name="meeting_url" value="{{ old('meeting_url') }}" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-violet-500" placeholder="https://meet.google.com/...">
@@ -92,7 +122,7 @@
             </div>
             <div class="mt-6 flex gap-3">
                 <button type="submit" class="px-4 py-2.5 bg-violet-600 text-white rounded-xl font-semibold hover:bg-violet-700">حفظ</button>
-                <a href="{{ route('instructor.offline-courses.lectures.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-semibold hover:bg-slate-200">إلغاء</a>
+                <a href="{{ old('curriculum_section_id', $curriculumSectionId ?? null) ? route('instructor.offline-courses.curriculum.index', $offlineCourse).'?channel='.urlencode($channel ?? 'offline') : route('instructor.offline-courses.lectures.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-semibold hover:bg-slate-200">إلغاء</a>
             </div>
         </form>
     </div>

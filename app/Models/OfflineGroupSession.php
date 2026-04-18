@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OfflineGroupSession extends Model
 {
@@ -32,6 +34,27 @@ class OfflineGroupSession extends Model
     public function instructor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'instructor_id');
+    }
+
+    public function lectures(): HasMany
+    {
+        return $this->hasMany(OfflineLecture::class, 'offline_group_session_id');
+    }
+
+    /**
+     * جلسات المجموعات التابعة لكورس أوفلاين (حسب قناة التعلم للمجموعة).
+     */
+    public function scopeForOfflineCourse(Builder $query, OfflineCourse $course, string $channel = 'offline'): Builder
+    {
+        return $query->whereHas('group', function (Builder $gq) use ($course, $channel) {
+            $gq->where('offline_course_id', $course->id);
+            if ($channel === 'online') {
+                $gq->where(function (Builder $g) {
+                    $g->where('online_booking_enabled', true)
+                        ->orWhere('current_students_online', '>', 0);
+                });
+            }
+        });
     }
 
     public function scopeScheduled($query)

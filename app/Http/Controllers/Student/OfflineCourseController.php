@@ -13,6 +13,7 @@ use App\Models\OfflineCurriculumNote;
 use App\Models\OfflineLecture;
 use App\Models\OfflineCourseBooking;
 use App\Models\AdvancedExam;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -94,7 +95,10 @@ class OfflineCourseController extends Controller
             ->where('status', 'active')
             ->firstOrFail();
 
-        $enrollment->load(['group.sessions' => fn($q) => $q->ordered(), 'group.locationModel']);
+        $enrollment->load(['group.locationModel']);
+        if ($enrollment->group) {
+            $enrollment->group->loadCount('sessions');
+        }
 
         $offlineCourse->load([
             'instructor',
@@ -126,19 +130,162 @@ class OfflineCourseController extends Controller
             })
             ->get();
 
-        $upcomingSessions = $enrollment->group
-            ? $enrollment->group->sessions()->upcoming()->ordered()->take(10)->get()
-            : collect();
-
-        $curriculumRoots = $this->curriculumSectionsForStudent($offlineCourse, $enrollment);
-
         return view('student.offline-courses.show', compact(
             'offlineCourse',
             'enrollment',
             'pendingActivities',
             'completedActivities',
-            'upcomingSessions',
+            'channel',
+            'studentRouteGroup'
+        ));
+    }
+
+    /**
+     * منهج الكورس مع التوصيف الكامل ونبذة المدرب
+     */
+    public function curriculum(OfflineCourse $offlineCourse)
+    {
+        $user = Auth::user();
+        $channel = $this->studentLearningChannel();
+        $studentRouteGroup = $this->studentRouteGroup();
+
+        $enrollment = $user->offlineEnrollments()
+            ->where('offline_course_id', $offlineCourse->id)
+            ->where('enrollment_channel', $channel)
+            ->where('status', 'active')
+            ->firstOrFail();
+
+        $offlineCourse->load(['instructor', 'locationModel']);
+
+        $curriculumRoots = $this->curriculumSectionsForStudent($offlineCourse, $enrollment);
+        $curriculumStats = $this->curriculumStatsForStudent($curriculumRoots);
+
+        return view('student.offline-courses.curriculum', compact(
+            'offlineCourse',
+            'enrollment',
             'curriculumRoots',
+            'curriculumStats',
+            'channel',
+            'studentRouteGroup'
+        ));
+    }
+
+    /**
+     * @param \Illuminate\Support\Collection<int, \App\Models\OfflineCourseSection> $roots
+     * @return array{sections: int, items: int}
+     */
+    private function curriculumStatsForStudent($roots): array
+    {
+        $sections = 0;
+        $items = 0;
+        $walk = function ($collection) use (&$sections, &$items, &$walk) {
+            foreach ($collection as $sec) {
+                $sections++;
+                $items += $sec->items->count();
+                if ($sec->relationLoaded('children') && $sec->children->isNotEmpty()) {
+                    $walk($sec->children);
+                }
+            }
+        };
+        $walk($roots);
+
+        return ['sections' => $sections, 'items' => $items];
+    }
+
+    /**
+     * تقويم الجلسات والمواعيد (أنشطة بتاريخ تسليم، اختبارات بتاريخ بدء)
+     */
+    public function schedule(OfflineCourse $offlineCourse)
+    {
+        $user = Auth::user();
+        $channel = $this->studentLearningChannel();
+        $studentRouteGroup = $this->studentRouteGroup();
+
+        $enrollment = $user->offlineEnrollments()
+            ->where('offline_course_id', $offlineCourse->id)
+            ->where('enrollment_channel', $channel)
+            ->where('status', 'active')
+            ->firstOrFail();
+
+        $enrollment->load(['group.sessions' => fn ($q) => $q->ordered(), 'group.locationModel']);
+
+        $offlineCourse->load('locationModel');
+
+        $sessions = $enrollment->group
+            ? $enrollment->group->sessions()->ordered()->get()
+            : collect();
+
+        $activitiesQuery = $offlineCourse->activities()
+            ->where('status', 'published')
+            ->where('is_active', true)
+            ->orderBy('due_date')
+            ->orderBy('id');
+
+        if ($enrollment->group_id) {
+            $activitiesQuery->where(function ($q) use ($enrollment) {
+                $q->whereNull('group_id')->orWhere('group_id', $enrollment->group_id);
+            });
+        }
+
+        $activities = $activitiesQuery->get();
+        $activitiesNoDue = $activities->filter(fn (OfflineActivity $a) => $a->due_date === null)->values();
+
+        $exams = AdvancedExam::query()
+            ->where('offline_course_id', $offlineCourse->id)
+            ->where('is_active', true)
+            ->where('is_published', true)
+            ->whereNotNull('start_date')
+            ->orderBy('start_date')
+            ->orderBy('id')
+            ->get();
+
+        $timelineRows = collect();
+
+        foreach ($sessions as $session) {
+            $sort = $session->session_date->format('Y-m-d').' ';
+            try {
+                $sort .= $session->start_time ? \Carbon\Carbon::parse($session->start_time)->format('H:i:s') : '00:00:00';
+            } catch (\Throwable $e) {
+                $sort .= '00:00:00';
+            }
+            $timelineRows->push([
+                'type' => 'session',
+                'sort' => $sort,
+                'date' => $session->session_date,
+                'session' => $session,
+            ]);
+        }
+
+        foreach ($activities->filter(fn (OfflineActivity $a) => $a->due_date !== null) as $activity) {
+            $timelineRows->push([
+                'type' => 'activity',
+                'sort' => $activity->due_date->format('Y-m-d').' 23:59:00',
+                'date' => $activity->due_date,
+                'activity' => $activity,
+            ]);
+        }
+
+        foreach ($exams as $exam) {
+            $timelineRows->push([
+                'type' => 'exam',
+                'sort' => $exam->start_date->format('Y-m-d').' 12:00:00',
+                'date' => $exam->start_date,
+                'exam' => $exam,
+            ]);
+        }
+
+        $timelineRows = $timelineRows->sortBy('sort')->values();
+
+        $timelineByMonth = $timelineRows->groupBy(function (array $row) {
+            return $row['date']->translatedFormat('F Y');
+        });
+
+        return view('student.offline-courses.schedule', compact(
+            'offlineCourse',
+            'enrollment',
+            'sessions',
+            'activitiesNoDue',
+            'timelineByMonth',
             'channel',
             'studentRouteGroup'
         ));
@@ -152,7 +299,12 @@ class OfflineCourseController extends Controller
         $all = $course->offlineCourseSections()
             ->where('is_active', true)
             ->with(['items' => function ($q) {
-                $q->where('is_active', true)->orderBy('order')->orderBy('id')->with('item');
+                $q->where('is_active', true)->orderBy('order')->orderBy('id')
+                    ->with(['item' => function (MorphTo $morph) {
+                        $morph->morphWith([
+                            OfflineLecture::class => ['groupSession.group'],
+                        ]);
+                    }]);
             }])
             ->orderBy('order')
             ->orderBy('id')
@@ -273,7 +425,7 @@ class OfflineCourseController extends Controller
             ->where('status', 'active')
             ->firstOrFail();
 
-        $query = $offlineCourse->offlineLectures()->active()->ordered();
+        $query = $offlineCourse->offlineLectures()->active()->ordered()->with(['groupSession.group']);
         if ($enrollment->group_id) {
             $query->where(function ($q) use ($enrollment) {
                 $q->whereNull('group_id')->orWhere('group_id', $enrollment->group_id);

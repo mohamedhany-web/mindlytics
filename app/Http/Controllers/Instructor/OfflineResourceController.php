@@ -87,14 +87,13 @@ class OfflineResourceController extends Controller
 
         $attachments = [];
         if ($request->hasFile('file')) {
-            $file = $request->file('file');
-            $path = $file->store('offline-resources/' . $offlineCourse->id, 'public');
-            $attachments[] = ['path' => $path, 'name' => $file->getClientOriginalName()];
+            $attachments[] = $this->storeOfflineResourceFile($request->file('file'), $offlineCourse);
         }
         if ($request->hasFile('files')) {
             foreach ($request->file('files') as $file) {
-                $path = $file->store('offline-resources/' . $offlineCourse->id, 'public');
-                $attachments[] = ['path' => $path, 'name' => $file->getClientOriginalName()];
+                if ($file) {
+                    $attachments[] = $this->storeOfflineResourceFile($file, $offlineCourse);
+                }
             }
         }
         if (!empty($attachments)) {
@@ -173,14 +172,13 @@ class OfflineResourceController extends Controller
             $currentAttachments = $resource->getAllFiles();
             $newAttachments = [];
             if ($request->hasFile('file')) {
-                $file = $request->file('file');
-                $path = $file->store('offline-resources/' . $offlineCourse->id, 'public');
-                $newAttachments[] = ['path' => $path, 'name' => $file->getClientOriginalName()];
+                $newAttachments[] = $this->storeOfflineResourceFile($request->file('file'), $offlineCourse);
             }
             if ($request->hasFile('files')) {
                 foreach ($request->file('files') as $file) {
-                    $path = $file->store('offline-resources/' . $offlineCourse->id, 'public');
-                    $newAttachments[] = ['path' => $path, 'name' => $file->getClientOriginalName()];
+                    if ($file) {
+                        $newAttachments[] = $this->storeOfflineResourceFile($file, $offlineCourse);
+                    }
                 }
             }
             if (!empty($newAttachments)) {
@@ -210,8 +208,16 @@ class OfflineResourceController extends Controller
         }
 
         foreach ($resource->getAllFiles() as $file) {
-            if (!empty($file['path'])) {
-                Storage::disk('public')->delete($file['path']);
+            if (empty($file['path'])) {
+                continue;
+            }
+            $disk = $file['disk'] ?? 'public';
+            try {
+                Storage::disk($disk)->delete($file['path']);
+            } catch (\Throwable $e) {
+                if ($disk !== 'public') {
+                    Storage::disk('public')->delete($file['path']);
+                }
             }
         }
         $resource->delete();
@@ -219,6 +225,32 @@ class OfflineResourceController extends Controller
         return redirect()
             ->route('instructor.offline-courses.resources.index', ['offlineCourse' => $offlineCourse, 'channel' => $channel])
             ->with('success', 'تم حذف المورد');
+    }
+
+    /**
+     * @return array{path: string, name: string, disk: string}
+     */
+    private function storeOfflineResourceFile(\Illuminate\Http\UploadedFile $file, OfflineCourse $offlineCourse): array
+    {
+        $directory = 'offline-resources/'.$offlineCourse->id;
+        $preferred = offline_course_resources_disk();
+        try {
+            $path = $file->store($directory, $preferred);
+
+            return [
+                'path' => $path,
+                'name' => $file->getClientOriginalName(),
+                'disk' => $preferred,
+            ];
+        } catch (\Throwable $e) {
+            $path = $file->store($directory, 'public');
+
+            return [
+                'path' => $path,
+                'name' => $file->getClientOriginalName(),
+                'disk' => 'public',
+            ];
+        }
     }
 
     private function groupsForChannel(OfflineCourse $offlineCourse, string $channel)

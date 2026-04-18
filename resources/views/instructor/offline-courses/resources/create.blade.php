@@ -21,9 +21,14 @@
                 <i class="fas fa-file-alt text-lg"></i>
             </div>
             <div class="min-w-0 flex-1">
-                <h1 class="text-xl sm:text-2xl font-bold text-slate-800">إضافة مورد ({{ ($channel ?? 'offline') === 'online' ? 'أونلاين' : 'أوفلاين' }})</h1>
-                <p class="text-sm text-slate-600 mt-0.5">رفع ملف واحد أو عدة ملفات (PDF، Word، صور، إلخ) أو إضافة رابط</p>
+                <p class="text-xs font-bold uppercase tracking-wide text-amber-700">مورد جديد لهذا الكورس فقط</p>
+                <h1 class="text-xl sm:text-2xl font-bold text-slate-800 leading-snug">إضافة مورد — {{ $offlineCourse->title }}</h1>
+                <p class="text-sm text-slate-600 mt-1">نوع الكورس: {{ ($channel ?? 'offline') === 'online' ? 'أونلاين' : 'أوفلاين' }} · لن يُحفظ المورد إلا ضمن موارد هذا الكورس.</p>
             </div>
+        </div>
+        <div class="mt-4 rounded-xl border border-sky-100 bg-sky-50/90 px-4 py-3 text-sm text-sky-950">
+            <p class="font-bold flex items-center gap-2"><i class="fas fa-cloud text-sky-600"></i> التخزين السحابي (Cloudflare R2)</p>
+            <p class="mt-1 text-xs leading-relaxed text-sky-900/90">ملفات المورد تُرفع تلقائياً إلى قرص المنصة المخصص للموارد (الافتراضي Cloudflare R2 عند تهيئة مفاتيح التخزين في البيئة). إن تعذر الاتصال بالسحابة يُستخدم التخزين المحلي كاحتياط.</p>
         </div>
     </div>
 

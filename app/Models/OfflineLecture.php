@@ -11,9 +11,12 @@ class OfflineLecture extends Model
     protected $fillable = [
         'offline_course_id',
         'group_id',
+        'offline_group_session_id',
         'instructor_id',
         'title',
         'description',
+        'session_agenda',
+        'offline_attendee_mindmap',
         'scheduled_at',
         'meeting_url',
         'duration_minutes',
@@ -40,6 +43,11 @@ class OfflineLecture extends Model
     public function group(): BelongsTo
     {
         return $this->belongsTo(OfflineCourseGroup::class, 'group_id');
+    }
+
+    public function groupSession(): BelongsTo
+    {
+        return $this->belongsTo(OfflineGroupSession::class, 'offline_group_session_id');
     }
 
     public function instructor(): BelongsTo

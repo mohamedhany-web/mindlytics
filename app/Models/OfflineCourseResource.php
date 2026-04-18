@@ -33,18 +33,26 @@ class OfflineCourseResource extends Model
      */
     public function getAllFiles(): array
     {
-        $files = [];
-        if ($this->file_path && $this->file_name) {
-            $files[] = ['path' => $this->file_path, 'name' => $this->file_name];
-        }
+        $fromAttachments = [];
         if ($this->attachments && is_array($this->attachments)) {
             foreach ($this->attachments as $att) {
-                if (!empty($att['path'])) {
-                    $files[] = ['path' => $att['path'], 'name' => $att['name'] ?? basename($att['path'])];
+                if (! empty($att['path'])) {
+                    $fromAttachments[] = [
+                        'path' => $att['path'],
+                        'name' => $att['name'] ?? basename($att['path']),
+                        'disk' => $att['disk'] ?? 'public',
+                    ];
                 }
             }
         }
-        return $files;
+        if (! empty($fromAttachments)) {
+            return $fromAttachments;
+        }
+        if ($this->file_path && $this->file_name) {
+            return [['path' => $this->file_path, 'name' => $this->file_name, 'disk' => 'public']];
+        }
+
+        return [];
     }
 
     public function course(): BelongsTo

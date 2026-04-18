@@ -110,9 +110,9 @@
                     <span class="text-sky-500">({{ $offlineCourse->resources()->count() }})</span>
                 </a>
                 <a href="{{ route('instructor.offline-courses.lectures.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200 font-semibold transition-colors">
-                    <i class="fas fa-chalkboard-teacher"></i>
-                    <span>المحاضرات</span>
-                    <span class="text-violet-500">({{ $offlineCourse->offlineLectures()->count() }})</span>
+                    <i class="fas fa-calendar-days"></i>
+                    <span>الجلسات</span>
+                    <span class="text-violet-500">({{ \App\Models\OfflineGroupSession::query()->forOfflineCourse($offlineCourse, $channel ?? 'offline')->count() }})</span>
                 </a>
                 <a href="{{ route('instructor.offline-courses.activities.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 font-semibold transition-colors">
                     <i class="fas fa-tasks"></i>
