@@ -19,6 +19,8 @@ class OfflineActivityController extends Controller
     {
         $this->authorizeInstructor($offlineCourse);
 
+        $channel = request()->query('channel', 'offline');
+
         $activities = $offlineCourse->activities()
             ->with('group')
             ->withCount('submissions')
@@ -28,7 +30,7 @@ class OfflineActivityController extends Controller
 
         $groups = $offlineCourse->groups()->orderBy('name')->get();
 
-        return view('instructor.offline-courses.activities.index', compact('offlineCourse', 'activities', 'groups'));
+        return view('instructor.offline-courses.activities.index', compact('offlineCourse', 'activities', 'groups', 'channel'));
     }
 
     /**
@@ -38,9 +40,11 @@ class OfflineActivityController extends Controller
     {
         $this->authorizeInstructor($offlineCourse);
 
+        $channel = request()->query('channel', 'offline');
+
         $groups = $offlineCourse->groups()->orderBy('name')->get();
 
-        return view('instructor.offline-courses.activities.create', compact('offlineCourse', 'groups'));
+        return view('instructor.offline-courses.activities.create', compact('offlineCourse', 'groups', 'channel'));
     }
 
     /**
@@ -73,16 +77,17 @@ class OfflineActivityController extends Controller
         $attachments = [];
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
-                $path = $file->store('offline-activities/' . $offlineCourse->id, 'public');
-                $attachments[] = ['path' => $path, 'name' => $file->getClientOriginalName()];
+                $attachments[] = $this->storeActivityAttachmentFile($file, $offlineCourse);
             }
         }
         $validated['attachments'] = $attachments;
 
         OfflineActivity::create($validated);
 
+        $channel = request()->query('channel', 'offline');
+
         return redirect()
-            ->route('instructor.offline-courses.activities.index', $offlineCourse)
+            ->route('instructor.offline-courses.activities.index', ['offlineCourse' => $offlineCourse, 'channel' => $channel])
             ->with('success', 'تم إضافة النشاط بنجاح');
     }
 
@@ -96,9 +101,11 @@ class OfflineActivityController extends Controller
             abort(404);
         }
 
-        $activity->load(['group', 'submissions.student']);
+        $channel = request()->query('channel', 'offline');
 
-        return view('instructor.offline-courses.activities.show', compact('offlineCourse', 'activity'));
+        $activity->load(['group', 'submissions.student', 'submissions.grader']);
+
+        return view('instructor.offline-courses.activities.show', compact('offlineCourse', 'activity', 'channel'));
     }
 
     /**
@@ -111,9 +118,11 @@ class OfflineActivityController extends Controller
             abort(404);
         }
 
+        $channel = request()->query('channel', 'offline');
+
         $groups = $offlineCourse->groups()->orderBy('name')->get();
 
-        return view('instructor.offline-courses.activities.edit', compact('offlineCourse', 'activity', 'groups'));
+        return view('instructor.offline-courses.activities.edit', compact('offlineCourse', 'activity', 'groups', 'channel'));
     }
 
     /**
@@ -146,16 +155,17 @@ class OfflineActivityController extends Controller
         if ($request->hasFile('attachments')) {
             $current = $activity->attachments ?? [];
             foreach ($request->file('attachments') as $file) {
-                $path = $file->store('offline-activities/' . $offlineCourse->id, 'public');
-                $current[] = ['path' => $path, 'name' => $file->getClientOriginalName()];
+                $current[] = $this->storeActivityAttachmentFile($file, $offlineCourse);
             }
             $activity->attachments = $current;
         }
 
         $activity->save();
 
+        $channel = request()->query('channel', 'offline');
+
         return redirect()
-            ->route('instructor.offline-courses.activities.show', [$offlineCourse, $activity])
+            ->route('instructor.offline-courses.activities.show', ['offlineCourse' => $offlineCourse, 'activity' => $activity, 'channel' => $channel])
             ->with('success', 'تم تحديث النشاط بنجاح');
     }
 
@@ -171,15 +181,22 @@ class OfflineActivityController extends Controller
 
         if ($activity->attachments) {
             foreach ($activity->attachments as $att) {
-                if (!empty($att['path'])) {
-                    Storage::disk('public')->delete($att['path']);
+                if (! empty($att['path'])) {
+                    $disk = $att['disk'] ?? 'public';
+                    try {
+                        Storage::disk($disk)->delete($att['path']);
+                    } catch (\Throwable $e) {
+                        Storage::disk('public')->delete($att['path']);
+                    }
                 }
             }
         }
         $activity->delete();
 
+        $channel = request()->query('channel', 'offline');
+
         return redirect()
-            ->route('instructor.offline-courses.activities.index', $offlineCourse)
+            ->route('instructor.offline-courses.activities.index', ['offlineCourse' => $offlineCourse, 'channel' => $channel])
             ->with('success', 'تم حذف النشاط');
     }
 
@@ -205,9 +222,37 @@ class OfflineActivityController extends Controller
         $submission->status = 'graded';
         $submission->save();
 
+        $channel = request()->query('channel', 'offline');
+
         return redirect()
-            ->route('instructor.offline-courses.activities.show', [$offlineCourse, $activity])
+            ->route('instructor.offline-courses.activities.show', ['offlineCourse' => $offlineCourse, 'activity' => $activity, 'channel' => $channel])
             ->with('success', 'تم تصحيح التقديم بنجاح');
+    }
+
+    /**
+     * @return array{path: string, name: string, disk: string}
+     */
+    private function storeActivityAttachmentFile(\Illuminate\Http\UploadedFile $file, OfflineCourse $offlineCourse): array
+    {
+        $directory = 'offline-activities/'.$offlineCourse->id;
+        $preferred = offline_course_resources_disk();
+        try {
+            $path = $file->store($directory, $preferred);
+
+            return [
+                'path' => $path,
+                'name' => $file->getClientOriginalName(),
+                'disk' => $preferred,
+            ];
+        } catch (\Throwable $e) {
+            $path = $file->store($directory, 'public');
+
+            return [
+                'path' => $path,
+                'name' => $file->getClientOriginalName(),
+                'disk' => 'public',
+            ];
+        }
     }
 
     private function authorizeInstructor(OfflineCourse $offlineCourse): void

@@ -4,10 +4,11 @@
 @section('header', 'تعديل نشاط')
 
 @section('content')
-<div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+@php $channel = $channel ?? request()->query('channel', 'offline'); @endphp
+<div class="w-full max-w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
     <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-5">
         <nav class="text-sm text-slate-500 mb-2">
-            <a href="{{ route('instructor.offline-courses.activities.index', $offlineCourse) }}" class="hover:text-amber-600">الواجبات والاختبارات</a>
+            <a href="{{ route('instructor.offline-courses.activities.index', ['offlineCourse' => $offlineCourse, 'channel' => $channel]) }}" class="hover:text-amber-600">الواجبات والاختبارات</a>
             <span class="mx-2">/</span>
             <span class="text-slate-700 font-semibold">تعديل</span>
         </nav>
@@ -15,7 +16,7 @@
     </div>
 
     <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-6">
-        <form action="{{ route('instructor.offline-courses.activities.update', [$offlineCourse, $activity]) }}" method="post" enctype="multipart/form-data">
+        <form action="{{ route('instructor.offline-courses.activities.update', ['offlineCourse' => $offlineCourse, 'activity' => $activity, 'channel' => $channel]) }}" method="post" enctype="multipart/form-data">
             @csrf
             @method('PUT')
             <div class="space-y-4">
@@ -86,7 +87,7 @@
             </div>
             <div class="mt-6 flex gap-3">
                 <button type="submit" class="px-4 py-2.5 bg-amber-600 text-white rounded-xl font-semibold hover:bg-amber-700">حفظ</button>
-                <a href="{{ route('instructor.offline-courses.activities.show', [$offlineCourse, $activity]) }}" class="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-semibold hover:bg-slate-200">إلغاء</a>
+                <a href="{{ route('instructor.offline-courses.activities.show', ['offlineCourse' => $offlineCourse, 'activity' => $activity, 'channel' => $channel]) }}" class="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-semibold hover:bg-slate-200">إلغاء</a>
             </div>
         </form>
     </div>

@@ -19,13 +19,13 @@ if (!function_exists('offline_course_resources_disk')) {
     }
 }
 
-if (!function_exists('offline_course_resource_file_url')) {
+if (!function_exists('stored_upload_file_url')) {
     /**
-     * رابط تحميل/عرض ملف مورد كورس (يدعم public محلي و Cloudflare R2).
+     * رابط تحميل/عرض ملف مرفوع (موارد، مرفقات نشاط، تسليمات) — public محلي أو R2/S3.
      *
      * @param  array{path?: string, name?: string, disk?: string, url?: string}|null  $file
      */
-    function offline_course_resource_file_url(?array $file): string
+    function stored_upload_file_url(?array $file): string
     {
         if (empty($file) || empty($file['path'])) {
             return '#';
@@ -43,6 +43,45 @@ if (!function_exists('offline_course_resource_file_url')) {
         } catch (\Throwable $e) {
             return asset('storage/'.ltrim($path, '/'));
         }
+    }
+}
+
+if (!function_exists('offline_course_resource_file_url')) {
+    /**
+     * @param  array{path?: string, name?: string, disk?: string, url?: string}|null  $file
+     */
+    function offline_course_resource_file_url(?array $file): string
+    {
+        return stored_upload_file_url($file);
+    }
+}
+
+if (!function_exists('offline_activity_submission_file_url')) {
+    /**
+     * رابط تحميل ملف ضمن تسليم نشاط أوفلاين (نفس منطق الموارد).
+     *
+     * @param  array{path?: string, name?: string, disk?: string, url?: string}|null  $file
+     */
+    function offline_activity_submission_file_url(?array $file): string
+    {
+        return stored_upload_file_url($file);
+    }
+}
+
+if (!function_exists('offline_activity_submissions_disk')) {
+    /**
+     * قرص تخزين تسليمات الطلاب لأنشطة الكورس الأوفلاين.
+     *
+     * @return string 'r2' أو 'public'
+     */
+    function offline_activity_submissions_disk(): string
+    {
+        $envDisk = env('FILESYSTEM_DISK_OFFLINE_ACTIVITY_SUBMISSIONS');
+        if ($envDisk !== null && $envDisk !== '' && in_array($envDisk, ['r2', 'public'], true)) {
+            return $envDisk;
+        }
+
+        return config('filesystems.offline_activity_submissions_disk', 'r2');
     }
 }
 

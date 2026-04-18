@@ -90,6 +90,9 @@ class AdvancedCourse extends Model
         'requirements',
         'prerequisites',
         'what_you_learn',
+        'mind_map_steps',
+        'mind_map_published',
+        'mind_map_timetable',
         'skills',
         'language',
         'students_count',
@@ -111,6 +114,8 @@ class AdvancedCourse extends Model
         'price' => 'decimal:2',
         'rating' => 'decimal:2',
         'skills' => 'array',
+        'mind_map_steps' => 'array',
+        'mind_map_published' => 'boolean',
     ];
 
     public function academicYear()

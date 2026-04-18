@@ -15,6 +15,7 @@ use App\Models\OfflineCourseBooking;
 use App\Models\AdvancedExam;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
@@ -460,6 +461,7 @@ class OfflineCourseController extends Controller
 
         $submission = OfflineActivitySubmission::where('activity_id', $activity->id)
             ->where('student_id', $user->id)
+            ->with('grader')
             ->first();
 
         return view('student.offline-courses.activity-show', compact('offlineCourse', 'enrollment', 'activity', 'submission', 'channel', 'studentRouteGroup'));
@@ -499,8 +501,9 @@ class OfflineCourseController extends Controller
         $newAttachments = [];
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
-                $path = $file->store('offline-activity-submissions/' . $activity->id, 'public');
-                $newAttachments[] = ['path' => $path, 'name' => $file->getClientOriginalName()];
+                if ($file instanceof UploadedFile) {
+                    $newAttachments[] = $this->storeOfflineActivitySubmissionFile($file, $activity->id);
+                }
             }
         }
         $submission->submission_content = $request->input('submission_content');
@@ -512,5 +515,31 @@ class OfflineCourseController extends Controller
         return redirect()
             ->route($studentRouteGroup . '.activities.show', [$offlineCourse, $activity])
             ->with('success', 'تم تسليم النشاط بنجاح');
+    }
+
+    /**
+     * @return array{path: string, name: string, disk: string}
+     */
+    private function storeOfflineActivitySubmissionFile(UploadedFile $file, int $activityId): array
+    {
+        $directory = 'offline-activity-submissions/'.$activityId;
+        $preferred = offline_activity_submissions_disk();
+        try {
+            $path = $file->store($directory, $preferred);
+
+            return [
+                'path' => $path,
+                'name' => $file->getClientOriginalName(),
+                'disk' => $preferred,
+            ];
+        } catch (\Throwable $e) {
+            $path = $file->store($directory, 'public');
+
+            return [
+                'path' => $path,
+                'name' => $file->getClientOriginalName(),
+                'disk' => 'public',
+            ];
+        }
     }
 }

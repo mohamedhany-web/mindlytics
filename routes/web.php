@@ -351,6 +351,11 @@ Route::get('/course/{id}', function ($id) {
         ->where('is_approved', true)
         ->count();
 
+    $mindMapSteps = $course->mind_map_steps;
+    $courseMindMapVisible = $course->mind_map_published
+        && is_array($mindMapSteps)
+        && count($mindMapSteps) >= 2;
+
     return view('course-show', compact(
         'course',
         'relatedCourses',
@@ -359,9 +364,13 @@ Route::get('/course/{id}', function ($id) {
         'previewVideoLessons',
         'approvedReviews',
         'reviewsAvg',
-        'reviewsCount'
+        'reviewsCount',
+        'courseMindMapVisible'
     ));
 })->name('public.course.show');
+
+Route::get('/course/{course}/mind-map', [\App\Http\Controllers\Public\CourseMindMapController::class, 'show'])
+    ->name('public.course.mind-map');
 
 Route::post('/course/{courseId}/reviews', [\App\Http\Controllers\Public\PublicReviewController::class, 'storeCourse'])
     ->middleware('auth')
@@ -1579,6 +1588,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::post('/personal-branding/submit', [\App\Http\Controllers\Instructor\PersonalBrandingController::class, 'submit'])->name('personal-branding.submit');
 
         Route::resource('courses', \App\Http\Controllers\Instructor\CourseController::class)->only(['index', 'show']);
+        Route::get('courses/{course}/mind-map', [\App\Http\Controllers\Instructor\CourseMindMapController::class, 'edit'])->name('courses.mind-map.edit');
+        Route::put('courses/{course}/mind-map', [\App\Http\Controllers\Instructor\CourseMindMapController::class, 'update'])->name('courses.mind-map.update');
         Route::get('online-group-courses', [\App\Http\Controllers\Instructor\OfflineCourseController::class, 'onlineIndex'])->name('online-group-courses.index');
         Route::get('online-group-courses/{offlineCourse}', [\App\Http\Controllers\Instructor\OfflineCourseController::class, 'onlineShow'])->name('online-group-courses.show');
         Route::resource('offline-courses', \App\Http\Controllers\Instructor\OfflineCourseController::class)->only(['index', 'show'])->parameters(['offline_course' => 'offlineCourse']);
