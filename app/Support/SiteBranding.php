@@ -18,7 +18,16 @@ class SiteBranding
         foreach (self::LOGO_EXTENSIONS as $ext) {
             $path = "site/logo.{$ext}";
             if ($disk->exists($path)) {
-                return asset('storage/'.$path);
+                $url = asset('storage/'.$path);
+                try {
+                    $v = $disk->lastModified($path);
+                    if ($v > 0) {
+                        $url .= '?v='.$v;
+                    }
+                } catch (\Throwable) {
+                }
+
+                return $url;
             }
         }
 
@@ -31,7 +40,16 @@ class SiteBranding
         foreach (self::FAVICON_EXTENSIONS as $ext) {
             $path = "site/favicon.{$ext}";
             if ($disk->exists($path)) {
-                return asset('storage/'.$path);
+                $url = asset('storage/'.$path);
+                try {
+                    $v = $disk->lastModified($path);
+                    if ($v > 0) {
+                        $url .= '?v='.$v;
+                    }
+                } catch (\Throwable) {
+                }
+
+                return $url;
             }
         }
 

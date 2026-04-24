@@ -1,5 +1,3 @@
-
-
 <?php $__env->startSection('title', 'إعدادات النظام'); ?>
 <?php $__env->startSection('header', 'إعدادات النظام'); ?>
 

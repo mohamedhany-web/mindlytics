@@ -49,7 +49,13 @@ class SystemSettingsController extends Controller
                 $disk->delete("site/logo.{$ext}");
             }
             $file = $validated['logo'];
-            $ext = strtolower($file->getClientOriginalExtension());
+            $ext = strtolower((string) $file->getClientOriginalExtension());
+            if ($ext === '') {
+                $ext = strtolower((string) $file->guessExtension());
+            }
+            if (! in_array($ext, SiteBranding::logoExtensions(), true)) {
+                $ext = 'png';
+            }
             $file->storeAs('site', 'logo.'.$ext, 'public');
         }
 
@@ -58,7 +64,13 @@ class SystemSettingsController extends Controller
                 $disk->delete("site/favicon.{$ext}");
             }
             $file = $validated['favicon'];
-            $ext = strtolower($file->getClientOriginalExtension());
+            $ext = strtolower((string) $file->getClientOriginalExtension());
+            if ($ext === '') {
+                $ext = strtolower((string) $file->guessExtension());
+            }
+            if (! in_array($ext, SiteBranding::faviconExtensions(), true)) {
+                $ext = 'png';
+            }
             $file->storeAs('site', 'favicon.'.$ext, 'public');
         }
 
