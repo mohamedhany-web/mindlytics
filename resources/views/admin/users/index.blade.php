@@ -218,12 +218,12 @@
                 </div>
                 <div>
                     <h3 class="text-lg font-black text-slate-900">البحث والفلترة</h3>
-                    <p class="text-xs text-slate-600 font-medium mt-1">ابحث وفلتر المستخدمين حسب الدور والحالة</p>
+                    <p class="text-xs text-slate-600 font-medium mt-1">ابحث وفلتر المستخدمين حسب الدور والحالة وفترة التسجيل</p>
                 </div>
             </div>
         </div>
         <div class="px-6 py-5">
-            <form method="GET" action="{{ route('admin.users.index') }}" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <form method="GET" action="{{ route('admin.users.index') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
                         <i class="fas fa-search text-blue-600 text-sm"></i>
@@ -257,6 +257,22 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                        <i class="fas fa-calendar-alt text-blue-600 text-sm"></i>
+                        من تاريخ
+                    </label>
+                    <input type="date" name="date_from" value="{{ request('date_from') }}"
+                           class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                        <i class="fas fa-calendar-alt text-blue-600 text-sm"></i>
+                        إلى تاريخ
+                    </label>
+                    <input type="date" name="date_to" value="{{ request('date_to') }}"
+                           class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
                         <i class="fas fa-toggle-on text-blue-600 text-sm"></i>
                         الحالة
                     </label>
@@ -273,7 +289,7 @@
                         <i class="fas fa-search"></i>
                         <span>بحث</span>
                     </button>
-                    @if(request()->anyFilled(['search', 'role', 'status']))
+                    @if(request()->anyFilled(['search', 'role', 'status', 'date_from', 'date_to']))
                     <a href="{{ route('admin.users.index') }}" 
                        class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors" 
                        title="مسح الفلتر">
@@ -429,7 +445,7 @@
 
         @if ($users->hasPages())
             <div class="px-6 py-4 border-t border-slate-200 bg-slate-50">
-                {{ $users->appends(request()->query())->links() }}
+                {{ $users->links() }}
             </div>
         @endif
     </section>

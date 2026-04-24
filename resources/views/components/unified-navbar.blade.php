@@ -40,8 +40,12 @@
             <div class="flex items-center gap-3 gap-reverse flex-shrink-0">
                 <a href="{{ route('home') }}" class="flex items-center gap-3 gap-reverse group nav-brand">
                     <div class="relative flex-shrink-0">
-                        <div class="w-11 h-11 lg:w-14 lg:h-14 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300 group-hover:shadow-xl group-hover:scale-[1.02] relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-500 to-emerald-600 border border-white/20">
-                            <span class="text-xl lg:text-2xl font-black text-white drop-shadow relative z-10" style="font-family: 'Tajawal', 'Cairo', sans-serif;">M</span>
+                        <div class="w-11 h-11 lg:w-14 lg:h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 group-hover:shadow-xl group-hover:scale-[1.02] relative overflow-hidden p-0.5">
+                            <img
+                                src="{{ $platformLogoUrl ?? asset('logo-removebg-preview.png') }}"
+                                alt="Mindlytics Logo"
+                                class="w-full h-full object-cover object-center relative z-10 rounded-full"
+                                onerror="this.onerror=null; this.src='{{ asset('logo-removebg-preview.png') }}';">
                         </div>
                     </div>
                     <div class="flex flex-col">
@@ -149,8 +153,12 @@
         <!-- رأس السايدبار -->
         <div class="mobile-sidebar-header relative flex items-center justify-between gap-4 px-5 py-4 border-b border-white/15 sticky top-0 z-10 bg-[#1e3a8a]/95 backdrop-blur-md" style="padding-top: max(1rem, env(safe-area-inset-top)); font-family: 'Tajawal', 'Cairo', sans-serif;">
             <div class="flex items-center gap-3 min-w-0">
-                <div class="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-blue-500 to-blue-700 border border-white/20 shadow-lg">
-                    <span class="text-xl font-black text-white">M</span>
+                <div class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg p-0.5 overflow-hidden">
+                    <img
+                        src="{{ $platformLogoUrl ?? asset('logo-removebg-preview.png') }}"
+                        alt="Mindlytics Logo"
+                        class="w-full h-full object-cover object-center rounded-full"
+                        onerror="this.onerror=null; this.src='{{ asset('logo-removebg-preview.png') }}';">
                 </div>
                 <div class="min-w-0">
                     <h2 class="text-lg font-extrabold text-white truncate">Mindlytics</h2>

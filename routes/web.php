@@ -147,6 +147,31 @@ Route::get('/sitemap.xml', function() {
         ->header('Content-Type', 'application/xml');
 })->name('sitemap');
 
+// Favicon and Web App Manifest for stronger browser/search detection
+Route::get('/favicon.ico', function () {
+    return redirect(\App\Support\SiteBranding::faviconUrl());
+})->name('favicon');
+
+Route::get('/site.webmanifest', function () {
+    $icon = \App\Support\SiteBranding::faviconUrl();
+    $logo = \App\Support\SiteBranding::logoUrl();
+
+    return response()->json([
+        'name' => config('app.name', 'Mindlytics'),
+        'short_name' => 'Mindlytics',
+        'start_url' => url('/'),
+        'display' => 'standalone',
+        'background_color' => '#ffffff',
+        'theme_color' => '#0ea5e9',
+        'icons' => [
+            ['src' => $icon, 'sizes' => '16x16', 'type' => 'image/png'],
+            ['src' => $icon, 'sizes' => '32x32', 'type' => 'image/png'],
+            ['src' => $logo, 'sizes' => '180x180', 'type' => 'image/png'],
+            ['src' => $logo, 'sizes' => '512x512', 'type' => 'image/png'],
+        ],
+    ])->header('Content-Type', 'application/manifest+json');
+})->name('site.webmanifest');
+
 // الصفحة الرئيسية (Home) - الترجمة عبر SetLocale في مجموعة web
 Route::get('/', [\App\Http\Controllers\Public\LandingController::class, 'index'])->name('home');
 
@@ -165,6 +190,8 @@ Route::get('/refund', [\App\Http\Controllers\Public\PageController::class, 'refu
 Route::get('/testimonials', [\App\Http\Controllers\Public\PageController::class, 'testimonials'])->name('public.testimonials');
 Route::get('/events', [\App\Http\Controllers\Public\PageController::class, 'events'])->name('public.events');
 Route::get('/partners', [\App\Http\Controllers\Public\PageController::class, 'partners'])->name('public.partners');
+Route::get('/groups', [\App\Http\Controllers\Public\PageController::class, 'groups'])->name('public.groups');
+Route::get('/bookings', [\App\Http\Controllers\Public\PageController::class, 'bookings'])->middleware('auth')->name('public.bookings');
 
 // المدونة
 Route::get('/blog', [\App\Http\Controllers\Public\BlogController::class, 'index'])->name('public.blog.index');

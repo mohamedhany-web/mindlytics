@@ -53,15 +53,9 @@
         <meta name="twitter:image:alt" content="Mindlytics - أكاديمية البرمجة والذكاء الاصطناعي">
         
         <!-- Additional SEO Meta Tags -->
-        <meta name="theme-color" content="#0ea5e9">
-        <meta name="msapplication-TileColor" content="#0ea5e9">
         <meta name="application-name" content="Mindlytics">
         
-        <!-- Favicon (من إعدادات النظام) -->
-        <link rel="icon" href="{{ $platformFaviconUrl ?? asset('favicon.ico') }}">
-        <link rel="apple-touch-icon" href="{{ $platformLogoUrl ?? asset('logo-removebg-preview.png') }}">
-        <link rel="icon" type="image/png" sizes="32x32" href="{{ $platformFaviconUrl ?? asset('favicon.ico') }}">
-        <link rel="icon" type="image/png" sizes="16x16" href="{{ $platformFaviconUrl ?? asset('favicon.ico') }}">
+        @include('components.favicon-meta')
         
         <!-- Preconnect for Performance -->
         <link rel="preconnect" href="https://fonts.googleapis.com">

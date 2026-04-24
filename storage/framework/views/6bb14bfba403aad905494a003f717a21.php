@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
     <title>المصادقة الثنائية - Mindlytics</title>
-    <link rel="icon" href="<?php echo e($platformFaviconUrl ?? asset('favicon.ico')); ?>">
-    <link rel="apple-touch-icon" href="<?php echo e($platformLogoUrl ?? asset('logo-removebg-preview.png')); ?>">
+    <?php echo $__env->make('components.favicon-meta', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">

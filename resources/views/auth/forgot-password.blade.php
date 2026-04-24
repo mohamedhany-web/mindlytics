@@ -6,8 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ __('auth.forgot_password') }} - {{ config('app.name') }}</title>
-    <link rel="icon" href="{{ $platformFaviconUrl ?? asset('favicon.ico') }}">
-    <link rel="apple-touch-icon" href="{{ $platformLogoUrl ?? asset('logo-removebg-preview.png') }}">
+    @include('components.favicon-meta')
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">

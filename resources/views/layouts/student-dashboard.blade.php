@@ -9,10 +9,7 @@
     <title>{{ config('app.name', 'Mindlytics') }} - @yield('title', __('auth.dashboard'))</title>
 
     <!-- Favicon -->
-    <link rel="icon" href="{{ $platformFaviconUrl ?? asset('favicon.ico') }}">
-    <link rel="apple-touch-icon" href="{{ $platformLogoUrl ?? asset('logo-removebg-preview.png') }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ $platformFaviconUrl ?? asset('favicon.ico') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ $platformFaviconUrl ?? asset('favicon.ico') }}">
+    @include('components.favicon-meta')
 
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 
 class InvoiceController extends Controller
@@ -57,16 +58,20 @@ class InvoiceController extends Controller
 
             if ($request->filled('search')) {
                 $search = strip_tags(trim((string) $request->search));
-                $search = preg_replace('/[^a-zA-Z0-9\u0600-\u06FF\s@._-]/u', '', $search);
+                $search = preg_replace('/[^a-zA-Z0-9\x{0600}-\x{06FF}\s@._-]/u', '', $search);
                 if (strlen($search) > 0 && strlen($search) <= 255) {
                     $like = '%'.$search.'%';
-                    $query->where(function ($q) use ($like) {
+                    $usersHasPhone = Schema::hasColumn('users', 'phone');
+                    $query->where(function ($q) use ($like, $usersHasPhone) {
                         $q->where('invoice_number', 'like', $like)
                             ->orWhere('description', 'like', $like)
-                            ->orWhereHas('user', function ($uq) use ($like) {
+                            ->orWhereHas('user', function ($uq) use ($like, $usersHasPhone) {
                                 $uq->where('name', 'like', $like)
-                                    ->orWhere('phone', 'like', $like)
                                     ->orWhere('email', 'like', $like);
+
+                                if ($usersHasPhone) {
+                                    $uq->orWhere('phone', 'like', $like);
+                                }
                             });
                     });
                 }

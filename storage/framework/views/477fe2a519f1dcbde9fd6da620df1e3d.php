@@ -1,36 +1,38 @@
-@extends('layouts.admin')
 
-@section('title', 'إعدادات النظام')
-@section('header', 'إعدادات النظام')
 
-@section('content')
+<?php $__env->startSection('title', 'إعدادات النظام'); ?>
+<?php $__env->startSection('header', 'إعدادات النظام'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="w-full bg-gradient-to-b from-slate-50 via-white to-slate-100">
     <div class="w-full max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 space-y-6">
 
-        @if(session('success'))
+        <?php if(session('success')): ?>
             <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50/90 text-emerald-900 px-5 py-4 text-sm font-semibold shadow-sm flex items-center gap-3">
                 <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white"><i class="fas fa-check"></i></span>
-                {{ session('success') }}
-            </div>
-        @endif
+                <?php echo e(session('success')); ?>
 
-        @if(session('warning'))
+            </div>
+        <?php endif; ?>
+
+        <?php if(session('warning')): ?>
             <div class="rounded-2xl border border-amber-200/80 bg-amber-50/90 text-amber-950 px-5 py-4 text-sm font-semibold shadow-sm flex items-center gap-3">
                 <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white"><i class="fas fa-exclamation-triangle"></i></span>
-                {{ session('warning') }}
-            </div>
-        @endif
+                <?php echo e(session('warning')); ?>
 
-        @if($errors->any())
+            </div>
+        <?php endif; ?>
+
+        <?php if($errors->any()): ?>
             <div class="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-900 shadow-sm">
                 <p class="font-bold mb-2">يرجى تصحيح ما يلي:</p>
                 <ul class="list-disc list-inside space-y-1">
-                    @foreach($errors->all() as $e)
-                        <li>{{ $e }}</li>
-                    @endforeach
+                    <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $e): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <li><?php echo e($e); ?></li>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </ul>
             </div>
-        @endif
+        <?php endif; ?>
 
         <div class="rounded-3xl border border-slate-200/80 bg-white p-5 lg:p-6 shadow-sm">
             <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -45,13 +47,13 @@
             </div>
         </div>
 
-        <form method="post" action="{{ route('admin.system-settings.update') }}" enctype="multipart/form-data" class="space-y-8">
-            @csrf
-            @method('PUT')
+        <form method="post" action="<?php echo e(route('admin.system-settings.update')); ?>" enctype="multipart/form-data" class="space-y-8">
+            <?php echo csrf_field(); ?>
+            <?php echo method_field('PUT'); ?>
 
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
 
-                {{-- الهوية البصرية --}}
+                
                 <section class="rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50 overflow-hidden">
                     <div class="px-6 py-5 lg:px-8 lg:py-6 border-b border-slate-100 bg-gradient-to-l from-blue-600 to-indigo-600 text-white">
                         <div class="flex items-center gap-3">
@@ -71,7 +73,7 @@
                                 <p class="text-xs text-slate-500 leading-relaxed">PNG, JPG, WebP, GIF — حتى 2 ميغابايت</p>
                                 <div class="flex items-center gap-4">
                                     <div class="h-28 w-28 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center p-2 overflow-hidden shrink-0">
-                                        <img src="{{ $logoUrl }}" alt="" class="max-h-full max-w-full object-contain" id="logo-preview">
+                                        <img src="<?php echo e($logoUrl); ?>" alt="" class="max-h-full max-w-full object-contain" id="logo-preview">
                                     </div>
                                     <input type="file" name="logo" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
                                            class="block w-full min-w-0 text-sm text-slate-700 file:mr-0 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
@@ -82,7 +84,7 @@
                                 <p class="text-xs text-slate-500 leading-relaxed">ICO, PNG, SVG, WebP — حتى 4 ميغابايت</p>
                                 <div class="flex items-center gap-4">
                                     <div class="h-20 w-20 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center p-2 shrink-0">
-                                        <img src="{{ $faviconUrl }}" alt="" class="max-h-full max-w-full object-contain" id="favicon-preview" width="48" height="48">
+                                        <img src="<?php echo e($faviconUrl); ?>" alt="" class="max-h-full max-w-full object-contain" id="favicon-preview" width="48" height="48">
                                     </div>
                                     <input type="file" name="favicon" accept=".ico,.png,.svg,.webp"
                                            class="block w-full min-w-0 text-sm text-slate-700 file:mr-0 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-slate-700 file:text-white hover:file:bg-slate-800 cursor-pointer">
@@ -92,7 +94,7 @@
                     </div>
                 </section>
 
-                {{-- الدفع --}}
+                
                 <section class="rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50 overflow-hidden">
                     <div class="px-6 py-5 lg:px-8 lg:py-6 border-b border-slate-100 bg-gradient-to-l from-emerald-600 to-teal-600 text-white">
                         <div class="flex items-center gap-3">
@@ -110,7 +112,7 @@
 
                         <div class="grid gap-4">
                             <label class="relative flex cursor-pointer rounded-2xl border-2 p-4 transition-all has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50/50 border-slate-200 hover:border-slate-300">
-                                <input type="radio" name="platform_payment_mode" value="manual" class="mt-1 text-emerald-600 focus:ring-emerald-500" @checked(old('platform_payment_mode', $platformPaymentMode) === 'manual')>
+                                <input type="radio" name="platform_payment_mode" value="manual" class="mt-1 text-emerald-600 focus:ring-emerald-500" <?php if(old('platform_payment_mode', $platformPaymentMode) === 'manual'): echo 'checked'; endif; ?>>
                                 <div class="mr-4 flex-1">
                                     <span class="font-bold text-slate-900">دفع يدوي</span>
                                     <p class="text-sm text-slate-600 mt-1">صفحة الطلب تعرض بيانات التحويل ورفع صورة الإيصال. مناسب للمراجعة اليدوية قبل التفعيل.</p>
@@ -118,7 +120,7 @@
                             </label>
 
                             <label class="relative flex cursor-pointer rounded-2xl border-2 p-4 transition-all has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/50 border-slate-200 hover:border-slate-300">
-                                <input type="radio" name="platform_payment_mode" value="kashier" class="mt-1 text-blue-600 focus:ring-blue-500" @checked(old('platform_payment_mode', $platformPaymentMode) === 'kashier')>
+                                <input type="radio" name="platform_payment_mode" value="kashier" class="mt-1 text-blue-600 focus:ring-blue-500" <?php if(old('platform_payment_mode', $platformPaymentMode) === 'kashier'): echo 'checked'; endif; ?>>
                                 <div class="mr-4 flex-1">
                                     <span class="font-bold text-slate-900">بوابة كاشير (الحالية)</span>
                                     <p class="text-sm text-slate-600 mt-1">دفع إلكتروني عبر iframe كاشير كما هو مُفعّل اليوم في النظام.</p>
@@ -126,7 +128,7 @@
                             </label>
 
                             <label class="relative flex cursor-pointer rounded-2xl border-2 p-4 transition-all has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/50 border-slate-200 hover:border-slate-300">
-                                <input type="radio" name="platform_payment_mode" value="fawaterak" class="mt-1 text-indigo-600 focus:ring-indigo-500" @checked(old('platform_payment_mode', $platformPaymentMode) === 'fawaterak')>
+                                <input type="radio" name="platform_payment_mode" value="fawaterak" class="mt-1 text-indigo-600 focus:ring-indigo-500" <?php if(old('platform_payment_mode', $platformPaymentMode) === 'fawaterak'): echo 'checked'; endif; ?>>
                                 <div class="mr-4 flex-1">
                                     <span class="font-bold text-slate-900">فواتيرك (iframe — الكورسات)</span>
                                     <p class="text-sm text-slate-600 mt-1">دفع إلكتروني عبر إضافة فواتيرك في صفحة إتمام طلب الكورس. يتطلب FAWATERAK_VENDOR_KEY و FAWATERAK_PROVIDER_KEY و FAWATERAK_INTEGRATION=iframe في .env وتطابق نطاق الـ HMAC مع لوحة فواتيرك.</p>
@@ -136,7 +138,7 @@
 
                         <div class="rounded-2xl border border-slate-200 bg-white p-4 space-y-2">
                             <label class="flex items-start gap-3 cursor-pointer text-sm text-slate-800">
-                                <input type="checkbox" name="fawaterak_gateway_on" value="1" class="mt-1 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" @checked(old('fawaterak_gateway_on', $fawaterakGatewayEnabled ?? true))>
+                                <input type="checkbox" name="fawaterak_gateway_on" value="1" class="mt-1 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" <?php if(old('fawaterak_gateway_on', $fawaterakGatewayEnabled ?? true)): echo 'checked'; endif; ?>>
                                 <span><span class="font-bold">تفعيل بوابة فواتيرك</span> — عند إلغاء التفعيل لن يظهر مسار الدفع الإلكتروني لفواتيرك حتى لو كان الوضع «فواتيرك» محدداً.</span>
                             </label>
                         </div>
@@ -150,19 +152,19 @@
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-2">طريقة احتساب العمولة</label>
                                 <select name="gateway_fee_mode" class="w-full max-w-md rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
-                                    <option value="none" @selected(old('gateway_fee_mode', $gatewayFeeMode ?? 'none') === 'none')>بدون عمولة مسجّلة</option>
-                                    <option value="percent" @selected(old('gateway_fee_mode', $gatewayFeeMode ?? 'none') === 'percent')>نسبة من إجمالي العملية (%)</option>
-                                    <option value="fixed" @selected(old('gateway_fee_mode', $gatewayFeeMode ?? 'none') === 'fixed')>مبلغ ثابت لكل عملية (ج.م)</option>
+                                    <option value="none" <?php if(old('gateway_fee_mode', $gatewayFeeMode ?? 'none') === 'none'): echo 'selected'; endif; ?>>بدون عمولة مسجّلة</option>
+                                    <option value="percent" <?php if(old('gateway_fee_mode', $gatewayFeeMode ?? 'none') === 'percent'): echo 'selected'; endif; ?>>نسبة من إجمالي العملية (%)</option>
+                                    <option value="fixed" <?php if(old('gateway_fee_mode', $gatewayFeeMode ?? 'none') === 'fixed'): echo 'selected'; endif; ?>>مبلغ ثابت لكل عملية (ج.م)</option>
                                 </select>
                             </div>
                             <div class="grid sm:grid-cols-2 gap-4 max-w-2xl">
                                 <div>
                                     <label class="block text-xs font-bold text-slate-700 mb-1">النسبة % (عند اختيار نسبة)</label>
-                                    <input type="number" name="gateway_fee_percent" step="0.01" min="0" max="100" value="{{ old('gateway_fee_percent', $gatewayFeePercent ?? '0') }}" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                                    <input type="number" name="gateway_fee_percent" step="0.01" min="0" max="100" value="<?php echo e(old('gateway_fee_percent', $gatewayFeePercent ?? '0')); ?>" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-slate-700 mb-1">مبلغ ثابت ج.م (عند اختيار ثابت)</label>
-                                    <input type="number" name="gateway_fee_fixed" step="0.01" min="0" value="{{ old('gateway_fee_fixed', $gatewayFeeFixed ?? '0') }}" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                                    <input type="number" name="gateway_fee_fixed" step="0.01" min="0" value="<?php echo e(old('gateway_fee_fixed', $gatewayFeeFixed ?? '0')); ?>" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
                                 </div>
                             </div>
                         </div>
@@ -187,4 +189,6 @@
         </form>
     </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.admin', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/admin/system-settings/index.blade.php ENDPATH**/ ?>

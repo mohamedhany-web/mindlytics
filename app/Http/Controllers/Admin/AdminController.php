@@ -334,91 +334,93 @@ class AdminController extends Controller
     }
 
     /**
+     * استعلام قائمة المستخدمين في لوحة الأدمن مع تطبيق فلاتر البحث/الدور/الحالة/الفترة.
+     */
+    private function usersIndexFilteredQuery(Request $request)
+    {
+        $query = User::query();
+
+        if ($request->filled('role')) {
+            if ($request->string('role')->toString() === 'employee') {
+                $query->where('is_employee', true);
+            } else {
+                $query->where('role', $request->role);
+            }
+        }
+
+        if ($request->has('status') && $request->input('status') !== '' && $request->input('status') !== null) {
+            $query->where('is_active', filter_var($request->status, FILTER_VALIDATE_BOOLEAN));
+        }
+
+        if ($request->filled('date_from') && $request->date('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date('date_from'));
+        }
+        if ($request->filled('date_to') && $request->date('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date('date_to'));
+        }
+
+        $search = trim((string) $request->get('search', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                    ->orWhere('email', 'LIKE', "%{$search}%")
+                    ->orWhere('phone', 'LIKE', "%{$search}%");
+            });
+        }
+
+        return $query;
+    }
+
+    /**
      * إدارة المستخدمين
      */
     public function users(Request $request)
     {
-        try {
-            // بعد إضافة أو تعديل مستخدم نوجّه بـ created=1 أو updated=1 — عرض نسخة مبسطة لتجنب 500
-            $simpleRedirect = $request->get('created') == '1' || $request->get('updated') == '1';
-            if ($simpleRedirect) {
-                $users = User::query()->latest()->paginate(20)->appends($request->only(['created', 'updated']));
-                $stats = [
-                    'total' => User::count(),
-                    'active' => User::where('is_active', true)->count(),
-                    'teachers' => User::whereIn('role', ['teacher', 'instructor'])->count(),
-                    'students' => User::where('role', 'student')->count(),
-                    'new_this_month' => 0,
-                    'new_teachers_this_month' => 0,
-                    'new_students_this_month' => 0,
-                ];
-                $trends = ['users' => null, 'teachers' => null, 'students' => null];
-                $recentUsers = collect();
-                $recentlyActiveUsers = collect();
-                $usersByRole = collect();
-                $usersByMonth = collect();
-                return view('admin.users.index', compact('users', 'stats', 'trends', 'recentUsers', 'recentlyActiveUsers', 'usersByRole', 'usersByMonth'));
-            }
+        $users = $this->usersIndexFilteredQuery($request)->latest()->paginate(20)->withQueryString();
 
+        $stats = [
+            'total' => 0,
+            'active' => 0,
+            'teachers' => 0,
+            'students' => 0,
+            'new_this_month' => 0,
+            'new_teachers_this_month' => 0,
+            'new_students_this_month' => 0,
+        ];
+        $trends = ['users' => null, 'teachers' => null, 'students' => null];
+        $recentUsers = collect();
+        $recentlyActiveUsers = collect();
+        $usersByRole = collect();
+        $usersByMonth = collect();
+
+        try {
             $now = now();
             $currentPeriodStart = $now->copy()->startOfMonth();
             $currentPeriodEnd = $now;
             $previousPeriodStart = $now->copy()->subMonth()->startOfMonth();
             $previousPeriodEnd = $now->copy()->subMonth()->endOfMonth();
 
-            // إحصائيات عامة
             $totalUsers = User::count();
             $activeUsers = User::where('is_active', true)->count();
-            $totalTeachers = User::where('role', 'teacher')->orWhere('role', 'instructor')->count();
+            $totalTeachers = User::whereIn('role', ['teacher', 'instructor'])->count();
             $totalStudents = User::where('role', 'student')->count();
-            
-            // إحصائيات شهرية
+
             $newUsersThisMonth = User::whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count();
             $newUsersLastMonth = User::whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])->count();
-            
+
             $newTeachersThisMonth = User::whereIn('role', ['teacher', 'instructor'])
                 ->whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count();
             $newTeachersLastMonth = User::whereIn('role', ['teacher', 'instructor'])
                 ->whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])->count();
-            
+
             $newStudentsThisMonth = User::where('role', 'student')
                 ->whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count();
             $newStudentsLastMonth = User::where('role', 'student')
                 ->whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])->count();
 
-            // حساب الاتجاهات
             $usersTrend = $this->calculateChange($newUsersThisMonth, $newUsersLastMonth);
             $teachersTrend = $this->calculateChange($newTeachersThisMonth, $newTeachersLastMonth);
             $studentsTrend = $this->calculateChange($newStudentsThisMonth, $newStudentsLastMonth);
-
-            $query = User::query();
-
-            // فلترة حسب الدور
-            if ($request->has('role') && $request->role) {
-                if ($request->role === 'employee') {
-                    // فلترة الموظفين
-                    $query->where('is_employee', true);
-                } else {
-                    $query->where('role', $request->role);
-                }
-            }
-
-            // فلترة حسب الحالة
-            if ($request->has('status') && $request->status !== '') {
-                $query->where('is_active', $request->status);
-            }
-
-            // البحث
-            if ($request->has('search') && $request->search) {
-                $search = $request->search;
-                $query->where(function($q) use ($search) {
-                    $q->where('name', 'LIKE', "%{$search}%")
-                      ->orWhere('email', 'LIKE', "%{$search}%")
-                      ->orWhere('phone', 'LIKE', "%{$search}%");
-                });
-            }
-
-            $users = $query->latest()->paginate(20);
 
             $stats = [
                 'total' => $totalUsers,
@@ -436,33 +438,28 @@ class AdminController extends Controller
                 'students' => $studentsTrend,
             ];
 
-            // المستخدمين الجدد (آخر 10)
             $recentUsers = User::latest()->take(10)->get();
-            
-            // المستخدمين النشطون مؤخراً (آخر 7 أيام)
+
             $recentlyActiveUsers = User::where('is_active', true)
                 ->where('updated_at', '>=', now()->subDays(7))
                 ->latest('updated_at')
                 ->take(10)
                 ->get();
 
-            // توزيع المستخدمين حسب الدور
             $usersByRole = User::select('role', DB::raw('count(*) as count'))
                 ->groupBy('role')
                 ->get()
-                ->mapWithKeys(function($item) {
+                ->mapWithKeys(function ($item) {
                     return [$item->role => $item->count];
                 });
 
-            // المستخدمين حسب الشهر (آخر 6 أشهر)
             $driver = DB::getDriverName();
-            $usersByMonth = collect();
             if ($driver === 'sqlite') {
                 $usersByMonth = User::select(
-                        DB::raw("CAST(strftime('%Y', created_at) AS INTEGER) as year"),
-                        DB::raw("CAST(strftime('%m', created_at) AS INTEGER) as month"),
-                        DB::raw('COUNT(*) as count')
-                    )
+                    DB::raw("CAST(strftime('%Y', created_at) AS INTEGER) as year"),
+                    DB::raw("CAST(strftime('%m', created_at) AS INTEGER) as month"),
+                    DB::raw('COUNT(*) as count')
+                )
                     ->where('created_at', '>=', now()->subMonths(6))
                     ->groupBy('year', 'month')
                     ->orderBy('year', 'desc')
@@ -470,48 +467,39 @@ class AdminController extends Controller
                     ->get();
             } else {
                 $usersByMonth = User::select(
-                        DB::raw('YEAR(created_at) as year'),
-                        DB::raw('MONTH(created_at) as month'),
-                        DB::raw('COUNT(*) as count')
-                    )
+                    DB::raw('YEAR(created_at) as year'),
+                    DB::raw('MONTH(created_at) as month'),
+                    DB::raw('COUNT(*) as count')
+                )
                     ->where('created_at', '>=', now()->subMonths(6))
                     ->groupBy(DB::raw('YEAR(created_at)'), DB::raw('MONTH(created_at)'))
                     ->orderBy('year', 'desc')
                     ->orderBy('month', 'desc')
                     ->get();
             }
-
-            return view('admin.users.index', compact('users', 'stats', 'trends', 'recentUsers', 'recentlyActiveUsers', 'usersByRole', 'usersByMonth'));
         } catch (\Throwable $e) {
-            Log::error('Error loading users index: ' . $e->getMessage(), [
+            Log::error('Error loading users index extras: ' . $e->getMessage(), [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
                 'request_url' => $request->fullUrl(),
             ]);
-            // عرض صفحة مبسطة بالقائمة فقط حتى لا يظهر 500 بعد إضافة مستخدم
-            try {
-                $users = User::query()->latest()->paginate(20);
-                $stats = [
-                    'total' => User::count(),
-                    'active' => User::where('is_active', true)->count(),
-                    'teachers' => User::whereIn('role', ['teacher', 'instructor'])->count(),
-                    'students' => User::where('role', 'student')->count(),
-                    'new_this_month' => 0,
-                    'new_teachers_this_month' => 0,
-                    'new_students_this_month' => 0,
-                ];
-                $trends = ['users' => null, 'teachers' => null, 'students' => null];
-                $recentUsers = collect();
-                $recentlyActiveUsers = collect();
-                $usersByRole = collect();
-                $usersByMonth = collect();
-                return view('admin.users.index', compact('users', 'stats', 'trends', 'recentUsers', 'recentlyActiveUsers', 'usersByRole', 'usersByMonth'))
-                    ->with('warning', 'تم تحميل القائمة بشكل مبسط بسبب خطأ تقني.');
-            } catch (\Throwable $e2) {
-                throw $e;
+            if (($stats['total'] ?? 0) === 0) {
+                try {
+                    $stats = [
+                        'total' => User::count(),
+                        'active' => User::where('is_active', true)->count(),
+                        'teachers' => User::whereIn('role', ['teacher', 'instructor'])->count(),
+                        'students' => User::where('role', 'student')->count(),
+                        'new_this_month' => 0,
+                        'new_teachers_this_month' => 0,
+                        'new_students_this_month' => 0,
+                    ];
+                } catch (\Throwable) {
+                }
             }
         }
+
+        return view('admin.users.index', compact('users', 'stats', 'trends', 'recentUsers', 'recentlyActiveUsers', 'usersByRole', 'usersByMonth'));
     }
 
     /**

@@ -1,15 +1,14 @@
 <div class="flex flex-col h-full bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl border-l border-slate-700/50" style="margin: 0 !important; padding: 0 !important; margin-top: 0 !important; padding-top: 0 !important; position: relative !important; isolation: isolate !important; contain: layout style paint !important;">
     <!-- شعار المنصة -->
-    <div class="p-6 border-b-2 border-slate-700/50 bg-gradient-to-br from-slate-800/90 via-slate-800/80 to-slate-900/90 flex-shrink-0 backdrop-blur-sm" style="margin-top: 0 !important; padding-top: 1.5rem !important;">
+    <div class="p-6 border-b-2 border-slate-700/50 bg-slate-900/90 flex-shrink-0" style="margin-top: 0 !important; padding-top: 1.5rem !important;">
         <div class="flex items-center gap-4">
             <div class="relative">
-                <div class="w-16 h-16 rounded-2xl flex items-center justify-center shadow-xl bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 border-2 border-blue-400/30 overflow-hidden p-1.5">
+                <div class="w-16 h-16 rounded-full flex items-center justify-center shadow-xl overflow-hidden p-1">
                     <img src="<?php echo e($platformLogoUrl ?? asset('logo-removebg-preview.png')); ?>"
                          alt="<?php echo e(config('app.name')); ?>"
-                         class="w-full h-full object-contain object-center"
+                         class="w-full h-full object-cover object-center rounded-full"
                          onerror="this.onerror=null;this.src='<?php echo e(asset('logo-removebg-preview.png')); ?>';">
                 </div>
-                <div class="absolute -inset-1 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 rounded-2xl blur opacity-30 animate-pulse pointer-events-none"></div>
             </div>
             <div>
                 <h2 class="text-xl font-black bg-gradient-to-r from-blue-300 via-blue-200 to-blue-100 bg-clip-text text-transparent tracking-tight">Mindlytics</h2>

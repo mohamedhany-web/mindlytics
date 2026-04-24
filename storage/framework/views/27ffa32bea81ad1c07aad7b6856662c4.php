@@ -9,10 +9,7 @@
     <title><?php echo e(config('app.name', 'Mindlytics')); ?> - <?php echo $__env->yieldContent('title', __('auth.dashboard')); ?></title>
 
     <!-- Favicon -->
-    <link rel="icon" href="<?php echo e($platformFaviconUrl ?? asset('favicon.ico')); ?>">
-    <link rel="apple-touch-icon" href="<?php echo e($platformLogoUrl ?? asset('logo-removebg-preview.png')); ?>">
-    <link rel="icon" type="image/png" sizes="32x32" href="<?php echo e($platformFaviconUrl ?? asset('favicon.ico')); ?>">
-    <link rel="icon" type="image/png" sizes="16x16" href="<?php echo e($platformFaviconUrl ?? asset('favicon.ico')); ?>">
+    <?php echo $__env->make('components.favicon-meta', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">

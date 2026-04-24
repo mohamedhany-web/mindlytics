@@ -7,11 +7,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', __('auth.dashboard')) - {{ config('app.name') }}</title>
     
-    <!-- Favicon & أيقونات المنصة (من إعدادات النظام) -->
-    <link rel="icon" href="{{ $platformFaviconUrl ?? asset('favicon.ico') }}">
-    <link rel="apple-touch-icon" href="{{ $platformLogoUrl ?? asset('logo-removebg-preview.png') }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ $platformFaviconUrl ?? asset('favicon.ico') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ $platformFaviconUrl ?? asset('favicon.ico') }}">
+    @include('components.favicon-meta')
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">

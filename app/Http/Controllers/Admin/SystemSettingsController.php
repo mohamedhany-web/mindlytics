@@ -31,7 +31,7 @@ class SystemSettingsController extends Controller
     {
         $validated = $request->validate([
             'logo' => ['nullable', 'image', 'max:2048', 'mimes:png,jpg,jpeg,webp,gif'],
-            'favicon' => ['nullable', 'file', 'max:512', 'mimes:ico,png,svg,webp'],
+            'favicon' => ['nullable', 'file', 'max:4096', 'mimes:ico,png,svg,webp'],
             'platform_payment_mode' => ['required', Rule::in(['manual', 'kashier', 'fawaterak'])],
             'gateway_fee_mode' => ['required', Rule::in(['none', 'percent', 'fixed'])],
             'gateway_fee_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],

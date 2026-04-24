@@ -149,4 +149,44 @@ class PageController extends Controller
     {
         return view('public.partners');
     }
+
+    public function groups()
+    {
+        $offlineGroups = \App\Models\OfflineCourseGroup::query()
+            ->where('public_booking_enabled', true)
+            ->whereNotNull('public_slug')
+            ->where('is_active', true)
+            ->where('status', 'active')
+            ->whereHas('course', function ($query) {
+                $query->where('is_active', true)->where('status', 'active');
+            })
+            ->with(['course.instructor', 'locationModel'])
+            ->latest('id')
+            ->get();
+
+        $onlineGroups = \App\Models\OfflineCourseGroup::query()
+            ->where('online_booking_enabled', true)
+            ->whereNotNull('online_slug')
+            ->where('is_active', true)
+            ->where('status', 'active')
+            ->whereHas('course', function ($query) {
+                $query->where('is_active', true)->where('status', 'active');
+            })
+            ->with(['course.instructor', 'locationModel'])
+            ->latest('id')
+            ->get();
+
+        return view('public.groups', compact('offlineGroups', 'onlineGroups'));
+    }
+
+    public function bookings()
+    {
+        $bookings = auth()->user()
+            ->offlineCourseBookings()
+            ->with(['course', 'requestedGroup'])
+            ->latest()
+            ->paginate(12);
+
+        return view('public.bookings', compact('bookings'));
+    }
 }

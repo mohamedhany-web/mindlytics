@@ -63,6 +63,18 @@
                             <span class="group-hover:translate-x-[-3px] transition-transform">{{ __('public.courses') }}</span>
                         </a>
                     </li>
+                    <li>
+                        <a href="{{ route('public.groups') }}" class="footer-link group flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-all duration-300 text-xs md:text-sm py-1">
+                            <i class="fas fa-users text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] md:text-xs w-4"></i>
+                            <span class="group-hover:translate-x-[-3px] transition-transform">الجروبات</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('public.bookings') }}" class="footer-link group flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-all duration-300 text-xs md:text-sm py-1">
+                            <i class="fas fa-calendar-check text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] md:text-xs w-4"></i>
+                            <span class="group-hover:translate-x-[-3px] transition-transform">الحجوزات</span>
+                        </a>
+                    </li>
                     @if(Route::has('public.about'))
                     <li class="hidden sm:block">
                         <a href="{{ route('public.about') }}" class="footer-link group flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-all duration-300 text-xs md:text-sm py-1">
