@@ -39,14 +39,12 @@
             <!-- الشعار والعلامة -->
             <div class="flex items-center gap-3 gap-reverse flex-shrink-0">
                 <a href="{{ route('home') }}" class="flex items-center gap-3 gap-reverse group nav-brand">
-                    <div class="relative flex-shrink-0">
-                        <div class="w-11 h-11 lg:w-14 lg:h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 group-hover:shadow-xl group-hover:scale-[1.02] relative overflow-hidden p-0.5">
-                            <img
-                                src="{{ $platformLogoUrl ?? asset('logo-removebg-preview.png') }}"
-                                alt="Mindlytics Logo"
-                                class="w-full h-full object-cover object-center relative z-10 rounded-full"
-                                onerror="this.onerror=null; this.src='{{ asset('logo-removebg-preview.png') }}';">
-                        </div>
+                    <div class="relative flex-shrink-0 flex items-center">
+                        <img
+                            src="{{ $platformLogoUrl ?? asset('logo-removebg-preview.png') }}"
+                            alt="Mindlytics Logo"
+                            class="block h-9 w-auto max-h-9 sm:h-10 sm:max-h-10 lg:h-11 lg:max-h-11 object-contain object-center transition-opacity duration-200 group-hover:opacity-95"
+                            onerror="this.onerror=null; this.src='{{ asset('logo-removebg-preview.png') }}';">
                     </div>
                     <div class="flex flex-col">
                         <span class="text-base lg:text-lg font-extrabold text-white group-hover:text-white/95 transition-colors leading-tight" style="font-family: 'Tajawal', 'Cairo', sans-serif;">Mindlytics</span>
@@ -153,11 +151,11 @@
         <!-- رأس السايدبار -->
         <div class="mobile-sidebar-header relative flex items-center justify-between gap-4 px-5 py-4 border-b border-white/15 sticky top-0 z-10 bg-[#1e3a8a]/95 backdrop-blur-md" style="padding-top: max(1rem, env(safe-area-inset-top)); font-family: 'Tajawal', 'Cairo', sans-serif;">
             <div class="flex items-center gap-3 min-w-0">
-                <div class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg p-0.5 overflow-hidden">
+                <div class="flex h-11 w-auto max-w-[120px] flex-shrink-0 items-center">
                     <img
                         src="{{ $platformLogoUrl ?? asset('logo-removebg-preview.png') }}"
                         alt="Mindlytics Logo"
-                        class="w-full h-full object-cover object-center rounded-full"
+                        class="max-h-11 w-auto max-w-full object-contain object-center"
                         onerror="this.onerror=null; this.src='{{ asset('logo-removebg-preview.png') }}';">
                 </div>
                 <div class="min-w-0">
