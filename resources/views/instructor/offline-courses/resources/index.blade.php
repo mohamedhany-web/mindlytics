@@ -47,6 +47,15 @@
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-2 flex-wrap">
                                 <span class="font-semibold text-slate-800">{{ $resource->title }}</span>
+                                @if($resource->relationLoaded('lectures') && $resource->lectures->isNotEmpty())
+                                    <span class="text-xs px-2 py-0.5 rounded bg-sky-50 text-sky-700">
+                                        <i class="fas fa-chalkboard-teacher ml-1"></i>
+                                        {{ $resource->lectures->take(1)->first()->title }}
+                                        @if($resource->lectures->count() > 1)
+                                            ({{ $resource->lectures->count() }})
+                                        @endif
+                                    </span>
+                                @endif
                                 @if($resource->group_id)
                                     <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600">{{ $resource->group->name ?? '' }}</span>
                                 @endif

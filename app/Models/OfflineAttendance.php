@@ -7,9 +7,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OfflineAttendance extends Model
 {
+    protected $table = 'offline_attendance';
+
     protected $fillable = [
         'offline_course_id',
         'group_id',
+        'offline_group_session_id',
         'student_id',
         'attendance_date',
         'attendance_time',
@@ -20,7 +23,7 @@ class OfflineAttendance extends Model
 
     protected $casts = [
         'attendance_date' => 'date',
-        'attendance_time' => 'datetime',
+        'attendance_time' => 'string',
     ];
 
     /**

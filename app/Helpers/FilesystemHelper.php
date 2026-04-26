@@ -39,8 +39,23 @@ if (!function_exists('stored_upload_file_url')) {
             return asset('storage/'.ltrim($path, '/'));
         }
         try {
-            return Storage::disk($disk)->url($path);
-        } catch (\Throwable $e) {
+            $driver = Storage::disk($disk);
+
+            // R2/S3 عادةً يكون Private، فـ url() يعطي رابط مباشر بدون توقيع → Authorization error.
+            // الأفضل استخدام رابط مؤقت موقّع إن كان متاحاً.
+            if (method_exists($driver, 'temporaryUrl')) {
+                $name = $file['name'] ?? basename((string) $path);
+                $disposition = 'attachment; filename="' . str_replace('"', '', (string) $name) . '"';
+
+                return $driver->temporaryUrl(
+                    $path,
+                    now()->addMinutes(15),
+                    ['ResponseContentDisposition' => $disposition]
+                );
+            }
+
+            return $driver->url($path);
+        } catch (\Throwable) {
             return asset('storage/'.ltrim($path, '/'));
         }
     }

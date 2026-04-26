@@ -4,9 +4,9 @@
 @section('header', 'إضافة مورد')
 
 @section('content')
-<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+<div class="w-full max-w-full space-y-6">
     <!-- هيدر الصفحة (عرض الصفحة) -->
-    <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-5 sm:p-6 mb-6">
+    <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-5 sm:p-6">
         <nav class="text-sm text-slate-500 mb-2">
             <a href="{{ route('instructor.offline-courses.index', ['channel' => ($channel ?? 'offline')]) }}" class="hover:text-amber-600 transition-colors">{{ ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : 'كورساتي الأوفلاين' }}</a>
             <span class="mx-2">/</span>
@@ -27,8 +27,8 @@
             </div>
         </div>
         <div class="mt-4 rounded-xl border border-sky-100 bg-sky-50/90 px-4 py-3 text-sm text-sky-950">
-            <p class="font-bold flex items-center gap-2"><i class="fas fa-cloud text-sky-600"></i> التخزين السحابي (Cloudflare R2)</p>
-            <p class="mt-1 text-xs leading-relaxed text-sky-900/90">ملفات المورد تُرفع تلقائياً إلى قرص المنصة المخصص للموارد (الافتراضي Cloudflare R2 عند تهيئة مفاتيح التخزين في البيئة). إن تعذر الاتصال بالسحابة يُستخدم التخزين المحلي كاحتياط.</p>
+            <p class="font-bold flex items-center gap-2"><i class="fas fa-cloud-upload-alt text-sky-600"></i> رفع الملفات</p>
+            <p class="mt-1 text-xs leading-relaxed text-sky-900/90">ملفات المورد تُرفع وتُحفظ تلقائياً ضمن تخزين المنصة المخصص للموارد.</p>
         </div>
     </div>
 
@@ -36,13 +36,13 @@
     <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-6 sm:p-8">
         <form action="{{ route('instructor.offline-courses.resources.store', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" method="post" enctype="multipart/form-data">
             @csrf
-            <div class="space-y-4">
-                <div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="lg:col-span-2">
                     <label class="block text-sm font-semibold text-slate-700 mb-1">العنوان <span class="text-red-500">*</span></label>
                     <input type="text" name="title" value="{{ old('title') }}" required class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-sky-500 focus:border-sky-500" placeholder="مثال: ملخص الوحدة الأولى">
                     @error('title')<p class="text-red-500 text-sm mt-1">{{ $message }}</p>@enderror
                 </div>
-                <div>
+                <div class="lg:col-span-2">
                     <label class="block text-sm font-semibold text-slate-700 mb-1">الوصف</label>
                     <textarea name="description" rows="3" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-sky-500">{{ old('description') }}</textarea>
                 </div>
@@ -53,7 +53,27 @@
                         <option value="link" {{ old('type') === 'link' ? 'selected' : '' }}>رابط</option>
                     </select>
                 </div>
-                <div id="fileField" class="">
+                <div class="lg:col-span-1">
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">ربط بمحاضرة (اختياري)</label>
+                    <select name="lecture_ids[]" multiple class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-sky-500 min-h-[3.25rem]">
+                        @foreach(($lectures ?? collect()) as $lec)
+                            @php
+                                $dateLabel = optional($lec->groupSession)->session_date
+                                    ? \Carbon\Carbon::parse($lec->groupSession->session_date)->format('Y-m-d')
+                                    : ($lec->scheduled_at ? $lec->scheduled_at->format('Y-m-d') : null);
+                                $groupLabel = optional(optional($lec->groupSession)->group)->name ?? optional($lec->group)->name;
+                                $label = trim(($dateLabel ? $dateLabel.' — ' : '') . ($groupLabel ? $groupLabel.' — ' : '') . ($lec->title ?? 'محاضرة'));
+                            @endphp
+                            <option value="{{ $lec->id }}" {{ in_array($lec->id, (array) old('lecture_ids', [])) ? 'selected' : '' }}>
+                                {{ $label }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="text-xs text-slate-500 mt-1">يمكن ربط المورد بمحاضرة واحدة أو أكثر. لو تركته فارغًا سيظهر كـ “مورد عام”.</p>
+                    @error('lecture_ids')<p class="text-red-500 text-sm mt-1">{{ $message }}</p>@enderror
+                    @error('lecture_ids.*')<p class="text-red-500 text-sm mt-1">{{ $message }}</p>@enderror
+                </div>
+                <div id="fileField" class="lg:col-span-1">
                     <label class="block text-sm font-semibold text-slate-700 mb-1">ملف واحد</label>
                     <input type="file" name="file" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 mb-2">
                     <label class="block text-sm font-semibold text-slate-700 mb-1 mt-3">أو عدة ملفات (PDF، Word، صور، فيديو، إلخ)</label>
@@ -62,13 +82,13 @@
                     @error('file')<p class="text-red-500 text-sm mt-1">{{ $message }}</p>@enderror
                     @error('files.*')<p class="text-red-500 text-sm mt-1">{{ $message }}</p>@enderror
                 </div>
-                <div id="linkField" class="hidden">
+                <div id="linkField" class="hidden lg:col-span-1">
                     <label class="block text-sm font-semibold text-slate-700 mb-1">رابط التحميل أو المورد</label>
                     <input type="url" name="url" value="{{ old('url') }}" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-sky-500" placeholder="https://...">
                     @error('url')<p class="text-red-500 text-sm mt-1">{{ $message }}</p>@enderror
                 </div>
                 @if($groups->isNotEmpty())
-                    <div>
+                    <div class="lg:col-span-2">
                         <label class="block text-sm font-semibold text-slate-700 mb-1">لمجموعة محددة (اختياري)</label>
                         <select name="group_id" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-sky-500">
                             <option value="">كل الطلاب</option>

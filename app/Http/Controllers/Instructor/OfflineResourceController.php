@@ -21,6 +21,7 @@ class OfflineResourceController extends Controller
 
         $resources = $offlineCourse->resources()
             ->with('group')
+            ->with('lectures')
             ->when($channel === 'online', function ($q) {
                 $q->whereHas('group', fn ($g) => $g->where('online_booking_enabled', true));
             })
@@ -41,8 +42,13 @@ class OfflineResourceController extends Controller
         $channel = request()->query('channel') === 'online' ? 'online' : 'offline';
 
         $groups = $this->groupsForChannel($offlineCourse, $channel)->get();
+        $lectures = $offlineCourse->offlineLectures()
+            ->active()
+            ->with(['groupSession.group'])
+            ->ordered()
+            ->get();
 
-        return view('instructor.offline-courses.resources.create', compact('offlineCourse', 'groups', 'channel'));
+        return view('instructor.offline-courses.resources.create', compact('offlineCourse', 'groups', 'channel', 'lectures'));
     }
 
     /**
@@ -62,6 +68,8 @@ class OfflineResourceController extends Controller
             'files' => 'nullable|array',
             'files.*' => 'file|max:51200',
             'group_id' => 'nullable|exists:offline_course_groups,id',
+            'lecture_ids' => 'nullable|array',
+            'lecture_ids.*' => 'integer|min:1',
         ], [
             'title.required' => 'عنوان المورد مطلوب',
             'type.required' => 'نوع المورد مطلوب',
@@ -102,7 +110,17 @@ class OfflineResourceController extends Controller
             $validated['attachments'] = $attachments;
         }
 
-        OfflineCourseResource::create($validated);
+        $resource = OfflineCourseResource::create($validated);
+
+        $lectureIds = array_values(array_unique(array_filter(array_map('intval', $validated['lecture_ids'] ?? []))));
+        if (!empty($lectureIds)) {
+            $allowedLectureIds = $offlineCourse->offlineLectures()
+                ->whereIn('id', $lectureIds)
+                ->pluck('id')
+                ->map(fn ($v) => (int) $v)
+                ->all();
+            $resource->lectures()->sync($allowedLectureIds);
+        }
 
         return redirect()
             ->route('instructor.offline-courses.resources.index', ['offlineCourse' => $offlineCourse, 'channel' => $channel])
@@ -121,8 +139,14 @@ class OfflineResourceController extends Controller
         }
 
         $groups = $this->groupsForChannel($offlineCourse, $channel)->get();
+        $lectures = $offlineCourse->offlineLectures()
+            ->active()
+            ->with(['groupSession.group'])
+            ->ordered()
+            ->get();
+        $resource->load('lectures');
 
-        return view('instructor.offline-courses.resources.edit', compact('offlineCourse', 'resource', 'groups', 'channel'));
+        return view('instructor.offline-courses.resources.edit', compact('offlineCourse', 'resource', 'groups', 'channel', 'lectures'));
     }
 
     /**
@@ -146,6 +170,8 @@ class OfflineResourceController extends Controller
             'files.*' => 'file|max:51200',
             'group_id' => 'nullable|exists:offline_course_groups,id',
             'is_active' => 'boolean',
+            'lecture_ids' => 'nullable|array',
+            'lecture_ids.*' => 'integer|min:1',
         ]);
 
         $resource->title = $validated['title'];
@@ -190,6 +216,18 @@ class OfflineResourceController extends Controller
         }
 
         $resource->save();
+
+        $lectureIds = array_values(array_unique(array_filter(array_map('intval', $validated['lecture_ids'] ?? []))));
+        if (!empty($lectureIds)) {
+            $allowedLectureIds = $offlineCourse->offlineLectures()
+                ->whereIn('id', $lectureIds)
+                ->pluck('id')
+                ->map(fn ($v) => (int) $v)
+                ->all();
+            $resource->lectures()->sync($allowedLectureIds);
+        } else {
+            $resource->lectures()->sync([]);
+        }
 
         return redirect()
             ->route('instructor.offline-courses.resources.index', ['offlineCourse' => $offlineCourse, 'channel' => $channel])

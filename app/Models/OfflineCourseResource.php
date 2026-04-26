@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class OfflineCourseResource extends Model
@@ -73,6 +74,16 @@ class OfflineCourseResource extends Model
     public function offlineCurriculumItems(): MorphMany
     {
         return $this->morphMany(OfflineCurriculumItem::class, 'item');
+    }
+
+    public function lectures(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            OfflineLecture::class,
+            'offline_lecture_resource',
+            'offline_course_resource_id',
+            'offline_lecture_id'
+        )->withTimestamps();
     }
 
     public function scopeActive($query)

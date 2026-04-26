@@ -388,7 +388,7 @@ class OfflineCourseController extends Controller
     /**
      * موارد الكورس الأوفلاين (للطالب)
      */
-    public function resources(OfflineCourse $offlineCourse)
+    public function resources(Request $request, OfflineCourse $offlineCourse)
     {
         $user = Auth::user();
         $channel = $this->studentLearningChannel();
@@ -400,15 +400,82 @@ class OfflineCourseController extends Controller
             ->where('status', 'active')
             ->firstOrFail();
 
-        $query = $offlineCourse->resources()->active()->ordered();
+        $search = trim((string) $request->query('q', ''));
+        $perPage = (int) $request->query('per_page', 10);
+        $perPage = min(25, max(5, $perPage));
+
+        $resourceVisibility = function ($q) use ($enrollment) {
+            if ($enrollment->group_id) {
+                $q->where(function ($qq) use ($enrollment) {
+                    $qq->whereNull('group_id')->orWhere('group_id', $enrollment->group_id);
+                });
+            } else {
+                $q->whereNull('group_id');
+            }
+        };
+
+        // موارد عامة (غير مرتبطة بمحاضرة)
+        $generalResourcesQuery = $offlineCourse->resources()
+            ->active()
+            ->ordered()
+            ->whereDoesntHave('lectures')
+            ->where($resourceVisibility);
+        if ($search !== '') {
+            $generalResourcesQuery->where(function ($q) use ($search) {
+                $like = '%' . $search . '%';
+                $q->where('title', 'like', $like)
+                    ->orWhere('description', 'like', $like)
+                    ->orWhere('file_name', 'like', $like);
+            });
+        }
+        $generalResources = $generalResourcesQuery->get();
+
+        // محاضرات + مواردها (مقسمة حسب الجلسات/اليوم)
+        $lecturesQuery = $offlineCourse->offlineLectures()
+            ->active()
+            ->ordered()
+            ->with(['groupSession.group'])
+            ->with(['resources' => function ($q) use ($resourceVisibility, $search) {
+                $q->active()->ordered()->where($resourceVisibility);
+                if ($search !== '') {
+                    $q->where(function ($qq) use ($search) {
+                        $like = '%' . $search . '%';
+                        $qq->where('title', 'like', $like)
+                            ->orWhere('description', 'like', $like)
+                            ->orWhere('file_name', 'like', $like);
+                    });
+                }
+            }]);
         if ($enrollment->group_id) {
-            $query->where(function ($q) use ($enrollment) {
+            $lecturesQuery->where(function ($q) use ($enrollment) {
                 $q->whereNull('group_id')->orWhere('group_id', $enrollment->group_id);
             });
         }
-        $resources = $query->get();
+        if ($search !== '') {
+            $lecturesQuery->where(function ($q) use ($search) {
+                $like = '%' . $search . '%';
+                $q->where('title', 'like', $like)
+                    ->orWhere('description', 'like', $like)
+                    ->orWhereHas('resources', function ($rq) use ($like) {
+                        $rq->where('title', 'like', $like)
+                            ->orWhere('description', 'like', $like)
+                            ->orWhere('file_name', 'like', $like);
+                    });
+            });
+        }
 
-        return view('student.offline-courses.resources', compact('offlineCourse', 'enrollment', 'resources', 'channel', 'studentRouteGroup'));
+        $lectures = $lecturesQuery->paginate($perPage)->withQueryString();
+
+        return view('student.offline-courses.resources', compact(
+            'offlineCourse',
+            'enrollment',
+            'generalResources',
+            'lectures',
+            'channel',
+            'studentRouteGroup',
+            'search',
+            'perPage'
+        ));
     }
 
     /**

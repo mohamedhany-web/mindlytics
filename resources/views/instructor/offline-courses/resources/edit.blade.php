@@ -4,7 +4,7 @@
 @section('header', 'تعديل مورد')
 
 @section('content')
-<div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+<div class="w-full max-w-full space-y-6">
     <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-5">
         <nav class="text-sm text-slate-500 mb-2">
             <a href="{{ route('instructor.offline-courses.index', ['channel' => ($channel ?? 'offline')]) }}" class="hover:text-amber-600">{{ ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : 'كورساتي الأوفلاين' }}</a>
@@ -24,13 +24,13 @@
         <form action="{{ route('instructor.offline-courses.resources.update', ['offlineCourse' => $offlineCourse, 'resource' => $resource, 'channel' => ($channel ?? 'offline')]) }}" method="post" enctype="multipart/form-data">
             @csrf
             @method('PUT')
-            <div class="space-y-4">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1">العنوان <span class="text-red-500">*</span></label>
                     <input type="text" name="title" value="{{ old('title', $resource->title) }}" required class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-sky-500">
                     @error('title')<p class="text-red-500 text-sm mt-1">{{ $message }}</p>@enderror
                 </div>
-                <div>
+                <div class="lg:col-span-2">
                     <label class="block text-sm font-semibold text-slate-700 mb-1">الوصف</label>
                     <textarea name="description" rows="3" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-sky-500">{{ old('description', $resource->description) }}</textarea>
                 </div>
@@ -40,6 +40,27 @@
                         <option value="file" {{ old('type', $resource->type) === 'file' ? 'selected' : '' }}>ملف مرفوع</option>
                         <option value="link" {{ old('type', $resource->type) === 'link' ? 'selected' : '' }}>رابط</option>
                     </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">ربط بمحاضرة (اختياري)</label>
+                    @php $selectedLectureIds = collect(old('lecture_ids', $resource->lectures->pluck('id')->all() ?? []))->map(fn($v)=>(int)$v)->all(); @endphp
+                    <select name="lecture_ids[]" multiple class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-sky-500 min-h-[3.25rem]">
+                        @foreach(($lectures ?? collect()) as $lec)
+                            @php
+                                $dateLabel = optional($lec->groupSession)->session_date
+                                    ? \Carbon\Carbon::parse($lec->groupSession->session_date)->format('Y-m-d')
+                                    : ($lec->scheduled_at ? $lec->scheduled_at->format('Y-m-d') : null);
+                                $groupLabel = optional(optional($lec->groupSession)->group)->name ?? optional($lec->group)->name;
+                                $label = trim(($dateLabel ? $dateLabel.' — ' : '') . ($groupLabel ? $groupLabel.' — ' : '') . ($lec->title ?? 'محاضرة'));
+                            @endphp
+                            <option value="{{ $lec->id }}" {{ in_array($lec->id, $selectedLectureIds, true) ? 'selected' : '' }}>
+                                {{ $label }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="text-xs text-slate-500 mt-1">لو تركته فارغًا سيظهر كـ “مورد عام”.</p>
+                    @error('lecture_ids')<p class="text-red-500 text-sm mt-1">{{ $message }}</p>@enderror
+                    @error('lecture_ids.*')<p class="text-red-500 text-sm mt-1">{{ $message }}</p>@enderror
                 </div>
                 <div id="fileField" class="">
                     @php $allFiles = $resource->getAllFiles(); @endphp
@@ -54,7 +75,7 @@
                     <label class="block text-sm font-semibold text-slate-700 mb-1">إضافة ملف جديد أو عدة ملفات (اختياري)</label>
                     <input type="file" name="file" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 mb-2">
                     <input type="file" name="files[]" multiple class="w-full rounded-xl border border-slate-200 px-4 py-2.5">
-                    <p class="text-xs text-slate-500 mt-1">الملفات الجديدة تُضاف للموجود. الحد الأقصى 50 ميجا لكل ملف. تُرفع الملفات الجديدة إلى التخزين السحابي (Cloudflare R2) عند تفعيله.</p>
+                    <p class="text-xs text-slate-500 mt-1">الملفات الجديدة تُضاف للموجود. الحد الأقصى 50 ميجا لكل ملف.</p>
                     @error('file')<p class="text-red-500 text-sm mt-1">{{ $message }}</p>@enderror
                     @error('files.*')<p class="text-red-500 text-sm mt-1">{{ $message }}</p>@enderror
                 </div>

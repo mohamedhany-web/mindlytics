@@ -104,6 +104,14 @@
                     <span>بناء المنهج</span>
                     <span class="text-indigo-500">({{ $offlineCourse->offlineCourseSections()->count() }} قسم)</span>
                 </a>
+                <a href="{{ route('instructor.offline-courses.attendance.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 font-semibold transition-colors">
+                    <i class="fas fa-user-check"></i>
+                    <span>الحضور والغياب</span>
+                </a>
+                <a href="{{ route('instructor.offline-courses.student-reports.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-50 text-slate-800 hover:bg-slate-100 border border-slate-200 font-semibold transition-colors">
+                    <i class="fas fa-chart-line"></i>
+                    <span>تقارير الطلاب</span>
+                </a>
                 <a href="{{ route('instructor.offline-courses.resources.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')]) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 font-semibold transition-colors">
                     <i class="fas fa-file-alt"></i>
                     <span>الموارد</span>
@@ -203,5 +211,6 @@
             </div>
         </div>
     </div>
+
 </div>
 @endsection

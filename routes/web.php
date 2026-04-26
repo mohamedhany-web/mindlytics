@@ -1632,6 +1632,15 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::resource('activities', \App\Http\Controllers\Instructor\OfflineActivityController::class)->parameters(['activity' => 'activity']);
             Route::post('activities/{activity}/submissions/{submission}/grade', [\App\Http\Controllers\Instructor\OfflineActivityController::class, 'gradeSubmission'])->name('activities.submissions.grade');
 
+            // حضور وغياب الكورس (موحّد للأوفلاين/الأونلاين حسب نفس المجموعة)
+            Route::get('attendance', [\App\Http\Controllers\Instructor\OfflineCourseController::class, 'attendanceIndex'])->name('attendance.index');
+            Route::get('attendance/sessions/{session}', [\App\Http\Controllers\Instructor\OfflineCourseController::class, 'attendanceSession'])->name('attendance.sessions.show');
+            Route::post('attendance/mark', [\App\Http\Controllers\Instructor\OfflineCourseController::class, 'markAttendance'])->name('attendance.mark');
+
+            // تقارير الطلاب
+            Route::get('student-reports', [\App\Http\Controllers\Instructor\OfflineCourseController::class, 'studentReportsIndex'])->name('student-reports.index');
+            Route::get('student-reports/{student}', [\App\Http\Controllers\Instructor\OfflineCourseController::class, 'studentReportsShow'])->name('student-reports.show');
+
             Route::prefix('curriculum')->name('curriculum.')->group(function () {
                 Route::get('/', [\App\Http\Controllers\Instructor\OfflineCurriculumController::class, 'index'])->name('index');
                 Route::post('/sections', [\App\Http\Controllers\Instructor\OfflineCurriculumController::class, 'storeSection'])->name('sections.store');
