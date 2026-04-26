@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
+use App\Helpers\VideoHelper;
 use App\Models\OfflineCourse;
 use App\Models\OfflineCourseEnrollment;
 use App\Models\OfflineActivity;
@@ -13,6 +14,8 @@ use App\Models\OfflineCurriculumNote;
 use App\Models\OfflineLecture;
 use App\Models\OfflineCourseBooking;
 use App\Models\AdvancedExam;
+use App\Models\VideoProvider;
+use App\Support\BunnyStreamSigner;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -502,6 +505,78 @@ class OfflineCourseController extends Controller
         $lectures = $query->get();
 
         return view('student.offline-courses.lectures', compact('offlineCourse', 'enrollment', 'lectures', 'channel', 'studentRouteGroup'));
+    }
+
+    /**
+     * مشاهدة تسجيل محاضرة داخل المنصة (بدل فتح رابط التسجيل خارجياً).
+     */
+    public function watchLectureRecording(OfflineCourse $offlineCourse, OfflineLecture $lecture)
+    {
+        $user = Auth::user();
+        $channel = $this->studentLearningChannel();
+
+        $enrollment = $user->offlineEnrollments()
+            ->where('offline_course_id', $offlineCourse->id)
+            ->where('enrollment_channel', $channel)
+            ->where('status', 'active')
+            ->firstOrFail();
+
+        if ($lecture->offline_course_id !== $offlineCourse->id) {
+            abort(404);
+        }
+        if (! $lecture->is_active) {
+            abort(404);
+        }
+        if ($lecture->group_id && (int) $lecture->group_id !== (int) $enrollment->group_id) {
+            abort(403, 'هذا التسجيل غير متاح لمجموعتك');
+        }
+
+        $raw = $lecture->recording_url ? trim((string) $lecture->recording_url) : '';
+        if ($raw === '') {
+            abort(404, 'لا يوجد تسجيل لهذه المحاضرة');
+        }
+
+        $source = VideoHelper::getVideoSource($raw);
+        $embed = VideoHelper::getEmbedUrl($raw) ?: $raw;
+
+        if ($source === 'bunny') {
+            $provider = VideoProvider::where('platform', 'bunny')->where('is_active', true)->orderByDesc('id')->first();
+            $key = $provider?->token_auth_key ? trim((string) $provider->token_auth_key) : '';
+            if ($key !== '') {
+                $embed = BunnyStreamSigner::signEmbedUrl($embed, $key, now()->addMinutes(20)->timestamp);
+            }
+
+            return response()
+                ->view('video.protected-embed', [
+                    'type' => 'iframe',
+                    'src' => $embed,
+                    'title' => $lecture->title ?: 'التسجيل',
+                ])
+                ->header('Cache-Control', 'private, no-store, no-cache, must-revalidate')
+                ->header('Pragma', 'no-cache');
+        }
+
+        if ($source === 'direct') {
+            return response()
+                ->view('video.protected-embed', [
+                    'type' => 'html5',
+                    'src' => $embed,
+                    'mime' => 'video/mp4',
+                    'title' => $lecture->title ?: 'التسجيل',
+                ])
+                ->header('Cache-Control', 'private, no-store, no-cache, must-revalidate')
+                ->header('Pragma', 'no-cache');
+        }
+
+        // YouTube/Vimeo/Drive/Other embeds: عرض داخل صفحة داخلية بدل فتح خارج المنصة
+        return response()
+            ->view('video.protected-embed', [
+                'type' => 'iframe',
+                'src' => $embed,
+                'title' => $lecture->title ?: 'التسجيل',
+            ])
+            ->header('Cache-Control', 'private, no-store, no-cache, must-revalidate')
+            ->header('Pragma', 'no-cache');
     }
 
     /**

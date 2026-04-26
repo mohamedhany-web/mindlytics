@@ -363,7 +363,7 @@
                                                 @endif
 
                                                 @if($lecture->recording_url)
-                                                    <a href="{{ $lecture->recording_url }}" target="_blank" rel="noopener"
+                                                    <a href="{{ route($studentRouteGroup . '.lectures.watch', [$offlineCourse, $lecture]) }}"
                                                        class="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3.5 py-2.5 text-xs font-black text-violet-800 hover:bg-violet-100 justify-center">
                                                         <i class="fas fa-play"></i>
                                                         التسجيل

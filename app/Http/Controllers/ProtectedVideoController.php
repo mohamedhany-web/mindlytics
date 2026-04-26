@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\CourseLesson;
 use App\Models\AdvancedCourse;
 use App\Helpers\VideoHelper;
+use App\Models\VideoProvider;
+use App\Support\BunnyStreamSigner;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Http\RedirectResponse;
@@ -59,8 +61,26 @@ class ProtectedVideoController extends Controller
         $embedUrl = VideoHelper::getEmbedUrl($videoUrl);
         $source = VideoHelper::getVideoSource($videoUrl);
 
-        if (in_array($source, ['youtube', 'vimeo', 'google_drive', 'bunny'], true)) {
+        if (in_array($source, ['youtube', 'vimeo', 'google_drive'], true)) {
             return redirect()->away($embedUrl);
+        }
+
+        if ($source === 'bunny') {
+            $signed = $embedUrl;
+            $provider = VideoProvider::where('platform', 'bunny')->where('is_active', true)->orderByDesc('id')->first();
+            $key = $provider?->token_auth_key ? trim((string) $provider->token_auth_key) : '';
+            if ($key !== '') {
+                $signed = BunnyStreamSigner::signEmbedUrl($embedUrl, $key, now()->addMinutes(20)->timestamp);
+            }
+
+            return response()
+                ->view('video.protected-embed', [
+                    'type' => 'iframe',
+                    'src' => $signed,
+                    'title' => $lesson->title ?: 'Video',
+                ])
+                ->header('Cache-Control', 'private, no-store, no-cache, must-revalidate')
+                ->header('Pragma', 'no-cache');
         }
 
         if ($source === 'direct') {

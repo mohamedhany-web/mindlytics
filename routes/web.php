@@ -591,6 +591,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
                 Route::get('/{offlineCourse}/schedule', [\App\Http\Controllers\Student\OfflineCourseController::class, 'schedule'])->name('schedule');
                 Route::get('/{offlineCourse}/resources', [\App\Http\Controllers\Student\OfflineCourseController::class, 'resources'])->name('resources');
                 Route::get('/{offlineCourse}/lectures', [\App\Http\Controllers\Student\OfflineCourseController::class, 'lectures'])->name('lectures');
+                Route::get('/{offlineCourse}/lectures/{lecture}/watch', [\App\Http\Controllers\Student\OfflineCourseController::class, 'watchLectureRecording'])->name('lectures.watch');
                 Route::get('/{offlineCourse}/activities/{activity}', [\App\Http\Controllers\Student\OfflineCourseController::class, 'activityShow'])->name('activities.show');
                 Route::post('/{offlineCourse}/activities/{activity}/submit', [\App\Http\Controllers\Student\OfflineCourseController::class, 'activitySubmit'])->name('activities.submit');
                 Route::get('/{offlineCourse}', [\App\Http\Controllers\Student\OfflineCourseController::class, 'show'])->name('show');
@@ -603,6 +604,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
                 Route::get('/{offlineCourse}/schedule', [\App\Http\Controllers\Student\OfflineCourseController::class, 'schedule'])->name('schedule');
                 Route::get('/{offlineCourse}/resources', [\App\Http\Controllers\Student\OfflineCourseController::class, 'resources'])->name('resources');
                 Route::get('/{offlineCourse}/lectures', [\App\Http\Controllers\Student\OfflineCourseController::class, 'lectures'])->name('lectures');
+                Route::get('/{offlineCourse}/lectures/{lecture}/watch', [\App\Http\Controllers\Student\OfflineCourseController::class, 'watchLectureRecording'])->name('lectures.watch');
                 Route::get('/{offlineCourse}/activities/{activity}', [\App\Http\Controllers\Student\OfflineCourseController::class, 'activityShow'])->name('activities.show');
                 Route::post('/{offlineCourse}/activities/{activity}/submit', [\App\Http\Controllers\Student\OfflineCourseController::class, 'activitySubmit'])->name('activities.submit');
                 Route::get('/{offlineCourse}', [\App\Http\Controllers\Student\OfflineCourseController::class, 'show'])->name('show');
