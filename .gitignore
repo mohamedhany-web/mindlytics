@@ -18,6 +18,7 @@
 /public/storage
 /storage/*.key
 /storage/pail
+/storage/framework/cache/htmlpurifier
 /vendor
 Homestead.json
 Homestead.yaml

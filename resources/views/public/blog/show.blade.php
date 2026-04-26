@@ -54,7 +54,7 @@
             <!-- Post Content -->
             <div class="bg-white rounded-xl shadow-lg p-8 mb-8 border border-gray-200 card-hover">
                 <div class="prose prose-lg max-w-none">
-                    {!! $post->content !!}
+                    {!! \App\Support\BlogHtmlSanitizer::purify($post->content) !!}
                 </div>
             </div>
 

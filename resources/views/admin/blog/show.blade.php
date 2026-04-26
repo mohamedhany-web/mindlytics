@@ -42,7 +42,7 @@
                 <div>
                     <h2 class="text-2xl font-bold text-gray-900 mb-4">المحتوى</h2>
                     <div class="prose max-w-none">
-                        {!! nl2br(e($blog->content)) !!}
+                        {!! \App\Support\BlogHtmlSanitizer::purify($blog->content) !!}
                     </div>
                 </div>
 

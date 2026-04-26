@@ -8,6 +8,7 @@
     "require": {
         "php": "^8.2",
         "bacon/bacon-qr-code": "*",
+        "ezyang/htmlpurifier": "^4.18",
         "laravel/framework": "^12.0",
         "laravel/socialite": "^5.24",
         "laravel/tinker": "^2.10.1",
@@ -63,6 +64,12 @@
         "test": [
             "@php artisan config:clear --ansi",
             "@php artisan test"
+        ],
+        "security": "@php scripts/security_audit.php",
+        "security:test": [
+            "@security",
+            "@php artisan test --testsuite=Security",
+            "@php artisan test tests/Unit/BlogHtmlSanitizerTest.php"
         ]
     },
     "extra": {

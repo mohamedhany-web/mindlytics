@@ -623,6 +623,24 @@
                             </div>
                         </div>
                     @endif
+
+                    @if($errors->any())
+                        <div class="bg-white border-2 border-rose-200 rounded-2xl shadow-xl p-5" role="alert" aria-live="polite">
+                            <div class="flex items-start gap-3">
+                                <div class="flex-shrink-0 mt-0.5 text-rose-600">
+                                    <i class="fas fa-circle-exclamation text-xl"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="font-black text-slate-900 mb-2">يوجد أخطاء في البيانات المدخلة</div>
+                                    <ul class="list-disc pr-6 space-y-1 text-sm text-slate-700">
+                                        @foreach($errors->all() as $message)
+                                            <li>{{ $message }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
                 </div>
 
                 <div class="px-3 sm:px-6 pb-8 sm:pb-12">

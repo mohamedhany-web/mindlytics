@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\BlogPost;
+use App\Support\BlogHtmlSanitizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
@@ -130,6 +131,8 @@ class BlogController extends Controller
             $validated['published_at'] = now();
         }
 
+        $validated['content'] = BlogHtmlSanitizer::purify($validated['content']);
+
         $validated['author_id'] = auth()->id();
 
         BlogPost::create($validated);
@@ -243,6 +246,8 @@ class BlogController extends Controller
         if ($validated['status'] === 'published' && !$blog->published_at) {
             $validated['published_at'] = now();
         }
+
+        $validated['content'] = BlogHtmlSanitizer::purify($validated['content']);
 
         $blog->update($validated);
 
