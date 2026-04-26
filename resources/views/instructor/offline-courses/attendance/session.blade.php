@@ -135,11 +135,16 @@
                 },
                 body: JSON.stringify({ group_id: groupId, session_id: sessionId, date: date, records: records })
             });
-            if (!res.ok) throw new Error('HTTP ' + res.status);
+            if (!res.ok) {
+                var text = await res.text();
+                throw new Error('HTTP ' + res.status + ' ' + text);
+            }
             saveBtn.textContent = 'تم الحفظ';
             setTimeout(function () { saveBtn.textContent = old; }, 1200);
         } catch (e) {
             saveBtn.textContent = 'فشل الحفظ';
+            console.error(e);
+            alert('فشل الحفظ. التفاصيل في الكونسول/اللوج.\n' + (e && e.message ? e.message : ''));
             setTimeout(function () { saveBtn.textContent = old; }, 1200);
         } finally {
             saveBtn.disabled = false;

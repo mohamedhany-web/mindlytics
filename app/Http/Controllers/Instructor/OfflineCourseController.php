@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Log;
 
 class OfflineCourseController extends Controller
 {
@@ -109,65 +110,87 @@ class OfflineCourseController extends Controller
             abort(403, 'غير مسموح لك بإدارة هذا الكورس');
         }
 
-        $validated = $request->validate([
-            'group_id' => 'required|integer',
-            'session_id' => 'required|integer|exists:offline_group_sessions,id',
-            'date' => 'required|date',
-            'records' => 'required|array|min:1',
-            'records.*.student_id' => 'required|integer|exists:users,id',
-            'records.*.status' => 'required|in:present,absent,late,excused',
-        ]);
-
-        $groupId = (int) $validated['group_id'];
-        $sessionId = (int) $validated['session_id'];
-
-        $exists = $offlineCourse->groups()->whereKey($groupId)->exists();
-        if (! $exists) {
-            abort(403, 'المجموعة لا تتبع هذا الكورس');
+        try {
+            $validated = $request->validate([
+                'group_id' => 'required|integer',
+                'session_id' => 'required|integer|exists:offline_group_sessions,id',
+                'date' => 'required|date',
+                'records' => 'required|array|min:1',
+                'records.*.student_id' => 'required|integer|exists:users,id',
+                'records.*.status' => 'required|in:present,absent,late,excused',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::warning('Offline attendance validation failed', [
+                'course_id' => $offlineCourse->id,
+                'user_id' => $instructor->id,
+                'errors' => $e->errors(),
+            ]);
+            throw $e;
         }
 
-        $channel = $request->query('channel') === 'online' ? 'online' : 'offline';
-        OfflineGroupSession::query()
-            ->forOfflineCourse($offlineCourse, $channel)
-            ->whereKey($sessionId)
-            ->where('group_id', $groupId)
-            ->firstOrFail();
+        try {
+            $groupId = (int) $validated['group_id'];
+            $sessionId = (int) $validated['session_id'];
 
-        $date = date('Y-m-d', strtotime((string) $validated['date']));
-        $records = $validated['records'];
-
-        $requestedStudentIds = collect($records)->pluck('student_id')->map(fn ($v) => (int) $v)->unique()->values()->all();
-        $allowedStudentIds = $offlineCourse->enrollments()
-            ->whereIn('student_id', $requestedStudentIds)
-            ->pluck('student_id')
-            ->map(fn ($v) => (int) $v)
-            ->all();
-        $allowedStudentIds = array_flip($allowedStudentIds);
-
-        DB::transaction(function () use ($offlineCourse, $groupId, $sessionId, $date, $records, $allowedStudentIds, $instructor) {
-            foreach ($records as $r) {
-                $sid = (int) $r['student_id'];
-                if (! isset($allowedStudentIds[$sid])) {
-                    continue;
-                }
-                OfflineAttendance::updateOrCreate(
-                    [
-                        'student_id' => $sid,
-                        'offline_course_id' => $offlineCourse->id,
-                        'offline_group_session_id' => $sessionId,
-                    ],
-                    [
-                        'group_id' => $groupId,
-                        'attendance_date' => $date,
-                        'attendance_time' => now()->format('H:i:s'),
-                        'status' => $r['status'],
-                        'marked_by' => $instructor->id,
-                    ]
-                );
+            $exists = $offlineCourse->groups()->whereKey($groupId)->exists();
+            if (! $exists) {
+                abort(403, 'المجموعة لا تتبع هذا الكورس');
             }
-        });
 
-        return response()->json(['success' => true]);
+            $channel = $request->query('channel') === 'online' ? 'online' : 'offline';
+            OfflineGroupSession::query()
+                ->forOfflineCourse($offlineCourse, $channel)
+                ->whereKey($sessionId)
+                ->where('group_id', $groupId)
+                ->firstOrFail();
+
+            $date = date('Y-m-d', strtotime((string) $validated['date']));
+            $records = $validated['records'];
+
+            $requestedStudentIds = collect($records)->pluck('student_id')->map(fn ($v) => (int) $v)->unique()->values()->all();
+            $allowedStudentIds = $offlineCourse->enrollments()
+                ->whereIn('user_id', $requestedStudentIds)
+                ->pluck('user_id')
+                ->map(fn ($v) => (int) $v)
+                ->all();
+            $allowedStudentIds = array_flip($allowedStudentIds);
+
+            DB::transaction(function () use ($offlineCourse, $groupId, $sessionId, $date, $records, $allowedStudentIds, $instructor) {
+                foreach ($records as $r) {
+                    $sid = (int) $r['student_id'];
+                    if (! isset($allowedStudentIds[$sid])) {
+                        continue;
+                    }
+                    OfflineAttendance::updateOrCreate(
+                        [
+                            'student_id' => $sid,
+                            'offline_course_id' => $offlineCourse->id,
+                            'offline_group_session_id' => $sessionId,
+                        ],
+                        [
+                            'group_id' => $groupId,
+                            'attendance_date' => $date,
+                            'attendance_time' => now()->format('H:i:s'),
+                            'status' => $r['status'],
+                            'marked_by' => $instructor->id,
+                        ]
+                    );
+                }
+            });
+
+            return response()->json(['success' => true]);
+        } catch (\Throwable $e) {
+            Log::error('Offline attendance save failed', [
+                'course_id' => $offlineCourse->id,
+                'user_id' => $instructor->id,
+                'payload' => $request->all(),
+                'exception' => $e,
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'فشل حفظ الحضور: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function attendanceIndex(Request $request, OfflineCourse $offlineCourse)

@@ -86,6 +86,11 @@ class AppServiceProvider extends ServiceProvider
             'layouts.app',
             'layouts.instructor-sidebar',
             'layouts.student-sidebar',
+            // صفحات عامة تستخدم unified-navbar بدون layouts.public
+            'courses',
+            'course-show',
+            'public.learning-paths',
+            'public.learning-path-show',
             'auth.login',
             'auth.register',
             'auth.forgot-password',
