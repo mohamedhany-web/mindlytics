@@ -4,10 +4,10 @@
         <div class="flex items-center gap-4">
             <div class="relative">
                 <div class="w-16 h-16 rounded-full flex items-center justify-center shadow-xl overflow-hidden p-1">
-                    <img src="{{ $platformLogoUrl ?? asset('logo-removebg-preview.png') }}"
+                    <img src="{{ $platformLogoUrl ?? asset('logo-fallback.svg') }}"
                          alt="{{ config('app.name') }}"
                          class="w-full h-full object-cover object-center rounded-full"
-                         onerror="this.onerror=null;this.src='{{ asset('logo-removebg-preview.png') }}';">
+                         onerror="this.onerror=null;this.src='{{ asset('logo-fallback.svg') }}';">
                 </div>
             </div>
             <div>

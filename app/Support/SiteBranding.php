@@ -31,7 +31,8 @@ class SiteBranding
             }
         }
 
-        return asset('logo-removebg-preview.png');
+        // Fallback: ملف ثابت داخل public حتى لا يتعطل الشعار في أي صفحة
+        return asset('logo-fallback.svg');
     }
 
     public static function faviconUrl(): string

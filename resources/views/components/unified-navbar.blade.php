@@ -41,10 +41,10 @@
                 <a href="{{ route('home') }}" class="flex items-center gap-3 gap-reverse group nav-brand">
                     <div class="relative flex-shrink-0 flex items-center">
                         <img
-                            src="{{ $platformLogoUrl ?? asset('logo-removebg-preview.png') }}"
+                            src="{{ $platformLogoUrl ?? asset('logo-fallback.svg') }}"
                             alt="Mindlytics Logo"
                             class="block h-9 w-auto max-h-9 sm:h-10 sm:max-h-10 lg:h-11 lg:max-h-11 object-contain object-center transition-opacity duration-200 group-hover:opacity-95"
-                            onerror="this.onerror=null; this.src='{{ asset('logo-removebg-preview.png') }}';">
+                            onerror="this.onerror=null; this.src='{{ asset('logo-fallback.svg') }}';">
                     </div>
                     <div class="flex flex-col">
                         <span class="text-base lg:text-lg font-extrabold text-white group-hover:text-white/95 transition-colors leading-tight" style="font-family: 'Tajawal', 'Cairo', sans-serif;">Mindlytics</span>
@@ -153,10 +153,10 @@
             <div class="flex items-center gap-3 min-w-0">
                 <div class="flex h-11 w-auto max-w-[120px] flex-shrink-0 items-center">
                     <img
-                        src="{{ $platformLogoUrl ?? asset('logo-removebg-preview.png') }}"
+                        src="{{ $platformLogoUrl ?? asset('logo-fallback.svg') }}"
                         alt="Mindlytics Logo"
                         class="max-h-11 w-auto max-w-full object-contain object-center"
-                        onerror="this.onerror=null; this.src='{{ asset('logo-removebg-preview.png') }}';">
+                        onerror="this.onerror=null; this.src='{{ asset('logo-fallback.svg') }}';">
                 </div>
                 <div class="min-w-0">
                     <h2 class="text-lg font-extrabold text-white truncate">Mindlytics</h2>

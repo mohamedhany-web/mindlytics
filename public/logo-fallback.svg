@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Mindlytics">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2563eb"/>
+      <stop offset="0.55" stop-color="#1e40af"/>
+      <stop offset="1" stop-color="#10b981"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="224" height="224" rx="44" fill="url(#g)"/>
+  <path d="M78 170V92c0-6.6 5.4-12 12-12h10c6.6 0 12 5.4 12 12v30l38-40c2.3-2.4 5.5-3.8 8.9-3.8H170c6.6 0 12 5.4 12 12v78c0 6.6-5.4 12-12 12h-10c-6.6 0-12-5.4-12-12v-32l-40 42c-2.3 2.4-5.5 3.8-8.9 3.8H90c-6.6 0-12-5.4-12-12Z" fill="#fff" fill-opacity="0.96"/>
+</svg>
+
