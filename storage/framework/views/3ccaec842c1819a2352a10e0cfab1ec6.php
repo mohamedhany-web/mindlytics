@@ -1,8 +1,6 @@
-@extends('layouts.student-dashboard')
+<?php $__env->startSection('title', 'محاضرات الكورس — ' . $offlineCourse->title); ?>
 
-@section('title', 'محاضرات الكورس — ' . $offlineCourse->title)
-
-@push('styles')
+<?php $__env->startPush('styles'); ?>
 <style>
     .lectures-hero {
         background: #fff;
@@ -88,21 +86,21 @@
     }
     .chip i { opacity: .85; }
 </style>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@section('content')
-@php
+<?php $__env->startSection('content'); ?>
+<?php
     $sg = $studentRouteGroup ?? 'student.offline-courses';
     $chLabel = ($channel ?? 'offline') === 'online' ? 'أونلاين' : 'أوفلاين';
     $lectureCount = $lectures->count();
-@endphp
+?>
 <div class="w-full max-w-full space-y-6" x-data="window.__offlineLecturesPage()">
     <nav class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-500" aria-label="مسار التنقل">
-        <a href="{{ route('dashboard') }}" class="font-medium hover:text-sky-600">لوحة التحكم</a>
+        <a href="<?php echo e(route('dashboard')); ?>" class="font-medium hover:text-sky-600">لوحة التحكم</a>
         <span class="text-slate-300" aria-hidden="true">/</span>
-        <a href="{{ route($sg . '.index') }}" class="font-medium hover:text-sky-600">{{ ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : 'كورساتي الأوفلاين' }}</a>
+        <a href="<?php echo e(route($sg . '.index')); ?>" class="font-medium hover:text-sky-600"><?php echo e(($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : 'كورساتي الأوفلاين'); ?></a>
         <span class="text-slate-300" aria-hidden="true">/</span>
-        <a href="{{ route($sg . '.show', $offlineCourse) }}" class="max-w-[10rem] truncate font-medium hover:text-sky-600 sm:max-w-xs">{{ \Illuminate\Support\Str::limit($offlineCourse->title, 40) }}</a>
+        <a href="<?php echo e(route($sg . '.show', $offlineCourse)); ?>" class="max-w-[10rem] truncate font-medium hover:text-sky-600 sm:max-w-xs"><?php echo e(\Illuminate\Support\Str::limit($offlineCourse->title, 40)); ?></a>
         <span class="text-slate-300" aria-hidden="true">/</span>
         <span class="font-semibold text-slate-800">المحاضرات</span>
     </nav>
@@ -110,25 +108,25 @@
     <div class="lectures-hero">
         <div class="lectures-hero-accent" aria-hidden="true"></div>
         <div class="relative pr-2 sm:pr-3">
-            <p class="mb-1 text-xs font-bold uppercase tracking-wide text-violet-600">محاضرات الكورس · {{ $chLabel }}</p>
+            <p class="mb-1 text-xs font-bold uppercase tracking-wide text-violet-600">محاضرات الكورس · <?php echo e($chLabel); ?></p>
             <h1 class="text-2xl font-black leading-tight text-gray-900 sm:text-3xl">قائمة المحاضرات</h1>
             <p class="mt-2 max-w-3xl text-sm leading-relaxed text-gray-600 sm:text-base">
-                {{ $offlineCourse->title }} — جلساتك، نقاط اليوم، التسجيلات والمرفقات حسب ما جهّزه المدرب لمجموعتك.
+                <?php echo e($offlineCourse->title); ?> — جلساتك، نقاط اليوم، التسجيلات والمرفقات حسب ما جهّزه المدرب لمجموعتك.
             </p>
             <div class="mt-4 flex flex-wrap gap-2">
-                <a href="{{ route($sg . '.show', $offlineCourse) }}" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-800 transition-colors hover:bg-slate-200">
+                <a href="<?php echo e(route($sg . '.show', $offlineCourse)); ?>" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-800 transition-colors hover:bg-slate-200">
                     <i class="fas fa-arrow-right text-slate-500"></i>
                     صفحة الكورس
                 </a>
-                <a href="{{ route($sg . '.curriculum', $offlineCourse) }}" class="inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm font-bold text-sky-800 transition-colors hover:bg-sky-100">
+                <a href="<?php echo e(route($sg . '.curriculum', $offlineCourse)); ?>" class="inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm font-bold text-sky-800 transition-colors hover:bg-sky-100">
                     <i class="fas fa-sitemap"></i>
                     المنهج
                 </a>
-                <a href="{{ route($sg . '.schedule', $offlineCourse) }}" class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-800 transition-colors hover:bg-indigo-100">
+                <a href="<?php echo e(route($sg . '.schedule', $offlineCourse)); ?>" class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-800 transition-colors hover:bg-indigo-100">
                     <i class="fas fa-calendar-alt"></i>
                     التقويم
                 </a>
-                <a href="{{ route($sg . '.resources', $offlineCourse) }}" class="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-violet-700">
+                <a href="<?php echo e(route($sg . '.resources', $offlineCourse)); ?>" class="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-violet-700">
                     <i class="fas fa-file-alt"></i>
                     الموارد
                 </a>
@@ -139,15 +137,15 @@
     <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
         <div class="lectures-stat text-center sm:text-start">
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">عدد المحاضرات</p>
-            <p class="mt-1 text-2xl font-black text-violet-600">{{ $lectureCount }}</p>
+            <p class="mt-1 text-2xl font-black text-violet-600"><?php echo e($lectureCount); ?></p>
         </div>
         <div class="lectures-stat text-center sm:text-start">
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">نوع التعلم</p>
-            <p class="mt-1 text-lg font-black text-slate-800">{{ $chLabel }}</p>
+            <p class="mt-1 text-lg font-black text-slate-800"><?php echo e($chLabel); ?></p>
         </div>
         <div class="lectures-stat hidden text-center sm:text-start lg:block">
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">المجموعة</p>
-            <p class="mt-1 truncate text-lg font-bold text-slate-800" title="{{ $enrollment->group->name ?? '—' }}">{{ $enrollment->group->name ?? '—' }}</p>
+            <p class="mt-1 truncate text-lg font-bold text-slate-800" title="<?php echo e($enrollment->group->name ?? '—'); ?>"><?php echo e($enrollment->group->name ?? '—'); ?></p>
         </div>
     </div>
 
@@ -169,7 +167,8 @@
                 <div class="mt-2 flex flex-wrap items-center gap-2 text-xs font-bold text-slate-500">
                     <span class="chip">
                         <i class="fas fa-filter text-[10px] text-slate-400"></i>
-                        عرض: <span class="text-slate-700" x-text="visibleCount"></span> / {{ $lectureCount }}
+                        عرض: <span class="text-slate-700" x-text="visibleCount"></span> / <?php echo e($lectureCount); ?>
+
                     </span>
                     <span class="chip" x-show="q.length">
                         نتائج البحث
@@ -211,16 +210,16 @@
             </div>
         </div>
 
-        @if($lectures->isEmpty())
+        <?php if($lectures->isEmpty()): ?>
             <div class="px-6 py-16 text-center">
                 <i class="fas fa-chalkboard-teacher mb-3 block text-5xl text-slate-300" aria-hidden="true"></i>
                 <p class="font-bold text-slate-700">لا توجد محاضرات متاحة حالياً.</p>
                 <p class="mt-2 text-sm text-slate-500">عند نشر المحاضرات من المدرب ستظهر هنا.</p>
             </div>
-        @else
+        <?php else: ?>
             <ul class="divide-y divide-slate-100" role="list" x-ref="list">
-                @foreach($lectures as $lecture)
-                    @php
+                <?php $__currentLoopData = $lectures; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $lecture): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <?php
                         $agendaLines = filled($lecture->session_agenda)
                             ? array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $lecture->session_agenda))))
                             : [];
@@ -236,8 +235,8 @@
                             $whenText = $lecture->scheduled_at->translatedFormat('l j F Y — H:i');
                             $whenISO = optional($lecture->scheduled_at)->toIso8601String();
                         }
-                    @endphp
-                    @php
+                    ?>
+                    <?php
                         $statusLabel = null;
                         $statusClasses = 'bg-slate-100 text-slate-700 border-slate-200';
                         if ($lecture->relationLoaded('groupSession') && $lecture->groupSession && $lecture->groupSession->session_date) {
@@ -251,14 +250,14 @@
                             elseif ($d->isFuture()) { $statusLabel = 'قادمة'; $statusClasses = 'bg-emerald-50 text-emerald-800 border-emerald-200'; }
                             else { $statusLabel = 'سابقة'; $statusClasses = 'bg-slate-100 text-slate-700 border-slate-200'; }
                         }
-                    @endphp
-                    <li id="offline-lecture-{{ $lecture->id }}"
+                    ?>
+                    <li id="offline-lecture-<?php echo e($lecture->id); ?>"
                         class="scroll-mt-28 px-4 py-5 sm:px-6 sm:py-6"
-                        data-title="{{ mb_strtolower((string) $lecture->title) }}"
-                        data-description="{{ mb_strtolower((string) ($lecture->description ?? '')) }}"
-                        data-agenda="{{ mb_strtolower((string) ($lecture->session_agenda ?? '')) }}"
-                        data-has-materials="{{ $hasMaterials > 0 ? '1' : '0' }}"
-                        data-when="{{ $whenISO ?? '' }}"
+                        data-title="<?php echo e(mb_strtolower((string) $lecture->title)); ?>"
+                        data-description="<?php echo e(mb_strtolower((string) ($lecture->description ?? ''))); ?>"
+                        data-agenda="<?php echo e(mb_strtolower((string) ($lecture->session_agenda ?? ''))); ?>"
+                        data-has-materials="<?php echo e($hasMaterials > 0 ? '1' : '0'); ?>"
+                        data-when="<?php echo e($whenISO ?? ''); ?>"
                         x-show="matches($el)"
                         x-transition.opacity.duration.150ms
                     >
@@ -273,46 +272,49 @@
                                                 <i class="fas fa-chalkboard-teacher text-sm"></i>
                                             </span>
                                             <h2 class="min-w-0 flex-1 text-base sm:text-lg font-black leading-snug text-slate-900 break-words">
-                                                {{ $lecture->title }}
+                                                <?php echo e($lecture->title); ?>
+
                                             </h2>
-                                            @if($statusLabel)
-                                                <span class="chip border {{ $statusClasses }}">
+                                            <?php if($statusLabel): ?>
+                                                <span class="chip border <?php echo e($statusClasses); ?>">
                                                     <i class="fas fa-circle text-[8px]"></i>
-                                                    {{ $statusLabel }}
+                                                    <?php echo e($statusLabel); ?>
+
                                                 </span>
-                                            @endif
+                                            <?php endif; ?>
                                             <span class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-black text-slate-700">
                                                 <i class="fas fa-paperclip text-slate-400 text-[10px]"></i>
-                                                {{ $hasMaterials }} مواد
+                                                <?php echo e($hasMaterials); ?> مواد
                                             </span>
                                         </div>
-                                        @if($whenText)
+                                        <?php if($whenText): ?>
                                             <div class="mt-2 flex flex-wrap items-center gap-2 text-xs font-bold text-slate-600">
                                                 <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
                                                     <i class="far fa-calendar-check text-slate-500"></i>
-                                                    <span>{{ $whenText }}</span>
+                                                    <span><?php echo e($whenText); ?></span>
                                                 </span>
-                                                @if($lecture->relationLoaded('groupSession') && $lecture->groupSession)
-                                                    @php $lgt = $lecture->groupSession->start_time; @endphp
+                                                <?php if($lecture->relationLoaded('groupSession') && $lecture->groupSession): ?>
+                                                    <?php $lgt = $lecture->groupSession->start_time; ?>
                                                     <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
                                                         <i class="far fa-clock text-slate-500"></i>
-                                                        <span>{{ is_string($lgt) ? substr($lgt, 0, 5) : $lgt }}</span>
+                                                        <span><?php echo e(is_string($lgt) ? substr($lgt, 0, 5) : $lgt); ?></span>
                                                     </span>
-                                                    @if($lecture->groupSession->group)
+                                                    <?php if($lecture->groupSession->group): ?>
                                                         <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
                                                             <i class="fas fa-users text-slate-500 text-[10px]"></i>
-                                                            <span class="truncate max-w-[14rem]">{{ $lecture->groupSession->group->name }}</span>
+                                                            <span class="truncate max-w-[14rem]"><?php echo e($lecture->groupSession->group->name); ?></span>
                                                         </span>
-                                                    @endif
-                                                @endif
+                                                    <?php endif; ?>
+                                                <?php endif; ?>
                                             </div>
-                                        @endif
+                                        <?php endif; ?>
 
-                                        @if($lecture->description)
+                                        <?php if($lecture->description): ?>
                                             <p class="mt-2 text-sm leading-relaxed text-slate-600">
-                                                {{ Str::limit($lecture->description, 220) }}
+                                                <?php echo e(Str::limit($lecture->description, 220)); ?>
+
                                             </p>
-                                        @endif
+                                        <?php endif; ?>
                                     </div>
                                     <div class="flex items-center gap-2 text-slate-400 flex-shrink-0">
                                         <span class="inline-flex items-center gap-1 text-xs font-black">
@@ -326,72 +328,72 @@
                             <div class="px-4 sm:px-5 pb-5">
                                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
                                     <div class="lg:col-span-2 space-y-4">
-                                        @if(count($agendaLines))
+                                        <?php if(count($agendaLines)): ?>
                                             <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
                                                 <div class="flex items-center justify-between gap-3">
                                                     <p class="text-xs font-black text-slate-700">برنامج اليوم</p>
-                                                    <span class="text-[11px] font-black text-slate-500">{{ count($agendaLines) }} نقاط</span>
+                                                    <span class="text-[11px] font-black text-slate-500"><?php echo e(count($agendaLines)); ?> نقاط</span>
                                                 </div>
                                                 <ul class="mt-3 space-y-2 text-sm text-slate-700 max-h-56 overflow-auto pr-1">
-                                                    @foreach($agendaLines as $line)
+                                                    <?php $__currentLoopData = $agendaLines; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $line): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                                         <li class="flex gap-2 leading-relaxed">
                                                             <span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-violet-400" aria-hidden="true"></span>
-                                                            <span>{{ $line }}</span>
+                                                            <span><?php echo e($line); ?></span>
                                                         </li>
-                                                    @endforeach
+                                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                                 </ul>
                                             </div>
-                                        @endif
+                                        <?php endif; ?>
 
-                                        @include('partials.offline-mindmap-visual', ['text' => $lecture->offline_attendee_mindmap])
+                                        <?php echo $__env->make('partials.offline-mindmap-visual', ['text' => $lecture->offline_attendee_mindmap], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
                                     </div>
 
                                     <div class="space-y-3">
                                         <div class="rounded-2xl border border-slate-200 bg-white p-4">
                                             <div class="flex items-center justify-between gap-3">
                                                 <p class="text-xs font-black text-slate-800">المواد والمرفقات</p>
-                                                <span class="text-[11px] font-black text-slate-500">{{ $hasMaterials }}</span>
+                                                <span class="text-[11px] font-black text-slate-500"><?php echo e($hasMaterials); ?></span>
                                             </div>
 
                                             <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
-                                                @if(($channel ?? 'offline') === 'online' && $lecture->meeting_url)
-                                                    <a href="{{ $lecture->meeting_url }}" target="_blank" rel="noopener"
+                                                <?php if(($channel ?? 'offline') === 'online' && $lecture->meeting_url): ?>
+                                                    <a href="<?php echo e($lecture->meeting_url); ?>" target="_blank" rel="noopener"
                                                        class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-3.5 py-2.5 text-xs font-black text-white hover:bg-indigo-700 justify-center">
                                                         <i class="fas fa-video"></i>
                                                         بث مباشر
                                                     </a>
-                                                @endif
+                                                <?php endif; ?>
 
-                                                @if($lecture->recording_url)
-                                                    <a href="{{ $lecture->recording_url }}" target="_blank" rel="noopener"
+                                                <?php if($lecture->recording_url): ?>
+                                                    <a href="<?php echo e($lecture->recording_url); ?>" target="_blank" rel="noopener"
                                                        class="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3.5 py-2.5 text-xs font-black text-violet-800 hover:bg-violet-100 justify-center">
                                                         <i class="fas fa-play"></i>
                                                         التسجيل
                                                     </a>
-                                                @endif
+                                                <?php endif; ?>
                                             </div>
 
-                                            @if($linksCount > 0)
+                                            <?php if($linksCount > 0): ?>
                                                 <div class="mt-3">
                                                     <p class="text-[11px] font-black text-slate-500 mb-2">روابط التحميل</p>
                                                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
-                                                        @foreach($lecture->download_links as $link)
-                                                            <a href="{{ $link['url'] ?? '#' }}" target="_blank" rel="noopener"
+                                                        <?php $__currentLoopData = $lecture->download_links; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $link): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                            <a href="<?php echo e($link['url'] ?? '#'); ?>" target="_blank" rel="noopener"
                                                                class="group inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-xs font-black text-sky-800 hover:bg-sky-100">
                                                                 <i class="fas fa-download flex-shrink-0"></i>
-                                                                <span class="truncate min-w-0">{{ $link['label'] ?? 'تحميل' }}</span>
+                                                                <span class="truncate min-w-0"><?php echo e($link['label'] ?? 'تحميل'); ?></span>
                                                             </a>
-                                                        @endforeach
+                                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                                     </div>
                                                 </div>
-                                            @endif
+                                            <?php endif; ?>
 
-                                            @if($filesCount > 0)
+                                            <?php if($filesCount > 0): ?>
                                                 <div class="mt-3">
                                                     <p class="text-[11px] font-black text-slate-500 mb-2">مرفقات</p>
                                                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
-                                                        @foreach($lecture->attachments as $att)
-                                                            @php
+                                                        <?php $__currentLoopData = $lecture->attachments; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $att): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                            <?php
                                                                 $name = (string) ($att['name'] ?? 'ملف');
                                                                 $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
                                                                 $icon = 'fa-file';
@@ -401,30 +403,30 @@
                                                                 elseif (in_array($ext, ['doc', 'docx'])) $icon = 'fa-file-word';
                                                                 elseif (in_array($ext, ['png','jpg','jpeg','webp','gif'])) $icon = 'fa-file-image';
                                                                 elseif (in_array($ext, ['zip','rar','7z'])) $icon = 'fa-file-archive';
-                                                            @endphp
-                                                            <a href="{{ asset('storage/' . ($att['path'] ?? '')) }}" target="_blank" rel="noopener"
+                                                            ?>
+                                                            <a href="<?php echo e(asset('storage/' . ($att['path'] ?? ''))); ?>" target="_blank" rel="noopener"
                                                                class="group inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-black text-slate-700 hover:bg-slate-50">
-                                                                <i class="fas {{ $icon }} text-slate-500 flex-shrink-0"></i>
-                                                                <span class="truncate min-w-0">{{ $name }}</span>
+                                                                <i class="fas <?php echo e($icon); ?> text-slate-500 flex-shrink-0"></i>
+                                                                <span class="truncate min-w-0"><?php echo e($name); ?></span>
                                                             </a>
-                                                        @endforeach
+                                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                                     </div>
                                                 </div>
-                                            @endif
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </details>
                     </li>
-                @endforeach
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </ul>
-        @endif
+        <?php endif; ?>
     </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 window.__offlineLecturesPage = function () {
     return {
@@ -433,7 +435,7 @@ window.__offlineLecturesPage = function () {
         onlyUpcoming: false,
         onlyPast: false,
         allExpanded: false,
-        visibleCount: {{ (int) $lectureCount }},
+        visibleCount: <?php echo e((int) $lectureCount); ?>,
         normalize(s) {
             return (s || '').toString().toLowerCase().trim();
         },
@@ -508,4 +510,6 @@ window.__offlineLecturesPage = function () {
     }
 }
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
+
+<?php echo $__env->make('layouts.student-dashboard', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/student/offline-courses/lectures.blade.php ENDPATH**/ ?>

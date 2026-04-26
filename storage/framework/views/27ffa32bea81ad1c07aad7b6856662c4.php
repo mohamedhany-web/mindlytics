@@ -1,15 +1,15 @@
-@php $studentLocale = app()->getLocale(); $studentRtl = $studentLocale === 'ar'; @endphp
+<?php $studentLocale = app()->getLocale(); $studentRtl = $studentLocale === 'ar'; ?>
 <!DOCTYPE html>
-<html lang="{{ $studentLocale }}" dir="{{ $studentRtl ? 'rtl' : 'ltr' }}" class="light">
+<html lang="<?php echo e($studentLocale); ?>" dir="<?php echo e($studentRtl ? 'rtl' : 'ltr'); ?>" class="light">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
 
-    <title>{{ config('app.name', 'Mindlytics') }} - @yield('title', __('auth.dashboard'))</title>
+    <title><?php echo e(config('app.name', 'Mindlytics')); ?> - <?php echo $__env->yieldContent('title', __('auth.dashboard')); ?></title>
 
     <!-- Favicon -->
-    @include('components.favicon-meta')
+    <?php echo $__env->make('components.favicon-meta', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -453,7 +453,7 @@
         }
     </style>
 
-    @stack('styles')
+    <?php echo $__env->yieldPushContent('styles'); ?>
 </head>
 <body x-data="{ 
     sidebarOpen: window.innerWidth >= 1024
@@ -485,7 +485,7 @@ x-init="
     });
 ">
     <div class="flex h-screen overflow-hidden">
-        @auth
+        <?php if(auth()->guard()->check()): ?>
             <!-- Clean Sidebar -->
             <aside x-show="sidebarOpen || window.innerWidth >= 1024"
                    x-transition:enter="transition ease-out duration-150"
@@ -496,7 +496,7 @@ x-init="
                    x-transition:leave-end="opacity-0 translate-x-full"
                    class="student-sidebar flex-shrink-0 fixed lg:static inset-y-0 right-0 z-50 lg:z-auto"
                    style="will-change: transform, opacity;">
-                @include('layouts.student-sidebar')
+                <?php echo $__env->make('layouts.student-sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
             </aside>
 
             <!-- Mobile Overlay -->
@@ -510,11 +510,11 @@ x-init="
                  x-transition:leave-end="opacity-0"
                  class="fixed inset-0 bg-black/50 z-40 lg:hidden"
                  style="will-change: opacity;"></div>
-        @endauth
+        <?php endif; ?>
 
         <!-- Main Content Area -->
         <div class="flex flex-col flex-1 min-w-0">
-            @auth
+            <?php if(auth()->guard()->check()): ?>
                 <!-- Enhanced Header -->
                 <header class="student-header flex items-center justify-between px-4 sm:px-6 lg:px-8 flex-shrink-0 sticky top-0 z-30">
                     <div class="flex items-center gap-2 sm:gap-3 md:gap-5 flex-1 min-w-0">
@@ -529,7 +529,7 @@ x-init="
                             <div class="search-command flex items-center gap-2 w-full">
                                 <i class="fas fa-search text-sky-500 text-xs sm:text-sm flex-shrink-0"></i>
                                 <input type="text" 
-                                       placeholder="{{ __('common.nav_search_placeholder') }}" 
+                                       placeholder="<?php echo e(__('common.nav_search_placeholder')); ?>" 
                                        class="flex-1 bg-transparent border-none outline-none text-xs sm:text-sm text-gray-700 placeholder-gray-400 font-medium min-w-0">
                             </div>
                         </div>
@@ -539,7 +539,7 @@ x-init="
                             <div class="search-command flex items-center gap-3 w-full">
                                 <i class="fas fa-search text-sky-500 text-sm flex-shrink-0"></i>
                                 <input type="text" 
-                                       placeholder="{{ __('common.nav_search_placeholder_long') }}" 
+                                       placeholder="<?php echo e(__('common.nav_search_placeholder_long')); ?>" 
                                        class="flex-1 bg-transparent border-none outline-none text-sm text-gray-700 placeholder-gray-400 font-medium min-w-0">
                                 <kbd class="hidden lg:flex items-center gap-1 px-2.5 py-1 bg-gradient-to-br from-sky-500/10 to-sky-400/10 rounded text-xs font-bold text-sky-500 border border-sky-500/20 flex-shrink-0">
                                     <span>Ctrl</span>
@@ -550,13 +550,32 @@ x-init="
                     </div>
 
                     <div class="flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-shrink-0">
-                        <x-language-switcher class="hidden sm:inline-flex" />
+                        <?php if (isset($component)) { $__componentOriginal8d3bff7d7383a45350f7495fc470d934 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal8d3bff7d7383a45350f7495fc470d934 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.language-switcher','data' => ['class' => 'hidden sm:inline-flex']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('language-switcher'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['class' => 'hidden sm:inline-flex']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal8d3bff7d7383a45350f7495fc470d934)): ?>
+<?php $attributes = $__attributesOriginal8d3bff7d7383a45350f7495fc470d934; ?>
+<?php unset($__attributesOriginal8d3bff7d7383a45350f7495fc470d934); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal8d3bff7d7383a45350f7495fc470d934)): ?>
+<?php $component = $__componentOriginal8d3bff7d7383a45350f7495fc470d934; ?>
+<?php unset($__componentOriginal8d3bff7d7383a45350f7495fc470d934); ?>
+<?php endif; ?>
                         <!-- Quick Actions - Desktop Only -->
                         <div class="hidden lg:flex items-center gap-2">
-                            <a href="{{ route('academic-years') }}" class="quick-action-btn" title="{{ __('landing.nav.courses') }}">
+                            <a href="<?php echo e(route('academic-years')); ?>" class="quick-action-btn" title="<?php echo e(__('landing.nav.courses')); ?>">
                                 <i class="fas fa-search text-sm"></i>
                             </a>
-                            <a href="{{ route('my-courses.index') }}" class="quick-action-btn" title="{{ __('common.my_courses_title') }}">
+                            <a href="<?php echo e(route('my-courses.index')); ?>" class="quick-action-btn" title="<?php echo e(__('common.my_courses_title')); ?>">
                                 <i class="fas fa-book-open text-sm"></i>
                             </a>
                         </div>
@@ -618,7 +637,7 @@ x-init="
                                     </div>
                                 </div>
                                 <div class="p-3 border-t border-gray-200 bg-white">
-                                    <a href="{{ url('/dashboard') }}" class="text-xs font-bold text-slate-700 hover:text-slate-900">الذهاب للوحة التحكم</a>
+                                    <a href="<?php echo e(url('/dashboard')); ?>" class="text-xs font-bold text-slate-700 hover:text-slate-900">الذهاب للوحة التحكم</a>
                                 </div>
                             </div>
                         </div>
@@ -628,14 +647,15 @@ x-init="
                             <button @click="open = !open"
                                     class="user-menu-btn flex items-center gap-1.5 sm:gap-2 md:gap-3 p-1 sm:p-1.5 md:p-2 rounded-xl">
                                 <div class="user-avatar flex-shrink-0">
-                                    @if(auth()->user()->profile_image)
-                                        <img src="{{ auth()->user()->profile_image_url }}" alt="" class="w-full h-full rounded-lg object-cover">
-                                    @else
-                                        {{ substr(auth()->user()->name, 0, 1) }}
-                                    @endif
+                                    <?php if(auth()->user()->profile_image): ?>
+                                        <img src="<?php echo e(auth()->user()->profile_image_url); ?>" alt="" class="w-full h-full rounded-lg object-cover">
+                                    <?php else: ?>
+                                        <?php echo e(substr(auth()->user()->name, 0, 1)); ?>
+
+                                    <?php endif; ?>
                                 </div>
                                 <div class="hidden sm:block md:hidden lg:block text-right min-w-0">
-                                    <div class="text-xs sm:text-sm font-bold text-gray-900 truncate">{{ auth()->user()->name }}</div>
+                                    <div class="text-xs sm:text-sm font-bold text-gray-900 truncate"><?php echo e(auth()->user()->name); ?></div>
                                     <div class="text-[10px] sm:text-xs text-gray-500">طالب</div>
                                 </div>
                                 <i class="fas fa-chevron-down text-[10px] sm:text-xs text-gray-400 hidden sm:block transition-transform flex-shrink-0" :class="{ 'rotate-180': open }"></i>
@@ -647,30 +667,31 @@ x-init="
                                 <div class="p-3 sm:p-4 border-b border-gray-200 bg-gradient-to-r from-sky-400/10 to-sky-500/10">
                                     <div class="flex items-center gap-2 sm:gap-3">
                                         <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-sky-500 to-sky-400 flex items-center justify-center text-white font-bold text-sm sm:text-base shadow-lg flex-shrink-0">
-                                            @if(auth()->user()->profile_image)
-                                                <img src="{{ auth()->user()->profile_image_url }}" alt="" class="w-full h-full rounded-xl object-cover">
-                                            @else
-                                                {{ substr(auth()->user()->name, 0, 1) }}
-                                            @endif
+                                            <?php if(auth()->user()->profile_image): ?>
+                                                <img src="<?php echo e(auth()->user()->profile_image_url); ?>" alt="" class="w-full h-full rounded-xl object-cover">
+                                            <?php else: ?>
+                                                <?php echo e(substr(auth()->user()->name, 0, 1)); ?>
+
+                                            <?php endif; ?>
                                         </div>
                                         <div class="min-w-0 flex-1">
-                                            <div class="font-bold text-gray-900 text-xs sm:text-sm truncate">{{ auth()->user()->name }}</div>
-                                            <div class="text-[10px] sm:text-xs text-gray-600 truncate">{{ auth()->user()->email }}</div>
+                                            <div class="font-bold text-gray-900 text-xs sm:text-sm truncate"><?php echo e(auth()->user()->name); ?></div>
+                                            <div class="text-[10px] sm:text-xs text-gray-600 truncate"><?php echo e(auth()->user()->email); ?></div>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="p-1.5 sm:p-2">
-                                    <a href="{{ route('profile') }}" class="dropdown-item flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm text-gray-700 font-medium">
+                                    <a href="<?php echo e(route('profile')); ?>" class="dropdown-item flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm text-gray-700 font-medium">
                                         <i class="fas fa-user w-4 sm:w-5 text-sky-500 flex-shrink-0"></i>
                                         <span>الملف الشخصي</span>
                                     </a>
-                                    <a href="{{ route('settings') }}" class="dropdown-item flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm text-gray-700 font-medium">
+                                    <a href="<?php echo e(route('settings')); ?>" class="dropdown-item flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm text-gray-700 font-medium">
                                         <i class="fas fa-cog w-4 sm:w-5 text-gray-500 flex-shrink-0"></i>
                                         <span>الإعدادات</span>
                                     </a>
                                     <hr class="my-1.5 sm:my-2 border-gray-200">
-                                    <form method="POST" action="{{ route('logout') }}">
-                                        @csrf
+                                    <form method="POST" action="<?php echo e(route('logout')); ?>">
+                                        <?php echo csrf_field(); ?>
                                         <button type="submit" class="w-full dropdown-item flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm text-red-600 font-medium">
                                             <i class="fas fa-sign-out-alt w-4 sm:w-5 flex-shrink-0"></i>
                                             <span>تسجيل الخروج</span>
@@ -681,30 +702,32 @@ x-init="
                         </div>
                     </div>
                 </header>
-            @endauth
+            <?php endif; ?>
 
             <!-- Main Content -->
             <main class="flex-1 overflow-auto bg-gray-50 min-w-0 w-full">
                 <div class="w-full max-w-full p-4 sm:p-6 lg:p-8">
-                    @if(session('success') && !session('payment_success_modal'))
+                    <?php if(session('success') && !session('payment_success_modal')): ?>
                         <div class="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm font-medium">
-                            {{ session('success') }}
-                        </div>
-                    @endif
+                            <?php echo e(session('success')); ?>
 
-                    @if(session('error'))
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if(session('error')): ?>
                         <div class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm font-medium">
-                            {{ session('error') }}
-                        </div>
-                    @endif
+                            <?php echo e(session('error')); ?>
 
-                    @yield('content')
+                        </div>
+                    <?php endif; ?>
+
+                    <?php echo $__env->yieldContent('content'); ?>
                 </div>
             </main>
         </div>
     </div>
 
-    @stack('scripts')
+    <?php echo $__env->yieldPushContent('scripts'); ?>
     
     <script>
         window.__navNotifications = function () {
@@ -716,7 +739,7 @@ x-init="
                 async refresh() {
                     try {
                         this.loading = true;
-                        const res = await fetch(`{{ route('nav-notifications.recent') }}`, {
+                        const res = await fetch(`<?php echo e(route('nav-notifications.recent')); ?>`, {
                             headers: { 'Accept': 'application/json' }
                         });
                         const data = await res.json();
@@ -734,11 +757,11 @@ x-init="
                 },
                 async markAllRead() {
                     try {
-                        await fetch(`{{ route('nav-notifications.mark-all-read') }}`, {
+                        await fetch(`<?php echo e(route('nav-notifications.mark-all-read')); ?>`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>',
                                 'Accept': 'application/json',
                             },
                             body: JSON.stringify({})
@@ -751,11 +774,11 @@ x-init="
                 async onClickItem(n) {
                     try {
                         if (n && n.id && !n.is_read) {
-                            await fetch(`{{ url('/api/nav-notifications') }}/${n.id}/mark-read`, {
+                            await fetch(`<?php echo e(url('/api/nav-notifications')); ?>/${n.id}/mark-read`, {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>',
                                     'Accept': 'application/json',
                                 },
                                 body: JSON.stringify({})
@@ -802,3 +825,4 @@ x-init="
     </script>
 </body>
 </html>
+<?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/layouts/student-dashboard.blade.php ENDPATH**/ ?>

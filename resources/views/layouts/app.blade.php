@@ -398,26 +398,59 @@ x-init="
                         </div>
 
                         <!-- Notifications -->
-                        <div class="relative" x-data="{ open: false }">
-                            <button @click="open = !open"
-                                    class="quick-action-btn relative">
+                        <div class="relative" x-data="window.__navNotifications()">
+                            <button @click="toggle()"
+                                    class="quick-action-btn relative"
+                                    aria-label="الإشعارات">
                                 <i class="fas fa-bell text-xs sm:text-sm"></i>
-                                <span class="notification-badge text-[9px] sm:text-[10px]">3</span>
+                                <template x-if="unreadCount > 0">
+                                    <span class="notification-badge text-[9px] sm:text-[10px]" x-text="unreadCount > 99 ? '99+' : unreadCount"></span>
+                                </template>
                             </button>
                             <div x-show="open"
                                  @click.away="open = false"
                                  x-transition
                                  class="absolute left-0 mt-3 w-72 sm:w-80 md:w-96 dropdown-menu z-50 overflow-hidden">
-                                <div class="p-3 sm:p-4 border-b border-slate-200 bg-slate-50">
+                                <div class="p-3 sm:p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-3">
                                     <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
                                         <i class="fas fa-bell text-sky-500"></i>
                                         <span>الإشعارات</span>
                                     </h3>
+                                    <button type="button" class="text-xs font-bold text-sky-700 hover:text-sky-900"
+                                            @click="markAllRead()" x-show="unreadCount > 0">
+                                        تحديد الكل كمقروء
+                                    </button>
                                 </div>
                                 <div class="max-h-96 overflow-y-auto">
-                                    <div class="p-4 sm:p-6 text-center text-slate-500 text-sm">
-                                        <i class="fas fa-bell-slash text-2xl mb-2 text-slate-300 inline-block"></i>
-                                        <p>لا توجد إشعارات جديدة</p>
+                                    <template x-if="loading">
+                                        <div class="p-4 sm:p-6 text-center text-slate-500 text-sm">جاري التحميل…</div>
+                                    </template>
+                                    <template x-if="!loading && items.length === 0">
+                                        <div class="p-4 sm:p-6 text-center text-slate-500 text-sm">
+                                            <i class="fas fa-bell-slash text-2xl mb-2 text-slate-300 inline-block"></i>
+                                            <p>لا توجد إشعارات</p>
+                                        </div>
+                                    </template>
+                                    <div x-show="!loading && items.length > 0" class="divide-y divide-slate-100">
+                                        <template x-for="n in items" :key="n.id">
+                                            <a :href="n.action_url || '#'"
+                                               @click.prevent="onClickItem(n)"
+                                               class="block px-4 sm:px-5 py-3 hover:bg-slate-50/70 transition-colors">
+                                                <div class="flex items-start gap-3">
+                                                    <div class="w-9 h-9 rounded-xl bg-sky-50 border border-sky-100 text-sky-600 flex items-center justify-center flex-shrink-0">
+                                                        <i :class="n.type_icon"></i>
+                                                    </div>
+                                                    <div class="min-w-0 flex-1">
+                                                        <div class="flex items-center gap-2">
+                                                            <div class="font-bold text-slate-900 text-sm truncate" x-text="n.title"></div>
+                                                            <div class="w-2 h-2 rounded-full bg-sky-500 flex-shrink-0" x-show="!n.is_read"></div>
+                                                        </div>
+                                                        <div class="text-xs text-slate-600 mt-0.5 line-clamp-2" x-text="n.message"></div>
+                                                        <div class="text-[11px] text-slate-400 mt-1" x-text="n.created_human"></div>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </template>
                                     </div>
                                 </div>
                             </div>
@@ -514,6 +547,71 @@ x-init="
     @stack('scripts')
     
     <script>
+        window.__navNotifications = window.__navNotifications || function () {
+            return {
+                open: false,
+                loading: false,
+                unreadCount: 0,
+                items: [],
+                async refresh() {
+                    try {
+                        this.loading = true;
+                        const res = await fetch(`{{ route('nav-notifications.recent') }}`, { headers: { 'Accept': 'application/json' } });
+                        const data = await res.json();
+                        this.unreadCount = Number(data.unread_count || 0);
+                        this.items = Array.isArray(data.items) ? data.items : [];
+                    } catch (e) {
+                        // silent
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                toggle() {
+                    this.open = !this.open;
+                    if (this.open) this.refresh();
+                },
+                async markAllRead() {
+                    try {
+                        await fetch(`{{ route('nav-notifications.mark-all-read') }}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({})
+                        });
+                    } catch (e) {
+                        // silent
+                    }
+                    await this.refresh();
+                },
+                async onClickItem(n) {
+                    try {
+                        if (n && n.id && !n.is_read) {
+                            await fetch(`{{ url('/api/nav-notifications') }}/${n.id}/mark-read`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'Accept': 'application/json',
+                                },
+                                body: JSON.stringify({})
+                            });
+                        }
+                    } catch (e) {
+                        // silent
+                    }
+                    if (n && n.action_url) {
+                        window.location.href = n.action_url;
+                    }
+                },
+                init() {
+                    this.refresh();
+                    setInterval(() => this.refresh(), 30000);
+                }
+            }
+        }
         // إزالة الوضع المظلم من النظام بشكل مستمر
         function removeDarkMode() {
             document.documentElement.classList.remove('dark');

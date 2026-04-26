@@ -555,6 +555,14 @@ Route::middleware(['auth'])->prefix('2fa')->name('two-factor.')->group(function 
 // مسارات لوحة التحكم - محمية بالتأكد من تسجيل الدخول ومنع الجلسات المتزامنة
 Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // API لإشعارات الناف بار (تعمل للطالب/المدرب/الموظف)
+    Route::prefix('api/nav-notifications')->name('nav-notifications.')->group(function () {
+        Route::get('/unread-count', [\App\Http\Controllers\NavbarNotificationController::class, 'unreadCount'])->name('unread-count');
+        Route::get('/recent', [\App\Http\Controllers\NavbarNotificationController::class, 'recent'])->name('recent');
+        Route::post('/{notification}/mark-read', [\App\Http\Controllers\NavbarNotificationController::class, 'markRead'])->name('mark-read');
+        Route::post('/mark-all-read', [\App\Http\Controllers\NavbarNotificationController::class, 'markAllRead'])->name('mark-all-read');
+    });
     
     // مسارات الطلاب
     Route::get('/academic-years', [\App\Http\Controllers\Student\AcademicYearController::class, 'index'])->name('academic-years');

@@ -10,6 +10,8 @@ use App\Models\LectureAssignment;
 use App\Models\CalendarEvent;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\PlatformNotificationMail;
 
 class CalendarNotificationService
 {
@@ -130,22 +132,36 @@ class CalendarNotificationService
 
             foreach ($students as $student) {
                 // إشعار فوري عند إنشاء الامتحان
+                $title = 'امتحان جديد: ' . $exam->title;
+                $message = 'تم جدولة امتحان جديد في كورس "' . $course->title . '" بتاريخ ' . $examStart->format('d/m/Y h:i A');
+                $actionUrl = route('student.exams.show', $exam->id);
+                $actionText = 'عرض الامتحان';
+
                 Notification::create([
                     'user_id' => $student->id,
                     'sender_id' => $exam->created_by,
-                    'title' => 'امتحان جديد: ' . $exam->title,
-                    'message' => 'تم جدولة امتحان جديد في كورس "' . $course->title . '" بتاريخ ' . $examStart->format('d/m/Y h:i A'),
+                    'title' => $title,
+                    'message' => $message,
                     'type' => 'exam',
                     'priority' => 'high',
                     'audience' => 'student',
-                    'action_url' => route('student.exams.show', $exam->id),
-                    'action_text' => 'عرض الامتحان',
+                    'action_url' => $actionUrl,
+                    'action_text' => $actionText,
                     'data' => [
                         'exam_id' => $exam->id,
                         'course_id' => $course->id,
                         'start_time' => $examStart->toIso8601String(),
                     ],
                 ]);
+
+                // إشعار البريد (عند نشر/إنشاء الامتحان فقط)
+                try {
+                    if (!empty($student->email)) {
+                        Mail::to($student->email)->send(new PlatformNotificationMail($title, $message, $actionUrl, $actionText));
+                    }
+                } catch (\Throwable $mailE) {
+                    Log::warning('Exam notification mail failed: ' . $mailE->getMessage());
+                }
 
                 // تذكير قبل الامتحان بـ 3 أيام
                 if ($examStart->diffInDays(now()) >= 3) {
@@ -241,22 +257,36 @@ class CalendarNotificationService
 
             foreach ($students as $student) {
                 // إشعار فوري عند إنشاء الواجب
+                $title = 'واجب جديد: ' . $assignment->title;
+                $message = 'تم إضافة واجب جديد في كورس "' . $course->title . '" - موعد التسليم: ' . $dueDate->format('d/m/Y');
+                $actionUrl = route('my-courses.show', $course->id) . '#assignments';
+                $actionText = 'عرض الواجب';
+
                 Notification::create([
                     'user_id' => $student->id,
                     'sender_id' => $assignment->teacher_id ?? ($assignment->lecture->instructor_id ?? null),
-                    'title' => 'واجب جديد: ' . $assignment->title,
-                    'message' => 'تم إضافة واجب جديد في كورس "' . $course->title . '" - موعد التسليم: ' . $dueDate->format('d/m/Y'),
+                    'title' => $title,
+                    'message' => $message,
                     'type' => 'assignment',
                     'priority' => 'high',
                     'audience' => 'student',
-                    'action_url' => route('my-courses.show', $course->id) . '#assignments',
-                    'action_text' => 'عرض الواجب',
+                    'action_url' => $actionUrl,
+                    'action_text' => $actionText,
                     'data' => [
                         'assignment_id' => $assignment->id,
                         'course_id' => $course->id,
                         'due_date' => $dueDate->toIso8601String(),
                     ],
                 ]);
+
+                // إشعار البريد (عند نشر/إنشاء الواجب فقط)
+                try {
+                    if (!empty($student->email)) {
+                        Mail::to($student->email)->send(new PlatformNotificationMail($title, $message, $actionUrl, $actionText));
+                    }
+                } catch (\Throwable $mailE) {
+                    Log::warning('Assignment notification mail failed: ' . $mailE->getMessage());
+                }
 
                 // تذكير قبل موعد التسليم بـ 3 أيام
                 if ($dueDate->diffInDays(now()) >= 3) {

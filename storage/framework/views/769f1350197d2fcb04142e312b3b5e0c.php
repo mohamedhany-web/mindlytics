@@ -1,7 +1,7 @@
-{{-- عرض «خريطة ذهنية» مبسّطة من نص متدرّج (مسافات / - ) --}}
-@php $text = $text ?? null; @endphp
-@if(filled($text))
-    @php
+
+<?php $text = $text ?? null; ?>
+<?php if(filled($text)): ?>
+    <?php
         $rawLines = preg_split('/\r\n|\r|\n/', $text);
         $lines = [];
         foreach ($rawLines as $raw) {
@@ -33,9 +33,9 @@
             }
             $lines[] = ['depth' => $depth, 'text' => $s];
         }
-    @endphp
-    @if(count($lines))
-        @php $previewCount = min(6, count($lines)); @endphp
+    ?>
+    <?php if(count($lines)): ?>
+        <?php $previewCount = min(6, count($lines)); ?>
         <details class="group mt-3 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
             <summary class="cursor-pointer list-none px-4 py-3 sm:px-5 sm:py-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between gap-3 select-none">
                 <div class="flex items-center gap-2 min-w-0">
@@ -44,7 +44,7 @@
                     </span>
                     <div class="min-w-0">
                         <div class="text-sm font-black text-slate-900 truncate">الخريطة الذهنية</div>
-                        <div class="text-[11px] font-bold text-slate-500">{{ count($lines) }} نقطة — اضغط للعرض</div>
+                        <div class="text-[11px] font-bold text-slate-500"><?php echo e(count($lines)); ?> نقطة — اضغط للعرض</div>
                     </div>
                 </div>
                 <i class="fas fa-chevron-down text-slate-400 text-sm transition-transform duration-200 group-open:rotate-180"></i>
@@ -54,18 +54,19 @@
                 <div class="rounded-2xl border border-slate-200 bg-gradient-to-br from-indigo-950/[0.02] via-cyan-950/[0.03] to-violet-950/[0.02] p-4 overflow-hidden">
                     <div class="max-h-72 overflow-auto">
                         <div class="space-y-0">
-                            @foreach($lines as $idx => $row)
-                                @php $pl = min($row['depth'], 10) * 0.75; @endphp
-                                <div class="flex items-start gap-2.5 py-1.5 rounded-lg hover:bg-white/60 transition-colors" style="margin-inline-start: {{ $pl }}rem">
+                            <?php $__currentLoopData = $lines; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $idx => $row): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <?php $pl = min($row['depth'], 10) * 0.75; ?>
+                                <div class="flex items-start gap-2.5 py-1.5 rounded-lg hover:bg-white/60 transition-colors" style="margin-inline-start: <?php echo e($pl); ?>rem">
                                     <span class="mt-2 h-2 w-2 shrink-0 rounded-full bg-gradient-to-r from-cyan-500 to-indigo-600 shadow-sm ring-2 ring-white"></span>
-                                    <span class="text-sm text-slate-800 leading-relaxed font-semibold break-words">{{ $row['text'] }}</span>
+                                    <span class="text-sm text-slate-800 leading-relaxed font-semibold break-words"><?php echo e($row['text']); ?></span>
                                 </div>
-                            @endforeach
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </div>
                     </div>
                 </div>
 
             </div>
         </details>
-    @endif
-@endif
+    <?php endif; ?>
+<?php endif; ?>
+<?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/partials/offline-mindmap-visual.blade.php ENDPATH**/ ?>
