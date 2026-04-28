@@ -127,12 +127,12 @@
                      data-item-type="lesson"
                      data-item-id="{{ $item->id }}"
                      data-item-locked="{{ $isLocked ? '1' : '0' }}"
-                     @click="currentSectionDescription = (window.learnSectionDescriptions || {})[$event.currentTarget.dataset.sectionId] || ''; if ({{ $isLocked ? 'true' : 'false' }}) return; selectedLesson = {{ $item->id }}; loadLesson({{ $item->id }})"
+                    @click="currentSectionDescription = (window.learnSectionDescriptions || {})[$event.currentTarget.dataset.sectionId] || ''; if (($event.currentTarget.dataset.itemLocked || '0') === '1') return; selectedLesson = {{ $item->id }}; loadLesson({{ $item->id }})"
                  @elseif($item instanceof \App\Models\Lecture)
                      data-item-type="lecture"
                      data-item-id="{{ $item->id }}"
                      data-item-locked="{{ $isLocked ? '1' : '0' }}"
-                     @click="currentSectionDescription = (window.learnSectionDescriptions || {})[$event.currentTarget.dataset.sectionId] || ''; if ({{ $isLocked ? 'true' : 'false' }}) return; loadLecture({{ $item->id }})"
+                     @click="currentSectionDescription = (window.learnSectionDescriptions || {})[$event.currentTarget.dataset.sectionId] || ''; if (($event.currentTarget.dataset.itemLocked || '0') === '1') return; loadLecture({{ $item->id }})"
                  @elseif($item instanceof \App\Models\Assignment)
                      data-item-type="assignment"
                      data-item-id="{{ $item->id }}"
@@ -147,7 +147,7 @@
                      data-item-type="pattern"
                      data-item-id="{{ $item->id }}"
                      data-item-locked="{{ $isLocked ? '1' : '0' }}"
-                     @click="currentSectionDescription = (window.learnSectionDescriptions || {})[$event.currentTarget.dataset.sectionId] || ''; if ({{ $isLocked ? 'true' : 'false' }}) return; loadPattern({{ $item->id }})"
+                     @click="currentSectionDescription = (window.learnSectionDescriptions || {})[$event.currentTarget.dataset.sectionId] || ''; if (($event.currentTarget.dataset.itemLocked || '0') === '1') return; loadPattern({{ $item->id }})"
                  @endif
                  x-show="!searchQuery || '{{ strtolower($item->title) }}'.includes(searchQuery.toLowerCase())">
                 <div class="flex items-start gap-2">

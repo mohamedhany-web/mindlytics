@@ -3000,9 +3000,34 @@ function videoPlayer() {
         return String(item.el.dataset.itemLocked || '') === '1';
     }
 
+    function unlockCurriculumItemEl(el) {
+        if (!el) return;
+        try {
+            el.dataset.itemLocked = '0';
+            el.classList.remove('locked');
+            // لو كان يظهر أيقونة قفل داخل مربع الأيقونة، نحاول استبدالها (تحسين UX فقط)
+            var iconBox = el.querySelector('.w-6.h-6');
+            if (iconBox) {
+                iconBox.classList.remove('bg-gray-600');
+                if (!iconBox.classList.contains('bg-sky-500') && !iconBox.classList.contains('bg-green-500')) {
+                    iconBox.classList.add('bg-sky-500');
+                }
+                var i = iconBox.querySelector('i.fas.fa-lock');
+                if (i) {
+                    i.classList.remove('fa-lock');
+                    i.classList.add('fa-play');
+                }
+            }
+        } catch (e) {}
+    }
+
     window.learnNavGetNextForButton = getNextCurriculumItem;
     window.learnNavGetPrevForButton = getPrevCurriculumItem;
     window.learnNavIsTargetLocked = learnNavIsTargetLocked;
+    window.learnSidebarUnlockItem = function(type, id) {
+        var el = findCurriculumItemEl(type, id);
+        unlockCurriculumItemEl(el);
+    };
 
     function getItemTitle(el) {
         var titleEl = el && el.querySelector('.curriculum-item-title');
@@ -3019,6 +3044,10 @@ function videoPlayer() {
     function loadNextItem(item) {
         hideOverlay();
         if (!item) return;
+        // فك قفل العنصر التالي فوراً في الواجهة حتى يصبح قابلاً للضغط بدون Refresh
+        if (item.el && String(item.el.dataset.itemLocked || '') === '1') {
+            unlockCurriculumItemEl(item.el);
+        }
         var raw = item.id;
         var nid = parseInt(String(raw), 10);
         var openId = (String(nid) === String(raw) && !isNaN(nid)) ? nid : raw;
