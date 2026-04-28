@@ -1369,12 +1369,37 @@ function courseFocusMode() {
                         if (wrapper && data.completed_items != null) wrapper.dataset.completedItems = data.completed_items;
                         if (forceCompleted || pct >= 90) this.currentLessonCompleted = true;
                         if (typeof updateProgressBar === 'function') updateProgressBar();
+                        if (typeof this.refreshSidebarLocks === 'function') await this.refreshSidebarLocks();
                     }
                 }
             } catch (e) {
                 console.warn('flushLessonProgressNow failed', e);
             } finally {
                 this.isFlushingProgress = false;
+            }
+        },
+        async refreshSidebarLocks() {
+            try {
+                const res = await fetch(`{{ route('my-courses.curriculum.locks', [$course]) }}`, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!res.ok) return;
+                const data = await res.json().catch(() => null);
+                if (!data || !data.success || !data.locks) return;
+                const locks = data.locks || {};
+
+                Object.keys(locks).forEach((key) => {
+                    const locked = String(locks[key]) === '1';
+                    const parts = String(key).split(':');
+                    const type = parts[0];
+                    const id = parts[1];
+                    const el = document.querySelector('.curriculum-item[data-item-type="' + type + '"][data-item-id="' + id + '"]');
+                    if (!el) return;
+                    el.dataset.itemLocked = locked ? '1' : '0';
+                    el.classList.toggle('locked', locked);
+                });
+            } catch (e) {
+                console.warn('refreshSidebarLocks failed', e);
             }
         },
         async flushLectureProgressNow(lectureId) {
@@ -1397,6 +1422,7 @@ function courseFocusMode() {
                         if (wrapper && data.completed_items != null) wrapper.dataset.completedItems = data.completed_items;
                         if (typeof updateProgressBar === 'function') updateProgressBar();
                         if (typeof data.progress_percent === 'number') this.lectureProgressPercent = data.progress_percent;
+                        if (typeof this.refreshSidebarLocks === 'function') await this.refreshSidebarLocks();
                     }
                 }
             } catch (e) {

@@ -7,6 +7,8 @@ use App\Models\LectureMaterial;
 use App\Models\LectureWatchProgress;
 use App\Models\LectureVideoQuestion;
 use App\Models\LectureVideoQuestionAnswer;
+use App\Models\CourseLesson;
+use App\Models\Lecture;
 use App\Models\VideoProvider;
 use App\Support\BunnyStreamSigner;
 use Illuminate\Http\JsonResponse;
@@ -434,6 +436,89 @@ class MyCourseController extends Controller
         }
 
         return response()->download($path, $material->file_name);
+    }
+
+    /**
+     * حالة الأقفال في السايدبار (AJAX) — لتحديث الواجهة بدون Refresh بعد إكمال فيديو.
+     */
+    public function curriculumLocks($courseId): JsonResponse
+    {
+        $user = Auth::user();
+        $course = $user->activeCourses()->findOrFail($courseId);
+
+        $allSections = $course->activeSections()
+            ->with(['activeItems' => function ($q) {
+                $q->orderBy('order')->with('item');
+            }])
+            ->orderBy('order')
+            ->get();
+
+        // تحميل التقدم الذي تعتمد عليه الأقفال
+        foreach ($allSections as $section) {
+            foreach ($section->activeItems as $curriculumItem) {
+                $entity = $curriculumItem->item;
+                if ($entity instanceof Lecture) {
+                    $entity->load(['watchProgress' => fn ($q) => $q->where('user_id', $user->id)]);
+                } elseif ($entity instanceof CourseLesson) {
+                    $entity->load(['progress' => fn ($q) => $q->where('user_id', $user->id)]);
+                } elseif ($entity instanceof \App\Models\LearningPattern) {
+                    $entity->load(['attempts' => fn ($q) => $q->where('user_id', $user->id)->latest()]);
+                } elseif ($entity instanceof \App\Models\AdvancedExam) {
+                    $entity->load(['attempts' => fn ($q) => $q->where('user_id', $user->id)->whereNotNull('submitted_at')]);
+                } elseif ($entity instanceof \App\Models\Assignment) {
+                    $entity->load(['submissions' => fn ($q) => $q->where('student_id', $user->id)]);
+                }
+            }
+        }
+
+        // نفس قفل الأقسام المستخدم في learn()
+        $this->computeSectionLockState($user, $allSections);
+
+        $itemLocks = [];
+        foreach ($allSections as $section) {
+            $isSectionLocked = (bool) ($section->is_locked ?? false);
+            $items = $section->activeItems->sortBy('order')->values();
+
+            for ($i = 0; $i < $items->count(); $i++) {
+                $ci = $items[$i];
+                $item = $ci->item;
+                if (! $item) continue;
+                if ($item instanceof CourseLesson) continue; // الدروس ليست في السايدبار (حالياً)
+
+                $isLocked = $isSectionLocked;
+
+                if ($item instanceof Lecture) {
+                    // قفل المحاضرة يعتمد على آخر محاضرة سابقة في نفس القسم
+                    $prevLecture = null;
+                    for ($j = $i - 1; $j >= 0; $j--) {
+                        $prev = $items[$j]->item;
+                        if ($prev instanceof Lecture) { $prevLecture = $prev; break; }
+                    }
+                    if ($prevLecture) {
+                        $prevWp = $prevLecture->watchProgress->first();
+                        $prevMin = $prevLecture->min_watch_percent_to_unlock_next;
+                        $prevThreshold = $prevMin !== null ? (int) $prevMin : 90;
+                        if (! $prevWp || (int) $prevWp->progress_percent < $prevThreshold) {
+                            $isLocked = true;
+                        }
+                    }
+                } elseif ($item instanceof \App\Models\LearningPattern) {
+                    $isLocked = $isSectionLocked;
+                }
+
+                $key = ($item instanceof Lecture) ? ('lecture:' . $item->id)
+                    : ($item instanceof \App\Models\LearningPattern ? ('pattern:' . $item->id) : null);
+
+                if ($key) {
+                    $itemLocks[$key] = $isLocked ? 1 : 0;
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'locks' => $itemLocks,
+        ]);
     }
 
     /**

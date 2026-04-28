@@ -633,6 +633,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::post('/my-courses/{course}/lessons/{lesson}/progress', [\App\Http\Controllers\Student\MyCourseController::class, 'updateLessonProgress'])
             ->middleware(['ownership:course,course'])
             ->name('my-courses.lesson.progress');
+        Route::get('/my-courses/{course}/curriculum/locks', [\App\Http\Controllers\Student\MyCourseController::class, 'curriculumLocks'])
+            ->middleware(['ownership:course,course'])
+            ->name('my-courses.curriculum.locks');
         
         // أنماط التعلم التفاعلية
         Route::prefix('my-courses/{course}/learning-patterns')->name('my-courses.learning-patterns.')->group(function () {
