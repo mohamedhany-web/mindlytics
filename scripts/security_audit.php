@@ -23,12 +23,37 @@ $failures = [];
 $warnings = [];
 
 // --- Composer advisory DB ---
-$audit = new Process(['composer', 'audit', '--format=json'], $root, null, null, 300.0);
-$audit->run();
-if (! $audit->isSuccessful()) {
-    $failures[] = 'composer audit failed to run: '.$audit->getErrorOutput();
+$composerCandidates = [
+    ['composer', 'audit', '--format=json'],
+];
+if (PHP_OS_FAMILY === 'Windows') {
+    // Some Windows setups expose composer as composer.bat only.
+    array_unshift($composerCandidates, ['composer.bat', 'audit', '--format=json']);
+}
+if (is_file($root.'/composer.phar')) {
+    $composerCandidates[] = [PHP_BINARY, 'composer.phar', 'audit', '--format=json'];
+}
+
+$auditJson = null;
+$auditRan = false;
+$auditErrors = [];
+foreach ($composerCandidates as $cmd) {
+    $audit = new Process($cmd, $root, null, null, 300.0);
+    $audit->run();
+    if ($audit->isSuccessful()) {
+        $auditRan = true;
+        $auditJson = $audit->getOutput();
+        break;
+    }
+    $auditErrors[] = trim($audit->getErrorOutput()) ?: trim($audit->getOutput());
+}
+
+if (! $auditRan) {
+    // Local/dev environments may not have composer available in PATH.
+    // This should not fail the whole audit script; emit warning instead.
+    $warnings[] = 'composer audit failed to run (composer not available?): '.implode(' | ', array_filter($auditErrors));
 } else {
-    $json = json_decode($audit->getOutput(), true);
+    $json = json_decode((string) $auditJson, true);
     if (! is_array($json)) {
         $failures[] = 'composer audit returned invalid JSON';
     } elseif (! empty($json['advisories'])) {

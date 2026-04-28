@@ -1862,6 +1862,10 @@ function videoPlayer() {
     return {
         currentLessonVideoUrl: null,
         watchersSetup: false,
+        vimeoPlayer: null,
+        bunnyPlayer: null,
+        vimeoProgressInterval: null,
+        bunnyProgressInterval: null,
         get currentVideoUrl() {
             return this.currentLessonVideoUrl;
         },
@@ -1940,6 +1944,10 @@ function videoPlayer() {
         },
         loadVideo(videoUrl, platform = null) {
             if (this.ytProgressInterval) { clearInterval(this.ytProgressInterval); this.ytProgressInterval = null; }
+            if (this.vimeoProgressInterval) { clearInterval(this.vimeoProgressInterval); this.vimeoProgressInterval = null; }
+            if (this.bunnyProgressInterval) { clearInterval(this.bunnyProgressInterval); this.bunnyProgressInterval = null; }
+            this.vimeoPlayer = null;
+            this.bunnyPlayer = null;
             if (!videoUrl) {
                 this.currentLessonVideoUrl = null;
                 return;
@@ -1974,6 +1982,7 @@ function videoPlayer() {
                 iframe.allow = 'autoplay; fullscreen; picture-in-picture';
                 iframe.allowFullscreen = true;
                 surface.appendChild(iframe);
+                this.setupVimeoProgressTracking(iframe);
             } else if (platform === 'direct') {
                 const video = document.createElement('video');
                 video.className = 'absolute inset-0 w-full h-full object-contain';
@@ -1999,7 +2008,91 @@ function videoPlayer() {
                 iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture');
                 iframe.allowFullscreen = true;
                 surface.appendChild(iframe);
+                this.setupBunnyProgressTracking(iframe);
             }
+        },
+        setupVimeoProgressTracking(iframe) {
+            const self = this;
+            const init = () => {
+                try {
+                    if (!window.Vimeo || !window.Vimeo.Player) return false;
+                    self.vimeoPlayer = new window.Vimeo.Player(iframe);
+                    self.vimeoPlayer.on('timeupdate', function(data) {
+                        try {
+                            const ct = Number(data && data.seconds) || 0;
+                            const dur = Number(data && data.duration) || 0;
+                            if (dur > 0) {
+                                window.dispatchEvent(new CustomEvent('video-progress-report', { detail: { currentSec: ct, durationSec: dur, isPlaying: true } }));
+                            }
+                        } catch (e) {}
+                    });
+                    self.vimeoPlayer.on('ended', function() {
+                        window.dispatchEvent(new CustomEvent('learn-video-ended'));
+                    });
+                    // fallback poll (in case timeupdate throttled)
+                    self.vimeoProgressInterval = setInterval(async function() {
+                        try {
+                            if (!self.vimeoPlayer) return;
+                            const ct = await self.vimeoPlayer.getCurrentTime();
+                            const dur = await self.vimeoPlayer.getDuration();
+                            if (Number(dur) > 0) {
+                                window.dispatchEvent(new CustomEvent('video-progress-report', { detail: { currentSec: ct, durationSec: dur, isPlaying: true } }));
+                            }
+                        } catch (e) {}
+                    }, 1200);
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            };
+            if (window.Vimeo && window.Vimeo.Player) {
+                init();
+                return;
+            }
+            const s = document.createElement('script');
+            s.src = 'https://player.vimeo.com/api/player.js';
+            s.onload = function() { init(); };
+            document.head.appendChild(s);
+        },
+        setupBunnyProgressTracking(iframe) {
+            const self = this;
+            const init = () => {
+                try {
+                    if (!window.playerjs || !window.playerjs.Player) return false;
+                    self.bunnyPlayer = new window.playerjs.Player(iframe);
+                    self.bunnyPlayer.on('ended', function() { window.dispatchEvent(new CustomEvent('learn-video-ended')); });
+                    try { self.bunnyPlayer.on('finish', function() { window.dispatchEvent(new CustomEvent('learn-video-ended')); }); } catch (eFin) {}
+                    try { self.bunnyPlayer.on('complete', function() { window.dispatchEvent(new CustomEvent('learn-video-ended')); }); } catch (eCmp) {}
+                    self.bunnyProgressInterval = setInterval(function() {
+                        try {
+                            if (!self.bunnyPlayer) return;
+                            if (typeof self.bunnyPlayer.getCurrentTime !== 'function') return;
+                            self.bunnyPlayer.getCurrentTime(function(sec) {
+                                try {
+                                    const ct = Number(sec) || 0;
+                                    if (typeof self.bunnyPlayer.getDuration === 'function') {
+                                        self.bunnyPlayer.getDuration(function(dur) {
+                                            const ds = Number(dur) || 0;
+                                            if (ds > 0) window.dispatchEvent(new CustomEvent('video-progress-report', { detail: { currentSec: ct, durationSec: ds, isPlaying: true } }));
+                                        });
+                                    }
+                                } catch (e) {}
+                            });
+                        } catch (e) {}
+                    }, 1200);
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            };
+            if (window.playerjs && window.playerjs.Player) {
+                init();
+                return;
+            }
+            const s = document.createElement('script');
+            s.src = '//assets.mediadelivery.net/playerjs/playerjs-latest.min.js';
+            s.onload = function() { init(); };
+            document.head.appendChild(s);
         },
         attachVideoProgressTracking(video) {
             const report = () => {
