@@ -698,12 +698,18 @@
              if (typeof window.showAutoAdvanceToNext !== 'function') return;
              // درس (فيديو الدرس): currentLessonId يُحدَّد عند loadLesson
              if (_learnComp.currentLessonId && !_learnComp.selectedLecture) {
-                 window.showAutoAdvanceToNext('lesson', _learnComp.currentLessonId);
+                 // احفظ التقدم فوراً حتى يسمح السيرفر بفتح الدرس التالي (بدون Refresh)
+                 _learnComp.flushLessonProgressNow(_learnComp.currentLessonId, true).then(() => {
+                     window.showAutoAdvanceToNext('lesson', _learnComp.currentLessonId);
+                 });
                  return;
              }
              // محاضرة (فيديو المنهج): بعد loadLecture يكون currentLessonId = null وselectedLecture = id المحاضرة
              if (_learnComp.selectedLecture) {
-                 window.showAutoAdvanceToNext('lecture', _learnComp.selectedLecture);
+                 // احفظ تقدم المحاضرة فوراً قبل فتح التالي (لتحديث القفل في الواجهة/السيرفر)
+                 _learnComp.flushLectureProgressNow(_learnComp.selectedLecture).then(() => {
+                     window.showAutoAdvanceToNext('lecture', _learnComp.selectedLecture);
+                 });
              }
          });
      ">
@@ -1112,6 +1118,9 @@ function courseFocusMode() {
         SEEK_THRESHOLD: 2.5,
         lectureVideoEndedThisClip: false,
         lessonVideoEndedThisClip: false,
+        autoAdvanceFiredForLessonId: null,
+        autoAdvanceFiredForLectureId: null,
+        isFlushingProgress: false,
         getCurrentNavTypeId() {
             if (this.selectedLecture) return { type: 'lecture', id: this.selectedLecture };
             if (this.selectedLesson) return { type: 'lesson', id: this.selectedLesson };
@@ -1180,6 +1189,7 @@ function courseFocusMode() {
             if (window._autoplayCancel) window._autoplayCancel();
             this.lessonVideoEndedThisClip = false;
             this.lectureVideoEndedThisClip = false;
+            this.autoAdvanceFiredForLessonId = null;
             this.selectedLesson = lessonId;
             this.selectedLecture = null;
             this.selectedPattern = null;
@@ -1320,6 +1330,78 @@ function courseFocusMode() {
             this.lastVideoWatchTimeSec = this.watchedSeconds;
             this.lastVideoDurationSec = dur;
             this.videoProgressPercent = pct;
+
+            // درس الفيديو: بمجرد بلوغ 90% افتح التالي بعد حفظ التقدم فوراً (بدون انتظار interval/refresh)
+            if (this.currentLessonId && !this.selectedLecture && this.showVideoPlayer) {
+                if (pct >= 90 && this.autoAdvanceFiredForLessonId !== this.currentLessonId) {
+                    this.autoAdvanceFiredForLessonId = this.currentLessonId;
+                    this.flushLessonProgressNow(this.currentLessonId, true).then(() => {
+                        if (typeof window.showAutoAdvanceToNext === 'function') {
+                            window.showAutoAdvanceToNext('lesson', this.currentLessonId);
+                        }
+                    });
+                }
+            }
+        },
+        async flushLessonProgressNow(lessonId, forceCompleted = false) {
+            try {
+                if (!lessonId) return;
+                if (this.isFlushingProgress) return;
+                this.isFlushingProgress = true;
+                const pct = Number(this.lastVideoProgressPercent || 0);
+                const watchTime = Number(this.lastVideoWatchTimeSec || 0);
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                const res = await fetch(`<?php echo e(route('my-courses.lesson.progress', [$course, ':lessonId'])); ?>`.replace(':lessonId', lessonId), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+                    body: JSON.stringify({
+                        watch_time: watchTime,
+                        completed: forceCompleted ? true : (pct >= 90),
+                        progress_percent: pct
+                    })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.success) {
+                        const wrapper = document.querySelector('.learn-page');
+                        if (wrapper && data.course_progress != null) wrapper.dataset.courseProgress = data.course_progress;
+                        if (wrapper && data.total_items != null) wrapper.dataset.totalItems = data.total_items;
+                        if (wrapper && data.completed_items != null) wrapper.dataset.completedItems = data.completed_items;
+                        if (forceCompleted || pct >= 90) this.currentLessonCompleted = true;
+                        if (typeof updateProgressBar === 'function') updateProgressBar();
+                    }
+                }
+            } catch (e) {
+                console.warn('flushLessonProgressNow failed', e);
+            } finally {
+                this.isFlushingProgress = false;
+            }
+        },
+        async flushLectureProgressNow(lectureId) {
+            try {
+                if (!lectureId) return;
+                const dur = Number(this.lastVideoDurationSec || 0);
+                if (!Number.isFinite(dur) || dur <= 0) return;
+                const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                const res = await fetch('/my-courses/<?php echo e($course->id); ?>/lectures/' + lectureId + '/progress', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                    body: JSON.stringify({ current_sec: dur, duration_sec: dur })
+                });
+                if (res.ok) {
+                    const data = await res.json().catch(() => null);
+                    if (data && data.success) {
+                        const wrapper = document.querySelector('.learn-page');
+                        if (wrapper && data.course_progress != null) wrapper.dataset.courseProgress = data.course_progress;
+                        if (wrapper && data.total_items != null) wrapper.dataset.totalItems = data.total_items;
+                        if (wrapper && data.completed_items != null) wrapper.dataset.completedItems = data.completed_items;
+                        if (typeof updateProgressBar === 'function') updateProgressBar();
+                        if (typeof data.progress_percent === 'number') this.lectureProgressPercent = data.progress_percent;
+                    }
+                }
+            } catch (e) {
+                console.warn('flushLectureProgressNow failed', e);
+            }
         },
         formatVideoTime(seconds) {
             const s = Math.floor(Number(seconds) || 0);
@@ -1866,6 +1948,7 @@ function videoPlayer() {
         bunnyPlayer: null,
         vimeoProgressInterval: null,
         bunnyProgressInterval: null,
+        bunnyMessageHandler: null,
         get currentVideoUrl() {
             return this.currentLessonVideoUrl;
         },
@@ -1933,14 +2016,13 @@ function videoPlayer() {
             // نفس منطق صفحة المنهج: أي رابط يحتوي embed/libraryId/videoId
             const m = trimmed.match(/mediadelivery\.net\/embed\/(\d+)\/([a-zA-Z0-9_-]+)/);
             if (m && m[1] && m[2]) {
-                // إزالة query string مثل صفحة curriculum ثم استخدام الرابط
-                const embedUrl = trimmed.split('?')[0];
-                if (!embedUrl.startsWith('http')) return 'https://' + embedUrl.replace(/^\/+/, '');
-                return embedUrl;
+                // مهم: لا نحذف query string (token/expires/autoplay...) حتى لا تنكسر حماية Bunny
+                if (!trimmed.startsWith('http')) return 'https://' + trimmed.replace(/^\/+/, '');
+                return trimmed;
             }
             // رابط Bunny بدون نمط embed (نادر): نعيده كما هو بعد إزالة الـ query
-            const noQuery = trimmed.split('?')[0];
-            return noQuery.startsWith('http') ? noQuery : ('https://' + noQuery.replace(/^\/+/, ''));
+            if (trimmed.startsWith('http')) return trimmed;
+            return 'https://' + trimmed.replace(/^\/+/, '');
         },
         loadVideo(videoUrl, platform = null) {
             if (this.ytProgressInterval) { clearInterval(this.ytProgressInterval); this.ytProgressInterval = null; }
@@ -1948,6 +2030,10 @@ function videoPlayer() {
             if (this.bunnyProgressInterval) { clearInterval(this.bunnyProgressInterval); this.bunnyProgressInterval = null; }
             this.vimeoPlayer = null;
             this.bunnyPlayer = null;
+            if (this.bunnyMessageHandler) {
+                try { window.removeEventListener('message', this.bunnyMessageHandler); } catch (e) {}
+                this.bunnyMessageHandler = null;
+            }
             if (!videoUrl) {
                 this.currentLessonVideoUrl = null;
                 return;
@@ -2056,6 +2142,28 @@ function videoPlayer() {
         },
         setupBunnyProgressTracking(iframe) {
             const self = this;
+            // Fallback #1: listen to postMessage (works even if PlayerJS events don't fire in some embeds)
+            self.bunnyMessageHandler = function(event) {
+                try {
+                    const origin = String(event.origin || '');
+                    if (!origin.includes('mediadelivery.net')) return;
+                    const data = event.data;
+
+                    // Common formats vary; handle string/object heuristically
+                    const asString = (typeof data === 'string') ? data : '';
+                    const evt = (data && typeof data === 'object') ? (data.event || data.type || data.name) : null;
+
+                    const isEnded =
+                        (typeof evt === 'string' && /(^|_)(end|ended|finish|finished|complete|completed)($|_)/i.test(evt)) ||
+                        (typeof asString === 'string' && /(end|ended|finish|finished|complete|completed)/i.test(asString));
+
+                    if (isEnded) {
+                        window.dispatchEvent(new CustomEvent('learn-video-ended'));
+                    }
+                } catch (e) {}
+            };
+            window.addEventListener('message', self.bunnyMessageHandler);
+
             const init = () => {
                 try {
                     if (!window.playerjs || !window.playerjs.Player) return false;

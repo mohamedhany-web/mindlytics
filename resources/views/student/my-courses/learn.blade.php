@@ -1948,6 +1948,7 @@ function videoPlayer() {
         bunnyPlayer: null,
         vimeoProgressInterval: null,
         bunnyProgressInterval: null,
+        bunnyMessageHandler: null,
         get currentVideoUrl() {
             return this.currentLessonVideoUrl;
         },
@@ -2015,14 +2016,13 @@ function videoPlayer() {
             // نفس منطق صفحة المنهج: أي رابط يحتوي embed/libraryId/videoId
             const m = trimmed.match(/mediadelivery\.net\/embed\/(\d+)\/([a-zA-Z0-9_-]+)/);
             if (m && m[1] && m[2]) {
-                // إزالة query string مثل صفحة curriculum ثم استخدام الرابط
-                const embedUrl = trimmed.split('?')[0];
-                if (!embedUrl.startsWith('http')) return 'https://' + embedUrl.replace(/^\/+/, '');
-                return embedUrl;
+                // مهم: لا نحذف query string (token/expires/autoplay...) حتى لا تنكسر حماية Bunny
+                if (!trimmed.startsWith('http')) return 'https://' + trimmed.replace(/^\/+/, '');
+                return trimmed;
             }
             // رابط Bunny بدون نمط embed (نادر): نعيده كما هو بعد إزالة الـ query
-            const noQuery = trimmed.split('?')[0];
-            return noQuery.startsWith('http') ? noQuery : ('https://' + noQuery.replace(/^\/+/, ''));
+            if (trimmed.startsWith('http')) return trimmed;
+            return 'https://' + trimmed.replace(/^\/+/, '');
         },
         loadVideo(videoUrl, platform = null) {
             if (this.ytProgressInterval) { clearInterval(this.ytProgressInterval); this.ytProgressInterval = null; }
@@ -2030,6 +2030,10 @@ function videoPlayer() {
             if (this.bunnyProgressInterval) { clearInterval(this.bunnyProgressInterval); this.bunnyProgressInterval = null; }
             this.vimeoPlayer = null;
             this.bunnyPlayer = null;
+            if (this.bunnyMessageHandler) {
+                try { window.removeEventListener('message', this.bunnyMessageHandler); } catch (e) {}
+                this.bunnyMessageHandler = null;
+            }
             if (!videoUrl) {
                 this.currentLessonVideoUrl = null;
                 return;
@@ -2138,6 +2142,28 @@ function videoPlayer() {
         },
         setupBunnyProgressTracking(iframe) {
             const self = this;
+            // Fallback #1: listen to postMessage (works even if PlayerJS events don't fire in some embeds)
+            self.bunnyMessageHandler = function(event) {
+                try {
+                    const origin = String(event.origin || '');
+                    if (!origin.includes('mediadelivery.net')) return;
+                    const data = event.data;
+
+                    // Common formats vary; handle string/object heuristically
+                    const asString = (typeof data === 'string') ? data : '';
+                    const evt = (data && typeof data === 'object') ? (data.event || data.type || data.name) : null;
+
+                    const isEnded =
+                        (typeof evt === 'string' && /(^|_)(end|ended|finish|finished|complete|completed)($|_)/i.test(evt)) ||
+                        (typeof asString === 'string' && /(end|ended|finish|finished|complete|completed)/i.test(asString));
+
+                    if (isEnded) {
+                        window.dispatchEvent(new CustomEvent('learn-video-ended'));
+                    }
+                } catch (e) {}
+            };
+            window.addEventListener('message', self.bunnyMessageHandler);
+
             const init = () => {
                 try {
                     if (!window.playerjs || !window.playerjs.Player) return false;
