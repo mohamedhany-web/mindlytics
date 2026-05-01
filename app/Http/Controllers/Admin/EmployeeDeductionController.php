@@ -7,6 +7,7 @@ use App\Models\EmployeeAgreement;
 use App\Models\EmployeeSalaryDeduction;
 use App\Models\User;
 use App\Mail\EmployeeDeductionAddedMail;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
@@ -88,7 +89,6 @@ class EmployeeDeductionController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $validated['deduction_number'] = EmployeeSalaryDeduction::generateDeductionNumber();
         $validated['created_by'] = Auth::id();
 
         // إذا لم تُختر اتفاقية، ربط بأول اتفاقية نشطة للموظف إن وُجدت
@@ -97,7 +97,21 @@ class EmployeeDeductionController extends Controller
             $validated['agreement_id'] = $agreement?->id;
         }
 
-        $deduction = EmployeeSalaryDeduction::create($validated);
+        $deduction = null;
+        for ($attempt = 0; $attempt < 10; $attempt++) {
+            try {
+                $deduction = EmployeeSalaryDeduction::createWithAutoDeductionNumber($validated);
+                break;
+            } catch (UniqueConstraintViolationException $e) {
+                if ($attempt >= 9 || ! str_contains($e->getMessage(), 'deduction_number')) {
+                    throw $e;
+                }
+            }
+        }
+
+        if (! $deduction instanceof EmployeeSalaryDeduction) {
+            throw new \RuntimeException('تعذر إنشاء رقم خصم فريد بعد عدة محاولات.');
+        }
 
         try {
             $employee = User::find($deduction->employee_id);

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 class EmployeeSalaryDeduction extends Model
 {
@@ -51,10 +52,53 @@ class EmployeeSalaryDeduction extends Model
     }
 
     /**
-     * إنشاء رقم خصم تلقائي
+     * إنشاء سجل خصم مع رقم تلقائي داخل معاملة واحدة (قفل + أقصى تسلسل للسنة).
+     *
+     * @param  array<string, mixed>  $attributes
      */
-    public static function generateDeductionNumber(): string
+    public static function createWithAutoDeductionNumber(array $attributes): self
     {
-        return 'DED-' . date('Y') . '-' . str_pad(self::count() + 1, 6, '0', STR_PAD_LEFT);
+        return DB::transaction(function () use ($attributes) {
+            $attributes['deduction_number'] = self::allocateNextDeductionNumber();
+
+            return self::create($attributes);
+        });
+    }
+
+    /**
+     * تخصيص الرقم التالي للسنة الحالية — يُستدعى فقط من داخل DB::transaction.
+     */
+    private static function allocateNextDeductionNumber(): string
+    {
+        $year = date('Y');
+        $prefix = 'DED-' . $year . '-';
+
+        self::query()
+            ->where('deduction_number', 'like', $prefix.'%')
+            ->orderByDesc('deduction_number')
+            ->lockForUpdate()
+            ->first();
+
+        $maxSuffix = self::maxNumericSuffixForPrefix($prefix);
+
+        return $prefix.str_pad((string) ($maxSuffix + 1), 6, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * أقصى لاحقة رقمية لبادئة السنة (لا يعتمد على العدد لتفادي التكرار بعد الحذف).
+     */
+    private static function maxNumericSuffixForPrefix(string $prefix): int
+    {
+        $max = self::query()
+            ->where('deduction_number', 'like', $prefix.'%')
+            ->pluck('deduction_number')
+            ->map(function (string $number): int {
+                return preg_match('/^DED-\d{4}-(\d{6})$/', $number, $m)
+                    ? (int) $m[1]
+                    : 0;
+            })
+            ->max();
+
+        return (int) ($max ?? 0);
     }
 }
