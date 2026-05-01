@@ -26,9 +26,12 @@ class SecurityHeadersMiddleware
         // Content Security Policy - محسّن للواجهة الأمامية
         // تعطيل CSP مؤقتاً في بيئة التطوير لتجنب مشاكل الواجهة
         if (!config('app.debug') || !env('DISABLE_CSP', true)) {
+            // Fawaterk (فواتيرك): قد تعمل على app.* أو staging.* حسب بيئة FAWATERAK_ENV
+            // نسمح بالاثنين لتفادي تعطل الدفع عند تبديل البيئة.
             $csp = "default-src 'self'; " .
                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' " .
                    "https://app.fawaterk.com " .
+                   "https://staging.fawaterk.com " .
                    "https://cdn.tailwindcss.com " .
                    "https://cdn.jsdelivr.net " .
                    "https://cdnjs.cloudflare.com " .
@@ -44,9 +47,12 @@ class SecurityHeadersMiddleware
                    "https://cdnjs.cloudflare.com " .
                    "https://cdn.jsdelivr.net; " .
                    "img-src 'self' data: https: blob:; " .
-                   "connect-src 'self' https: ws: wss:; " .
+                   "connect-src 'self' https: ws: wss: " .
+                   "https://app.fawaterk.com " .
+                   "https://staging.fawaterk.com; " .
                    "frame-src 'self' " .
                    "https://app.fawaterk.com " .
+                   "https://staging.fawaterk.com " .
                    "https://www.youtube.com " .
                    "https://player.vimeo.com " .
                    "https://www.google.com; " .
