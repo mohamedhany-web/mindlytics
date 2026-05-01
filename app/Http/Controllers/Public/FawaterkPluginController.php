@@ -26,11 +26,12 @@ class FawaterkPluginController extends Controller
         try {
             $body = Cache::remember($cacheKey, 6 * 3600, function () use ($url, $token) {
                 try {
-                    $response = Http::timeout(45)
-                        ->withHeaders([
-                            'Authorization' => 'Bearer '.$token,
-                        ])
-                        ->get($url);
+                    $client = Http::timeout(45);
+                    $response = $client->withHeaders(['Authorization' => 'Bearer '.$token])->get($url);
+                    if (! $response->successful()) {
+                        // بعض إعدادات فواتيرك قد لا تتطلب Authorization لتحميل السكربت
+                        $response = $client->get($url);
+                    }
                 } catch (\Throwable $e) {
                     Log::warning('Fawaterk plugin fetch failed', ['message' => $e->getMessage(), 'url' => $url]);
 
@@ -46,6 +47,14 @@ class FawaterkPluginController extends Controller
                 $content = $response->body();
                 if ($content === '') {
                     throw new \RuntimeException('Fawaterk plugin empty body');
+                }
+                // sanity check: يجب أن يحتوي السكربت على الدالة الأساسية
+                if (! str_contains($content, 'fawaterkCheckout')) {
+                    Log::warning('Fawaterk plugin unexpected body', [
+                        'url' => $url,
+                        'sample' => substr(preg_replace('/\s+/', ' ', $content), 0, 180),
+                    ]);
+                    throw new \RuntimeException('Fawaterk plugin invalid javascript body');
                 }
 
                 return $content;

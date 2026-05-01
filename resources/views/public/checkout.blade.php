@@ -662,7 +662,7 @@
                                 <div id="fawaterk-waiting-hint" class="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center text-slate-500 pointer-events-none z-10 bg-slate-50/90 backdrop-blur-[1px]">
                                     <i class="fas fa-spinner fa-spin text-2xl text-indigo-400"></i>
                                     <p class="text-sm font-medium text-slate-600">جاري تحميل طرق الدفع من فواتيرك…</p>
-                                    <p class="text-xs text-slate-500 max-w-md">حسب وثائق فواتيرك: نطاقات الـ iframe تُسجَّل بـ <strong class="font-semibold text-slate-600">HTTPS فقط</strong> بدون <code class="bg-white px-1 rounded border text-slate-700">/</code> في النهاية (مثال <code class="bg-white px-1 rounded border text-slate-700">https://127.0.0.1</code> بدون المنفذ). التوقيع يستخدم <code class="bg-white px-1 rounded border text-slate-700">Domain=https://hostname&ProviderKey=…</code> مع API Key كسر HMAC. للتطوير المحلي استخدم HTTPS محلياً أو <code class="bg-white px-1 rounded border text-slate-700">FAWATERAK_IFRAME_DOMAIN</code>. إن غيّرت <code class="bg-white px-1 rounded border text-slate-700">FAWATERAK_VERSION</code> عن 0 أضف <code class="bg-white px-1 rounded border text-slate-700">?version=…</code> في إدخال النطاق باللوحة كما في الوثائق.</p>
+                                    <p class="text-xs text-slate-500 max-w-md">قد يستغرق الأمر ثوانٍ قليلة. إذا لم تظهر طرق الدفع، اضغط «تحديث / إعادة تحميل الدفع».</p>
                                 </div>
                             </div>
                             <div
