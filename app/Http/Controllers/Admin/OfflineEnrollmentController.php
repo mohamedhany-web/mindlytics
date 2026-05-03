@@ -11,6 +11,8 @@ use App\Models\Payment;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Wallet;
+use App\Models\WalletTransaction;
+use Illuminate\Support\Facades\Log;
 use App\Support\OfflineEnrollmentProvisioner;
 use App\Services\AutoInstallmentAgreementService;
 use Illuminate\Http\Request;
@@ -198,7 +200,8 @@ class OfflineEnrollmentController extends Controller
 
         $validated = $request->validate([
             'amount' => 'required|numeric|min:0.01',
-            'payment_method' => 'nullable|string|max:100',
+            'payment_method' => 'required|in:cash,wallet',
+            'wallet_id' => 'nullable|required_if:payment_method,wallet|exists:wallets,id',
             'notes' => 'nullable|string',
         ]);
 
@@ -209,6 +212,32 @@ class OfflineEnrollmentController extends Controller
             return back()->withErrors(['error' => 'لا يوجد مبلغ متبقي للدفع']);
         }
 
+        $paymentMethod = $validated['payment_method'];
+        $walletId = isset($validated['wallet_id']) ? (int) $validated['wallet_id'] : null;
+        $wallet = null;
+        if ($paymentMethod === 'wallet') {
+            $wallet = Wallet::academyWallets()
+                ->where('is_active', true)
+                ->whereKey($walletId)
+                ->first();
+            if (! $wallet) {
+                return back()->withErrors(['wallet_id' => 'اختر محفظة أكاديمية نشطة وصحيحة'])->withInput();
+            }
+        } else {
+            $walletId = null;
+        }
+
+        $paymentMeta = [
+            'payment_method' => $paymentMethod,
+            'wallet_id' => $walletId,
+            'notes' => $validated['notes'] ?? null,
+            'deposit_notes' => 'إيداع دفعة إضافية — تسجيل كورس أوفلاين #'.$enrollment->id,
+        ];
+        if ($wallet) {
+            $walletLabel = $wallet->name ?: Wallet::typeLabel($wallet->type);
+            $paymentMeta['notes'] = trim(($validated['notes'] ?? '').' — '.$walletLabel);
+        }
+
         DB::beginTransaction();
         try {
             $enrollment->paid_amount = (float) $enrollment->paid_amount + $payAmount;
@@ -216,7 +245,7 @@ class OfflineEnrollmentController extends Controller
             $enrollment->payment_status = $enrollment->remaining_amount <= 0 ? 'paid' : 'partial';
             $enrollment->save();
 
-            $this->createPaymentRecord($enrollment, $payAmount, $validated);
+            $this->createPaymentRecord($enrollment, $payAmount, $paymentMeta);
             if ((float) $enrollment->remaining_amount > 0 && (float) $enrollment->paid_amount > 0) {
                 app(AutoInstallmentAgreementService::class)->ensureFromOfflineEnrollment($enrollment, auth()->id());
             }
@@ -263,9 +292,16 @@ class OfflineEnrollmentController extends Controller
         $invoice = $invoice ?? $enrollment->invoice;
         if (!$invoice) return;
 
+        $enrollment->loadMissing('course');
+
         $paymentNumber = 'OFF-PAY-' . str_pad(Payment::count() + 1, 6, '0', STR_PAD_LEFT);
 
-        $payment = Payment::create([
+        $walletId = isset($data['wallet_id']) ? (int) $data['wallet_id'] : null;
+        if ($walletId <= 0) {
+            $walletId = null;
+        }
+
+        $paymentAttrs = [
             'payment_number' => $paymentNumber,
             'invoice_id' => $invoice->id,
             'user_id' => $enrollment->user_id,
@@ -276,11 +312,58 @@ class OfflineEnrollmentController extends Controller
             'notes' => $data['payment_notes'] ?? $data['notes'] ?? null,
             'paid_at' => now(),
             'processed_by' => Auth::id(),
-        ]);
+        ];
+        if ($walletId !== null) {
+            $paymentAttrs['wallet_id'] = $walletId;
+        }
+
+        $payment = Payment::create($paymentAttrs);
+
+        $wallet = null;
+        if ($walletId !== null && $amount > 0) {
+            $wallet = Wallet::find($walletId);
+            if ($wallet) {
+                try {
+                    $depositDescription = $data['deposit_notes'] ?? $data['payment_notes'] ?? $data['notes'] ?? '';
+                    if ($depositDescription === '') {
+                        $depositDescription = 'إيداع كورس أوفلاين — فاتورة: '.$invoice->invoice_number;
+                    } else {
+                        $depositDescription .= ' — فاتورة: '.$invoice->invoice_number;
+                    }
+                    $wallet->deposit(
+                        $amount,
+                        $payment->id,
+                        null,
+                        $depositDescription
+                    );
+                } catch (\Throwable $e) {
+                    Log::warning('Wallet deposit skipped during offline enrollment additional payment: '.$e->getMessage(), [
+                        'wallet_id' => $walletId,
+                        'payment_id' => $payment->id,
+                        'enrollment_id' => $enrollment->id,
+                    ]);
+                }
+            }
+        }
 
         $transactionNumber = 'OFF-TXN-' . str_pad(Transaction::count() + 1, 6, '0', STR_PAD_LEFT);
 
-        Transaction::create([
+        $courseTitle = $enrollment->course->title ?? '';
+        $txDescription = 'دفعة كورس أوفلاين: '.$courseTitle;
+        if ($wallet) {
+            $txDescription .= ' — محفظة: '.($wallet->name ?? (string) $wallet->id);
+        }
+
+        $metadata = [
+            'offline_course_id' => $enrollment->offline_course_id,
+            'enrollment_id' => $enrollment->id,
+            'group_id' => $enrollment->group_id,
+        ];
+        if ($walletId !== null) {
+            $metadata['wallet_id'] = $walletId;
+        }
+
+        $transaction = Transaction::create([
             'transaction_number' => $transactionNumber,
             'user_id' => $enrollment->user_id,
             'payment_id' => $payment->id,
@@ -289,15 +372,22 @@ class OfflineEnrollmentController extends Controller
             'category' => 'course_payment',
             'amount' => $amount,
             'currency' => 'EGP',
-            'description' => 'دفعة كورس أوفلاين: ' . ($enrollment->course->title ?? ''),
+            'description' => $txDescription,
             'status' => 'completed',
-            'metadata' => [
-                'offline_course_id' => $enrollment->offline_course_id,
-                'enrollment_id' => $enrollment->id,
-                'group_id' => $enrollment->group_id,
-            ],
+            'metadata' => $metadata,
             'created_by' => Auth::id(),
         ]);
+
+        if ($wallet) {
+            $walletTransaction = WalletTransaction::where('wallet_id', $wallet->id)
+                ->where('payment_id', $payment->id)
+                ->where('type', 'deposit')
+                ->latest()
+                ->first();
+            if ($walletTransaction) {
+                $walletTransaction->update(['transaction_id' => $transaction->id]);
+            }
+        }
 
         if ($enrollment->payment_status === 'paid' && $invoice->status !== 'paid') {
             $invoice->markAsPaid();

@@ -296,13 +296,25 @@
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">طريقة الدفع</label>
-                            <select name="payment_method" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">طريقة الدفع <span class="text-red-500">*</span></label>
+                            <select name="payment_method" x-model="paymentMethodModal" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
                                 <option value="cash">نقدي</option>
-                                <option value="bank_transfer">تحويل بنكي</option>
-                                <option value="card">بطاقة ائتمان</option>
-                                <option value="wallet">محفظة إلكترونية</option>
+                                <option value="wallet">تحويل على محفظة (إيداع في محفظة الأكاديمية)</option>
                             </select>
+                        </div>
+                        <div x-show="paymentMethodModal === 'wallet'" x-cloak class="space-y-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">المحفظة <span class="text-red-500">*</span></label>
+                            <select name="wallet_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                                    :disabled="paymentMethodModal !== 'wallet'"
+                                    :required="paymentMethodModal === 'wallet'">
+                                <option value="">اختر المحفظة</option>
+                                @foreach($wallets as $wallet)
+                                    <option value="{{ $wallet->id }}">{{ $wallet->name }} — {{ \App\Models\Wallet::typeLabel($wallet->type) }}</option>
+                                @endforeach
+                            </select>
+                            @if($wallets->isEmpty())
+                                <p class="text-amber-600 text-xs">لا توجد محافظ مفعّلة. أنشئ محفظة من <a href="{{ route('admin.wallets.index') }}" class="font-semibold text-sky-700 underline">إدارة المحافظ</a>.</p>
+                            @endif
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">ملاحظات</label>
@@ -339,6 +351,7 @@ function enrollmentsPage() {
         showPaymentModal: false,
         paymentEnrollment: null,
         paymentAction: '',
+        paymentMethodModal: 'cash',
         emailSearch: '',
 
         filterStudents() {
@@ -366,6 +379,7 @@ function enrollmentsPage() {
 
         openPaymentModal(enrollment) {
             this.paymentEnrollment = enrollment;
+            this.paymentMethodModal = 'cash';
             this.paymentAction = "{{ url('admin/offline-courses/' . $offlineCourse->id . '/enrollments') }}/" + enrollment.id + "/payment";
             this.showPaymentModal = true;
         }
