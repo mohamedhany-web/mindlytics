@@ -184,6 +184,7 @@ class SalesKpiController extends Controller
             'userId' => $rep?->id,
             'yearMonth' => $yearMonth,
             'targets' => $merged,
+            'rep' => $rep,
         ]);
     }
 
@@ -192,6 +193,8 @@ class SalesKpiController extends Controller
         $validated = $request->validate([
             'user_id' => ['required', 'integer', Rule::exists('users', 'id')],
             'year_month' => ['required', 'regex:/^\d{4}-\d{2}$/'],
+            'sales_commission_mode' => ['nullable', Rule::in(['none', 'percent', 'fixed'])],
+            'sales_commission_value' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $rep = User::query()->findOrFail($validated['user_id']);
@@ -220,11 +223,26 @@ class SalesKpiController extends Controller
             ['targets' => $payload]
         );
 
+        // تحديث إعداد الكوميشن على مستوى الموظف (ليس شهرياً)
+        if ($request->has('sales_commission_mode')) {
+            $mode = (string) ($validated['sales_commission_mode'] ?? 'none');
+            $val = $validated['sales_commission_value'] ?? null;
+            $rep->forceFill([
+                'sales_commission_mode' => $mode,
+                'sales_commission_value' => $mode === 'none' ? null : (float) ($val ?? 0),
+            ])->save();
+        }
+
         \App\Services\SalesAuditService::log(
             'sales_kpi_targets_updated',
             $rep,
             null,
-            ['year_month' => $validated['year_month'], 'keys' => array_keys($payload)],
+            [
+                'year_month' => $validated['year_month'],
+                'keys' => array_keys($payload),
+                'sales_commission_mode' => $rep->sales_commission_mode ?? null,
+                'sales_commission_value' => $rep->sales_commission_value ?? null,
+            ],
             'تحديث أهداف KPIs مبيعات للموظف: '.($rep->name ?? '').' — '.$validated['year_month'].' — بواسطة '.(Auth::user()->name ?? '')
         );
 

@@ -889,6 +889,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::put('kpi/targets', [\App\Http\Controllers\Admin\SalesKpiController::class, 'updateTargets'])->name('kpi.targets.update');
             Route::get('leads/export', [\App\Http\Controllers\Admin\SalesLeadController::class, 'export'])->name('leads.export');
             Route::post('leads/{lead}/activities', [\App\Http\Controllers\Admin\SalesLeadController::class, 'storeActivity'])->name('leads.activities.store');
+            Route::post('leads/{lead}/confirm-win', [\App\Http\Controllers\Admin\SalesLeadController::class, 'confirmWin'])->name('leads.confirm-win');
             Route::resource('leads', \App\Http\Controllers\Admin\SalesLeadController::class);
         });
 

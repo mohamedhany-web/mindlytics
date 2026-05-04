@@ -14,7 +14,7 @@
 
     @if($activeAgreement)
         <!-- الكاردات في بداية الصفحة -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div class="dashboard-card rounded-2xl p-6 card-hover-effect border-2 border-green-200/50 hover:border-green-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 253, 250, 0.95) 50%, rgba(209, 250, 229, 0.9) 100%);">
                 <div class="flex items-center justify-between">
                     <div>
@@ -50,6 +50,18 @@
                     </div>
                 </div>
             </div>
+
+            <div class="dashboard-card rounded-2xl p-6 card-hover-effect border-2 border-amber-200/50 hover:border-amber-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 251, 235, 0.95) 50%, rgba(254, 243, 199, 0.9) 100%);">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-600 mb-1">كوميشن الشهر الحالي</p>
+                        <p class="text-3xl font-black text-amber-700">{{ number_format($stats['current_month_commission'] ?? 0, 2) }} ج.م</p>
+                    </div>
+                    <div class="w-16 h-16 bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
+                        <i class="fas fa-coins text-2xl"></i>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- معلومات الاستحقاق -->
@@ -77,6 +89,37 @@
             <i class="fas fa-exclamation-triangle text-yellow-600 text-4xl mb-4"></i>
             <h3 class="text-lg font-semibold text-yellow-900 mb-2">لا توجد اتفاقية نشطة</h3>
             <p class="text-yellow-700">لم يتم تعيين اتفاقية عمل نشطة لك حتى الآن</p>
+        </div>
+    @endif
+
+    @if(isset($recentCommissionTxns) && $recentCommissionTxns->count() > 0)
+        <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+            <div class="flex items-center justify-between gap-3 mb-4">
+                <h2 class="text-xl font-bold text-gray-900"><i class="fas fa-coins text-amber-600 mr-2"></i>سجل الكوميشن</h2>
+                <p class="text-sm text-gray-600">الإجمالي: <strong class="text-amber-700">{{ number_format($stats['total_commission'] ?? 0, 2) }} ج.م</strong></p>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الرقم</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">المبلغ</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الوصف</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">التاريخ</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        @foreach($recentCommissionTxns as $tx)
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $tx->transaction_number }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-amber-700">{{ number_format((float) $tx->amount, 2) }} ج.م</td>
+                                <td class="px-6 py-4 text-sm text-gray-700">{{ $tx->description }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ $tx->created_at?->format('Y-m-d H:i') }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
         </div>
     @endif
 

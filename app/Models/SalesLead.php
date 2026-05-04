@@ -66,6 +66,11 @@ class SalesLead extends Model
         'next_follow_up_at',
         'last_contacted_at',
         'closed_at',
+        'won_confirmed_at',
+        'won_confirmed_by',
+        'commission_amount',
+        'commission_transaction_id',
+        'commission_notes',
         'lost_reason',
         'csat_rating',
         'csat_comment',
@@ -79,6 +84,8 @@ class SalesLead extends Model
             'next_follow_up_at' => 'datetime',
             'last_contacted_at' => 'datetime',
             'closed_at' => 'datetime',
+            'won_confirmed_at' => 'datetime',
+            'commission_amount' => 'decimal:2',
             'csat_recorded_at' => 'datetime',
         ];
     }

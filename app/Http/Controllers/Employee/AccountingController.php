@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\EmployeeAgreement;
 use App\Models\EmployeeSalaryDeduction;
 use App\Models\EmployeeSalaryPayment;
+use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -50,6 +51,29 @@ class AccountingController extends Controller
             ->where('status', 'paid')
             ->sum('net_salary');
 
+        // الكوميشن (من اعتماد wins في المبيعات)
+        $currentMonthCommission = Transaction::query()
+            ->where('user_id', $user->id)
+            ->where('type', 'credit')
+            ->where('category', 'commission')
+            ->whereYear('created_at', Carbon::now()->year)
+            ->whereMonth('created_at', Carbon::now()->month)
+            ->sum('amount');
+
+        $totalCommission = Transaction::query()
+            ->where('user_id', $user->id)
+            ->where('type', 'credit')
+            ->where('category', 'commission')
+            ->sum('amount');
+
+        $recentCommissionTxns = Transaction::query()
+            ->where('user_id', $user->id)
+            ->where('type', 'credit')
+            ->where('category', 'commission')
+            ->latest('id')
+            ->limit(15)
+            ->get();
+
         // الحصول على الدفعات القادمة
         $upcomingPayments = EmployeeSalaryPayment::where('employee_id', $user->id)
             ->where('status', 'pending')
@@ -86,6 +110,8 @@ class AccountingController extends Controller
             'total_paid' => $totalPaid,
             'next_payment_date' => $nextPaymentDate,
             'net_salary' => $activeAgreement ? ($activeAgreement->salary - $currentMonthDeductions) : 0,
+            'current_month_commission' => $currentMonthCommission,
+            'total_commission' => $totalCommission,
         ];
 
         return view('employee.accounting.index', compact(
@@ -94,6 +120,7 @@ class AccountingController extends Controller
             'upcomingPayments',
             'allPayments',
             'recentDeductions',
+            'recentCommissionTxns',
             'stats'
         ));
     }

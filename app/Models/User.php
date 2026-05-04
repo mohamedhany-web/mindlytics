@@ -45,6 +45,8 @@ class User extends Authenticatable
         'termination_date',
         'salary',
         'employee_notes',
+        'sales_commission_mode',
+        'sales_commission_value',
         'bank_name',
         'bank_branch',
         'bank_account_number',
@@ -86,9 +88,35 @@ class User extends Authenticatable
             'termination_date' => 'date',
             'salary' => 'decimal:2',
             'is_employee' => 'boolean',
+            'sales_commission_value' => 'decimal:2',
             'two_factor_confirmed_at' => 'datetime',
             'two_factor_recovery_codes' => 'array',
         ];
+    }
+
+    public function salesCommissionLabel(): string
+    {
+        $mode = (string) ($this->sales_commission_mode ?? 'none');
+        $val = (float) ($this->sales_commission_value ?? 0);
+
+        return match ($mode) {
+            'percent' => rtrim(rtrim(number_format($val, 2), '0'), '.') . '%',
+            'fixed' => number_format($val, 2) . ' ج.م',
+            default => 'بدون',
+        };
+    }
+
+    public function calculateSalesCommissionAmount(?float $baseAmount): float
+    {
+        $base = max(0, (float) ($baseAmount ?? 0));
+        $mode = (string) ($this->sales_commission_mode ?? 'none');
+        $val = (float) ($this->sales_commission_value ?? 0);
+
+        return match ($mode) {
+            'percent' => round($base * ($val / 100), 2),
+            'fixed' => round(max(0, $val), 2),
+            default => 0.0,
+        };
     }
 
     /** مساهم في مجتمع البيانات فقط */

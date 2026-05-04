@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\SalesActivity;
 use App\Models\SalesLead;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Services\SalesAuditService;
 use App\Services\SalesLeadsExcelExportService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -195,6 +198,85 @@ class SalesLeadController extends Controller
         );
 
         return back()->with('success', 'تم تسجيل النشاط');
+    }
+
+    /**
+     * اعتماد فوز Lead وصرف الكوميشن لموظف المبيعات (ينزل في حساب الموظف).
+     */
+    public function confirmWin(Request $request, SalesLead $lead)
+    {
+        $lead->loadMissing(['assignee']);
+
+        if ($lead->stage !== 'won') {
+            return back()->withErrors(['error' => 'لا يمكن اعتماد الكوميشن إلا عند مرحلة «مكتمل / فوز».']);
+        }
+        if ($lead->won_confirmed_at) {
+            return back()->withErrors(['error' => 'تم اعتماد هذا الـ lead مسبقاً.']);
+        }
+        if (! $lead->assignee || ! $lead->assignee->isSalesEmployee()) {
+            return back()->withErrors(['error' => 'الموظف المسند ليس موظف مبيعات صالح.']);
+        }
+
+        $validated = $request->validate([
+            'commission_amount' => 'nullable|numeric|min:0',
+            'commission_notes' => 'nullable|string|max:2000',
+        ]);
+
+        $rep = $lead->assignee;
+        $baseAmount = (float) ($lead->expected_value ?? 0);
+        $defaultCommission = $rep->calculateSalesCommissionAmount($baseAmount);
+        $commission = array_key_exists('commission_amount', $validated) && $validated['commission_amount'] !== null
+            ? round((float) $validated['commission_amount'], 2)
+            : $defaultCommission;
+
+        DB::beginTransaction();
+        try {
+            $txnNumber = 'SALE-COM-' . str_pad((string) (Transaction::count() + 1), 6, '0', STR_PAD_LEFT);
+
+            $txn = Transaction::create([
+                'transaction_number' => $txnNumber,
+                'user_id' => $rep->id,
+                'payment_id' => null,
+                'invoice_id' => null,
+                'type' => 'credit',
+                'category' => 'commission',
+                'amount' => $commission,
+                'currency' => 'EGP',
+                'description' => 'عمولة مبيعات — اعتماد Lead فائز: ' . ($lead->name ?? ''),
+                'status' => 'completed',
+                'metadata' => [
+                    'sales_lead_id' => $lead->id,
+                    'assigned_to' => $rep->id,
+                    'expected_value' => $baseAmount,
+                    'commission_mode' => $rep->sales_commission_mode ?? 'none',
+                    'commission_value' => (float) ($rep->sales_commission_value ?? 0),
+                ],
+                'created_by' => Auth::id(),
+            ]);
+
+            $lead->forceFill([
+                'won_confirmed_at' => now(),
+                'won_confirmed_by' => Auth::id(),
+                'commission_amount' => $commission,
+                'commission_transaction_id' => $txn->id,
+                'commission_notes' => $validated['commission_notes'] ?? null,
+            ])->save();
+
+            SalesAuditService::log(
+                'sales_lead_won_confirmed',
+                $lead->fresh(),
+                null,
+                ['commission_amount' => $commission, 'transaction_id' => $txn->id],
+                'اعتماد Lead فائز وصرف عمولة لموظف: ' . ($rep->name ?? '') . ' — Lead: ' . ($lead->name ?? '')
+            );
+
+            DB::commit();
+
+            return back()->with('success', 'تم اعتماد الفوز وصرف الكوميشن بنجاح.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'حدث خطأ أثناء الاعتماد.']);
+        }
     }
 
     private function indexQuery(Request $request): Builder

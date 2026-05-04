@@ -42,6 +42,64 @@
             </div>
             <p class="text-sm text-gray-600">مسند إلى: <strong>{{ $lead->assignee->name ?? '—' }}</strong></p>
         </div>
+
+        @if($lead->stage === 'won')
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <p class="font-bold text-emerald-900"><i class="fas fa-badge-check ml-1"></i>اعتماد الفوز وصرف الكوميشن</p>
+                    @if($lead->won_confirmed_at)
+                        <span class="text-xs font-bold px-2 py-1 rounded-full bg-emerald-200 text-emerald-900">
+                            معتمد {{ $lead->won_confirmed_at->format('Y-m-d H:i') }}
+                        </span>
+                    @else
+                        <span class="text-xs font-semibold px-2 py-1 rounded-full bg-amber-100 text-amber-900">غير معتمد</span>
+                    @endif
+                </div>
+
+                @if($lead->won_confirmed_at)
+                    <p class="text-sm text-gray-800">
+                        الكوميشن: <strong class="text-emerald-800">{{ number_format((float) ($lead->commission_amount ?? 0), 2) }} ج.م</strong>
+                        @if($lead->commission_transaction_id)
+                            <span class="text-xs text-gray-500">— رقم قيد: {{ $lead->commission_transaction_id }}</span>
+                        @endif
+                    </p>
+                    @if($lead->commission_notes)
+                        <p class="text-xs text-gray-600 whitespace-pre-wrap">{{ $lead->commission_notes }}</p>
+                    @endif
+                @else
+                    @php
+                        $rep = $lead->assignee;
+                        $base = (float) ($lead->expected_value ?? 0);
+                        $defaultCommission = $rep ? $rep->calculateSalesCommissionAmount($base) : 0;
+                    @endphp
+                    <form method="post" action="{{ route('admin.sales.leads.confirm-win', $lead) }}" class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                        @csrf
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">القيمة المرجعية (expected)</label>
+                            <input type="text" value="{{ number_format($base, 2) }} ج.م" class="w-full border rounded-lg px-3 py-2 text-sm bg-white" disabled>
+                            @if($rep)
+                                <p class="text-[11px] text-gray-500 mt-1">إعداد الموظف: <strong>{{ $rep->salesCommissionLabel() }}</strong></p>
+                            @endif
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">مبلغ الكوميشن (اختياري)</label>
+                            <input type="number" step="0.01" min="0" name="commission_amount" value="{{ old('commission_amount', $defaultCommission) }}" class="w-full border rounded-lg px-3 py-2 text-sm">
+                            <p class="text-[11px] text-gray-500 mt-1">اتركه كما هو لاستخدام الحساب الافتراضي.</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">ملاحظات</label>
+                            <input type="text" name="commission_notes" value="{{ old('commission_notes') }}" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="اختياري">
+                        </div>
+                        <div class="md:col-span-3 flex justify-end">
+                            <button type="submit" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold">
+                                اعتماد وصرف الكوميشن
+                            </button>
+                        </div>
+                    </form>
+                @endif
+            </div>
+        @endif
+
         <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <div><dt class="text-gray-500">الهاتف</dt><dd class="font-medium">{{ $lead->phone ?? '—' }}</dd></div>
             <div><dt class="text-gray-500">البريد</dt><dd class="font-medium">{{ $lead->email ?? '—' }}</dd></div>

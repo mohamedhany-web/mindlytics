@@ -67,6 +67,34 @@
             <input type="hidden" name="user_id" value="{{ $userId }}">
             <input type="hidden" name="year_month" value="{{ $yearMonth }}">
 
+            <div class="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4 sm:p-5 mb-6">
+                <h3 class="text-sm font-black text-emerald-900 mb-3 flex items-center gap-2">
+                    <i class="fas fa-coins"></i>
+                    إعدادات الكوميشن (لكل موظف)
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">النظام</label>
+                        <select name="sales_commission_mode" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500">
+                            <option value="none" @selected(old('sales_commission_mode', $rep?->sales_commission_mode ?? 'none') === 'none')>بدون</option>
+                            <option value="percent" @selected(old('sales_commission_mode', $rep?->sales_commission_mode) === 'percent')>نسبة % من expected value</option>
+                            <option value="fixed" @selected(old('sales_commission_mode', $rep?->sales_commission_mode) === 'fixed')>مبلغ ثابت لكل win</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">القيمة</label>
+                        <input type="number" step="0.01" min="0" name="sales_commission_value"
+                               value="{{ old('sales_commission_value', $rep?->sales_commission_value) }}"
+                               class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500">
+                        <p class="text-[11px] text-slate-500 mt-1">تُستخدم عند اعتماد wins من الإدارة فقط.</p>
+                    </div>
+                    <div class="text-sm text-slate-700">
+                        <p class="font-bold">الموظف: <span class="text-slate-900">{{ $rep?->name ?? '—' }}</span></p>
+                        <p class="text-xs text-slate-500 mt-1">الحالي: <span class="font-bold text-emerald-900">{{ $rep?->salesCommissionLabel() ?? '—' }}</span></p>
+                    </div>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 @foreach($labels as $key => $label)
                     <div class="rounded-xl border border-slate-200 bg-slate-50/50 p-3">
