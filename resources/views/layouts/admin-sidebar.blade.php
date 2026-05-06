@@ -124,6 +124,22 @@
                             <span>أهداف المبيعات</span>
                         </a>
                     </li>
+                    <li>
+                        <a href="{{ route('admin.sales.insights.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.insights.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-lightbulb w-4"></i>
+                            <span>Insights الموظفين</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.sales.commissions.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.commissions.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-coins w-4"></i>
+                            <span>كوميشن المبيعات</span>
+                        </a>
+                    </li>
                 </ul>
             </li>
 
@@ -349,6 +365,14 @@
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.accounting.hub') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
                             <i class="fas fa-th-large w-4"></i>
                             <span>مركز المحاسبة</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.accounting.insights') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.accounting.insights*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
+                            <i class="fas fa-chart-area w-4"></i>
+                            <span>مؤشرات الشركة (Real‑time)</span>
                         </a>
                     </li>
                     <li>

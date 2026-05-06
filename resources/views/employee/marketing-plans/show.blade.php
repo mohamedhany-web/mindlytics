@@ -21,7 +21,7 @@
         default => $s,
     };
 @endphp
-<div class="space-y-8">
+<div class="space-y-8" x-data="marketingPlanPage()">
     @if(session('success'))
         <div class="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-900 px-4 py-3 text-sm font-medium">{{ session('success') }}</div>
     @endif
@@ -76,13 +76,17 @@
         <div class="p-5 space-y-6">
             <form method="post" action="{{ route('employee.marketing-plans.platforms.store', $plan) }}" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end rounded-xl border border-dashed border-pink-200 bg-white/80 p-4">
                 @csrf
-                <div class="md:col-span-3">
-                    <label class="block text-xs font-medium text-gray-600 mb-1">المنصة</label>
-                    <select name="platform_key" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                <div class="md:col-span-6">
+                    <label class="block text-xs font-medium text-gray-600 mb-2">المنصات (اختيار متعدد)</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                         @foreach($platformLabels as $key => $label)
-                            <option value="{{ $key }}">{{ $label }}</option>
+                            <label class="inline-flex items-center gap-2 rounded-lg border border-pink-100 bg-white px-3 py-2 text-sm">
+                                <input type="checkbox" name="platform_keys[]" value="{{ $key }}" class="rounded border-gray-300">
+                                <span class="font-semibold text-gray-800">{{ $label }}</span>
+                            </label>
                         @endforeach
-                    </select>
+                    </div>
+                    <p class="text-[11px] text-gray-500 mt-2">يمكنك اختيار Facebook + Instagram + TikTok مرة واحدة. (ملاحظة: «أخرى» تُضاف وحدها).</p>
                 </div>
                 <div class="md:col-span-2">
                     <label class="block text-xs font-medium text-gray-600 mb-1">اسم مخصص (أخرى)</label>
@@ -206,13 +210,22 @@
                     <input type="datetime-local" name="ends_at" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
                 </div>
                 <div class="md:col-span-4">
-                    <label class="block text-xs font-medium text-gray-600 mb-1">المنصة</label>
-                    <select name="platform_id" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                        <option value="">— عام للخطة —</option>
-                        @foreach($plan->platforms as $plat)
-                            <option value="{{ $plat->id }}">{{ $plat->displayName() }}</option>
-                        @endforeach
-                    </select>
+                    <label class="block text-xs font-medium text-gray-600 mb-2">المنصات (اختيار متعدد)</label>
+                    <div class="rounded-lg border border-gray-300 bg-white p-3 space-y-2 max-h-40 overflow-auto">
+                        <label class="flex items-center gap-2 text-sm">
+                            <input type="checkbox" x-model="isGeneralEvent" class="rounded border-gray-300">
+                            <span class="font-semibold text-gray-800">عام للخطة (بدون منصات)</span>
+                        </label>
+                        <div class="border-t border-gray-100 pt-2 grid grid-cols-1 gap-2">
+                            @foreach($plan->platforms as $plat)
+                                <label class="flex items-center gap-2 text-sm">
+                                    <input type="checkbox" name="platform_ids[]" value="{{ $plat->id }}" class="rounded border-gray-300" :disabled="isGeneralEvent">
+                                    <span class="font-semibold text-gray-800">{{ $plat->displayName() }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-gray-500 mt-2">لو اخترت “عام”، سيتم إنشاء حدث واحد غير مربوط بمنصة. لو اخترت منصات، سيتم إنشاء حدث لكل منصة بنفس المحتوى.</p>
                 </div>
                 <div class="md:col-span-4">
                     <label class="block text-xs font-medium text-gray-600 mb-1">الحالة</label>
@@ -330,3 +343,23 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('marketingPlanPage', () => ({
+            isGeneralEvent: false,
+        }));
+    });
+</script>
+@endpush
+
+@push('scripts')
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('marketingPlanPage', () => ({
+            isGeneralEvent: false,
+        }));
+    });
+</script>
+@endpush

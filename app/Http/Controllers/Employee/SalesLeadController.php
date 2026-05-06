@@ -15,6 +15,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SalesLeadController extends Controller
 {
+    /** سياسات إلزامية — يمكن لاحقاً نقلها لإعدادات النظام */
+    private const REQUIRED_ACTIVITY_DAYS_FOR_CLOSE = 7;
+
     public function index(Request $request)
     {
         $query = $this->indexQuery($request);
@@ -104,6 +107,9 @@ class SalesLeadController extends Controller
         $before = $lead->only(array_keys($validated));
 
         $oldStage = $lead->stage;
+
+        $this->enforcePolicies($lead, $validated, $oldStage);
+
         $lead->update($validated);
 
         if ($oldStage !== $lead->stage) {
@@ -366,5 +372,81 @@ class SalesLeadController extends Controller
         unset($validated['lost_reason_code'], $validated['lost_reason_custom']);
 
         return $validated;
+    }
+
+    /**
+     * قواعد إلزامية لضبط جودة CRM قبل السماح بحفظ التغييرات.
+     *
+     * @param  array<string, mixed>  $validated
+     */
+    private function enforcePolicies(SalesLead $lead, array $validated, string $oldStage): void
+    {
+        $newStage = (string) ($validated['stage'] ?? $lead->stage);
+        $nextFollow = $validated['next_follow_up_at'] ?? $lead->next_follow_up_at;
+        $expectedValue = $validated['expected_value'] ?? $lead->expected_value;
+
+        $isOpenNewStage = ! in_array($newStage, ['won', 'lost'], true);
+
+        // 1) أي Lead خرج من "new" إلى مراحل أعمق يجب أن يكون له موعد متابعة
+        if ($isOpenNewStage && $newStage !== 'new') {
+            if (empty($nextFollow)) {
+                throw ValidationException::withMessages([
+                    'next_follow_up_at' => ['موعد المتابعة مطلوب عند اختيار مرحلة غير "جديد".'],
+                ]);
+            }
+        }
+
+        // 2) إذا كان موعد المتابعة متأخر، لا تسمح بالحفظ بدون تعديل الموعد لمستقبل
+        if ($lead->isOpen() && $lead->isFollowUpOverdue()) {
+            $nf = $validated['next_follow_up_at'] ?? null;
+            if ($nf === null) {
+                throw ValidationException::withMessages([
+                    'next_follow_up_at' => ['لا يمكن الحفظ والمتابعة متأخرة بدون تحديد موعد متابعة جديد.'],
+                ]);
+            }
+        }
+
+        // 3) الإغلاق (won/lost) يتطلب نشاط حديث + قيمة متوقعة + سبب خسارة عند lost
+        if (in_array($newStage, ['won', 'lost'], true)) {
+            if ($expectedValue === null || (float) $expectedValue <= 0) {
+                throw ValidationException::withMessages([
+                    'expected_value' => ['قيمة متوقعة مطلوبة (> 0) قبل إغلاق الـ lead (won/lost).'],
+                ]);
+            }
+
+            // نشاط غير "stage_change" خلال آخر X أيام أو على الأقل وجود last_contacted_at حديث
+            $cutoff = now()->subDays(self::REQUIRED_ACTIVITY_DAYS_FOR_CLOSE);
+
+            $hasRecentActivity = SalesActivity::query()
+                ->where('sales_lead_id', $lead->id)
+                ->where('user_id', Auth::id())
+                ->where('type', '!=', 'stage_change')
+                ->where('created_at', '>=', $cutoff)
+                ->exists();
+
+            $lastContactOk = $lead->last_contacted_at && $lead->last_contacted_at->gte($cutoff);
+
+            if (! $hasRecentActivity && ! $lastContactOk) {
+                throw ValidationException::withMessages([
+                    'stage' => ['لا يمكن إغلاق الـ lead بدون نشاط/تواصل حديث خلال آخر '.self::REQUIRED_ACTIVITY_DAYS_FOR_CLOSE.' أيام. سجّل Activity أولاً.'],
+                ]);
+            }
+
+            if ($newStage === 'lost') {
+                $lostReason = $validated['lost_reason'] ?? $lead->lost_reason;
+                if (! $lostReason) {
+                    throw ValidationException::withMessages([
+                        'lost_reason_code' => ['سبب الخسارة مطلوب قبل إغلاق الـ lead كـ Lost.'],
+                    ]);
+                }
+            }
+        }
+
+        // 4) حماية: لا تسمح بخفض المرحلة من won/lost إلى مراحل مفتوحة بدون مسح closed_at (يحدث تلقائياً) لكن نمنع التلاعب
+        if (in_array($oldStage, ['won', 'lost'], true) && $isOpenNewStage) {
+            throw ValidationException::withMessages([
+                'stage' => ['لا يمكن إعادة فتح Lead مُغلَق (won/lost) من واجهة الموظف. تواصل مع الإدارة.'],
+            ]);
+        }
     }
 }

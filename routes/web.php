@@ -887,6 +887,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('kpi', [\App\Http\Controllers\Admin\SalesKpiController::class, 'index'])->name('kpi.index');
             Route::get('kpi/targets', [\App\Http\Controllers\Admin\SalesKpiController::class, 'targets'])->name('kpi.targets');
             Route::put('kpi/targets', [\App\Http\Controllers\Admin\SalesKpiController::class, 'updateTargets'])->name('kpi.targets.update');
+            Route::get('insights', [\App\Http\Controllers\Admin\SalesInsightsController::class, 'index'])->name('insights.index');
+            Route::get('commissions', [\App\Http\Controllers\Admin\SalesCommissionController::class, 'index'])->name('commissions.index');
             Route::get('leads/export', [\App\Http\Controllers\Admin\SalesLeadController::class, 'export'])->name('leads.export');
             Route::post('leads/{lead}/activities', [\App\Http\Controllers\Admin\SalesLeadController::class, 'storeActivity'])->name('leads.activities.store');
             Route::post('leads/{lead}/confirm-win', [\App\Http\Controllers\Admin\SalesLeadController::class, 'confirmWin'])->name('leads.confirm-win');
@@ -1419,6 +1421,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
 
         Route::get('/accounting/hub', [\App\Http\Controllers\Admin\AccountingHubController::class, 'hub'])->name('accounting.hub');
         Route::get('/accounting/chart-of-accounts', [\App\Http\Controllers\Admin\AccountingHubController::class, 'chart'])->name('accounting.chart');
+        Route::get('/accounting/insights', [\App\Http\Controllers\Admin\AccountingInsightsController::class, 'index'])->name('accounting.insights');
+        Route::get('/accounting/insights/metrics', [\App\Http\Controllers\Admin\AccountingInsightsController::class, 'metrics'])->name('accounting.insights.metrics');
         Route::get('/accounting/installments', [\App\Http\Controllers\Admin\AccountingInstallmentsController::class, 'index'])->name('accounting.installments');
         Route::get('/accounting/gateway-operations', [\App\Http\Controllers\Admin\AccountingGatewayOperationsController::class, 'index'])->name('accounting.gateway-operations');
 

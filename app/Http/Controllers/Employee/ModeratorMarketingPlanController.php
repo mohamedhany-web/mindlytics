@@ -150,7 +150,9 @@ class ModeratorMarketingPlanController extends Controller
         $this->assertOwnPlan($marketing_plan);
 
         $validated = $request->validate([
-            'platform_key' => ['required', 'string', 'max:40'],
+            'platform_key' => ['nullable', 'string', 'max:40'],
+            'platform_keys' => ['nullable', 'array', 'min:1'],
+            'platform_keys.*' => ['string', 'max:40'],
             'custom_label' => ['nullable', 'string', 'max:120'],
             'profile_url' => ['nullable', 'url', 'max:500'],
             'strategy_notes' => ['nullable', 'string', 'max:10000'],
@@ -159,20 +161,69 @@ class ModeratorMarketingPlanController extends Controller
         ]);
 
         $keys = array_keys(ModeratorMarketingPlatform::platformLabels());
-        if (! in_array($validated['platform_key'], $keys, true)) {
-            return back()->withErrors(['platform_key' => 'منصة غير معروفة.'])->withInput();
+        $platformKeys = [];
+        if (! empty($validated['platform_keys']) && is_array($validated['platform_keys'])) {
+            $platformKeys = array_values(array_filter(array_map('strtolower', $validated['platform_keys'])));
+        } elseif (! empty($validated['platform_key'])) {
+            $platformKeys = [strtolower((string) $validated['platform_key'])];
         }
-        if ($validated['platform_key'] !== 'other') {
+
+        if ($platformKeys === []) {
+            return back()->withErrors(['platform_key' => 'اختر منصة واحدة على الأقل.'])->withInput();
+        }
+
+        foreach ($platformKeys as $pk) {
+            if (! in_array($pk, $keys, true)) {
+                return back()->withErrors(['platform_key' => 'منصة غير معروفة.'])->withInput();
+            }
+        }
+
+        // "other" لا يدعم الإضافة المتعددة (يحتاج اسم مخصص واحد)
+        if (in_array('other', $platformKeys, true)) {
+            if (count($platformKeys) > 1) {
+                return back()->withErrors(['platform_key' => 'لا يمكن اختيار "أخرى" مع منصات متعددة. اختر "أخرى" وحدها.'])->withInput();
+            }
+            $custom = trim((string) ($validated['custom_label'] ?? ''));
+            if ($custom === '') {
+                return back()->withErrors(['custom_label' => 'اكتب اسم المنصة عند اختيار "أخرى".'])->withInput();
+            }
+        } else {
             $validated['custom_label'] = null;
         }
 
-        $validated['plan_id'] = $marketing_plan->id;
-        $validated['sort_order'] = (int) $marketing_plan->platforms()->max('sort_order') + 1;
-        $validated['color_hex'] = $validated['color_hex'] ?? '#6366f1';
+        $maxSort = (int) $marketing_plan->platforms()->max('sort_order');
+        $color = $validated['color_hex'] ?? '#6366f1';
 
-        ModeratorMarketingPlatform::create($validated);
+        $created = 0;
+        foreach ($platformKeys as $pk) {
+            // لا تكرر نفس المنصة داخل نفس الخطة
+            $exists = ModeratorMarketingPlatform::query()
+                ->where('plan_id', $marketing_plan->id)
+                ->where('platform_key', $pk)
+                ->exists();
+            if ($exists) {
+                continue;
+            }
 
-        return back()->with('success', 'تمت إضافة المنصة.');
+            $maxSort++;
+            ModeratorMarketingPlatform::create([
+                'plan_id' => $marketing_plan->id,
+                'platform_key' => $pk,
+                'custom_label' => $validated['custom_label'] ?? null,
+                'profile_url' => $validated['profile_url'] ?? null,
+                'strategy_notes' => $validated['strategy_notes'] ?? null,
+                'cadence_notes' => $validated['cadence_notes'] ?? null,
+                'color_hex' => $color,
+                'sort_order' => $maxSort,
+            ]);
+            $created++;
+        }
+
+        if ($created <= 0) {
+            return back()->with('success', 'لم يتم إضافة منصات جديدة (قد تكون مضافة مسبقاً).');
+        }
+
+        return back()->with('success', 'تمت إضافة '.$created.' منصة/منصات.');
     }
 
     public function updatePlatform(Request $request, ModeratorMarketingPlan $marketing_plan, ModeratorMarketingPlatform $platform)
@@ -218,6 +269,8 @@ class ModeratorMarketingPlanController extends Controller
 
         $validated = $request->validate([
             'platform_id' => ['nullable', 'exists:moderator_mkt_platforms,id'],
+            'platform_ids' => ['nullable', 'array', 'min:1'],
+            'platform_ids.*' => ['integer', 'exists:moderator_mkt_platforms,id'],
             'title' => ['required', 'string', 'max:255'],
             'body' => ['nullable', 'string', 'max:10000'],
             'starts_at' => ['required', 'date'],
@@ -226,13 +279,20 @@ class ModeratorMarketingPlanController extends Controller
             'design_task_cycle_id' => ['nullable', 'exists:design_task_cycles,id'],
         ]);
 
-        if (! empty($validated['platform_id'])) {
-            $p = ModeratorMarketingPlatform::query()
-                ->where('id', $validated['platform_id'])
+        $platformIds = [];
+        if (! empty($validated['platform_ids']) && is_array($validated['platform_ids'])) {
+            $platformIds = array_values(array_unique(array_map('intval', $validated['platform_ids'])));
+        } elseif (! empty($validated['platform_id'])) {
+            $platformIds = [(int) $validated['platform_id']];
+        }
+
+        if ($platformIds !== []) {
+            $okCount = ModeratorMarketingPlatform::query()
+                ->whereIn('id', $platformIds)
                 ->where('plan_id', $marketing_plan->id)
-                ->exists();
-            if (! $p) {
-                return back()->withErrors(['platform_id' => 'المنصة غير تابعة لهذه الخطة.'])->withInput();
+                ->count();
+            if ($okCount !== count($platformIds)) {
+                return back()->withErrors(['platform_ids' => 'يوجد منصة/منصات غير تابعة لهذه الخطة.'])->withInput();
             }
         }
 
@@ -246,10 +306,28 @@ class ModeratorMarketingPlanController extends Controller
             }
         }
 
-        $validated['plan_id'] = $marketing_plan->id;
-        ModeratorMarketingCalendarEvent::create($validated);
+        $base = [
+            'plan_id' => $marketing_plan->id,
+            'title' => $validated['title'],
+            'body' => $validated['body'] ?? null,
+            'starts_at' => $validated['starts_at'],
+            'ends_at' => $validated['ends_at'] ?? null,
+            'status' => $validated['status'],
+            'design_task_cycle_id' => $validated['design_task_cycle_id'] ?? null,
+        ];
 
-        return back()->with('success', 'تمت إضافة الحدث للتقويم.');
+        if ($platformIds === []) {
+            ModeratorMarketingCalendarEvent::create($base + ['platform_id' => null]);
+            return back()->with('success', 'تمت إضافة الحدث للتقويم.');
+        }
+
+        $created = 0;
+        foreach ($platformIds as $pid) {
+            ModeratorMarketingCalendarEvent::create($base + ['platform_id' => $pid]);
+            $created++;
+        }
+
+        return back()->with('success', 'تمت إضافة الحدث لعدد '.$created.' منصة/منصات.');
     }
 
     public function updateEvent(Request $request, ModeratorMarketingPlan $marketing_plan, ModeratorMarketingCalendarEvent $event)
