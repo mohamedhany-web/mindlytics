@@ -4,7 +4,7 @@
 @section('header', 'مؤشرات الشركة (Real‑time)')
 
 @section('content')
-<div class="p-4 md:p-6 space-y-6" style="background:#f8fafc;min-height:100vh;" x-data="accountingInsights()">
+<div class="p-4 md:p-6 space-y-6" style="background:#f8fafc;min-height:100vh;" x-data="accountingInsights(@js($initialPayload ?? []))">
     <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
             <p class="text-sm text-gray-600 max-w-2xl">لوحة لحظية مبنية على بيانات النظام: إيراد، مصروفات، صافي ربح/خسارة، واتجاهات مقارنة بالفترة السابقة.</p>
@@ -19,6 +19,13 @@
             </button>
         </div>
     </div>
+
+    <template x-if="errorMsg">
+        <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-900 text-sm font-semibold">
+            <i class="fas fa-exclamation-triangle ml-1"></i>
+            <span x-text="errorMsg"></span>
+        </div>
+    </template>
 
     <div class="rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-sky-900 text-white shadow-xl overflow-hidden">
         <div class="px-6 py-6 border-b border-white/10 flex flex-wrap items-center justify-between gap-3">
@@ -133,10 +140,11 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
-function accountingInsights() {
+function accountingInsights(initial) {
     return {
         loading: false,
         asOf: null,
+        errorMsg: null,
         snapshot: {},
         trend: {},
         daily: {},
@@ -180,6 +188,11 @@ function accountingInsights() {
             this.loading = true;
             try {
                 const res = await fetch("{{ route('admin.accounting.insights.metrics') }}", { headers: { 'Accept': 'application/json' }});
+                const ct = res.headers.get('content-type') || '';
+                if (!res.ok || !ct.includes('application/json')) {
+                    this.errorMsg = 'تعذر تحميل المؤشرات (قد تكون الجلسة منتهية أو تم تحويلك لصفحة تسجيل الدخول).';
+                    return;
+                }
                 const data = await res.json();
                 this.asOf = data.snapshot?.as_of || null;
                 this.snapshot = data.snapshot || {};
@@ -189,8 +202,9 @@ function accountingInsights() {
                 this.healthLabel = data.health?.label || null;
                 this.healthTone = data.health?.tone || 'good';
                 this.updateChart();
+                this.errorMsg = null;
             } catch (e) {
-                // ignore in UI
+                this.errorMsg = 'حدث خطأ أثناء تحديث المؤشرات.';
             } finally {
                 this.loading = false;
             }
@@ -275,6 +289,18 @@ function accountingInsights() {
 
         init() {
             this.ensureChart();
+            // preload server-side data
+            if (initial && typeof initial === 'object') {
+                this.snapshot = initial.snapshot || {};
+                this.trend = initial.trend || {};
+                this.daily = initial.daily || {};
+                this.realtime = initial.realtime || this.realtime;
+                this.healthLabel = initial.health?.label || null;
+                this.healthTone = initial.health?.tone || 'good';
+                this.asOf = this.snapshot.as_of || null;
+                this.updateChart();
+            }
+
             this.refresh(true);
             setInterval(() => this.refresh(false), 10_000);
         }

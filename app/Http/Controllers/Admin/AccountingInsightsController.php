@@ -16,12 +16,23 @@ class AccountingInsightsController extends Controller
 {
     public function index(): View
     {
-        return view('admin.accounting.insights');
+        $payload = $this->buildPayload(Carbon::now());
+
+        return view('admin.accounting.insights', [
+            'initialPayload' => $payload,
+        ]);
     }
 
     public function metrics(Request $request): JsonResponse
     {
-        $now = Carbon::now();
+        return response()->json($this->buildPayload(Carbon::now()));
+    }
+
+    /**
+     * @return array{snapshot: array<string,mixed>, trend: array<string,mixed>, daily: array<string,mixed>, realtime: array<string,mixed>, health: array<string,mixed>}
+     */
+    private function buildPayload(Carbon $now): array
+    {
         $todayStart = $now->copy()->startOfDay();
         $todayEnd = $now->copy()->endOfDay();
 
@@ -80,13 +91,7 @@ class AccountingInsightsController extends Controller
 
         $health = $this->healthLabel($netMonth, $trend['net_month_pct']);
 
-        return response()->json([
-            'snapshot' => $snapshot,
-            'trend' => $trend,
-            'daily' => $daily,
-            'realtime' => $realtime,
-            'health' => $health,
-        ]);
+        return compact('snapshot', 'trend', 'daily', 'realtime', 'health');
     }
 
     private function revenueBetween(Carbon $start, Carbon $end): float
