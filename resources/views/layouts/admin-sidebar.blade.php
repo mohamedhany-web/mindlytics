@@ -53,6 +53,78 @@
                 </a>
             </li>
 
+            @php
+                $mobileAppMenuOpen = request()->routeIs('admin.mobile-app.*') || request()->routeIs('admin.practice.*');
+            @endphp
+            <li x-data="{ open: {{ $mobileAppMenuOpen ? 'true' : 'false' }} }">
+                <button type="button" @click="open = !open"
+                        class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-mobile-alt w-5 text-violet-400 group-hover:text-white"></i>
+                        <span class="font-semibold text-start leading-snug">Mindlytics Community<br><span class="text-xs font-normal text-slate-500 group-hover:text-slate-300">تطبيق الطلاب</span></span>
+                    </div>
+                    <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400 shrink-0" :class="open ? 'rotate-180' : ''"></i>
+                </button>
+                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-violet-700/40 pr-2">
+                    <li>
+                        <a href="{{ route('admin.mobile-app.edit') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.mobile-app.edit') ? 'bg-violet-600/30 text-white font-semibold border-r-2 border-violet-400' : '' }}">
+                            <i class="fas fa-home w-4"></i>
+                            <span>محتوى الصفحة الرئيسية</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.practice.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.practice.*') ? 'bg-violet-600/30 text-white font-semibold border-r-2 border-violet-400' : '' }}">
+                            <i class="fas fa-dumbbell w-4"></i>
+                            <span>Practice (التمارين)</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.mobile-app.course-community.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.mobile-app.course-community.*') ? 'bg-violet-600/30 text-white font-semibold border-r-2 border-violet-400' : '' }}">
+                            <i class="fas fa-comments w-4"></i>
+                            <span>مجتمع الكورسات (مراقبة ونشر)</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.mobile-app.notifications') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.mobile-app.notifications') ? 'bg-violet-600/30 text-white font-semibold border-r-2 border-violet-400' : '' }}">
+                            <i class="fas fa-bell w-4"></i>
+                            <span>إشعارات التطبيق</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.mobile-app.maintenance') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.mobile-app.maintenance') ? 'bg-violet-600/30 text-white font-semibold border-r-2 border-violet-400' : '' }}">
+                            <i class="fas fa-tools w-4"></i>
+                            <span>الصيانة والرسائل العامة</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.mobile-app.links') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.mobile-app.links') ? 'bg-violet-600/30 text-white font-semibold border-r-2 border-violet-400' : '' }}">
+                            <i class="fas fa-link w-4"></i>
+                            <span>الروابط والمسارات</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.mobile-app.appearance') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.mobile-app.appearance') ? 'bg-violet-600/30 text-white font-semibold border-r-2 border-violet-400' : '' }}">
+                            <i class="fas fa-palette w-4"></i>
+                            <span>المظهر والعلامة</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
             <!-- الملف الشخصي -->
             @php
                 $profileActive = request()->routeIs('admin.profile*');
@@ -627,7 +699,7 @@
 
             <!-- إدارة المحتوى -->
             @php
-                $contentManagementOpen = request()->routeIs('admin.academic-years.*') || request()->routeIs('admin.learning-paths.*') || request()->routeIs('admin.academic-subjects.*') || request()->routeIs('admin.advanced-courses.*') || request()->routeIs('admin.exams.*') || request()->routeIs('admin.question-bank.*') || request()->routeIs('admin.question-categories.*') || request()->routeIs('admin.lectures.*') || request()->routeIs('admin.groups.*') || request()->routeIs('admin.assignments.*');
+                $contentManagementOpen = request()->routeIs('admin.academic-years.*') || request()->routeIs('admin.learning-paths.*') || request()->routeIs('admin.academic-subjects.*') || request()->routeIs('admin.advanced-courses.*') || request()->routeIs('admin.exams.*') || request()->routeIs('admin.practice.*') || request()->routeIs('admin.question-bank.*') || request()->routeIs('admin.question-categories.*') || request()->routeIs('admin.lectures.*') || request()->routeIs('admin.groups.*') || request()->routeIs('admin.assignments.*');
             @endphp
             <li x-data="{ open: {{ $contentManagementOpen ? 'true' : 'false' }} }">
                 <button @click="open = !open" 
@@ -718,6 +790,14 @@
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.exams.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
                             <i class="fas fa-clipboard-check w-4"></i>
                             <span>{{ __('admin.exams') }}</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.practice.index') }}" 
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.practice.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
+                            <i class="fas fa-dumbbell w-4"></i>
+                            <span>Practice (التمارين)</span>
                         </a>
                     </li>
                     <li>

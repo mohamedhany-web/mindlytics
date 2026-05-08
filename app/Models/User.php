@@ -5,12 +5,12 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -29,9 +29,12 @@ class User extends Authenticatable
         'parent_id',
         'is_active',
         'profile_image',
+        'profile_image_disk',
         'birth_date',
         'address',
         'bio',
+        'headline',
+        'skills',
         'academic_year_id',
         'last_login_at',
         'referral_code',
@@ -91,6 +94,7 @@ class User extends Authenticatable
             'sales_commission_value' => 'decimal:2',
             'two_factor_confirmed_at' => 'datetime',
             'two_factor_recovery_codes' => 'array',
+            'skills' => 'array',
         ];
     }
 
@@ -141,8 +145,8 @@ class User extends Authenticatable
 
     /**
      * رابط صورة الملف الشخصي.
-     * الصور في storage/app/public تُعرض عبر Storage::disk('public')->url() لضمان الرابط الصحيح.
-     * تطبيع المسار (backslash على Windows) وضمان URL كامل.
+     * قرص public محليًا عبر url()؛ R2/S3 الخاص عبر رابط موقّع مؤقتًا.
+     * لا يُلحق معامل v= على الروابط الموقّعة حتى لا يُبطل التوقيع.
      */
     public function getProfileImageUrlAttribute(): ?string
     {
@@ -154,10 +158,21 @@ class User extends Authenticatable
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
             $base = $path;
         } else {
-            $base = Storage::disk('public')->url($path);
+            $disk = $this->profile_image_disk ?: 'public';
+            $base = storage_inline_media_url($disk, $path);
+            if ($base === '') {
+                $base = storage_inline_media_url('public', $path);
+            }
+            if ($base === '') {
+                return null;
+            }
         }
-        $ts = $this->updated_at ? $this->updated_at->timestamp : '';
-        return $base . (str_contains($base, '?') ? '&' : '?') . 'v=' . $ts;
+        $ts = $this->updated_at ? (string) $this->updated_at->timestamp : '';
+        if ($ts !== '' && ! str_contains($base, 'X-Amz-')) {
+            return $base.(str_contains($base, '?') ? '&' : '?').'v='.$ts;
+        }
+
+        return $base;
     }
 
     /**

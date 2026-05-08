@@ -880,6 +880,31 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
     Route::prefix('admin')->name('admin.')->middleware(['role:admin|super_admin'])->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Admin\AdminController::class, 'dashboard'])->name('dashboard');
 
+        Route::prefix('mobile-app')->name('mobile-app.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\MobileAppSettingsController::class, 'edit'])->name('edit');
+            Route::put('/', [\App\Http\Controllers\Admin\MobileAppSettingsController::class, 'update'])->name('update');
+            Route::get('/notifications', [\App\Http\Controllers\Admin\MobileAppNotificationsController::class, 'index'])->name('notifications');
+            Route::post('/notifications', [\App\Http\Controllers\Admin\MobileAppNotificationsController::class, 'store'])
+                ->middleware('throttle:30,1')
+                ->name('notifications.store');
+            Route::get('/maintenance', [\App\Http\Controllers\Admin\MobileAppPagesController::class, 'maintenance'])->name('maintenance');
+            Route::get('/links', [\App\Http\Controllers\Admin\MobileAppPagesController::class, 'links'])->name('links');
+            Route::get('/appearance', [\App\Http\Controllers\Admin\MobileAppPagesController::class, 'appearance'])->name('appearance');
+
+            Route::prefix('course-community')->name('course-community.')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Admin\AdminCourseCommunityController::class, 'index'])->name('index');
+                Route::get('/posts/create', [\App\Http\Controllers\Admin\AdminCourseCommunityController::class, 'create'])->name('posts.create');
+                Route::post('/posts', [\App\Http\Controllers\Admin\AdminCourseCommunityController::class, 'store'])
+                    ->middleware('throttle:30,1')
+                    ->name('posts.store');
+                Route::get('/posts/{post}', [\App\Http\Controllers\Admin\AdminCourseCommunityController::class, 'show'])->name('posts.show');
+                Route::delete('/posts/{post}', [\App\Http\Controllers\Admin\AdminCourseCommunityController::class, 'destroyPost'])->name('posts.destroy');
+                Route::post('/posts/{post}/pin', [\App\Http\Controllers\Admin\AdminCourseCommunityController::class, 'togglePin'])->name('posts.pin');
+                Route::delete('/posts/{post}/comments/{comment}', [\App\Http\Controllers\Admin\AdminCourseCommunityController::class, 'destroyComment'])
+                    ->name('posts.comments.destroy');
+            });
+        });
+
         Route::prefix('sales')->name('sales.')->group(function () {
             Route::get('reports', [\App\Http\Controllers\Admin\SalesReportController::class, 'index'])->name('reports.index');
             Route::get('reports/export', [\App\Http\Controllers\Admin\SalesReportController::class, 'export'])->name('reports.export');
@@ -1035,6 +1060,12 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/{exam}/statistics', [\App\Http\Controllers\Admin\ExamController::class, 'statistics'])->name('statistics');
             Route::get('/{exam}/preview', [\App\Http\Controllers\Admin\ExamController::class, 'preview'])->name('preview');
             Route::post('/{exam}/duplicate', [\App\Http\Controllers\Admin\ExamController::class, 'duplicate'])->name('duplicate');
+        });
+
+        // إدارة التمارين العملية (Practice / Learning Patterns)
+        Route::prefix('practice')->name('practice.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\PracticeController::class, 'index'])->name('index');
+            Route::get('/{pattern}', [\App\Http\Controllers\Admin\PracticeController::class, 'show'])->name('show');
         });
 
         // إدارة المواد الدراسية القديمة

@@ -36,7 +36,7 @@ class ReferralService
     /**
      * معالجة إحالة مستخدم جديد
      */
-    public function processReferral(User $referrer, User $referred, string $referralCode = null): ?Referral
+    public function processReferral(User $referrer, User $referred, ?string $referralCode = null): ?Referral
     {
         // البحث عن برنامج إحالة نشط
         $program = ReferralProgram::active()->first();

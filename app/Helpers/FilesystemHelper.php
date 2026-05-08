@@ -100,6 +100,54 @@ if (!function_exists('offline_activity_submissions_disk')) {
     }
 }
 
+if (!function_exists('student_mobile_disk')) {
+    /**
+     * قرص رفع ملفات تطبيق الطالب (بروفايل، صور منشورات المجتمع) — يُفضّل R2.
+     *
+     * @return string اسم القرص في config/filesystems.php (مثل r2 أو public)
+     */
+    function student_mobile_disk(): string
+    {
+        $envDisk = env('FILESYSTEM_DISK_STUDENT_MOBILE');
+        if ($envDisk !== null && $envDisk !== '') {
+            return $envDisk;
+        }
+
+        return config('filesystems.student_mobile_disk', 'r2');
+    }
+}
+
+if (!function_exists('storage_inline_media_url')) {
+    /**
+     * رابط عرض وسائط إنلاين (صورة، فيديو): مسار public/local عبر url()، أو رابط موقّع مؤقتًا لـ R2/S3 الخاص.
+     */
+    function storage_inline_media_url(string $disk, string $path, ?\DateTimeInterface $expires = null): string
+    {
+        $path = ltrim(str_replace('\\', '/', $path), '/');
+        if ($path === '') {
+            return '';
+        }
+
+        try {
+            $driver = Storage::disk($disk);
+
+            if (in_array($disk, ['public', 'local'], true)) {
+                return $driver->url($path);
+            }
+
+            $expires = $expires ?? now()->addDays(7);
+
+            if (method_exists($driver, 'temporaryUrl')) {
+                return $driver->temporaryUrl($path, $expires);
+            }
+
+            return $driver->url($path);
+        } catch (\Throwable) {
+            return '';
+        }
+    }
+}
+
 if (!function_exists('community_disk')) {
     /**
      * قرص تخزين ملفات المجتمع (تقديمات المساهمين).

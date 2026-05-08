@@ -1,0 +1,115 @@
+openapi: 3.0.3
+info:
+  title: Mindlytics Platform API
+  description: |
+    عقد أولي لربط تطبيق الموبايل (Flutter) بخادم Laravel.
+    التنفيذ الفعلي يكون في مشروع Mindlytics تحت المسار /api/v1.
+    مجتمع الكورس (community): الخلاصة والمنشورات مرتبطة بكورس محدد؛ يُسمح للطالب المسجّل بنشاط في ذلك الكورس فقط
+    (ومنشورات الفريق super_admin / admin / instructor) لسرعة التواصل ضمن الفوج.
+  version: 0.1.0
+servers:
+  - url: https://mindlytics-academy.com/api/v1
+    description: Production
+  - url: http://127.0.0.1:8000/api/v1
+    description: Local Laravel (php artisan serve)
+
+paths:
+  /meta/phone-countries:
+    get:
+      summary: قائمة الدول لرمز الاتصال (متطابقة مع الويب)
+      operationId: metaPhoneCountries
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  default_country_code:
+                    type: string
+                    example: SA
+                  countries:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: string
+                        dial_code:
+                          type: string
+                        name_ar:
+                          type: string
+                        name_en:
+                          type: string
+
+  /health:
+    get:
+      summary: فحص توفر الخدمة
+      operationId: healthCheck
+      responses:
+        '200':
+          description: الخادم يعمل
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  service:
+                    type: string
+                    example: mindlytics-api
+
+  /auth/login:
+    post:
+      summary: تسجيل دخول الموبايل (مقترح — Sanctum)
+      operationId: authLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                remember:
+                  type: boolean
+                  description: مطابقة لحقل remember في الويب عند الحاجة
+      responses:
+        '200':
+          description: نجاح — يعيد token وبيانات المستخدم حسب ما تختاره المنصة
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  token_type:
+                    type: string
+                    example: Bearer
+                  user:
+                    type: object
+        '401':
+          description: بيانات غير صحيحة
+        '422':
+          description: خطأ تحقق
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum
+
+# المسارات المحمية لاحقًا:
+# security:
+#   - bearerAuth: []
