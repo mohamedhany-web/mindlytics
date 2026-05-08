@@ -66,10 +66,10 @@ class AuthController extends Controller
             ], 403);
         }
 
-        if (! $user->isStudent()) {
+        if (! ($user->isStudent() || $user->isInstructor())) {
             return response()->json([
-                'message' => 'تطبيق المجتمع مخصص للطلاب فقط. سجّل الدخول من الموقع الإلكتروني.',
-                'code' => 'app_students_only',
+                'message' => 'غير مسموح بتسجيل الدخول لهذا النوع من الحسابات عبر التطبيق.',
+                'code' => 'role_not_allowed',
             ], 403);
         }
 

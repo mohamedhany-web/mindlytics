@@ -45,6 +45,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'sales.employee' => \App\Http\Middleware\EnsureSalesEmployee::class,
             'moderator.employee' => \App\Http\Middleware\EnsureModeratorEmployee::class,
             'api.student' => \App\Http\Middleware\EnsureApiStudent::class,
+            'api.instructor' => \App\Http\Middleware\EnsureApiInstructor::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

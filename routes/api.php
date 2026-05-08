@@ -8,6 +8,13 @@ use App\Http\Controllers\Api\V1\StudentNotificationsController;
 use App\Http\Controllers\Api\V1\StudentPracticeController;
 use App\Http\Controllers\Api\V1\StudentCommunityController;
 use App\Http\Controllers\Api\V1\StudentProfileController;
+use App\Http\Controllers\Api\V1\StudentChallengesController;
+use App\Http\Controllers\Api\V1\InstructorCoursesController;
+use App\Http\Controllers\Api\V1\InstructorCommunityController;
+use App\Http\Controllers\Api\V1\InstructorAnnouncementsController;
+use App\Http\Controllers\Api\V1\InstructorMessagesController;
+use App\Http\Controllers\Api\V1\InstructorAssignmentsController;
+use App\Http\Controllers\Api\V1\SupportTicketsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -42,10 +49,95 @@ Route::prefix('v1')->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('api.v1.auth.logout');
     });
 
+    Route::middleware('auth:sanctum')->prefix('support')->group(function () {
+        Route::get('/tickets', [SupportTicketsController::class, 'index'])
+            ->middleware('throttle:90,1')
+            ->name('api.v1.support.tickets.index');
+        Route::post('/tickets', [SupportTicketsController::class, 'store'])
+            ->middleware('throttle:30,1')
+            ->name('api.v1.support.tickets.store');
+        Route::get('/tickets/{ticket}', [SupportTicketsController::class, 'show'])
+            ->middleware('throttle:120,1')
+            ->name('api.v1.support.tickets.show');
+        Route::post('/tickets/{ticket}/reply', [SupportTicketsController::class, 'reply'])
+            ->middleware('throttle:120,1')
+            ->name('api.v1.support.tickets.reply');
+    });
+
     Route::middleware(['auth:sanctum', 'api.student'])->prefix('student')->group(function () {
         Route::get('/home', [StudentHomeController::class, 'home'])
             ->middleware('throttle:60,1')
             ->name('api.v1.student.home');
+        Route::get('/challenges', [StudentChallengesController::class, 'index'])
+            ->middleware('throttle:60,1')
+            ->name('api.v1.student.challenges.index');
+    });
+
+    Route::middleware(['auth:sanctum', 'api.instructor'])->prefix('instructor')->group(function () {
+        Route::get('/courses', [InstructorCoursesController::class, 'index'])
+            ->middleware('throttle:60,1')
+            ->name('api.v1.instructor.courses.index');
+        Route::get('/courses/{course}/students', [InstructorCoursesController::class, 'students'])
+            ->middleware('throttle:60,1')
+            ->name('api.v1.instructor.courses.students');
+
+        Route::get('/courses/{course}/announcements', [InstructorAnnouncementsController::class, 'index'])
+            ->middleware('throttle:60,1')
+            ->name('api.v1.instructor.courses.announcements.index');
+        Route::post('/courses/{course}/announcements', [InstructorAnnouncementsController::class, 'store'])
+            ->middleware('throttle:30,1')
+            ->name('api.v1.instructor.courses.announcements.store');
+
+        Route::prefix('community')->group(function () {
+            Route::get('/courses', [InstructorCommunityController::class, 'courses'])
+                ->middleware('throttle:60,1')
+                ->name('api.v1.instructor.community.courses');
+            Route::get('/courses/{course}/feed', [InstructorCommunityController::class, 'feed'])
+                ->middleware('throttle:90,1')
+                ->name('api.v1.instructor.community.feed');
+            Route::post('/courses/{course}/posts', [InstructorCommunityController::class, 'createPost'])
+                ->middleware('throttle:30,1')
+                ->name('api.v1.instructor.community.posts.create');
+            Route::get('/posts/{post}', [InstructorCommunityController::class, 'post'])
+                ->middleware('throttle:90,1')
+                ->name('api.v1.instructor.community.posts.show');
+            Route::post('/posts/{post}/comments', [InstructorCommunityController::class, 'createComment'])
+                ->middleware('throttle:60,1')
+                ->name('api.v1.instructor.community.comments.create');
+            Route::post('/posts/{post}/react', [InstructorCommunityController::class, 'reactToPost'])
+                ->middleware('throttle:120,1')
+                ->name('api.v1.instructor.community.posts.react');
+            Route::delete('/posts/{post}/react', [InstructorCommunityController::class, 'unreactToPost'])
+                ->middleware('throttle:120,1')
+                ->name('api.v1.instructor.community.posts.unreact');
+        });
+
+        Route::prefix('messages')->group(function () {
+            Route::get('/threads', [InstructorMessagesController::class, 'threads'])
+                ->middleware('throttle:90,1')
+                ->name('api.v1.instructor.messages.threads');
+            Route::post('/threads', [InstructorMessagesController::class, 'startThread'])
+                ->middleware('throttle:60,1')
+                ->name('api.v1.instructor.messages.threads.start');
+            Route::get('/threads/{thread}/messages', [InstructorMessagesController::class, 'messages'])
+                ->middleware('throttle:120,1')
+                ->name('api.v1.instructor.messages.messages');
+            Route::post('/threads/{thread}/messages', [InstructorMessagesController::class, 'send'])
+                ->middleware('throttle:120,1')
+                ->name('api.v1.instructor.messages.send');
+        });
+
+        Route::prefix('assignments')->group(function () {
+            Route::get('/', [InstructorAssignmentsController::class, 'assignments'])
+                ->middleware('throttle:90,1')
+                ->name('api.v1.instructor.assignments.index');
+            Route::get('/{assignment}/submissions', [InstructorAssignmentsController::class, 'submissions'])
+                ->middleware('throttle:120,1')
+                ->name('api.v1.instructor.assignments.submissions');
+        });
+        Route::put('/submissions/{submission}', [InstructorAssignmentsController::class, 'grade'])
+            ->middleware('throttle:120,1')
+            ->name('api.v1.instructor.assignments.submissions.grade');
     });
 
     Route::middleware(['auth:sanctum', 'api.student'])->prefix('student/learn')->group(function () {

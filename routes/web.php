@@ -183,6 +183,7 @@ Route::get('/privacy', [\App\Http\Controllers\Public\PageController::class, 'pri
 Route::get('/pricing', [\App\Http\Controllers\Public\PageController::class, 'pricing'])->name('public.pricing');
 Route::get('/team', [\App\Http\Controllers\Public\PageController::class, 'team'])->name('public.team');
 Route::get('/certificates', [\App\Http\Controllers\Public\PageController::class, 'certificates'])->name('public.certificates');
+Route::get('/challenges', [\App\Http\Controllers\Public\ChallengesController::class, 'index'])->name('public.challenges');
 Route::get('/certificates/verify', [\App\Http\Controllers\Public\CertificateVerificationController::class, 'verify'])->name('public.certificates.verify');
 Route::get('/certificates/verify/{code}', [\App\Http\Controllers\Public\CertificateVerificationController::class, 'verify'])->name('public.certificates.verify.code');
 Route::get('/help', [\App\Http\Controllers\Public\PageController::class, 'help'])->name('public.help');
@@ -879,6 +880,13 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
     // مسارات الإدارة - محمية بالـ role middleware للإداريين فقط
     Route::prefix('admin')->name('admin.')->middleware(['role:admin|super_admin'])->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Admin\AdminController::class, 'dashboard'])->name('dashboard');
+
+        Route::prefix('support-tickets')->name('support-tickets.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\SupportTicketsController::class, 'index'])->name('index');
+            Route::get('/{ticket}', [\App\Http\Controllers\Admin\SupportTicketsController::class, 'show'])->name('show');
+            Route::post('/{ticket}/reply', [\App\Http\Controllers\Admin\SupportTicketsController::class, 'reply'])->name('reply');
+            Route::post('/{ticket}/close', [\App\Http\Controllers\Admin\SupportTicketsController::class, 'close'])->name('close');
+        });
 
         Route::prefix('mobile-app')->name('mobile-app.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\MobileAppSettingsController::class, 'edit'])->name('edit');
