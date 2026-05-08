@@ -909,6 +909,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('reports', [\App\Http\Controllers\Admin\SalesReportController::class, 'index'])->name('reports.index');
             Route::get('reports/export', [\App\Http\Controllers\Admin\SalesReportController::class, 'export'])->name('reports.export');
             Route::get('audit-log', [\App\Http\Controllers\Admin\SalesAuditController::class, 'index'])->name('audit-log.index');
+            Route::get('transfer', [\App\Http\Controllers\Admin\SalesTransferController::class, 'index'])->name('transfer.index');
+            Route::post('transfer', [\App\Http\Controllers\Admin\SalesTransferController::class, 'store'])->name('transfer.store');
             Route::get('kpi', [\App\Http\Controllers\Admin\SalesKpiController::class, 'index'])->name('kpi.index');
             Route::get('kpi/targets', [\App\Http\Controllers\Admin\SalesKpiController::class, 'targets'])->name('kpi.targets');
             Route::put('kpi/targets', [\App\Http\Controllers\Admin\SalesKpiController::class, 'updateTargets'])->name('kpi.targets.update');
