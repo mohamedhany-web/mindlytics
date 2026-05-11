@@ -50,10 +50,18 @@
                 <a href="{{ route('admin.sales.reports.export', request()->query()) }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-l from-emerald-600 to-teal-600 text-white rounded-xl text-sm font-bold shadow-lg border border-emerald-400/40">
                     <i class="fas fa-file-excel"></i> تصدير Excel كامل
                 </a>
-                <a href="{{ route('admin.sales.reports.daily-export', request()->query()) }}"
-                   class="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-bold shadow-lg border border-slate-700/60">
-                    <i class="fas fa-calendar-day"></i> تقرير يومي للموظف (Excel)
-                </a>
+                @if(!empty($userId))
+                    <a href="{{ route('admin.sales.reports.daily-export', request()->query()) }}"
+                       class="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-bold shadow-lg border border-slate-700/60">
+                        <i class="fas fa-calendar-day"></i> تقرير يومي للموظف (Excel)
+                    </a>
+                @else
+                    <button type="button"
+                            class="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-300 text-slate-700 rounded-xl text-sm font-bold border border-slate-200 cursor-not-allowed"
+                            title="اختر موظف مبيعات أولاً ثم صدّر التقرير اليومي">
+                        <i class="fas fa-calendar-day"></i> تقرير يومي للموظف (Excel)
+                    </button>
+                @endif
             </div>
         </form>
     </div>

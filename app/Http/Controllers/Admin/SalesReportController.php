@@ -258,7 +258,13 @@ class SalesReportController extends Controller
             'date_from' => ['required', 'date'],
             'date_to' => ['required', 'date', 'after_or_equal:date_from'],
             'user_id' => ['required', 'integer', Rule::exists('users', 'id')],
-            'lead_scope' => ['required', 'string', Rule::in(['touched', 'new', 'transferred_from_admin'])],
+            'lead_scope' => ['nullable', 'string', Rule::in(['touched', 'new', 'transferred_from_admin'])],
+        ], [
+            'user_id.required' => 'اختر موظف مبيعات أولاً لاستخراج التقرير اليومي.',
+            'user_id.exists' => 'الموظف المحدد غير موجود.',
+            'date_from.required' => 'حدد تاريخ البداية.',
+            'date_to.required' => 'حدد تاريخ النهاية.',
+            'date_to.after_or_equal' => 'تاريخ النهاية يجب أن يكون بعد أو يساوي تاريخ البداية.',
         ]);
 
         $start = Carbon::parse($validated['date_from'])->startOfDay();
@@ -269,7 +275,7 @@ class SalesReportController extends Controller
             abort(422, 'المستخدم ليس موظف مبيعات.');
         }
 
-        $scope = (string) $validated['lead_scope'];
+        $scope = (string) ($validated['lead_scope'] ?? 'touched');
         $scopeLabel = match ($scope) {
             'new' => 'Leads مسجلة جديداً بواسطة الموظف',
             'transferred_from_admin' => 'Leads محوّلة من الإدارة (مسندة للموظف)',
