@@ -17,7 +17,10 @@
     @endif
 
     <div class="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 md:p-6">
-        <form method="get" action="{{ route('admin.sales.reports.index') }}" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+        <form method="get"
+              action="{{ route('admin.sales.reports.index') }}"
+              x-data="{ userId: '{{ (string) ($userId ?? '') }}' }"
+              class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
             <div>
                 <label class="block text-xs font-bold text-gray-600 mb-1">من تاريخ</label>
                 <input type="date" name="date_from" value="{{ $dateFrom }}" class="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm" required>
@@ -28,7 +31,7 @@
             </div>
             <div class="md:col-span-2 lg:col-span-2">
                 <label class="block text-xs font-bold text-gray-600 mb-1">الموظف (اختياري — اتركه فارغاً لجميع موظفي المبيعات)</label>
-                <select name="user_id" class="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm">
+                <select name="user_id" x-model="userId" class="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm">
                     <option value="">— كل الفريق —</option>
                     @foreach($salesReps as $r)
                         <option value="{{ $r->id }}" @selected((string)$userId === (string)$r->id)>{{ $r->name }}</option>
@@ -50,18 +53,16 @@
                 <a href="{{ route('admin.sales.reports.export', request()->query()) }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-l from-emerald-600 to-teal-600 text-white rounded-xl text-sm font-bold shadow-lg border border-emerald-400/40">
                     <i class="fas fa-file-excel"></i> تصدير Excel كامل
                 </a>
-                @if(!empty($userId))
-                    <a href="{{ route('admin.sales.reports.daily-export', request()->query()) }}"
-                       class="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-bold shadow-lg border border-slate-700/60">
-                        <i class="fas fa-calendar-day"></i> تقرير يومي للموظف (Excel)
-                    </a>
-                @else
-                    <button type="button"
-                            class="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-300 text-slate-700 rounded-xl text-sm font-bold border border-slate-200 cursor-not-allowed"
-                            title="اختر موظف مبيعات أولاً ثم صدّر التقرير اليومي">
-                        <i class="fas fa-calendar-day"></i> تقرير يومي للموظف (Excel)
-                    </button>
-                @endif
+                <button type="submit"
+                        formaction="{{ route('admin.sales.reports.daily-export') }}"
+                        formmethod="get"
+                        :disabled="!userId"
+                        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg border transition
+                               bg-slate-900 hover:bg-slate-800 text-white border-slate-700/60
+                               disabled:bg-slate-300 disabled:text-slate-700 disabled:border-slate-200 disabled:cursor-not-allowed">
+                    <i class="fas fa-calendar-day"></i> تقرير يومي للموظف (Excel)
+                </button>
+                <span class="text-xs text-slate-500 self-center" x-show="!userId" x-cloak>اختر موظفاً لتفعيل التقرير اليومي.</span>
             </div>
         </form>
     </div>
