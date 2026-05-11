@@ -35,12 +35,24 @@
                     @endforeach
                 </select>
             </div>
+            <div class="lg:col-span-2">
+                <label class="block text-xs font-bold text-gray-600 mb-1">فلتر الـ Leads (يؤثر على “التقرير اليومي” + المعاينة عند اختيار موظف)</label>
+                <select name="lead_scope" class="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm">
+                    <option value="touched" @selected(($leadScope ?? 'touched') === 'touched')>كل Leads ذات صلة بالفترة (Touched)</option>
+                    <option value="new" @selected(($leadScope ?? 'touched') === 'new')>Leads مسجلة جديداً بواسطة الموظف</option>
+                    <option value="transferred_from_admin" @selected(($leadScope ?? 'touched') === 'transferred_from_admin')>Leads محوّلة من الإدارة (مسندة للموظف)</option>
+                </select>
+            </div>
             <div class="flex flex-wrap gap-2 lg:col-span-4">
                 <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-md">
                     <i class="fas fa-sync-alt"></i> تحديث المعاينة
                 </button>
                 <a href="{{ route('admin.sales.reports.export', request()->query()) }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-l from-emerald-600 to-teal-600 text-white rounded-xl text-sm font-bold shadow-lg border border-emerald-400/40">
                     <i class="fas fa-file-excel"></i> تصدير Excel كامل
+                </a>
+                <a href="{{ route('admin.sales.reports.daily-export', request()->query()) }}"
+                   class="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-bold shadow-lg border border-slate-700/60">
+                    <i class="fas fa-calendar-day"></i> تقرير يومي للموظف (Excel)
                 </a>
             </div>
         </form>
@@ -68,6 +80,10 @@
                         <p class="text-xs text-gray-500 font-semibold">أنشطة CRM</p>
                         <p class="text-2xl font-black text-slate-800 tabular-nums">{{ $counts['activities'] ?? 0 }}</p>
                     </div>
+                </div>
+                <div class="mt-2 text-xs text-gray-600">
+                    Leads أنشأها الموظف: <span class="font-bold">{{ $counts['leads_created_by'] ?? 0 }}</span>
+                    — Leads محوّلة من الإدارة: <span class="font-bold">{{ $counts['leads_transferred_from_admin'] ?? 0 }}</span>
                 </div>
                 @if(!empty($periodReport['alert_flags']))
                     <ul class="mt-4 text-sm text-amber-900 space-y-1 list-disc list-inside">

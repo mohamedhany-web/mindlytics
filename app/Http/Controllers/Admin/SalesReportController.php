@@ -7,6 +7,7 @@ use App\Models\ActivityLog;
 use App\Models\SalesActivity;
 use App\Models\SalesLead;
 use App\Models\User;
+use App\Services\SalesEmployeeDailyLeadsExcelExportService;
 use App\Services\SalesFullReportExcelExportService;
 use App\Services\SalesKpiService;
 use Carbon\Carbon;
@@ -38,11 +39,13 @@ class SalesReportController extends Controller
         $request->mergeIfMissing([
             'date_from' => now()->startOfMonth()->toDateString(),
             'date_to' => now()->toDateString(),
+            'lead_scope' => 'touched',
         ]);
 
         $dateFrom = (string) $request->get('date_from');
         $dateTo = (string) $request->get('date_to');
         $userId = $request->get('user_id');
+        $leadScope = (string) $request->get('lead_scope', 'touched');
 
         $validated = null;
         $error = null;
@@ -61,6 +64,7 @@ class SalesReportController extends Controller
                 'date_from' => ['required', 'date'],
                 'date_to' => ['required', 'date', 'after_or_equal:date_from'],
                 'user_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
+                'lead_scope' => ['nullable', 'string', Rule::in(['touched', 'new', 'transferred_from_admin'])],
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             $error = $e->validator->errors()->first();
@@ -76,7 +80,7 @@ class SalesReportController extends Controller
                     $error = 'المستخدم المحدد ليس موظف مبيعات.';
                 } else {
                     $periodReport = $kpi->buildPeriodReport($selectedRep, $start, $end);
-                    $leadsQuery = $this->leadsTouchedInPeriodQuery((int) $selectedRep->id, $start, $end);
+                    $leadsQuery = $this->leadsScopeQuery((int) $selectedRep->id, $start, $end, (string) ($validated['lead_scope'] ?? 'touched'));
                     $actQuery = $this->activitiesInPeriodQuery((int) $selectedRep->id, $start, $end);
                     $auditQuery = $this->auditInPeriodQuery($start, $end, (int) $selectedRep->id);
 
@@ -86,6 +90,13 @@ class SalesReportController extends Controller
                         'audit' => (clone $auditQuery)->count(),
                         'leads_created_by' => SalesLead::query()
                             ->where('created_by', $selectedRep->id)
+                            ->whereBetween('created_at', [$start, $end])
+                            ->count(),
+                        'leads_transferred_from_admin' => SalesLead::query()
+                            ->where('assigned_to', $selectedRep->id)
+                            ->where(function ($q) use ($selectedRep) {
+                                $q->whereNull('created_by')->orWhere('created_by', '!=', $selectedRep->id);
+                            })
                             ->whereBetween('created_at', [$start, $end])
                             ->count(),
                     ];
@@ -127,6 +138,7 @@ class SalesReportController extends Controller
             'dateFrom',
             'dateTo',
             'userId',
+            'leadScope',
             'error',
             'start',
             'end',
@@ -238,6 +250,95 @@ class SalesReportController extends Controller
     }
 
     /**
+     * تقرير يومي موجّه للإدارة: ملخص يومي + بيانات Leads كاملة حسب فلتر.
+     */
+    public function dailyExport(Request $request, SalesEmployeeDailyLeadsExcelExportService $excel): StreamedResponse
+    {
+        $validated = $request->validate([
+            'date_from' => ['required', 'date'],
+            'date_to' => ['required', 'date', 'after_or_equal:date_from'],
+            'user_id' => ['required', 'integer', Rule::exists('users', 'id')],
+            'lead_scope' => ['required', 'string', Rule::in(['touched', 'new', 'transferred_from_admin'])],
+        ]);
+
+        $start = Carbon::parse($validated['date_from'])->startOfDay();
+        $end = Carbon::parse($validated['date_to'])->endOfDay();
+
+        $rep = User::query()->findOrFail($validated['user_id']);
+        if (! $rep->isSalesEmployee()) {
+            abort(422, 'المستخدم ليس موظف مبيعات.');
+        }
+
+        $scope = (string) $validated['lead_scope'];
+        $scopeLabel = match ($scope) {
+            'new' => 'Leads مسجلة جديداً بواسطة الموظف',
+            'transferred_from_admin' => 'Leads محوّلة من الإدارة (مسندة للموظف)',
+            default => 'كل Leads ذات صلة بالفترة (Touched)',
+        };
+
+        $leads = $this->leadsScopeQuery((int) $rep->id, $start, $end, $scope)
+            ->with(['assignee:id,name', 'creator:id,name'])
+            ->get();
+
+        $activities = $this->activitiesInPeriodQuery((int) $rep->id, $start, $end)
+            ->with(['lead:id,name,assigned_to', 'user:id,name'])
+            ->get();
+
+        $dailyRows = [];
+        $days = Carbon::parse($start)->startOfDay()->daysUntil(Carbon::parse($end)->endOfDay())->toArray();
+        foreach ($days as $d) {
+            $dayStart = $d->copy()->startOfDay();
+            $dayEnd = $d->copy()->endOfDay();
+
+            $leadsCount = $leads->filter(fn ($l) => $l->created_at && $l->created_at->betweenIncluded($dayStart, $dayEnd))->count();
+            $actCount = $activities->filter(fn ($a) => $a->created_at && $a->created_at->betweenIncluded($dayStart, $dayEnd))->count();
+
+            $createdByRep = SalesLead::query()
+                ->where('created_by', $rep->id)
+                ->whereBetween('created_at', [$dayStart, $dayEnd])
+                ->count();
+
+            $transferred = SalesLead::query()
+                ->where('assigned_to', $rep->id)
+                ->where(function ($q) use ($rep) {
+                    $q->whereNull('created_by')->orWhere('created_by', '!=', $rep->id);
+                })
+                ->whereBetween('created_at', [$dayStart, $dayEnd])
+                ->count();
+
+            $dailyRows[] = [
+                'date' => $d->format('Y-m-d'),
+                'leads' => $leadsCount,
+                'activities' => $actCount,
+                'leads_created_by_rep' => $createdByRep,
+                'leads_transferred_from_admin' => $transferred,
+            ];
+        }
+
+        $exportedBy = 'تصدير من الإدارة — '.(auth()->user()->name ?? '').' — '.now()->format('Y-m-d H:i');
+        $payload = [
+            'rep_name' => (string) ($rep->name ?? ''),
+            'date_from' => $start->format('Y-m-d'),
+            'date_to' => $end->format('Y-m-d'),
+            'lead_scope_label' => $scopeLabel,
+            'context' => $exportedBy,
+            'daily_rows' => $dailyRows,
+            'leads' => $leads,
+            'activities' => $activities,
+        ];
+
+        $spreadsheet = $excel->buildSpreadsheet($payload);
+        $filename = 'تقرير-يومي-مبيعات-'.now()->format('Y-m-d').'-موظف-'.$rep->id.'.xlsx';
+
+        return response()->streamDownload(function () use ($excel, $spreadsheet) {
+            $excel->writeToOutput($spreadsheet);
+            $spreadsheet->disconnectWorksheets();
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    /**
      * @return \Illuminate\Database\Eloquent\Builder<\App\Models\SalesLead>
      */
     private function leadsTouchedInPeriodQuery(int $userId, Carbon $start, Carbon $end)
@@ -253,6 +354,36 @@ class SalesReportController extends Controller
                     });
             })
             ->orderByDesc('updated_at');
+    }
+
+    /**
+     * فلترة Leads لتقارير أعمال الموظف.
+     *
+     * - touched: أي Lead “ذو صلة” بالفترة (إنشاء/تحديث/إغلاق/نشاط)
+     * - new: Leads أنشأها الموظف داخل الفترة
+     * - transferred_from_admin: Leads مسندة للموظف ولكن لم ينشئها هو (محولة/قادمة من الإدارة أو مصدر آخر)
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<\App\Models\SalesLead>
+     */
+    private function leadsScopeQuery(int $userId, Carbon $start, Carbon $end, string $scope)
+    {
+        return match ($scope) {
+            'new' => SalesLead::query()
+                ->forAssignee($userId)
+                ->where('created_by', $userId)
+                ->whereBetween('created_at', [$start, $end])
+                ->orderByDesc('created_at'),
+
+            'transferred_from_admin' => SalesLead::query()
+                ->forAssignee($userId)
+                ->where(function ($q) use ($userId) {
+                    $q->whereNull('created_by')->orWhere('created_by', '!=', $userId);
+                })
+                ->whereBetween('created_at', [$start, $end])
+                ->orderByDesc('created_at'),
+
+            default => $this->leadsTouchedInPeriodQuery($userId, $start, $end),
+        };
     }
 
     /**
