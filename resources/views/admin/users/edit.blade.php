@@ -129,6 +129,18 @@
                                 </select>
                                 @error('is_active')<p class="mt-1.5 text-xs text-rose-600 font-medium">{{ $message }}</p>@enderror
                             </div>
+                            @if(isset($branches) && $branches->isNotEmpty())
+                            <div class="space-y-1">
+                                <label for="branch_id" class="block text-xs font-semibold text-slate-700 mb-2">الفرع</label>
+                                <select name="branch_id" id="branch_id" class="w-full rounded-xl border-2 border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all cursor-pointer">
+                                    <option value="">— غير محدد (يُستخدم الفرع الافتراضي) —</option>
+                                    @foreach($branches as $b)
+                                        <option value="{{ $b->id }}" {{ (string) old('branch_id', $user->branch_id ?? '') === (string) $b->id ? 'selected' : '' }}>{{ $b->name }} — {{ $b->slug }}</option>
+                                    @endforeach
+                                </select>
+                                @error('branch_id')<p class="mt-1.5 text-xs text-rose-600 font-medium">{{ $message }}</p>@enderror
+                            </div>
+                            @endif
                         </div>
                     </div>
                     <div class="rounded-xl border border-slate-200 bg-white p-6 space-y-4">

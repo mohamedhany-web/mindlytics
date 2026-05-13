@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AssignsDefaultBranchOnCreate;
+use App\Models\Concerns\QueriesByBranch;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Invoice extends Model
 {
-    use HasFactory;
+    use AssignsDefaultBranchOnCreate, HasFactory, QueriesByBranch;
 
     protected static function booted()
     {
@@ -20,6 +22,7 @@ class Invoice extends Model
     }
 
     protected $fillable = [
+        'branch_id',
         'invoice_number',
         'user_id',
         'type',
@@ -49,6 +52,11 @@ class Invoice extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function payments()

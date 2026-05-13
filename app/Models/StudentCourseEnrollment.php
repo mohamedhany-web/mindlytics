@@ -2,12 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AssignsDefaultBranchOnCreate;
+use App\Models\Concerns\QueriesByBranch;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class StudentCourseEnrollment extends Model
 {
+    use AssignsDefaultBranchOnCreate, QueriesByBranch;
+
     protected $fillable = [
+        'branch_id',
         'user_id',
         'advanced_course_id',
         'enrolled_at',
@@ -37,6 +42,11 @@ class StudentCourseEnrollment extends Model
     public function student(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     /**

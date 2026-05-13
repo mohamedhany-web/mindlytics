@@ -54,6 +54,46 @@
             </li>
 
             @php
+                $branchesMenuOpen = request()->routeIs('admin.branches.*');
+            @endphp
+            <li x-data="{ open: {{ $branchesMenuOpen ? 'true' : 'false' }} }">
+                <button type="button" @click="open = !open"
+                        class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-code-branch w-5 text-amber-400 group-hover:text-white"></i>
+                        <span class="font-semibold text-start leading-snug">الفروع والامتداد<br><span class="text-xs font-normal text-slate-500 group-hover:text-slate-300">فروع الأكاديمية والدومينات</span></span>
+                    </div>
+                    <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400 shrink-0" :class="open ? 'rotate-180' : ''"></i>
+                </button>
+                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-amber-700/40 pr-2">
+                    <li>
+                        <a href="{{ route('admin.branches.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.branches.index') || request()->routeIs('admin.branches.show') || request()->routeIs('admin.branches.edit') ? 'bg-amber-600/30 text-white font-semibold border-r-2 border-amber-400' : '' }}">
+                            <i class="fas fa-list w-4"></i>
+                            <span>قائمة الفروع</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.branches.create') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.branches.create') ? 'bg-amber-600/30 text-white font-semibold border-r-2 border-amber-400' : '' }}">
+                            <i class="fas fa-plus w-4"></i>
+                            <span>إضافة فرع</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.branches.rollout-plan') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.branches.rollout-plan') ? 'bg-amber-600/30 text-white font-semibold border-r-2 border-amber-400' : '' }}">
+                            <i class="fas fa-book-open w-4"></i>
+                            <span>خطة التوسع (المستند)</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @php
                 $mobileAppMenuOpen = request()->routeIs('admin.mobile-app.*') || request()->routeIs('admin.practice.*');
             @endphp
             <li x-data="{ open: {{ $mobileAppMenuOpen ? 'true' : 'false' }} }">

@@ -2,14 +2,45 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\QueriesByBranch;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class WalletTransaction extends Model
 {
-    use HasFactory;
+    use HasFactory, QueriesByBranch;
+
+    protected static function booted(): void
+    {
+        static::creating(function (WalletTransaction $walletTransaction): void {
+            if ($walletTransaction->branch_id !== null && $walletTransaction->branch_id !== '') {
+                return;
+            }
+            if ($walletTransaction->wallet_id) {
+                $bid = Wallet::query()->whereKey($walletTransaction->wallet_id)->value('branch_id');
+                if ($bid !== null) {
+                    $walletTransaction->branch_id = $bid;
+
+                    return;
+                }
+            }
+            if ($walletTransaction->payment_id) {
+                $bid = Payment::query()->whereKey($walletTransaction->payment_id)->value('branch_id');
+                if ($bid !== null) {
+                    $walletTransaction->branch_id = $bid;
+
+                    return;
+                }
+            }
+            $default = Branch::defaultAssignableId();
+            if ($default !== null) {
+                $walletTransaction->branch_id = $default;
+            }
+        });
+    }
 
     protected $fillable = [
+        'branch_id',
         'wallet_id',
         'payment_id',
         'transaction_id',
@@ -36,6 +67,11 @@ class WalletTransaction extends Model
     public function wallet()
     {
         return $this->belongsTo(Wallet::class);
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     /**

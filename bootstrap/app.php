@@ -15,6 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Security Headers - يجب أن يكون أول middleware
         $middleware->append(\App\Http\Middleware\SecurityHeadersMiddleware::class);
         
+        // بعد SecurityHeaders؛ قبل بقية مجموعة web ليكون الفرع متاحاً في كل الطلبات العامة.
+        $middleware->prependToGroup('web', \App\Http\Middleware\ResolveBranchFromHost::class);
+
         // تحديد لغة الموقع من ?lang= أو الجلسة (لجميع الصفحات)
         $middleware->appendToGroup('web', \App\Http\Middleware\SetLocale::class);
         
@@ -46,6 +49,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'moderator.employee' => \App\Http\Middleware\EnsureModeratorEmployee::class,
             'api.student' => \App\Http\Middleware\EnsureApiStudent::class,
             'api.instructor' => \App\Http\Middleware\EnsureApiInstructor::class,
+            'branch.office' => \App\Http\Middleware\BranchOfficePanel::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AdvancedCourse;
 use App\Models\AcademicYear;
 use App\Models\AcademicSubject;
+use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -152,6 +153,9 @@ class AdvancedCourseController extends Controller
             ->unique()
             ->values();
 
+        $branches = Branch::query()->whereNull('deleted_at')->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'slug']);
+        $defaultBranchId = Branch::defaultAssignableId();
+
         return view('admin.advanced-courses.create', compact(
             'trackOptions',
             'selectedTrack',
@@ -160,7 +164,9 @@ class AdvancedCourseController extends Controller
             'languages',
             'frameworks',
             'categories',
-            'skills'
+            'skills',
+            'branches',
+            'defaultBranchId'
         ));
     }
 
@@ -217,6 +223,7 @@ class AdvancedCourseController extends Controller
             'ends_at' => 'nullable|date|after_or_equal:starts_at',
             'is_active' => 'boolean',
             'is_featured' => 'boolean',
+            'branch_id' => 'nullable|exists:branches,id',
         ], [
             'title.required' => 'عنوان الكورس مطلوب',
             'academic_year_id.exists' => 'المسار التعليمي المحدد غير موجود',
@@ -282,6 +289,7 @@ class AdvancedCourseController extends Controller
             : null;
         $data['title_en'] = $request->filled('title_en') ? trim((string) $data['title_en']) : null;
         $data['description_en'] = $request->filled('description_en') ? trim((string) $data['description_en']) : null;
+        $data['branch_id'] = $request->filled('branch_id') ? (int) $request->input('branch_id') : null;
 
         if ($request->hasFile('thumbnail')) {
             $data['thumbnail'] = $request->file('thumbnail')->store('courses', 'public');
@@ -391,6 +399,8 @@ class AdvancedCourseController extends Controller
         }
         $selectedSkills = is_array($selectedSkills) ? $selectedSkills : [];
 
+        $branches = Branch::query()->whereNull('deleted_at')->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'slug']);
+
         return view('admin.advanced-courses.edit', compact(
             'advancedCourse',
             'instructors',
@@ -400,7 +410,8 @@ class AdvancedCourseController extends Controller
             'frameworks',
             'categories',
             'trackOptions',
-            'selectedSkills'
+            'selectedSkills',
+            'branches'
         ));
     }
 
@@ -443,6 +454,7 @@ class AdvancedCourseController extends Controller
             'ends_at' => 'nullable|date|after_or_equal:starts_at',
             'is_active' => 'boolean',
             'is_featured' => 'boolean',
+            'branch_id' => 'nullable|exists:branches,id',
         ], [
             'title.required' => 'عنوان الكورس مطلوب',
             'academic_year_id.exists' => 'المسار التعليمي المحدد غير موجود',
@@ -458,6 +470,7 @@ class AdvancedCourseController extends Controller
             'title_en',
             'academic_year_id',
             'academic_subject_id',
+            'branch_id',
             'description',
             'description_en',
             'video_url',
@@ -494,6 +507,7 @@ class AdvancedCourseController extends Controller
         // المسار ومجموعة المهارات اختياريان في التعديل
         $data['academic_year_id'] = $request->filled('academic_year_id') ? $data['academic_year_id'] : null;
         $data['academic_subject_id'] = $request->filled('academic_subject_id') ? $data['academic_subject_id'] : null;
+        $data['branch_id'] = $request->filled('branch_id') ? (int) $data['branch_id'] : null;
 
         if ($request->hasFile('thumbnail')) {
             $data['thumbnail'] = $request->file('thumbnail')->store('courses', 'public');

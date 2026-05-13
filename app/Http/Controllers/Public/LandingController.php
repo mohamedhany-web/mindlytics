@@ -10,6 +10,7 @@ use App\Models\LessonProgress;
 use App\Models\OfflineCourse;
 use App\Models\PopupAd;
 use App\Models\User;
+use App\Support\BranchContext;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -35,13 +36,26 @@ class LandingController extends Controller
         // نفس مسارات صفحة المسارات التعليمية بكل بياناتها (سعر المسار المستقل، عدد الكورسات، الصورة، إلخ)
         $landingPaths = $this->getPublicLearningPaths(12);
 
-        $statsLearners = User::query()
-            ->where('role', 'student')
-            ->where('is_active', true)
-            ->count();
+        $branch = app(BranchContext::class)->branch;
 
-        $statsCourses = AdvancedCourse::query()->where('is_active', true)->count()
-            + OfflineCourse::query()->where('is_active', true)->where('status', 'active')->count();
+        $statsLearnersQuery = User::query()
+            ->where('role', 'student')
+            ->where('is_active', true);
+        if ($branch) {
+            $statsLearnersQuery->where('branch_id', $branch->id);
+        }
+        $statsLearners = $statsLearnersQuery->count();
+
+        $statsCoursesAdvanced = AdvancedCourse::query()->where('is_active', true);
+        if ($branch) {
+            $statsCoursesAdvanced->where('branch_id', $branch->id);
+        }
+        $statsCourses = $statsCoursesAdvanced->count();
+        $statsCourses += OfflineCourse::query()
+            ->where('is_active', true)
+            ->where('status', 'active')
+            ->visibleOnCurrentHost()
+            ->count();
 
         // خانة الشهادات في الصفحة الرئيسية تعرض نفس عدد الطلاب النشطين (حسب الطلب)
         $statsCertificates = $statsLearners;
@@ -67,11 +81,16 @@ class LandingController extends Controller
     {
         $query = AcademicYear::where('is_active', true)
             ->with(['linkedCourses' => function ($q) {
-                $q->where('is_active', true);
+                $q->where('is_active', true)->visibleOnCurrentHost();
             }, 'academicSubjects' => function ($q) {
                 $q->where('is_active', true);
             }])
-            ->withCount(['linkedCourses', 'academicSubjects'])
+            ->withCount([
+                'linkedCourses' => function ($q) {
+                    $q->where('is_active', true)->visibleOnCurrentHost();
+                },
+                'academicSubjects',
+            ])
             ->orderBy('order');
 
         if ($limit !== null) {
@@ -88,6 +107,7 @@ class LandingController extends Controller
                 if (!empty($subjectIds)) {
                     $subjectCourses = AdvancedCourse::where('is_active', true)
                         ->whereIn('academic_subject_id', $subjectIds)
+                        ->visibleOnCurrentHost()
                         ->get();
                 }
             }

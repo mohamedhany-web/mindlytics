@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdvancedCourse;
+use App\Models\User;
+use App\Support\BranchContext;
 use Illuminate\Http\Request;
 
 class PageController extends Controller
@@ -11,10 +14,21 @@ class PageController extends Controller
 
     public function about()
     {
+        $branch = app(BranchContext::class)->branch;
+
+        $coursesQuery = AdvancedCourse::query()->where('is_active', true);
+        $studentsQuery = User::query()->where('role', 'student')->where('is_active', true);
+        $instructorsQuery = User::query()->where('role', 'instructor')->where('is_active', true);
+        if ($branch) {
+            $coursesQuery->where('branch_id', $branch->id);
+            $studentsQuery->where('branch_id', $branch->id);
+            $instructorsQuery->where('branch_id', $branch->id);
+        }
+
         $stats = [
-            'courses' => \App\Models\AdvancedCourse::where('is_active', true)->count(),
-            'students' => \App\Models\User::where('role', 'student')->where('is_active', true)->count(),
-            'instructors' => \App\Models\User::where('role', 'instructor')->where('is_active', true)->count(),
+            'courses' => $coursesQuery->count(),
+            'students' => $studentsQuery->count(),
+            'instructors' => $instructorsQuery->count(),
         ];
         
         return view('public.about', compact('stats'));
@@ -102,10 +116,17 @@ class PageController extends Controller
     {
         // جلب الباقات النشطة من قاعدة البيانات
         $packages = \App\Models\Package::active()
+            ->whereHas('courses', function ($q) {
+                $q->where('advanced_courses.is_active', true)->visibleOnCurrentHost();
+            })
             ->with(['courses' => function($query) {
-                $query->where('is_active', true);
+                $query->where('is_active', true)->visibleOnCurrentHost();
             }])
-            ->withCount('courses')
+            ->withCount([
+                'courses' => function ($q) {
+                    $q->where('advanced_courses.is_active', true)->visibleOnCurrentHost();
+                },
+            ])
             ->orderBy('is_popular', 'desc') // الباقات الشائعة أولاً
             ->orderBy('is_featured', 'desc') // ثم المميزة
             ->orderBy('order')
@@ -158,7 +179,7 @@ class PageController extends Controller
             ->where('is_active', true)
             ->where('status', 'active')
             ->whereHas('course', function ($query) {
-                $query->where('is_active', true)->where('status', 'active');
+                $query->where('is_active', true)->where('status', 'active')->visibleOnCurrentHost();
             })
             ->with(['course.instructor', 'locationModel'])
             ->latest('id')
@@ -170,7 +191,7 @@ class PageController extends Controller
             ->where('is_active', true)
             ->where('status', 'active')
             ->whereHas('course', function ($query) {
-                $query->where('is_active', true)->where('status', 'active');
+                $query->where('is_active', true)->where('status', 'active')->visibleOnCurrentHost();
             })
             ->with(['course.instructor', 'locationModel'])
             ->latest('id')

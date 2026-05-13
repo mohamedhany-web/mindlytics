@@ -54,6 +54,18 @@
                         @error('instructor_id')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                     </div>
 
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">الفرع</label>
+                        <select name="branch_id"
+                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                            <option value="">الافتراضي (من المدرب أو إعدادات المنصة)</option>
+                            @foreach($branches ?? [] as $branch)
+                                <option value="{{ $branch->id }}" {{ (string) old('branch_id', $defaultBranchId ?? '') === (string) $branch->id ? 'selected' : '' }}>{{ $branch->name }} @if($branch->slug) ({{ $branch->slug }}) @endif</option>
+                            @endforeach
+                        </select>
+                        @error('branch_id')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+
                     <!-- المكان -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">المكان</label>

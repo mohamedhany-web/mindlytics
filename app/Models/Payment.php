@@ -2,14 +2,53 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\QueriesByBranch;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Payment extends Model
 {
-    use HasFactory;
+    use HasFactory, QueriesByBranch;
+
+    protected static function booted(): void
+    {
+        static::creating(function (Payment $payment): void {
+            if ($payment->branch_id !== null && $payment->branch_id !== '') {
+                return;
+            }
+            if ($payment->user_id) {
+                $bid = User::query()->whereKey($payment->user_id)->value('branch_id');
+                if ($bid !== null) {
+                    $payment->branch_id = $bid;
+
+                    return;
+                }
+            }
+            if ($payment->invoice_id) {
+                $bid = Invoice::query()->whereKey($payment->invoice_id)->value('branch_id');
+                if ($bid !== null) {
+                    $payment->branch_id = $bid;
+
+                    return;
+                }
+            }
+            if ($payment->order_id) {
+                $bid = Order::query()->whereKey($payment->order_id)->value('branch_id');
+                if ($bid !== null) {
+                    $payment->branch_id = $bid;
+
+                    return;
+                }
+            }
+            $default = Branch::defaultAssignableId();
+            if ($default !== null) {
+                $payment->branch_id = $default;
+            }
+        });
+    }
 
     protected $fillable = [
+        'branch_id',
         'payment_number',
         'invoice_id',
         'order_id',
@@ -43,6 +82,11 @@ class Payment extends Model
     public function invoice()
     {
         return $this->belongsTo(Invoice::class);
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function order()

@@ -233,7 +233,11 @@ class AuthController extends Controller
             if ($user->role === 'super_admin' || $user->role === 'admin') {
                 return redirect()->intended(route('admin.dashboard'));
             }
-            
+
+            if ($user->isBranchManager()) {
+                return redirect()->intended(route('branch.office.dashboard'));
+            }
+
             if ($user->isInstructor()) {
                 return redirect()->intended(route('instructor.dashboard'));
             }

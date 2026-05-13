@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Concerns\QueriesByBranch;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
@@ -10,7 +11,7 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, QueriesByBranch;
 
     /**
      * The attributes that are mass assignable.
@@ -59,6 +60,7 @@ class User extends Authenticatable
         'two_factor_secret',
         'two_factor_recovery_codes',
         'two_factor_confirmed_at',
+        'branch_id',
     ];
 
     /**
@@ -71,6 +73,22 @@ class User extends Authenticatable
         'remember_token',
         'two_factor_secret',
     ];
+
+    /**
+     * ضمان ربط المستخدم بفرع افتراضي عند الإنشاء إن لم يُحدَّد branch_id.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (User $user): void {
+            if ($user->branch_id !== null) {
+                return;
+            }
+            $branchId = Branch::defaultAssignableId();
+            if ($branchId !== null) {
+                $user->branch_id = $branchId;
+            }
+        });
+    }
 
     /**
      * Get the attributes that should be cast.
@@ -180,7 +198,7 @@ class User extends Authenticatable
      */
     public function requiresTwoFactor(): bool
     {
-        return in_array($this->role, ['super_admin', 'admin', 'instructor'], true);
+        return in_array($this->role, ['super_admin', 'admin', 'instructor', 'branch_manager'], true);
     }
 
     /**
@@ -197,6 +215,14 @@ class User extends Authenticatable
     public function hasTwoFactorEnabled(): bool
     {
         return !empty($this->two_factor_secret) && $this->two_factor_confirmed_at !== null;
+    }
+
+    /**
+     * علاقة مع الفرع (الأكاديمية / الدولة)
+     */
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     /**
@@ -355,6 +381,14 @@ class User extends Authenticatable
     public function wallet()
     {
         return $this->hasOne(Wallet::class);
+    }
+
+    /**
+     * مدير فرع (لوحة branch-office)
+     */
+    public function isBranchManager(): bool
+    {
+        return $this->role === 'branch_manager';
     }
 
     /**

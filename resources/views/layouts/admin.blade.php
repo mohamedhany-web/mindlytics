@@ -471,7 +471,11 @@
     <div class="flex min-h-screen lg:h-screen overflow-x-hidden" style="margin: 0 !important; padding: 0 !important; margin-top: 0 !important; padding-top: 0 !important; top: 0 !important; position: relative !important; isolation: isolate !important;">
         <!-- Sidebar - Fixed and isolated -->
         <aside class="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:right-0 lg:z-20 flex-shrink-0 inset-y-0" style="position: fixed !important; z-index: 20 !important; isolation: isolate !important;">
-            @include('layouts.admin-sidebar')
+            @if(request()->routeIs('branch.office.*'))
+                @include('layouts.branch-office-sidebar')
+            @else
+                @include('layouts.admin-sidebar')
+            @endif
         </aside>
 
         <!-- Mobile sidebar -->
@@ -488,7 +492,7 @@
              style="display: none;"
              x-bind:style="sidebarOpen ? 'display: block !important;' : 'display: none !important;'">
             <div class="fixed inset-0 bg-black/60" @click="sidebarOpen = false" style="transition: opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);"></div>
-            <div class="absolute inset-y-0 right-0 flex flex-col w-64 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl transform transition-transform duration-150 ease-out border-l border-slate-700/50"
+                <div class="absolute inset-y-0 right-0 flex flex-col w-64 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl transform transition-transform duration-150 ease-out border-l border-slate-700/50"
                  style="will-change: transform; backface-visibility: hidden; transform: translate3d(0, 0, 0);"
                  :class="sidebarOpen ? 'translate-x-0' : 'translate-x-full'">
                 <div class="absolute top-4 left-4 z-50">
@@ -497,7 +501,11 @@
                     </button>
                 </div>
                 <!-- Sidebar content for mobile -->
-                @include('layouts.admin-sidebar')
+                @if(request()->routeIs('branch.office.*'))
+                    @include('layouts.branch-office-sidebar')
+                @else
+                    @include('layouts.admin-sidebar')
+                @endif
             </div>
         </div>
 

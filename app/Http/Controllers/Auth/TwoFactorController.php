@@ -105,6 +105,9 @@ class TwoFactorController extends Controller
         if ($user->role === 'super_admin' || $user->role === 'admin') {
             return redirect()->intended(route('admin.dashboard'));
         }
+        if ($user->isBranchManager()) {
+            return redirect()->intended(route('branch.office.dashboard'));
+        }
         if ($user->isInstructor()) {
             return redirect()->intended(route('instructor.courses.index'));
         }
@@ -118,7 +121,7 @@ class TwoFactorController extends Controller
     {
         $user = $request->user();
         if (!$user->requiresTwoFactor()) {
-            abort(403, 'المصادقة الثنائية متاحة للإدمن فقط.');
+            abort(403, 'المصادقة الثنائية متاحة للإدمن والمدربين ومديري الفروع فقط.');
         }
         if ($user->hasTwoFactorEnabled()) {
             return redirect()->route($this->getDashboardRoute($user))
@@ -210,6 +213,9 @@ class TwoFactorController extends Controller
         }
         if ($user->role === 'super_admin' || $user->role === 'admin') {
             return 'admin.dashboard';
+        }
+        if ($user->isBranchManager()) {
+            return 'branch.office.dashboard';
         }
         if ($user->isInstructor()) {
             return 'instructor.courses.index';

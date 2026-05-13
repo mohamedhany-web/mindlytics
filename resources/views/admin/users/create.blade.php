@@ -147,6 +147,21 @@
                                 </select>
                                 @error('is_active')<p class="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1"><i class="fas fa-exclamation-circle"></i>{{ $message }}</p>@enderror
                             </div>
+                            @if(isset($branches) && $branches->isNotEmpty())
+                            <div class="space-y-1 md:col-span-2">
+                                <label for="branch_id" class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                                    <i class="fas fa-code-branch text-amber-600 text-sm"></i>
+                                    الفرع
+                                </label>
+                                <select name="branch_id" id="branch_id" class="w-full rounded-xl border-2 border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all hover:border-slate-400 cursor-pointer">
+                                    <option value="">افتراضي (الفرع الرئيسي أو الأقدم)</option>
+                                    @foreach($branches as $b)
+                                        <option value="{{ $b->id }}" {{ (string) old('branch_id', '') === (string) $b->id ? 'selected' : '' }}>{{ $b->name }} — {{ $b->slug }}</option>
+                                    @endforeach
+                                </select>
+                                @error('branch_id')<p class="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1"><i class="fas fa-exclamation-circle"></i>{{ $message }}</p>@enderror
+                            </div>
+                            @endif
                         </div>
                         <div class="rounded-xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-blue-50 p-5 text-sm text-indigo-900 shadow-sm">
                             <h4 class="font-bold mb-3 flex items-center gap-2 text-base">

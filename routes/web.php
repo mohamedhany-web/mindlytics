@@ -264,7 +264,7 @@ Route::get('/media/{media}', [\App\Http\Controllers\Public\MediaController::clas
 
 // صفحة الكورسات العامة
 Route::get('/courses', function () {
-    $coursesQuery = \App\Models\AdvancedCourse::where('is_active', true);
+    $coursesQuery = \App\Models\AdvancedCourse::where('is_active', true)->visibleOnCurrentHost();
     
     // جلب الكورسات مع العلاقات
     $coursesCollection = $coursesQuery
@@ -292,12 +292,19 @@ Route::get('/courses', function () {
         ];
     })->values()->toArray();
     
-    // جلب الباقات النشطة
+    // جلب الباقات النشطة (تظهر فقط إن وُجد بها كورس نشط يخص الفرع الحالي عند وجود فرع)
     $packages = \App\Models\Package::active()
+        ->whereHas('courses', function ($q) {
+            $q->where('advanced_courses.is_active', true)->visibleOnCurrentHost();
+        })
         ->with(['courses' => function($query) {
-            $query->where('is_active', true);
+            $query->where('is_active', true)->visibleOnCurrentHost();
         }])
-        ->withCount('courses')
+        ->withCount([
+            'courses' => function ($q) {
+                $q->where('advanced_courses.is_active', true)->visibleOnCurrentHost();
+            },
+        ])
         ->orderBy('is_featured', 'desc')
         ->orderBy('is_popular', 'desc')
         ->orderBy('order')
@@ -321,6 +328,7 @@ Route::get('/course/{courseId}/preview-watch-url/{lessonId}', [\App\Http\Control
 Route::get('/course/{id}', function ($id) {
     $course = \App\Models\AdvancedCourse::where('id', $id)
         ->where('is_active', true)
+        ->visibleOnCurrentHost()
         ->with(['academicSubject', 'academicYear', 'instructor'])
         ->withCount('lessons')
         ->firstOrFail();
@@ -351,6 +359,7 @@ Route::get('/course/{id}', function ($id) {
 
     // كورسات ذات صلة
     $relatedCourses = \App\Models\AdvancedCourse::where('is_active', true)
+        ->visibleOnCurrentHost()
         ->where('id', '!=', $course->id)
         ->where(function($query) use ($course) {
             $query->where('level', $course->level)
@@ -504,8 +513,12 @@ Route::post('/learning-path/{slug}/enroll', [\App\Http\Controllers\Public\Learni
 Route::get('/package/{slug}', function ($slug) {
     $package = \App\Models\Package::where('slug', $slug)
         ->where('is_active', true)
+        ->whereHas('courses', function ($q) {
+            $q->where('advanced_courses.is_active', true)->visibleOnCurrentHost();
+        })
         ->with(['courses' => function($query) {
             $query->where('is_active', true)
+                  ->visibleOnCurrentHost()
                   ->with(['academicSubject', 'academicYear'])
                   ->withCount('lessons');
         }])
@@ -514,7 +527,14 @@ Route::get('/package/{slug}', function ($slug) {
     // باقات ذات صلة
     $relatedPackages = \App\Models\Package::where('is_active', true)
         ->where('id', '!=', $package->id)
-        ->withCount('courses')
+        ->whereHas('courses', function ($q) {
+            $q->where('advanced_courses.is_active', true)->visibleOnCurrentHost();
+        })
+        ->withCount([
+            'courses' => function ($q) {
+                $q->where('advanced_courses.is_active', true)->visibleOnCurrentHost();
+            },
+        ])
         ->limit(3)
         ->get();
     
@@ -556,6 +576,15 @@ Route::middleware(['auth'])->prefix('2fa')->name('two-factor.')->group(function 
 // مسارات لوحة التحكم - محمية بالتأكد من تسجيل الدخول ومنع الجلسات المتزامنة
 Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // لوحة مدير الفرع (بيانات الفرع المرتبط بحسابه فقط)
+    Route::prefix('branch-office')->name('branch.office.')->middleware(['role:branch_manager', 'branch.office'])->group(function () {
+        Route::get('/', function () {
+            return redirect()->route('branch.office.dashboard');
+        });
+        Route::get('/dashboard', [\App\Http\Controllers\Branch\BranchDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/users', [\App\Http\Controllers\Branch\BranchUsersController::class, 'index'])->name('users');
+    });
 
     // API لإشعارات الناف بار (تعمل للطالب/المدرب/الموظف)
     Route::prefix('api/nav-notifications')->name('nav-notifications.')->group(function () {
@@ -882,6 +911,12 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
     // مسارات الإدارة - محمية بالـ role middleware للإداريين فقط
     Route::prefix('admin')->name('admin.')->middleware(['role:admin|super_admin'])->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Admin\AdminController::class, 'dashboard'])->name('dashboard');
+
+        Route::get('branches/rollout-plan', [\App\Http\Controllers\Admin\BranchController::class, 'rolloutPlan'])->name('branches.rollout-plan');
+        Route::post('branches/{branch}/branch-managers', [\App\Http\Controllers\Admin\BranchController::class, 'storeBranchManager'])
+            ->middleware('throttle:10,1')
+            ->name('branches.branch-managers.store');
+        Route::resource('branches', \App\Http\Controllers\Admin\BranchController::class);
 
         Route::prefix('support-tickets')->name('support-tickets.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\SupportTicketsController::class, 'index'])->name('index');
