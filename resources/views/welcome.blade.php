@@ -2561,16 +2561,7 @@
             </div>
         </div>
 
-        @php
-            $featuredCourses = \App\Models\AdvancedCourse::where('is_active', true)
-                ->where('is_featured', true)
-                ->with(['academicSubject', 'instructor'])
-                ->withCount('lessons')
-                ->limit(12)
-                ->get();
-        @endphp
-
-        @if($featuredCourses->count() > 0)
+        @if(isset($featuredCourses) && $featuredCourses->count() > 0)
             <div class="featured-courses-scroll w-full">
                 <div id="featured-courses-track" class="flex gap-4 lg:gap-6 overflow-x-auto overflow-y-hidden pb-4 scroll-smooth snap-x snap-mandatory scrollbar-featured" style="scrollbar-gutter: stable;">
                     @foreach($featuredCourses as $index => $course)

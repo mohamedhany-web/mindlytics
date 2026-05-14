@@ -192,9 +192,13 @@ class BranchController extends Controller
             $plainPassword = Str::password(14, true, true, true, false);
         }
 
+        // رقم هاتف وهمي فريد: عمود users.phone مطلوب وغالباً UNIQUE في MySQL، ولا يُجمع في نموذج مدير الفرع.
+        $phone = 'bm'.Str::lower(Str::ulid());
+
         User::query()->create([
             'name' => $validated['name'],
             'email' => $validated['email'],
+            'phone' => $phone,
             'password' => $plainPassword,
             'role' => 'branch_manager',
             'branch_id' => $branch->id,

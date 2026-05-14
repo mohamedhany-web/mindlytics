@@ -63,13 +63,25 @@ class LandingController extends Controller
         // إحصائية أهم للزائر: عدد المسارات التعليمية النشطة (Academic Years)
         $statsLearningPaths = AcademicYear::query()->where('is_active', true)->visibleOnCurrentHost()->count();
 
+        // الكورسات المميزة على الصفحة الرئيسية: نفس فلترة النطاق الفرعي (لا تعرض كورسات المركز على sudan.*)
+        $featuredCourses = AdvancedCourse::query()
+            ->where('is_active', true)
+            ->where('is_featured', true)
+            ->visibleOnCurrentHost()
+            ->with(['academicSubject', 'instructor'])
+            ->withCount('lessons')
+            ->orderByDesc('created_at')
+            ->limit(12)
+            ->get();
+
         return view('welcome', compact(
             'popupAd',
             'landingPaths',
             'statsLearners',
             'statsCourses',
             'statsCertificates',
-            'statsLearningPaths'
+            'statsLearningPaths',
+            'featuredCourses'
         ));
     }
 
