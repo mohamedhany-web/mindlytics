@@ -587,6 +587,12 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         });
         Route::get('/dashboard', [\App\Http\Controllers\Branch\BranchDashboardController::class, 'index'])->name('dashboard');
         Route::get('/users', [\App\Http\Controllers\Branch\BranchUsersController::class, 'index'])->name('users');
+        Route::get('/orders', [\App\Http\Controllers\Branch\BranchOrdersController::class, 'index'])->name('orders');
+        Route::get('/courses-online', [\App\Http\Controllers\Branch\BranchOnlineCoursesController::class, 'index'])->name('courses-online');
+        Route::get('/courses-offline', [\App\Http\Controllers\Branch\BranchOfflineCoursesController::class, 'index'])->name('courses-offline');
+        Route::get('/learning-paths', [\App\Http\Controllers\Branch\BranchLearningPathsController::class, 'index'])->name('learning-paths');
+        Route::get('/invoices', [\App\Http\Controllers\Branch\BranchInvoicesController::class, 'index'])->name('invoices');
+        Route::get('/payments', [\App\Http\Controllers\Branch\BranchPaymentsController::class, 'index'])->name('payments');
     });
 
     // API لإشعارات الناف بار (تعمل للطالب/المدرب/الموظف)

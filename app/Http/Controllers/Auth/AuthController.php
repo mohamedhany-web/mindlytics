@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\TwoFactorCodeMail;
 use App\Models\TwoFactorLog;
 use App\Models\User;
+use App\Support\BranchContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -311,7 +312,9 @@ class AuthController extends Controller
             return back()->withErrors(['phone' => 'رقم الهاتف مسجل مسبقاً'])->withInput()->with(compact('phoneCountries', 'defaultCountry'));
         }
 
-        // التسجيل متاح فقط للطلاب
+        // التسجيل متاح فقط للطلاب — ربط الحساب بفرع الدومين عند التسجيل من موقع فرع (وإلا يبقى null فيُعيَّن الفرع الافتراضي في نموذج User)
+        $branchId = app(BranchContext::class)->id();
+
         $user = User::create([
             'name' => $request->name,
             'phone' => $fullPhone,
@@ -319,6 +322,7 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
             'role' => 'student', // فقط طالب
             'is_active' => true,
+            'branch_id' => $branchId,
         ]);
 
         // معالجة كود الإحالة في Queue لتقليل الضغط على السيرفر

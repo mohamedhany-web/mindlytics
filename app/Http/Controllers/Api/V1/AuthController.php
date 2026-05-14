@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\ApiUserResource;
 use App\Jobs\ProcessStudentRegistration;
 use App\Models\User;
+use App\Services\Branch\BranchResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -161,6 +162,8 @@ class AuthController extends Controller
             ], 422);
         }
 
+        $branchId = BranchResolver::fromHost($request->getHost())?->id;
+
         $user = User::create([
             'name' => $request->name,
             'phone' => $fullPhone,
@@ -168,6 +171,7 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
             'role' => 'student',
             'is_active' => true,
+            'branch_id' => $branchId,
         ]);
 
         $referral = $request->filled('referral_code')

@@ -9,20 +9,50 @@
             </div>
             <div class="min-w-0">
                 <h2 class="text-lg font-black text-white truncate">{{ $b->name ?? 'الفرع' }}</h2>
-                <p class="text-xs text-emerald-200/80 font-semibold">لوحة مدير الفرع</p>
+                <p class="text-xs text-emerald-200/80 font-semibold">لوحة إدارة الفرع</p>
             </div>
         </div>
     </div>
     <nav class="flex-1 p-4 overflow-y-auto space-y-1">
         <a href="{{ route('branch.office.dashboard') }}"
            class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-200 hover:bg-white/10 transition {{ request()->routeIs('branch.office.dashboard') ? 'bg-emerald-600/40 text-white font-semibold' : '' }}">
-            <i class="fas fa-chart-pie w-5 text-emerald-400"></i>
-            <span>لوحة الفرع</span>
+            <i class="fas fa-home w-5 text-emerald-400"></i>
+            <span>الرئيسية</span>
         </a>
         <a href="{{ route('branch.office.users') }}"
            class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-200 hover:bg-white/10 transition {{ request()->routeIs('branch.office.users') ? 'bg-emerald-600/40 text-white font-semibold' : '' }}">
             <i class="fas fa-users w-5 text-emerald-400"></i>
-            <span>مستخدمو الفرع</span>
+            <span>المستخدمون</span>
+        </a>
+        <a href="{{ route('branch.office.orders') }}"
+           class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-200 hover:bg-white/10 transition {{ request()->routeIs('branch.office.orders') ? 'bg-emerald-600/40 text-white font-semibold' : '' }}">
+            <i class="fas fa-shopping-cart w-5 text-emerald-400"></i>
+            <span>الطلبات</span>
+        </a>
+        <a href="{{ route('branch.office.courses-online') }}"
+           class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-200 hover:bg-white/10 transition {{ request()->routeIs('branch.office.courses-online') ? 'bg-emerald-600/40 text-white font-semibold' : '' }}">
+            <i class="fas fa-laptop-code w-5 text-emerald-400"></i>
+            <span>كورسات أونلاين</span>
+        </a>
+        <a href="{{ route('branch.office.courses-offline') }}"
+           class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-200 hover:bg-white/10 transition {{ request()->routeIs('branch.office.courses-offline') ? 'bg-emerald-600/40 text-white font-semibold' : '' }}">
+            <i class="fas fa-school w-5 text-emerald-400"></i>
+            <span>كورسات أوفلاين</span>
+        </a>
+        <a href="{{ route('branch.office.learning-paths') }}"
+           class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-200 hover:bg-white/10 transition {{ request()->routeIs('branch.office.learning-paths') ? 'bg-emerald-600/40 text-white font-semibold' : '' }}">
+            <i class="fas fa-route w-5 text-emerald-400"></i>
+            <span>مسارات التعلم</span>
+        </a>
+        <a href="{{ route('branch.office.invoices') }}"
+           class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-200 hover:bg-white/10 transition {{ request()->routeIs('branch.office.invoices') ? 'bg-emerald-600/40 text-white font-semibold' : '' }}">
+            <i class="fas fa-file-invoice-dollar w-5 text-emerald-400"></i>
+            <span>الفواتير</span>
+        </a>
+        <a href="{{ route('branch.office.payments') }}"
+           class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-200 hover:bg-white/10 transition {{ request()->routeIs('branch.office.payments') ? 'bg-emerald-600/40 text-white font-semibold' : '' }}">
+            <i class="fas fa-money-check-alt w-5 text-emerald-400"></i>
+            <span>المدفوعات</span>
         </a>
         <div class="pt-6 mt-6 border-t border-white/10">
             <a href="{{ url('/') }}" target="_blank" rel="noopener"
