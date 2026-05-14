@@ -54,7 +54,7 @@
             </li>
 
             @php
-                $branchesMenuOpen = request()->routeIs('admin.branches.*');
+                $branchesMenuOpen = request()->routeIs('admin.branches.*') || request()->routeIs('admin.branch-managers.*');
             @endphp
             <li x-data="{ open: {{ $branchesMenuOpen ? 'true' : 'false' }} }">
                 <button type="button" @click="open = !open"
@@ -80,6 +80,14 @@
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.branches.create') ? 'bg-amber-600/30 text-white font-semibold border-r-2 border-amber-400' : '' }}">
                             <i class="fas fa-plus w-4"></i>
                             <span>إضافة فرع</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.branch-managers.create') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.branch-managers.create') ? 'bg-amber-600/30 text-white font-semibold border-r-2 border-amber-400' : '' }}">
+                            <i class="fas fa-user-tie w-4"></i>
+                            <span>إضافة مدير فرع</span>
                         </a>
                     </li>
                     <li>

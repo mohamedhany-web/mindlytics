@@ -256,6 +256,7 @@ class CheckoutController extends Controller
         }
 
         $learningPath = AcademicYear::active()
+            ->visibleOnCurrentHost()
             ->get()
             ->first(fn ($year) => Str::slug($year->name) === $slug);
         if (!$learningPath) {
@@ -1244,6 +1245,7 @@ class CheckoutController extends Controller
 
         // البحث عن AcademicYear بالاسم (slug)
         $learningPath = AcademicYear::active()
+            ->visibleOnCurrentHost()
             ->get()
             ->first(function($year) use ($slug) {
                 return Str::slug($year->name) === $slug;
@@ -1303,6 +1305,7 @@ class CheckoutController extends Controller
 
         // البحث عن AcademicYear بالاسم (slug)
         $learningPath = AcademicYear::active()
+            ->visibleOnCurrentHost()
             ->get()
             ->first(function($year) use ($slug) {
                 return Str::slug($year->name) === $slug;
@@ -1426,6 +1429,7 @@ class CheckoutController extends Controller
 
         // البحث عن AcademicYear بالاسم (slug)
         $learningPath = AcademicYear::active()
+            ->visibleOnCurrentHost()
             ->get()
             ->first(function($year) use ($slug) {
                 return Str::slug($year->name) === $slug;

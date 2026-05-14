@@ -294,6 +294,7 @@ Route::get('/courses', function () {
     
     // جلب الباقات النشطة (تظهر فقط إن وُجد بها كورس نشط يخص الفرع الحالي عند وجود فرع)
     $packages = \App\Models\Package::active()
+        ->visibleOnCurrentHost()
         ->whereHas('courses', function ($q) {
             $q->where('advanced_courses.is_active', true)->visibleOnCurrentHost();
         })
@@ -513,6 +514,7 @@ Route::post('/learning-path/{slug}/enroll', [\App\Http\Controllers\Public\Learni
 Route::get('/package/{slug}', function ($slug) {
     $package = \App\Models\Package::where('slug', $slug)
         ->where('is_active', true)
+        ->visibleOnCurrentHost()
         ->whereHas('courses', function ($q) {
             $q->where('advanced_courses.is_active', true)->visibleOnCurrentHost();
         })
@@ -526,6 +528,7 @@ Route::get('/package/{slug}', function ($slug) {
     
     // باقات ذات صلة
     $relatedPackages = \App\Models\Package::where('is_active', true)
+        ->visibleOnCurrentHost()
         ->where('id', '!=', $package->id)
         ->whereHas('courses', function ($q) {
             $q->where('advanced_courses.is_active', true)->visibleOnCurrentHost();
@@ -913,6 +916,10 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Admin\AdminController::class, 'dashboard'])->name('dashboard');
 
         Route::get('branches/rollout-plan', [\App\Http\Controllers\Admin\BranchController::class, 'rolloutPlan'])->name('branches.rollout-plan');
+        Route::get('branch-managers/create', [\App\Http\Controllers\Admin\BranchController::class, 'createBranchManager'])->name('branch-managers.create');
+        Route::post('branch-managers', [\App\Http\Controllers\Admin\BranchController::class, 'storeBranchManagerGlobal'])
+            ->middleware('throttle:10,1')
+            ->name('branch-managers.store');
         Route::post('branches/{branch}/branch-managers', [\App\Http\Controllers\Admin\BranchController::class, 'storeBranchManager'])
             ->middleware('throttle:10,1')
             ->name('branches.branch-managers.store');

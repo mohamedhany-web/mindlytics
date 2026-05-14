@@ -15,6 +15,7 @@ class PortfolioController extends Controller
     public function index(Request $request)
     {
         $learningPaths = AcademicYear::where('is_active', true)
+            ->visibleOnCurrentHost()
             ->ordered()
             ->get(['id', 'name']);
 

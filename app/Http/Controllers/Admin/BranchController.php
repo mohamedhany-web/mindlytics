@@ -69,6 +69,50 @@ class BranchController extends Controller
             ->with('success', 'تم إنشاء الفرع بنجاح.');
     }
 
+    /**
+     * نموذج إنشاء مدير فرع من السايدبار (اختيار الفرع ثم البيانات).
+     */
+    public function createBranchManager(): View
+    {
+        $branches = Branch::query()
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug', 'is_active']);
+
+        return view('admin.branches.branch-managers-create', compact('branches'));
+    }
+
+    /**
+     * حفظ مدير فرع بعد اختيار الفرع من الصفحة العامة.
+     */
+    public function storeBranchManagerGlobal(Request $request): RedirectResponse
+    {
+        $validated = $request->validate(
+            array_merge(
+                ['branch_id' => 'required|exists:branches,id'],
+                $this->branchManagerUserRules()
+            ),
+            array_merge(
+                [
+                    'branch_id.required' => 'اختر الفرع.',
+                    'branch_id.exists' => 'الفرع المحدد غير موجود.',
+                ],
+                $this->branchManagerUserMessages()
+            )
+        );
+
+        $branch = Branch::query()->findOrFail($validated['branch_id']);
+
+        return $this->persistBranchManager(
+            $branch,
+            [
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'password' => $validated['password'] ?? null,
+            ]
+        );
+    }
+
     public function show(Branch $branch): View
     {
         $branch->loadCount([
@@ -130,17 +174,19 @@ class BranchController extends Controller
      */
     public function storeBranchManager(Request $request, Branch $branch): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email',
-            'password' => 'nullable|string|min:10|max:255',
-        ], [
-            'name.required' => 'اسم مدير الفرع مطلوب.',
-            'email.required' => 'البريد مطلوب.',
-            'email.unique' => 'هذا البريد مستخدم لمستخدم آخر.',
-            'password.min' => 'كلمة المرور يجب ألا تقل عن 10 أحرف إن أدخلتها.',
-        ]);
+        $validated = $request->validate(
+            $this->branchManagerUserRules(),
+            $this->branchManagerUserMessages()
+        );
 
+        return $this->persistBranchManager($branch, $validated);
+    }
+
+    /**
+     * @param  array{name: string, email: string, password?: string|null}  $validated
+     */
+    private function persistBranchManager(Branch $branch, array $validated): RedirectResponse
+    {
         $plainPassword = $validated['password'] ?? null;
         if ($plainPassword === null || $plainPassword === '') {
             $plainPassword = Str::password(14, true, true, true, false);
@@ -160,6 +206,31 @@ class BranchController extends Controller
             ->with('success', 'تم إنشاء حساب مدير الفرع.')
             ->with('generated_branch_manager_password', $plainPassword)
             ->with('generated_branch_manager_email', $validated['email']);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function branchManagerUserRules(): array
+    {
+        return [
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email',
+            'password' => 'nullable|string|min:10|max:255',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function branchManagerUserMessages(): array
+    {
+        return [
+            'name.required' => 'اسم مدير الفرع مطلوب.',
+            'email.required' => 'البريد مطلوب.',
+            'email.unique' => 'هذا البريد مستخدم لمستخدم آخر.',
+            'password.min' => 'كلمة المرور يجب ألا تقل عن 10 أحرف إن أدخلتها.',
+        ];
     }
 
     /**

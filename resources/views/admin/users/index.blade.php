@@ -218,12 +218,12 @@
                 </div>
                 <div>
                     <h3 class="text-lg font-black text-slate-900">البحث والفلترة</h3>
-                    <p class="text-xs text-slate-600 font-medium mt-1">ابحث وفلتر المستخدمين حسب الدور والحالة وفترة التسجيل</p>
+                    <p class="text-xs text-slate-600 font-medium mt-1">ابحث وفلتر حسب الدور والحالة والفرع وفترة التسجيل</p>
                 </div>
             </div>
         </div>
         <div class="px-6 py-5">
-            <form method="GET" action="{{ route('admin.users.index') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+            <form method="GET" action="{{ route('admin.users.index') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
                         <i class="fas fa-search text-blue-600 text-sm"></i>
@@ -283,13 +283,28 @@
                         <option value="0" {{ request('status') == '0' ? 'selected' : '' }}>غير نشط</option>
                     </select>
                 </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                        <i class="fas fa-code-branch text-blue-600 text-sm"></i>
+                        الفرع
+                    </label>
+                    <select name="branch_id"
+                            class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                        <option value="">كل الفروع (المركز يرى الكل)</option>
+                        @foreach($branches ?? [] as $b)
+                            <option value="{{ $b->id }}" {{ (string) request('branch_id') === (string) $b->id ? 'selected' : '' }}>
+                                {{ $b->name }} ({{ $b->slug }})@if(isset($centralAcademyBranchId) && (int) $b->id === (int) $centralAcademyBranchId) — أساسي @endif
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
                 <div class="flex items-end gap-2">
                     <button type="submit" 
                             class="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-4 py-2.5 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-200">
                         <i class="fas fa-search"></i>
                         <span>بحث</span>
                     </button>
-                    @if(request()->anyFilled(['search', 'role', 'status', 'date_from', 'date_to']))
+                    @if(request()->anyFilled(['search', 'role', 'status', 'date_from', 'date_to', 'branch_id']))
                     <a href="{{ route('admin.users.index') }}" 
                        class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors" 
                        title="مسح الفلتر">
@@ -331,6 +346,12 @@
                             <div class="flex items-center gap-2">
                                 <i class="fas fa-user-tag text-blue-600"></i>
                                 <span>الدور</span>
+                            </div>
+                        </th>
+                        <th class="px-6 py-4 text-right">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-code-branch text-blue-600"></i>
+                                <span>الفرع</span>
                             </div>
                         </th>
                         <th class="px-6 py-4 text-right">
@@ -390,6 +411,17 @@
                                 </span>
                             </td>
                             <td class="px-6 py-4">
+                                @if($user->branch)
+                                    <a href="{{ route('admin.branches.show', $user->branch) }}" class="text-sm font-semibold text-slate-900 hover:text-blue-600 hover:underline">{{ $user->branch->name }}</a>
+                                    <p class="text-xs font-mono text-slate-500 mt-0.5" dir="ltr">{{ $user->branch->slug }}</p>
+                                    @if(isset($centralAcademyBranchId) && (int) $user->branch_id === (int) $centralAcademyBranchId)
+                                        <span class="mt-1 inline-flex text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 border border-indigo-200">أساسي</span>
+                                    @endif
+                                @else
+                                    <span class="text-slate-400 text-sm">—</span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4">
                                 <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold {{ $user->is_active ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-rose-100 text-rose-700 border border-rose-200' }}">
                                     <span class="h-1.5 w-1.5 rounded-full bg-current"></span>
                                     {{ $user->is_active ? 'نشط' : 'غير نشط' }}
@@ -426,7 +458,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-16 text-center">
+                            <td colspan="6" class="px-6 py-16 text-center">
                                 <div class="flex flex-col items-center gap-4">
                                     <div class="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center">
                                         <i class="fas fa-users text-3xl text-blue-600"></i>

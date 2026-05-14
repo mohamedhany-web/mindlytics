@@ -140,6 +140,26 @@ class Branch extends Model
     }
 
     /**
+     * معرّف فرع «الأكاديمية الأساسية» (المركز): نفس منطق التعيين الافتراضي — slug `main` ثم أقدم فرع نشط.
+     * بيانات المركز تُخزَّن تحت هذا الـ branch_id؛ الفروع الأخرى تمثل الامتدادات.
+     */
+    public static function centralAcademyBranchId(): ?int
+    {
+        return self::defaultAssignableId();
+    }
+
+    public static function isCentralAcademyBranch(?int $branchId): bool
+    {
+        if ($branchId === null) {
+            return false;
+        }
+
+        $central = self::centralAcademyBranchId();
+
+        return $central !== null && (int) $branchId === (int) $central;
+    }
+
+    /**
      * معرّف الفرع الافتراضي لتعيين مستخدمين جدد عند عدم تحديد فرع (slug: main أو أقدم فرع نشط).
      */
     public static function defaultAssignableId(): ?int

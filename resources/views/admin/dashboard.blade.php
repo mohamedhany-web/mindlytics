@@ -308,6 +308,73 @@
         </div>
     </div>
 
+    @if(isset($branchesOperationalOverview) && $branchesOperationalOverview->isNotEmpty())
+    <section class="dashboard-card rounded-2xl card-hover-effect border-2 border-slate-200/80 shadow-xl overflow-hidden mb-6" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.96) 100%);">
+        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/90">
+            <h3 class="text-lg font-black text-slate-900 flex flex-wrap items-center gap-2">
+                <i class="fas fa-layer-group text-indigo-600"></i>
+                فصل بيانات الفروع — نظرة المركز على كل الفروع
+            </h3>
+            <p class="text-xs text-slate-600 mt-2 leading-relaxed max-w-4xl">
+                تُخزَّن بيانات <strong>الأكاديمية الأساسية</strong> تحت فرع slug عادةً <code class="bg-slate-200 px-1 rounded text-[11px] font-mono">main</code>
+                @if($centralAcademyBranchId)
+                    <span class="font-mono text-indigo-700">(المعرّف {{ $centralAcademyBranchId }})</span>
+                @endif
+                ؛ كل فرع آخر هو امتداد ببيانات منفصلة في الجداول عبر <code class="bg-slate-200 px-1 rounded text-[11px]">branch_id</code>.
+                في لوحة الإدارة تظهر هنا <strong>جميع</strong> الأعداد حتى يرى المركز ما يُضاف في كل فرع (كورسات، طلبات، تسجيلات، مستخدمين…).
+            </p>
+        </div>
+        <div class="overflow-x-auto p-2">
+            <table class="min-w-full text-sm text-slate-800">
+                <thead>
+                    <tr class="text-xs font-bold text-slate-600 uppercase tracking-wide border-b border-slate-200 bg-white">
+                        <th class="px-4 py-3 text-right">الفرع</th>
+                        <th class="px-4 py-3 text-right whitespace-nowrap">slug</th>
+                        <th class="px-4 py-3 text-center">مستخدمون</th>
+                        <th class="px-4 py-3 text-center">كورسات متقدمة</th>
+                        <th class="px-4 py-3 text-center">أوفلاين</th>
+                        <th class="px-4 py-3 text-center">طلبات</th>
+                        <th class="px-4 py-3 text-center">تسجيلات</th>
+                        <th class="px-4 py-3 text-center">حالة</th>
+                        <th class="px-4 py-3 text-center whitespace-nowrap">عرض</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    @foreach($branchesOperationalOverview as $bRow)
+                        @php $isCentral = isset($centralAcademyBranchId) && (int) $bRow->id === (int) $centralAcademyBranchId; @endphp
+                        <tr class="hover:bg-slate-50/90 transition-colors {{ $isCentral ? 'bg-indigo-50/40' : '' }}">
+                            <td class="px-4 py-3 font-semibold">
+                                {{ $bRow->name }}
+                                @if($isCentral)
+                                    <span class="mr-2 inline-flex text-[10px] font-black px-2 py-0.5 rounded bg-indigo-200 text-indigo-900">أساسي</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 font-mono text-xs" dir="ltr">{{ $bRow->slug }}</td>
+                            <td class="px-4 py-3 text-center tabular-nums font-bold">{{ number_format($bRow->users_count) }}</td>
+                            <td class="px-4 py-3 text-center tabular-nums">{{ number_format($bRow->advanced_courses_count) }}</td>
+                            <td class="px-4 py-3 text-center tabular-nums">{{ number_format($bRow->offline_courses_count) }}</td>
+                            <td class="px-4 py-3 text-center tabular-nums">{{ number_format($bRow->orders_count) }}</td>
+                            <td class="px-4 py-3 text-center tabular-nums">{{ number_format($bRow->student_course_enrollments_count) }}</td>
+                            <td class="px-4 py-3 text-center">
+                                @if($bRow->is_active)
+                                    <span class="text-emerald-700 font-semibold text-xs">نشط</span>
+                                @else
+                                    <span class="text-slate-500 text-xs">موقوف</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <a href="{{ route('admin.branches.show', $bRow) }}" class="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-bold text-xs">
+                                    <i class="fas fa-external-link-alt"></i> تفاصيل
+                                </a>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </section>
+    @endif
+
     <!-- الأنشطة الأخيرة -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- سجل النشاطات -->

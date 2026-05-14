@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
-use App\Models\Package;
 use App\Models\AcademicYear;
 use App\Models\AdvancedCourse;
 use App\Models\StudentCourseEnrollment;
@@ -24,6 +23,7 @@ class LearningPathController extends Controller
     {
         // جلب المسارات التعليمية النشطة (AcademicYears)
         $academicYears = AcademicYear::where('is_active', true)
+            ->visibleOnCurrentHost()
             ->select('*') // تأكد من جلب جميع الأعمدة بما فيها thumbnail
             ->with(['linkedCourses' => function($query) {
                 $query->where('is_active', true)
@@ -138,6 +138,7 @@ class LearningPathController extends Controller
     {
         // البحث عن AcademicYear بالاسم (slug)
         $academicYear = AcademicYear::active()
+            ->visibleOnCurrentHost()
             ->with(['linkedCourses' => function($query) {
                 $query->where('is_active', true)
                       ->visibleOnCurrentHost()
@@ -192,6 +193,7 @@ class LearningPathController extends Controller
         
         // مسارات ذات صلة
         $relatedYears = AcademicYear::active()
+            ->visibleOnCurrentHost()
             ->where('id', '!=', $academicYear->id)
             ->withCount('academicSubjects')
             ->limit(3)
@@ -262,6 +264,7 @@ class LearningPathController extends Controller
 
         // البحث عن AcademicYear بالاسم (slug)
         $academicYear = AcademicYear::active()
+            ->visibleOnCurrentHost()
             ->get()
             ->first(function($year) use ($slug) {
                 return Str::slug($year->name) === $slug;

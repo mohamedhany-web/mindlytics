@@ -61,7 +61,7 @@ class LandingController extends Controller
         $statsCertificates = $statsLearners;
 
         // إحصائية أهم للزائر: عدد المسارات التعليمية النشطة (Academic Years)
-        $statsLearningPaths = AcademicYear::query()->where('is_active', true)->count();
+        $statsLearningPaths = AcademicYear::query()->where('is_active', true)->visibleOnCurrentHost()->count();
 
         return view('welcome', compact(
             'popupAd',
@@ -80,6 +80,7 @@ class LandingController extends Controller
     public static function getPublicLearningPaths(?int $limit = null): \Illuminate\Support\Collection
     {
         $query = AcademicYear::where('is_active', true)
+            ->visibleOnCurrentHost()
             ->with(['linkedCourses' => function ($q) {
                 $q->where('is_active', true)->visibleOnCurrentHost();
             }, 'academicSubjects' => function ($q) {

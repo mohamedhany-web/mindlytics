@@ -242,6 +242,19 @@ class AdminController extends Controller
             'datasets_active' => \App\Models\CommunityDataset::active()->count(),
         ];
 
+        $centralAcademyBranchId = null;
+        $branchesOperationalOverview = collect();
+        try {
+            $centralAcademyBranchId = Branch::centralAcademyBranchId();
+            $branchesOperationalOverview = Branch::query()
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->withCount(['users', 'advancedCourses', 'offlineCourses', 'orders', 'studentCourseEnrollments'])
+                ->get();
+        } catch (\Throwable $e) {
+            Log::warning('تعذر تحميل ملخص الفروع في لوحة الإدارة', ['message' => $e->getMessage()]);
+        }
+
         $quickActions = [
             [
                 'title' => 'مجتمع الذكاء الاصطناعي',
@@ -330,7 +343,9 @@ class AdminController extends Controller
             'weeklyActivity',
             'monthlyActivity',
             'quickActions',
-            'communityStats'
+            'communityStats',
+            'centralAcademyBranchId',
+            'branchesOperationalOverview'
         ));
     }
 
@@ -369,6 +384,10 @@ class AdminController extends Controller
             });
         }
 
+        if ($request->filled('branch_id') && (int) $request->input('branch_id') > 0) {
+            $query->where('branch_id', (int) $request->input('branch_id'));
+        }
+
         return $query;
     }
 
@@ -377,7 +396,7 @@ class AdminController extends Controller
      */
     public function users(Request $request)
     {
-        $users = $this->usersIndexFilteredQuery($request)->latest()->paginate(20)->withQueryString();
+        $users = $this->usersIndexFilteredQuery($request)->with('branch')->latest()->paginate(20)->withQueryString();
 
         $stats = [
             'total' => 0,
@@ -500,7 +519,16 @@ class AdminController extends Controller
             }
         }
 
-        return view('admin.users.index', compact('users', 'stats', 'trends', 'recentUsers', 'recentlyActiveUsers', 'usersByRole', 'usersByMonth'));
+        $branches = collect();
+        try {
+            $branches = Branch::query()->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'slug', 'is_active']);
+        } catch (\Throwable $e) {
+            Log::warning('تعذر تحميل قائمة الفروع لفلترة المستخدمين', ['message' => $e->getMessage()]);
+        }
+
+        $centralAcademyBranchId = Branch::centralAcademyBranchId();
+
+        return view('admin.users.index', compact('users', 'stats', 'trends', 'recentUsers', 'recentlyActiveUsers', 'usersByRole', 'usersByMonth', 'branches', 'centralAcademyBranchId'));
     }
 
     /**
