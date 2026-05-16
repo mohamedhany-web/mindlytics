@@ -33,6 +33,7 @@ class MobileAppSettingsController extends Controller
             'no_subscription_body_ar' => ['nullable', 'string', 'max:5000'],
             'no_subscription_body_en' => ['nullable', 'string', 'max:5000'],
             'catalog_web_path' => ['required', 'string', 'max:255', 'regex:/^\\/\\S*$/'],
+            'chats_full_url' => ['nullable', 'string', 'max:2048', 'url'],
         ], [
             'catalog_web_path.regex' => 'المسار يجب أن يبدأ بـ / (مثال: /courses).',
         ]);

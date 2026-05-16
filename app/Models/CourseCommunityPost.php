@@ -63,17 +63,30 @@ class CourseCommunityPost extends Model
     }
 
     /**
-     * منشورات يظهر مؤلفها في مجتمع الكورس: طالب مسجّل بنشاط في هذا الكورس، أو إداري/مدرب ينشر للفوج.
+     * حالات التسجيل التي يُعتبر بها الطالب ضمن فوج المجتمع لهذا الكورس (يظهر منشوره لزملاء الكورس في التطبيق).
+     * يشمل المكتمل والمعلّق حتى يتوافق مع تجربة الويب عندما يكون الطالب مسجّلاً لكن الحالة ليست «active» فقط.
+     *
+     * @return list<string>
+     */
+    public static function communityVisibleEnrollmentStatuses(): array
+    {
+        return ['active', 'completed', 'pending'];
+    }
+
+    /**
+     * منشورات يظهر مؤلفها في مجتمع الكورس: طالب له تسجيل ضمن فوج المجتمع لهذا الكورس، أو إداري/مدرب.
      */
     public function scopeWhereAuthorVisibleInCourse(Builder $query, int $advancedCourseId): Builder
     {
-        return $query->where(function (Builder $w) use ($advancedCourseId) {
+        $statuses = self::communityVisibleEnrollmentStatuses();
+
+        return $query->where(function (Builder $w) use ($advancedCourseId, $statuses) {
             $w->whereHas('user', function (Builder $uq) {
                 $uq->whereIn('role', ['super_admin', 'admin', 'instructor']);
-            })->orWhereHas('user', function (Builder $uq) use ($advancedCourseId) {
-                $uq->whereHas('courseEnrollments', function (Builder $eq) use ($advancedCourseId) {
+            })->orWhereHas('user', function (Builder $uq) use ($advancedCourseId, $statuses) {
+                $uq->whereHas('courseEnrollments', function (Builder $eq) use ($advancedCourseId, $statuses) {
                     $eq->where('advanced_course_id', $advancedCourseId)
-                        ->where('status', 'active');
+                        ->whereIn('status', $statuses);
                 });
             });
         });
@@ -98,6 +111,9 @@ class CourseCommunityPost extends Model
             return false;
         }
 
-        return $author->isEnrolledIn((int) $this->course_id);
+        return $author->courseEnrollments()
+            ->where('advanced_course_id', (int) $this->course_id)
+            ->whereIn('status', self::communityVisibleEnrollmentStatuses())
+            ->exists();
     }
 }

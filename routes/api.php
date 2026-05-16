@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\StudentNotificationsController;
 use App\Http\Controllers\Api\V1\StudentPracticeController;
 use App\Http\Controllers\Api\V1\StudentCommunityController;
 use App\Http\Controllers\Api\V1\StudentProfileController;
+use App\Http\Controllers\Api\V1\StudentPeersController;
 use App\Http\Controllers\Api\V1\StudentChallengesController;
 use App\Http\Controllers\Api\V1\InstructorCoursesController;
 use App\Http\Controllers\Api\V1\InstructorCommunityController;
@@ -213,5 +214,32 @@ Route::prefix('v1')->group(function () {
         Route::post('/photo', [StudentProfileController::class, 'uploadPhoto'])
             ->middleware('throttle:20,1')
             ->name('api.v1.student.profile.photo');
+    });
+
+    Route::middleware(['auth:sanctum', 'api.student'])->prefix('student/peers')->group(function () {
+        Route::get('/recommended', [StudentPeersController::class, 'recommended'])
+            ->middleware('throttle:90,1')
+            ->name('api.v1.student.peers.recommended');
+        Route::get('/incoming', [StudentPeersController::class, 'incoming'])
+            ->middleware('throttle:60,1')
+            ->name('api.v1.student.peers.incoming');
+        Route::get('/{user}/social-state', [StudentPeersController::class, 'socialState'])
+            ->middleware('throttle:120,1')
+            ->name('api.v1.student.peers.social-state');
+        Route::post('/{user}/connect', [StudentPeersController::class, 'connect'])
+            ->middleware('throttle:30,1')
+            ->name('api.v1.student.peers.connect');
+        Route::post('/{user}/cancel-outgoing', [StudentPeersController::class, 'cancelOutgoing'])
+            ->middleware('throttle:30,1')
+            ->name('api.v1.student.peers.cancel-outgoing');
+        Route::post('/{user}/accept', [StudentPeersController::class, 'accept'])
+            ->middleware('throttle:30,1')
+            ->name('api.v1.student.peers.accept');
+        Route::post('/{user}/decline', [StudentPeersController::class, 'decline'])
+            ->middleware('throttle:30,1')
+            ->name('api.v1.student.peers.decline');
+        Route::get('/{user}', [StudentPeersController::class, 'show'])
+            ->middleware('throttle:120,1')
+            ->name('api.v1.student.peers.show');
     });
 });

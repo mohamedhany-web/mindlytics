@@ -26,6 +26,7 @@ class MobileAppSetting extends Model
         'no_subscription_body_ar',
         'no_subscription_body_en',
         'catalog_web_path',
+        'chats_full_url',
     ];
 
     /**

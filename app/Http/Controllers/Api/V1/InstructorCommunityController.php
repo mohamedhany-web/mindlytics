@@ -8,8 +8,11 @@ use App\Models\CourseCommunityPost;
 use App\Models\CourseCommunityComment;
 use App\Models\CourseCommunityPostImage;
 use App\Models\CourseCommunityReaction;
+use App\Support\CourseCommunityFeedBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class InstructorCommunityController extends Controller
@@ -76,80 +79,14 @@ class InstructorCommunityController extends Controller
             return $deny;
         }
 
-        $perPage = (int) $request->input('per_page', 15);
-        $perPage = max(5, min(30, $perPage));
-
-        $q = CourseCommunityPost::query()
+        $user = $request->user();
+        $postsQuery = CourseCommunityPost::query()
             ->where('course_id', $course->id)
             ->whereAuthorVisibleInCourse($course->id)
             ->with(['user:id,name,profile_image,updated_at,role', 'images'])
-            ->withCount(['comments'])
-            ->latest('is_pinned')
-            ->latest('id');
+            ->withCount(['comments']);
 
-        $posts = $q->paginate($perPage)->withQueryString();
-
-        $postIds = $posts->getCollection()->pluck('id');
-        $reactionsCount = CourseCommunityReaction::query()
-            ->where('reactable_type', CourseCommunityPost::class)
-            ->whereIn('reactable_id', $postIds)
-            ->where('type', 'like')
-            ->selectRaw('reactable_id, COUNT(*) as c')
-            ->groupBy('reactable_id')
-            ->pluck('c', 'reactable_id');
-
-        $user = $request->user();
-        $myReactions = CourseCommunityReaction::query()
-            ->where('reactable_type', CourseCommunityPost::class)
-            ->whereIn('reactable_id', $postIds)
-            ->where('type', 'like')
-            ->where('user_id', $user->id)
-            ->pluck('reactable_id')
-            ->flip();
-
-        $data = $posts->getCollection()->map(function (CourseCommunityPost $p) use ($reactionsCount, $myReactions) {
-            return [
-                'id' => $p->id,
-                'course_id' => $p->course_id,
-                'body' => $p->body,
-                'is_pinned' => (bool) $p->is_pinned,
-                'created_at' => $p->created_at?->toIso8601String(),
-                'edited_at' => $p->edited_at?->toIso8601String(),
-                'user' => [
-                    'id' => $p->user?->id,
-                    'name' => $p->user?->name,
-                    'profile_image_url' => $p->user?->profile_image_url,
-                ],
-                'counts' => [
-                    'comments' => (int) ($p->comments_count ?? 0),
-                    'likes' => (int) ($reactionsCount[$p->id] ?? 0),
-                ],
-                'viewer' => [
-                    'liked' => $myReactions->has($p->id),
-                ],
-                'images' => $p->images->map(fn (CourseCommunityPostImage $img) => [
-                    'url' => $img->url,
-                ])->values(),
-            ];
-        })->values();
-
-        return response()->json([
-            'course' => [
-                'id' => $course->id,
-                'title' => [
-                    'ar' => $course->title,
-                    'en' => $course->title_en ?: $course->title,
-                ],
-            ],
-            'posts' => $data,
-            'pagination' => [
-                'current_page' => $posts->currentPage(),
-                'last_page' => $posts->lastPage(),
-                'per_page' => $posts->perPage(),
-                'total' => $posts->total(),
-                'next_page_url' => $posts->nextPageUrl(),
-            ],
-        ]);
+        return CourseCommunityFeedBuilder::buildResponse($request, $course, $user, $postsQuery);
     }
 
     public function createPost(Request $request, AdvancedCourse $course): JsonResponse
@@ -234,10 +171,12 @@ class InstructorCommunityController extends Controller
 
         $comments = CourseCommunityComment::query()
             ->where('post_id', $post->id)
-            ->with(['user:id,name,profile_image,updated_at,role'])
+            ->with(['user:id,name,profile_image,updated_at,role', 'parent.user:id,name,profile_image,updated_at,role'])
             ->orderBy('id')
             ->limit(200)
             ->get();
+
+        $commentTotal = CourseCommunityComment::query()->where('post_id', $post->id)->count();
 
         $likes = CourseCommunityReaction::query()
             ->where('reactable_type', CourseCommunityPost::class)
@@ -267,7 +206,7 @@ class InstructorCommunityController extends Controller
                     'profile_image_url' => $post->user?->profile_image_url,
                 ],
                 'counts' => [
-                    'comments' => $comments->count(),
+                    'comments' => $commentTotal,
                     'likes' => $likes,
                 ],
                 'viewer' => [
@@ -277,17 +216,7 @@ class InstructorCommunityController extends Controller
                     'url' => $img->url,
                 ])->values(),
             ],
-            'comments' => $comments->map(fn (CourseCommunityComment $c) => [
-                'id' => $c->id,
-                'body' => $c->body,
-                'created_at' => $c->created_at?->toIso8601String(),
-                'edited_at' => $c->edited_at?->toIso8601String(),
-                'user' => [
-                    'id' => $c->user?->id,
-                    'name' => $c->user?->name,
-                    'profile_image_url' => $c->user?->profile_image_url,
-                ],
-            ])->values(),
+            'comments' => $comments->map(fn (CourseCommunityComment $c) => $this->commentForApi($c))->values(),
         ]);
     }
 
@@ -299,16 +228,60 @@ class InstructorCommunityController extends Controller
 
         $data = $request->validate([
             'body' => ['required', 'string', 'min:1', 'max:2000'],
+            'parent_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('course_community_comments', 'id')->where(fn ($q) => $q->where('post_id', $post->id)),
+            ],
         ]);
+
+        $body = trim($data['body']);
+        if ($body === '') {
+            throw ValidationException::withMessages([
+                'body' => ['Comment body cannot be empty.'],
+            ]);
+        }
 
         $comment = CourseCommunityComment::create([
             'post_id' => $post->id,
             'user_id' => $request->user()->id,
-            'body' => trim($data['body']),
+            'parent_id' => $data['parent_id'] ?? null,
+            'body' => $body,
             'edited_at' => null,
         ]);
 
         return response()->json(['comment_id' => $comment->id], 201);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function commentForApi(CourseCommunityComment $c): array
+    {
+        $parentPayload = null;
+        if ($c->parent_id && $c->relationLoaded('parent') && $c->parent) {
+            $parentPayload = [
+                'id' => $c->parent->id,
+                'user' => [
+                    'name' => $c->parent->user?->name ?? '—',
+                ],
+                'body_preview' => Str::limit(trim(preg_replace('/\s+/u', ' ', strip_tags((string) $c->parent->body))), 120),
+            ];
+        }
+
+        return [
+            'id' => $c->id,
+            'body' => $c->body,
+            'parent_id' => $c->parent_id,
+            'parent' => $parentPayload,
+            'created_at' => $c->created_at?->toIso8601String(),
+            'edited_at' => $c->edited_at?->toIso8601String(),
+            'user' => [
+                'id' => $c->user?->id,
+                'name' => $c->user?->name,
+                'profile_image_url' => $c->user?->profile_image_url,
+            ],
+        ];
     }
 
     public function reactToPost(Request $request, CourseCommunityPost $post): JsonResponse

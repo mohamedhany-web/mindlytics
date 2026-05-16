@@ -43,6 +43,7 @@ class StudentHomeController extends Controller
                 'active_courses_count' => $enrollments->count(),
             ],
             'catalog_web_path' => $settings->catalog_web_path ?: '/courses',
+            'chats_full_url' => $settings->chats_full_url ? trim((string) $settings->chats_full_url) : null,
             'copy' => [
                 'welcome_title' => [
                     'ar' => $settings->welcome_title_ar,
