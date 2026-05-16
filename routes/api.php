@@ -9,6 +9,9 @@ use App\Http\Controllers\Api\V1\StudentPracticeController;
 use App\Http\Controllers\Api\V1\StudentCommunityController;
 use App\Http\Controllers\Api\V1\StudentProfileController;
 use App\Http\Controllers\Api\V1\StudentPeersController;
+use App\Http\Controllers\Api\V1\StudentGroupsController;
+use App\Http\Controllers\Api\V1\StudentGroupChatController;
+use App\Http\Controllers\Api\V1\StudentPeerChatController;
 use App\Http\Controllers\Api\V1\StudentChallengesController;
 use App\Http\Controllers\Api\V1\InstructorCoursesController;
 use App\Http\Controllers\Api\V1\InstructorCommunityController;
@@ -72,6 +75,28 @@ Route::prefix('v1')->group(function () {
         Route::get('/challenges', [StudentChallengesController::class, 'index'])
             ->middleware('throttle:60,1')
             ->name('api.v1.student.challenges.index');
+        Route::get('/groups', [StudentGroupsController::class, 'index'])
+            ->middleware('throttle:60,1')
+            ->name('api.v1.student.groups.index');
+        Route::prefix('group-chat')->group(function () {
+            Route::get('/groups/{group}/messages', [StudentGroupChatController::class, 'messages'])
+                ->middleware('throttle:120,1')
+                ->name('api.v1.student.group-chat.messages');
+            Route::post('/groups/{group}/messages', [StudentGroupChatController::class, 'send'])
+                ->middleware('throttle:60,1')
+                ->name('api.v1.student.group-chat.send');
+        });
+        Route::prefix('dm')->group(function () {
+            Route::get('/threads', [StudentPeerChatController::class, 'threads'])
+                ->middleware('throttle:60,1')
+                ->name('api.v1.student.dm.threads');
+            Route::get('/with/{peer}/messages', [StudentPeerChatController::class, 'messages'])
+                ->middleware('throttle:120,1')
+                ->name('api.v1.student.dm.messages');
+            Route::post('/with/{peer}/messages', [StudentPeerChatController::class, 'send'])
+                ->middleware('throttle:60,1')
+                ->name('api.v1.student.dm.send');
+        });
     });
 
     Route::middleware(['auth:sanctum', 'api.instructor'])->prefix('instructor')->group(function () {

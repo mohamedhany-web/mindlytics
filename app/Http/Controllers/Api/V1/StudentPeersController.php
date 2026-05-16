@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ApiPublicStudentResource;
 use App\Models\Notification;
+use App\Models\PeerChatThread;
 use App\Models\PeerConnectionRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -253,6 +254,8 @@ class StudentPeersController extends Controller
         }
 
         $row->update(['status' => 'accepted']);
+
+        PeerChatThread::findOrCreateForUsers($me->id, $user->id);
 
         Notification::sendToUser($user->id, [
             'sender_id' => $me->id,
