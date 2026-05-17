@@ -46,6 +46,7 @@ class User extends Authenticatable
         'employee_job_id',
         'employee_code',
         'hire_date',
+        'weekly_off_day',
         'termination_date',
         'salary',
         'employee_notes',
@@ -106,6 +107,7 @@ class User extends Authenticatable
             'last_login_at' => 'datetime',
             'referred_at' => 'datetime',
             'hire_date' => 'date',
+            'weekly_off_day' => 'integer',
             'termination_date' => 'date',
             'salary' => 'decimal:2',
             'is_employee' => 'boolean',
@@ -777,6 +779,66 @@ class User extends Authenticatable
     public function assignedSalesLeads()
     {
         return $this->hasMany(SalesLead::class, 'assigned_to');
+    }
+
+    /**
+     * أيام الإجازة الأسبوعية (Carbon dayOfWeek: 0=أحد … 6=سبت).
+     *
+     * @return array<int, string>
+     */
+    public static function weeklyOffDayOptions(): array
+    {
+        return [
+            0 => 'الأحد',
+            1 => 'الإثنين',
+            2 => 'الثلاثاء',
+            3 => 'الأربعاء',
+            4 => 'الخميس',
+            5 => 'الجمعة',
+            6 => 'السبت',
+        ];
+    }
+
+    public function weeklyOffDayLabel(): ?string
+    {
+        if ($this->weekly_off_day === null) {
+            return null;
+        }
+
+        return self::weeklyOffDayOptions()[(int) $this->weekly_off_day] ?? null;
+    }
+
+    /**
+     * هل التاريخ يوافق يوم الإجازة الأسبوعية للموظف؟
+     * إن لم يُحدَّد يوم، يُعتمد عطلة نهاية الأسبوع (سبت/أحد).
+     */
+    public function isWeeklyOff(\Carbon\Carbon $date): bool
+    {
+        if ($this->weekly_off_day !== null) {
+            return (int) $this->weekly_off_day === $date->dayOfWeek;
+        }
+
+        return $date->isWeekend();
+    }
+
+    /**
+     * إجازة معتمدة (طلب إجازة) تغطي هذا التاريخ.
+     */
+    public function isOnApprovedLeave(\Carbon\Carbon $date): bool
+    {
+        return $this->leaveRequests()
+            ->approved()
+            ->whereDate('start_date', '<=', $date)
+            ->whereDate('end_date', '>=', $date)
+            ->exists();
+    }
+
+    /**
+     * هل يُطلَب من الموظف تقرير يومي في هذا التاريخ؟
+     */
+    public function requiresDailyReportOn(\Carbon\Carbon $date): bool
+    {
+        return ! $this->isWeeklyOff($date) && ! $this->isOnApprovedLeave($date);
     }
 
     /**

@@ -87,6 +87,8 @@
                         @error('hire_date')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                     </div>
 
+                    @include('admin.employees._weekly_off_day_field', ['employee' => $employee])
+
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">تاريخ إنهاء الخدمة</label>
                         <input type="date" name="termination_date" value="{{ old('termination_date', $employee->termination_date?->format('Y-m-d')) }}" 

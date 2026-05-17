@@ -81,9 +81,14 @@ class EmployeeController extends Controller
             'employee_job_id' => 'required|exists:employee_jobs,id',
             'employee_code' => 'nullable|string|unique:users,employee_code',
             'hire_date' => 'required|date',
+            'weekly_off_day' => 'nullable|integer|min:0|max:6',
             'salary' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
         ]);
+
+        if ($validated['weekly_off_day'] === '' || ! isset($validated['weekly_off_day'])) {
+            $validated['weekly_off_day'] = null;
+        }
 
         // إنشاء رمز الموظف إذا لم يتم توفيره
         if (empty($validated['employee_code'])) {
@@ -162,6 +167,7 @@ class EmployeeController extends Controller
             'employee_job_id' => 'required|exists:employee_jobs,id',
             'employee_code' => 'nullable|string|unique:users,employee_code,' . $employee->id,
             'hire_date' => 'required|date',
+            'weekly_off_day' => 'nullable|integer|min:0|max:6',
             'termination_date' => 'nullable|date|after:hire_date',
             'salary' => 'nullable|numeric|min:0',
             'employee_notes' => 'nullable|string',
@@ -177,6 +183,10 @@ class EmployeeController extends Controller
             $validated['password'] = Hash::make($validated['password']);
         } else {
             unset($validated['password']);
+        }
+
+        if (! array_key_exists('weekly_off_day', $validated) || $validated['weekly_off_day'] === '') {
+            $validated['weekly_off_day'] = null;
         }
 
         $validated['is_active'] = $request->has('is_active') ? true : false;

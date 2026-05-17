@@ -231,6 +231,8 @@ class SalesKpiService
         $workingDaysApprox = max(1, min($daysInRange, 31));
         $engagementPct = min(100.0, round($distinctDays / $workingDaysApprox * 100, 1));
 
+        $dailyReportPct = app(SalesDailyReportService::class)->submissionRatePct($userId, $start, $end);
+
         $staleCount = $this->staleOpenCount($userId);
         $overdueFollowups = $this->overdueFollowupCount($userId);
 
@@ -254,6 +256,7 @@ class SalesKpiService
             'crm_activities_daily_avg' => $crmActivitiesDailyAvg,
             'data_fresh_open_pct' => $dataFreshPct,
             'engagement_days_pct' => $engagementPct,
+            'daily_report_submission_pct' => $dailyReportPct,
             'total_activities' => $totalActivities,
             'stale_open_leads' => $staleCount,
             'overdue_followups' => $overdueFollowups,
@@ -404,6 +407,11 @@ class SalesKpiService
             'crm_daily' => ['label' => 'متوسط أنشطة CRM يومية', 'actual' => $m['crm_activities_daily_avg'], 'target' => $t['crm_activities_daily_min']],
             'data_fresh' => ['label' => 'حداثة بيانات الفرص المفتوحة %', 'actual' => $m['data_fresh_open_pct'], 'target' => $t['data_fresh_open_pct_min']],
             'engagement' => ['label' => 'أيام بتفاعل مسجّل %', 'actual' => $m['engagement_days_pct'], 'target' => $t['engagement_days_pct_min']],
+            'daily_reports' => [
+                'label' => 'التقارير اليومية المسلّمة %',
+                'actual' => $m['daily_report_submission_pct'],
+                'target' => (float) (config('sales_daily_report.kpi_submission_target_pct', 95)),
+            ],
         ];
 
         $results = $this->meanScores([
@@ -444,17 +452,24 @@ class SalesKpiService
                 : 80.0,
         ]);
 
-        $discipline = $this->meanScores([
+        $disciplineScores = [
             $this->achievementUp((float) $m['crm_activities_daily_avg'], (float) $t['crm_activities_daily_min']),
             $this->achievementUp((float) $m['data_fresh_open_pct'], (float) $t['data_fresh_open_pct_min']),
             $this->achievementUp((float) $m['engagement_days_pct'], (float) $t['engagement_days_pct_min']),
-        ]);
+        ];
+        if ($m['daily_report_submission_pct'] !== null) {
+            $disciplineScores[] = $this->achievementUp(
+                (float) $m['daily_report_submission_pct'],
+                (float) config('sales_daily_report.kpi_submission_target_pct', 95)
+            );
+        }
+        $discipline = $this->meanScores($disciplineScores);
 
         $pillars = [
             'results' => ['score' => round($results, 1), 'label' => 'النتائج 40٪ — إيراد، صفقات، Leads، تحويل'],
             'activity' => ['score' => round($activity, 1), 'label' => 'النشاط 30٪ — مكالمات، اجتماعات، متابعات'],
             'quality' => ['score' => round($quality, 1), 'label' => 'الجودة 20٪ — إغلاق، رضا، أنبوب، دورة، سرعة رد'],
-            'discipline' => ['score' => round($discipline, 1), 'label' => 'الالتزام 10٪ — CRM، تحديث بيانات، تفاعل يومي'],
+            'discipline' => ['score' => round($discipline, 1), 'label' => 'الالتزام 10٪ — CRM، تحديث بيانات، تفاعل يومي، التقارير اليومية'],
         ];
 
         return compact('pillars', 'lines');

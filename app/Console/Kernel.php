@@ -46,6 +46,11 @@ class Kernel extends ConsoleKernel
                  ->dailyAt('09:00')
                  ->runInBackground()
                  ->withoutOverlapping();
+
+        $schedule->command('sales:apply-daily-report-penalties')
+                 ->dailyAt('00:45')
+                 ->runInBackground()
+                 ->withoutOverlapping();
     }
 
     /**

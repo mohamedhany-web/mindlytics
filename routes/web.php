@@ -835,6 +835,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('kpi', [\App\Http\Controllers\Employee\SalesKpiController::class, 'index'])->name('kpi.index');
             Route::get('reports', [\App\Http\Controllers\Employee\SalesReportController::class, 'index'])->name('reports.index');
             Route::get('reports/export', [\App\Http\Controllers\Employee\SalesReportController::class, 'export'])->name('reports.export');
+            Route::get('daily-reports', [\App\Http\Controllers\Employee\SalesDailyReportController::class, 'index'])->name('daily-reports.index');
+            Route::get('daily-reports/edit', [\App\Http\Controllers\Employee\SalesDailyReportController::class, 'edit'])->name('daily-reports.edit');
+            Route::post('daily-reports', [\App\Http\Controllers\Employee\SalesDailyReportController::class, 'store'])->name('daily-reports.store');
             Route::get('leads/export', [\App\Http\Controllers\Employee\SalesLeadController::class, 'export'])->name('leads.export');
             Route::post('leads/{lead}/activities', [\App\Http\Controllers\Employee\SalesLeadController::class, 'storeActivity'])->name('leads.activities.store');
             Route::post('leads/{lead}/csat', [\App\Http\Controllers\Employee\SalesLeadController::class, 'storeCsat'])->name('leads.csat.store');
@@ -967,6 +970,11 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('reports', [\App\Http\Controllers\Admin\SalesReportController::class, 'index'])->name('reports.index');
             Route::get('reports/export', [\App\Http\Controllers\Admin\SalesReportController::class, 'export'])->name('reports.export');
             Route::get('reports/daily-export', [\App\Http\Controllers\Admin\SalesReportController::class, 'dailyExport'])->name('reports.daily-export');
+            Route::get('daily-reports', [\App\Http\Controllers\Admin\SalesDailyReportController::class, 'index'])->name('daily-reports.index');
+            Route::get('daily-reports/export', [\App\Http\Controllers\Admin\SalesDailyReportController::class, 'export'])->name('daily-reports.export');
+            Route::get('daily-reports/settings', [\App\Http\Controllers\Admin\SalesDailyReportController::class, 'settings'])->name('daily-reports.settings');
+            Route::put('daily-reports/settings', [\App\Http\Controllers\Admin\SalesDailyReportController::class, 'updateSettings'])->name('daily-reports.settings.update');
+            Route::get('daily-reports/{id}', [\App\Http\Controllers\Admin\SalesDailyReportController::class, 'show'])->name('daily-reports.show')->where('id', '[0-9]+');
             Route::get('audit-log', [\App\Http\Controllers\Admin\SalesAuditController::class, 'index'])->name('audit-log.index');
             Route::get('transfer', [\App\Http\Controllers\Admin\SalesTransferController::class, 'index'])->name('transfer.index');
             Route::post('transfer', [\App\Http\Controllers\Admin\SalesTransferController::class, 'store'])->name('transfer.store');
@@ -1421,6 +1429,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('moderator-marketing-plans', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'index'])->name('moderator-marketing-plans.index');
         Route::get('moderator-marketing-plans/{plan}', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'show'])->name('moderator-marketing-plans.show');
 
+        Route::get('employee-deductions/daily-report-penalty-settings', [\App\Http\Controllers\Admin\SalesDailyReportPenaltyController::class, 'edit'])->name('employee-deductions.daily-report-penalty-settings');
+        Route::put('employee-deductions/daily-report-penalty-settings', [\App\Http\Controllers\Admin\SalesDailyReportPenaltyController::class, 'update'])->name('employee-deductions.daily-report-penalty-settings.update');
         Route::resource('employee-deductions', \App\Http\Controllers\Admin\EmployeeDeductionController::class);
         
         // إدارة الإجازات

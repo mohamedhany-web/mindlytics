@@ -5,6 +5,21 @@
 
 @section('content')
 <div class="space-y-6">
+    @php
+        $dailyReportService = app(\App\Services\SalesDailyReportService::class);
+        $todayDailyReport = $dailyReportService->todayReportFor(auth()->user());
+        $dailySettings = \App\Support\SalesDailyReportSettings::all();
+    @endphp
+    @if(($dailySettings['enabled'] ?? true) && $dailyReportService->isWorkDay(today(), auth()->user()) && !($todayDailyReport?->isSubmitted()))
+        <div class="rounded-2xl border-2 border-amber-400 bg-amber-50 px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+            <div class="text-sm text-amber-900">
+                <p class="font-bold"><i class="fas fa-exclamation-circle ml-1"></i> التقرير اليومي الإلزامي لم يُسلَّم بعد</p>
+                <p class="mt-1 text-xs">يؤثر على KPI — عدم التسليم قبل {{ $dailySettings['deadline_time'] ?? '23:59' }} قد يُنشئ خصماً تلقائياً.</p>
+            </div>
+            <a href="{{ route('employee.sales.daily-reports.edit') }}" class="shrink-0 px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-sm">تعبئة التقرير الآن</a>
+        </div>
+    @endif
+
     <div class="flex flex-wrap items-center justify-between gap-4">
         <div>
             <h1 class="text-2xl font-bold text-gray-900">مركز المبيعات</h1>
