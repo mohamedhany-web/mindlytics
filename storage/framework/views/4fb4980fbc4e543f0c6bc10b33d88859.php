@@ -23,14 +23,6 @@
 ?>
 
 <div class="space-y-6 pb-12">
-    <?php if(session('success')): ?>
-        <div class="rounded-2xl bg-emerald-50 border border-emerald-200 px-5 py-4 text-emerald-800 text-sm font-medium flex items-center gap-2">
-            <i class="fas fa-check-circle text-emerald-600"></i>
-            <?php echo e(session('success')); ?>
-
-        </div>
-    <?php endif; ?>
-
     <div class="bg-gradient-to-r from-slate-50 to-white rounded-2xl p-6 border border-slate-200 shadow-lg">
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div class="flex items-center gap-4">

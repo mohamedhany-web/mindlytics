@@ -173,6 +173,21 @@
             </div>
         </div>
 
+        <div class="rounded-2xl border-2 border-sky-200/60 p-5 sm:p-8 shadow-lg w-full mb-8"
+             style="background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(224,242,254,0.88) 100%);">
+            <div class="space-y-2">
+                <label class="block text-sm font-bold text-sky-900">رابط تجربة المحادثات الكاملة على الويب (اختياري)</label>
+                <p class="text-xs text-sky-800/90 leading-relaxed max-w-4xl">
+                    أدخل عنوان URL كاملاً يبدأ بـ <code class="rounded bg-white/80 px-1.5 py-0.5 border border-sky-200">https://</code>
+                    ليفتحه تطبيق الطلاب من شاشة «المحادثات» ومن داخل المحادثة (زر «فتح على الويب») عندما تكون التجربة الكاملة متوفرة على الموقع.
+                    اتركه فارغاً إذا لم يكن هناك صفحة جاهزة بعد.
+                </p>
+                <input type="url" name="chats_full_url" value="<?php echo e(old('chats_full_url', $settings->chats_full_url)); ?>" dir="ltr"
+                       placeholder="https://example.com/messages"
+                       class="w-full max-w-3xl rounded-xl border-2 border-sky-200/90 bg-white px-4 py-3 text-sm focus:ring-2 focus:ring-sky-500/35 focus:border-sky-500 transition-shadow">
+            </div>
+        </div>
+
         <div class="rounded-2xl border-2 border-indigo-200/60 p-5 sm:p-8 shadow-lg w-full"
              style="background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(238,242,255,0.9) 100%);">
             <div class="flex flex-col lg:flex-row lg:items-end gap-6">

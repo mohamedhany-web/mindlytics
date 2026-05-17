@@ -51,7 +51,7 @@
             <div class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
                 <div class="px-6 py-5 border-b border-slate-200 bg-slate-50">
                     <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-                        <i class="fas fa-chart-bar text-blue-600"></i>
+                        <i class="fas fa-chart-pie text-blue-600"></i>
                         أعداد مرتبطة بالفرع
                     </h3>
                 </div>

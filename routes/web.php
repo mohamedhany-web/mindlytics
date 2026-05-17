@@ -843,6 +843,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('leads/{lead}/csat', [\App\Http\Controllers\Employee\SalesLeadController::class, 'storeCsat'])->name('leads.csat.store');
             Route::resource('leads', \App\Http\Controllers\Employee\SalesLeadController::class);
         });
+        
 
         Route::middleware('moderator.employee')->prefix('design-cycles')->name('design-cycles.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'index'])->name('index');
@@ -1429,8 +1430,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('moderator-marketing-plans', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'index'])->name('moderator-marketing-plans.index');
         Route::get('moderator-marketing-plans/{plan}', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'show'])->name('moderator-marketing-plans.show');
 
-        Route::get('employee-deductions/daily-report-penalty-settings', [\App\Http\Controllers\Admin\SalesDailyReportPenaltyController::class, 'edit'])->name('employee-deductions.daily-report-penalty-settings');
-        Route::put('employee-deductions/daily-report-penalty-settings', [\App\Http\Controllers\Admin\SalesDailyReportPenaltyController::class, 'update'])->name('employee-deductions.daily-report-penalty-settings.update');
+        Route::get('employee-deductions/daily-report-penalty-settings', [\App\Http\Controllers\Admin\EmployeeDeductionController::class, 'dailyReportPenaltySettings'])->name('employee-deductions.daily-report-penalty-settings');
+        Route::put('employee-deductions/daily-report-penalty-settings', [\App\Http\Controllers\Admin\EmployeeDeductionController::class, 'updateDailyReportPenaltySettings'])->name('employee-deductions.daily-report-penalty-settings.update');
         Route::resource('employee-deductions', \App\Http\Controllers\Admin\EmployeeDeductionController::class);
         
         // إدارة الإجازات

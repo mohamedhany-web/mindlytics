@@ -1,56 +1,73 @@
 
 
-<?php $__env->startSection('title', 'تعديل فرع'); ?>
-<?php $__env->startSection('header', 'تعديل الفرع — ' . $branch->name); ?>
+<?php $__env->startSection('title', 'تعديل فرع — ' . $branch->name); ?>
+<?php $__env->startSection('header', 'تعديل الفرع'); ?>
 
 <?php $__env->startSection('content'); ?>
-<div class="w-full max-w-none min-h-full -mx-3 sm:-mx-6 px-2 sm:px-4 lg:px-6 xl:px-8 pb-4 space-y-6" style="background: #f8fafc;">
-    <div class="w-full max-w-[min(100%,88rem)] mx-auto space-y-6">
-        <div class="bg-gradient-to-br from-indigo-600 via-sky-600 to-sky-700 rounded-3xl p-6 sm:p-8 shadow-xl text-white relative overflow-hidden">
-            <div class="absolute inset-y-0 right-0 w-40 bg-white/10 blur-3xl pointer-events-none"></div>
-            <div class="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-                <div class="space-y-3">
-                    <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/15 text-sm font-semibold">
-                        <i class="fas fa-pen"></i>
-                        تعديل فرع
-                    </div>
-                    <h1 class="text-2xl sm:text-3xl font-bold"><?php echo e($branch->name); ?></h1>
-                    <p class="text-sm text-white/85 font-mono" dir="ltr"><?php echo e($branch->slug); ?></p>
+<div class="space-y-6 pb-16">
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+        <div class="px-6 py-5 bg-slate-50 border-b border-slate-200 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-center gap-4 min-w-0">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-md shrink-0">
+                    <i class="fas fa-pen text-lg"></i>
                 </div>
-                <div class="flex flex-wrap gap-2 shrink-0">
-                    <a href="<?php echo e(route('admin.branches.show', $branch)); ?>" class="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/40 px-5 py-2.5 text-sm font-semibold hover:bg-white/10 transition">
-                        <i class="fas fa-eye"></i>
-                        عرض التفاصيل
-                    </a>
-                    <a href="<?php echo e(route('admin.branches.index')); ?>" class="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/40 px-5 py-2.5 text-sm font-semibold hover:bg-white/10 transition">
-                        <i class="fas fa-arrow-right"></i>
-                        كل الفروع
-                    </a>
+                <div class="min-w-0">
+                    <nav class="text-xs font-medium text-slate-500 flex flex-wrap items-center gap-2 mb-1">
+                        <a href="<?php echo e(route('admin.dashboard')); ?>" class="text-blue-600 hover:text-blue-700">لوحة التحكم</a>
+                        <span>/</span>
+                        <a href="<?php echo e(route('admin.branches.index')); ?>" class="text-blue-600 hover:text-blue-700">الفروع</a>
+                        <span>/</span>
+                        <span class="text-slate-600">تعديل</span>
+                    </nav>
+                    <h2 class="text-2xl font-black text-slate-900 mt-1 truncate"><?php echo e($branch->name); ?></h2>
+                    <p class="text-sm text-slate-600 mt-1 font-mono truncate" dir="ltr"><?php echo e($branch->slug); ?></p>
                 </div>
             </div>
+            <div class="flex flex-wrap gap-2 shrink-0">
+                <a href="<?php echo e(route('admin.branches.show', $branch)); ?>" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+                    <i class="fas fa-eye"></i>
+                    عرض التفاصيل
+                </a>
+                <a href="<?php echo e(route('admin.branches.index')); ?>" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+                    <i class="fas fa-arrow-right"></i>
+                    العودة للقائمة
+                </a>
+            </div>
         </div>
+    </section>
 
-        <div class="dashboard-card rounded-2xl card-hover-effect border-2 border-gray-200/50 hover:border-sky-300/70 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.95) 100%);">
-            <div class="border-b border-gray-100 px-6 sm:px-8 py-5">
-                <h2 class="text-xl font-bold text-gray-900">تحديث بيانات الفرع</h2>
-                <p class="text-sm text-gray-500 mt-1">تعديل slug أو الدومين قد يتطلب تحديث DNS أو إبطال كاش الدومين تلقائياً بعد الحفظ.</p>
-            </div>
-            <form action="<?php echo e(route('admin.branches.update', $branch)); ?>" method="POST" class="p-6 sm:p-8 space-y-8">
-                <?php echo csrf_field(); ?>
-                <?php echo method_field('PUT'); ?>
-                <?php echo $__env->make('admin.branches._form', ['branch' => $branch], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
-                <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 border-t border-gray-100">
-                    <a href="<?php echo e(route('admin.branches.show', $branch)); ?>" class="inline-flex items-center justify-center px-6 py-3 rounded-2xl border-2 border-gray-200 text-gray-700 font-bold hover:bg-gray-50 transition">
-                        عرض فقط
-                    </a>
-                    <button type="submit" class="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-2xl bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 text-white font-bold shadow-lg shadow-sky-600/25 hover:from-sky-700 hover:via-blue-700 hover:to-indigo-700 transition">
-                        <i class="fas fa-save"></i>
-                        حفظ التعديلات
-                    </button>
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+        <form action="<?php echo e(route('admin.branches.update', $branch)); ?>" method="POST" class="space-y-0">
+            <?php echo csrf_field(); ?>
+            <?php echo method_field('PUT'); ?>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
+                <div class="lg:col-span-2 space-y-6">
+                    <?php echo $__env->make('admin.branches._form', ['branch' => $branch], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
                 </div>
-            </form>
-        </div>
-    </div>
+                <div class="space-y-6">
+                    <div class="rounded-xl border border-slate-200 bg-white p-6">
+                        <h3 class="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
+                            <i class="fas fa-exclamation-triangle text-amber-500"></i>
+                            عند تغيير slug أو الدومين
+                        </h3>
+                        <p class="text-sm text-slate-600 leading-relaxed">قد تحتاج لتحديث DNS أو انتظار إبطال كاش المطابقة تلقائياً بعد الحفظ.</p>
+                    </div>
+                    <div class="rounded-xl border border-slate-200 bg-white p-6 space-y-4">
+                        <div class="flex flex-col gap-3">
+                            <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg hover:shadow-xl transition-all duration-200">
+                                <i class="fas fa-save"></i>
+                                <span>حفظ التعديلات</span>
+                            </button>
+                            <a href="<?php echo e(route('admin.branches.show', $branch)); ?>" class="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-slate-300 px-6 py-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all">
+                                <i class="fas fa-eye"></i>
+                                <span>عرض فقط</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </section>
 </div>
 <?php $__env->stopSection(); ?>
 

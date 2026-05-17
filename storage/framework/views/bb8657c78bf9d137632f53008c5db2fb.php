@@ -25,10 +25,23 @@
         </a>
     </div>
 
-    <?php if(($settings['enabled'] ?? true) && !$todaySubmitted && $date->isToday()): ?>
+    <?php if($date->isToday() && !($isWorkDayToday ?? true)): ?>
+        <div class="rounded-2xl border-2 border-sky-200 bg-sky-50 px-5 py-4 text-sky-900 text-sm">
+            <p class="font-bold"><i class="fas fa-umbrella-beach ml-1"></i> اليوم لا يُطلَب فيه تقرير يومي</p>
+            <p class="mt-1">
+                <?php if($isLeaveToday ?? false): ?>
+                    لديك إجازة معتمدة اليوم.
+                <?php elseif($isWeeklyOffToday ?? false): ?>
+                    اليوم هو إجازتك الأسبوعية: <strong><?php echo e(auth()->user()->weeklyOffDayLabel()); ?></strong>.
+                <?php else: ?>
+                    هذا اليوم مستثنى من أيام العمل.
+                <?php endif; ?>
+            </p>
+        </div>
+    <?php elseif(($settings['enabled'] ?? true) && !$todaySubmitted && $date->isToday()): ?>
         <div class="rounded-2xl border-2 border-amber-300 bg-amber-50 px-5 py-4 text-amber-900 text-sm">
             <p class="font-bold"><i class="fas fa-clock ml-1"></i> لم يُسلَّم تقرير اليوم بعد</p>
-            <p class="mt-1">آخر موعد: <?php echo e($settings['deadline_time'] ?? '23:59'); ?> — عدم التسليم قد يُنشئ خصماً بقيمة <?php echo e(number_format($settings['penalty_amount'] ?? 50, 2)); ?> ج.م.</p>
+            <p class="mt-1">إجازتك الأسبوعية: <strong><?php echo e(auth()->user()->weeklyOffDayLabel() ?? 'عطلة نهاية الأسبوع'); ?></strong> — آخر موعد: <?php echo e($settings['deadline_time'] ?? '23:59'); ?> — عدم التسليم قد يُنشئ خصماً بقيمة <?php echo e(number_format($settings['penalty_amount'] ?? 50, 2)); ?> ج.م.</p>
         </div>
     <?php endif; ?>
 

@@ -54,7 +54,7 @@
             </li>
 
             <?php
-                $branchesMenuOpen = request()->routeIs('admin.branches.*');
+                $branchesMenuOpen = request()->routeIs('admin.branches.*') || request()->routeIs('admin.branch-managers.*');
             ?>
             <li x-data="{ open: <?php echo e($branchesMenuOpen ? 'true' : 'false'); ?> }">
                 <button type="button" @click="open = !open"
@@ -80,6 +80,14 @@
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.branches.create') ? 'bg-amber-600/30 text-white font-semibold border-r-2 border-amber-400' : ''); ?>">
                             <i class="fas fa-plus w-4"></i>
                             <span>إضافة فرع</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="<?php echo e(route('admin.branch-managers.create')); ?>"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.branch-managers.create') ? 'bg-amber-600/30 text-white font-semibold border-r-2 border-amber-400' : ''); ?>">
+                            <i class="fas fa-user-tie w-4"></i>
+                            <span>إضافة مدير فرع</span>
                         </a>
                     </li>
                     <li>
@@ -202,6 +210,12 @@
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.sales.reports.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : ''); ?>">
                             <i class="fas fa-chart-line w-4"></i>
                             <span>تقارير المبيعات</span>
+                        </a>
+                        <a href="<?php echo e(route('admin.sales.daily-reports.index')); ?>"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.sales.daily-reports.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : ''); ?>">
+                            <i class="fas fa-clipboard-list w-4"></i>
+                            <span>التقارير اليومية (موظفين)</span>
                         </a>
                     </li>
                     <li>
@@ -1632,7 +1646,7 @@
     <!-- معلومات المستخدم -->
     <div class="p-4 border-t-2 border-slate-700/50 bg-gradient-to-br from-slate-800/90 via-slate-800/80 to-slate-900/90 flex-shrink-0 backdrop-blur-sm">
         <div class="flex items-center gap-3 p-3 bg-slate-700/40 backdrop-blur-sm rounded-xl shadow-xl border border-slate-600/50 hover:bg-slate-700/60 transition-all duration-300 group">
-            <?php if(auth()->user()->profile_image): ?>
+            <?php if(auth()->user()?->profile_image): ?>
                 <img src="<?php echo e(asset('storage/' . auth()->user()->profile_image)); ?>" alt="<?php echo e(auth()->user()->name); ?>" class="w-12 h-12 rounded-full object-cover shadow-lg ring-2 ring-slate-600/50 flex-shrink-0" onerror="this.style.display='none'; this.nextElementSibling?.classList.remove('hidden');">
                 <div class="w-12 h-12 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-full hidden flex items-center justify-center text-white font-black text-lg shadow-lg relative overflow-hidden flex-shrink-0">
                     <div class="absolute inset-0 bg-gradient-to-br from-white/30 to-transparent"></div>

@@ -144,7 +144,7 @@ unset($__errorArgs, $__bag); ?>
             </div>
             <div class="space-y-1">
                 <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                    <i class="fas fa-fill-drip text-indigo-600 text-sm"></i>
+                    <i class="fas fa-paint-brush text-indigo-600 text-sm"></i>
                     لون العلامة (HEX)
                 </label>
                 <input type="text" name="primary_color" value="<?php echo e(old('primary_color', $branch->primary_color ?? '')); ?>" dir="ltr" placeholder="#2563eb"

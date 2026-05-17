@@ -13,7 +13,9 @@ class SalesDailyReportSettings
      */
     public static function defaults(): array
     {
-        return config('sales_daily_report', []);
+        $config = config('sales_daily_report');
+
+        return is_array($config) ? $config : [];
     }
 
     /**
@@ -21,14 +23,20 @@ class SalesDailyReportSettings
      */
     public static function all(): array
     {
-        $disk = Storage::disk('public');
-        if (! $disk->exists(self::STORAGE_PATH)) {
-            return self::defaults();
-        }
-        $raw = $disk->get(self::STORAGE_PATH);
-        $data = json_decode($raw, true);
+        $defaults = self::defaults();
 
-        return array_merge(self::defaults(), is_array($data) ? $data : []);
+        try {
+            $disk = Storage::disk('public');
+            if (! $disk->exists(self::STORAGE_PATH)) {
+                return $defaults;
+            }
+            $raw = $disk->get(self::STORAGE_PATH);
+            $data = json_decode($raw, true);
+
+            return array_merge($defaults, is_array($data) ? $data : []);
+        } catch (\Throwable) {
+            return $defaults;
+        }
     }
 
     public static function enabled(): bool

@@ -13,7 +13,7 @@
     <div class="px-6 py-5 border-b bg-gradient-to-r from-rose-50 to-white flex flex-wrap items-center justify-between gap-3">
       <div>
         <h2 class="text-xl font-black text-slate-900">إعدادات الخصم التلقائي — التقرير اليومي</h2>
-        <p class="text-sm text-slate-600 mt-1">يُطبَّق عند عدم تسليم موظف المبيعات تقريره قبل نهاية اليوم. يظهر في <a href="{{ route('admin.sales.daily-reports.index') }}" class="text-emerald-700 font-semibold underline">تقارير المبيعات اليومية</a>.</p>
+        <p class="text-sm text-slate-600 mt-1">يُطبَّق عند عدم تسليم موظف المبيعات تقريره قبل نهاية اليوم.@if(\Illuminate\Support\Facades\Route::has('admin.sales.daily-reports.index')) يظهر في <a href="{{ route('admin.sales.daily-reports.index') }}" class="text-emerald-700 font-semibold underline">تقارير المبيعات اليومية</a>.@endif</p>
       </div>
       <a href="{{ route('admin.employee-deductions.index') }}" class="text-sm text-slate-600 hover:text-rose-700 font-semibold"><i class="fas fa-arrow-right ml-1"></i> خصومات الموظفين</a>
     </div>
