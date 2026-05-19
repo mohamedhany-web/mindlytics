@@ -1,3 +1,4 @@
-# Requirements for generate_deploy_docx.py (Word deployment guide)
+# Word document generators (business guide, deployment guide, etc.)
 # Install: pip install -r requirements-docx.txt
 python-docx>=1.0.0
+pywin32>=306; sys_platform == "win32"
