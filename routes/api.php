@@ -173,6 +173,10 @@ Route::prefix('v1')->group(function () {
         Route::get('/courses/{course}', [StudentLearnController::class, 'courseOutline'])
             ->middleware('throttle:90,1')
             ->name('api.v1.student.learn.course-outline');
+        Route::get('/courses/{course}/lectures/{lecture}/playback', [StudentLearnController::class, 'lecturePlayback'])
+            ->middleware('throttle:120,1')
+            ->whereNumber('lecture')
+            ->name('api.v1.student.learn.lecture-playback');
         Route::get('/assignments', [StudentLearnController::class, 'assignments'])
             ->middleware('throttle:90,1')
             ->name('api.v1.student.learn.assignments');

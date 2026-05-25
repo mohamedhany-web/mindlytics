@@ -11,6 +11,8 @@ use App\Models\Exam;
 use App\Models\LearningPattern;
 use App\Models\Lecture;
 use App\Models\AdvancedExam;
+use App\Support\LectureRecordingResolver;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -115,6 +117,61 @@ class StudentLearnController extends Controller
             ],
             'sections' => $sectionPayload,
         ]);
+    }
+
+    /**
+     * رابط تشغيل محاضرة موقّع/جاهز (نفس منطق صفحة التعلّم على الويب).
+     */
+    public function lecturePlayback(Request $request, AdvancedCourse $course, int $lecture): JsonResponse
+    {
+        $user = $request->user();
+        if (! $user->isEnrolledIn($course->id)) {
+            return response()->json([
+                'message' => 'أنت غير مسجل في هذا الكورس.',
+                'code' => 'not_enrolled',
+            ], 403);
+        }
+
+        $lectureModel = $course->lectures()->find($lecture);
+        if (! $lectureModel) {
+            return response()->json(['message' => 'المحاضرة غير موجودة.'], 404);
+        }
+
+        $cacheKey = sprintf('api_lecture_playback:%d:%d:%d', $course->id, $lectureModel->id, $user->id);
+
+        $payload = Cache::remember($cacheKey, now()->addMinutes(18), function () use ($lectureModel, $course, $user) {
+            $resolved = LectureRecordingResolver::resolve(
+                $lectureModel->recording_url,
+                $lectureModel->video_platform
+            );
+
+            if (empty($resolved['recording_url'])) {
+                return null;
+            }
+
+            $watch = $lectureModel->watchProgress()
+                ->where('user_id', $user->id)
+                ->first();
+
+            return [
+                'id' => $lectureModel->id,
+                'title' => $lectureModel->title ?? 'محاضرة',
+                'recording_url' => $resolved['recording_url'],
+                'video_platform' => $resolved['video_platform'],
+                'duration_minutes' => $lectureModel->duration_minutes,
+                'watch_progress_percent' => $watch ? (int) $watch->progress_percent : null,
+                'web_path' => '/my-courses/'.$course->id.'/lectures/'.$lectureModel->id,
+            ];
+        });
+
+        if ($payload === null) {
+            return response()->json([
+                'message' => 'لا يوجد تسجيل فيديو لهذه المحاضرة.',
+                'code' => 'no_recording',
+            ], 404);
+        }
+
+        return response()->json($payload);
     }
 
     /**
@@ -284,14 +341,7 @@ class StudentLearnController extends Controller
         }
 
         if ($item instanceof Lecture) {
-            $recordingUrl = $item->recording_url ? trim($item->recording_url) : null;
-            if ($recordingUrl !== null && $recordingUrl !== '' && ! preg_match('#^https?://#i', $recordingUrl)) {
-                $recordingUrl = url(ltrim($recordingUrl, '/'));
-            }
-            if ($recordingUrl === '') {
-                $recordingUrl = null;
-            }
-
+            $resolved = LectureRecordingResolver::resolve($item->recording_url, $item->video_platform);
             $watch = $item->watchProgress->first();
 
             return array_merge($base, [
@@ -300,8 +350,8 @@ class StudentLearnController extends Controller
                 'title' => $item->title ?? 'محاضرة',
                 'description' => $item->description,
                 'duration_minutes' => $item->duration_minutes,
-                'video_platform' => $item->video_platform ? strtolower(trim($item->video_platform)) : null,
-                'recording_url' => $recordingUrl,
+                'video_platform' => $resolved['video_platform'],
+                'recording_url' => $resolved['recording_url'],
                 'watch_progress_percent' => $watch ? (int) $watch->progress_percent : null,
                 'web_path' => '/my-courses/'.$course->id.'/lectures/'.$item->id,
             ]);

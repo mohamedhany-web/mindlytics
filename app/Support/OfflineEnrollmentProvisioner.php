@@ -42,12 +42,17 @@ class OfflineEnrollmentProvisioner
             throw new \RuntimeException('DUPLICATE_ENROLLMENT');
         }
 
-        $remainingAmount = max(0, $coursePrice - $paidAmount);
-        $paymentStatus = 'unpaid';
-        if ($paidAmount >= $coursePrice && $coursePrice > 0) {
+        if ($coursePrice <= 0) {
+            $remainingAmount = 0;
             $paymentStatus = 'paid';
-        } elseif ($paidAmount > 0) {
-            $paymentStatus = 'partial';
+        } else {
+            $remainingAmount = max(0, $coursePrice - $paidAmount);
+            $paymentStatus = 'unpaid';
+            if ($paidAmount >= $coursePrice) {
+                $paymentStatus = 'paid';
+            } elseif ($paidAmount > 0) {
+                $paymentStatus = 'partial';
+            }
         }
 
         $enrollment = OfflineCourseEnrollment::create([
