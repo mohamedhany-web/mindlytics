@@ -562,7 +562,7 @@ class WhatsAppService
     /**
      * إرسال تقرير فوري للطالب
      */
-    public function sendStudentProgress(User $student, string $courseTitle = null): array
+    public function sendStudentProgress(User $student, ?string $courseTitle = null): array
     {
         $reportData = $this->generateStudentReportData($student);
         

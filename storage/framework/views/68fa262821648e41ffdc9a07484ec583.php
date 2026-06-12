@@ -1,0 +1,164 @@
+
+
+<?php $__env->startSection('title', 'إضافة مورد - كورس ' . (($channel ?? 'offline') === 'online' ? 'أونلاين' : 'أوفلاين')); ?>
+<?php $__env->startSection('header', 'إضافة مورد'); ?>
+
+<?php $__env->startSection('content'); ?>
+<div class="w-full max-w-full space-y-6">
+    <!-- هيدر الصفحة (عرض الصفحة) -->
+    <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-5 sm:p-6">
+        <nav class="text-sm text-slate-500 mb-2">
+            <a href="<?php echo e(route('instructor.offline-courses.index', ['channel' => ($channel ?? 'offline')])); ?>" class="hover:text-amber-600 transition-colors"><?php echo e(($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : 'كورساتي الأوفلاين'); ?></a>
+            <span class="mx-2">/</span>
+            <a href="<?php echo e(route('instructor.offline-courses.show', ['offline_course' => $offlineCourse, 'channel' => ($channel ?? 'offline')])); ?>" class="hover:text-amber-600 transition-colors"><?php echo e($offlineCourse->title); ?></a>
+            <span class="mx-2">/</span>
+            <a href="<?php echo e(route('instructor.offline-courses.resources.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')])); ?>" class="hover:text-amber-600 transition-colors">الموارد</a>
+            <span class="mx-2">/</span>
+            <span class="text-slate-700 font-semibold">إضافة مورد</span>
+        </nav>
+        <div class="flex flex-wrap items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center shrink-0">
+                <i class="fas fa-file-alt text-lg"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+                <p class="text-xs font-bold uppercase tracking-wide text-amber-700">مورد جديد لهذا الكورس فقط</p>
+                <h1 class="text-xl sm:text-2xl font-bold text-slate-800 leading-snug">إضافة مورد — <?php echo e($offlineCourse->title); ?></h1>
+                <p class="text-sm text-slate-600 mt-1">نوع الكورس: <?php echo e(($channel ?? 'offline') === 'online' ? 'أونلاين' : 'أوفلاين'); ?> · لن يُحفظ المورد إلا ضمن موارد هذا الكورس.</p>
+            </div>
+        </div>
+        <div class="mt-4 rounded-xl border border-sky-100 bg-sky-50/90 px-4 py-3 text-sm text-sky-950">
+            <p class="font-bold flex items-center gap-2"><i class="fas fa-cloud-upload-alt text-sky-600"></i> رفع الملفات</p>
+            <p class="mt-1 text-xs leading-relaxed text-sky-900/90">ملفات المورد تُرفع وتُحفظ تلقائياً ضمن تخزين المنصة المخصص للموارد.</p>
+        </div>
+    </div>
+
+    <!-- بطاقة النموذج -->
+    <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-6 sm:p-8">
+        <form action="<?php echo e(route('instructor.offline-courses.resources.store', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')])); ?>" method="post" enctype="multipart/form-data">
+            <?php echo csrf_field(); ?>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="lg:col-span-2">
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">العنوان <span class="text-red-500">*</span></label>
+                    <input type="text" name="title" value="<?php echo e(old('title')); ?>" required class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-sky-500 focus:border-sky-500" placeholder="مثال: ملخص الوحدة الأولى">
+                    <?php $__errorArgs = ['title'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="text-red-500 text-sm mt-1"><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                </div>
+                <div class="lg:col-span-2">
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">الوصف</label>
+                    <textarea name="description" rows="3" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-sky-500"><?php echo e(old('description')); ?></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">نوع المورد <span class="text-red-500">*</span></label>
+                    <select name="type" id="resourceType" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-sky-500">
+                        <option value="file" <?php echo e(old('type', 'file') === 'file' ? 'selected' : ''); ?>>ملف مرفوع</option>
+                        <option value="link" <?php echo e(old('type') === 'link' ? 'selected' : ''); ?>>رابط</option>
+                    </select>
+                </div>
+                <div class="lg:col-span-1">
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">ربط بمحاضرة (اختياري)</label>
+                    <select name="lecture_ids[]" multiple class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-sky-500 min-h-[3.25rem]">
+                        <?php $__currentLoopData = ($lectures ?? collect()); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $lec): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <?php
+                                $dateLabel = optional($lec->groupSession)->session_date
+                                    ? \Carbon\Carbon::parse($lec->groupSession->session_date)->format('Y-m-d')
+                                    : ($lec->scheduled_at ? $lec->scheduled_at->format('Y-m-d') : null);
+                                $groupLabel = optional(optional($lec->groupSession)->group)->name ?? optional($lec->group)->name;
+                                $label = trim(($dateLabel ? $dateLabel.' — ' : '') . ($groupLabel ? $groupLabel.' — ' : '') . ($lec->title ?? 'محاضرة'));
+                            ?>
+                            <option value="<?php echo e($lec->id); ?>" <?php echo e(in_array($lec->id, (array) old('lecture_ids', [])) ? 'selected' : ''); ?>>
+                                <?php echo e($label); ?>
+
+                            </option>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                    </select>
+                    <p class="text-xs text-slate-500 mt-1">يمكن ربط المورد بمحاضرة واحدة أو أكثر. لو تركته فارغًا سيظهر كـ “مورد عام”.</p>
+                    <?php $__errorArgs = ['lecture_ids'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="text-red-500 text-sm mt-1"><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                    <?php $__errorArgs = ['lecture_ids.*'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="text-red-500 text-sm mt-1"><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                </div>
+                <div id="fileField" class="lg:col-span-1">
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">ملف واحد</label>
+                    <input type="file" name="file" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 mb-2">
+                    <label class="block text-sm font-semibold text-slate-700 mb-1 mt-3">أو عدة ملفات (PDF، Word، صور، فيديو، إلخ)</label>
+                    <input type="file" name="files[]" multiple class="w-full rounded-xl border border-slate-200 px-4 py-2.5">
+                    <p class="text-xs text-slate-500 mt-1">يمكنك اختيار أكثر من ملف. الحد الأقصى 50 ميجا لكل ملف.</p>
+                    <?php $__errorArgs = ['file'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="text-red-500 text-sm mt-1"><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                    <?php $__errorArgs = ['files.*'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="text-red-500 text-sm mt-1"><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                </div>
+                <div id="linkField" class="hidden lg:col-span-1">
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">رابط التحميل أو المورد</label>
+                    <input type="url" name="url" value="<?php echo e(old('url')); ?>" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-sky-500" placeholder="https://...">
+                    <?php $__errorArgs = ['url'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="text-red-500 text-sm mt-1"><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                </div>
+                <?php if($groups->isNotEmpty()): ?>
+                    <div class="lg:col-span-2">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">لمجموعة محددة (اختياري)</label>
+                        <select name="group_id" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-sky-500">
+                            <option value="">كل الطلاب</option>
+                            <?php $__currentLoopData = $groups; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $g): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <option value="<?php echo e($g->id); ?>" <?php echo e(old('group_id') == $g->id ? 'selected' : ''); ?>><?php echo e($g->name); ?></option>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                        </select>
+                    </div>
+                <?php endif; ?>
+            </div>
+            <div class="mt-6 flex gap-3">
+                <button type="submit" class="px-4 py-2.5 bg-sky-600 text-white rounded-xl font-semibold hover:bg-sky-700">حفظ</button>
+                <a href="<?php echo e(route('instructor.offline-courses.resources.index', ['offlineCourse' => $offlineCourse, 'channel' => ($channel ?? 'offline')])); ?>" class="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-semibold hover:bg-slate-200">إلغاء</a>
+            </div>
+        </form>
+    </div>
+</div>
+<?php $__env->startPush('scripts'); ?>
+<script>
+document.getElementById('resourceType').addEventListener('change', function() {
+    var type = this.value;
+    document.getElementById('fileField').classList.toggle('hidden', type !== 'file');
+    document.getElementById('linkField').classList.toggle('hidden', type !== 'link');
+});
+document.getElementById('resourceType').dispatchEvent(new Event('change'));
+</script>
+<?php $__env->stopPush(); ?>
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH /Users/cityphone/Documents/all Mindlytics Project/Mindlytics/resources/views/instructor/offline-courses/resources/create.blade.php ENDPATH**/ ?>

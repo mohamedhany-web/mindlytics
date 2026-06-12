@@ -10,7 +10,11 @@
     @endif
 
     <div class="flex flex-wrap items-center justify-between gap-4">
-        <a href="{{ route('admin.sales.audit-log.index') }}" class="text-sm text-emerald-700 font-medium hover:underline">سجل أنشطة المبيعات</a>
+        <div class="flex flex-wrap items-center gap-3">
+            <a href="{{ route('admin.sales.audit-log.index') }}" class="text-sm text-emerald-700 font-medium hover:underline">سجل أنشطة المبيعات</a>
+            <span class="text-gray-300">|</span>
+            <a href="{{ route('admin.sales.transfer.index') }}" class="text-sm text-slate-700 font-bold hover:underline">تحويل بيانات موظف</a>
+        </div>
         <div class="flex flex-wrap gap-2">
             <a href="{{ route('admin.sales.leads.export', request()->query()) }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-l from-emerald-600 to-teal-600 text-white rounded-xl text-sm font-bold shadow-lg hover:from-emerald-700 hover:to-teal-700 border border-emerald-400/40">
                 <i class="fas fa-file-excel"></i> تصدير Excel

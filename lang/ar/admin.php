@@ -113,4 +113,17 @@ return [
     'community_settings' => 'إعدادات المجتمع',
     'top_management' => 'الإدارة العليا',
     'about_page' => 'صفحة من نحن',
+
+    'course_community_title' => 'مجتمع الكورسات (التطبيق)',
+    'course_community_subtitle' => 'مراقبة منشورات وردود الطلاب في التطبيق، ونشر منشورات من الإدارة.',
+    'course_community_need_body_or_image' => 'أضف نص المنشور أو صورة واحدة على الأقل.',
+    'course_community_post_created' => 'تم نشر المنشور.',
+    'course_community_post_deleted' => 'تم حذف المنشور.',
+    'course_community_comment_deleted' => 'تم حذف التعليق.',
+    'course_community_pinned' => 'تم تثبيت المنشور.',
+    'course_community_unpinned' => 'تم إلغاء تثبيت المنشور.',
+    'course_community_all_courses' => 'كل الكورسات',
+    'course_community_search_placeholder' => 'بحث في نص المنشور…',
+    'course_community_new_post' => 'منشور جديد',
+    'course_community_no_posts' => 'لا توجد منشورات.',
 ];

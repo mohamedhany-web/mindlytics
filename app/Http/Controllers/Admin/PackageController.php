@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\Package;
 use App\Models\AdvancedCourse;
 use Illuminate\Http\Request;
@@ -22,6 +23,7 @@ class PackageController extends Controller
     {
         // جلب الباقات
         $packagesQuery = Package::withCount('courses')
+            ->with('branch')
             ->orderBy('order')
             ->orderBy('created_at', 'desc');
 
@@ -140,11 +142,14 @@ class PackageController extends Controller
      */
     public function create()
     {
+        $branches = Branch::query()->whereNull('deleted_at')->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'slug']);
+        $defaultBranchId = Branch::centralAcademyBranchId();
+
         $courses = AdvancedCourse::where('is_active', true)
             ->orderBy('title')
             ->get(['id', 'title', 'price']);
 
-        return view('admin.packages.create', compact('courses'));
+        return view('admin.packages.create', compact('courses', 'branches', 'defaultBranchId'));
     }
 
     /**
@@ -169,12 +174,15 @@ class PackageController extends Controller
             'ends_at' => 'nullable|date|after:starts_at',
             'courses' => 'required|array|min:1',
             'courses.*' => 'exists:advanced_courses,id',
+            'branch_id' => 'nullable|exists:branches,id',
         ]);
 
         // إنشاء slug إذا لم يتم توفيره
         if (empty($validated['slug'])) {
             $validated['slug'] = Str::slug($validated['name']);
         }
+
+        $validated['branch_id'] = $request->filled('branch_id') ? (int) $request->input('branch_id') : null;
 
         // رفع الصورة
         if ($request->hasFile('thumbnail')) {
@@ -212,11 +220,13 @@ class PackageController extends Controller
     public function edit(Package $package)
     {
         $package->load('courses');
+        $branches = Branch::query()->whereNull('deleted_at')->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'slug']);
+        $defaultBranchId = Branch::centralAcademyBranchId();
         $courses = AdvancedCourse::where('is_active', true)
             ->orderBy('title')
             ->get(['id', 'title', 'price']);
 
-        return view('admin.packages.edit', compact('package', 'courses'));
+        return view('admin.packages.edit', compact('package', 'courses', 'branches', 'defaultBranchId'));
     }
 
     /**
@@ -241,12 +251,15 @@ class PackageController extends Controller
             'ends_at' => 'nullable|date|after:starts_at',
             'courses' => 'required|array|min:1',
             'courses.*' => 'exists:advanced_courses,id',
+            'branch_id' => 'nullable|exists:branches,id',
         ]);
 
         // إنشاء slug إذا لم يتم توفيره
         if (empty($validated['slug'])) {
             $validated['slug'] = Str::slug($validated['name']);
         }
+
+        $validated['branch_id'] = $request->filled('branch_id') ? (int) $request->input('branch_id') : null;
 
         // رفع الصورة
         if ($request->hasFile('thumbnail')) {

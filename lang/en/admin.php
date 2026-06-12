@@ -113,4 +113,17 @@ return [
     'community_settings' => 'Community Settings',
     'top_management' => 'Top Management',
     'about_page' => 'About Us Page',
+
+    'course_community_title' => 'Course community (mobile app)',
+    'course_community_subtitle' => 'Monitor student posts and replies; publish official posts from the admin.',
+    'course_community_need_body_or_image' => 'Add post text or at least one image.',
+    'course_community_post_created' => 'Post published.',
+    'course_community_post_deleted' => 'Post deleted.',
+    'course_community_comment_deleted' => 'Comment deleted.',
+    'course_community_pinned' => 'Post pinned.',
+    'course_community_unpinned' => 'Post unpinned.',
+    'course_community_all_courses' => 'All courses',
+    'course_community_search_placeholder' => 'Search post body…',
+    'course_community_new_post' => 'New post',
+    'course_community_no_posts' => 'No posts yet.',
 ];

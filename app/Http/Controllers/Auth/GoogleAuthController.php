@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\BranchContext;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
@@ -52,6 +53,8 @@ class GoogleAuthController extends Controller
         }
 
         if (!$user) {
+            $branchId = app(BranchContext::class)->id();
+
             $user = User::create([
                 'name' => $name,
                 'email' => $email,
@@ -60,6 +63,7 @@ class GoogleAuthController extends Controller
                 'google_id' => $googleId,
                 'role' => 'student',
                 'is_active' => true,
+                'branch_id' => $branchId,
             ]);
         } else {
             if (empty($user->google_id)) {

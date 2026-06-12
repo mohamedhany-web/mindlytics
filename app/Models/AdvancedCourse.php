@@ -2,6 +2,10 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AssignsDefaultBranchOnCreate;
+use App\Models\Concerns\QueriesByBranch;
+use App\Models\Concerns\VisibleOnCurrentHostScope;
+use App\Support\BranchContext;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -9,7 +13,10 @@ use Illuminate\Support\Facades\Schema;
 
 class AdvancedCourse extends Model
 {
+    use AssignsDefaultBranchOnCreate;
     use HasFactory;
+    use QueriesByBranch;
+    use VisibleOnCurrentHostScope;
 
     /**
      * حذف السجلات المرتبطة بالكورس باستعلامات SQL مباشرة (بدون تحميل نماذج أو أحداث).
@@ -70,6 +77,7 @@ class AdvancedCourse extends Model
     }
 
     protected $fillable = [
+        'branch_id',
         'instructor_id',
         'title',
         'title_en',
@@ -117,6 +125,11 @@ class AdvancedCourse extends Model
         'mind_map_steps' => 'array',
         'mind_map_published' => 'boolean',
     ];
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
 
     public function academicYear()
     {
@@ -241,6 +254,16 @@ class AdvancedCourse extends Model
     public function scopeByLevel($query, $level)
     {
         return $query->where('level', $level);
+    }
+
+    public function isVisibleOnCurrentHost(): bool
+    {
+        $branch = app(BranchContext::class)->branch;
+        if (! $branch) {
+            return true;
+        }
+
+        return (int) $this->branch_id === (int) $branch->id;
     }
 
     /**

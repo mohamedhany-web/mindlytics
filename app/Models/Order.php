@@ -2,14 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AssignsDefaultBranchOnCreate;
+use App\Models\Concerns\QueriesByBranch;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
 {
-    use HasFactory;
+    use AssignsDefaultBranchOnCreate, HasFactory, QueriesByBranch;
 
     protected $fillable = [
+        'branch_id',
         'user_id',
         'advanced_course_id',
         'academic_year_id',
@@ -42,6 +45,11 @@ class Order extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function course()

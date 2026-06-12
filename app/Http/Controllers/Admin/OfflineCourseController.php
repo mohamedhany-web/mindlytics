@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\OfflineCourse;
 use App\Models\OfflineCourseBooking;
+use App\Models\Branch;
 use App\Models\User;
 use App\Models\OfflineLocation;
 use Carbon\Carbon;
@@ -64,8 +65,10 @@ class OfflineCourseController extends Controller
     {
         $instructors = User::where('role', 'instructor')->where('is_active', true)->get();
         $locations = OfflineLocation::where('is_active', true)->get();
+        $branches = Branch::query()->whereNull('deleted_at')->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'slug']);
+        $defaultBranchId = Branch::defaultAssignableId();
 
-        return view('admin.offline-courses.create', compact('instructors', 'locations'));
+        return view('admin.offline-courses.create', compact('instructors', 'locations', 'branches', 'defaultBranchId'));
     }
 
     /**
@@ -92,6 +95,7 @@ class OfflineCourseController extends Controller
             'online_only' => 'sometimes|boolean',
             'booking_opens_at' => 'nullable|date',
             'booking_closes_at' => 'nullable|date|after_or_equal:booking_opens_at',
+            'branch_id' => 'nullable|exists:branches,id',
         ]);
 
         $validated['public_booking_enabled'] = $request->boolean('public_booking_enabled');
@@ -109,6 +113,8 @@ class OfflineCourseController extends Controller
             }
         }
 
+        $validated['branch_id'] = $request->filled('branch_id') ? (int) $request->input('branch_id') : null;
+
         $course = OfflineCourse::create($validated);
 
         return redirect()->route('admin.offline-courses.show', $course)
@@ -121,6 +127,7 @@ class OfflineCourseController extends Controller
     public function show(OfflineCourse $offlineCourse)
     {
         $offlineCourse->load([
+            'branch',
             'instructor',
             'locationModel',
             'groups.instructor',
@@ -168,8 +175,9 @@ class OfflineCourseController extends Controller
     {
         $instructors = User::where('role', 'instructor')->where('is_active', true)->get();
         $locations = OfflineLocation::where('is_active', true)->get();
+        $branches = Branch::query()->whereNull('deleted_at')->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'slug']);
 
-        return view('admin.offline-courses.edit', compact('offlineCourse', 'instructors', 'locations'));
+        return view('admin.offline-courses.edit', compact('offlineCourse', 'instructors', 'locations', 'branches'));
     }
 
     /**
@@ -196,6 +204,7 @@ class OfflineCourseController extends Controller
             'online_only' => 'sometimes|boolean',
             'booking_opens_at' => 'nullable|date',
             'booking_closes_at' => 'nullable|date|after_or_equal:booking_opens_at',
+            'branch_id' => 'nullable|exists:branches,id',
         ]);
 
         $validated['public_booking_enabled'] = $request->boolean('public_booking_enabled');
@@ -212,6 +221,8 @@ class OfflineCourseController extends Controller
                 $validated['booking_closes_at'] = $dt->copy()->endOfDay()->format('Y-m-d H:i:s');
             }
         }
+
+        $validated['branch_id'] = $request->filled('branch_id') ? (int) $request->input('branch_id') : null;
 
         $offlineCourse->update($validated);
 

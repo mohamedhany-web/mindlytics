@@ -183,6 +183,7 @@ Route::get('/privacy', [\App\Http\Controllers\Public\PageController::class, 'pri
 Route::get('/pricing', [\App\Http\Controllers\Public\PageController::class, 'pricing'])->name('public.pricing');
 Route::get('/team', [\App\Http\Controllers\Public\PageController::class, 'team'])->name('public.team');
 Route::get('/certificates', [\App\Http\Controllers\Public\PageController::class, 'certificates'])->name('public.certificates');
+Route::get('/challenges', [\App\Http\Controllers\Public\ChallengesController::class, 'index'])->name('public.challenges');
 Route::get('/certificates/verify', [\App\Http\Controllers\Public\CertificateVerificationController::class, 'verify'])->name('public.certificates.verify');
 Route::get('/certificates/verify/{code}', [\App\Http\Controllers\Public\CertificateVerificationController::class, 'verify'])->name('public.certificates.verify.code');
 Route::get('/help', [\App\Http\Controllers\Public\PageController::class, 'help'])->name('public.help');
@@ -263,7 +264,7 @@ Route::get('/media/{media}', [\App\Http\Controllers\Public\MediaController::clas
 
 // صفحة الكورسات العامة
 Route::get('/courses', function () {
-    $coursesQuery = \App\Models\AdvancedCourse::where('is_active', true);
+    $coursesQuery = \App\Models\AdvancedCourse::where('is_active', true)->visibleOnCurrentHost();
     
     // جلب الكورسات مع العلاقات
     $coursesCollection = $coursesQuery
@@ -291,12 +292,20 @@ Route::get('/courses', function () {
         ];
     })->values()->toArray();
     
-    // جلب الباقات النشطة
+    // جلب الباقات النشطة (تظهر فقط إن وُجد بها كورس نشط يخص الفرع الحالي عند وجود فرع)
     $packages = \App\Models\Package::active()
+        ->visibleOnCurrentHost()
+        ->whereHas('courses', function ($q) {
+            $q->where('advanced_courses.is_active', true)->visibleOnCurrentHost();
+        })
         ->with(['courses' => function($query) {
-            $query->where('is_active', true);
+            $query->where('is_active', true)->visibleOnCurrentHost();
         }])
-        ->withCount('courses')
+        ->withCount([
+            'courses' => function ($q) {
+                $q->where('advanced_courses.is_active', true)->visibleOnCurrentHost();
+            },
+        ])
         ->orderBy('is_featured', 'desc')
         ->orderBy('is_popular', 'desc')
         ->orderBy('order')
@@ -320,6 +329,7 @@ Route::get('/course/{courseId}/preview-watch-url/{lessonId}', [\App\Http\Control
 Route::get('/course/{id}', function ($id) {
     $course = \App\Models\AdvancedCourse::where('id', $id)
         ->where('is_active', true)
+        ->visibleOnCurrentHost()
         ->with(['academicSubject', 'academicYear', 'instructor'])
         ->withCount('lessons')
         ->firstOrFail();
@@ -350,6 +360,7 @@ Route::get('/course/{id}', function ($id) {
 
     // كورسات ذات صلة
     $relatedCourses = \App\Models\AdvancedCourse::where('is_active', true)
+        ->visibleOnCurrentHost()
         ->where('id', '!=', $course->id)
         ->where(function($query) use ($course) {
             $query->where('level', $course->level)
@@ -503,8 +514,13 @@ Route::post('/learning-path/{slug}/enroll', [\App\Http\Controllers\Public\Learni
 Route::get('/package/{slug}', function ($slug) {
     $package = \App\Models\Package::where('slug', $slug)
         ->where('is_active', true)
+        ->visibleOnCurrentHost()
+        ->whereHas('courses', function ($q) {
+            $q->where('advanced_courses.is_active', true)->visibleOnCurrentHost();
+        })
         ->with(['courses' => function($query) {
             $query->where('is_active', true)
+                  ->visibleOnCurrentHost()
                   ->with(['academicSubject', 'academicYear'])
                   ->withCount('lessons');
         }])
@@ -512,8 +528,16 @@ Route::get('/package/{slug}', function ($slug) {
     
     // باقات ذات صلة
     $relatedPackages = \App\Models\Package::where('is_active', true)
+        ->visibleOnCurrentHost()
         ->where('id', '!=', $package->id)
-        ->withCount('courses')
+        ->whereHas('courses', function ($q) {
+            $q->where('advanced_courses.is_active', true)->visibleOnCurrentHost();
+        })
+        ->withCount([
+            'courses' => function ($q) {
+                $q->where('advanced_courses.is_active', true)->visibleOnCurrentHost();
+            },
+        ])
         ->limit(3)
         ->get();
     
@@ -555,6 +579,21 @@ Route::middleware(['auth'])->prefix('2fa')->name('two-factor.')->group(function 
 // مسارات لوحة التحكم - محمية بالتأكد من تسجيل الدخول ومنع الجلسات المتزامنة
 Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // لوحة مدير الفرع (بيانات الفرع المرتبط بحسابه فقط)
+    Route::prefix('branch-office')->name('branch.office.')->middleware(['role:branch_manager', 'branch.office'])->group(function () {
+        Route::get('/', function () {
+            return redirect()->route('branch.office.dashboard');
+        });
+        Route::get('/dashboard', [\App\Http\Controllers\Branch\BranchDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/users', [\App\Http\Controllers\Branch\BranchUsersController::class, 'index'])->name('users');
+        Route::get('/orders', [\App\Http\Controllers\Branch\BranchOrdersController::class, 'index'])->name('orders');
+        Route::get('/courses-online', [\App\Http\Controllers\Branch\BranchOnlineCoursesController::class, 'index'])->name('courses-online');
+        Route::get('/courses-offline', [\App\Http\Controllers\Branch\BranchOfflineCoursesController::class, 'index'])->name('courses-offline');
+        Route::get('/learning-paths', [\App\Http\Controllers\Branch\BranchLearningPathsController::class, 'index'])->name('learning-paths');
+        Route::get('/invoices', [\App\Http\Controllers\Branch\BranchInvoicesController::class, 'index'])->name('invoices');
+        Route::get('/payments', [\App\Http\Controllers\Branch\BranchPaymentsController::class, 'index'])->name('payments');
+    });
 
     // API لإشعارات الناف بار (تعمل للطالب/المدرب/الموظف)
     Route::prefix('api/nav-notifications')->name('nav-notifications.')->group(function () {
@@ -794,11 +833,17 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::middleware('sales.employee')->prefix('sales')->name('sales.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Employee\SalesDashboardController::class, 'index'])->name('dashboard');
             Route::get('kpi', [\App\Http\Controllers\Employee\SalesKpiController::class, 'index'])->name('kpi.index');
+            Route::get('reports', [\App\Http\Controllers\Employee\SalesReportController::class, 'index'])->name('reports.index');
+            Route::get('reports/export', [\App\Http\Controllers\Employee\SalesReportController::class, 'export'])->name('reports.export');
+            Route::get('daily-reports', [\App\Http\Controllers\Employee\SalesDailyReportController::class, 'index'])->name('daily-reports.index');
+            Route::get('daily-reports/edit', [\App\Http\Controllers\Employee\SalesDailyReportController::class, 'edit'])->name('daily-reports.edit');
+            Route::post('daily-reports', [\App\Http\Controllers\Employee\SalesDailyReportController::class, 'store'])->name('daily-reports.store');
             Route::get('leads/export', [\App\Http\Controllers\Employee\SalesLeadController::class, 'export'])->name('leads.export');
             Route::post('leads/{lead}/activities', [\App\Http\Controllers\Employee\SalesLeadController::class, 'storeActivity'])->name('leads.activities.store');
             Route::post('leads/{lead}/csat', [\App\Http\Controllers\Employee\SalesLeadController::class, 'storeCsat'])->name('leads.csat.store');
             Route::resource('leads', \App\Http\Controllers\Employee\SalesLeadController::class);
         });
+        
 
         Route::middleware('moderator.employee')->prefix('design-cycles')->name('design-cycles.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'index'])->name('index');
@@ -880,10 +925,60 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
     Route::prefix('admin')->name('admin.')->middleware(['role:admin|super_admin'])->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Admin\AdminController::class, 'dashboard'])->name('dashboard');
 
+        Route::get('branches/rollout-plan', [\App\Http\Controllers\Admin\BranchController::class, 'rolloutPlan'])->name('branches.rollout-plan');
+        Route::get('branch-managers/create', [\App\Http\Controllers\Admin\BranchController::class, 'createBranchManager'])->name('branch-managers.create');
+        Route::post('branch-managers', [\App\Http\Controllers\Admin\BranchController::class, 'storeBranchManagerGlobal'])
+            ->middleware('throttle:10,1')
+            ->name('branch-managers.store');
+        Route::post('branches/{branch}/branch-managers', [\App\Http\Controllers\Admin\BranchController::class, 'storeBranchManager'])
+            ->middleware('throttle:10,1')
+            ->name('branches.branch-managers.store');
+        Route::resource('branches', \App\Http\Controllers\Admin\BranchController::class);
+
+        Route::prefix('support-tickets')->name('support-tickets.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\SupportTicketsController::class, 'index'])->name('index');
+            Route::get('/{ticket}', [\App\Http\Controllers\Admin\SupportTicketsController::class, 'show'])->name('show');
+            Route::post('/{ticket}/reply', [\App\Http\Controllers\Admin\SupportTicketsController::class, 'reply'])->name('reply');
+            Route::post('/{ticket}/close', [\App\Http\Controllers\Admin\SupportTicketsController::class, 'close'])->name('close');
+        });
+
+        Route::prefix('mobile-app')->name('mobile-app.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\MobileAppSettingsController::class, 'edit'])->name('edit');
+            Route::put('/', [\App\Http\Controllers\Admin\MobileAppSettingsController::class, 'update'])->name('update');
+            Route::get('/notifications', [\App\Http\Controllers\Admin\MobileAppNotificationsController::class, 'index'])->name('notifications');
+            Route::post('/notifications', [\App\Http\Controllers\Admin\MobileAppNotificationsController::class, 'store'])
+                ->middleware('throttle:30,1')
+                ->name('notifications.store');
+            Route::get('/maintenance', [\App\Http\Controllers\Admin\MobileAppPagesController::class, 'maintenance'])->name('maintenance');
+            Route::get('/links', [\App\Http\Controllers\Admin\MobileAppPagesController::class, 'links'])->name('links');
+            Route::get('/appearance', [\App\Http\Controllers\Admin\MobileAppPagesController::class, 'appearance'])->name('appearance');
+
+            Route::prefix('course-community')->name('course-community.')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Admin\AdminCourseCommunityController::class, 'index'])->name('index');
+                Route::get('/posts/create', [\App\Http\Controllers\Admin\AdminCourseCommunityController::class, 'create'])->name('posts.create');
+                Route::post('/posts', [\App\Http\Controllers\Admin\AdminCourseCommunityController::class, 'store'])
+                    ->middleware('throttle:30,1')
+                    ->name('posts.store');
+                Route::get('/posts/{post}', [\App\Http\Controllers\Admin\AdminCourseCommunityController::class, 'show'])->name('posts.show');
+                Route::delete('/posts/{post}', [\App\Http\Controllers\Admin\AdminCourseCommunityController::class, 'destroyPost'])->name('posts.destroy');
+                Route::post('/posts/{post}/pin', [\App\Http\Controllers\Admin\AdminCourseCommunityController::class, 'togglePin'])->name('posts.pin');
+                Route::delete('/posts/{post}/comments/{comment}', [\App\Http\Controllers\Admin\AdminCourseCommunityController::class, 'destroyComment'])
+                    ->name('posts.comments.destroy');
+            });
+        });
+
         Route::prefix('sales')->name('sales.')->group(function () {
             Route::get('reports', [\App\Http\Controllers\Admin\SalesReportController::class, 'index'])->name('reports.index');
             Route::get('reports/export', [\App\Http\Controllers\Admin\SalesReportController::class, 'export'])->name('reports.export');
+            Route::get('reports/daily-export', [\App\Http\Controllers\Admin\SalesReportController::class, 'dailyExport'])->name('reports.daily-export');
+            Route::get('daily-reports', [\App\Http\Controllers\Admin\SalesDailyReportController::class, 'index'])->name('daily-reports.index');
+            Route::get('daily-reports/export', [\App\Http\Controllers\Admin\SalesDailyReportController::class, 'export'])->name('daily-reports.export');
+            Route::get('daily-reports/settings', [\App\Http\Controllers\Admin\SalesDailyReportController::class, 'settings'])->name('daily-reports.settings');
+            Route::put('daily-reports/settings', [\App\Http\Controllers\Admin\SalesDailyReportController::class, 'updateSettings'])->name('daily-reports.settings.update');
+            Route::get('daily-reports/{id}', [\App\Http\Controllers\Admin\SalesDailyReportController::class, 'show'])->name('daily-reports.show')->where('id', '[0-9]+');
             Route::get('audit-log', [\App\Http\Controllers\Admin\SalesAuditController::class, 'index'])->name('audit-log.index');
+            Route::get('transfer', [\App\Http\Controllers\Admin\SalesTransferController::class, 'index'])->name('transfer.index');
+            Route::post('transfer', [\App\Http\Controllers\Admin\SalesTransferController::class, 'store'])->name('transfer.store');
             Route::get('kpi', [\App\Http\Controllers\Admin\SalesKpiController::class, 'index'])->name('kpi.index');
             Route::get('kpi/targets', [\App\Http\Controllers\Admin\SalesKpiController::class, 'targets'])->name('kpi.targets');
             Route::put('kpi/targets', [\App\Http\Controllers\Admin\SalesKpiController::class, 'updateTargets'])->name('kpi.targets.update');
@@ -1035,6 +1130,12 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/{exam}/statistics', [\App\Http\Controllers\Admin\ExamController::class, 'statistics'])->name('statistics');
             Route::get('/{exam}/preview', [\App\Http\Controllers\Admin\ExamController::class, 'preview'])->name('preview');
             Route::post('/{exam}/duplicate', [\App\Http\Controllers\Admin\ExamController::class, 'duplicate'])->name('duplicate');
+        });
+
+        // إدارة التمارين العملية (Practice / Learning Patterns)
+        Route::prefix('practice')->name('practice.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\PracticeController::class, 'index'])->name('index');
+            Route::get('/{pattern}', [\App\Http\Controllers\Admin\PracticeController::class, 'show'])->name('show');
         });
 
         // إدارة المواد الدراسية القديمة
@@ -1329,6 +1430,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('moderator-marketing-plans', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'index'])->name('moderator-marketing-plans.index');
         Route::get('moderator-marketing-plans/{plan}', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'show'])->name('moderator-marketing-plans.show');
 
+        Route::get('employee-deductions/daily-report-penalty-settings', [\App\Http\Controllers\Admin\EmployeeDeductionController::class, 'dailyReportPenaltySettings'])->name('employee-deductions.daily-report-penalty-settings');
+        Route::put('employee-deductions/daily-report-penalty-settings', [\App\Http\Controllers\Admin\EmployeeDeductionController::class, 'updateDailyReportPenaltySettings'])->name('employee-deductions.daily-report-penalty-settings.update');
         Route::resource('employee-deductions', \App\Http\Controllers\Admin\EmployeeDeductionController::class);
         
         // إدارة الإجازات

@@ -78,6 +78,9 @@
                                 <div>
                                     <h2 class="text-xl font-bold text-gray-900">{{ $track->name }}</h2>
                                     <p class="text-xs text-gray-500 uppercase tracking-widest">{{ $track->code }}</p>
+                                    @if($track->branch)
+                                        <p class="text-xs text-sky-600 font-medium mt-1"><i class="fas fa-code-branch ml-1"></i>{{ $track->branch->name }}</p>
+                                    @endif
                                 </div>
                             </div>
                             <p class="text-sm text-gray-600 max-w-xl">

@@ -1,4 +1,4 @@
-﻿@extends('layouts.admin')
+@extends('layouts.admin')
 
 @section('title', 'إدارة الباقات والأسعار')
 @section('header', 'إدارة الباقات والأسعار')
@@ -180,6 +180,9 @@
                                             @endif
                                             <div>
                                                 <div class="text-sm font-medium text-gray-900">{{ $package->name }}</div>
+                                                @if($package->branch)
+                                                    <div class="text-xs text-sky-600 mt-0.5">{{ $package->branch->name }}</div>
+                                                @endif
                                                 @if($package->description)
                                                 <div class="text-xs text-gray-500 mt-1">{{ Str::limit($package->description, 50) }}</div>
                                                 @endif

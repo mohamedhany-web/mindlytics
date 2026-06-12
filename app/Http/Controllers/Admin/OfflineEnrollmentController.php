@@ -115,7 +115,10 @@ class OfflineEnrollmentController extends Controller
         $coursePrice = (float) $offlineCourse->price;
         $paidAmount = 0;
 
-        if ($validated['payment_type'] === 'full') {
+        if ($validated['payment_type'] === 'free') {
+            $coursePrice = 0;
+            $paidAmount = 0;
+        } elseif ($validated['payment_type'] === 'full') {
             $paidAmount = $coursePrice;
         } elseif ($validated['payment_type'] === 'partial') {
             $paidAmount = min((float) ($validated['paid_amount'] ?? 0), $coursePrice);

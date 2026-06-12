@@ -24,10 +24,16 @@
                     <p class="text-sm text-slate-600 mt-1">إدارة خصومات الرواتب (ضريبة، تأمين، قرض، غرامة، أخرى)</p>
                 </div>
             </div>
-            <a href="{{ route('admin.employee-deductions.create') }}" class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-red-500 hover:from-rose-700 hover:to-red-600 px-5 py-3 text-sm font-semibold text-white shadow-lg hover:shadow-xl transition-all duration-200">
-                <i class="fas fa-plus"></i>
-                إضافة خصم جديد
-            </a>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('admin.employee-deductions.daily-report-penalty-settings') }}" class="inline-flex items-center gap-2 rounded-xl border-2 border-amber-300 bg-amber-50 hover:bg-amber-100 px-5 py-3 text-sm font-semibold text-amber-900 transition-all">
+                    <i class="fas fa-clipboard-check"></i>
+                    خصم التقرير اليومي (مبيعات)
+                </a>
+                <a href="{{ route('admin.employee-deductions.create') }}" class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-red-500 hover:from-rose-700 hover:to-red-600 px-5 py-3 text-sm font-semibold text-white shadow-lg hover:shadow-xl transition-all duration-200">
+                    <i class="fas fa-plus"></i>
+                    إضافة خصم جديد
+                </a>
+            </div>
         </div>
     </section>
 

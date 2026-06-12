@@ -89,6 +89,21 @@
                                 </div>
 
                                 <div class="space-y-2">
+                                    <label class="block text-sm font-semibold text-gray-700">الفرع</label>
+                                    <select name="branch_id"
+                                            class="w-full rounded-2xl border border-gray-200 bg-white/70 px-4 py-3 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition">
+                                        <option value="">الافتراضي (حسب إعدادات المنصة)</option>
+                                        @foreach($branches ?? [] as $branch)
+                                            <option value="{{ $branch->id }}" {{ (string) old('branch_id', $defaultBranchId ?? '') === (string) $branch->id ? 'selected' : '' }}>
+                                                {{ $branch->name }} @if($branch->slug)<span class="text-gray-400">({{ $branch->slug }})</span>@endif
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <p class="text-xs text-gray-500">يحدد ظهور الكورس على النطاق الفرعي أو النطاق المخصص لهذا الفرع.</p>
+                                    @error('branch_id') <p class="text-xs text-rose-500 mt-1">{{ $message }}</p> @enderror
+                                </div>
+
+                                <div class="space-y-2">
                                     <label class="block text-sm font-semibold text-gray-700">مستوى الكورس</label>
                                     <select name="level"
                                             class="w-full rounded-2xl border border-gray-200 bg-white/70 px-4 py-3 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition">

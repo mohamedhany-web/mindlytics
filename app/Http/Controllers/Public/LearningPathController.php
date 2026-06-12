@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
-use App\Models\Package;
 use App\Models\AcademicYear;
 use App\Models\AdvancedCourse;
 use App\Models\StudentCourseEnrollment;
@@ -24,15 +23,22 @@ class LearningPathController extends Controller
     {
         // جلب المسارات التعليمية النشطة (AcademicYears)
         $academicYears = AcademicYear::where('is_active', true)
+            ->visibleOnCurrentHost()
             ->select('*') // تأكد من جلب جميع الأعمدة بما فيها thumbnail
             ->with(['linkedCourses' => function($query) {
                 $query->where('is_active', true)
+                      ->visibleOnCurrentHost()
                       ->with(['academicSubject', 'academicYear', 'instructor'])
                       ->withCount('lessons');
             }, 'academicSubjects' => function($query) {
                 $query->where('is_active', true);
             }])
-            ->withCount(['linkedCourses', 'academicSubjects'])
+            ->withCount([
+                'linkedCourses' => function ($q) {
+                    $q->where('is_active', true)->visibleOnCurrentHost();
+                },
+                'academicSubjects',
+            ])
             ->select('*')
             ->orderBy('order')
             ->get();
@@ -49,6 +55,7 @@ class LearningPathController extends Controller
                 if (!empty($subjectIds)) {
                     $subjectCourses = AdvancedCourse::where('is_active', true)
                         ->whereIn('academic_subject_id', $subjectIds)
+                        ->visibleOnCurrentHost()
                         ->with(['academicSubject', 'academicYear', 'instructor'])
                         ->withCount('lessons')
                         ->get();
@@ -85,6 +92,7 @@ class LearningPathController extends Controller
         // جلب الكورسات المميزة للعرض
         $featuredCourses = AdvancedCourse::where('is_active', true)
             ->where('is_featured', true)
+            ->visibleOnCurrentHost()
             ->with(['academicSubject', 'academicYear'])
             ->withCount('lessons')
             ->limit(6)
@@ -130,8 +138,10 @@ class LearningPathController extends Controller
     {
         // البحث عن AcademicYear بالاسم (slug)
         $academicYear = AcademicYear::active()
+            ->visibleOnCurrentHost()
             ->with(['linkedCourses' => function($query) {
                 $query->where('is_active', true)
+                      ->visibleOnCurrentHost()
                       ->with(['academicSubject', 'academicYear', 'instructor'])
                       ->withCount('lessons');
             }, 'academicSubjects'])
@@ -150,13 +160,14 @@ class LearningPathController extends Controller
         if (!empty($subjectIds)) {
             $courses = AdvancedCourse::where('is_active', true)
                 ->whereIn('academic_subject_id', $subjectIds)
+                ->visibleOnCurrentHost()
                 ->with(['academicSubject', 'academicYear', 'instructor'])
                 ->withCount('lessons')
                 ->get();
         }
         
         // دمج الكورسات المرتبطة مباشرة مع الكورسات من المواد الدراسية
-        $linkedCourses = $academicYear->linkedCourses()->where('is_active', true)->get();
+        $linkedCourses = $academicYear->linkedCourses()->where('is_active', true)->visibleOnCurrentHost()->get();
         $allCourses = $linkedCourses->merge($courses)->unique('id');
         
         // سعر المسار مستقل عن أسعار الكورسات (يُحدد من لوحة الإدارة)
@@ -182,6 +193,7 @@ class LearningPathController extends Controller
         
         // مسارات ذات صلة
         $relatedYears = AcademicYear::active()
+            ->visibleOnCurrentHost()
             ->where('id', '!=', $academicYear->id)
             ->withCount('academicSubjects')
             ->limit(3)
@@ -189,7 +201,7 @@ class LearningPathController extends Controller
         
         $relatedPaths = $relatedYears->map(function($year) {
             $yearCourses = $year->academicSubjects->flatMap(function($subject) {
-                return $subject->advancedCourses()->where('is_active', true)->get();
+                return $subject->advancedCourses()->where('is_active', true)->visibleOnCurrentHost()->get();
             })->unique('id');
             
             return (object)[
@@ -252,6 +264,7 @@ class LearningPathController extends Controller
 
         // البحث عن AcademicYear بالاسم (slug)
         $academicYear = AcademicYear::active()
+            ->visibleOnCurrentHost()
             ->get()
             ->first(function($year) use ($slug) {
                 return Str::slug($year->name) === $slug;

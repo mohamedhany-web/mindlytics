@@ -9,7 +9,18 @@ class GroupMessage extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['group_id', 'user_id', 'body'];
+    protected $fillable = [
+        'group_id',
+        'user_id',
+        'body',
+        'reply_to_id',
+        'kind',
+        'meta',
+    ];
+
+    protected $casts = [
+        'meta' => 'array',
+    ];
 
     public function group()
     {
@@ -19,5 +30,10 @@ class GroupMessage extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function replyTo()
+    {
+        return $this->belongsTo(GroupMessage::class, 'reply_to_id');
     }
 }

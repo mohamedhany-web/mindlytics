@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AcademicYear;
 use App\Models\AdvancedCourse;
+use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -15,7 +16,7 @@ class AcademicYearController extends Controller
 {
     public function index()
     {
-        $academicYears = AcademicYear::with(['academicSubjects'])
+        $academicYears = AcademicYear::with(['academicSubjects', 'branch'])
             ->ordered()
             ->get();
 
@@ -56,7 +57,10 @@ class AcademicYearController extends Controller
 
     public function create()
     {
-        return view('admin.academic-years.create');
+        $branches = Branch::query()->whereNull('deleted_at')->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'slug']);
+        $defaultBranchId = Branch::centralAcademyBranchId();
+
+        return view('admin.academic-years.create', compact('branches', 'defaultBranchId'));
     }
 
     public function store(Request $request)
@@ -73,6 +77,7 @@ class AcademicYearController extends Controller
             'color' => 'nullable|string|max:7',
             'order' => 'nullable|integer|min:0',
             'is_active' => 'boolean',
+            'branch_id' => 'nullable|exists:branches,id',
         ], [
             'name.required' => 'اسم السنة الدراسية مطلوب',
             'name.unique' => 'اسم السنة الدراسية موجود مسبقاً',
@@ -86,6 +91,7 @@ class AcademicYearController extends Controller
         $data = $request->all();
         $data['is_active'] = $request->has('is_active');
         $data['order'] = $data['order'] ?? 0;
+        $data['branch_id'] = $request->filled('branch_id') ? (int) $request->input('branch_id') : null;
 
         if ($request->hasFile('thumbnail')) {
             $data['thumbnail'] = $request->file('thumbnail')->store('academic-years', 'public');
@@ -165,6 +171,9 @@ class AcademicYearController extends Controller
             ->orderBy('name')
             ->get();
 
+        $branches = Branch::query()->whereNull('deleted_at')->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'slug']);
+        $defaultBranchId = Branch::centralAcademyBranchId();
+
         return view('admin.academic-years.edit', [
             'academicYear' => $academicYear,
             'track' => $track,
@@ -172,6 +181,8 @@ class AcademicYearController extends Controller
             'trackSummary' => $trackSummary,
             'allCourses' => $allCourses,
             'availableInstructors' => $availableInstructors,
+            'branches' => $branches,
+            'defaultBranchId' => $defaultBranchId,
         ]);
     }
 
@@ -199,6 +210,7 @@ class AcademicYearController extends Controller
             'color' => 'nullable|string|max:7',
             'order' => 'nullable|integer|min:0',
             'is_active' => 'boolean',
+            'branch_id' => 'nullable|exists:branches,id',
         ], [
             'name.required' => 'اسم السنة الدراسية مطلوب',
             'name.unique' => 'اسم السنة الدراسية موجود مسبقاً',
@@ -212,6 +224,7 @@ class AcademicYearController extends Controller
         $data = $request->all();
         $data['is_active'] = $request->has('is_active');
         $data['order'] = $data['order'] ?? 0;
+        $data['branch_id'] = $request->filled('branch_id') ? (int) $request->input('branch_id') : null;
 
         if ($request->hasFile('thumbnail')) {
             // حذف الصورة القديمة إن وجدت

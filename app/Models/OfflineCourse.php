@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\QueriesByBranch;
+use App\Models\Concerns\VisibleOnCurrentHostScope;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +12,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class OfflineCourse extends Model
 {
+    use QueriesByBranch;
+    use VisibleOnCurrentHostScope;
+
     protected $fillable = [
+        'branch_id',
         'title',
         'description',
         'instructor_id',
@@ -44,6 +50,33 @@ class OfflineCourse extends Model
         'booking_opens_at' => 'datetime',
         'booking_closes_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (OfflineCourse $course): void {
+            if ($course->getAttribute('branch_id') !== null && $course->getAttribute('branch_id') !== '') {
+                return;
+            }
+            $instructorId = $course->getAttribute('instructor_id');
+            if ($instructorId) {
+                $bid = User::query()->whereKey($instructorId)->value('branch_id');
+                if ($bid !== null) {
+                    $course->setAttribute('branch_id', $bid);
+
+                    return;
+                }
+            }
+            $default = Branch::defaultAssignableId();
+            if ($default !== null) {
+                $course->setAttribute('branch_id', $default);
+            }
+        });
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
+    }
 
     /**
      * علاقة مع المدرب

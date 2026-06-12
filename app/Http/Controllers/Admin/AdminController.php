@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Branch;
 use App\Models\Course;
 use App\Models\Subject;
 use App\Models\Exam;
@@ -241,6 +242,19 @@ class AdminController extends Controller
             'datasets_active' => \App\Models\CommunityDataset::active()->count(),
         ];
 
+        $centralAcademyBranchId = null;
+        $branchesOperationalOverview = collect();
+        try {
+            $centralAcademyBranchId = Branch::centralAcademyBranchId();
+            $branchesOperationalOverview = Branch::query()
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->withCount(['users', 'advancedCourses', 'offlineCourses', 'orders', 'studentCourseEnrollments'])
+                ->get();
+        } catch (\Throwable $e) {
+            Log::warning('تعذر تحميل ملخص الفروع في لوحة الإدارة', ['message' => $e->getMessage()]);
+        }
+
         $quickActions = [
             [
                 'title' => 'مجتمع الذكاء الاصطناعي',
@@ -329,7 +343,9 @@ class AdminController extends Controller
             'weeklyActivity',
             'monthlyActivity',
             'quickActions',
-            'communityStats'
+            'communityStats',
+            'centralAcademyBranchId',
+            'branchesOperationalOverview'
         ));
     }
 
@@ -368,6 +384,10 @@ class AdminController extends Controller
             });
         }
 
+        if ($request->filled('branch_id') && (int) $request->input('branch_id') > 0) {
+            $query->where('branch_id', (int) $request->input('branch_id'));
+        }
+
         return $query;
     }
 
@@ -376,7 +396,7 @@ class AdminController extends Controller
      */
     public function users(Request $request)
     {
-        $users = $this->usersIndexFilteredQuery($request)->latest()->paginate(20)->withQueryString();
+        $users = $this->usersIndexFilteredQuery($request)->with('branch')->latest()->paginate(20)->withQueryString();
 
         $stats = [
             'total' => 0,
@@ -499,7 +519,16 @@ class AdminController extends Controller
             }
         }
 
-        return view('admin.users.index', compact('users', 'stats', 'trends', 'recentUsers', 'recentlyActiveUsers', 'usersByRole', 'usersByMonth'));
+        $branches = collect();
+        try {
+            $branches = Branch::query()->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'slug', 'is_active']);
+        } catch (\Throwable $e) {
+            Log::warning('تعذر تحميل قائمة الفروع لفلترة المستخدمين', ['message' => $e->getMessage()]);
+        }
+
+        $centralAcademyBranchId = Branch::centralAcademyBranchId();
+
+        return view('admin.users.index', compact('users', 'stats', 'trends', 'recentUsers', 'recentlyActiveUsers', 'usersByRole', 'usersByMonth', 'branches', 'centralAcademyBranchId'));
     }
 
     /**
@@ -513,7 +542,9 @@ class AdminController extends Controller
         if (!$defaultCountry || !is_array($defaultCountry)) {
             $defaultCountry = ['code' => 'SA', 'dial_code' => '+966', 'name_ar' => 'السعودية', 'name_en' => 'Saudi Arabia'];
         }
-        return view('admin.users.create', compact('phoneCountries', 'defaultCountry'));
+        $branches = Branch::query()->whereNull('deleted_at')->orderBy('sort_order')->orderBy('name')->get();
+
+        return view('admin.users.create', compact('phoneCountries', 'defaultCountry', 'branches'));
     }
 
     /**
@@ -530,6 +561,8 @@ class AdminController extends Controller
             abort(403, 'غير مصرح لك بإنشاء مستخدم جديد');
         }
 
+        $branches = Branch::query()->whereNull('deleted_at')->orderBy('sort_order')->orderBy('name')->get();
+
         // Sanitization - تنقية البيانات من XSS
         $isActiveInput = $request->input('is_active');
         $isActive = false;
@@ -543,6 +576,9 @@ class AdminController extends Controller
             $defaultCountry = ['code' => 'SA', 'dial_code' => '+966', 'name_ar' => 'السعودية', 'name_en' => 'Saudi Arabia'];
         }
 
+        $branchIdInput = $request->input('branch_id');
+        $branchId = ($branchIdInput === '' || $branchIdInput === null) ? null : (int) $branchIdInput;
+
         $sanitizedData = [
             'name' => strip_tags(trim($request->input('name', ''))),
             'email' => is_scalar($request->input('email')) ? trim((string) $request->input('email')) : '',
@@ -552,6 +588,7 @@ class AdminController extends Controller
             'role' => $request->input('role'),
             'is_active' => $isActive,
             'bio' => strip_tags(trim($request->input('bio', ''))),
+            'branch_id' => $branchId,
         ];
 
         // Validation محسن
@@ -582,6 +619,7 @@ class AdminController extends Controller
             ],
             'is_active' => ['nullable'],
             'bio' => ['nullable', 'string', 'max:1000'],
+            'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
         ], [
             'name.required' => 'الاسم مطلوب',
             'name.regex' => 'الاسم يجب أن يحتوي على أحرف عربية فقط',
@@ -595,28 +633,29 @@ class AdminController extends Controller
             'role.required' => 'الدور مطلوب',
             'role.in' => 'الدور المحدد غير صحيح',
             'bio.max' => 'النبذة التعريفية يجب ألا تتجاوز 1000 حرف',
+            'branch_id.exists' => 'الفرع المحدد غير موجود.',
         ]);
 
         if ($validator->fails()) {
-            return back()->withErrors($validator)->withInput()->with(compact('phoneCountries', 'defaultCountry'));
+            return back()->withErrors($validator)->withInput()->with(compact('phoneCountries', 'defaultCountry', 'branches'));
         }
 
         // التحقق من صحة رقم الهاتف حسب الدولة
         $dialCodeForLookup = ($sanitizedData['country_code'] === 'OTHER' || $sanitizedData['country_code'] === '') ? '' : $sanitizedData['country_code'];
         $country = collect($phoneCountries)->firstWhere('dial_code', $dialCodeForLookup);
         if (!$country || !isset($country['validation']['regex'])) {
-            return back()->withErrors(['phone' => 'كود الدولة غير مدعوم.'])->withInput()->with(compact('phoneCountries', 'defaultCountry'));
+            return back()->withErrors(['phone' => 'كود الدولة غير مدعوم.'])->withInput()->with(compact('phoneCountries', 'defaultCountry', 'branches'));
         }
         $nationalNumber = preg_replace('/\D/', '', $sanitizedData['phone']);
         $nationalNumber = ltrim($nationalNumber, '0');
         if (!preg_match($country['validation']['regex'], $nationalNumber)) {
             $example = $country['example'] ?? $country['placeholder'] ?? '';
-            return back()->withErrors(['phone' => 'رقم الهاتف غير صحيح لهذه الدولة. مثال: ' . $example])->withInput()->with(compact('phoneCountries', 'defaultCountry'));
+            return back()->withErrors(['phone' => 'رقم الهاتف غير صحيح لهذه الدولة. مثال: ' . $example])->withInput()->with(compact('phoneCountries', 'defaultCountry', 'branches'));
         }
         $dial = $country['dial_code'] ?? '';
         $fullPhone = ($dial === '' || $dial === 'OTHER') ? ('OTHER_' . $nationalNumber) : ($dial . $nationalNumber);
         if (User::where('phone', $fullPhone)->exists()) {
-            return back()->withErrors(['phone' => 'رقم الهاتف مستخدم مسبقاً'])->withInput()->with(compact('phoneCountries', 'defaultCountry'));
+            return back()->withErrors(['phone' => 'رقم الهاتف مستخدم مسبقاً'])->withInput()->with(compact('phoneCountries', 'defaultCountry', 'branches'));
         }
 
         try {
@@ -642,6 +681,7 @@ class AdminController extends Controller
                 'role' => $sanitizedData['role'],
                 'is_active' => $sanitizedData['is_active'],
                 'bio' => !empty($sanitizedData['bio']) ? $sanitizedData['bio'] : null,
+                'branch_id' => $sanitizedData['branch_id'],
             ]);
 
             Log::info('User created successfully', ['user_id' => $user->id]);
@@ -657,6 +697,7 @@ class AdminController extends Controller
                     'phone' => $user->phone,
                     'role' => $user->role,
                     'is_active' => $user->is_active,
+                    'branch_id' => $user->branch_id,
                 ];
                 ActivityLog::create([
                     'user_id' => Auth::id(),
@@ -691,7 +732,7 @@ class AdminController extends Controller
             return back()
                 ->withErrors(['error' => $errorMessage])
                 ->withInput()
-                ->with(compact('phoneCountries', 'defaultCountry'));
+                ->with(compact('phoneCountries', 'defaultCountry', 'branches'));
         }
     }
 
@@ -700,7 +741,8 @@ class AdminController extends Controller
      */
     public function showUser($id)
     {
-        $user = User::findOrFail($id);
+        $user = User::with('branch')->findOrFail($id);
+
         return view('admin.users.show', compact('user'));
     }
 
@@ -713,7 +755,9 @@ class AdminController extends Controller
         try {
             $user = User::findOrFail($id);
             Log::info('editUser: user loaded', ['user_id' => $user->id]);
-            return view('admin.users.edit', compact('user'));
+            $branches = Branch::query()->whereNull('deleted_at')->orderBy('sort_order')->orderBy('name')->get();
+
+            return view('admin.users.edit', compact('user', 'branches'));
         } catch (\Throwable $e) {
             Log::error('editUser failed', ['id' => $id, 'error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine(), 'trace' => $e->getTraceAsString()]);
             throw $e;
@@ -738,6 +782,7 @@ class AdminController extends Controller
                 'is_active' => $user->is_active,
                 'is_employee' => $user->is_employee,
                 'bio' => $user->bio,
+                'branch_id' => $user->branch_id,
             ];
         } catch (\Throwable $e) {
             if ($isAjax) {
@@ -768,12 +813,16 @@ class AdminController extends Controller
         $isActiveRaw = $raw['is_active'] ?? $request->input('is_active');
         $is_active = in_array($isActiveRaw, [true, '1', 1, 'true', 'on'], true);
 
+        $branchIdRaw = $raw['branch_id'] ?? $request->input('branch_id');
+        $branchId = ($branchIdRaw === '' || $branchIdRaw === null) ? null : (int) $branchIdRaw;
+
         $input = [
             'name' => $name,
             'email' => $email ?: null,
             'phone' => $phone ?: null,
             'role' => $role,
             'is_active' => $is_active,
+            'branch_id' => $branchId,
         ];
 
         $validator = Validator::make($input, [
@@ -782,6 +831,7 @@ class AdminController extends Controller
             'phone' => 'nullable|string|max:50|unique:users,phone,' . $id,
             'role' => 'required|in:super_admin,admin,instructor,teacher,student,parent,employee',
             'is_active' => 'required|boolean',
+            'branch_id' => 'nullable|integer|exists:branches,id',
         ], [
             'name.required' => 'الاسم مطلوب.',
             'name.max' => 'الاسم يجب ألا يتجاوز 255 حرفاً.',
@@ -792,6 +842,7 @@ class AdminController extends Controller
             'role.in' => 'الدور المحدد غير صالح.',
             'is_active.required' => 'حالة الحساب مطلوبة.',
             'is_active.boolean' => 'حالة الحساب غير صالحة.',
+            'branch_id.exists' => 'الفرع المحدد غير موجود.',
         ]);
 
         if ($validator->fails()) {
@@ -815,6 +866,7 @@ class AdminController extends Controller
             'phone' => $request->phone,
             'role' => $request->role,
             'is_active' => (bool) $request->is_active,
+            'branch_id' => $input['branch_id'],
         ];
         if ($request->filled('bio')) {
             $updateData['bio'] = $request->bio;
@@ -865,6 +917,7 @@ class AdminController extends Controller
                     'is_active' => (bool) ($updated->is_active ?? false),
                     'is_employee' => (bool) ($updated->is_employee ?? false),
                     'bio' => $updated->bio ?? null,
+                    'branch_id' => $updated->branch_id,
                 ];
                 ActivityLog::create([
                     'user_id' => Auth::id(),

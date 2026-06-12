@@ -53,6 +53,7 @@ class PermissionsSeeder extends Seeder
             ['name' => 'manage.assignments', 'display_name' => 'إدارة الواجبات', 'description' => 'إدارة الواجبات والمشاريع', 'group' => 'إدارة المحتوى'],
             ['name' => 'manage.exams', 'display_name' => 'إدارة الامتحانات', 'description' => 'إدارة الامتحانات', 'group' => 'إدارة المحتوى'],
             ['name' => 'manage.question-bank', 'display_name' => 'إدارة بنك الأسئلة', 'description' => 'إدارة بنك الأسئلة', 'group' => 'إدارة المحتوى'],
+            ['name' => 'manage.branches', 'display_name' => 'إدارة فروع المنصة', 'description' => 'إنشاء وتعديل فروع الأكاديمية والدومينات', 'group' => 'إدارة النظام'],
 
             // إدارة الصفحات الخارجية
             ['name' => 'manage.blog', 'display_name' => 'إدارة المدونة', 'description' => 'إدارة مقالات المدونة', 'group' => 'إدارة الصفحات الخارجية'],

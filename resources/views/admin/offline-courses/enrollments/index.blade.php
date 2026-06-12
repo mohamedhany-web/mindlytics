@@ -119,7 +119,7 @@
                         <select name="payment_type" x-model="paymentType" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                             <option value="full">دفع كامل ({{ number_format($offlineCourse->price, 2) }} ج.م)</option>
                             <option value="partial">دفع جزئي</option>
-                            <option value="free">مجاني / مؤجل</option>
+                            <option value="free">دفع مجاني (بدون مبلغ على الطالب أو الحساب)</option>
                         </select>
                     </div>
                     <div x-show="paymentType === 'partial'">
@@ -224,15 +224,19 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3">
-                                @php
-                                    $pLabels = [
-                                        'unpaid' => ['لم يدفع', 'bg-red-100 text-red-800'],
-                                        'partial' => ['جزئي', 'bg-amber-100 text-amber-800'],
-                                        'paid' => ['مكتمل', 'bg-green-100 text-green-800'],
-                                    ];
-                                    $pl = $pLabels[$enrollment->payment_status] ?? ['—', 'bg-gray-100 text-gray-800'];
-                                @endphp
-                                <span class="px-2 py-0.5 text-xs font-semibold rounded-full {{ $pl[1] }}">{{ $pl[0] }}</span>
+                                @if((float) $enrollment->total_amount <= 0)
+                                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-slate-100 text-slate-700">مجاني</span>
+                                @else
+                                    @php
+                                        $pLabels = [
+                                            'unpaid' => ['لم يدفع', 'bg-red-100 text-red-800'],
+                                            'partial' => ['جزئي', 'bg-amber-100 text-amber-800'],
+                                            'paid' => ['مكتمل', 'bg-green-100 text-green-800'],
+                                        ];
+                                        $pl = $pLabels[$enrollment->payment_status] ?? ['—', 'bg-gray-100 text-gray-800'];
+                                    @endphp
+                                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full {{ $pl[1] }}">{{ $pl[0] }}</span>
+                                @endif
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap">
                                 <div class="flex items-center gap-1">

@@ -2,15 +2,22 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AssignsDefaultBranchOnCreate;
+use App\Models\Concerns\QueriesByBranch;
+use App\Models\Concerns\VisibleOnCurrentHostScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
 
 class AcademicYear extends Model
 {
+    use AssignsDefaultBranchOnCreate;
     use HasFactory;
+    use QueriesByBranch;
+    use VisibleOnCurrentHostScope;
 
     protected $fillable = [
+        'branch_id',
         'name',
         'code',
         'description',
@@ -139,5 +146,10 @@ class AcademicYear extends Model
     public function portfolioProjects()
     {
         return $this->hasMany(PortfolioProject::class, 'academic_year_id');
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
     }
 }

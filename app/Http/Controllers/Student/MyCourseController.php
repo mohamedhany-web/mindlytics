@@ -9,8 +9,7 @@ use App\Models\LectureVideoQuestion;
 use App\Models\LectureVideoQuestionAnswer;
 use App\Models\CourseLesson;
 use App\Models\Lecture;
-use App\Models\VideoProvider;
-use App\Support\BunnyStreamSigner;
+use App\Support\LectureRecordingResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -339,18 +338,9 @@ class MyCourseController extends Controller
         $course = $user->activeCourses()->findOrFail($courseId);
         $lecture = $course->lectures()->findOrFail($lectureId);
 
-        $recordingUrl = $lecture->recording_url ? trim($lecture->recording_url) : null;
-        $videoPlatform = $lecture->video_platform ? trim(strtolower($lecture->video_platform)) : null;
-
-        // Bunny Stream: نعيد رابط embed موقّع (token/expires) بدلاً من الرابط الدائم
-        if ($recordingUrl && ($videoPlatform === 'bunny' || str_contains($recordingUrl, 'mediadelivery.net'))) {
-            $provider = VideoProvider::where('platform', 'bunny')->where('is_active', true)->orderByDesc('id')->first();
-            $key = $provider?->token_auth_key ? trim((string) $provider->token_auth_key) : '';
-            if ($key !== '') {
-                $recordingUrl = BunnyStreamSigner::signEmbedUrl($recordingUrl, $key, now()->addMinutes(20)->timestamp);
-                $videoPlatform = 'bunny';
-            }
-        }
+        $resolved = LectureRecordingResolver::resolve($lecture->recording_url, $lecture->video_platform);
+        $recordingUrl = $resolved['recording_url'];
+        $videoPlatform = $resolved['video_platform'];
 
         $materials = $lecture->materials()
             ->where('is_visible_to_student', true)

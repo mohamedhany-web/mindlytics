@@ -1,0 +1,1 @@
+ <?php /**PATH /Users/cityphone/Documents/all Mindlytics Project/Mindlytics/resources/views/admin/subjects/index.blade.php ENDPATH**/ ?>

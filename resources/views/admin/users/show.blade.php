@@ -76,6 +76,15 @@
                             <p class="text-slate-900">{{ $user->email ?: '—' }}</p>
                             <p class="text-sm text-slate-600 font-medium mt-2">رقم الهاتف</p>
                             <p class="text-slate-900" dir="ltr">{{ $user->phone ?: '—' }}</p>
+                            <p class="text-sm text-slate-600 font-medium mt-3">الفرع</p>
+                            @if($user->branch)
+                                <p class="text-slate-900">
+                                    <a href="{{ route('admin.branches.show', $user->branch) }}" class="text-blue-600 hover:underline font-semibold">{{ $user->branch->name }}</a>
+                                    <span class="text-slate-500 text-sm mr-1">({{ $user->branch->slug }})</span>
+                                </p>
+                            @else
+                                <p class="text-slate-500">—</p>
+                            @endif
                         </div>
                     </div>
                     @if($user->bio)

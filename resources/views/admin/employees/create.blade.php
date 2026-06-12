@@ -88,6 +88,8 @@
                         @error('hire_date')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                     </div>
 
+                    @include('admin.employees._weekly_off_day_field', ['employee' => new \App\Models\User()])
+
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">الراتب</label>
                         <input type="number" name="salary" value="{{ old('salary') }}" min="0" step="0.01" 

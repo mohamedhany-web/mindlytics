@@ -3,14 +3,15 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Concerns\QueriesByBranch;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, QueriesByBranch;
 
     /**
      * The attributes that are mass assignable.
@@ -29,9 +30,12 @@ class User extends Authenticatable
         'parent_id',
         'is_active',
         'profile_image',
+        'profile_image_disk',
         'birth_date',
         'address',
         'bio',
+        'headline',
+        'skills',
         'academic_year_id',
         'last_login_at',
         'referral_code',
@@ -42,6 +46,7 @@ class User extends Authenticatable
         'employee_job_id',
         'employee_code',
         'hire_date',
+        'weekly_off_day',
         'termination_date',
         'salary',
         'employee_notes',
@@ -56,6 +61,7 @@ class User extends Authenticatable
         'two_factor_secret',
         'two_factor_recovery_codes',
         'two_factor_confirmed_at',
+        'branch_id',
     ];
 
     /**
@@ -68,6 +74,22 @@ class User extends Authenticatable
         'remember_token',
         'two_factor_secret',
     ];
+
+    /**
+     * ضمان ربط المستخدم بفرع افتراضي عند الإنشاء إن لم يُحدَّد branch_id.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (User $user): void {
+            if ($user->branch_id !== null) {
+                return;
+            }
+            $branchId = Branch::defaultAssignableId();
+            if ($branchId !== null) {
+                $user->branch_id = $branchId;
+            }
+        });
+    }
 
     /**
      * Get the attributes that should be cast.
@@ -85,12 +107,14 @@ class User extends Authenticatable
             'last_login_at' => 'datetime',
             'referred_at' => 'datetime',
             'hire_date' => 'date',
+            'weekly_off_day' => 'integer',
             'termination_date' => 'date',
             'salary' => 'decimal:2',
             'is_employee' => 'boolean',
             'sales_commission_value' => 'decimal:2',
             'two_factor_confirmed_at' => 'datetime',
             'two_factor_recovery_codes' => 'array',
+            'skills' => 'array',
         ];
     }
 
@@ -141,8 +165,8 @@ class User extends Authenticatable
 
     /**
      * رابط صورة الملف الشخصي.
-     * الصور في storage/app/public تُعرض عبر Storage::disk('public')->url() لضمان الرابط الصحيح.
-     * تطبيع المسار (backslash على Windows) وضمان URL كامل.
+     * قرص public محليًا عبر url()؛ R2/S3 الخاص عبر رابط موقّع مؤقتًا.
+     * لا يُلحق معامل v= على الروابط الموقّعة حتى لا يُبطل التوقيع.
      */
     public function getProfileImageUrlAttribute(): ?string
     {
@@ -154,10 +178,21 @@ class User extends Authenticatable
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
             $base = $path;
         } else {
-            $base = Storage::disk('public')->url($path);
+            $disk = $this->profile_image_disk ?: 'public';
+            $base = storage_inline_media_url($disk, $path);
+            if ($base === '') {
+                $base = storage_inline_media_url('public', $path);
+            }
+            if ($base === '') {
+                return null;
+            }
         }
-        $ts = $this->updated_at ? $this->updated_at->timestamp : '';
-        return $base . (str_contains($base, '?') ? '&' : '?') . 'v=' . $ts;
+        $ts = $this->updated_at ? (string) $this->updated_at->timestamp : '';
+        if ($ts !== '' && ! str_contains($base, 'X-Amz-')) {
+            return $base.(str_contains($base, '?') ? '&' : '?').'v='.$ts;
+        }
+
+        return $base;
     }
 
     /**
@@ -165,7 +200,7 @@ class User extends Authenticatable
      */
     public function requiresTwoFactor(): bool
     {
-        return in_array($this->role, ['super_admin', 'admin', 'instructor'], true);
+        return in_array($this->role, ['super_admin', 'admin', 'instructor', 'branch_manager'], true);
     }
 
     /**
@@ -182,6 +217,14 @@ class User extends Authenticatable
     public function hasTwoFactorEnabled(): bool
     {
         return !empty($this->two_factor_secret) && $this->two_factor_confirmed_at !== null;
+    }
+
+    /**
+     * علاقة مع الفرع (الأكاديمية / الدولة)
+     */
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     /**
@@ -340,6 +383,14 @@ class User extends Authenticatable
     public function wallet()
     {
         return $this->hasOne(Wallet::class);
+    }
+
+    /**
+     * مدير فرع (لوحة branch-office)
+     */
+    public function isBranchManager(): bool
+    {
+        return $this->role === 'branch_manager';
     }
 
     /**
@@ -728,6 +779,66 @@ class User extends Authenticatable
     public function assignedSalesLeads()
     {
         return $this->hasMany(SalesLead::class, 'assigned_to');
+    }
+
+    /**
+     * أيام الإجازة الأسبوعية (Carbon dayOfWeek: 0=أحد … 6=سبت).
+     *
+     * @return array<int, string>
+     */
+    public static function weeklyOffDayOptions(): array
+    {
+        return [
+            0 => 'الأحد',
+            1 => 'الإثنين',
+            2 => 'الثلاثاء',
+            3 => 'الأربعاء',
+            4 => 'الخميس',
+            5 => 'الجمعة',
+            6 => 'السبت',
+        ];
+    }
+
+    public function weeklyOffDayLabel(): ?string
+    {
+        if ($this->weekly_off_day === null) {
+            return null;
+        }
+
+        return self::weeklyOffDayOptions()[(int) $this->weekly_off_day] ?? null;
+    }
+
+    /**
+     * هل التاريخ يوافق يوم الإجازة الأسبوعية للموظف؟
+     * إن لم يُحدَّد يوم، يُعتمد عطلة نهاية الأسبوع (سبت/أحد).
+     */
+    public function isWeeklyOff(\Carbon\Carbon $date): bool
+    {
+        if ($this->weekly_off_day !== null) {
+            return (int) $this->weekly_off_day === $date->dayOfWeek;
+        }
+
+        return $date->isWeekend();
+    }
+
+    /**
+     * إجازة معتمدة (طلب إجازة) تغطي هذا التاريخ.
+     */
+    public function isOnApprovedLeave(\Carbon\Carbon $date): bool
+    {
+        return $this->leaveRequests()
+            ->approved()
+            ->whereDate('start_date', '<=', $date)
+            ->whereDate('end_date', '>=', $date)
+            ->exists();
+    }
+
+    /**
+     * هل يُطلَب من الموظف تقرير يومي في هذا التاريخ؟
+     */
+    public function requiresDailyReportOn(\Carbon\Carbon $date): bool
+    {
+        return ! $this->isWeeklyOff($date) && ! $this->isOnApprovedLeave($date);
     }
 
     /**

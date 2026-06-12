@@ -18,6 +18,7 @@ class AcademicYearController extends Controller
     public function index()
     {
         $academicYears = AcademicYear::where('is_active', true)
+            ->visibleOnCurrentHost()
             ->withCount('academicSubjects')
             ->orderBy('order')
             ->get();

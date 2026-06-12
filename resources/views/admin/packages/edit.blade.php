@@ -1,4 +1,4 @@
-﻿@extends('layouts.admin')
+@extends('layouts.admin')
 
 @section('title', 'تعديل الباقة')
 @section('header', 'تعديل الباقة')
@@ -36,6 +36,25 @@
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
+
+                @if(isset($branches) && $branches->isNotEmpty())
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">الفرع</label>
+                    <select name="branch_id"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
+                        <option value="">الافتراضي (الأكاديمية الأساسية)</option>
+                        @foreach($branches as $branch)
+                            <option value="{{ $branch->id }}" {{ (string) old('branch_id', $package->branch_id ?? $defaultBranchId ?? '') === (string) $branch->id ? 'selected' : '' }}>
+                                {{ $branch->name }} @if($branch->slug)<span class="text-gray-400">({{ $branch->slug }})</span>@endif
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="mt-1 text-xs text-gray-500">يحدد ظهور الباقة على النطاق الفرعي المرتبط بهذا الفرع.</p>
+                    @error('branch_id')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                @endif
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">السعر *</label>

@@ -134,6 +134,10 @@
                 <p class="font-semibold text-gray-900 text-lg">{{ $employee->hire_date->format('Y-m-d') }}</p>
             </div>
             @endif
+            <div>
+                <p class="text-sm text-gray-600 mb-1">يوم الإجازة الأسبوعية</p>
+                <p class="font-semibold text-gray-900 text-lg">{{ $employee->weeklyOffDayLabel() ?? 'عطلة نهاية الأسبوع (افتراضي)' }}</p>
+            </div>
             @if($employee->salary)
             <div>
                 <p class="text-sm text-gray-600 mb-1">الراتب</p>
