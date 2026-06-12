@@ -196,26 +196,22 @@
             min-height: 0;
         }
         
+        /* Scrollbar مخفي — التمرير يعمل بدون تأثير على التصميم */
+        html,
+        body,
+        main,
         .sidebar {
-            scrollbar-width: thin;
-            scrollbar-color: rgba(59, 130, 246, 0.5) transparent;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
         }
-        
+
+        html::-webkit-scrollbar,
+        body::-webkit-scrollbar,
+        main::-webkit-scrollbar,
         .sidebar::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        .sidebar::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        
-        .sidebar::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, #3b82f6, #2563eb);
-            border-radius: 10px;
-        }
-        
-        .sidebar::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(180deg, #2563eb, #1d4ed8);
+            display: none;
+            width: 0;
+            height: 0;
         }
         
         .nav-link {
@@ -224,6 +220,103 @@
         
         .nav-link.active {
             @apply bg-blue-100 text-blue-700;
+        }
+
+        /* لوحة التحكم — نشط أبيض داخل السايدبار فقط */
+        .admin-nav-dashboard-active {
+            background: #ffffff !important;
+            color: #0f172a !important;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+        }
+
+        .admin-nav-dashboard-active .bridge-icon {
+            color: #4f46e5 !important;
+        }
+
+        /* ── Admin Sidebar — هيكل موحّد ── */
+        .admin-sidebar-root {
+            contain: none !important;
+        }
+
+        .admin-sidebar-nav {
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+        }
+
+        .admin-sidebar-nav > ul > li {
+            position: relative;
+        }
+
+        .admin-sidebar-nav li[x-data] > button {
+            gap: 0.75rem;
+        }
+
+        .admin-sidebar-nav li[x-data] > button[aria-expanded="true"] {
+            background: rgba(51, 65, 85, 0.45);
+            color: #ffffff;
+        }
+
+        .admin-sidebar-sub {
+            margin-top: 0.375rem;
+            margin-right: 0.75rem;
+            padding-right: 0.625rem;
+            border-right: 2px solid rgba(100, 116, 139, 0.45);
+            display: flex;
+            flex-direction: column;
+            gap: 0.125rem;
+        }
+
+        .admin-sidebar-sub a {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.875rem;
+            font-size: 0.8125rem;
+            line-height: 1.35;
+            border-radius: 0.5rem;
+            color: rgb(203 213 225);
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .admin-sidebar-sub a:hover {
+            background: rgba(51, 65, 85, 0.55);
+            color: #ffffff;
+        }
+
+        .admin-sidebar-sub a.font-semibold {
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .admin-sidebar-sub .admin-sidebar-sub {
+            margin-top: 0.25rem;
+            margin-right: 0.5rem;
+            border-color: rgba(100, 116, 139, 0.3);
+        }
+
+        .admin-sidebar-sub li[x-data] > button {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 0.875rem;
+            font-size: 0.8125rem;
+            border-radius: 0.5rem;
+            color: rgb(148 163 184);
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .admin-sidebar-sub li[x-data] > button:hover,
+        .admin-sidebar-sub li[x-data] > button[aria-expanded="true"] {
+            background: rgba(51, 65, 85, 0.45);
+            color: #ffffff;
+        }
+
+        @media (max-width: 1023px) {
+            .admin-nav-dashboard-active {
+                border-radius: 0.75rem !important;
+            }
         }
         
         .btn-primary {
@@ -246,13 +339,21 @@
             @apply bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-medium transition-colors;
         }
         
-        /* Dashboard Cards Enhancement */
-        .card-hover-effect {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        /* Dashboard Cards — minimal hover, no lift animation */
+        .dashboard-stat-card {
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
         }
-        
+
+        .dashboard-stat-card:hover {
+            box-shadow: 0 8px 16px -4px rgba(15, 23, 42, 0.1);
+        }
+
+        .card-hover-effect {
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
         .card-hover-effect:hover {
-            transform: translateY(-4px);
+            transform: none;
         }
         
         /* Dashboard Background */
@@ -670,7 +771,7 @@
     </div>
 
     @stack('scripts')
-    
+
     <script>
         // إزالة الوضع المظلم - محسّن للأداء (بدون intervals)
         (function() {

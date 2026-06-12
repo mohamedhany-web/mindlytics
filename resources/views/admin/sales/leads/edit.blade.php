@@ -4,18 +4,55 @@
 @section('header', 'تعديل عميل محتمل')
 
 @section('content')
-<div class="p-4 md:p-6 max-w-3xl mx-auto space-y-6" style="background:#f8fafc;min-height:100vh;">
-    <a href="{{ route('admin.sales.leads.show', $lead) }}" class="text-sm text-gray-600 hover:text-emerald-600"><i class="fas fa-arrow-right ml-1"></i> التفاصيل</a>
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <form method="post" action="{{ route('admin.sales.leads.update', $lead) }}">
-            @csrf
-            @method('PUT')
-            @include('admin.sales.leads._lead_fields', ['lead' => $lead, 'salesReps' => $salesReps])
-            <div class="mt-6 flex gap-3">
-                <button type="submit" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold">حفظ</button>
-                <a href="{{ route('admin.sales.leads.show', $lead) }}" class="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700">إلغاء</a>
+<div class="space-y-6">
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+        <div class="px-4 py-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center text-white shadow-md flex-shrink-0">
+                    <i class="fas fa-edit"></i>
+                </div>
+                <div class="min-w-0">
+                    <h2 class="text-xl font-black text-slate-900 truncate">تعديل: {{ $lead->name }}</h2>
+                    <p class="text-xs text-slate-600">تحديث البيانات أو إعادة إسناد Lead لموظف آخر.</p>
+                </div>
             </div>
-        </form>
-    </div>
+            <a href="{{ route('admin.sales.leads.show', $lead) }}" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 rounded-xl border border-slate-300 hover:bg-white">
+                <i class="fas fa-arrow-right"></i>
+                التفاصيل
+            </a>
+        </div>
+    </section>
+
+    @if($errors->any())
+        <div class="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm">
+            <p class="font-semibold mb-1"><i class="fas fa-exclamation-circle ml-1"></i> يوجد أخطاء في النموذج:</p>
+            <ul class="list-disc list-inside space-y-0.5">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <form method="post" action="{{ route('admin.sales.leads.update', $lead) }}" class="space-y-6">
+        @csrf
+        @method('PUT')
+        @include('admin.sales.leads._lead_fields', ['lead' => $lead, 'salesReps' => $salesReps])
+
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-4 py-4 sm:px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <p class="text-xs text-slate-500">التغييرات على المرحلة والإسناد تُسجَّل في سجل المراقبة.</p>
+                <div class="flex flex-wrap items-center gap-2">
+                    <a href="{{ route('admin.sales.leads.show', $lead) }}" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                        إلغاء
+                    </a>
+                    <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white">
+                        <i class="fas fa-save"></i>
+                        حفظ التعديلات
+                    </button>
+                </div>
+            </div>
+        </section>
+    </form>
 </div>
 @endsection

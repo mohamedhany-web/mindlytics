@@ -7,35 +7,19 @@
 @php
     $frequencyUnits = $frequencyUnits ?? [];
 @endphp
-<div class="container mx-auto px-4 py-8 space-y-8">
-    <div class="bg-gradient-to-br from-sky-500 via-sky-600 to-purple-600 rounded-3xl shadow-xl text-white p-8 relative overflow-hidden">
-        <div class="absolute inset-y-0 right-0 w-1/3 pointer-events-none opacity-20">
-            <div class="w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-        </div>
-        <div class="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div>
-                <div class="flex items-center gap-3 flex-wrap">
-                    <h1 class="text-3xl font-black tracking-tight">إنشاء خطة تقسيط</h1>
-                    <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-white/20">
-                        <i class="fas fa-calendar-alt text-xs"></i>
-                        دعم الدفع المرن للطلاب
-                    </span>
-                </div>
-                <p class="mt-3 text-white/75 max-w-2xl">
-                    اربط الخطة بكورس معين، حدّد قيمة الأقساط وفتراتها، واختر إن كان النظام سيولد الخطط تلقائياً عند تسجيل الطالب.
-                </p>
-            </div>
-            <div class="flex flex-wrap gap-3 justify-end">
-                <a href="{{ route('admin.installments.plans.index') }}" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white text-sky-700 font-semibold shadow-lg hover:shadow-xl transition-all">
-                    <i class="fas fa-arrow-right"></i>
-                    العودة لقائمة الخطط
-                </a>
-            </div>
-        </div>
-    </div>
+<div class="space-y-6">
+    @include('admin.installments.partials.header', [
+        'title' => 'إنشاء خطة تقسيط',
+        'description' => 'اربط الخطة بكورس، حدّد الأقساط والدورية، واختر التوليد التلقائي عند التسجيل.',
+        'icon' => 'fa-plus',
+        'iconGradient' => 'from-sky-500 to-blue-600',
+        'actions' => [
+            ['route' => 'admin.installments.plans.index', 'label' => 'قائمة الخطط', 'icon' => 'fa-list'],
+        ],
+    ])
+    @include('admin.installments.partials.nav', ['active' => 'plans'])
 
-    <div class="max-w-4xl mx-auto">
-        <div class="bg-white rounded-3xl shadow-lg border border-gray-100 p-8">
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg p-6 sm:p-8 max-w-4xl mx-auto">
             <div class="flex items-center justify-between mb-6">
                 <div>
                     <h2 class="text-xl font-black text-gray-900">بيانات الخطة</h2>
@@ -178,7 +162,6 @@
                     </button>
                 </div>
             </form>
-        </div>
-    </div>
+    </section>
 </div>
 @endsection

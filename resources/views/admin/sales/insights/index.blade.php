@@ -1,298 +1,720 @@
 @extends('layouts.admin')
 
 @section('title', 'Insights — المبيعات')
-@section('header', 'Insights — تقرير أداء موظف المبيعات')
+@section('header', 'Insights — تحليلات المبيعات')
 
 @section('content')
-<div class="p-4 md:p-6 space-y-6" style="background:#f8fafc;min-height:100vh;">
-    <div class="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 md:p-6">
-        <form method="get" action="{{ route('admin.sales.insights.index') }}" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
-            <div class="lg:col-span-2">
-                <label class="block text-xs font-bold text-gray-600 mb-1">الموظف</label>
-                <select name="user_id" class="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm" required>
-                    @foreach($salesReps as $r)
-                        <option value="{{ $r->id }}" @selected((string) $rep->id === (string) $r->id)>{{ $r->name }}</option>
-                    @endforeach
-                </select>
+@php
+    $direction = $teamDashboard['direction'] ?? [];
+    $monthly = $teamDashboard['monthly'] ?? [];
+    $dirMetrics = $direction['metrics'] ?? [];
+    $dirStatus = $direction['status'] ?? 'neutral';
+    $dirBannerClass = match ($dirStatus) {
+        'growth' => 'border-emerald-200 bg-emerald-50',
+        'stable' => 'border-sky-200 bg-sky-50',
+        'decline' => 'border-rose-200 bg-rose-50',
+        default => 'border-slate-200 bg-slate-50',
+    };
+    $dirIconClass = match ($dirStatus) {
+        'growth' => 'text-emerald-600',
+        'stable' => 'text-sky-600',
+        'decline' => 'text-rose-600',
+        default => 'text-slate-600',
+    };
+    $statusClass = match($decision['status'] ?? 'good') {
+        'excellent' => 'bg-emerald-100 text-emerald-800 border-emerald-200',
+        'good' => 'bg-sky-100 text-sky-800 border-sky-200',
+        'warning' => 'bg-amber-100 text-amber-800 border-amber-200',
+        default => 'bg-rose-100 text-rose-800 border-rose-200',
+    };
+    $inputClass = 'w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500';
+    $conversionArr = $monthly['conversion'] ?? [];
+    $academyArr = $monthly['academyRate'] ?? [];
+    $revenueArr = $monthly['revenue'] ?? [];
+    $latestConversion = $conversionArr !== [] ? (float) end($conversionArr) : 0;
+    $latestAcademy = $academyArr !== [] ? (float) end($academyArr) : 0;
+    $latestRevenue = $revenueArr !== [] ? (float) end($revenueArr) : 0;
+@endphp
+
+<div class="space-y-6">
+    {{-- الهيدر والفلاتر --}}
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+        <div class="px-4 py-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white shadow-md">
+                    <i class="fas fa-chart-pie"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-black text-slate-900">تحليلات المبيعات</h2>
+                    <p class="text-xs text-slate-600">اتجاه الفريق، تحويل الأكاديمية، ومقارنة أداء الموظفين.</p>
+                </div>
             </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-600 mb-1">الفترة</label>
-                <select name="period" id="period_sel" class="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm">
-                    <option value="day" @selected(request('period', 'week') === 'day')>يومي</option>
-                    <option value="week" @selected(request('period', 'week') === 'week')>أسبوعي</option>
-                    <option value="month" @selected(request('period', 'week') === 'month')>شهري</option>
-                    <option value="custom" @selected(request('period', 'week') === 'custom')>مخصص</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-600 mb-1">من</label>
-                <input type="date" name="date_from" id="date_from" value="{{ $start->toDateString() }}" class="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm">
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-600 mb-1">إلى</label>
-                <input type="date" name="date_to" id="date_to" value="{{ $end->toDateString() }}" class="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm">
-            </div>
-            <div class="flex flex-wrap gap-2 lg:col-span-6">
-                <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-md">
-                    <i class="fas fa-sync-alt"></i> تحديث
-                </button>
-                <button type="button" onclick="downloadInsightsPdf()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-950 text-white rounded-xl text-sm font-bold shadow-md">
-                    <i class="fas fa-file-pdf"></i> PDF للموظف
-                </button>
-                <a href="{{ route('admin.sales.commissions.index') }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-bold shadow-md">
-                    <i class="fas fa-coins"></i> كوميشن المبيعات
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('admin.sales.kpi.index') }}" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 rounded-xl border border-slate-300 hover:bg-white">
+                    <i class="fas fa-chart-line text-emerald-600"></i>
+                    KPIs
+                </a>
+                <a href="{{ route('admin.sales.commissions.index') }}" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 rounded-xl border border-slate-300 hover:bg-white">
+                    <i class="fas fa-coins text-amber-600"></i>
+                    الكوميشن
                 </a>
             </div>
-            <input type="hidden" name="_preset_period_label" value="{{ $periodLabel }}">
-        </form>
-        <p class="text-xs text-slate-500 mt-3">الفترة الفعلية: <strong>{{ $start->format('Y-m-d') }}</strong> إلى <strong>{{ $end->format('Y-m-d') }}</strong>.</p>
-    </div>
-
-    <div id="insights-pdf-root" class="space-y-6">
-        <div class="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5 shadow-sm">
-            <div class="flex flex-wrap items-center justify-between gap-2">
+        </div>
+        <div class="p-4">
+            <form method="get" action="{{ route('admin.sales.insights.index') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
+                <div class="lg:col-span-2">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">الموظف (تفصيل)</label>
+                    <select name="user_id" class="{{ $inputClass }}" required>
+                        @foreach($salesReps as $r)
+                            <option value="{{ $r->id }}" @selected((string) $rep->id === (string) $r->id)>{{ $r->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <div>
-                    <p class="text-sm text-gray-700">الموظف: <span class="font-black text-gray-900">{{ $rep->name }}</span></p>
-                    <p class="text-xs text-gray-500 mt-1">Insights — {{ $periodLabel }} — {{ $start->format('Y-m-d') }} → {{ $end->format('Y-m-d') }}</p>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">الفترة</label>
+                    <select name="period" id="period_sel" class="{{ $inputClass }}">
+                        <option value="day" @selected(request('period', 'week') === 'day')>يومي</option>
+                        <option value="week" @selected(request('period', 'week') === 'week')>أسبوعي</option>
+                        <option value="month" @selected(request('period', 'week') === 'month')>شهري</option>
+                        <option value="custom" @selected(request('period', 'week') === 'custom')>مخصص</option>
+                    </select>
                 </div>
-                @php
-                    $statusClass = match($decision['status'] ?? 'good') {
-                        'excellent' => 'bg-emerald-600 text-white',
-                        'good' => 'bg-sky-600 text-white',
-                        'warning' => 'bg-amber-600 text-white',
-                        default => 'bg-rose-600 text-white',
-                    };
-                @endphp
-                <div class="px-4 py-2 rounded-xl {{ $statusClass }}">
-                    <p class="text-xs font-bold opacity-90">القرار</p>
-                    <p class="text-sm font-black">{{ $decision['status_label'] ?? '—' }}</p>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">من</label>
+                    <input type="date" name="date_from" id="date_from" value="{{ $start->toDateString() }}" class="{{ $inputClass }}">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">إلى</label>
+                    <input type="date" name="date_to" id="date_to" value="{{ $end->toDateString() }}" class="{{ $inputClass }}">
+                </div>
+                <div class="flex flex-wrap gap-2 lg:col-span-6">
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold">
+                        <i class="fas fa-sync-alt"></i>
+                        تحديث
+                    </button>
+                    <button type="button" onclick="downloadInsightsPdf()" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold">
+                        <i class="fas fa-file-pdf"></i>
+                        PDF للموظف
+                    </button>
+                </div>
+            </form>
+            <p class="text-xs text-slate-500 mt-3">فترة تفصيل الموظف: <strong>{{ $start->format('Y-m-d') }}</strong> → <strong>{{ $end->format('Y-m-d') }}</strong> ({{ $periodLabel }})</p>
+        </div>
+    </section>
+
+    {{-- اتجاه الفريق --}}
+    <section class="rounded-2xl border shadow-lg overflow-hidden {{ $dirBannerClass }}">
+        <div class="px-4 py-4 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center {{ $dirIconClass }}">
+                    <i class="fas fa-compass text-lg"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold text-slate-600">اتجاه قسم المبيعات</p>
+                    <p class="text-lg font-black text-slate-900">{{ $direction['label'] ?? '—' }}</p>
+                    <p class="text-sm text-slate-700 mt-1 max-w-3xl">{{ $direction['summary'] ?? '' }}</p>
+                    <p class="text-[11px] text-slate-500 mt-2">
+                        مقارنة: {{ $direction['previous_month_label'] ?? '—' }} ← {{ $direction['current_month_label'] ?? '—' }}
+                    </p>
                 </div>
             </div>
-
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mt-4">
-                <div class="rounded-xl bg-white border border-emerald-100 p-3">
-                    <p class="text-xs text-gray-500 font-semibold">المؤشر المركّب</p>
-                    <p class="text-2xl font-black text-emerald-700 tabular-nums">{{ $decision['composite'] ?? ($periodReport['composite'] ?? '—') }}</p>
-                </div>
-                <div class="rounded-xl bg-white border border-emerald-100 p-3">
-                    <p class="text-xs text-gray-500 font-semibold">Leads في التقرير</p>
-                    <p class="text-2xl font-black text-slate-800 tabular-nums">{{ $counts['leads'] ?? 0 }}</p>
-                    <p class="text-[11px] text-slate-500 mt-1">أنشأها الموظف: {{ $counts['leads_created_by'] ?? 0 }}</p>
-                </div>
-                <div class="rounded-xl bg-white border border-emerald-100 p-3">
-                    <p class="text-xs text-gray-500 font-semibold">أنشطة CRM</p>
-                    <p class="text-2xl font-black text-slate-800 tabular-nums">{{ $counts['activities'] ?? 0 }}</p>
-                </div>
-                <div class="rounded-xl bg-white border border-emerald-100 p-3">
-                    <p class="text-xs text-gray-500 font-semibold">wins معتمدة (كوميشن)</p>
-                    <p class="text-2xl font-black text-emerald-800 tabular-nums">{{ $commission['confirmed_wins'] ?? 0 }}</p>
-                    <p class="text-[11px] text-slate-500 mt-1">كوميشن: {{ number_format((float) ($commission['commission_from_leads'] ?? 0), 2) }} ج.م</p>
-                </div>
-            </div>
-
-            @if(!empty($decision['flags']))
-                <ul class="mt-4 text-sm text-amber-900 space-y-1 list-disc list-inside">
-                    @foreach($decision['flags'] as $f)
-                        <li>{{ $f }}</li>
-                    @endforeach
-                </ul>
-            @endif
-
-            <div class="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-                <p class="text-xs font-bold text-slate-600 mb-2">توصيات النظام</p>
-                <ul class="text-sm text-slate-800 space-y-1 list-disc list-inside">
-                    @foreach(($decision['recommendations'] ?? []) as $rec)
-                        <li>{{ $rec }}</li>
-                    @endforeach
-                </ul>
+            <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2 min-w-0">
+                @foreach($dirMetrics as $key => $m)
+                    @php
+                        $pct = $m['pct'] ?? null;
+                        $isPctMetric = in_array($key, ['conversion', 'academy'], true);
+                        $trendUp = $pct !== null && $pct > 0;
+                        $trendDown = $pct !== null && $pct < 0;
+                        $trendClass = $trendUp ? 'text-emerald-700' : ($trendDown ? 'text-rose-700' : 'text-slate-600');
+                    @endphp
+                    <div class="rounded-xl bg-white/80 border border-white p-3 shadow-sm">
+                        <p class="text-[10px] font-semibold text-slate-500 truncate">{{ $m['label'] ?? '' }}</p>
+                        <p class="text-lg font-black text-slate-900 tabular-nums">
+                            @if($isPctMetric)
+                                {{ number_format((float) ($m['current'] ?? 0), 1) }}%
+                            @elseif($key === 'revenue')
+                                {{ number_format((float) ($m['current'] ?? 0), 0) }}
+                            @else
+                                {{ number_format((int) ($m['current'] ?? 0)) }}
+                            @endif
+                        </p>
+                        @if($pct !== null)
+                            <p class="text-[10px] font-bold {{ $trendClass }} tabular-nums">
+                                {{ $trendUp ? '↑' : ($trendDown ? '↓' : '→') }}
+                                {{ $isPctMetric ? number_format(abs((float) $pct), 1).' نقطة' : number_format(abs((float) $pct), 1).'%' }}
+                            </p>
+                        @endif
+                    </div>
+                @endforeach
             </div>
         </div>
+    </section>
 
-        <div class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-            <div class="px-5 py-3 border-b border-gray-100 bg-slate-50">
-                <h2 class="text-base font-black text-gray-900">تفصيل KPIs (الفترة)</h2>
+    {{-- بطاقات سريعة --}}
+    <div class="grid grid-cols-2 xl:grid-cols-4 gap-3">
+        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p class="text-xs font-semibold text-slate-600">تحويل Leads (الشهر الحالي)</p>
+            <p class="text-2xl font-black text-emerald-700 tabular-nums">{{ number_format((float) $latestConversion, 1) }}%</p>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p class="text-xs font-semibold text-slate-600">تحويل الأكاديمية</p>
+            <p class="text-2xl font-black text-indigo-700 tabular-nums">{{ number_format((float) $latestAcademy, 1) }}%</p>
+            <p class="text-[10px] text-slate-500">فوز → تسجيل كورس خلال 90 يوم</p>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p class="text-xs font-semibold text-slate-600">إيراد المبيعات (الشهر)</p>
+            <p class="text-2xl font-black text-slate-900 tabular-nums">{{ number_format((float) $latestRevenue, 0) }}</p>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p class="text-xs font-semibold text-slate-600">مؤشر الموظف المحدد</p>
+            <p class="text-2xl font-black text-sky-700 tabular-nums">{{ $decision['composite'] ?? ($periodReport['composite'] ?? '—') }}</p>
+            <p class="text-[10px] text-slate-500">{{ $rep->name }}</p>
+        </div>
+    </div>
+
+    {{-- شارتات الفريق --}}
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden xl:col-span-2">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                <h3 class="text-base font-black text-slate-900">اتجاه المبيعات — آخر 6 أشهر</h3>
+                <p class="text-xs text-slate-600">Leads جديدة، صفقات فوز، ومعدل التحويل.</p>
             </div>
-            <div class="overflow-x-auto p-4">
+            <div class="p-4">
+                <div class="relative w-full" style="height: 360px;">
+                    <canvas id="chartTeamTrend"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                <h3 class="text-base font-black text-slate-900">تحويل مبيعات الأكاديمية</h3>
+                <p class="text-xs text-slate-600">نسبة الفوز → تسجيل فعلي في كورس (أونلاين/أوفلاين).</p>
+            </div>
+            <div class="p-4">
+                <div class="relative w-full" style="height: 300px;">
+                    <canvas id="chartAcademy"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                <h3 class="text-base font-black text-slate-900">الإيراد الشهري</h3>
+                <p class="text-xs text-slate-600">قيمة الصفقات المكتملة (expected value).</p>
+            </div>
+            <div class="p-4">
+                <div class="relative w-full" style="height: 300px;">
+                    <canvas id="chartRevenue"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                <h3 class="text-base font-black text-slate-900">قمع المبيعات (الأنبوب)</h3>
+                <p class="text-xs text-slate-600">الفرص المفتوحة حسب المرحلة + فوز الشهر.</p>
+            </div>
+            <div class="p-4">
+                <div class="relative w-full" style="height: 300px;">
+                    <canvas id="chartFunnel"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                <h3 class="text-base font-black text-slate-900">مصادر Leads (الشهر)</h3>
+            </div>
+            <div class="p-4">
+                <div class="relative w-full" style="height: 300px;">
+                    <canvas id="chartSources"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden xl:col-span-2">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                <h3 class="text-base font-black text-slate-900">مقارنة الموظفين — هذا الشهر</h3>
+                <p class="text-xs text-slate-600">المؤشر المركّب، عدد الفوز، والإيراد.</p>
+            </div>
+            <div class="p-4">
+                <div class="relative w-full" style="height: 320px;">
+                    <canvas id="chartRepComparison"></canvas>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    {{-- تفصيل الموظف --}}
+    <div id="insights-pdf-root" class="space-y-6">
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-4 py-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h3 class="text-base font-black text-slate-900">تفصيل: {{ $rep->name }}</h3>
+                    <p class="text-xs text-slate-600">{{ $periodLabel }} — {{ $start->format('Y-m-d') }} → {{ $end->format('Y-m-d') }}</p>
+                </div>
+                <span class="inline-flex items-center rounded-xl px-3 py-1.5 text-xs font-bold border {{ $statusClass }}">
+                    {{ $decision['status_label'] ?? '—' }}
+                </span>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 p-4">
+                <div class="rounded-xl border border-slate-200 p-3">
+                    <p class="text-xs text-slate-500">Leads</p>
+                    <p class="text-xl font-black tabular-nums">{{ $counts['leads'] ?? 0 }}</p>
+                </div>
+                <div class="rounded-xl border border-slate-200 p-3">
+                    <p class="text-xs text-slate-500">أنشطة CRM</p>
+                    <p class="text-xl font-black tabular-nums">{{ $counts['activities'] ?? 0 }}</p>
+                </div>
+                <div class="rounded-xl border border-slate-200 p-3">
+                    <p class="text-xs text-slate-500">Wins معتمدة</p>
+                    <p class="text-xl font-black tabular-nums">{{ $commission['confirmed_wins'] ?? 0 }}</p>
+                </div>
+                <div class="rounded-xl border border-slate-200 p-3">
+                    <p class="text-xs text-slate-500">كوميشن</p>
+                    <p class="text-xl font-black tabular-nums">{{ number_format((float) ($commission['commission_from_leads'] ?? 0), 0) }}</p>
+                </div>
+            </div>
+            @if(!empty($decision['recommendations']))
+                <div class="px-4 pb-4">
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <p class="text-xs font-bold text-slate-600 mb-2">توصيات</p>
+                        <ul class="text-sm text-slate-800 space-y-1 list-disc list-inside">
+                            @foreach($decision['recommendations'] as $rec)
+                                <li>{{ $rec }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+            @endif
+        </section>
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden xl:col-span-2">
+                <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                    <h3 class="text-base font-black text-slate-900">نشاط الموظف اليومي</h3>
+                </div>
+                <div class="p-4">
+                    <div class="relative w-full" style="height: 300px;">
+                        <canvas id="chartRepDaily"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+                <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                    <h3 class="text-base font-black text-slate-900">توزيع المراحل</h3>
+                </div>
+                <div class="p-4">
+                    <div class="relative w-full" style="height: 280px;">
+                        <canvas id="chartRepStages"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+                <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                    <h3 class="text-base font-black text-slate-900">أنواع الأنشطة</h3>
+                </div>
+                <div class="p-4">
+                    <div class="relative w-full" style="height: 280px;">
+                        <canvas id="chartRepActivities"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden xl:col-span-2">
+                <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                    <h3 class="text-base font-black text-slate-900">محاور KPI (الفترة)</h3>
+                </div>
+                <div class="p-4">
+                    <div class="relative w-full" style="height: 280px;">
+                        <canvas id="chartRepPillars"></canvas>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                <h3 class="text-base font-black text-slate-900">تفصيل KPIs</h3>
+            </div>
+            <div class="overflow-x-auto">
                 <table class="min-w-[740px] w-full text-sm">
                     <thead>
-                        <tr class="bg-emerald-800 text-white">
-                            <th class="px-3 py-2 text-right">المؤشر</th>
-                            <th class="px-3 py-2 text-center">الفعلي</th>
-                            <th class="px-3 py-2 text-center">الهدف (فترة)</th>
+                        <tr class="bg-slate-50 text-slate-700 border-b border-slate-200">
+                            <th class="px-4 py-3 text-right font-semibold">المؤشر</th>
+                            <th class="px-4 py-3 text-center font-semibold">الفعلي</th>
+                            <th class="px-4 py-3 text-center font-semibold">الهدف</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100">
-                        @foreach($periodReport['kpi_lines'] ?? [] as $line)
-                            <tr class="hover:bg-emerald-50/50">
-                                <td class="px-3 py-2 font-medium text-gray-800">{{ $line['label'] ?? '' }}</td>
-                                <td class="px-3 py-2 text-center tabular-nums">{{ $line['actual'] ?? '—' }}</td>
-                                <td class="px-3 py-2 text-center tabular-nums">{{ $line['target'] ?? '—' }}</td>
+                    <tbody class="divide-y divide-slate-100">
+                        @forelse($periodReport['kpi_lines'] ?? [] as $line)
+                            <tr class="hover:bg-slate-50">
+                                <td class="px-4 py-2 font-medium text-slate-800">{{ $line['label'] ?? '' }}</td>
+                                <td class="px-4 py-2 text-center tabular-nums">{{ $line['actual'] ?? '—' }}</td>
+                                <td class="px-4 py-2 text-center tabular-nums">{{ $line['target'] ?? '—' }}</td>
                             </tr>
-                        @endforeach
+                        @empty
+                            <tr><td colspan="3" class="px-4 py-8 text-center text-slate-500">لا بيانات KPI.</td></tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
-        </div>
+        </section>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div class="rounded-2xl border border-gray-200 bg-white shadow-sm p-4">
-                <h3 class="text-sm font-black text-gray-900 mb-2">Leads (عينة)</h3>
-                @if($leadsSample->isEmpty())
-                    <p class="text-xs text-gray-500">لا توجد صفوف في الفترة.</p>
-                @else
-                    <ul class="text-xs space-y-2 text-gray-700">
-                        @foreach($leadsSample as $l)
-                            <li class="border-b border-gray-100 pb-2">
-                                <span class="font-bold">{{ $l->name }}</span>
-                                <span class="text-gray-500"> — {{ \App\Models\SalesLead::stageLabel($l->stage) }}</span>
-                                @if($l->email)<span class="text-gray-400"> — {{ $l->email }}</span>@endif
-                            </li>
-                        @endforeach
-                    </ul>
-                @endif
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+                <h3 class="text-base font-black text-slate-900">ربط الأكاديمية (حسب الإيميل)</h3>
+                <span class="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-200">{{ (int) ($courses['matched_users'] ?? 0) }} حساب</span>
             </div>
-            <div class="rounded-2xl border border-gray-200 bg-white shadow-sm p-4">
-                <h3 class="text-sm font-black text-gray-900 mb-2">أنشطة CRM (عينة)</h3>
-                @if($activitiesSample->isEmpty())
-                    <p class="text-xs text-gray-500">لا توجد أنشطة في الفترة.</p>
-                @else
-                    <ul class="text-xs space-y-2 text-gray-700">
-                        @foreach($activitiesSample as $a)
-                            <li class="border-b border-gray-100 pb-2">
-                                <span class="font-bold">{{ \App\Models\SalesActivity::typeLabel($a->type) }}</span>
-                                @if($a->lead)<span class="text-gray-500"> — {{ $a->lead->name }} ({{ \App\Models\SalesLead::stageLabel($a->lead->stage) }})</span>@endif
-                                <span class="text-gray-400"> — {{ $a->created_at?->format('Y-m-d H:i') }}</span>
-                            </li>
-                        @endforeach
-                    </ul>
-                @endif
-            </div>
-        </div>
-
-        <div class="rounded-2xl border border-gray-200 bg-white shadow-sm p-4 space-y-3">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-                <h3 class="text-sm font-black text-gray-900">الكورسات المرتبطة بعملاء الموظف (حسب الإيميل)</h3>
-                <span class="text-xs text-slate-500">حسابات مطابقة: {{ (int) ($courses['matched_users'] ?? 0) }}</span>
+            <div class="p-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="rounded-xl border border-slate-200 p-3 text-center">
+                    <p class="text-xs text-slate-500">تسجيلات أونلاين</p>
+                    <p class="text-xl font-black tabular-nums">{{ (int) data_get($courses, 'online_enrollments.count', 0) }}</p>
+                </div>
+                <div class="rounded-xl border border-slate-200 p-3 text-center">
+                    <p class="text-xs text-slate-500">Orders</p>
+                    <p class="text-xl font-black tabular-nums">{{ (int) data_get($courses, 'orders.count', 0) }}</p>
+                </div>
+                <div class="rounded-xl border border-slate-200 p-3 text-center">
+                    <p class="text-xs text-slate-500">حجوزات أوفلاين</p>
+                    <p class="text-xl font-black tabular-nums">{{ (int) data_get($courses, 'offline_bookings.count', 0) }}</p>
+                </div>
+                <div class="rounded-xl border border-slate-200 p-3 text-center">
+                    <p class="text-xs text-slate-500">تسجيلات أوفلاين</p>
+                    <p class="text-xl font-black tabular-nums">{{ (int) data_get($courses, 'offline_enrollments.count', 0) }}</p>
+                </div>
             </div>
             @if(!empty($courses['note']))
-                <p class="text-xs text-amber-800">{{ $courses['note'] }}</p>
+                <p class="px-4 pb-4 text-xs text-amber-800">{{ $courses['note'] }}</p>
             @endif
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div class="rounded-xl border border-slate-200 bg-slate-50/50 p-3">
-                    <p class="text-xs font-bold text-slate-700 mb-2">تسجيلات كورسات الموقع (Online enrollments)</p>
-                    <p class="text-xs text-slate-500 mb-2">الإجمالي في الفترة: {{ (int) data_get($courses, 'online_enrollments.count', 0) }}</p>
-                    <ul class="text-xs space-y-2 text-slate-800">
-                        @forelse(data_get($courses, 'online_enrollments.rows', collect()) as $e)
-                            <li class="border-b border-slate-200 pb-2">
-                                <span class="font-bold">{{ $e->user->name ?? '—' }}</span>
-                                <span class="text-slate-500"> — {{ $e->course->title ?? '—' }}</span>
-                                <span class="text-slate-400"> — {{ $e->enrolled_at?->format('Y-m-d') }}</span>
-                            </li>
-                        @empty
-                            <li class="text-slate-500">—</li>
-                        @endforelse
-                    </ul>
-                </div>
-                <div class="rounded-xl border border-slate-200 bg-slate-50/50 p-3">
-                    <p class="text-xs font-bold text-slate-700 mb-2">طلبات شراء / Orders</p>
-                    <p class="text-xs text-slate-500 mb-2">الإجمالي في الفترة: {{ (int) data_get($courses, 'orders.count', 0) }}</p>
-                    <ul class="text-xs space-y-2 text-slate-800">
-                        @forelse(data_get($courses, 'orders.rows', collect()) as $o)
-                            <li class="border-b border-slate-200 pb-2">
-                                <span class="font-bold">{{ $o->user->name ?? '—' }}</span>
-                                <span class="text-slate-500">
-                                    — {{ $o->course->title ?? ($o->learningPath->name ?? '—') }}
-                                </span>
-                                <span class="text-slate-400"> — {{ $o->created_at?->format('Y-m-d') }}</span>
-                            </li>
-                        @empty
-                            <li class="text-slate-500">—</li>
-                        @endforelse
-                    </ul>
-                </div>
-                <div class="rounded-xl border border-slate-200 bg-slate-50/50 p-3">
-                    <p class="text-xs font-bold text-slate-700 mb-2">حجوزات أوفلاين (Offline bookings)</p>
-                    <p class="text-xs text-slate-500 mb-2">الإجمالي في الفترة: {{ (int) data_get($courses, 'offline_bookings.count', 0) }}</p>
-                    <ul class="text-xs space-y-2 text-slate-800">
-                        @forelse(data_get($courses, 'offline_bookings.rows', collect()) as $b)
-                            <li class="border-b border-slate-200 pb-2">
-                                <span class="font-bold">{{ $b->user->name ?? '—' }}</span>
-                                <span class="text-slate-500"> — {{ $b->course->title ?? '—' }}</span>
-                                <span class="text-slate-400"> — جروب: {{ $b->assignedGroup->name ?? ($b->requestedGroup->name ?? '—') }}</span>
-                            </li>
-                        @empty
-                            <li class="text-slate-500">—</li>
-                        @endforelse
-                    </ul>
-                </div>
-                <div class="rounded-xl border border-slate-200 bg-slate-50/50 p-3">
-                    <p class="text-xs font-bold text-slate-700 mb-2">تسجيلات أوفلاين (Enrollments)</p>
-                    <p class="text-xs text-slate-500 mb-2">الإجمالي في الفترة: {{ (int) data_get($courses, 'offline_enrollments.count', 0) }}</p>
-                    <ul class="text-xs space-y-2 text-slate-800">
-                        @forelse(data_get($courses, 'offline_enrollments.rows', collect()) as $en)
-                            <li class="border-b border-slate-200 pb-2">
-                                <span class="font-bold">{{ $en->student->name ?? '—' }}</span>
-                                <span class="text-slate-500"> — {{ $en->course->title ?? '—' }}</span>
-                                <span class="text-slate-400"> — {{ ($en->enrollment_channel ?? 'offline') === 'online' ? 'أونلاين' : 'أوفلاين' }} — جروب: {{ $en->group->name ?? '—' }}</span>
-                            </li>
-                        @empty
-                            <li class="text-slate-500">—</li>
-                        @endforelse
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <div class="rounded-2xl border border-gray-200 bg-white shadow-sm p-4">
-            <h3 class="text-sm font-black text-gray-900 mb-2">سجل النظام (عينة)</h3>
-            @if($auditSample->isEmpty())
-                <p class="text-xs text-gray-500">لا توجد سجلات في الفترة.</p>
-            @else
-                <ul class="text-xs space-y-2 text-gray-700">
-                    @foreach($auditSample as $log)
-                        <li class="border-b border-gray-100 pb-2">
-                            <span class="font-bold">{{ $log->user->name ?? '—' }}</span>
-                            <span class="text-gray-400"> — {{ $log->created_at?->format('Y-m-d H:i') }}</span>
-                            <div class="text-gray-700 mt-1 whitespace-pre-wrap">{{ \Illuminate\Support\Str::limit($log->description ?? $log->action, 180) }}</div>
-                        </li>
-                    @endforeach
-                </ul>
-            @endif
-        </div>
+        </section>
     </div>
 </div>
 
 @push('scripts')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
-    function downloadInsightsPdf() {
-        const element = document.getElementById('insights-pdf-root');
-        const opt = {
-            margin: 8,
-            filename: 'sales-insights-{{ $rep->id }}-{{ $start->format('Y-m-d') }}-{{ $end->format('Y-m-d') }}.pdf',
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-        html2pdf().set(opt).from(element).save();
+(function () {
+    const team = @json($teamDashboard);
+    const rep = @json($repCharts);
+
+    const palette = {
+        emerald: 'rgb(16, 185, 129)',
+        emeraldSoft: 'rgba(16, 185, 129, 0.15)',
+        sky: 'rgb(14, 165, 233)',
+        skySoft: 'rgba(14, 165, 233, 0.15)',
+        indigo: 'rgb(99, 102, 241)',
+        indigoSoft: 'rgba(99, 102, 241, 0.15)',
+        amber: 'rgb(245, 158, 11)',
+        rose: 'rgb(244, 63, 94)',
+        slate: 'rgb(100, 116, 139)',
+        violet: 'rgb(139, 92, 246)',
+    };
+
+    const doughnutColors = [
+        palette.emerald, palette.sky, palette.indigo, palette.amber,
+        palette.rose, palette.violet, palette.slate, '#0ea5e9', '#84cc16', '#f97316'
+    ];
+
+    const baseOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+        },
+    };
+
+    function hasData(arr) {
+        return Array.isArray(arr) && arr.some(v => Number(v) > 0);
     }
 
-    (function () {
-        const sel = document.getElementById('period_sel');
-        const from = document.getElementById('date_from');
-        const to = document.getElementById('date_to');
-        if (!sel || !from || !to) return;
+    function emptyChartMessage(canvasId, msg) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const wrap = canvas.parentElement;
+        wrap.innerHTML = '<p class="text-sm text-slate-500 text-center py-16">' + msg + '</p>';
+    }
 
-        function toggleCustom() {
-            const isCustom = sel.value === 'custom';
-            from.disabled = !isCustom;
-            to.disabled = !isCustom;
-        }
+    const monthly = team.monthly || {};
 
-        sel.addEventListener('change', toggleCustom);
-        toggleCustom();
-    })();
+    if (hasData(monthly.created) || hasData(monthly.won)) {
+        new Chart(document.getElementById('chartTeamTrend'), {
+            type: 'line',
+            data: {
+                labels: monthly.labels || [],
+                datasets: [
+                    {
+                        label: 'Leads جديدة',
+                        data: monthly.created || [],
+                        borderColor: palette.sky,
+                        backgroundColor: palette.skySoft,
+                        tension: 0.35,
+                        fill: true,
+                        yAxisID: 'y',
+                    },
+                    {
+                        label: 'صفقات فوز',
+                        data: monthly.won || [],
+                        borderColor: palette.emerald,
+                        backgroundColor: palette.emeraldSoft,
+                        tension: 0.35,
+                        fill: true,
+                        yAxisID: 'y',
+                    },
+                    {
+                        label: 'معدل التحويل %',
+                        data: monthly.conversion || [],
+                        borderColor: palette.amber,
+                        borderDash: [6, 4],
+                        tension: 0.35,
+                        yAxisID: 'y1',
+                    },
+                ],
+            },
+            options: {
+                ...baseOptions,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    y: { beginAtZero: true, position: 'right', title: { display: true, text: 'العدد' } },
+                    y1: { beginAtZero: true, position: 'left', grid: { drawOnChartArea: false }, title: { display: true, text: '%' } },
+                },
+            },
+        });
+    } else {
+        emptyChartMessage('chartTeamTrend', 'لا بيانات Leads/فوز كافية لعرض الاتجاه.');
+    }
+
+    if (hasData(monthly.academyRate) || hasData(monthly.academyConverted)) {
+        new Chart(document.getElementById('chartAcademy'), {
+            type: 'line',
+            data: {
+                labels: monthly.labels || [],
+                datasets: [
+                    {
+                        label: 'نسبة تحويل الأكاديمية %',
+                        data: monthly.academyRate || [],
+                        borderColor: palette.indigo,
+                        backgroundColor: palette.indigoSoft,
+                        tension: 0.35,
+                        fill: true,
+                        yAxisID: 'y1',
+                    },
+                    {
+                        label: 'تسجيلات من فوز',
+                        data: monthly.academyConverted || [],
+                        type: 'bar',
+                        backgroundColor: 'rgba(99, 102, 241, 0.55)',
+                        yAxisID: 'y',
+                    },
+                ],
+            },
+            options: {
+                ...baseOptions,
+                scales: {
+                    y: { beginAtZero: true, position: 'right', title: { display: true, text: 'تسجيلات' } },
+                    y1: { beginAtZero: true, position: 'left', grid: { drawOnChartArea: false }, max: 100, title: { display: true, text: '%' } },
+                },
+            },
+        });
+    } else {
+        emptyChartMessage('chartAcademy', 'لا بيانات تحويل أكاديمية — تأكد من إيميل الـ leads وربطها بحسابات الطلاب.');
+    }
+
+    if (hasData(monthly.revenue)) {
+        new Chart(document.getElementById('chartRevenue'), {
+            type: 'bar',
+            data: {
+                labels: monthly.labels || [],
+                datasets: [{
+                    label: 'الإيراد (ج.م)',
+                    data: monthly.revenue || [],
+                    backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                    borderRadius: 8,
+                }],
+            },
+            options: {
+                ...baseOptions,
+                plugins: { ...baseOptions.plugins, legend: { display: false } },
+                scales: { y: { beginAtZero: true } },
+            },
+        });
+    } else {
+        emptyChartMessage('chartRevenue', 'لا إيراد مسجّل في آخر 6 أشهر.');
+    }
+
+    const funnel = team.funnel || {};
+    if (hasData(funnel.values)) {
+        new Chart(document.getElementById('chartFunnel'), {
+            type: 'bar',
+            data: {
+                labels: funnel.labels || [],
+                datasets: [{
+                    label: 'العدد',
+                    data: funnel.values || [],
+                    backgroundColor: doughnutColors,
+                    borderRadius: 6,
+                }],
+            },
+            options: {
+                indexAxis: 'y',
+                ...baseOptions,
+                plugins: { ...baseOptions.plugins, legend: { display: false } },
+                scales: { x: { beginAtZero: true } },
+            },
+        });
+    } else {
+        emptyChartMessage('chartFunnel', 'الأنبوب فارغ حالياً.');
+    }
+
+    const sources = team.sources || {};
+    if (hasData(sources.values)) {
+        new Chart(document.getElementById('chartSources'), {
+            type: 'doughnut',
+            data: {
+                labels: sources.labels || [],
+                datasets: [{
+                    data: sources.values || [],
+                    backgroundColor: doughnutColors,
+                    borderWidth: 2,
+                }],
+            },
+            options: { ...baseOptions },
+        });
+    } else {
+        emptyChartMessage('chartSources', 'لا leads بمصادر مسجّلة هذا الشهر.');
+    }
+
+    const comp = team.rep_comparison || {};
+    if ((comp.labels || []).length > 0) {
+        new Chart(document.getElementById('chartRepComparison'), {
+            type: 'bar',
+            data: {
+                labels: comp.labels || [],
+                datasets: [
+                    {
+                        label: 'المؤشر المركّب',
+                        data: comp.composite || [],
+                        backgroundColor: 'rgba(14, 165, 233, 0.75)',
+                        borderRadius: 6,
+                        yAxisID: 'y',
+                    },
+                    {
+                        label: 'فوز الشهر',
+                        data: comp.won || [],
+                        backgroundColor: 'rgba(16, 185, 129, 0.75)',
+                        borderRadius: 6,
+                        yAxisID: 'y1',
+                    },
+                ],
+            },
+            options: {
+                ...baseOptions,
+                scales: {
+                    y: { beginAtZero: true, max: 100, position: 'right', title: { display: true, text: 'مركّب' } },
+                    y1: { beginAtZero: true, position: 'left', grid: { drawOnChartArea: false }, title: { display: true, text: 'فوز' } },
+                },
+            },
+        });
+    } else {
+        emptyChartMessage('chartRepComparison', 'لا موظفين للمقارنة.');
+    }
+
+    const daily = rep.daily || {};
+    if (hasData(daily.leads) || hasData(daily.activities) || hasData(daily.wins)) {
+        new Chart(document.getElementById('chartRepDaily'), {
+            type: 'line',
+            data: {
+                labels: daily.labels || [],
+                datasets: [
+                    { label: 'Leads', data: daily.leads || [], borderColor: palette.sky, tension: 0.3 },
+                    { label: 'أنشطة', data: daily.activities || [], borderColor: palette.indigo, tension: 0.3 },
+                    { label: 'فوز', data: daily.wins || [], borderColor: palette.emerald, tension: 0.3 },
+                ],
+            },
+            options: { ...baseOptions, scales: { y: { beginAtZero: true } } },
+        });
+    } else {
+        emptyChartMessage('chartRepDaily', 'لا نشاط يومي في الفترة المحددة.');
+    }
+
+    const stages = rep.stages || {};
+    if (hasData(stages.values)) {
+        new Chart(document.getElementById('chartRepStages'), {
+            type: 'doughnut',
+            data: {
+                labels: stages.labels || [],
+                datasets: [{ data: stages.values || [], backgroundColor: doughnutColors, borderWidth: 2 }],
+            },
+            options: { ...baseOptions },
+        });
+    } else {
+        emptyChartMessage('chartRepStages', 'لا leads لهذا الموظف.');
+    }
+
+    const act = rep.activities_by_type || {};
+    if (hasData(act.values)) {
+        new Chart(document.getElementById('chartRepActivities'), {
+            type: 'doughnut',
+            data: {
+                labels: act.labels || [],
+                datasets: [{ data: act.values || [], backgroundColor: doughnutColors, borderWidth: 2 }],
+            },
+            options: { ...baseOptions },
+        });
+    } else {
+        emptyChartMessage('chartRepActivities', 'لا أنشطة CRM في الفترة.');
+    }
+
+    const pillars = rep.pillars || {};
+    if ((pillars.labels || []).length > 0) {
+        new Chart(document.getElementById('chartRepPillars'), {
+            type: 'bar',
+            data: {
+                labels: pillars.labels || [],
+                datasets: [
+                    { label: 'النتيجة', data: pillars.scores || [], backgroundColor: 'rgba(14, 165, 233, 0.75)', borderRadius: 6 },
+                    { label: 'معيار 70', data: pillars.targets || [], type: 'line', borderColor: palette.amber, borderDash: [4, 4], pointRadius: 0, fill: false },
+                ],
+            },
+            options: {
+                ...baseOptions,
+                scales: { y: { beginAtZero: true, max: 100 } },
+            },
+        });
+    } else {
+        emptyChartMessage('chartRepPillars', 'لا محاور KPI.');
+    }
+})();
+
+function downloadInsightsPdf() {
+    const element = document.getElementById('insights-pdf-root');
+    const opt = {
+        margin: 8,
+        filename: 'sales-insights-{{ $rep->id }}-{{ $start->format('Y-m-d') }}-{{ $end->format('Y-m-d') }}.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    html2pdf().set(opt).from(element).save();
+}
+
+(function () {
+    const sel = document.getElementById('period_sel');
+    const from = document.getElementById('date_from');
+    const to = document.getElementById('date_to');
+    if (!sel || !from || !to) return;
+    function toggleCustom() {
+        const isCustom = sel.value === 'custom';
+        from.disabled = !isCustom;
+        to.disabled = !isCustom;
+    }
+    sel.addEventListener('change', toggleCustom);
+    toggleCustom();
+})();
 </script>
 @endpush
 @endsection
-

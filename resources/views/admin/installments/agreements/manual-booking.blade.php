@@ -9,39 +9,21 @@
     $onlineCourses = $onlineCourses ?? collect();
     $offlineCoursesGroups = $offlineCoursesGroups ?? collect();
 @endphp
-<div class="container mx-auto px-4 py-8 space-y-8">
-    <div class="bg-gradient-to-br from-violet-500 via-violet-600 to-sky-600 rounded-3xl shadow-xl text-white p-8 relative overflow-hidden">
-        <div class="absolute inset-y-0 right-0 w-1/3 pointer-events-none opacity-20">
-            <div class="w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-        </div>
-        <div class="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div>
-                <div class="flex items-center gap-3 flex-wrap">
-                    <h1 class="text-3xl font-black tracking-tight">حجز يدوي + خطة تقسيط</h1>
-                    <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-white/20">
-                        <i class="fas fa-envelope text-xs"></i>
-                        بريد الطالب + نوع الكورس
-                    </span>
-                </div>
-                <p class="mt-3 text-white/75 max-w-2xl">
-                    أدخل بريد الطالب المسجّل في المنصة، واختر كورساً أونلاين أو أوفلاين. إن لم يكن مسجّلاً في الكورس يُنشأ التسقيط تلقائياً ثم تُولَّد خطة الأقساط.
-                </p>
-            </div>
-            <div class="flex flex-wrap gap-3 justify-end">
-                <a href="{{ route('admin.installments.agreements.index') }}" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white/15 text-white font-semibold border border-white/30 hover:bg-white/25 transition-all">
-                    <i class="fas fa-arrow-right"></i>
-                    الاتفاقيات
-                </a>
-                <a href="{{ route('admin.installments.agreements.create') }}" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white text-violet-700 font-semibold shadow-lg hover:shadow-xl transition-all">
-                    <i class="fas fa-link"></i>
-                    ربط بتسجيل موجود
-                </a>
-            </div>
-        </div>
-    </div>
+<div class="space-y-6">
+    @include('admin.installments.partials.header', [
+        'title' => 'حجز يدوي + خطة تقسيط',
+        'description' => 'بريد الطالب + نوع الكورس — يُنشأ التسجيل والتقسيط تلقائياً إن لم يكن موجوداً.',
+        'icon' => 'fa-user-plus',
+        'iconGradient' => 'from-violet-500 to-purple-600',
+        'actions' => [
+            ['route' => 'admin.installments.agreements.create', 'label' => 'ربط بتسجيل موجود', 'icon' => 'fa-link'],
+            ['route' => 'admin.installments.agreements.index', 'label' => 'الاتفاقيات', 'icon' => 'fa-list'],
+        ],
+    ])
+    @include('admin.installments.partials.nav', ['active' => 'manual-booking'])
 
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div class="xl:col-span-2 bg-white rounded-3xl shadow-lg border border-gray-100 p-8">
+        <section class="xl:col-span-2 rounded-2xl bg-white border border-slate-200 shadow-lg p-6 sm:p-8">
             <form id="manual-installment-form" action="{{ route('admin.installments.agreements.manual-booking.store') }}" method="POST" class="space-y-8">
                 @csrf
 
@@ -197,11 +179,11 @@
                     </button>
                 </div>
             </form>
-        </div>
+        </section>
 
         <div class="space-y-6">
-            <div class="bg-white rounded-3xl shadow-lg border border-gray-100 p-6">
-                <h2 class="text-lg font-black text-gray-900 mb-4">تنبيهات</h2>
+            <section class="rounded-2xl bg-white border border-slate-200 shadow-lg p-6">
+                <h2 class="text-lg font-black text-slate-900 mb-4">تنبيهات</h2>
                 <ul class="space-y-3 text-sm text-gray-600">
                     <li class="flex items-start gap-2">
                         <i class="fas fa-user-check mt-1 text-violet-500"></i>
@@ -216,7 +198,7 @@
                         لا يُسمح بأكثر من اتفاقية نشطة/متأخرة لنفس تسجيل الكورس.
                     </li>
                 </ul>
-            </div>
+            </section>
         </div>
     </div>
 </div>

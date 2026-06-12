@@ -12,6 +12,7 @@ use App\Models\SalesLead;
 use App\Models\StudentCourseEnrollment;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\SalesInsightsAnalyticsService;
 use App\Services\SalesKpiService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -35,7 +36,7 @@ class SalesInsightsController extends Controller
         'sales_lead_won_confirmed',
     ];
 
-    public function index(Request $request, SalesKpiService $kpi)
+    public function index(Request $request, SalesKpiService $kpi, SalesInsightsAnalyticsService $analytics)
     {
         $salesReps = User::salesEmployees()->where('is_active', true)->orderBy('name')->get(['id', 'name']);
 
@@ -94,6 +95,9 @@ class SalesInsightsController extends Controller
 
         $decision = $this->decisionFromReport($periodReport, $counts, $commission, $courses);
 
+        $teamDashboard = $analytics->buildTeamDashboard(6);
+        $repCharts = $analytics->buildRepCharts($rep->id, $start, $end, $periodReport);
+
         $periodLabel = match ($validated['period']) {
             'day' => 'اليوم',
             'week' => 'الأسبوع الحالي',
@@ -114,7 +118,9 @@ class SalesInsightsController extends Controller
             'commission',
             'courses',
             'decision',
-            'periodLabel'
+            'periodLabel',
+            'teamDashboard',
+            'repCharts'
         ));
     }
 

@@ -4,11 +4,15 @@
 @section('header', 'Insights — المبيعات')
 
 @section('content')
-<div class="p-4 md:p-6 space-y-6" style="background:#f8fafc;min-height:100vh;">
-    <div class="rounded-2xl border border-amber-200 bg-amber-50/70 p-6">
-        <h2 class="text-lg font-black text-amber-900 mb-2">لا يوجد موظفو مبيعات</h2>
-        <p class="text-sm text-amber-900/90">أضف موظف بوظيفة <strong>sales</strong> ثم أعد فتح صفحة Insights.</p>
-    </div>
+<div class="space-y-6">
+    <section class="rounded-2xl bg-white border border-amber-200 shadow-lg overflow-hidden">
+        <div class="px-4 py-8 text-center">
+            <div class="w-14 h-14 mx-auto mb-3 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
+                <i class="fas fa-users text-xl"></i>
+            </div>
+            <h2 class="text-lg font-black text-slate-900 mb-2">لا يوجد موظفو مبيعات</h2>
+            <p class="text-sm text-slate-600 max-w-md mx-auto">أضف موظف بوظيفة <strong>sales</strong> ثم أعد فتح صفحة Insights لعرض الشارتات والاتجاهات.</p>
+        </div>
+    </section>
 </div>
 @endsection
-

@@ -84,6 +84,9 @@ class OfflineEnrollmentController extends Controller
             'status' => 'required|in:pending,active',
             'payment_type' => 'required|in:full,partial,free',
             'paid_amount' => 'required_if:payment_type,partial|nullable|numeric|min:0',
+            'apply_discount' => 'nullable|boolean',
+            'discount_type' => 'nullable|in:fixed,percent',
+            'discount_value' => 'nullable|numeric|min:0',
             'payment_method' => 'nullable|required_if:payment_type,full,partial|in:cash,wallet',
             'wallet_id' => 'nullable|required_if:payment_method,wallet|exists:wallets,id',
             'payment_notes' => 'nullable|string',
@@ -112,16 +115,23 @@ class OfflineEnrollmentController extends Controller
             return back()->withErrors(['error' => $msg]);
         }
 
-        $coursePrice = (float) $offlineCourse->price;
+        $listPrice = (float) $offlineCourse->price;
+        $discountAmount = 0;
+        $finalAmount = $listPrice;
         $paidAmount = 0;
 
         if ($validated['payment_type'] === 'free') {
-            $coursePrice = 0;
+            $finalAmount = 0;
             $paidAmount = 0;
-        } elseif ($validated['payment_type'] === 'full') {
-            $paidAmount = $coursePrice;
-        } elseif ($validated['payment_type'] === 'partial') {
-            $paidAmount = min((float) ($validated['paid_amount'] ?? 0), $coursePrice);
+        } else {
+            $discountAmount = $this->resolveEnrollmentDiscount($request, $listPrice);
+            $finalAmount = max(0, round($listPrice - $discountAmount, 2));
+
+            if ($validated['payment_type'] === 'full') {
+                $paidAmount = $finalAmount;
+            } elseif ($validated['payment_type'] === 'partial') {
+                $paidAmount = min((float) ($validated['paid_amount'] ?? 0), $finalAmount);
+            }
         }
 
         $paymentMethod = $validated['payment_method'] ?? 'cash';
@@ -145,7 +155,7 @@ class OfflineEnrollmentController extends Controller
                 (int) $validated['user_id'],
                 (int) $validated['group_id'],
                 $validated['status'],
-                $coursePrice,
+                $finalAmount,
                 $paidAmount,
                 [
                     'payment_method' => $paymentMethod,
@@ -153,7 +163,9 @@ class OfflineEnrollmentController extends Controller
                     'payment_notes' => $validated['payment_notes'] ?? null,
                 ],
                 null,
-                $enrollmentChannel
+                $enrollmentChannel,
+                $discountAmount,
+                $listPrice
             );
 
             $createdEnrollment = OfflineCourseEnrollment::query()
@@ -395,5 +407,29 @@ class OfflineEnrollmentController extends Controller
         if ($enrollment->payment_status === 'paid' && $invoice->status !== 'paid') {
             $invoice->markAsPaid();
         }
+    }
+
+    private function resolveEnrollmentDiscount(Request $request, float $listPrice): float
+    {
+        if ($listPrice <= 0 || ! $request->boolean('apply_discount')) {
+            return 0;
+        }
+
+        $type = $request->input('discount_type', 'fixed');
+        $value = (float) $request->input('discount_value', 0);
+
+        if ($value <= 0) {
+            return 0;
+        }
+
+        if ($type === 'percent') {
+            if ($value > 100) {
+                return $listPrice;
+            }
+
+            return min($listPrice, round($listPrice * $value / 100, 2));
+        }
+
+        return min($listPrice, round($value, 2));
     }
 }

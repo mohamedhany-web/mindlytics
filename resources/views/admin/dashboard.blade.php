@@ -1,371 +1,323 @@
 @extends('layouts.admin')
 
 @section('title', 'لوحة الإدارة - Mindlytics')
+@section('header', 'لوحة الإدارة')
 
 @section('content')
-<div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" style="background: #f8fafc; min-height: 100vh;">
-    <!-- إحصائيات سريعة -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <!-- إجمالي المستخدمين -->
-        @php $usersMetric = $metrics['users'] ?? null; $usersTrend = $usersMetric['trend'] ?? null; @endphp
-        <div class="dashboard-card rounded-2xl p-5 sm:p-6 card-hover-effect relative overflow-hidden group border-2 border-blue-200/50 hover:border-blue-300/70 shadow-xl hover:shadow-2xl transition-all duration-300 w-full" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 249, 255, 0.95) 50%, rgba(224, 242, 254, 0.9) 100%);">
-            <div class="absolute inset-0 bg-gradient-to-br from-blue-100/60 via-sky-100/40 to-blue-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-transparent rounded-full opacity-80" aria-hidden="true"></div>
-            <div class="relative z-10">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex-1 min-w-0">
-                        <p class="text-base sm:text-sm font-bold text-blue-800/80 mb-2 sm:mb-1">إجمالي المستخدمين</p>
-                        <p class="text-5xl sm:text-4xl font-black bg-gradient-to-r from-blue-700 via-blue-600 to-sky-600 bg-clip-text text-transparent drop-shadow-sm">{{ number_format($usersMetric['total'] ?? 0) }}</p>
-                    </div>
-                    <div class="card-icon w-20 h-20 sm:w-16 sm:h-16 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0 mr-3 sm:mr-0" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #0284c7 100%); box-shadow: 0 8px 20px 0 rgba(59, 130, 246, 0.4);">
-                        <i class="fas fa-users text-white text-2xl sm:text-xl"></i>
-                    </div>
-                </div>
-                <p class="text-xs font-medium text-blue-700/70">مستخدمون جدد هذا الشهر: <span class="font-bold text-blue-800">{{ number_format($usersMetric['new_this_month'] ?? 0) }}</span></p>
-                @if($usersTrend)
-                    @php
-                        $diff = (int) round($usersTrend['difference']);
-                        $percent = $usersTrend['percent'];
-                        $positive = $diff >= 0;
-                    @endphp
-                    <div class="mt-3 flex items-center gap-2 text-sm flex-wrap">
-                        <span class="font-bold {{ $positive ? 'text-emerald-600' : 'text-rose-500' }}">
-                            {{ $positive ? '+' : '' }}{{ number_format($diff) }}
-                        </span>
-                        <span class="text-blue-700/70">عن الشهر الماضي</span>
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold {{ $positive ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-rose-100 text-rose-700 border border-rose-200' }}">
-                            {{ $percent >= 0 ? '+' : '' }}{{ number_format($percent, 1) }}%
-                        </span>
-                </div>
-                @else
-                    <p class="mt-3 text-sm text-blue-600/60">لا توجد بيانات مقارنة للشهر السابق.</p>
-                @endif
-            </div>
-        </div>
+@php
+    $direction = $chartDashboard['direction'] ?? [];
+    $monthly = $chartDashboard['monthly'] ?? [];
+    $dirMetrics = $direction['metrics'] ?? [];
+    $dirStatus = $direction['status'] ?? 'neutral';
+    $dirBannerClass = match ($dirStatus) {
+        'growth' => 'border-emerald-200 bg-emerald-50',
+        'stable' => 'border-sky-200 bg-sky-50',
+        'decline' => 'border-rose-200 bg-rose-50',
+        default => 'border-slate-200 bg-slate-50',
+    };
+    $dirIconClass = match ($dirStatus) {
+        'growth' => 'text-emerald-600',
+        'stable' => 'text-sky-600',
+        'decline' => 'text-rose-600',
+        default => 'text-slate-600',
+    };
+    $walletAvailable = (float) ($stats['total_wallet_balance'] ?? 0);
+    $walletPending = (float) ($stats['total_wallet_pending'] ?? 0);
+    $walletTotal = $walletAvailable + $walletPending;
+    $revenueArr = $monthly['revenue'] ?? [];
+    $latestRevenue = $revenueArr !== [] ? (float) $revenueArr[array_key_last($revenueArr)] : 0;
+    $enrollArr = $monthly['totalEnrollments'] ?? [];
+    $latestEnrollments = $enrollArr !== [] ? (int) $enrollArr[array_key_last($enrollArr)] : 0;
 
-        <!-- الطلاب -->
-        @php $studentsMetric = $metrics['students'] ?? null; $studentsTrend = $studentsMetric['trend'] ?? null; @endphp
-        <div class="dashboard-card rounded-2xl p-6 card-hover-effect relative overflow-hidden group border-2 border-emerald-200/50 hover:border-emerald-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(236, 253, 245, 0.95) 50%, rgba(209, 250, 229, 0.9) 100%);">
-            <div class="absolute inset-0 bg-gradient-to-br from-emerald-100/60 via-green-100/40 to-teal-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-400/15 to-transparent rounded-full opacity-80" aria-hidden="true"></div>
-            <div class="relative z-10">
-                <div class="flex items-center justify-between mb-4">
-                    <div>
-                        <p class="text-sm font-bold text-emerald-800/80 mb-1">الطلاب</p>
-                        <p class="text-4xl font-black bg-gradient-to-r from-emerald-700 via-green-600 to-teal-600 bg-clip-text text-transparent drop-shadow-sm">{{ number_format($studentsMetric['total'] ?? 0) }}</p>
-                    </div>
-                    <div class="w-16 h-16 bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300" style="box-shadow: 0 8px 20px 0 rgba(16, 185, 129, 0.4);">
-                        <i class="fas fa-user-graduate text-white text-xl"></i>
-                    </div>
-                </div>
-                <p class="text-xs font-medium text-emerald-700/70">طلاب جدد هذا الشهر: <span class="font-bold text-emerald-800">{{ number_format($studentsMetric['new_this_month'] ?? 0) }}</span></p>
-                @if($studentsTrend)
-                    @php
-                        $diff = (int) round($studentsTrend['difference']);
-                        $percent = $studentsTrend['percent'];
-                        $positive = $diff >= 0;
-                    @endphp
-                    <div class="mt-3 flex items-center gap-2 text-sm flex-wrap">
-                        <span class="font-bold {{ $positive ? 'text-emerald-600' : 'text-rose-500' }}">
-                            {{ $positive ? '+' : '' }}{{ number_format($diff) }}
-                        </span>
-                        <span class="text-emerald-700/70">عن الشهر الماضي</span>
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold {{ $positive ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-rose-100 text-rose-700 border border-rose-200' }}">
-                            {{ $percent >= 0 ? '+' : '' }}{{ number_format($percent, 1) }}%
-                        </span>
-                </div>
-                @endif
-            </div>
-        </div>
+    $statCards = [
+        ['label' => 'الطلاب', 'value' => number_format($metrics['students']['total'] ?? 0), 'icon' => 'fas fa-user-graduate', 'theme' => 'emerald', 'desc' => '+' . number_format($metrics['students']['new_this_month'] ?? 0) . ' هذا الشهر', 'trend' => $metrics['students']['trend'] ?? null],
+        ['label' => 'تسجيلات نشطة', 'value' => number_format($metrics['enrollments']['total'] ?? 0), 'icon' => 'fas fa-user-check', 'theme' => 'violet', 'desc' => '+' . number_format($metrics['enrollments']['new_this_month'] ?? 0) . ' هذا الشهر', 'trend' => $metrics['enrollments']['trend'] ?? null],
+        ['label' => 'إيراد الشهر', 'value' => number_format($metrics['monthly_revenue']['current'] ?? 0, 0), 'icon' => 'fas fa-chart-line', 'theme' => 'sky', 'desc' => 'ج.م — مدفوعات مكتملة', 'trend' => $metrics['monthly_revenue']['trend'] ?? null],
+        ['label' => 'إجمالي الإيراد', 'value' => number_format($stats['total_revenue'] ?? 0, 0), 'icon' => 'fas fa-money-bill-wave', 'theme' => 'green', 'desc' => 'ج.م — تراكمي', 'trend' => null],
+        ['label' => 'الكورسات', 'value' => number_format($metrics['courses']['total'] ?? 0), 'icon' => 'fas fa-book', 'theme' => 'amber', 'desc' => number_format($stats['published_courses'] ?? 0) . ' منشور', 'trend' => $metrics['courses']['trend'] ?? null],
+        ['label' => 'المدربون', 'value' => number_format($metrics['instructors']['total'] ?? 0), 'icon' => 'fas fa-chalkboard-teacher', 'theme' => 'indigo', 'desc' => '+' . number_format($metrics['instructors']['new_this_month'] ?? 0) . ' هذا الشهر', 'trend' => $metrics['instructors']['trend'] ?? null],
+        ['label' => 'المستخدمون', 'value' => number_format($metrics['users']['total'] ?? 0), 'icon' => 'fas fa-users', 'theme' => 'blue', 'desc' => '+' . number_format($metrics['users']['new_this_month'] ?? 0) . ' هذا الشهر', 'trend' => $metrics['users']['trend'] ?? null],
+        ['label' => 'فواتير معلّقة', 'value' => number_format($metrics['pending_invoices']['total'] ?? 0), 'icon' => 'fas fa-file-invoice', 'theme' => 'rose', 'desc' => number_format($walletTotal, 0) . ' ج.م في المحافظ', 'trend' => $metrics['pending_invoices']['trend'] ?? null],
+    ];
 
-        <!-- المدربين -->
-        @php $instructorsMetric = $metrics['instructors'] ?? null; $instructorsTrend = $instructorsMetric['trend'] ?? null; @endphp
-        <div class="dashboard-card rounded-2xl p-6 card-hover-effect relative overflow-hidden group border-2 border-indigo-200/50 hover:border-indigo-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(238, 242, 255, 0.95) 50%, rgba(224, 231, 255, 0.9) 100%);">
-            <div class="absolute inset-0 bg-gradient-to-br from-indigo-100/60 via-purple-100/40 to-violet-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-indigo-400/15 to-transparent rounded-full opacity-80" aria-hidden="true"></div>
-            <div class="relative z-10">
-                <div class="flex items-center justify-between mb-4">
-                    <div>
-                        <p class="text-sm font-bold text-indigo-800/80 mb-1">المدربين</p>
-                        <p class="text-4xl font-black bg-gradient-to-r from-indigo-700 via-purple-600 to-violet-600 bg-clip-text text-transparent drop-shadow-sm">{{ number_format($instructorsMetric['total'] ?? 0) }}</p>
-                    </div>
-                    <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 via-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300" style="box-shadow: 0 8px 20px 0 rgba(99, 102, 241, 0.4);">
-                        <i class="fas fa-user-tie text-white text-xl"></i>
-                    </div>
-                </div>
-                <p class="text-xs font-medium text-indigo-700/70">مدربون جدد هذا الشهر: <span class="font-bold text-indigo-800">{{ number_format($instructorsMetric['new_this_month'] ?? 0) }}</span></p>
-                @if($instructorsTrend)
-                    @php
-                        $diff = (int) round($instructorsTrend['difference']);
-                        $percent = $instructorsTrend['percent'];
-                        $positive = $diff >= 0;
-                    @endphp
-                    <div class="mt-3 flex items-center gap-2 text-sm flex-wrap">
-                        <span class="font-bold {{ $positive ? 'text-emerald-600' : 'text-rose-500' }}">
-                            {{ $positive ? '+' : '' }}{{ number_format($diff) }}
-                        </span>
-                        <span class="text-indigo-700/70">عن الشهر الماضي</span>
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold {{ $positive ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-rose-100 text-rose-700 border border-rose-200' }}">
-                            {{ $percent >= 0 ? '+' : '' }}{{ number_format($percent, 1) }}%
-                        </span>
-                    </div>
-                @endif
-            </div>
-        </div>
+    $cardThemes = [
+        'emerald' => ['border' => 'border-emerald-200/70', 'bg' => 'from-white via-white to-emerald-50/60', 'label' => 'text-emerald-800/80', 'value' => 'from-emerald-700 to-teal-600', 'icon' => 'from-emerald-500 to-teal-600', 'desc' => 'text-emerald-700/70'],
+        'violet'  => ['border' => 'border-violet-200/70', 'bg' => 'from-white via-white to-violet-50/60', 'label' => 'text-violet-800/80', 'value' => 'from-violet-700 to-purple-600', 'icon' => 'from-violet-500 to-purple-600', 'desc' => 'text-violet-700/70'],
+        'sky'     => ['border' => 'border-sky-200/70', 'bg' => 'from-white via-white to-sky-50/60', 'label' => 'text-sky-800/80', 'value' => 'from-sky-700 to-blue-600', 'icon' => 'from-sky-500 to-blue-600', 'desc' => 'text-sky-700/70'],
+        'green'   => ['border' => 'border-green-200/70', 'bg' => 'from-white via-white to-green-50/60', 'label' => 'text-green-800/80', 'value' => 'from-green-700 to-emerald-600', 'icon' => 'from-green-500 to-emerald-600', 'desc' => 'text-green-700/70'],
+        'amber'   => ['border' => 'border-amber-200/70', 'bg' => 'from-white via-white to-amber-50/60', 'label' => 'text-amber-800/80', 'value' => 'from-amber-700 to-orange-600', 'icon' => 'from-amber-500 to-orange-500', 'desc' => 'text-amber-700/70'],
+        'indigo'  => ['border' => 'border-indigo-200/70', 'bg' => 'from-white via-white to-indigo-50/60', 'label' => 'text-indigo-800/80', 'value' => 'from-indigo-700 to-violet-600', 'icon' => 'from-indigo-500 to-violet-600', 'desc' => 'text-indigo-700/70'],
+        'blue'    => ['border' => 'border-blue-200/70', 'bg' => 'from-white via-white to-blue-50/60', 'label' => 'text-blue-800/80', 'value' => 'from-blue-700 to-sky-600', 'icon' => 'from-blue-500 to-sky-600', 'desc' => 'text-blue-700/70'],
+        'rose'    => ['border' => 'border-rose-200/70', 'bg' => 'from-white via-white to-rose-50/60', 'label' => 'text-rose-800/80', 'value' => 'from-rose-700 to-red-600', 'icon' => 'from-rose-500 to-red-500', 'desc' => 'text-rose-700/70'],
+    ];
+@endphp
 
-        <!-- الكورسات -->
-        @php $coursesMetric = $metrics['courses'] ?? null; $coursesTrend = $coursesMetric['trend'] ?? null; @endphp
-        <div class="dashboard-card rounded-2xl p-6 card-hover-effect relative overflow-hidden group border-2 border-amber-200/50 hover:border-amber-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 251, 235, 0.95) 50%, rgba(254, 243, 199, 0.9) 100%);">
-            <div class="absolute inset-0 bg-gradient-to-br from-amber-100/60 via-orange-100/40 to-yellow-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-400/15 to-transparent rounded-full opacity-80" aria-hidden="true"></div>
-            <div class="relative z-10">
-                <div class="flex items-center justify-between mb-4">
-                    <div>
-                        <p class="text-sm font-bold text-amber-800/80 mb-1">الكورسات</p>
-                        <p class="text-4xl font-black bg-gradient-to-r from-amber-700 via-orange-600 to-yellow-600 bg-clip-text text-transparent drop-shadow-sm">{{ number_format($coursesMetric['total'] ?? 0) }}</p>
-                    </div>
-                    <div class="w-16 h-16 bg-gradient-to-br from-amber-500 via-orange-500 to-yellow-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300" style="box-shadow: 0 8px 20px 0 rgba(245, 158, 11, 0.4);">
-                        <i class="fas fa-book text-white text-xl"></i>
-                    </div>
+<div class="space-y-6">
+    {{-- الهيدر --}}
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+        <div class="px-4 py-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white shadow-md">
+                    <i class="fas fa-university"></i>
                 </div>
-                <p class="text-xs font-medium text-amber-700/70">كورسات جديدة هذا الشهر: <span class="font-bold text-amber-800">{{ number_format($coursesMetric['new_this_month'] ?? 0) }}</span></p>
-                @if($coursesTrend)
-                    @php
-                        $diff = (int) round($coursesTrend['difference']);
-                        $percent = $coursesTrend['percent'];
-                        $positive = $diff >= 0;
-                    @endphp
-                    <div class="mt-3 flex items-center gap-2 text-sm flex-wrap">
-                        <span class="font-bold {{ $positive ? 'text-emerald-600' : 'text-rose-500' }}">
-                            {{ $positive ? '+' : '' }}{{ number_format($diff) }}
-                        </span>
-                        <span class="text-amber-700/70">عن الشهر الماضي</span>
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold {{ $positive ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-rose-100 text-rose-700 border border-rose-200' }}">
-                            {{ $percent >= 0 ? '+' : '' }}{{ number_format($percent, 1) }}%
-                        </span>
-                    </div>
-                @endif
+                <div>
+                    <h2 class="text-xl font-black text-slate-900">لوحة الأكاديمية</h2>
+                    <p class="text-xs text-slate-600">نظرة شاملة على الإيراد، التسجيلات، الطلاب، والاتجاهات.</p>
                 </div>
             </div>
-        </div>
-
-    <!-- إحصائيات مالية -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-6">
-        <!-- إجمالي الإيرادات -->
-        @php $revenueMetric = $metrics['monthly_revenue'] ?? null; $revenueTrend = $revenueMetric['trend'] ?? null; @endphp
-        <div class="dashboard-card rounded-2xl p-6 card-hover-effect relative overflow-hidden group border-2 border-emerald-200/50 hover:border-emerald-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(236, 253, 245, 0.95) 50%, rgba(209, 250, 229, 0.9) 100%);">
-            <div class="absolute inset-0 bg-gradient-to-br from-emerald-100/60 via-green-100/40 to-teal-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-400/15 to-transparent rounded-full opacity-80" aria-hidden="true"></div>
-            <div class="relative z-10">
-                <div class="flex items-center justify-between mb-4">
-                    <div>
-                        <p class="text-sm font-bold text-emerald-800/80 mb-1">إجمالي الإيرادات</p>
-                        <p class="text-xs text-emerald-700/60 mb-1">مجموع المدفوعات بحالة «مكتمل»</p>
-                        <p class="text-3xl font-black bg-gradient-to-r from-emerald-700 via-green-600 to-teal-600 bg-clip-text text-transparent drop-shadow-sm">{{ number_format($stats['total_revenue'] ?? 0, 2) }} <span class="text-lg">ج.م</span></p>
-                    </div>
-                    <div class="w-16 h-16 bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300" style="box-shadow: 0 8px 20px 0 rgba(16, 185, 129, 0.4);">
-                        <i class="fas fa-money-bill-wave text-white text-xl"></i>
-                    </div>
-                </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('admin.accounting.insights') }}" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 rounded-xl border border-slate-300 hover:bg-white">
+                    <i class="fas fa-chart-bar text-sky-600"></i>
+                    مؤشرات المحاسبة
+                </a>
+                <a href="{{ route('admin.sales.insights.index') }}" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 rounded-xl border border-slate-300 hover:bg-white">
+                    <i class="fas fa-chart-pie text-emerald-600"></i>
+                    Insights المبيعات
+                </a>
+                <a href="{{ route('admin.wallets.index') }}" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 rounded-xl border border-slate-300 hover:bg-white">
+                    <i class="fas fa-wallet text-amber-600"></i>
+                    المحافظ
+                </a>
             </div>
         </div>
+    </section>
 
-        <!-- إيرادات الشهر -->
-        <div class="dashboard-card rounded-2xl p-6 card-hover-effect relative overflow-hidden group border-2 border-blue-200/50 hover:border-blue-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 249, 255, 0.95) 50%, rgba(224, 242, 254, 0.9) 100%);">
-            <div class="absolute inset-0 bg-gradient-to-br from-blue-100/60 via-sky-100/40 to-cyan-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-transparent rounded-full opacity-80" aria-hidden="true"></div>
-            <div class="relative z-10">
-                <div class="flex items-center justify-between mb-4">
-                    <div>
-                        <p class="text-sm font-bold text-blue-800/80 mb-1">إيرادات الشهر</p>
-                        <p class="text-xs text-blue-700/60 mb-1">مدفوعات مكتملة في الشهر الحالي — المقارنة مع نفس الأيام من الشهر السابق</p>
-                        <p class="text-3xl font-black bg-gradient-to-r from-blue-700 via-sky-600 to-cyan-600 bg-clip-text text-transparent drop-shadow-sm">{{ number_format($revenueMetric['current'] ?? 0, 2) }} <span class="text-lg">ج.م</span></p>
-                    </div>
-                    <div class="w-16 h-16 bg-gradient-to-br from-blue-500 via-sky-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300" style="box-shadow: 0 8px 20px 0 rgba(59, 130, 246, 0.4);">
-                        <i class="fas fa-chart-line text-white text-xl"></i>
-                    </div>
-                </div>
-                @if($revenueTrend)
-                    @php
-                        $diff = $revenueTrend['difference'];
-                        $percent = $revenueTrend['percent'];
-                        $positive = $diff >= 0;
-                    @endphp
-                    <div class="mt-3 flex items-center gap-2 text-sm flex-wrap">
-                        <span class="font-bold {{ $positive ? 'text-emerald-600' : 'text-rose-500' }}">
-                            {{ $positive ? '+' : '' }}{{ number_format($diff, 2) }} ج.م
-                        </span>
-                        <span class="text-blue-700/70">عن الشهر الماضي</span>
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold {{ $positive ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-rose-100 text-rose-700 border border-rose-200' }}">
-                            {{ $percent >= 0 ? '+' : '' }}{{ number_format($percent, 1) }}%
-                        </span>
-                    </div>
-                @endif
-            </div>
-        </div>
-
-        <!-- أموال المحافظ -->
-        @php
-            $walletAvailable = (float) ($stats['total_wallet_balance'] ?? 0);
-            $walletPending = (float) ($stats['total_wallet_pending'] ?? 0);
-            $walletTotal = $walletAvailable + $walletPending;
-        @endphp
-        <div class="dashboard-card rounded-2xl p-6 card-hover-effect relative overflow-hidden group border-2 border-slate-200/80 hover:border-slate-300/90 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(241, 245, 249, 0.95) 50%, rgba(226, 232, 240, 0.9) 100%);">
-            <div class="absolute inset-0 bg-gradient-to-br from-slate-100/60 via-slate-50/40 to-slate-100/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-slate-400/15 to-transparent rounded-full opacity-80" aria-hidden="true"></div>
-            <div class="relative z-10">
-                <div class="flex items-center justify-between mb-4">
+    {{-- بطاقات الإحصائيات --}}
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        @foreach($statCards as $card)
+            @php
+                $theme = $cardThemes[$card['theme'] ?? 'blue'] ?? $cardThemes['blue'];
+                $trend = $card['trend'] ?? null;
+                $pct = $trend['percent'] ?? null;
+                $trendUp = $pct !== null && $pct >= 0;
+            @endphp
+            <div class="dashboard-stat-card rounded-2xl border-2 {{ $theme['border'] }} bg-gradient-to-br {{ $theme['bg'] }} p-5 shadow-lg">
+                <div class="flex items-center justify-between gap-3 mb-3">
                     <div class="min-w-0 flex-1">
-                        <p class="text-sm font-bold text-slate-800/90 mb-1">الأموال في المحافظ</p>
-                        <p class="text-xs text-slate-600/80 mb-2">محافظ نشطة — متاح + معلّق</p>
-                        <p class="text-3xl font-black bg-gradient-to-r from-slate-700 via-slate-600 to-slate-800 bg-clip-text text-transparent drop-shadow-sm">{{ number_format($walletTotal, 2) }} <span class="text-lg">ج.م</span></p>
+                        <p class="text-sm font-bold {{ $theme['label'] }} mb-1">{{ $card['label'] }}</p>
+                        <p class="text-3xl font-black bg-gradient-to-r {{ $theme['value'] }} bg-clip-text text-transparent tabular-nums">{{ $card['value'] }}</p>
                     </div>
-                    <div class="w-16 h-16 bg-gradient-to-br from-slate-600 via-slate-500 to-slate-700 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0 mr-2" style="box-shadow: 0 8px 20px 0 rgba(71, 85, 105, 0.35);">
-                        <i class="fas fa-wallet text-white text-xl"></i>
-                    </div>
-                </div>
-                <dl class="mt-3 space-y-1 text-xs text-slate-700/85">
-                    <div class="flex justify-between gap-2"><dt>رصيد متاح</dt><dd class="font-bold tabular-nums">{{ number_format($walletAvailable, 2) }} ج.م</dd></div>
-                    <div class="flex justify-between gap-2"><dt>رصيد معلّق</dt><dd class="font-bold tabular-nums">{{ number_format($walletPending, 2) }} ج.م</dd></div>
-                </dl>
-                <div class="mt-4 pt-3 border-t border-slate-200/80">
-                    <a href="{{ route('admin.wallets.index') }}" class="text-slate-700 hover:text-slate-900 text-sm font-bold inline-flex items-center gap-2 transition-colors">
-                        إدارة المحافظ
-                        <i class="fas fa-arrow-left text-xs"></i>
-                    </a>
-                </div>
-            </div>
-        </div>
-        
-        <!-- الفواتير المعلقة -->
-        @php $pendingMetric = $metrics['pending_invoices'] ?? null; $pendingTrend = $pendingMetric['trend'] ?? null; @endphp
-        <div class="dashboard-card rounded-2xl p-6 card-hover-effect relative overflow-hidden group border-2 border-yellow-200/50 hover:border-yellow-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 251, 235, 0.95) 50%, rgba(254, 243, 199, 0.9) 100%);">
-            <div class="absolute inset-0 bg-gradient-to-br from-yellow-100/60 via-amber-100/40 to-orange-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-yellow-400/15 to-transparent rounded-full opacity-80" aria-hidden="true"></div>
-            <div class="relative z-10">
-                <div class="flex items-center justify-between mb-4">
-                    <div>
-                        <p class="text-sm font-bold text-yellow-800/80 mb-1">فواتير معلقة</p>
-                        <p class="text-3xl font-black bg-gradient-to-r from-yellow-700 via-amber-600 to-orange-600 bg-clip-text text-transparent drop-shadow-sm">{{ number_format($pendingMetric['total'] ?? 0) }}</p>
-                    </div>
-                    <div class="w-16 h-16 bg-gradient-to-br from-yellow-500 via-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300" style="box-shadow: 0 8px 20px 0 rgba(245, 158, 11, 0.4);">
-                        <i class="fas fa-file-invoice text-white text-xl"></i>
+                    <div class="w-14 h-14 rounded-xl bg-gradient-to-br {{ $theme['icon'] }} flex items-center justify-center text-white shadow-md flex-shrink-0">
+                        <i class="{{ $card['icon'] }} text-lg"></i>
                     </div>
                 </div>
-                <p class="text-xs font-medium text-yellow-700/70">فواتير جديدة هذا الشهر: <span class="font-bold text-yellow-800">{{ number_format($pendingMetric['new_this_month'] ?? 0) }}</span></p>
-                @if($pendingTrend)
-                    @php
-                        $diff = (int) round($pendingTrend['difference']);
-                        $percent = $pendingTrend['percent'];
-                        $positive = $diff >= 0;
-                    @endphp
-                    <div class="mt-3 flex items-center gap-2 text-sm flex-wrap">
-                        <span class="font-bold {{ $positive ? 'text-yellow-600' : 'text-rose-500' }}">
-                            {{ $positive ? '+' : '' }}{{ number_format($diff) }}
-                        </span>
-                        <span class="text-yellow-700/70">عن الشهر الماضي</span>
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold {{ $positive ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' : 'bg-rose-100 text-rose-700 border border-rose-200' }}">
-                            {{ $percent >= 0 ? '+' : '' }}{{ number_format($percent, 1) }}%
-                        </span>
-                    </div>
+                <p class="text-xs font-medium {{ $theme['desc'] }} truncate">{{ $card['desc'] }}</p>
+                @if($pct !== null)
+                    <p class="text-xs font-bold mt-2 {{ $trendUp ? 'text-emerald-700' : 'text-rose-700' }}">
+                        {{ $trendUp ? '↑' : '↓' }} {{ number_format(abs((float) $pct), 1) }}% عن الشهر السابق
+                    </p>
                 @endif
             </div>
-        </div>
-        
-        <!-- التسجيلات النشطة -->
-        @php $enrollmentsMetric = $metrics['enrollments'] ?? null; $enrollmentsTrend = $enrollmentsMetric['trend'] ?? null; @endphp
-        <div class="dashboard-card rounded-2xl p-6 card-hover-effect relative overflow-hidden group border-2 border-purple-200/50 hover:border-purple-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 245, 255, 0.95) 50%, rgba(243, 232, 255, 0.9) 100%);">
-            <div class="absolute inset-0 bg-gradient-to-br from-purple-100/60 via-pink-100/40 to-fuchsia-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-400/15 to-transparent rounded-full opacity-80" aria-hidden="true"></div>
-            <div class="relative z-10">
-                <div class="flex items-center justify-between mb-4">
-                    <div>
-                        <p class="text-sm font-bold text-purple-800/80 mb-1">التسجيلات النشطة</p>
-                        <p class="text-3xl font-black bg-gradient-to-r from-purple-700 via-pink-600 to-fuchsia-600 bg-clip-text text-transparent drop-shadow-sm">{{ number_format($enrollmentsMetric['total'] ?? 0) }}</p>
-                    </div>
-                    <div class="w-16 h-16 bg-gradient-to-br from-purple-500 via-pink-500 to-fuchsia-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300" style="box-shadow: 0 8px 20px 0 rgba(168, 85, 247, 0.4);">
-                        <i class="fas fa-user-check text-white text-xl"></i>
-                    </div>
-                </div>
-                <p class="text-xs font-medium text-purple-700/70">تسجيلات جديدة هذا الشهر: <span class="font-bold text-purple-800">{{ number_format($enrollmentsMetric['new_this_month'] ?? 0) }}</span></p>
-                @if($enrollmentsTrend)
-                    @php
-                        $diff = (int) round($enrollmentsTrend['difference']);
-                        $percent = $enrollmentsTrend['percent'];
-                        $positive = $diff >= 0;
-                    @endphp
-                    <div class="mt-3 flex items-center gap-2 text-sm flex-wrap">
-                        <span class="font-bold {{ $positive ? 'text-emerald-600' : 'text-rose-500' }}">
-                            {{ $positive ? '+' : '' }}{{ number_format($diff) }}
-                        </span>
-                        <span class="text-purple-700/70">عن الشهر الماضي</span>
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold {{ $positive ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-rose-100 text-rose-700 border border-rose-200' }}">
-                            {{ $percent >= 0 ? '+' : '' }}{{ number_format($percent, 1) }}%
-                        </span>
-                    </div>
-                @endif
-            </div>
-        </div>
+        @endforeach
     </div>
 
-    @if(isset($branchesOperationalOverview) && $branchesOperationalOverview->isNotEmpty())
-    <section class="dashboard-card rounded-2xl card-hover-effect border-2 border-slate-200/80 shadow-xl overflow-hidden mb-6" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.96) 100%);">
-        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/90">
-            <h3 class="text-lg font-black text-slate-900 flex flex-wrap items-center gap-2">
-                <i class="fas fa-layer-group text-indigo-600"></i>
-                فصل بيانات الفروع — نظرة المركز على كل الفروع
-            </h3>
-            <p class="text-xs text-slate-600 mt-2 leading-relaxed max-w-4xl">
-                تُخزَّن بيانات <strong>الأكاديمية الأساسية</strong> تحت فرع slug عادةً <code class="bg-slate-200 px-1 rounded text-[11px] font-mono">main</code>
-                @if($centralAcademyBranchId)
-                    <span class="font-mono text-indigo-700">(المعرّف {{ $centralAcademyBranchId }})</span>
-                @endif
-                ؛ كل فرع آخر هو امتداد ببيانات منفصلة في الجداول عبر <code class="bg-slate-200 px-1 rounded text-[11px]">branch_id</code>.
-                في لوحة الإدارة تظهر هنا <strong>جميع</strong> الأعداد حتى يرى المركز ما يُضاف في كل فرع (كورسات، طلبات، تسجيلات، مستخدمين…).
-            </p>
+    {{-- اتجاه الأكاديمية --}}
+    <section class="rounded-2xl border shadow-lg overflow-hidden {{ $dirBannerClass }}">
+        <div class="px-4 py-4 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center {{ $dirIconClass }}">
+                    <i class="fas fa-compass text-lg"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold text-slate-600">اتجاه الأكاديمية</p>
+                    <p class="text-lg font-black text-slate-900">{{ $direction['label'] ?? '—' }}</p>
+                    <p class="text-sm text-slate-700 mt-1 max-w-3xl">{{ $direction['summary'] ?? '' }}</p>
+                    <p class="text-[11px] text-slate-500 mt-2">
+                        {{ $direction['previous_month_label'] ?? '—' }} ← {{ $direction['current_month_label'] ?? '—' }}
+                    </p>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 min-w-0">
+                @foreach($dirMetrics as $key => $m)
+                    @php
+                        $pct = $m['pct'] ?? null;
+                        $isMoney = $key === 'revenue';
+                        $trendUp = $pct !== null && $pct > 0;
+                        $trendClass = $trendUp ? 'text-emerald-700' : ($pct < 0 ? 'text-rose-700' : 'text-slate-600');
+                    @endphp
+                    <div class="rounded-xl bg-white/80 border border-white p-3 shadow-sm">
+                        <p class="text-[10px] font-semibold text-slate-500 truncate">{{ $m['label'] ?? '' }}</p>
+                        <p class="text-lg font-black text-slate-900 tabular-nums">
+                            {{ $isMoney ? number_format((float) ($m['current'] ?? 0), 0) : number_format((int) ($m['current'] ?? 0)) }}
+                        </p>
+                        @if($pct !== null)
+                            <p class="text-[10px] font-bold {{ $trendClass }}">{{ $trendUp ? '↑' : ($pct < 0 ? '↓' : '→') }} {{ number_format(abs((float) $pct), 1) }}%</p>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
         </div>
-        <div class="overflow-x-auto p-2">
-            <table class="min-w-full text-sm text-slate-800">
+    </section>
+
+    {{-- الشارتات الرئيسية --}}
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden xl:col-span-2">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                <h3 class="text-base font-black text-slate-900">الإيراد والتسجيلات — آخر 6 أشهر</h3>
+                <p class="text-xs text-slate-600">إيراد المدفوعات + تسجيلات أونلاين/أوفلاين.</p>
+            </div>
+            <div class="p-4">
+                <div class="relative w-full" style="height: 360px;">
+                    <canvas id="chartAcademyMain"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                <h3 class="text-base font-black text-slate-900">الإيراد الشهري</h3>
+            </div>
+            <div class="p-4">
+                <div class="relative w-full" style="height: 300px;">
+                    <canvas id="chartRevenue"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                <h3 class="text-base font-black text-slate-900">نمو الطلاب والطلبات</h3>
+            </div>
+            <div class="p-4">
+                <div class="relative w-full" style="height: 300px;">
+                    <canvas id="chartStudentsOrders"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                <h3 class="text-base font-black text-slate-900">الإيراد اليومي — 14 يوم</h3>
+            </div>
+            <div class="p-4">
+                <div class="relative w-full" style="height: 280px;">
+                    <canvas id="chartDailyRevenue"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                <h3 class="text-base font-black text-slate-900">توزيع التسجيلات</h3>
+                <p class="text-xs text-slate-600">أونلاين vs أوفلاين (نشطة).</p>
+            </div>
+            <div class="p-4">
+                <div class="relative w-full" style="height: 280px;">
+                    <canvas id="chartEnrollmentMix"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                <h3 class="text-base font-black text-slate-900">توزيع المستخدمين</h3>
+            </div>
+            <div class="p-4">
+                <div class="relative w-full" style="height: 280px;">
+                    <canvas id="chartUserRoles"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                <h3 class="text-base font-black text-slate-900">نشاط النظام — 7 أيام</h3>
+            </div>
+            <div class="p-4">
+                <div class="relative w-full" style="height: 280px;">
+                    <canvas id="chartWeeklyActivity"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden xl:col-span-2">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                <h3 class="text-base font-black text-slate-900">أكثر الكورسات تسجيلاً</h3>
+            </div>
+            <div class="p-4">
+                <div class="relative w-full" style="height: 300px;">
+                    <canvas id="chartTopCourses"></canvas>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    {{-- إجراءات سريعة --}}
+    @if(!empty($quickActions))
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+            <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                <i class="fas fa-bolt text-amber-500"></i>
+                مهام تحتاج انتباه
+            </h3>
+        </div>
+        <div class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+            @foreach($quickActions as $action)
+                <a href="{{ $action['route'] }}" class="rounded-xl border border-slate-200 bg-white p-4 hover:bg-slate-50 shadow-sm">
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600">
+                            <i class="{{ $action['icon'] }} text-sm"></i>
+                        </div>
+                        <p class="text-xs font-bold text-slate-800 truncate">{{ $action['title'] }}</p>
+                    </div>
+                    <p class="text-2xl font-black text-slate-900 tabular-nums">{{ number_format($action['count'] ?? 0) }}</p>
+                    @if(!empty($action['meta']))
+                        <p class="text-[10px] text-slate-500 mt-1 truncate">{{ $action['meta'] }}</p>
+                    @endif
+                </a>
+            @endforeach
+        </div>
+    </section>
+    @endif
+
+    {{-- الفروع --}}
+    @if(isset($branchesOperationalOverview) && $branchesOperationalOverview->isNotEmpty())
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+            <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                <i class="fas fa-layer-group text-indigo-600"></i>
+                نظرة على الفروع
+            </h3>
+            <p class="text-xs text-slate-600 mt-1">بيانات منفصلة لكل فرع عبر branch_id.</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
                 <thead>
-                    <tr class="text-xs font-bold text-slate-600 uppercase tracking-wide border-b border-slate-200 bg-white">
-                        <th class="px-4 py-3 text-right">الفرع</th>
-                        <th class="px-4 py-3 text-right whitespace-nowrap">slug</th>
-                        <th class="px-4 py-3 text-center">مستخدمون</th>
-                        <th class="px-4 py-3 text-center">كورسات متقدمة</th>
-                        <th class="px-4 py-3 text-center">أوفلاين</th>
-                        <th class="px-4 py-3 text-center">طلبات</th>
-                        <th class="px-4 py-3 text-center">تسجيلات</th>
-                        <th class="px-4 py-3 text-center">حالة</th>
-                        <th class="px-4 py-3 text-center whitespace-nowrap">عرض</th>
+                    <tr class="bg-slate-50 text-slate-700 border-b border-slate-200">
+                        <th class="px-4 py-3 text-right font-semibold">الفرع</th>
+                        <th class="px-4 py-3 text-center font-semibold">مستخدمون</th>
+                        <th class="px-4 py-3 text-center font-semibold">كورسات</th>
+                        <th class="px-4 py-3 text-center font-semibold">أوفلاين</th>
+                        <th class="px-4 py-3 text-center font-semibold">طلبات</th>
+                        <th class="px-4 py-3 text-center font-semibold">تسجيلات</th>
+                        <th class="px-4 py-3 text-center font-semibold">حالة</th>
+                        <th class="px-4 py-3 text-center font-semibold">عرض</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     @foreach($branchesOperationalOverview as $bRow)
                         @php $isCentral = isset($centralAcademyBranchId) && (int) $bRow->id === (int) $centralAcademyBranchId; @endphp
-                        <tr class="hover:bg-slate-50/90 transition-colors {{ $isCentral ? 'bg-indigo-50/40' : '' }}">
+                        <tr class="hover:bg-slate-50 {{ $isCentral ? 'bg-indigo-50/40' : '' }}">
                             <td class="px-4 py-3 font-semibold">
                                 {{ $bRow->name }}
                                 @if($isCentral)
-                                    <span class="mr-2 inline-flex text-[10px] font-black px-2 py-0.5 rounded bg-indigo-200 text-indigo-900">أساسي</span>
+                                    <span class="mr-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800">أساسي</span>
                                 @endif
                             </td>
-                            <td class="px-4 py-3 font-mono text-xs" dir="ltr">{{ $bRow->slug }}</td>
-                            <td class="px-4 py-3 text-center tabular-nums font-bold">{{ number_format($bRow->users_count) }}</td>
+                            <td class="px-4 py-3 text-center tabular-nums">{{ number_format($bRow->users_count) }}</td>
                             <td class="px-4 py-3 text-center tabular-nums">{{ number_format($bRow->advanced_courses_count) }}</td>
                             <td class="px-4 py-3 text-center tabular-nums">{{ number_format($bRow->offline_courses_count) }}</td>
                             <td class="px-4 py-3 text-center tabular-nums">{{ number_format($bRow->orders_count) }}</td>
                             <td class="px-4 py-3 text-center tabular-nums">{{ number_format($bRow->student_course_enrollments_count) }}</td>
                             <td class="px-4 py-3 text-center">
                                 @if($bRow->is_active)
-                                    <span class="text-emerald-700 font-semibold text-xs">نشط</span>
+                                    <span class="text-xs font-semibold text-emerald-700">نشط</span>
                                 @else
-                                    <span class="text-slate-500 text-xs">موقوف</span>
+                                    <span class="text-xs text-slate-500">موقوف</span>
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-center">
-                                <a href="{{ route('admin.branches.show', $bRow) }}" class="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-bold text-xs">
-                                    <i class="fas fa-external-link-alt"></i> تفاصيل
-                                </a>
+                                <a href="{{ route('admin.branches.show', $bRow) }}" class="text-xs font-bold text-sky-600 hover:text-sky-800">تفاصيل</a>
                             </td>
                         </tr>
                     @endforeach
@@ -375,305 +327,240 @@
     </section>
     @endif
 
-    <!-- الأنشطة الأخيرة -->
+    {{-- آخر النشاطات --}}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- سجل النشاطات -->
-        <div class="dashboard-card rounded-2xl card-hover-effect border-2 border-blue-200/50 hover:border-blue-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 249, 255, 0.95) 50%, rgba(224, 242, 254, 0.9) 100%);">
-            <div class="px-6 py-4 section-header rounded-t-2xl" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.1) 50%, rgba(2, 132, 199, 0.08) 100%); border-bottom: 2px solid rgba(59, 130, 246, 0.3);">
-                <h3 class="text-xl font-black bg-gradient-to-r from-blue-700 via-blue-600 to-sky-600 bg-clip-text text-transparent">
-                    <i class="fas fa-history text-blue-600 ml-2"></i>
-                    آخر النشاطات
-                </h3>
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+                <h3 class="text-base font-black text-slate-900">آخر النشاطات</h3>
+                <a href="{{ route('admin.activity-log') }}" class="text-xs font-semibold text-sky-600">عرض الكل</a>
             </div>
-            <div class="p-6">
+            <div class="p-4">
                 @if(isset($stats['recent_activities']) && $stats['recent_activities']->count() > 0)
-                    <div class="space-y-4">
-                        @foreach($stats['recent_activities']->take(5) as $activity)
-                            <div class="flex items-center space-x-3 space-x-reverse p-3 rounded-xl hover:bg-blue-50/80 transition-all duration-300 border border-blue-100/50">
-                                <div class="flex-shrink-0">
-                                    <div class="w-10 h-10 bg-gradient-to-br from-blue-500 via-blue-600 to-sky-600 rounded-full flex items-center justify-center shadow-md">
-                                        <i class="fas fa-history text-white text-xs"></i>
-                                    </div>
+                    <ul class="space-y-2">
+                        @foreach($stats['recent_activities']->take(6) as $activity)
+                            <li class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 text-sm">
+                                <div class="w-8 h-8 rounded-lg bg-sky-100 flex items-center justify-center text-sky-600 flex-shrink-0">
+                                    <i class="fas fa-history text-xs"></i>
                                 </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-semibold text-blue-900">
-                                        {{ $activity->user->name ?? 'مستخدم محذوف' }}
-                                    </p>
-                                    <p class="text-xs text-blue-700/70">
-                                        {{ $activity->action }} - {{ $activity->created_at->diffForHumans() }}
-                                    </p>
+                                <div class="min-w-0 flex-1">
+                                    <p class="font-semibold text-slate-900 truncate">{{ $activity->user->name ?? '—' }}</p>
+                                    <p class="text-xs text-slate-500 truncate">{{ $activity->action }} — {{ $activity->created_at->diffForHumans() }}</p>
                                 </div>
-                            </div>
+                            </li>
                         @endforeach
-                    </div>
-                    <div class="mt-6 pt-4 border-t border-blue-200/50">
-                        <a href="{{ route('admin.activity-log') }}" class="text-blue-600 hover:text-blue-800 text-sm font-bold inline-flex items-center gap-2 transition-colors">
-                            عرض جميع النشاطات
-                            <i class="fas fa-arrow-left text-xs"></i>
-                        </a>
-                    </div>
+                    </ul>
                 @else
-                    <p class="text-blue-600/60 text-center py-8">لا توجد أنشطة بعد</p>
+                    <p class="text-sm text-slate-500 text-center py-6">لا توجد أنشطة.</p>
                 @endif
             </div>
-        </div>
+        </section>
 
-        <!-- آخر محاولات الامتحانات -->
-        <div class="dashboard-card rounded-2xl card-hover-effect border-2 border-indigo-200/50 hover:border-indigo-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(238, 242, 255, 0.95) 50%, rgba(224, 231, 255, 0.9) 100%);">
-            <div class="px-6 py-4 section-header rounded-t-2xl" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(79, 70, 229, 0.1) 50%, rgba(67, 56, 202, 0.08) 100%); border-bottom: 2px solid rgba(99, 102, 241, 0.3);">
-                <h3 class="text-xl font-black bg-gradient-to-r from-indigo-700 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                    <i class="fas fa-clipboard-check text-indigo-600 ml-2"></i>
-                    آخر محاولات الامتحانات
-                </h3>
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                <h3 class="text-base font-black text-slate-900">آخر محاولات الامتحانات</h3>
             </div>
-            <div class="p-6">
+            <div class="p-4">
                 @if(isset($stats['recent_exam_attempts']) && $stats['recent_exam_attempts']->count() > 0)
-                    <div class="space-y-4">
-                        @foreach($stats['recent_exam_attempts']->take(5) as $attempt)
-                            <div class="flex items-center justify-between p-3 rounded-xl hover:bg-indigo-50/80 transition-all duration-300 border border-indigo-100/50">
-                                <div class="flex-1">
-                                    <p class="text-sm font-semibold text-indigo-900">{{ $attempt->student->name ?? 'طالب محذوف' }}</p>
-                                    <p class="text-xs text-indigo-700/70">{{ $attempt->exam->title ?? 'امتحان محذوف' }}</p>
+                    <ul class="space-y-2">
+                        @foreach($stats['recent_exam_attempts']->take(6) as $attempt)
+                            <li class="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-slate-50 text-sm">
+                                <div class="min-w-0">
+                                    <p class="font-semibold text-slate-900 truncate">{{ $attempt->student->name ?? '—' }}</p>
+                                    <p class="text-xs text-slate-500 truncate">{{ $attempt->exam->title ?? '—' }}</p>
                                 </div>
-                                <div class="text-left">
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border
-                                        {{ $attempt->score >= 80 ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : ($attempt->score >= 60 ? 'bg-yellow-100 text-yellow-700 border-yellow-200' : 'bg-rose-100 text-rose-700 border-rose-200') }}">
-                                        {{ $attempt->score }}%
-                                    </span>
-                                </div>
-                            </div>
+                                <span class="inline-flex rounded-md px-2 py-0.5 text-xs font-bold {{ $attempt->score >= 80 ? 'bg-emerald-100 text-emerald-700' : ($attempt->score >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700') }}">
+                                    {{ $attempt->score }}%
+                                </span>
+                            </li>
                         @endforeach
-                    </div>
+                    </ul>
                 @else
-                    <p class="text-indigo-600/60 text-center py-8">لا توجد محاولات امتحانات بعد</p>
+                    <p class="text-sm text-slate-500 text-center py-6">لا توجد محاولات.</p>
                 @endif
             </div>
-        </div>
+        </section>
     </div>
 
-    <!-- آخر المستخدمين والكورسات -->
-    @if(isset($recent_users) || isset($recent_courses))
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- آخر المستخدمين -->
+    {{-- آخر المستخدمين / الكورسات / مدفوعات --}}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         @if(isset($recent_users))
-        <div class="dashboard-card rounded-2xl card-hover-effect border-2 border-blue-200/50 hover:border-blue-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 249, 255, 0.95) 50%, rgba(224, 242, 254, 0.9) 100%);">
-            <div class="p-6 section-header rounded-t-2xl" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.1) 50%, rgba(2, 132, 199, 0.08) 100%); border-bottom: 2px solid rgba(59, 130, 246, 0.3);">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-xl font-black bg-gradient-to-r from-blue-700 via-blue-600 to-sky-600 bg-clip-text text-transparent">
-                        <i class="fas fa-users text-blue-600 ml-2"></i>
-                        آخر المستخدمين
-                    </h3>
-                    <a href="{{ route('admin.users.index') }}" class="text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors inline-flex items-center gap-2">
-                        عرض الكل
-                        <i class="fas fa-arrow-left text-xs"></i>
-                    </a>
-                </div>
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+                <h3 class="text-sm font-black text-slate-900">آخر المستخدمين</h3>
+                <a href="{{ route('admin.users.index') }}" class="text-xs font-semibold text-sky-600">الكل</a>
             </div>
-            <div class="p-6">
-                <div class="space-y-4">
-                    @foreach($recent_users as $user)
-                    <div class="list-item-card flex items-center gap-4 p-3 rounded-xl group border border-blue-100/50 hover:border-blue-200/70" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(240, 249, 255, 0.85) 100%);">
-                        <div class="w-12 h-12 bg-gradient-to-br from-blue-500 via-blue-600 to-sky-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg group-hover:scale-110 transition-transform duration-300">
-                            {{ substr($user->name, 0, 1) }}
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-semibold text-blue-900 truncate">{{ $user->name }}</p>
-                            <p class="text-xs text-blue-700/70">{{ $user->phone ?? $user->email }}</p>
-                        </div>
-                        <div class="text-right">
-                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border
-                                @if($user->role === 'student') bg-emerald-100 text-emerald-700 border-emerald-200
-                                @elseif($user->role === 'instructor') bg-indigo-100 text-indigo-700 border-indigo-200
-                                @elseif($user->role === 'super_admin') bg-rose-100 text-rose-700 border-rose-200
-                                @else bg-gray-100 text-gray-700 border-gray-200 @endif">
-                                @if($user->role === 'student') طالب
-                                @elseif($user->role === 'instructor') مدرب
-                                @elseif($user->role === 'super_admin') مدير عام
-                                @else غير محدد @endif
-                            </span>
-                            <p class="text-xs text-blue-600/60 mt-1">{{ $user->created_at->diffForHumans() }}</p>
-                        </div>
-                    </div>
-                    @endforeach
-                </div>
-            </div>
-        </div>
+            <ul class="divide-y divide-slate-100">
+                @foreach($recent_users as $user)
+                    <li class="px-4 py-3 hover:bg-slate-50">
+                        <p class="text-sm font-semibold text-slate-900 truncate">{{ $user->name }}</p>
+                        <p class="text-xs text-slate-500">{{ $user->created_at->diffForHumans() }}</p>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
         @endif
 
-        <!-- آخر الكورسات -->
         @if(isset($recent_courses))
-        <div class="dashboard-card rounded-2xl card-hover-effect border-2 border-amber-200/50 hover:border-amber-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 251, 235, 0.95) 50%, rgba(254, 243, 199, 0.9) 100%);">
-            <div class="p-6 section-header rounded-t-2xl" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.1) 50%, rgba(180, 83, 9, 0.08) 100%); border-bottom: 2px solid rgba(245, 158, 11, 0.3);">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-xl font-black bg-gradient-to-r from-amber-700 via-orange-600 to-yellow-600 bg-clip-text text-transparent">
-                        <i class="fas fa-book text-amber-600 ml-2"></i>
-                        آخر الكورسات
-                    </h3>
-                    <a href="{{ route('admin.advanced-courses.index') }}" class="text-sm font-bold text-amber-600 hover:text-amber-700 transition-colors inline-flex items-center gap-2">
-                        عرض الكل
-                        <i class="fas fa-arrow-left text-xs"></i>
-                    </a>
-                </div>
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+                <h3 class="text-sm font-black text-slate-900">آخر الكورسات</h3>
+                <a href="{{ route('admin.advanced-courses.index') }}" class="text-xs font-semibold text-sky-600">الكل</a>
             </div>
-            <div class="p-6">
-                <div class="space-y-4">
-                    @forelse($recent_courses as $course)
-                    <div class="list-item-card flex items-start gap-4 p-3 rounded-xl group border border-amber-100/50 hover:border-amber-200/70" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 251, 235, 0.85) 100%);">
-                        <div class="w-14 h-14 bg-gradient-to-br from-amber-500 via-orange-500 to-yellow-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                            <i class="fas fa-book text-white text-lg"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-semibold text-amber-900 truncate">{{ $course->title }}</p>
-                            <p class="text-xs text-amber-700/70">{{ $course->academicSubject->name ?? 'غير محدد' }}</p>
-                        </div>
-                        <div class="text-right">
-                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border
-                                @if($course->is_active) bg-emerald-100 text-emerald-700 border-emerald-200
-                                @else bg-gray-100 text-gray-700 border-gray-200 @endif">
-                                @if($course->is_active) نشط
-                                @else غير نشط @endif
-                            </span>
-                            <p class="text-xs text-amber-600/60 mt-1">{{ $course->created_at->diffForHumans() }}</p>
-                        </div>
-                    </div>
-                    @empty
-                    <div class="text-center py-8 text-amber-600/60">
-                        <i class="fas fa-book text-3xl mb-2"></i>
-                        <p>لا توجد كورسات بعد</p>
-                    </div>
-                    @endforelse
-                </div>
-            </div>
-        </div>
-        @endif
-    </div>
-    @endif
-
-    <!-- الفواتير والمدفوعات -->
-    @if((isset($pending_invoices) && $pending_invoices->count() > 0) || (isset($recent_payments) && $recent_payments->count() > 0))
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- الفواتير المعلقة -->
-        @if(isset($pending_invoices) && $pending_invoices->count() > 0)
-        <div class="dashboard-card rounded-2xl card-hover-effect border-2 border-yellow-200/50 hover:border-yellow-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 251, 235, 0.95) 50%, rgba(254, 243, 199, 0.9) 100%);">
-            <div class="p-6 section-header rounded-t-2xl" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.1) 50%, rgba(180, 83, 9, 0.08) 100%); border-bottom: 2px solid rgba(245, 158, 11, 0.3);">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-xl font-black bg-gradient-to-r from-yellow-700 via-amber-600 to-orange-600 bg-clip-text text-transparent">
-                        <i class="fas fa-file-invoice text-yellow-600 ml-2"></i>
-                        الفواتير المعلقة
-                    </h3>
-                    <a href="#" class="text-sm font-bold text-yellow-600 hover:text-yellow-700 transition-colors inline-flex items-center gap-2">
-                        عرض الكل
-                        <i class="fas fa-arrow-left text-xs"></i>
-                    </a>
-                </div>
-            </div>
-            <div class="p-6">
-                <div class="space-y-4">
-                    @foreach($pending_invoices as $invoice)
-                    <div class="list-item-card flex items-start gap-4 p-3 rounded-xl group border border-yellow-100/50 hover:border-yellow-200/70" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 251, 235, 0.85) 100%);">
-                        <div class="w-14 h-14 bg-gradient-to-br from-yellow-500 via-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                            <i class="fas fa-file-invoice text-white text-lg"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-semibold text-yellow-900 truncate">{{ $invoice->invoice_number ?? 'غير محدد' }}</p>
-                            <p class="text-xs text-yellow-700/70">{{ $invoice->user->name ?? 'غير محدد' }}</p>
-                            <p class="text-xs font-bold text-yellow-700">{{ number_format($invoice->total_amount ?? 0, 2) }} ج.م</p>
-                        </div>
-                        <div class="text-right">
-                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700 border border-yellow-200">
-                                معلق
-                            </span>
-                            <p class="text-xs text-yellow-600/60 mt-1">{{ $invoice->created_at->diffForHumans() }}</p>
-                        </div>
-                    </div>
-                    @endforeach
-                </div>
-            </div>
-        </div>
+            <ul class="divide-y divide-slate-100">
+                @forelse($recent_courses as $course)
+                    <li class="px-4 py-3 hover:bg-slate-50">
+                        <p class="text-sm font-semibold text-slate-900 truncate">{{ $course->title }}</p>
+                        <p class="text-xs text-slate-500">{{ $course->created_at->diffForHumans() }}</p>
+                    </li>
+                @empty
+                    <li class="px-4 py-8 text-center text-sm text-slate-500">لا كورسات.</li>
+                @endforelse
+            </ul>
+        </section>
         @endif
 
-        <!-- المدفوعات الأخيرة -->
         @if(isset($recent_payments) && $recent_payments->count() > 0)
-        <div class="dashboard-card rounded-2xl card-hover-effect border-2 border-emerald-200/50 hover:border-emerald-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(236, 253, 245, 0.95) 50%, rgba(209, 250, 229, 0.9) 100%);">
-            <div class="p-6 section-header rounded-t-2xl" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 50%, rgba(4, 120, 87, 0.08) 100%); border-bottom: 2px solid rgba(16, 185, 129, 0.3);">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-xl font-black bg-gradient-to-r from-emerald-700 via-green-600 to-teal-600 bg-clip-text text-transparent">
-                        <i class="fas fa-money-bill-wave text-emerald-600 ml-2"></i>
-                        المدفوعات الأخيرة
-                    </h3>
-                    <a href="#" class="text-sm font-bold text-emerald-600 hover:text-emerald-700 transition-colors inline-flex items-center gap-2">
-                        عرض الكل
-                        <i class="fas fa-arrow-left text-xs"></i>
-                    </a>
-                </div>
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                <h3 class="text-sm font-black text-slate-900">آخر المدفوعات</h3>
             </div>
-            <div class="p-6">
-                <div class="space-y-4">
-                    @foreach($recent_payments as $payment)
-                    <div class="list-item-card flex items-start gap-4 p-3 rounded-xl group border border-emerald-100/50 hover:border-emerald-200/70" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(236, 253, 245, 0.85) 100%);">
-                        <div class="w-14 h-14 bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                            <i class="fas fa-money-bill-wave text-white text-lg"></i>
+            <ul class="divide-y divide-slate-100">
+                @foreach($recent_payments->take(5) as $payment)
+                    <li class="px-4 py-3 hover:bg-slate-50 flex justify-between gap-2">
+                        <div class="min-w-0">
+                            <p class="text-sm font-semibold text-slate-900 truncate">{{ $payment->user->name ?? '—' }}</p>
+                            <p class="text-xs text-slate-500">{{ $payment->paid_at?->diffForHumans() ?? $payment->created_at->diffForHumans() }}</p>
                         </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-semibold text-emerald-900 truncate">{{ $payment->payment_number ?? 'غير محدد' }}</p>
-                            <p class="text-xs text-emerald-700/70">{{ $payment->user->name ?? 'غير محدد' }}</p>
-                            <p class="text-xs font-bold text-emerald-700">{{ number_format($payment->amount ?? 0, 2) }} ج.م</p>
-                        </div>
-                        <div class="text-right">
-                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
-                                مكتمل
-                            </span>
-                            <p class="text-xs text-emerald-600/60 mt-1">{{ $payment->paid_at ? $payment->paid_at->diffForHumans() : $payment->created_at->diffForHumans() }}</p>
-                        </div>
-                    </div>
-                    @endforeach
-                </div>
-            </div>
-        </div>
+                        <span class="text-sm font-bold text-emerald-700 tabular-nums">{{ number_format($payment->amount ?? 0, 0) }}</span>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
         @endif
-    </div>
-    @endif
-
-    <!-- أزرار سريعة -->
-    <div class="dashboard-card rounded-2xl p-6 card-hover-effect border-2 border-blue-200/50 hover:border-blue-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 249, 255, 0.95) 50%, rgba(224, 242, 254, 0.9) 100%);">
-        <div class="pb-4 mb-6 border-b-2 border-blue-200/50 flex items-center justify-between">
-            <h3 class="text-xl font-black bg-gradient-to-r from-blue-700 via-blue-600 to-sky-600 bg-clip-text text-transparent">
-                <i class="fas fa-bolt text-blue-600 ml-2"></i>
-                إجراءات سريعة
-            </h3>
-            <p class="text-xs font-medium text-blue-700/70">روابط مباشرة للمهام اليومية بناءً على بيانات النظام الحالية</p>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            @foreach(($quickActions ?? []) as $action)
-                <a href="{{ $action['route'] }}"
-                   class="flex flex-col items-center gap-4 p-5 bg-gradient-to-br {{ $action['background'] }} rounded-2xl border-2 border-blue-200/30 hover:border-blue-300/50 shadow-lg hover:shadow-2xl transition-all duration-300 card-hover-effect group" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(240, 249, 255, 0.9) 100%);">
-                    <div class="w-14 h-14 bg-gradient-to-br {{ $action['icon_background'] }} rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300" style="box-shadow: 0 8px 20px 0 rgba(59, 130, 246, 0.3);">
-                        <i class="{{ $action['icon'] }} text-white text-xl"></i>
-                    </div>
-                    <div class="text-center space-y-2">
-                        <p class="text-sm font-bold text-blue-900">{{ $action['title'] }}</p>
-                        @php
-                            $actionCount = $action['count'] ?? 0;
-                        @endphp
-                        <p class="text-3xl font-black {{ $action['count_class'] ?? 'bg-gradient-to-r from-blue-700 via-blue-600 to-sky-600 bg-clip-text text-transparent' }}">
-                            {{ number_format($actionCount) }}
-                        </p>
-                        @if(!empty($action['meta']))
-                            <p class="text-xs font-medium {{ $action['meta_class'] ?? 'text-blue-700/70' }}">{{ $action['meta'] }}</p>
-                        @endif
-                        <span class="inline-flex items-center justify-center gap-2 text-xs font-bold text-blue-600 group-hover:text-blue-700 transition-colors">
-                            {{ $action['cta'] }}
-                            <i class="fas fa-arrow-left text-[10px]"></i>
-                        </span>
-                    </div>
-                </a>
-            @endforeach
-            @if(empty($quickActions))
-                <div class="col-span-full text-center text-blue-600/60 text-sm py-4">
-                    لا توجد مهام عاجلة حالياً.
-                </div>
-            @endif
-        </div>
     </div>
 </div>
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    const dash = @json($chartDashboard);
+    const weekly = @json($weeklyActivityChart ?? ['labels' => [], 'values' => []]);
+    const monthly = dash.monthly || {};
+    const daily = dash.daily_revenue || {};
+    const mix = dash.enrollment_mix || {};
+    const roles = dash.user_roles || {};
+    const topCourses = dash.top_courses || {};
+
+    const palette = {
+        emerald: 'rgb(16, 185, 129)', emeraldSoft: 'rgba(16, 185, 129, 0.15)',
+        sky: 'rgb(14, 165, 233)', skySoft: 'rgba(14, 165, 233, 0.15)',
+        indigo: 'rgb(99, 102, 241)', indigoSoft: 'rgba(99, 102, 241, 0.15)',
+        amber: 'rgb(245, 158, 11)', violet: 'rgb(139, 92, 246)',
+        rose: 'rgb(244, 63, 94)', slate: 'rgb(100, 116, 139)',
+    };
+    const doughnutColors = [palette.emerald, palette.sky, palette.indigo, palette.amber, palette.violet, palette.rose, palette.slate];
+    const baseOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 300 },
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+    };
+
+    function hasData(arr) {
+        return Array.isArray(arr) && arr.some(v => Number(v) > 0);
+    }
+
+    function emptyMsg(id, msg) {
+        const c = document.getElementById(id);
+        if (c) c.parentElement.innerHTML = '<p class="text-sm text-slate-500 text-center py-16">' + msg + '</p>';
+    }
+
+    if (hasData(monthly.revenue) || hasData(monthly.totalEnrollments)) {
+        new Chart(document.getElementById('chartAcademyMain'), {
+            type: 'line',
+            data: {
+                labels: monthly.labels || [],
+                datasets: [
+                    { label: 'الإيراد (ج.م)', data: monthly.revenue || [], borderColor: palette.emerald, backgroundColor: palette.emeraldSoft, tension: 0.35, fill: true, yAxisID: 'y1' },
+                    { label: 'تسجيلات أونلاين', data: monthly.onlineEnrollments || [], borderColor: palette.sky, tension: 0.35, yAxisID: 'y' },
+                    { label: 'تسجيلات أوفلاين', data: monthly.offlineEnrollments || [], borderColor: palette.indigo, tension: 0.35, yAxisID: 'y' },
+                    { label: 'إجمالي التسجيلات', data: monthly.totalEnrollments || [], borderColor: palette.amber, borderDash: [5, 4], tension: 0.35, yAxisID: 'y' },
+                ],
+            },
+            options: {
+                ...baseOptions,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    y: { beginAtZero: true, position: 'right', title: { display: true, text: 'تسجيلات' } },
+                    y1: { beginAtZero: true, position: 'left', grid: { drawOnChartArea: false }, title: { display: true, text: 'ج.م' } },
+                },
+            },
+        });
+    } else emptyMsg('chartAcademyMain', 'لا بيانات كافية لعرض الاتجاه.');
+
+    if (hasData(monthly.revenue)) {
+        new Chart(document.getElementById('chartRevenue'), {
+            type: 'bar',
+            data: { labels: monthly.labels || [], datasets: [{ label: 'الإيراد', data: monthly.revenue || [], backgroundColor: 'rgba(16, 185, 129, 0.75)', borderRadius: 8 }] },
+            options: { ...baseOptions, plugins: { ...baseOptions.plugins, legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+        });
+    } else emptyMsg('chartRevenue', 'لا إيراد مسجّل.');
+
+    if (hasData(monthly.newStudents) || hasData(monthly.orders)) {
+        new Chart(document.getElementById('chartStudentsOrders'), {
+            type: 'line',
+            data: {
+                labels: monthly.labels || [],
+                datasets: [
+                    { label: 'طلاب جدد', data: monthly.newStudents || [], borderColor: palette.emerald, tension: 0.35, fill: false },
+                    { label: 'طلبات', data: monthly.orders || [], borderColor: palette.sky, tension: 0.35, fill: false },
+                ],
+            },
+            options: { ...baseOptions, scales: { y: { beginAtZero: true } } },
+        });
+    } else emptyMsg('chartStudentsOrders', 'لا بيانات طلاب/طلبات.');
+
+    if (hasData(daily.revenue)) {
+        new Chart(document.getElementById('chartDailyRevenue'), {
+            type: 'bar',
+            data: { labels: daily.labels || [], datasets: [{ label: 'إيراد يومي', data: daily.revenue || [], backgroundColor: 'rgba(14, 165, 233, 0.7)', borderRadius: 6 }] },
+            options: { ...baseOptions, plugins: { ...baseOptions.plugins, legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+        });
+    } else emptyMsg('chartDailyRevenue', 'لا مدفوعات في آخر 14 يوم.');
+
+    if (hasData(mix.values)) {
+        new Chart(document.getElementById('chartEnrollmentMix'), {
+            type: 'doughnut',
+            data: { labels: mix.labels || [], datasets: [{ data: mix.values || [], backgroundColor: doughnutColors, borderWidth: 2 }] },
+            options: baseOptions,
+        });
+    } else emptyMsg('chartEnrollmentMix', 'لا تسجيلات نشطة.');
+
+    if (hasData(roles.values)) {
+        new Chart(document.getElementById('chartUserRoles'), {
+            type: 'doughnut',
+            data: { labels: roles.labels || [], datasets: [{ data: roles.values || [], backgroundColor: doughnutColors, borderWidth: 2 }] },
+            options: baseOptions,
+        });
+    } else emptyMsg('chartUserRoles', 'لا مستخدمين.');
+
+    if (hasData(weekly.values)) {
+        new Chart(document.getElementById('chartWeeklyActivity'), {
+            type: 'line',
+            data: { labels: weekly.labels || [], datasets: [{ label: 'أحداث', data: weekly.values || [], borderColor: palette.indigo, backgroundColor: palette.indigoSoft, tension: 0.35, fill: true }] },
+            options: { ...baseOptions, plugins: { ...baseOptions.plugins, legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+        });
+    } else emptyMsg('chartWeeklyActivity', 'لا نشاط في آخر 7 أيام.');
+
+    if (hasData(topCourses.values)) {
+        new Chart(document.getElementById('chartTopCourses'), {
+            type: 'bar',
+            data: { labels: topCourses.labels || [], datasets: [{ label: 'تسجيلات نشطة', data: topCourses.values || [], backgroundColor: 'rgba(99, 102, 241, 0.75)', borderRadius: 6 }] },
+            options: { indexAxis: 'y', ...baseOptions, plugins: { ...baseOptions.plugins, legend: { display: false } }, scales: { x: { beginAtZero: true } } },
+        });
+    } else emptyMsg('chartTopCourses', 'لا تسجيلات على الكورسات.');
+})();
+</script>
+@endpush
 @endsection

@@ -46,12 +46,17 @@ class SalesAuditController extends Controller
             });
         }
 
+        $stats = [
+            'total' => (clone $query)->count(),
+        ];
+
         $logs = $query->latest()->paginate(40)->withQueryString();
 
         $filterUsers = \App\Models\User::orderBy('name')->get(['id', 'name']);
 
         return view('admin.sales.audit.index', [
             'logs' => $logs,
+            'stats' => $stats,
             'filterUsers' => $filterUsers,
             'actionLabels' => $this->actionLabels(),
         ]);

@@ -4,52 +4,179 @@
 @section('header', 'تفاصيل التقرير اليومي')
 
 @section('content')
-<div class="p-4 md:p-6 space-y-6 max-w-5xl">
-    <a href="{{ route('admin.sales.daily-reports.index') }}" class="text-sm text-emerald-700 font-semibold"><i class="fas fa-arrow-right ml-1"></i> العودة</a>
+@php
+    $statusBadges = [
+        'submitted' => ['label' => 'مسلّم', 'classes' => 'bg-emerald-100 text-emerald-700 border border-emerald-200'],
+        'draft' => ['label' => 'مسودة', 'classes' => 'bg-amber-100 text-amber-700 border border-amber-200'],
+    ];
+    $statusKey = $report->isSubmitted() ? 'submitted' : 'draft';
+    $statusMeta = $statusBadges[$statusKey];
 
-    <div class="bg-white rounded-2xl border p-6">
-        <p class="text-sm text-slate-500">{{ $report->report_date->format('Y-m-d') }} — {{ $report->user->name ?? '' }}</p>
-        <p class="mt-1 font-bold @if($report->isSubmitted()) text-emerald-700 @else text-amber-700 @endif">
-            {{ $report->isSubmitted() ? 'مسلّم' : 'مسودة' }}
-            @if($report->autoDeduction)
-                <span class="text-rose-600 text-sm mr-2">| خصم: {{ $report->autoDeduction->deduction_number }} ({{ number_format($report->autoDeduction->amount, 2) }} ج.م)</span>
+    $activityStats = [
+        ['label' => 'ردود رسائل', 'value' => $report->messages_replied ?? '—', 'icon' => 'fas fa-comment-dots', 'bg' => 'bg-sky-100', 'text' => 'text-sky-600'],
+        ['label' => 'مؤهلون', 'value' => $report->leads_qualified ?? '—', 'icon' => 'fas fa-user-check', 'bg' => 'bg-emerald-100', 'text' => 'text-emerald-600'],
+        ['label' => 'حجوزات', 'value' => $report->bookings_from_leads ?? '—', 'icon' => 'fas fa-calendar-check', 'bg' => 'bg-violet-100', 'text' => 'text-violet-600'],
+    ];
+    $productivityStats = [
+        ['label' => 'أرقام', 'value' => $report->numbers_worked ?? '—', 'icon' => 'fas fa-phone', 'bg' => 'bg-blue-100', 'text' => 'text-blue-600'],
+        ['label' => 'متابعات', 'value' => $report->followups_done ?? '—', 'icon' => 'fas fa-redo', 'bg' => 'bg-amber-100', 'text' => 'text-amber-600'],
+        ['label' => 'مكالمات / اجتماعات / ردود', 'value' => ($report->calls_made ?? '—') . ' / ' . ($report->meetings_held ?? '—') . ' / ' . ($report->calls_answered ?? '—'), 'icon' => 'fas fa-headset', 'bg' => 'bg-slate-100', 'text' => 'text-slate-600'],
+    ];
+@endphp
+
+<div class="space-y-6">
+    {{-- الهيدر --}}
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+        <div class="px-4 py-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center text-white shadow-md">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-black text-slate-900">تقرير يومي — {{ $report->user->name ?? '—' }}</h2>
+                    <p class="text-xs text-slate-600">
+                        <i class="fas fa-calendar ml-0.5"></i>
+                        {{ $report->report_date->format('Y-m-d') }}
+                    </p>
+                </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold {{ $statusMeta['classes'] }}">
+                    <span class="h-1.5 w-1.5 rounded-full bg-current"></span>
+                    {{ $statusMeta['label'] }}
+                </span>
+                @if($report->autoDeduction)
+                    <span class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold bg-rose-100 text-rose-700 border border-rose-200">
+                        <i class="fas fa-gavel text-[10px]"></i>
+                        خصم: {{ $report->autoDeduction->deduction_number }} ({{ number_format($report->autoDeduction->amount, 2) }} ج.م)
+                    </span>
+                @endif
+                <a href="{{ route('admin.sales.daily-reports.index') }}" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 rounded-xl border border-slate-300 hover:bg-slate-50">
+                    <i class="fas fa-arrow-right"></i>
+                    العودة للقائمة
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+    {{-- نشاط اليوم --}}
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden h-full">
+        <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+            <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                <i class="fas fa-bolt text-amber-500"></i>
+                نشاط اليوم
+            </h3>
+        </div>
+        <div class="p-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                @foreach($activityStats as $stat)
+                    <div class="rounded-xl border border-slate-200 bg-white p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-semibold text-slate-600">{{ $stat['label'] }}</p>
+                                <p class="text-xl font-black text-slate-900 tabular-nums">{{ $stat['value'] }}</p>
+                            </div>
+                            <div class="w-9 h-9 rounded-lg {{ $stat['bg'] }} flex items-center justify-center {{ $stat['text'] }}">
+                                <i class="{{ $stat['icon'] }} text-xs"></i>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+            @if($report->activity_notes)
+                <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p class="text-xs font-semibold text-slate-600 mb-1">ملاحظات النشاط</p>
+                    <p class="text-sm text-slate-700 whitespace-pre-wrap">{{ $report->activity_notes }}</p>
+                </div>
             @endif
-        </p>
+        </div>
+    </section>
+
+    {{-- الإنتاجية --}}
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden h-full">
+        <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+            <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                <i class="fas fa-chart-line text-emerald-600"></i>
+                الإنتاجية
+            </h3>
+        </div>
+        <div class="p-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                @foreach($productivityStats as $stat)
+                    <div class="rounded-xl border border-slate-200 bg-white p-4">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="min-w-0">
+                                <p class="text-xs font-semibold text-slate-600">{{ $stat['label'] }}</p>
+                                <p class="text-lg font-black text-slate-900 tabular-nums truncate">{{ $stat['value'] }}</p>
+                            </div>
+                            <div class="w-9 h-9 rounded-lg {{ $stat['bg'] }} flex items-center justify-center {{ $stat['text'] }} flex-shrink-0">
+                                <i class="{{ $stat['icon'] }} text-xs"></i>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+            @if($report->productivity_notes)
+                <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p class="text-xs font-semibold text-slate-600 mb-1">ملاحظات الإنتاجية</p>
+                    <p class="text-sm text-slate-700 whitespace-pre-wrap">{{ $report->productivity_notes }}</p>
+                </div>
+            @endif
+        </div>
+    </section>
     </div>
 
-    <div class="grid md:grid-cols-2 gap-6">
-        <section class="bg-white rounded-2xl border p-5">
-            <h3 class="font-bold mb-3">نشاط اليوم</h3>
-            <dl class="text-sm space-y-1">
-                <div class="flex justify-between"><dt>ردود رسائل</dt><dd class="font-bold">{{ $report->messages_replied }}</dd></div>
-                <div class="flex justify-between"><dt>مؤهلون</dt><dd class="font-bold">{{ $report->leads_qualified }}</dd></div>
-                <div class="flex justify-between"><dt>حجوزات</dt><dd class="font-bold">{{ $report->bookings_from_leads }}</dd></div>
-            </dl>
-            @if($report->activity_notes)<p class="mt-3 text-xs text-slate-600 whitespace-pre-wrap">{{ $report->activity_notes }}</p>@endif
-        </section>
-        <section class="bg-white rounded-2xl border p-5">
-            <h3 class="font-bold mb-3">الإنتاجية</h3>
-            <dl class="text-sm space-y-1">
-                <div class="flex justify-between"><dt>أرقام</dt><dd class="font-bold">{{ $report->numbers_worked }}</dd></div>
-                <div class="flex justify-between"><dt>متابعات</dt><dd class="font-bold">{{ $report->followups_done }}</dd></div>
-                <div class="flex justify-between"><dt>مكالمات / اجتماعات / ردود</dt><dd class="font-bold">{{ $report->calls_made }} / {{ $report->meetings_held }} / {{ $report->calls_answered }}</dd></div>
-            </dl>
-            @if($report->productivity_notes)<p class="mt-3 text-xs text-slate-600 whitespace-pre-wrap">{{ $report->productivity_notes }}</p>@endif
-        </section>
-    </div>
-
-    <section class="bg-white rounded-2xl border overflow-hidden">
-        <h3 class="px-5 py-3 font-bold border-b bg-slate-50">المكالمات والاجتماعات (حالة العميل والمشاكل)</h3>
-        <div class="divide-y">
+    {{-- المكالمات والاجتماعات --}}
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+                <h3 class="text-base font-black text-slate-900">المكالمات والاجتماعات</h3>
+                <p class="text-xs text-slate-600">حالة العميل والمشاكل المسجّلة.</p>
+            </div>
+            <span class="text-xs font-semibold text-sky-700 bg-sky-50 px-2.5 py-1 rounded-lg border border-sky-200">{{ $report->contacts->count() }} سجل</span>
+        </div>
+        <div class="divide-y divide-slate-100">
             @forelse($report->contacts as $c)
-                <div class="p-5 text-sm">
-                    <p class="font-bold">{{ $c->interactionTypeLabel() }} — {{ $c->contact_name ?: '—' }} — {{ $c->contact_phone }}</p>
-                    @if($c->lead)<p class="text-xs text-emerald-700">Lead: {{ $c->lead->name }}</p>@endif
-                    <p class="mt-2"><span class="font-semibold text-slate-600">الحالة:</span> {{ $c->client_status }}</p>
-                    <p class="mt-1"><span class="font-semibold text-rose-700">المشاكل:</span> {{ $c->client_problems }}</p>
+                <div class="p-4 sm:p-5">
+                    <div class="flex flex-wrap items-start justify-between gap-2 mb-3">
+                        <div>
+                            <p class="text-sm font-bold text-slate-900">
+                                {{ $c->interactionTypeLabel() }}
+                                @if($c->contact_name || $c->contact_phone)
+                                    — {{ $c->contact_name ?: '—' }}
+                                    @if($c->contact_phone)
+                                        <span class="text-slate-500 font-medium">({{ $c->contact_phone }})</span>
+                                    @endif
+                                @endif
+                            </p>
+                            @if($c->lead)
+                                <p class="text-xs text-emerald-700 mt-1">
+                                    <i class="fas fa-user-tag ml-0.5"></i>
+                                    Lead: {{ $c->lead->name }}
+                                </p>
+                            @endif
+                        </div>
+                    </div>
+                    <dl class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                        <div class="rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2">
+                            <dt class="text-xs font-semibold text-slate-500 mb-1">حالة العميل</dt>
+                            <dd class="text-slate-800">{{ $c->client_status ?: '—' }}</dd>
+                        </div>
+                        <div class="rounded-lg border border-rose-200 bg-rose-50/30 px-3 py-2">
+                            <dt class="text-xs font-semibold text-rose-700 mb-1">المشاكل</dt>
+                            <dd class="text-slate-800">{{ $c->client_problems ?: '—' }}</dd>
+                        </div>
+                    </dl>
                 </div>
             @empty
-                <p class="p-5 text-slate-500">لا توجد سجلات تواصل</p>
+                <div class="p-10 text-center">
+                    <div class="w-14 h-14 mx-auto mb-3 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
+                        <i class="fas fa-phone-slash text-xl"></i>
+                    </div>
+                    <p class="text-sm font-semibold text-slate-900">لا توجد سجلات تواصل</p>
+                    <p class="text-xs text-slate-500 mt-1">لم يُسجّل أي تواصل في هذا التقرير.</p>
+                </div>
             @endforelse
         </div>
     </section>

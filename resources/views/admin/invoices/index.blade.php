@@ -14,10 +14,10 @@
         'other' => 'أخرى',
     ];
     $statCards = [
-        ['label' => 'إجمالي الفواتير', 'value' => number_format($stats['total'] ?? 0), 'icon' => 'fas fa-file-invoice', 'bg' => 'bg-blue-100', 'text' => 'text-blue-600', 'description' => 'كل الفواتير المسجلة', 'filter' => []],
-        ['label' => 'معلقة', 'value' => number_format($stats['pending'] ?? 0), 'icon' => 'fas fa-hourglass-half', 'bg' => 'bg-amber-100', 'text' => 'text-amber-600', 'description' => 'بانتظار الدفع', 'filter' => ['status' => 'pending']],
-        ['label' => 'مدفوعة', 'value' => number_format($stats['paid'] ?? 0), 'icon' => 'fas fa-check-circle', 'bg' => 'bg-emerald-100', 'text' => 'text-emerald-600', 'description' => 'تم دفعها', 'filter' => ['status' => 'paid']],
-        ['label' => 'متأخرة', 'value' => number_format($stats['overdue'] ?? 0), 'icon' => 'fas fa-exclamation-triangle', 'bg' => 'bg-rose-100', 'text' => 'text-rose-600', 'description' => 'تجاوزت الاستحقاق', 'filter' => ['status' => 'overdue']],
+        ['label' => 'إجمالي الفواتير', 'value' => number_format($stats['total'] ?? 0), 'icon' => 'fas fa-file-invoice', 'theme' => 'sky', 'desc' => 'كل الفواتير المسجلة', 'filter' => []],
+        ['label' => 'معلقة', 'value' => number_format($stats['pending'] ?? 0), 'icon' => 'fas fa-hourglass-half', 'theme' => 'amber', 'desc' => 'بانتظار الدفع', 'filter' => ['status' => 'pending']],
+        ['label' => 'مدفوعة', 'value' => number_format($stats['paid'] ?? 0), 'icon' => 'fas fa-check-circle', 'theme' => 'emerald', 'desc' => 'تم دفعها', 'filter' => ['status' => 'paid']],
+        ['label' => 'متأخرة', 'value' => number_format($stats['overdue'] ?? 0), 'icon' => 'fas fa-exclamation-triangle', 'theme' => 'rose', 'desc' => 'تجاوزت الاستحقاق', 'filter' => ['status' => 'overdue']],
     ];
     $statusBadges = [
         'paid' => ['label' => 'مدفوعة', 'classes' => 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200/80'],
@@ -58,28 +58,46 @@
                     <p class="text-xs text-slate-600">جدول منظم، بحث وفلترة متقدمة لأعداد كبيرة.</p>
                 </div>
             </div>
-            <a href="{{ route('admin.invoices.create') }}" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-500 rounded-xl shadow hover:from-blue-700 hover:to-blue-600 transition-all">
-                <i class="fas fa-plus"></i>
-                إنشاء فاتورة
-            </a>
-        </div>
-        <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 p-4">
-            @foreach ($statCards as $card)
-                <a href="{{ route('admin.invoices.index', $card['filter']) }}" class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md hover:border-blue-200 transition-all block text-right">
-                    <div class="flex items-center justify-between">
-                        <div class="min-w-0">
-                            <p class="text-xs font-semibold text-slate-600 truncate">{{ $card['label'] }}</p>
-                            <p class="text-xl font-black text-slate-900">{{ $card['value'] }}</p>
-                        </div>
-                        <div class="w-10 h-10 rounded-lg {{ $card['bg'] }} flex items-center justify-center {{ $card['text'] }} flex-shrink-0">
-                            <i class="{{ $card['icon'] }} text-sm"></i>
-                        </div>
-                    </div>
-                    <p class="text-xs text-slate-500 mt-1 truncate">{{ $card['description'] }}</p>
+            <div class="flex flex-wrap items-center gap-2">
+                @if(Route::has('admin.accounting.hub'))
+                <a href="{{ route('admin.accounting.hub') }}" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 rounded-xl border border-slate-300 hover:bg-white">
+                    <i class="fas fa-calculator text-sky-600"></i>
+                    مركز المحاسبة
                 </a>
-            @endforeach
+                @endif
+                <a href="{{ route('admin.invoices.create') }}" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-500 rounded-xl shadow hover:from-blue-700 hover:to-blue-600 transition-all">
+                    <i class="fas fa-plus"></i>
+                    إنشاء فاتورة
+                </a>
+            </div>
         </div>
     </section>
+
+    <div class="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        @php
+            $cardThemes = [
+                'sky' => ['border' => 'border-sky-200/70', 'bg' => 'from-white via-white to-sky-50/60', 'label' => 'text-sky-800/80', 'value' => 'from-sky-700 to-blue-600', 'icon' => 'from-sky-500 to-blue-600', 'desc' => 'text-sky-700/70'],
+                'amber' => ['border' => 'border-amber-200/70', 'bg' => 'from-white via-white to-amber-50/60', 'label' => 'text-amber-800/80', 'value' => 'from-amber-700 to-orange-600', 'icon' => 'from-amber-500 to-orange-500', 'desc' => 'text-amber-700/70'],
+                'emerald' => ['border' => 'border-emerald-200/70', 'bg' => 'from-white via-white to-emerald-50/60', 'label' => 'text-emerald-800/80', 'value' => 'from-emerald-700 to-teal-600', 'icon' => 'from-emerald-500 to-teal-600', 'desc' => 'text-emerald-700/70'],
+                'rose' => ['border' => 'border-rose-200/70', 'bg' => 'from-white via-white to-rose-50/60', 'label' => 'text-rose-800/80', 'value' => 'from-rose-700 to-red-600', 'icon' => 'from-rose-500 to-red-500', 'desc' => 'text-rose-700/70'],
+            ];
+        @endphp
+        @foreach($statCards as $card)
+            @php $theme = $cardThemes[$card['theme']] ?? $cardThemes['sky']; @endphp
+            <a href="{{ route('admin.invoices.index', $card['filter']) }}" class="dashboard-stat-card rounded-2xl border-2 {{ $theme['border'] }} bg-gradient-to-br {{ $theme['bg'] }} p-5 shadow-lg hover:shadow-xl transition-shadow block">
+                <div class="flex items-center justify-between gap-3 mb-2">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-bold {{ $theme['label'] }} mb-1">{{ $card['label'] }}</p>
+                        <p class="text-2xl font-black bg-gradient-to-r {{ $theme['value'] }} bg-clip-text text-transparent tabular-nums">{{ $card['value'] }}</p>
+                    </div>
+                    <div class="w-11 h-11 rounded-xl bg-gradient-to-br {{ $theme['icon'] }} flex items-center justify-center text-white shadow-md flex-shrink-0">
+                        <i class="{{ $card['icon'] }} text-sm"></i>
+                    </div>
+                </div>
+                <p class="text-xs font-medium {{ $theme['desc'] }}">{{ $card['desc'] }}</p>
+            </a>
+        @endforeach
+    </div>
 
     {{-- بحث وفلترة --}}
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">

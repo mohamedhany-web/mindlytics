@@ -20,6 +20,7 @@ class OfflineCourseEnrollment extends Model
         'absence_count',
         'notes',
         'total_amount',
+        'discount_amount',
         'paid_amount',
         'remaining_amount',
         'payment_status',
@@ -32,6 +33,7 @@ class OfflineCourseEnrollment extends Model
         'enrolled_at' => 'datetime',
         'progress' => 'decimal:2',
         'total_amount' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
         'paid_amount' => 'decimal:2',
         'remaining_amount' => 'decimal:2',
     ];

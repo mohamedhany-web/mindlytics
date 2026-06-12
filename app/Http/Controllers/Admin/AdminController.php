@@ -332,6 +332,10 @@ class AdminController extends Controller
             ],
         ];
 
+        $analytics = app(\App\Services\AdminDashboardAnalyticsService::class);
+        $chartDashboard = $analytics->build(6);
+        $weeklyActivityChart = $analytics->formatWeeklyActivity($weeklyActivity);
+
         return view('admin.dashboard', compact(
             'stats',
             'monthlyStats',
@@ -345,7 +349,9 @@ class AdminController extends Controller
             'quickActions',
             'communityStats',
             'centralAcademyBranchId',
-            'branchesOperationalOverview'
+            'branchesOperationalOverview',
+            'chartDashboard',
+            'weeklyActivityChart'
         ));
     }
 

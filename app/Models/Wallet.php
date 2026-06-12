@@ -203,6 +203,49 @@ class Wallet extends Model
     }
 
     /**
+     * استرداد مبلغ (سحب من المحفظة مع تسجيل نوع refund)
+     */
+    public function refund($amount, $paymentId = null, $transactionId = null, $notes = null, $createdBy = null)
+    {
+        if ((float) $this->balance < (float) $amount) {
+            throw new \Exception('رصيد المحفظة غير كافي');
+        }
+
+        $balanceBefore = (float) $this->balance;
+        $this->decrement('balance', $amount);
+        $balanceAfter = (float) $this->fresh()->balance;
+
+        $table = (new WalletTransaction)->getTable();
+
+        $data = [
+            'wallet_id' => $this->id,
+            'type' => 'refund',
+            'amount' => $amount,
+            'balance_after' => $balanceAfter,
+        ];
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'balance_before')) {
+            $data['balance_before'] = $balanceBefore;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'description')) {
+            $data['description'] = $notes ?? '';
+        } elseif (\Illuminate\Support\Facades\Schema::hasColumn($table, 'notes')) {
+            $data['notes'] = $notes;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'payment_id')) {
+            $data['payment_id'] = $paymentId;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'transaction_id')) {
+            $data['transaction_id'] = $transactionId;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'created_by')) {
+            $data['created_by'] = $createdBy ?? auth()->id();
+        }
+
+        return WalletTransaction::create($data);
+    }
+
+    /**
      * الحصول على نوع المحفظة بالعربية
      */
     public function getTypeNameAttribute()

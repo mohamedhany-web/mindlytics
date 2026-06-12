@@ -21,6 +21,8 @@
       @include('admin.sales.daily-reports._settings_form', [
           'formAction' => route('admin.employee-deductions.daily-report-penalty-settings.update'),
           'settings' => $settings,
+          'cancelUrl' => route('admin.employee-deductions.index'),
+          'layout' => 'compact',
       ])
     </div>
   </section>

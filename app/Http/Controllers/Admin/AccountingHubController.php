@@ -59,30 +59,72 @@ class AccountingHubController extends Controller
     public function chart(): View
     {
         $chart = config('accounting_chart', []);
+        $stats = $this->chartTreeStats($chart['roots'] ?? []);
 
-        return view('admin.accounting.chart', compact('chart'));
+        return view('admin.accounting.chart', compact('chart', 'stats'));
     }
 
     /**
-     * @return array<int, array{title: string, items: array<int, array{label: string, route: string, icon: string, hint?: string}>}>
+     * @param  array<int, array<string, mixed>>  $roots
+     * @return array{total: int, linked: int, asset: int, liability: int, equity: int, revenue: int, expense: int}
+     */
+    private function chartTreeStats(array $roots): array
+    {
+        $stats = [
+            'total' => 0,
+            'linked' => 0,
+            'asset' => 0,
+            'liability' => 0,
+            'equity' => 0,
+            'revenue' => 0,
+            'expense' => 0,
+        ];
+
+        $walk = function (array $nodes) use (&$walk, &$stats): void {
+            foreach ($nodes as $node) {
+                $stats['total']++;
+                $type = $node['type'] ?? '';
+                if (array_key_exists($type, $stats)) {
+                    $stats[$type]++;
+                }
+                if (! empty($node['route']) && \Illuminate\Support\Facades\Route::has($node['route'])) {
+                    $stats['linked']++;
+                }
+                if (! empty($node['children'])) {
+                    $walk($node['children']);
+                }
+            }
+        };
+
+        $walk($roots);
+
+        return $stats;
+    }
+
+    /**
+     * @return array<int, array{title: string, icon: string, theme: string, items: array<int, array{label: string, route: string, icon: string, hint?: string}>}>
      */
     private function hubSections(): array
     {
         return [
             [
-                'title' => 'التقارير والشجرة',
+                'title' => 'التقارير والمؤشرات',
+                'icon' => 'fa-chart-pie',
+                'theme' => 'sky',
                 'items' => [
-                    ['label' => 'التقارير المحاسبية الشاملة', 'route' => 'admin.accounting.reports', 'icon' => 'fa-chart-pie', 'hint' => 'فلاتر زمنية، رسوم بيانية، تصدير Excel'],
+                    ['label' => 'مؤشرات الشركة', 'route' => 'admin.accounting.insights', 'icon' => 'fa-chart-bar', 'hint' => 'إيراد، مصروفات، صافي ربح/خسارة، واتجاهات لحظية'],
+                    ['label' => 'التقارير المحاسبية الشاملة', 'route' => 'admin.accounting.reports', 'icon' => 'fa-file-excel', 'hint' => 'فلاتر زمنية، رسوم بيانية، تصدير Excel'],
                     ['label' => 'شجرة الحسابات', 'route' => 'admin.accounting.chart', 'icon' => 'fa-sitemap', 'hint' => 'خريطة الحسابات وربطها بوحدات النظام'],
                     ['label' => 'عمليات بوابات الدفع', 'route' => 'admin.accounting.gateway-operations', 'icon' => 'fa-plug', 'hint' => 'كاشير، فواتيرك، عمولات، ربط طلبات وفواتير ومعاملات'],
                 ],
             ],
             [
                 'title' => 'السجلات المحاسبية الأساسية',
+                'icon' => 'fa-book',
+                'theme' => 'slate',
                 'items' => [
                     ['label' => 'الفواتير', 'route' => 'admin.invoices.index', 'icon' => 'fa-file-invoice'],
                     ['label' => 'المدفوعات', 'route' => 'admin.payments.index', 'icon' => 'fa-credit-card'],
-                    ['label' => 'عمليات بوابات الدفع', 'route' => 'admin.accounting.gateway-operations', 'icon' => 'fa-network-wired', 'hint' => 'سجل أونلاين مرتبط بالطلبات'],
                     ['label' => 'المعاملات المالية', 'route' => 'admin.transactions.index', 'icon' => 'fa-exchange-alt'],
                     ['label' => 'المحافظ البنكية والنقدية', 'route' => 'admin.wallets.index', 'icon' => 'fa-wallet'],
                     ['label' => 'المصروفات', 'route' => 'admin.expenses.index', 'icon' => 'fa-receipt'],
@@ -90,6 +132,8 @@ class AccountingHubController extends Controller
             ],
             [
                 'title' => 'إيرادات الأكاديمية (كورسات وحجوزات)',
+                'icon' => 'fa-graduation-cap',
+                'theme' => 'emerald',
                 'items' => [
                     ['label' => 'طلبات الشراء — أونلاين ومسارات', 'route' => 'admin.orders.index', 'icon' => 'fa-shopping-cart'],
                     ['label' => 'التسجيل في الكورسات الأونلاين', 'route' => 'admin.online-enrollments.index', 'icon' => 'fa-laptop'],
@@ -102,6 +146,8 @@ class AccountingHubController extends Controller
             ],
             [
                 'title' => 'التقسيط والاشتراكات',
+                'icon' => 'fa-percentage',
+                'theme' => 'violet',
                 'items' => [
                     ['label' => 'لوحة التقسيط المحاسبية', 'route' => 'admin.accounting.installments', 'icon' => 'fa-tachometer-alt', 'hint' => 'مؤشرات، أقساط قادمة، آخر السداد'],
                     ['label' => 'خطط التقسيط', 'route' => 'admin.installments.plans.index', 'icon' => 'fa-layer-group'],
@@ -112,6 +158,8 @@ class AccountingHubController extends Controller
             ],
             [
                 'title' => 'المدربون — مستحقات وسحوبات',
+                'icon' => 'fa-chalkboard-teacher',
+                'theme' => 'amber',
                 'items' => [
                     ['label' => 'ماليات المدربين (رواتب/نسب)', 'route' => 'admin.salaries.index', 'icon' => 'fa-money-check-alt'],
                     ['label' => 'حسابات المدربين', 'route' => 'admin.accounting.instructor-accounts.index', 'icon' => 'fa-user-tie'],
@@ -120,12 +168,16 @@ class AccountingHubController extends Controller
             ],
             [
                 'title' => 'الموظفون والعقود',
+                'icon' => 'fa-users-cog',
+                'theme' => 'indigo',
                 'items' => [
                     ['label' => 'اتفاقيات الموظفين', 'route' => 'admin.employee-agreements.index', 'icon' => 'fa-users-cog'],
                 ],
             ],
             [
                 'title' => 'تسويق يؤثر على الإيراد',
+                'icon' => 'fa-bullhorn',
+                'theme' => 'rose',
                 'items' => [
                     ['label' => 'الكوبونات والخصومات', 'route' => 'admin.coupons.index', 'icon' => 'fa-ticket-alt'],
                     ['label' => 'برامج الإحالة', 'route' => 'admin.referral-programs.index', 'icon' => 'fa-gift'],

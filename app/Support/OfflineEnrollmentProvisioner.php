@@ -30,7 +30,9 @@ class OfflineEnrollmentProvisioner
         float $paidAmount,
         array $paymentMeta,
         ?string $enrollmentNotes = null,
-        string $enrollmentChannel = 'offline'
+        string $enrollmentChannel = 'offline',
+        float $discountAmount = 0,
+        ?float $listPrice = null,
     ): OfflineCourseEnrollment {
         $alreadyActive = OfflineCourseEnrollment::query()
             ->where('user_id', $userId)
@@ -63,6 +65,7 @@ class OfflineEnrollmentProvisioner
             'status' => $enrollmentStatus,
             'enrolled_at' => now(),
             'total_amount' => $coursePrice,
+            'discount_amount' => max(0, $discountAmount),
             'paid_amount' => $paidAmount,
             'remaining_amount' => $remainingAmount,
             'payment_status' => $paymentStatus,
@@ -82,7 +85,15 @@ class OfflineEnrollmentProvisioner
         }
 
         if ($paidAmount > 0) {
-            self::createFinancialRecords($enrollment, $course, $paidAmount, $coursePrice, $paymentMeta);
+            self::createFinancialRecords(
+                $enrollment,
+                $course,
+                $paidAmount,
+                $coursePrice,
+                $paymentMeta,
+                max(0, $discountAmount),
+                $listPrice ?? $coursePrice
+            );
         }
 
         return $enrollment;
@@ -96,8 +107,11 @@ class OfflineEnrollmentProvisioner
         OfflineCourse $course,
         float $paidAmount,
         float $totalAmount,
-        array $data
+        array $data,
+        float $discountAmount = 0,
+        ?float $listPrice = null,
     ): void {
+        $listPrice = $listPrice ?? $totalAmount;
         $invoiceNumber = 'OFF-INV-' . str_pad((string) $enrollment->id, 6, '0', STR_PAD_LEFT);
 
         $invoice = Invoice::create([
@@ -105,9 +119,9 @@ class OfflineEnrollmentProvisioner
             'user_id' => $enrollment->user_id,
             'type' => 'offline_course',
             'description' => "تسجيل في كورس أوفلاين: {$course->title}",
-            'subtotal' => $totalAmount,
+            'subtotal' => $listPrice,
             'tax_amount' => 0,
-            'discount_amount' => 0,
+            'discount_amount' => $discountAmount,
             'total_amount' => $totalAmount,
             'status' => $paidAmount >= $totalAmount ? 'paid' : 'pending',
             'due_date' => now()->addDays(30),
@@ -115,7 +129,7 @@ class OfflineEnrollmentProvisioner
             'items' => [[
                 'description' => "كورس أوفلاين: {$course->title}",
                 'quantity' => 1,
-                'unit_price' => $totalAmount,
+                'unit_price' => $listPrice,
                 'total' => $totalAmount,
             ]],
         ]);
@@ -132,8 +146,8 @@ class OfflineEnrollmentProvisioner
                 'advanced_course_id' => null,
                 'academic_year_id' => null,
                 'coupon_id' => null,
-                'original_amount' => $totalAmount,
-                'discount_amount' => 0,
+                'original_amount' => $listPrice,
+                'discount_amount' => $discountAmount,
                 'amount' => $totalAmount,
                 'payment_method' => $data['payment_method'] ?? 'bank_transfer',
                 'wallet_id' => isset($data['wallet_id']) && (int) $data['wallet_id'] > 0 ? (int) $data['wallet_id'] : null,

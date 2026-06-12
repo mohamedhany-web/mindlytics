@@ -1500,6 +1500,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             ->middleware('throttle:60,1')
             ->except(['update', 'destroy']);
         Route::match(['put', 'patch', 'post'], '/transactions/{transaction}', [\App\Http\Controllers\Admin\TransactionController::class, 'update'])->middleware('throttle:20,5')->name('transactions.update');
+        Route::post('/transactions/{transaction}/refund', [\App\Http\Controllers\Admin\TransactionController::class, 'refund'])->middleware('throttle:10,5')->name('transactions.refund');
         Route::delete('/transactions/{transaction}', [\App\Http\Controllers\Admin\TransactionController::class, 'destroy'])->middleware('throttle:10,1')->name('transactions.destroy');
         
         Route::resource('wallets', \App\Http\Controllers\Admin\WalletController::class)

@@ -20,13 +20,25 @@ class SalesLeadController extends Controller
 {
     public function index(Request $request)
     {
-        $query = $this->indexQuery($request);
+        $filterQuery = $this->indexQuery($request);
+
+        $stats = [
+            'total' => (clone $filterQuery)->count(),
+            'open' => (clone $filterQuery)->openPipeline()->count(),
+            'overdue_followups' => (clone $filterQuery)->openPipeline()
+                ->whereNotNull('next_follow_up_at')
+                ->where('next_follow_up_at', '<', now())
+                ->count(),
+            'won' => (clone $filterQuery)->where('stage', 'won')->count(),
+        ];
+
+        $query = clone $filterQuery;
         $this->applySorting($query, $request);
 
         $leads = $query->paginate(25)->withQueryString();
         $salesReps = User::salesEmployees()->orderBy('name')->get(['id', 'name']);
 
-        return view('admin.sales.leads.index', compact('leads', 'salesReps'));
+        return view('admin.sales.leads.index', compact('leads', 'salesReps', 'stats'));
     }
 
     public function export(Request $request, SalesLeadsExcelExportService $excel): StreamedResponse

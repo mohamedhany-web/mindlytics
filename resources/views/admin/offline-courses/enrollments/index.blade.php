@@ -117,16 +117,20 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">نوع الدفع <span class="text-red-500">*</span></label>
                         <select name="payment_type" x-model="paymentType" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                            <option value="full">دفع كامل ({{ number_format($offlineCourse->price, 2) }} ج.م)</option>
+                            <option value="full">دفع كامل</option>
                             <option value="partial">دفع جزئي</option>
                             <option value="free">دفع مجاني (بدون مبلغ على الطالب أو الحساب)</option>
                         </select>
+                        <p x-show="paymentType === 'full'" class="text-xs text-green-700 mt-1 font-semibold">
+                            المبلغ المستحق: <span x-text="formatMoney(netPrice)"></span> ج.م
+                        </p>
                     </div>
                     <div x-show="paymentType === 'partial'">
                         <label class="block text-sm font-medium text-gray-700 mb-1">المبلغ المدفوع</label>
-                        <input type="number" name="paid_amount" step="0.01" min="0" max="{{ $offlineCourse->price }}"
+                        <input type="number" name="paid_amount" step="0.01" min="0" :max="netPrice"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                placeholder="0.00">
+                        <p class="text-xs text-gray-500 mt-1">الحد الأقصى بعد الخصم: <span x-text="formatMoney(netPrice)"></span> ج.م</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">طريقة الدفع</label>
@@ -152,6 +156,37 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">ملاحظات الدفع</label>
                         <input type="text" name="payment_notes" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                placeholder="اختياري">
+                    </div>
+                </div>
+
+                <!-- الخصم -->
+                <div x-show="paymentType !== 'free'" x-cloak class="mt-4 pt-4 border-t border-gray-200">
+                    <label class="inline-flex items-center gap-2 cursor-pointer mb-3">
+                        <input type="checkbox" name="apply_discount" value="1" x-model="applyDiscount"
+                               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        <span class="text-sm font-semibold text-gray-800"><i class="fas fa-tag text-amber-500 ml-1"></i>تطبيق خصم على الاشتراك</span>
+                    </label>
+                    <div x-show="applyDiscount" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">نوع الخصم</label>
+                            <select name="discount_type" x-model="discountType" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500">
+                                <option value="fixed">مبلغ ثابت (ج.م)</option>
+                                <option value="percent">نسبة مئوية (%)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">قيمة الخصم</label>
+                            <input type="number" name="discount_value" x-model="discountValue" step="0.01" min="0"
+                                   :max="discountType === 'percent' ? 100 : coursePrice"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                                   placeholder="0.00">
+                            @error('discount_value')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                        </div>
+                        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
+                            <p class="text-gray-600">السعر الأصلي: <strong x-text="formatMoney(coursePrice)"></strong> ج.م</p>
+                            <p class="text-amber-700">الخصم: <strong x-text="formatMoney(discountAmount)"></strong> ج.م</p>
+                            <p class="text-green-800 font-bold mt-1">صافي الاشتراك: <span x-text="formatMoney(netPrice)"></span> ج.م</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -187,6 +222,8 @@
                             <th class="px-4 py-3 text-right font-medium text-gray-500">المجموعة</th>
                             <th class="px-4 py-3 text-right font-medium text-gray-500">التسجيل</th>
                             <th class="px-4 py-3 text-right font-medium text-gray-500">الحالة</th>
+                            <th class="px-4 py-3 text-right font-medium text-gray-500">الإجمالي</th>
+                            <th class="px-4 py-3 text-right font-medium text-gray-500">الخصم</th>
                             <th class="px-4 py-3 text-right font-medium text-gray-500">المدفوع</th>
                             <th class="px-4 py-3 text-right font-medium text-gray-500">المتبقي</th>
                             <th class="px-4 py-3 text-right font-medium text-gray-500">حالة الدفع</th>
@@ -214,6 +251,14 @@
                                     $sl = $sLabels[$enrollment->status] ?? ['—', 'bg-gray-100 text-gray-800'];
                                 @endphp
                                 <span class="px-2 py-0.5 text-xs font-semibold rounded-full {{ $sl[1] }}">{{ $sl[0] }}</span>
+                            </td>
+                            <td class="px-4 py-3 text-gray-700 font-semibold">{{ number_format($enrollment->total_amount, 2) }}</td>
+                            <td class="px-4 py-3 text-gray-700">
+                                @if((float) ($enrollment->discount_amount ?? 0) > 0)
+                                    <span class="text-amber-700 font-semibold">-{{ number_format($enrollment->discount_amount, 2) }}</span>
+                                @else
+                                    <span class="text-gray-400">—</span>
+                                @endif
                             </td>
                             <td class="px-4 py-3 text-gray-700 font-semibold">{{ number_format($enrollment->paid_amount, 2) }}</td>
                             <td class="px-4 py-3 text-gray-700">
@@ -352,11 +397,35 @@ function enrollmentsPage() {
 
     return {
         paymentType: 'full',
+        coursePrice: {{ (float) $offlineCourse->price }},
+        applyDiscount: {{ old('apply_discount') ? 'true' : 'false' }},
+        discountType: @json(old('discount_type', 'fixed')),
+        discountValue: @json(old('discount_value', '')),
         showPaymentModal: false,
         paymentEnrollment: null,
         paymentAction: '',
         paymentMethodModal: 'cash',
         emailSearch: '',
+
+        get discountAmount() {
+            if (!this.applyDiscount || this.paymentType === 'free') return 0;
+            const value = parseFloat(this.discountValue) || 0;
+            if (value <= 0) return 0;
+            if (this.discountType === 'percent') {
+                const pct = Math.min(100, value);
+                return Math.min(this.coursePrice, Math.round(this.coursePrice * pct / 100 * 100) / 100);
+            }
+            return Math.min(this.coursePrice, Math.round(value * 100) / 100);
+        },
+
+        get netPrice() {
+            if (this.paymentType === 'free') return 0;
+            return Math.max(0, Math.round((this.coursePrice - this.discountAmount) * 100) / 100);
+        },
+
+        formatMoney(amount) {
+            return (parseFloat(amount) || 0).toFixed(2);
+        },
 
         filterStudents() {
             const q = this.emailSearch.trim().toLowerCase();

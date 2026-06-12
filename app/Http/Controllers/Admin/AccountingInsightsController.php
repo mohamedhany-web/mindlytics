@@ -25,7 +25,15 @@ class AccountingInsightsController extends Controller
 
     public function metrics(Request $request): JsonResponse
     {
-        return response()->json($this->buildPayload(Carbon::now()));
+        try {
+            return response()->json($this->buildPayload(Carbon::now()));
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'message' => 'تعذر حساب المؤشرات.',
+            ], 500);
+        }
     }
 
     /**
@@ -185,8 +193,8 @@ class AccountingInsightsController extends Controller
         $rows = Transaction::query()
             ->whereBetween('created_at', [$start, $end])
             ->selectRaw("$labelExpr as t, type, COALESCE(SUM(amount),0) as total")
-            ->groupBy('t', 'type')
-            ->orderBy('t')
+            ->groupByRaw("{$labelExpr}, type")
+            ->orderByRaw('MIN(created_at)')
             ->get();
 
         $mapIn = [];
@@ -207,10 +215,10 @@ class AccountingInsightsController extends Controller
         $cashOut = [];
         $net = [];
 
-        $cursor = $start->copy();
-        $cursor->second = 0;
+        $cursor = $start->copy()->second(0);
         while ($cursor->lte($end)) {
-            $label = $cursor->format('H:') . str_pad((string) (floor(((int) $cursor->format('i')) / $bucketMinutes) * $bucketMinutes), 2, '0', STR_PAD_LEFT);
+            $minuteBucket = (int) (floor((int) $cursor->format('i') / $bucketMinutes) * $bucketMinutes);
+            $label = sprintf('%02d:%02d', (int) $cursor->format('H'), $minuteBucket);
 
             $in = (float) ($mapIn[$label] ?? 0);
             $out = (float) ($mapOut[$label] ?? 0);

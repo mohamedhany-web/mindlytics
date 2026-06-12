@@ -8,34 +8,20 @@
     $agreement = $agreement ?? null;
     $plans = $plans ?? collect();
 @endphp
-<div class="container mx-auto px-4 py-8 space-y-8">
-    <div class="bg-gradient-to-br from-amber-500 via-amber-600 to-sky-600 rounded-3xl shadow-xl text-white p-8 relative overflow-hidden">
-        <div class="absolute inset-y-0 right-0 w-1/3 pointer-events-none opacity-20">
-            <div class="w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-        </div>
-        <div class="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div>
-                <div class="flex items-center gap-3 flex-wrap">
-                    <h1 class="text-3xl font-black tracking-tight">{{ $agreement->student->name ?? 'طالب غير معروف' }}</h1>
-                    <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-white/20">
-                        <i class="fas fa-pen text-xs"></i>
-                        تحديث تفاصيل الاتفاقية
-                    </span>
-                </div>
-                <p class="mt-3 text-white/80 max-w-2xl">
-                    يمكنك تغيير حالة الاتفاقية أو نقلها إلى خطة أخرى، بالإضافة إلى إضافة ملاحظات إدارية.
-                </p>
-            </div>
-            <div class="flex flex-wrap gap-3 justify-end">
-                <a href="{{ route('admin.installments.agreements.show', $agreement) }}" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white text-amber-700 font-semibold shadow-lg hover:shadow-xl transition-all">
-                    <i class="fas fa-arrow-right"></i>
-                    العودة للتفاصيل
-                </a>
-            </div>
-        </div>
-    </div>
+<div class="space-y-6">
+    @include('admin.installments.partials.header', [
+        'title' => $agreement->student->name ?? 'تعديل اتفاقية',
+        'description' => 'تغيير حالة الاتفاقية أو نقلها لخطة أخرى وإضافة ملاحظات.',
+        'icon' => 'fa-edit',
+        'iconGradient' => 'from-amber-500 to-orange-500',
+        'actions' => [
+            ['route' => 'admin.installments.agreements.show', 'label' => 'التفاصيل', 'icon' => 'fa-eye', 'params' => [$agreement]],
+            ['route' => 'admin.installments.agreements.index', 'label' => 'الاتفاقيات', 'icon' => 'fa-list'],
+        ],
+    ])
+    @include('admin.installments.partials.nav', ['active' => 'agreements'])
 
-    <div class="max-w-3xl mx-auto bg-white rounded-3xl shadow-lg border border-gray-100 p-8 space-y-6">
+    <section class="max-w-3xl mx-auto rounded-2xl bg-white border border-slate-200 shadow-lg p-6 sm:p-8">
         <form action="{{ route('admin.installments.agreements.update', $agreement) }}" method="POST" class="space-y-6">
             @csrf
             @method('PUT')
@@ -73,6 +59,6 @@
                 </button>
             </div>
         </form>
-    </div>
+    </section>
 </div>
 @endsection

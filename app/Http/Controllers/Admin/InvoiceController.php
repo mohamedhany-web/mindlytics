@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\Invoice;
 use App\Models\User;
 use App\Models\ActivityLog;
@@ -134,7 +135,7 @@ class InvoiceController extends Controller
             // Sanitization
             $validated = $request->validate([
                 'user_id' => 'required|exists:users,id',
-                'type' => 'required|string|max:255',
+                'type' => 'required|in:course,subscription,membership,learning_path,offline_course,other',
                 'description' => 'nullable|string|max:1000',
                 'subtotal' => 'required|numeric|min:0|max:99999999.99',
                 'tax_amount' => 'nullable|numeric|min:0|max:99999999.99',
@@ -142,6 +143,13 @@ class InvoiceController extends Controller
                 'due_date' => 'nullable|date|after_or_equal:today',
                 'notes' => 'nullable|string|max:1000',
             ]);
+
+            $subtotal = (float) $validated['subtotal'];
+            $tax = (float) ($validated['tax_amount'] ?? 0);
+            $discount = (float) ($validated['discount_amount'] ?? 0);
+            if ($discount > $subtotal + $tax) {
+                return back()->withErrors(['discount_amount' => 'الخصم لا يمكن أن يتجاوز المبلغ الفرعي + الضريبة.'])->withInput();
+            }
 
             // وصف غير فارغ دائماً (NOT NULL / وسيط الفراغ → null / تنظيف المدخلات قد يفرّغ النص)
             $rawDescription = $validated['description'] ?? null;
@@ -229,7 +237,7 @@ class InvoiceController extends Controller
     {
         $this->assertCanManageInvoices();
 
-        $users = User::where('role', 'student')->where('is_active', true)->get();
+        $users = User::where('role', 'student')->where('is_active', true)->orderBy('name')->get();
         return view('admin.invoices.edit', compact('invoice', 'users'));
     }
 
@@ -254,15 +262,22 @@ class InvoiceController extends Controller
 
             $validated = $request->validate([
                 'user_id' => 'required|exists:users,id',
-                'type' => 'required|string|max:255',
+                'type' => 'required|in:course,subscription,membership,learning_path,offline_course,other',
                 'description' => 'nullable|string|max:1000',
                 'subtotal' => 'required|numeric|min:0|max:99999999.99',
                 'tax_amount' => 'nullable|numeric|min:0|max:99999999.99',
                 'discount_amount' => 'nullable|numeric|min:0|max:99999999.99',
-                'status' => 'required|in:pending,paid,overdue,cancelled',
+                'status' => 'required|in:draft,pending,partial,paid,overdue,cancelled,refunded',
                 'due_date' => 'nullable|date',
                 'notes' => 'nullable|string|max:1000',
             ]);
+
+            $subtotal = (float) $validated['subtotal'];
+            $tax = (float) ($validated['tax_amount'] ?? 0);
+            $discount = (float) ($validated['discount_amount'] ?? 0);
+            if ($discount > $subtotal + $tax) {
+                return back()->withErrors(['discount_amount' => 'الخصم لا يمكن أن يتجاوز المبلغ الفرعي + الضريبة.'])->withInput();
+            }
 
             $rawDescription = $validated['description'] ?? null;
             $validated['description'] = ($rawDescription !== null && $rawDescription !== '')
@@ -279,23 +294,28 @@ class InvoiceController extends Controller
                 ? strip_tags(trim((string) $rawNotes))
                 : null;
 
-            $total = $validated['subtotal'] 
-                + ($validated['tax_amount'] ?? 0) 
-                - ($validated['discount_amount'] ?? 0);
+            $total = $subtotal + $tax - $discount;
 
-            // Mass Assignment Protection
-            $invoice->update([
+            $updateData = [
                 'user_id' => (int) $validated['user_id'],
                 'type' => $validated['type'],
                 'description' => $validated['description'],
-                'subtotal' => (float) $validated['subtotal'],
-                'tax_amount' => (float) ($validated['tax_amount'] ?? 0),
-                'discount_amount' => (float) ($validated['discount_amount'] ?? 0),
+                'subtotal' => $subtotal,
+                'tax_amount' => $tax,
+                'discount_amount' => $discount,
                 'total_amount' => (float) $total,
                 'status' => $validated['status'],
                 'due_date' => $validated['due_date'] ? date('Y-m-d', strtotime($validated['due_date'])) : null,
                 'notes' => $validated['notes'],
-            ]);
+            ];
+
+            if ($validated['status'] === 'paid' && ! $invoice->paid_at) {
+                $updateData['paid_at'] = now()->toDateString();
+            } elseif ($validated['status'] !== 'paid') {
+                $updateData['paid_at'] = null;
+            }
+
+            $invoice->update($updateData);
 
             // Activity Logging
             ActivityLog::create([
@@ -402,10 +422,12 @@ class InvoiceController extends Controller
             : now()->addDays(30)->format('Y-m-d');
 
         $now = now();
-        $nextSeq = (int) DB::table('invoices')->count() + 1;
-        $invoiceNumber = 'INV-' . str_pad((string) $nextSeq, 8, '0', STR_PAD_LEFT);
+        $invoiceNumber = $this->nextInvoiceNumber();
 
-        $id = DB::table('invoices')->insertGetId([
+        $branchId = User::query()->whereKey((int) $validated['user_id'])->value('branch_id')
+            ?? Branch::defaultAssignableId();
+
+        $row = [
             'invoice_number' => $invoiceNumber,
             'user_id' => (int) $validated['user_id'],
             'type' => $validated['type'],
@@ -419,8 +441,30 @@ class InvoiceController extends Controller
             'notes' => $validated['notes'] ?? null,
             'created_at' => $now,
             'updated_at' => $now,
-        ]);
+        ];
+
+        if ($branchId !== null && Schema::hasColumn('invoices', 'branch_id')) {
+            $row['branch_id'] = $branchId;
+        }
+
+        $id = DB::table('invoices')->insertGetId($row);
 
         return Invoice::query()->findOrFail($id);
+    }
+
+    private function nextInvoiceNumber(): string
+    {
+        $last = DB::table('invoices')
+            ->where('invoice_number', 'like', 'INV-%')
+            ->orderByDesc('id')
+            ->value('invoice_number');
+
+        if ($last && preg_match('/INV-(\d+)/', (string) $last, $m)) {
+            $seq = (int) $m[1] + 1;
+        } else {
+            $seq = (int) DB::table('invoices')->max('id') + 1;
+        }
+
+        return 'INV-'.str_pad((string) $seq, 8, '0', STR_PAD_LEFT);
     }
 }

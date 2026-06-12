@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\ActivityLog;
+use App\Services\TransactionRefundService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -94,7 +95,9 @@ class TransactionController extends Controller
     public function edit(Transaction $transaction)
     {
         $users = User::where('role', 'student')->where('is_active', true)->get();
-        return view('admin.transactions.edit', compact('transaction', 'users'));
+        $canRefund = app(TransactionRefundService::class)->canRefund($transaction);
+
+        return view('admin.transactions.edit', compact('transaction', 'users', 'canRefund'));
     }
 
     public function store(Request $request)
@@ -133,18 +136,61 @@ class TransactionController extends Controller
 
     public function update(Request $request, Transaction $transaction)
     {
+        if ($request->boolean('process_refund') || $request->input('type') === 'refund') {
+            return $this->refund($request, $transaction);
+        }
+
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
-            'type' => 'required|string',
+            'type' => 'required|in:credit,debit',
             'amount' => 'required|numeric|min:0',
-            'status' => 'required|in:pending,completed,failed,cancelled',
+            'status' => 'required|in:pending,completed,cancelled,reversed',
             'description' => 'nullable|string',
         ]);
+
+        if ($transaction->status === 'reversed') {
+            return back()->withErrors([
+                'status' => 'لا يمكن تعديل معاملة تم استردادها. يمكنك فقط عرض التفاصيل.',
+            ])->withInput();
+        }
 
         $transaction->update($validated);
 
         return redirect()->route('admin.transactions.index')
             ->with('success', 'تم تحديث المعاملة بنجاح');
+    }
+
+    public function refund(Request $request, Transaction $transaction)
+    {
+        if (! Auth::check() || ! Auth::user()->isSuperAdmin()) {
+            abort(403, 'غير مصرح لك بتنفيذ الاسترداد');
+        }
+
+        $validated = $request->validate([
+            'amount' => 'nullable|numeric|min:0.01',
+            'description' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $result = app(TransactionRefundService::class)->process(
+                $transaction,
+                isset($validated['amount']) ? (float) $validated['amount'] : null,
+                $validated['description'] ?? null,
+                auth()->id()
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors())->withInput();
+        } catch (\Throwable $e) {
+            Log::error('Transaction refund failed: ' . $e->getMessage(), [
+                'transaction_id' => $transaction->id,
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return back()->with('error', 'تعذر تنفيذ الاسترداد: ' . $e->getMessage())->withInput();
+        }
+
+        return redirect()->route('admin.transactions.show', $result['refund'])
+            ->with('success', 'تم استرداد المبلغ بنجاح. تم سحبه من المحفظة المرتبطة (إن وُجدت) وتحديث الدفعة والفاتورة.');
     }
 
     public function destroy(Transaction $transaction)

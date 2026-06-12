@@ -8,39 +8,21 @@
     $plans = $plans ?? collect();
     $enrollments = $enrollments ?? collect();
 @endphp
-<div class="container mx-auto px-4 py-8 space-y-8">
-    <div class="bg-gradient-to-br from-emerald-500 via-emerald-600 to-sky-600 rounded-3xl shadow-xl text-white p-8 relative overflow-hidden">
-        <div class="absolute inset-y-0 right-0 w-1/3 pointer-events-none opacity-20">
-            <div class="w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-        </div>
-        <div class="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div>
-                <div class="flex items-center gap-3 flex-wrap">
-                    <h1 class="text-3xl font-black tracking-tight">اتفاقية تقسيط جديدة</h1>
-                    <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-white/20">
-                        <i class="fas fa-user-graduate text-xs"></i>
-                        ربط الطالب بخطة دفع مرنة
-                    </span>
-                </div>
-                <p class="mt-3 text-white/75 max-w-2xl">
-                    اختر خطة التقسيط المناسبة، وحدد التسجيل الخاص بالطالب، ثم راجع بيانات المبالغ لتوليد جدول السداد تلقائياً.
-                </p>
-            </div>
-            <div class="flex flex-wrap gap-3 justify-end">
-                <a href="{{ route('admin.installments.agreements.manual-booking') }}" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white/20 text-white font-semibold border border-white/30 hover:bg-white/30 transition-all">
-                    <i class="fas fa-user-plus"></i>
-                    حجز يدوي + تقسيط
-                </a>
-                <a href="{{ route('admin.installments.agreements.index') }}" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white text-emerald-700 font-semibold shadow-lg hover:shadow-xl transition-all">
-                    <i class="fas fa-arrow-right"></i>
-                    العودة للاتفاقيات
-                </a>
-            </div>
-        </div>
-    </div>
+<div class="space-y-6">
+    @include('admin.installments.partials.header', [
+        'title' => 'اتفاقية تقسيط جديدة',
+        'description' => 'اختر خطة التقسيط والتسجيل، ثم راجع المبالغ لتوليد جدول السداد.',
+        'icon' => 'fa-plus',
+        'iconGradient' => 'from-emerald-500 to-teal-600',
+        'actions' => [
+            ['route' => 'admin.installments.agreements.manual-booking', 'label' => 'حجز + تقسيط', 'icon' => 'fa-user-plus'],
+            ['route' => 'admin.installments.agreements.index', 'label' => 'الاتفاقيات', 'icon' => 'fa-list'],
+        ],
+    ])
+    @include('admin.installments.partials.nav', ['active' => 'agreements'])
 
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div class="xl:col-span-2 bg-white rounded-3xl shadow-lg border border-gray-100 p-8">
+        <section class="xl:col-span-2 rounded-2xl bg-white border border-slate-200 shadow-lg p-6 sm:p-8">
             <form action="{{ route('admin.installments.agreements.store') }}" method="POST" class="space-y-8">
                 @csrf
 
@@ -138,11 +120,11 @@
                     </button>
                 </div>
             </form>
-        </div>
+        </section>
 
         <div class="space-y-6">
-            <div class="bg-white rounded-3xl shadow-lg border border-gray-100 p-6">
-                <h2 class="text-lg font-black text-gray-900 mb-4">دليل سريع</h2>
+            <section class="rounded-2xl bg-white border border-slate-200 shadow-lg p-6">
+                <h2 class="text-lg font-black text-slate-900 mb-4">دليل سريع</h2>
                 <ul class="space-y-3 text-sm text-gray-600">
                     <li class="flex items-start gap-2">
                         <i class="fas fa-info-circle mt-1 text-emerald-500"></i>
@@ -157,10 +139,10 @@
                         اترك حقول المبالغ فارغة لاستخدام قيم الخطة بشكل افتراضي.
                     </li>
                 </ul>
-            </div>
+            </section>
 
-            <div class="bg-white rounded-3xl shadow-lg border border-gray-100 p-6">
-                <h2 class="text-lg font-black text-gray-900 mb-4">بحث عن تسجيل</h2>
+            <section class="rounded-2xl bg-white border border-slate-200 shadow-lg p-6">
+                <h2 class="text-lg font-black text-slate-900 mb-4">بحث عن تسجيل</h2>
                 <p class="text-xs text-gray-500 mb-4">استخدم الحقول التالية لتصفية التسجيلات المتاحة قبل إنشاء الاتفاقية.</p>
                 <form method="GET" class="space-y-3">
                     <div>
@@ -178,7 +160,7 @@
                         </button>
                     </div>
                 </form>
-            </div>
+            </section>
         </div>
     </div>
 </div>

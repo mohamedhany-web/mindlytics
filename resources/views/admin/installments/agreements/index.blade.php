@@ -6,102 +6,35 @@
 @section('content')
 @php
     $summary = $summary ?? [];
+    $pageStats = [
+        ['label' => 'نشطة', 'value' => number_format($summary['active'] ?? 0), 'desc' => 'اتفاقيات تتطلب متابعة', 'icon' => 'fas fa-bolt', 'theme' => 'sky'],
+        ['label' => 'إجمالي الممول', 'value' => number_format($summary['total_amount'] ?? 0, 2), 'desc' => 'ج.م — حسب التصفية', 'icon' => 'fas fa-coins', 'theme' => 'emerald'],
+        ['label' => 'دفعات مقدمة', 'value' => number_format($summary['deposit_amount'] ?? 0, 2), 'desc' => 'ج.م — مجموع التصفية', 'icon' => 'fas fa-hand-holding-usd', 'theme' => 'amber'],
+        ['label' => 'متأخرة', 'value' => number_format($summary['overdue'] ?? 0), 'desc' => 'مكتملة: ' . number_format($summary['completed'] ?? 0), 'icon' => 'fas fa-exclamation-circle', 'theme' => 'rose'],
+    ];
 @endphp
-<div class="w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-    <div class="rounded-3xl bg-gradient-to-br from-slate-900 via-sky-900 to-violet-900 shadow-xl text-white p-6 sm:p-8 relative overflow-hidden">
-        <div class="absolute inset-0 opacity-[0.07] pointer-events-none" style="background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
-        <div class="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div>
-                <div class="flex flex-wrap items-center gap-3">
-                    <h1 class="text-2xl sm:text-3xl font-black tracking-tight">اتفاقيات تقسيط الكورسات</h1>
-                    <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-white/15 border border-white/20">
-                        <i class="fas fa-filter text-[10px]"></i>
-                        {{ number_format($summary['total_count'] ?? 0) }} نتيجة بحسب التصفية
-                    </span>
-                </div>
-                <p class="mt-3 text-sm text-white/75 max-w-2xl leading-relaxed">
-                    إدارة منظمة لخطط السداد المرتبطة بـ <strong>كورسات الأونلاين</strong> أو <strong>الأوفلاين</strong>، مع متابعة الأقساط والربط المحاسبي عند التحصيل.
-                </p>
-            </div>
-            <div class="flex flex-wrap gap-2.5 justify-end">
-                @if(Route::has('admin.accounting.installments'))
-                <a href="{{ route('admin.accounting.installments') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/15 text-white text-sm font-semibold border border-white/25 hover:bg-white/25">
-                    <i class="fas fa-tachometer-alt"></i>
-                    لوحة التقسيط
-                </a>
-                @endif
-                <a href="{{ route('admin.installments.plans.index') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/15 text-white text-sm font-semibold border border-white/25 hover:bg-white/25">
-                    <i class="fas fa-layer-group"></i>
-                    الخطط
-                </a>
-                <a href="{{ route('admin.installments.agreements.manual-booking') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-amber-400 text-slate-900 text-sm font-bold hover:bg-amber-300">
-                    <i class="fas fa-user-plus"></i>
-                    حجز + تقسيط
-                </a>
-                <a href="{{ route('admin.installments.agreements.create') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white text-sky-800 text-sm font-bold shadow-lg hover:bg-sky-50">
-                    <i class="fas fa-plus"></i>
-                    اتفاقية من تسجيل أونلاين
-                </a>
-            </div>
-        </div>
-    </div>
+<div class="space-y-6">
+    @include('admin.installments.partials.header', [
+        'title' => 'اتفاقيات تقسيط الكورسات',
+        'description' => 'إدارة خطط السداد للكورسات الأونلاين والأوفلاين مع متابعة الأقساط والربط المحاسبي.',
+        'icon' => 'fa-handshake',
+        'iconGradient' => 'from-emerald-500 to-teal-600',
+        'meta' => number_format($summary['total_count'] ?? 0) . ' نتيجة بحسب التصفية',
+        'actions' => [
+            ['route' => 'admin.installments.agreements.manual-booking', 'label' => 'حجز + تقسيط', 'icon' => 'fa-user-plus', 'style' => 'warning'],
+            ['route' => 'admin.installments.agreements.create', 'label' => 'اتفاقية جديدة', 'icon' => 'fa-plus', 'style' => 'success'],
+        ],
+    ])
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <div class="rounded-2xl bg-white shadow-sm border border-sky-100 p-5">
-            <div class="flex items-center justify-between gap-3">
-                <div>
-                    <p class="text-xs font-semibold text-sky-600 uppercase tracking-wide">نشطة</p>
-                    <p class="mt-1 text-2xl font-black text-slate-900">{{ number_format($summary['active'] ?? 0) }}</p>
-                </div>
-                <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
-                    <i class="fas fa-bolt"></i>
-                </span>
-            </div>
-            <p class="text-xs text-slate-500 mt-2">اتفاقيات تتطلب متابعة دورية للأقساط.</p>
-        </div>
-        <div class="rounded-2xl bg-white shadow-sm border border-emerald-100 p-5">
-            <div class="flex items-center justify-between gap-3">
-                <div>
-                    <p class="text-xs font-semibold text-emerald-600 uppercase tracking-wide">إجمالي الممول (تصفية)</p>
-                    <p class="mt-1 text-2xl font-black text-slate-900">{{ number_format($summary['total_amount'] ?? 0, 2) }}</p>
-                </div>
-                <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
-                    <i class="fas fa-coins"></i>
-                </span>
-            </div>
-            <p class="text-xs text-slate-500 mt-2">ج.م — حسب الفلاتر الحالية.</p>
-        </div>
-        <div class="rounded-2xl bg-white shadow-sm border border-amber-100 p-5">
-            <div class="flex items-center justify-between gap-3">
-                <div>
-                    <p class="text-xs font-semibold text-amber-600 uppercase tracking-wide">دفعات مقدمة (مجموع)</p>
-                    <p class="mt-1 text-2xl font-black text-slate-900">{{ number_format($summary['deposit_amount'] ?? 0, 2) }}</p>
-                </div>
-                <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
-                    <i class="fas fa-hand-holding-usd"></i>
-                </span>
-            </div>
-            <p class="text-xs text-slate-500 mt-2">ج.م — مجمّع في النتائج المصفّاة.</p>
-        </div>
-        <div class="rounded-2xl bg-white shadow-sm border border-rose-100 p-5">
-            <div class="flex items-center justify-between gap-3">
-                <div>
-                    <p class="text-xs font-semibold text-rose-600 uppercase tracking-wide">متأخرة</p>
-                    <p class="mt-1 text-2xl font-black text-slate-900">{{ number_format($summary['overdue'] ?? 0) }}</p>
-                </div>
-                <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-rose-100 text-rose-600">
-                    <i class="fas fa-exclamation-circle"></i>
-                </span>
-            </div>
-            <p class="text-xs text-slate-500 mt-2">مكتملة: {{ number_format($summary['completed'] ?? 0) }}</p>
-        </div>
-    </div>
+    @include('admin.installments.partials.nav', ['active' => 'agreements'])
 
-    <div class="rounded-3xl bg-white border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
-        <div class="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
+    @include('admin.installments.partials.stats', ['stats' => $pageStats])
+
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+        <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
             <div>
-                <h2 class="text-xl font-black text-slate-900">قائمة الاتفاقيات</h2>
-                <p class="text-sm text-slate-500 mt-1">بحث بالطالب، تصفية بالحالة ونوع الكورس.</p>
+                <h2 class="text-base font-black text-slate-900">قائمة الاتفاقيات</h2>
+                <p class="text-xs text-slate-500 mt-0.5">بحث بالطالب، تصفية بالحالة ونوع الكورس.</p>
             </div>
             <form method="GET" class="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center">
                 <input type="search" name="search" value="{{ request('search') }}" placeholder="اسم الطالب، البريد، الجوال…"
@@ -127,6 +60,7 @@
             </form>
         </div>
 
+        <div class="p-4 space-y-6">
         @if($agreements->count())
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 @foreach($agreements as $agreement)
@@ -210,6 +144,7 @@
                 <p class="text-sm text-slate-500 mt-2">جرّب تغيير البحث أو أضف اتفاقية جديدة.</p>
             </div>
         @endif
-    </div>
+        </div>
+    </section>
 </div>
 @endsection

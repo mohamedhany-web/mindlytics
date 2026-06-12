@@ -1,4 +1,4 @@
-<div class="flex flex-col h-full bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl border-l border-slate-700/50" style="margin: 0 !important; padding: 0 !important; margin-top: 0 !important; padding-top: 0 !important; position: relative !important; isolation: isolate !important; contain: layout style paint !important;">
+<div class="admin-sidebar-root flex flex-col h-full bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl border-l border-slate-700/50" style="margin: 0 !important; padding: 0 !important; margin-top: 0 !important; padding-top: 0 !important; position: relative !important;">
     <!-- شعار المنصة -->
     <div class="p-6 border-b-2 border-slate-700/50 bg-slate-900/90 flex-shrink-0" style="margin-top: 0 !important; padding-top: 1.5rem !important;">
         <div class="flex items-center gap-4">
@@ -18,22 +18,7 @@
     </div>
 
     <!-- القائمة الرئيسية -->
-    <nav class="flex-1 p-4 overflow-y-auto sidebar bg-transparent" style="flex: 1 1 auto !important; min-height: 0 !important; overflow-y: auto !important; scrollbar-width: thin; scrollbar-color: rgba(59, 130, 246, 0.5) transparent;">
-        <style>
-            .sidebar::-webkit-scrollbar {
-                width: 6px;
-            }
-            .sidebar::-webkit-scrollbar-track {
-                background: rgba(15, 23, 42, 0.5);
-            }
-            .sidebar::-webkit-scrollbar-thumb {
-                background: linear-gradient(180deg, #3b82f6, #2563eb);
-                border-radius: 10px;
-            }
-            .sidebar::-webkit-scrollbar-thumb:hover {
-                background: linear-gradient(180deg, #2563eb, #1d4ed8);
-            }
-        </style>
+    <nav class="admin-sidebar-nav sidebar flex-1 p-4 overflow-y-auto bg-transparent" style="flex: 1 1 auto !important; min-height: 0 !important;">
         <ul class="space-y-2">
             <!-- لوحة التحكم -->
             @php
@@ -42,14 +27,13 @@
             <li>
                 <a href="{{ route('admin.dashboard') }}" 
                    @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                   class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 relative overflow-hidden group
-                          {{ $dashboardActive ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-xl shadow-blue-600/40' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}">
-                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-blue-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <i class="fas fa-chart-line w-5 relative z-10 {{ $dashboardActive ? 'text-white' : 'text-slate-400 group-hover:text-white' }}"></i>
+                   class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 relative group
+                          {{ $dashboardActive ? 'admin-nav-dashboard-active' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white overflow-hidden' }}">
+                    @unless($dashboardActive)
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-blue-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    @endunless
+                    <i class="fas fa-chart-line w-5 {{ $dashboardActive ? 'bridge-icon' : 'relative z-10 text-slate-400 group-hover:text-white' }}"></i>
                     <span class="relative z-10 font-semibold">{{ __('admin.dashboard') }}</span>
-                    @if($dashboardActive)
-                        <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-blue-400 to-blue-500 rounded-r shadow-lg"></div>
-                    @endif
                 </a>
             </li>
 
@@ -57,7 +41,7 @@
                 $branchesMenuOpen = request()->routeIs('admin.branches.*') || request()->routeIs('admin.branch-managers.*');
             @endphp
             <li x-data="{ open: {{ $branchesMenuOpen ? 'true' : 'false' }} }">
-                <button type="button" @click="open = !open"
+                <button type="button" @click="open = !open" :aria-expanded="open"
                         class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-code-branch w-5 text-amber-400 group-hover:text-white"></i>
@@ -65,7 +49,7 @@
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400 shrink-0" :class="open ? 'rotate-180' : ''"></i>
                 </button>
-                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-amber-700/40 pr-2">
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     <li>
                         <a href="{{ route('admin.branches.index') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -105,7 +89,7 @@
                 $mobileAppMenuOpen = request()->routeIs('admin.mobile-app.*') || request()->routeIs('admin.practice.*');
             @endphp
             <li x-data="{ open: {{ $mobileAppMenuOpen ? 'true' : 'false' }} }">
-                <button type="button" @click="open = !open"
+                <button type="button" @click="open = !open" :aria-expanded="open"
                         class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-mobile-alt w-5 text-violet-400 group-hover:text-white"></i>
@@ -113,7 +97,7 @@
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400 shrink-0" :class="open ? 'rotate-180' : ''"></i>
                 </button>
-                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-violet-700/40 pr-2">
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     <li>
                         <a href="{{ route('admin.mobile-app.edit') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -195,7 +179,7 @@
                 $salesMenuOpen = request()->routeIs('admin.sales.*');
             @endphp
             <li x-data="{ open: {{ $salesMenuOpen ? 'true' : 'false' }} }">
-                <button type="button" @click="open = !open"
+                <button type="button" @click="open = !open" :aria-expanded="open"
                         class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-handshake w-5 text-emerald-400 group-hover:text-white"></i>
@@ -203,7 +187,7 @@
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
-                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-emerald-700/40 pr-2">
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     <li>
                         <a href="{{ route('admin.sales.reports.index') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -211,6 +195,8 @@
                             <i class="fas fa-chart-line w-4"></i>
                             <span>تقارير المبيعات</span>
                         </a>
+                    </li>
+                    <li>
                         <a href="{{ route('admin.sales.daily-reports.index') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.daily-reports.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
@@ -282,7 +268,7 @@
                 $systemManagementOpen = request()->routeIs('admin.system-settings.*') || request()->routeIs('admin.users.*') || request()->routeIs('admin.orders.*') || request()->routeIs('admin.notifications.*') || request()->routeIs('admin.employee-notifications.*') || request()->routeIs('admin.activity-log*') || request()->routeIs('admin.two-factor-logs.*') || request()->routeIs('admin.statistics.*') || request()->routeIs('admin.performance.*');
             @endphp
             <li x-data="{ open: {{ $systemManagementOpen ? 'true' : 'false' }} }">
-                <button @click="open = !open" 
+                <button type="button" @click="open = !open" :aria-expanded="open" 
                         class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-cogs w-5 text-slate-400 group-hover:text-white"></i>
@@ -290,7 +276,7 @@
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
-                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-slate-600/50 pr-2">
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     <li>
                         <a href="{{ route('admin.system-settings.index') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -377,7 +363,7 @@
                 $workshopsOpen = request()->routeIs('admin.workshops.*');
             @endphp
             <li x-data="{ open: {{ $workshopsOpen ? 'true' : 'false' }} }">
-                <button @click="open = !open"
+                <button type="button" @click="open = !open" :aria-expanded="open"
                         class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-people-arrows w-5 text-blue-400 group-hover:text-white"></i>
@@ -385,7 +371,7 @@
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
-                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-slate-600/50 pr-2">
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     <li>
                         <a href="{{ route('admin.workshops.index') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -402,7 +388,7 @@
                 $contentOpen = request()->routeIs('admin.video-providers.*');
             @endphp
             <li x-data="{ open: {{ $contentOpen ? 'true' : 'false' }} }">
-                <button @click="open = !open" 
+                <button type="button" @click="open = !open" :aria-expanded="open" 
                         class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-photo-video w-5 text-blue-400 group-hover:text-white"></i>
@@ -410,7 +396,7 @@
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
-                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-slate-600/50 pr-2">
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     <li>
                         <a href="{{ route('admin.video-providers.index') }}" 
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -427,7 +413,7 @@
                 $agreementsOpen = request()->routeIs('admin.agreements.*') || request()->routeIs('admin.withdrawals.*') || request()->routeIs('admin.employee-agreements.*');
             @endphp
             <li x-data="{ open: {{ $agreementsOpen ? 'true' : 'false' }} }">
-                <button @click="open = !open" 
+                <button type="button" @click="open = !open" :aria-expanded="open" 
                         class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-handshake w-5 text-blue-400 group-hover:text-white"></i>
@@ -435,7 +421,7 @@
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
-                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-slate-600/50 pr-2">
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     @if(Route::has('admin.agreements.index'))
                     <li>
                         <a href="{{ route('admin.agreements.index') }}" 
@@ -484,7 +470,7 @@
                 $accountingOpen = request()->routeIs('admin.invoices.*') || request()->routeIs('admin.payments.*') || request()->routeIs('admin.transactions.*') || request()->routeIs('admin.wallets.*') || request()->routeIs('admin.expenses.*') || request()->routeIs('admin.subscriptions.*') || request()->routeIs('admin.installments.*') || request()->routeIs('admin.accounting.*') || request()->routeIs('admin.salaries.*') || request()->routeIs('admin.employee-agreements.*') || request()->routeIs('admin.accounting.hub') || request()->routeIs('admin.accounting.chart') || request()->routeIs('admin.accounting.gateway-operations');
             @endphp
             <li x-data="{ open: {{ $accountingOpen ? 'true' : 'false' }} }">
-                <button @click="open = !open" 
+                <button type="button" @click="open = !open" :aria-expanded="open" 
                         class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-money-bill-wave w-5 text-slate-400 group-hover:text-white"></i>
@@ -492,7 +478,7 @@
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
-                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-slate-600/50 pr-2">
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     <li>
                         <a href="{{ route('admin.accounting.hub') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -613,7 +599,7 @@
                         $installmentsOpen = request()->routeIs('admin.installments.*');
                     @endphp
                     <li x-data="{ open: {{ $installmentsOpen ? 'true' : 'false' }} }">
-                        <button @click="open = !open"
+                        <button type="button" @click="open = !open" :aria-expanded="open"
                                 class="flex items-center justify-between w-full px-4 py-2.5 rounded-lg transition-all duration-300 text-slate-400 hover:bg-slate-700/50 hover:text-white">
                             <span class="flex items-center gap-2">
                                 <i class="fas fa-calendar-check w-4 text-slate-400"></i>
@@ -621,7 +607,7 @@
                             </span>
                             <i class="fas fa-chevron-down text-xs transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                         </button>
-                        <ul x-show="open" x-transition class="mt-2 mr-3 space-y-1 border-r border-slate-600/50 pr-2">
+                        <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                             <li>
                                 <a href="{{ route('admin.installments.plans.index') }}"
                                    @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -656,7 +642,7 @@
                 $marketingOpen = request()->routeIs('admin.coupons.*') || request()->routeIs('admin.referral-programs.*') || request()->routeIs('admin.referrals.*') || request()->routeIs('admin.loyalty.*') || request()->routeIs('admin.personal-branding.*') || request()->routeIs('admin.popup-ads.*');
             @endphp
             <li x-data="{ open: {{ $marketingOpen ? 'true' : 'false' }} }">
-                <button @click="open = !open" 
+                <button type="button" @click="open = !open" :aria-expanded="open" 
                         class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-tags w-5 text-slate-400 group-hover:text-white"></i>
@@ -664,7 +650,7 @@
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
-                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-slate-600/50 pr-2">
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     <li>
                         <a href="{{ route('admin.popup-ads.index') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -721,7 +707,7 @@
                 $enrollmentsOpen = request()->routeIs('admin.online-enrollments.*') || request()->routeIs('admin.learning-path-enrollments.*');
             @endphp
             <li x-data="{ open: {{ $enrollmentsOpen ? 'true' : 'false' }} }">
-                <button @click="open = !open" 
+                <button type="button" @click="open = !open" :aria-expanded="open" 
                         class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-user-graduate w-5 text-emerald-400 group-hover:text-white"></i>
@@ -729,7 +715,7 @@
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
-                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-slate-600/50 pr-2">
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     <li>
                         <a href="{{ route('admin.online-enrollments.index') }}" 
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -764,7 +750,7 @@
                 $contentManagementOpen = request()->routeIs('admin.academic-years.*') || request()->routeIs('admin.learning-paths.*') || request()->routeIs('admin.academic-subjects.*') || request()->routeIs('admin.advanced-courses.*') || request()->routeIs('admin.exams.*') || request()->routeIs('admin.practice.*') || request()->routeIs('admin.question-bank.*') || request()->routeIs('admin.question-categories.*') || request()->routeIs('admin.lectures.*') || request()->routeIs('admin.groups.*') || request()->routeIs('admin.assignments.*');
             @endphp
             <li x-data="{ open: {{ $contentManagementOpen ? 'true' : 'false' }} }">
-                <button @click="open = !open" 
+                <button type="button" @click="open = !open" :aria-expanded="open" 
                         class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-folder w-5 text-slate-400 group-hover:text-white"></i>
@@ -772,7 +758,7 @@
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
-                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-slate-600/50 pr-2">
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     <li class="pt-2 pb-1">
                         <div class="flex items-center gap-2 text-xs font-bold text-slate-400 px-4 py-1 uppercase tracking-wider">
                             <i class="fas fa-route"></i>
@@ -881,7 +867,7 @@
                 $communityOpen = request()->routeIs('admin.community.*');
             @endphp
             <li x-data="{ open: {{ $communityOpen ? 'true' : 'false' }} }">
-                <button @click="open = !open" 
+                <button type="button" @click="open = !open" :aria-expanded="open" 
                         class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-users-cog w-5 text-cyan-400 group-hover:text-white"></i>
@@ -889,7 +875,7 @@
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
-                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-slate-600/50 pr-2">
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     <li class="pt-1">
                         <p class="px-4 py-1 text-xs font-bold text-cyan-400/90 uppercase tracking-wide">مراقبة عامة</p>
                     </li>
@@ -982,7 +968,7 @@
                 $onlineManagementOpen = request()->routeIs('admin.online-management.*') || request()->routeIs('admin.online-course-bookings.*');
             @endphp
             <li x-data="{ open: {{ $onlineManagementOpen ? 'true' : 'false' }} }">
-                <button @click="open = !open"
+                <button type="button" @click="open = !open" :aria-expanded="open"
                         class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-laptop-house w-5 text-indigo-400 group-hover:text-white"></i>
@@ -990,7 +976,7 @@
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
-                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-slate-600/50 pr-2">
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     <li>
                         <a href="{{ route('admin.online-management.index') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -1041,7 +1027,7 @@
                 $offlineCoursesOpen = request()->routeIs('admin.offline-courses.*') || request()->routeIs('admin.offline-groups.*') || request()->routeIs('admin.offline-enrollments.*') || request()->routeIs('admin.offline-course-bookings.*') || request()->routeIs('admin.offline-activities.*') || request()->routeIs('admin.offline-agreements.*') || request()->routeIs('admin.offline-locations.*');
             @endphp
             <li x-data="{ open: {{ $offlineCoursesOpen ? 'true' : 'false' }} }">
-                <button @click="open = !open" 
+                <button type="button" @click="open = !open" :aria-expanded="open" 
                         class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-chalkboard-teacher w-5 text-purple-400 group-hover:text-white"></i>
@@ -1049,7 +1035,7 @@
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
-                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-slate-600/50 pr-2">
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     <li>
                         <a href="{{ route('admin.offline-locations.index') }}" 
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -1118,7 +1104,7 @@
                 $employeesOpen = request()->routeIs('admin.employees.*') || request()->routeIs('admin.employee-jobs.*') || request()->routeIs('admin.employee-tasks.*') || request()->routeIs('admin.design-task-cycles.*') || request()->routeIs('admin.moderator-marketing-plans.*') || request()->routeIs('admin.employee-deductions.*') || request()->routeIs('admin.leaves.*') || request()->routeIs('admin.tasks.*') || request()->routeIs('admin.instructor-requests.*');
             @endphp
             <li x-data="{ open: {{ $employeesOpen ? 'true' : 'false' }} }">
-                <button @click="open = !open" 
+                <button type="button" @click="open = !open" :aria-expanded="open" 
                         class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-users-cog w-5 text-emerald-400 group-hover:text-white"></i>
@@ -1126,7 +1112,7 @@
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
-                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-slate-600/50 pr-2">
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     <li>
                         <a href="{{ route('admin.employees.index') }}" 
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -1255,7 +1241,7 @@
                 $qualityControlOpen = request()->routeIs('admin.quality-control.*');
             @endphp
             <li x-data="{ open: {{ $qualityControlOpen ? 'true' : 'false' }} }">
-                <button @click="open = !open" 
+                <button type="button" @click="open = !open" :aria-expanded="open" 
                         class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-shield-alt w-5 text-red-400 group-hover:text-white"></i>
@@ -1263,7 +1249,7 @@
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
-                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-slate-600/50 pr-2">
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     <li>
                         <a href="{{ route('admin.quality-control.index') }}" 
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -1312,7 +1298,7 @@
                 $certificatesManagementOpen = request()->routeIs('admin.certificates.*');
             @endphp
             <li x-data="{ open: {{ $certificatesManagementOpen ? 'true' : 'false' }} }">
-                <button @click="open = !open" 
+                <button type="button" @click="open = !open" :aria-expanded="open" 
                         class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-certificate w-5 text-slate-400 group-hover:text-white"></i>
@@ -1320,7 +1306,7 @@
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
-                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-slate-600/50 pr-2">
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     <li>
                         <a href="{{ route('admin.certificates.index') }}" 
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -1367,7 +1353,7 @@
                 $achievementsOpen = request()->routeIs('admin.achievements.*') || request()->routeIs('admin.badges.*') || request()->routeIs('admin.reviews.*') || request()->routeIs('admin.learning-path-reviews.*');
             @endphp
             <li x-data="{ open: {{ $achievementsOpen ? 'true' : 'false' }} }">
-                <button @click="open = !open" 
+                <button type="button" @click="open = !open" :aria-expanded="open" 
                         class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-trophy w-5 text-slate-400 group-hover:text-white"></i>
@@ -1375,7 +1361,7 @@
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
-                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-slate-600/50 pr-2">
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     <li>
                         <a href="{{ route('admin.achievements.index') }}" 
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -1416,7 +1402,7 @@
                 $permissionsOpen = request()->routeIs('admin.roles.*') || request()->routeIs('admin.permissions.*') || request()->routeIs('admin.user-permissions.*');
             @endphp
             <li x-data="{ open: {{ $permissionsOpen ? 'true' : 'false' }} }">
-                <button @click="open = !open" 
+                <button type="button" @click="open = !open" :aria-expanded="open" 
                         class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-shield-alt w-5 text-slate-400 group-hover:text-white"></i>
@@ -1424,7 +1410,7 @@
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
-                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-slate-600/50 pr-2">
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     <li>
                         <a href="{{ route('admin.roles.index') }}" 
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -1457,7 +1443,7 @@
                 $blogOpen = request()->routeIs('admin.blog.*') || request()->routeIs('admin.contact-messages.*') || request()->routeIs('admin.packages.*');
             @endphp
             <li x-data="{ open: {{ $blogOpen ? 'true' : 'false' }} }">
-                <button @click="open = !open" 
+                <button type="button" @click="open = !open" :aria-expanded="open" 
                         class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-globe w-5 text-slate-400 group-hover:text-white"></i>
@@ -1465,7 +1451,7 @@
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
-                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-slate-600/50 pr-2">
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     <li>
                         <a href="{{ route('admin.blog.index') }}" 
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -1512,7 +1498,7 @@
                 $topManagementOpen = request()->routeIs('admin.about.*');
             @endphp
             <li x-data="{ open: {{ $topManagementOpen ? 'true' : 'false' }} }">
-                <button @click="open = !open" 
+                <button type="button" @click="open = !open" :aria-expanded="open" 
                         class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-building w-5 text-amber-400 group-hover:text-white"></i>
@@ -1520,7 +1506,7 @@
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
-                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-slate-600/50 pr-2">
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     <li>
                         <a href="{{ route('admin.about.index') }}" 
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -1571,7 +1557,7 @@
                 $reportsOpen = request()->routeIs('admin.reports.*');
             @endphp
             <li x-data="{ open: {{ $reportsOpen ? 'true' : 'false' }} }">
-                <button @click="open = !open" 
+                <button type="button" @click="open = !open" :aria-expanded="open" 
                         class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-file-excel w-5 text-emerald-400 group-hover:text-white"></i>
@@ -1579,7 +1565,7 @@
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
-                <ul x-show="open" x-transition class="mt-2 mr-4 space-y-1 border-r-2 border-slate-600/50 pr-2">
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     <li>
                         <a href="{{ route('admin.reports.index') }}" 
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"

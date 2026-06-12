@@ -4,138 +4,267 @@
 @section('header', 'المبيعات — العملاء المحتملون')
 
 @section('content')
-<div class="p-4 md:p-6 space-y-6" style="background:#f8fafc;min-height:100vh;">
+@php
+    $statCards = [
+        ['label' => 'إجمالي النتائج', 'value' => number_format($stats['total'] ?? 0), 'icon' => 'fas fa-users', 'bg' => 'bg-sky-100', 'text' => 'text-sky-600', 'description' => 'حسب الفلتر الحالي'],
+        ['label' => 'قيد المتابعة', 'value' => number_format($stats['open'] ?? 0), 'icon' => 'fas fa-briefcase', 'bg' => 'bg-violet-100', 'text' => 'text-violet-600', 'description' => 'Leads مفتوحة'],
+        ['label' => 'متابعات متأخرة', 'value' => number_format($stats['overdue_followups'] ?? 0), 'icon' => 'fas fa-clock', 'bg' => 'bg-rose-100', 'text' => 'text-rose-600', 'description' => 'تحتاج إجراء'],
+        ['label' => 'صفقات فوز', 'value' => number_format($stats['won'] ?? 0), 'icon' => 'fas fa-trophy', 'bg' => 'bg-emerald-100', 'text' => 'text-emerald-600', 'description' => 'مرحلة Won'],
+    ];
+
+    $priorityBadges = [
+        'urgent' => ['label' => null, 'classes' => 'bg-rose-100 text-rose-700 border border-rose-200'],
+        'high' => ['label' => null, 'classes' => 'bg-orange-100 text-orange-700 border border-orange-200'],
+        'low' => ['label' => null, 'classes' => 'bg-slate-100 text-slate-700 border border-slate-200'],
+        'normal' => ['label' => null, 'classes' => 'bg-slate-100 text-slate-700 border border-slate-200'],
+    ];
+
+    $hasFilters = request()->hasAny(['assigned_to', 'stage', 'priority', 'follow_up', 'sort', 'stale', 'search']);
+@endphp
+
+<div class="space-y-6">
     @if(session('success'))
-        <div class="bg-green-100 border border-green-400 text-green-800 px-4 py-3 rounded-lg">{{ session('success') }}</div>
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm font-semibold">
+            <i class="fas fa-check-circle ml-1"></i>{{ session('success') }}
+        </div>
     @endif
 
-    <div class="flex flex-wrap items-center justify-between gap-4">
-        <div class="flex flex-wrap items-center gap-3">
-            <a href="{{ route('admin.sales.audit-log.index') }}" class="text-sm text-emerald-700 font-medium hover:underline">سجل أنشطة المبيعات</a>
-            <span class="text-gray-300">|</span>
-            <a href="{{ route('admin.sales.transfer.index') }}" class="text-sm text-slate-700 font-bold hover:underline">تحويل بيانات موظف</a>
+    {{-- الهيدر + إحصائيات --}}
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+        <div class="px-4 py-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white shadow-md">
+                    <i class="fas fa-user-tag"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-black text-slate-900">العملاء المحتملون</h2>
+                    <p class="text-xs text-slate-600">إدارة Leads، المتابعات، الأولويات، وإسناد موظفي المبيعات.</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('admin.sales.audit-log.index') }}" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 rounded-xl border border-slate-300 hover:bg-slate-50">
+                    <i class="fas fa-history text-slate-500"></i>
+                    سجل الأنشطة
+                </a>
+                <a href="{{ route('admin.sales.transfer.index') }}" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 rounded-xl border border-slate-300 hover:bg-slate-50">
+                    <i class="fas fa-exchange-alt text-violet-600"></i>
+                    تحويل بيانات
+                </a>
+                <a href="{{ route('admin.sales.leads.export', request()->query()) }}" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl bg-sky-600 hover:bg-sky-700">
+                    <i class="fas fa-file-excel"></i>
+                    Excel
+                </a>
+                <a href="{{ route('admin.sales.leads.create') }}" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl bg-emerald-600 hover:bg-emerald-700">
+                    <i class="fas fa-plus"></i>
+                    عميل جديد
+                </a>
+            </div>
         </div>
-        <div class="flex flex-wrap gap-2">
-            <a href="{{ route('admin.sales.leads.export', request()->query()) }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-l from-emerald-600 to-teal-600 text-white rounded-xl text-sm font-bold shadow-lg hover:from-emerald-700 hover:to-teal-700 border border-emerald-400/40">
-                <i class="fas fa-file-excel"></i> تصدير Excel
-            </a>
-            <a href="{{ route('admin.sales.leads.create') }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-lg">
-                <i class="fas fa-plus"></i> عميل جديد
-            </a>
-        </div>
-    </div>
 
-    <form method="get" class="flex flex-wrap gap-3 items-end bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-        <div>
-            <label class="block text-xs text-gray-500 mb-1">موظف المبيعات</label>
-            <select name="assigned_to" class="border rounded-lg px-3 py-2 text-sm min-w-[160px]">
-                <option value="">الكل</option>
-                @foreach($salesReps as $rep)
-                    <option value="{{ $rep->id }}" @selected(request('assigned_to') == $rep->id)>{{ $rep->name }}</option>
-                @endforeach
-            </select>
+        <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 p-4">
+            @foreach ($statCards as $card)
+                <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <div class="min-w-0">
+                            <p class="text-xs font-semibold text-slate-600 truncate">{{ $card['label'] }}</p>
+                            <p class="text-xl font-black text-slate-900 truncate tabular-nums">{{ $card['value'] }}</p>
+                        </div>
+                        <div class="w-10 h-10 rounded-lg {{ $card['bg'] }} flex items-center justify-center {{ $card['text'] }} flex-shrink-0">
+                            <i class="{{ $card['icon'] }} text-sm"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1 truncate">{{ $card['description'] }}</p>
+                </div>
+            @endforeach
         </div>
-        <div>
-            <label class="block text-xs text-gray-500 mb-1">المرحلة</label>
-            <select name="stage" class="border rounded-lg px-3 py-2 text-sm">
-                <option value="">الكل</option>
-                @foreach(\App\Models\SalesLead::STAGES as $k => $label)
-                    <option value="{{ $k }}" @selected(request('stage') === $k)>{{ $label }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div>
-            <label class="block text-xs text-gray-500 mb-1">الأولوية</label>
-            <select name="priority" class="border rounded-lg px-3 py-2 text-sm">
-                <option value="">الكل</option>
-                @foreach(\App\Models\SalesLead::PRIORITIES as $k => $label)
-                    <option value="{{ $k }}" @selected(request('priority') === $k)>{{ $label }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div>
-            <label class="block text-xs text-gray-500 mb-1">المتابعة</label>
-            <select name="follow_up" class="border rounded-lg px-3 py-2 text-sm min-w-[130px]">
-                <option value="">الكل</option>
-                <option value="overdue" @selected(request('follow_up') === 'overdue')>متأخرة</option>
-                <option value="today" @selected(request('follow_up') === 'today')>اليوم</option>
-                <option value="week" @selected(request('follow_up') === 'week')>خلال أسبوع</option>
-                <option value="none" @selected(request('follow_up') === 'none')>بدون موعد</option>
-            </select>
-        </div>
-        <div>
-            <label class="block text-xs text-gray-500 mb-1">ترتيب</label>
-            <select name="sort" class="border rounded-lg px-3 py-2 text-sm min-w-[150px]">
-                <option value="" @selected(!request('sort'))>آخر تحديث</option>
-                <option value="priority" @selected(request('sort') === 'priority')>الأولوية</option>
-                <option value="follow_up" @selected(request('sort') === 'follow_up')>متابعة</option>
-                <option value="last_contact" @selected(request('sort') === 'last_contact')>آخر تواصل</option>
-                <option value="value" @selected(request('sort') === 'value')>قيمة متوقعة</option>
-            </select>
-        </div>
-        <div class="flex items-center gap-2 pb-2">
-            <input type="checkbox" name="stale" value="1" id="stale_ad" class="rounded border-gray-300" @checked(request()->boolean('stale'))>
-            <label for="stale_ad" class="text-sm text-gray-700">بلا تواصل {{ \App\Models\SalesLead::STALE_CONTACT_DAYS }}+ يوم</label>
-        </div>
-        <div class="flex-1 min-w-[200px]">
-            <label class="block text-xs text-gray-500 mb-1">بحث</label>
-            <input type="search" name="search" value="{{ request('search') }}" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="اسم، هاتف، بريد...">
-        </div>
-        <button type="submit" class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-medium">تصفية</button>
-        @if(request()->hasAny(['assigned_to','stage','priority','follow_up','sort','stale','search']))
-            <a href="{{ route('admin.sales.leads.index') }}" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700">إعادة ضبط</a>
+
+        @if($hasFilters)
+            <div class="px-4 pb-4">
+                <p class="text-xs text-slate-600 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                    <i class="fas fa-filter text-amber-600 ml-1"></i>
+                    فلتر نشط — يعرض <strong>{{ number_format($leads->total()) }}</strong> نتيجة مطابقة.
+                </p>
+            </div>
         @endif
-    </form>
+    </section>
 
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
-        <table class="w-full min-w-[960px] text-sm">
-            <thead class="bg-gray-50 border-b border-gray-200">
-                <tr>
-                    <th class="text-right py-3 px-4 font-semibold text-gray-700">الاسم</th>
-                    <th class="text-right py-3 px-4 font-semibold text-gray-700">مسند إلى</th>
-                    <th class="text-right py-3 px-4 font-semibold text-gray-700">المرحلة</th>
-                    <th class="text-right py-3 px-4 font-semibold text-gray-700">أولوية</th>
-                    <th class="text-right py-3 px-4 font-semibold text-gray-700">متابعة</th>
-                    <th class="text-right py-3 px-4 font-semibold text-gray-700">آخر تواصل</th>
-                    <th class="text-right py-3 px-4 font-semibold text-gray-700">أنشئ</th>
-                    <th class="text-right py-3 px-4 font-semibold text-gray-700"></th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-                @forelse($leads as $lead)
-                @php
-                    $row = 'hover:bg-gray-50/80';
-                    if ($lead->isOpen() && $lead->isFollowUpOverdue()) {
-                        $row .= ' bg-rose-50/50';
-                    } elseif ($lead->isOpen() && $lead->isStaleContact()) {
-                        $row .= ' bg-amber-50/40';
-                    }
-                    $pr = $lead->priority ?? 'normal';
-                @endphp
-                <tr class="{{ $row }}">
-                    <td class="py-3 px-4 font-medium text-gray-900">{{ $lead->name }}</td>
-                    <td class="py-3 px-4 text-gray-700">{{ $lead->assignee->name ?? '—' }}</td>
-                    <td class="py-3 px-4"><span class="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 text-xs font-semibold">{{ \App\Models\SalesLead::stageLabel($lead->stage) }}</span></td>
-                    <td class="py-3 px-4">
-                        <span class="px-2 py-0.5 rounded-lg text-xs font-semibold
-                            @if($pr === 'urgent') bg-rose-100 text-rose-800
-                            @elseif($pr === 'high') bg-orange-100 text-orange-800
-                            @elseif($pr === 'low') bg-slate-100 text-slate-700
-                            @else bg-gray-100 text-gray-800 @endif">{{ \App\Models\SalesLead::priorityLabel($pr) }}</span>
-                    </td>
-                    <td class="py-3 px-4 text-xs @if($lead->isFollowUpOverdue()) text-rose-600 font-semibold @else text-gray-600 @endif">{{ $lead->next_follow_up_at?->format('Y-m-d H:i') ?? '—' }}</td>
-                    <td class="py-3 px-4 text-gray-600 text-xs">{{ $lead->last_contacted_at?->format('Y-m-d H:i') ?? '—' }}</td>
-                    <td class="py-3 px-4 text-gray-500 text-xs">{{ $lead->created_at->format('Y-m-d') }}</td>
-                    <td class="py-3 px-4">
-                        <a href="{{ route('admin.sales.leads.show', $lead) }}" class="text-emerald-600 font-semibold hover:underline">عرض</a>
-                    </td>
-                </tr>
-                @empty
-                <tr><td colspan="8" class="py-12 text-center text-gray-500">لا توجد سجلات</td></tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-    <div class="px-2">{{ $leads->links() }}</div>
+    {{-- الفلاتر --}}
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+            <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                <i class="fas fa-filter text-emerald-600"></i>
+                البحث والفلترة
+            </h3>
+            <p class="text-xs text-slate-600">تصفية حسب الموظف، المرحلة، الأولوية، المتابعة، أو البحث النصي.</p>
+        </div>
+        <div class="p-4">
+            <form method="get" action="{{ route('admin.sales.leads.index') }}" class="flex flex-col gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">موظف المبيعات</label>
+                        <select name="assigned_to" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                            <option value="">الكل</option>
+                            @foreach($salesReps as $rep)
+                                <option value="{{ $rep->id }}" @selected(request('assigned_to') == $rep->id)>{{ $rep->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">المرحلة</label>
+                        <select name="stage" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                            <option value="">الكل</option>
+                            @foreach(\App\Models\SalesLead::STAGES as $k => $label)
+                                <option value="{{ $k }}" @selected(request('stage') === $k)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">الأولوية</label>
+                        <select name="priority" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                            <option value="">الكل</option>
+                            @foreach(\App\Models\SalesLead::PRIORITIES as $k => $label)
+                                <option value="{{ $k }}" @selected(request('priority') === $k)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">المتابعة</label>
+                        <select name="follow_up" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                            <option value="">الكل</option>
+                            <option value="overdue" @selected(request('follow_up') === 'overdue')>متأخرة</option>
+                            <option value="today" @selected(request('follow_up') === 'today')>اليوم</option>
+                            <option value="week" @selected(request('follow_up') === 'week')>خلال أسبوع</option>
+                            <option value="none" @selected(request('follow_up') === 'none')>بدون موعد</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">ترتيب</label>
+                        <select name="sort" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                            <option value="" @selected(!request('sort'))>آخر تحديث</option>
+                            <option value="priority" @selected(request('sort') === 'priority')>الأولوية</option>
+                            <option value="follow_up" @selected(request('sort') === 'follow_up')>متابعة</option>
+                            <option value="last_contact" @selected(request('sort') === 'last_contact')>آخر تواصل</option>
+                            <option value="value" @selected(request('sort') === 'value')>قيمة متوقعة</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">بحث</label>
+                        <input type="search" name="search" value="{{ request('search') }}"
+                               class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                               placeholder="اسم، هاتف، بريد...">
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-slate-100">
+                    <label class="inline-flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                        <input type="checkbox" name="stale" value="1" id="stale_ad" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" @checked(request()->boolean('stale'))>
+                        <span>بلا تواصل {{ \App\Models\SalesLead::STALE_CONTACT_DAYS }}+ يوم</span>
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-sm font-semibold text-white">
+                            <i class="fas fa-search"></i>
+                            تطبيق
+                        </button>
+                        @if($hasFilters)
+                            <a href="{{ route('admin.sales.leads.index') }}" class="inline-flex items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" title="مسح الفلتر">
+                                <i class="fas fa-times"></i>
+                            </a>
+                        @endif
+                    </div>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    {{-- قائمة Leads --}}
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+                <h3 class="text-base font-black text-slate-900">قائمة العملاء</h3>
+                <p class="text-xs text-slate-600">الصفوف المميزة: متابعة متأخرة (وردي) · بلا تواصل (كهرماني).</p>
+            </div>
+            <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">{{ number_format($leads->total()) }} عميل</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[960px] text-sm">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-700 border-b border-slate-200">
+                        <th class="px-4 py-3 text-right font-semibold">الاسم</th>
+                        <th class="px-4 py-3 text-right font-semibold">مسند إلى</th>
+                        <th class="px-4 py-3 text-right font-semibold">المرحلة</th>
+                        <th class="px-4 py-3 text-right font-semibold">أولوية</th>
+                        <th class="px-4 py-3 text-right font-semibold">متابعة</th>
+                        <th class="px-4 py-3 text-right font-semibold">آخر تواصل</th>
+                        <th class="px-4 py-3 text-right font-semibold">أنشئ</th>
+                        <th class="px-4 py-3 text-center font-semibold w-16"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    @forelse($leads as $lead)
+                        @php
+                            $rowClass = 'hover:bg-slate-50';
+                            if ($lead->isOpen() && $lead->isFollowUpOverdue()) {
+                                $rowClass .= ' bg-rose-50/60';
+                            } elseif ($lead->isOpen() && $lead->isStaleContact()) {
+                                $rowClass .= ' bg-amber-50/50';
+                            }
+                            $pr = $lead->priority ?? 'normal';
+                            $priorityMeta = $priorityBadges[$pr] ?? $priorityBadges['normal'];
+                        @endphp
+                        <tr class="{{ $rowClass }}">
+                            <td class="px-4 py-3">
+                                <p class="font-semibold text-slate-900">{{ $lead->name }}</p>
+                                @if($lead->phone || $lead->email)
+                                    <p class="text-xs text-slate-500 mt-0.5">{{ $lead->phone ?: $lead->email }}</p>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-slate-700">{{ $lead->assignee->name ?? '—' }}</td>
+                            <td class="px-4 py-3">
+                                <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                    {{ \App\Models\SalesLead::stageLabel($lead->stage) }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold {{ $priorityMeta['classes'] }}">
+                                    {{ \App\Models\SalesLead::priorityLabel($pr) }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-xs tabular-nums @if($lead->isFollowUpOverdue()) text-rose-700 font-semibold @else text-slate-600 @endif">
+                                {{ $lead->next_follow_up_at?->format('Y-m-d H:i') ?? '—' }}
+                            </td>
+                            <td class="px-4 py-3 text-xs text-slate-600 tabular-nums">{{ $lead->last_contacted_at?->format('Y-m-d H:i') ?? '—' }}</td>
+                            <td class="px-4 py-3 text-xs text-slate-500 tabular-nums">{{ $lead->created_at->format('Y-m-d') }}</td>
+                            <td class="px-4 py-3 text-center">
+                                <a href="{{ route('admin.sales.leads.show', $lead) }}"
+                                   class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-emerald-600 hover:bg-emerald-50 text-sm"
+                                   title="عرض التفاصيل">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="8" class="px-4 py-12 text-center">
+                                <div class="w-14 h-14 mx-auto mb-3 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
+                                    <i class="fas fa-user-tag text-xl"></i>
+                                </div>
+                                <p class="text-sm font-semibold text-slate-900">لا توجد سجلات</p>
+                                <p class="text-xs text-slate-500 mt-1">لا يوجد عملاء محتملون أو لا توجد نتائج للفلتر.</p>
+                                <a href="{{ route('admin.sales.leads.create') }}" class="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-sm font-semibold text-white">
+                                    <i class="fas fa-plus"></i>
+                                    إضافة عميل
+                                </a>
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        @if($leads->hasPages())
+            <div class="border-t border-slate-200 px-4 py-3">
+                {{ $leads->links() }}
+            </div>
+        @endif
+    </section>
 </div>
 @endsection

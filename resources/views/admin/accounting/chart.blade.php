@@ -7,87 +7,192 @@
 @php
     $roots = $chart['roots'] ?? [];
     $currency = $chart['currency'] ?? 'EGP';
+    $stats = $stats ?? ['total' => 0, 'linked' => 0, 'asset' => 0, 'liability' => 0, 'equity' => 0, 'revenue' => 0, 'expense' => 0];
+
+    $cardThemes = [
+        'amber'   => ['border' => 'border-amber-200/70', 'bg' => 'from-white via-white to-amber-50/60', 'label' => 'text-amber-800/80', 'value' => 'from-amber-700 to-orange-600', 'icon' => 'from-amber-500 to-orange-500', 'desc' => 'text-amber-700/70'],
+        'rose'    => ['border' => 'border-rose-200/70', 'bg' => 'from-white via-white to-rose-50/60', 'label' => 'text-rose-800/80', 'value' => 'from-rose-700 to-red-600', 'icon' => 'from-rose-500 to-red-500', 'desc' => 'text-rose-700/70'],
+        'violet'  => ['border' => 'border-violet-200/70', 'bg' => 'from-white via-white to-violet-50/60', 'label' => 'text-violet-800/80', 'value' => 'from-violet-700 to-purple-600', 'icon' => 'from-violet-500 to-purple-600', 'desc' => 'text-violet-700/70'],
+        'emerald' => ['border' => 'border-emerald-200/70', 'bg' => 'from-white via-white to-emerald-50/60', 'label' => 'text-emerald-800/80', 'value' => 'from-emerald-700 to-teal-600', 'icon' => 'from-emerald-500 to-teal-600', 'desc' => 'text-emerald-700/70'],
+        'orange'  => ['border' => 'border-orange-200/70', 'bg' => 'from-white via-white to-orange-50/60', 'label' => 'text-orange-800/80', 'value' => 'from-orange-700 to-amber-600', 'icon' => 'from-orange-500 to-amber-500', 'desc' => 'text-orange-700/70'],
+        'sky'     => ['border' => 'border-sky-200/70', 'bg' => 'from-white via-white to-sky-50/60', 'label' => 'text-sky-800/80', 'value' => 'from-sky-700 to-blue-600', 'icon' => 'from-sky-500 to-blue-600', 'desc' => 'text-sky-700/70'],
+        'slate'   => ['border' => 'border-slate-200/70', 'bg' => 'from-white via-white to-slate-50/60', 'label' => 'text-slate-800/80', 'value' => 'from-slate-700 to-slate-600', 'icon' => 'from-slate-500 to-slate-600', 'desc' => 'text-slate-700/70'],
+    ];
+
+    $typeCards = [
+        ['label' => 'أصول', 'value' => number_format($stats['asset']), 'desc' => 'حسابات الأصول', 'icon' => 'fas fa-coins', 'theme' => 'amber'],
+        ['label' => 'خصوم', 'value' => number_format($stats['liability']), 'desc' => 'التزامات وذمم', 'icon' => 'fas fa-arrow-down', 'theme' => 'rose'],
+        ['label' => 'حقوق ملكية', 'value' => number_format($stats['equity']), 'desc' => 'رأس المال والاحتياطيات', 'icon' => 'fas fa-balance-scale', 'theme' => 'violet'],
+        ['label' => 'إيرادات', 'value' => number_format($stats['revenue']), 'desc' => 'إيرادات التشغيل', 'icon' => 'fas fa-chart-line', 'theme' => 'emerald'],
+        ['label' => 'مصروفات', 'value' => number_format($stats['expense']), 'desc' => 'تكاليف وتشغيل', 'icon' => 'fas fa-fire', 'theme' => 'orange'],
+        ['label' => 'روابط النظام', 'value' => number_format($stats['linked']), 'desc' => 'حسابات مربوطة بصفحات', 'icon' => 'fas fa-link', 'theme' => 'sky'],
+    ];
+
+    $rootThemes = [
+        'asset' => ['header' => 'from-amber-500 to-orange-500', 'badge' => 'bg-amber-100 text-amber-800 border-amber-200', 'border' => 'border-amber-200/80', 'bg' => 'from-amber-50/40 to-white'],
+        'liability' => ['header' => 'from-rose-500 to-red-500', 'badge' => 'bg-rose-100 text-rose-800 border-rose-200', 'border' => 'border-rose-200/80', 'bg' => 'from-rose-50/40 to-white'],
+        'equity' => ['header' => 'from-violet-500 to-purple-600', 'badge' => 'bg-violet-100 text-violet-800 border-violet-200', 'border' => 'border-violet-200/80', 'bg' => 'from-violet-50/40 to-white'],
+        'revenue' => ['header' => 'from-emerald-500 to-teal-600', 'badge' => 'bg-emerald-100 text-emerald-800 border-emerald-200', 'border' => 'border-emerald-200/80', 'bg' => 'from-emerald-50/40 to-white'],
+        'expense' => ['header' => 'from-orange-500 to-amber-500', 'badge' => 'bg-orange-100 text-orange-800 border-orange-200', 'border' => 'border-orange-200/80', 'bg' => 'from-orange-50/40 to-white'],
+    ];
 @endphp
-<div class="w-full max-w-7xl mx-auto space-y-8 pb-12">
-    <section class="rounded-3xl bg-gradient-to-br from-indigo-950 via-slate-900 to-sky-950 text-white shadow-xl overflow-hidden">
-        <div class="px-6 py-8 sm:px-10 sm:py-10">
-            <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+
+<div class="space-y-6" x-data="chartOfAccountsPage()">
+    {{-- الهيدر --}}
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+        <div class="px-4 py-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-md">
+                    <i class="fas fa-sitemap"></i>
+                </div>
                 <div>
-                    <p class="text-[11px] font-bold uppercase tracking-widest text-indigo-200/90 mb-2">المحاسبة — الهيكل المرجعي</p>
-                    <h1 class="text-2xl sm:text-3xl font-black tracking-tight">شجرة الحسابات</h1>
-                    <p class="mt-3 text-sm text-white/75 leading-relaxed max-w-3xl">
-                        خريطة تفاعلية تربط مفاهيم الأصول والخصوم وحقوق الملكية والإيرادات والمصروفات بصفحات النظام الفعلية (فواتير، مدفوعات، تقسيط، حجوزات، مدربين).
-                        العملة المرجعية: <strong class="text-white">{{ $currency }}</strong>.
-                    </p>
-                </div>
-                <div class="flex flex-wrap gap-2.5">
-                    <a href="{{ route('admin.accounting.hub') }}" class="inline-flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-2.5 text-sm font-semibold border border-white/20 hover:bg-white/20">
-                        <i class="fas fa-th-large"></i>
-                        مركز المحاسبة
-                    </a>
-                    @if(Route::has('admin.accounting.installments'))
-                    <a href="{{ route('admin.accounting.installments') }}" class="inline-flex items-center gap-2 rounded-2xl bg-violet-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-violet-400">
-                        <i class="fas fa-percentage"></i>
-                        لوحة التقسيط
-                    </a>
-                    @endif
-                    <a href="{{ route('admin.accounting.reports') }}" class="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-emerald-400">
-                        <i class="fas fa-file-excel"></i>
-                        تقارير وتصدير
-                    </a>
+                    <h2 class="text-xl font-black text-slate-900">شجرة الحسابات</h2>
+                    <p class="text-xs text-slate-600">خريطة تفاعلية تربط الأصول والخصوم والإيرادات والمصروفات بصفحات النظام.</p>
+                    <p class="text-[11px] text-slate-500 mt-1">العملة المرجعية: <span class="font-bold text-slate-700">{{ $currency }}</span> · {{ number_format($stats['total']) }} حساب · {{ count($roots) }} جذور</p>
                 </div>
             </div>
-        </div>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-px bg-white/10 border-t border-white/10">
-            <div class="bg-slate-900/70 px-4 py-3 text-center">
-                <p class="text-[10px] text-white/55 font-semibold">أصول</p>
-                <p class="text-lg font-black text-amber-200">1 — 11 — 12</p>
-            </div>
-            <div class="bg-slate-900/70 px-4 py-3 text-center">
-                <p class="text-[10px] text-white/55 font-semibold">خصوم</p>
-                <p class="text-lg font-black text-rose-200">2 — 21</p>
-            </div>
-            <div class="bg-slate-900/70 px-4 py-3 text-center">
-                <p class="text-[10px] text-white/55 font-semibold">إيرادات</p>
-                <p class="text-lg font-black text-emerald-200">4 — 41 — 42</p>
-            </div>
-            <div class="bg-slate-900/70 px-4 py-3 text-center">
-                <p class="text-[10px] text-white/55 font-semibold">مصروفات</p>
-                <p class="text-lg font-black text-orange-200">5 — 51</p>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('admin.accounting.hub') }}" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 rounded-xl border border-slate-300 hover:bg-white">
+                    <i class="fas fa-calculator text-sky-600"></i>
+                    مركز المحاسبة
+                </a>
+                @if(Route::has('admin.accounting.insights'))
+                <a href="{{ route('admin.accounting.insights') }}" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 rounded-xl border border-slate-300 hover:bg-white">
+                    <i class="fas fa-chart-bar text-emerald-600"></i>
+                    المؤشرات
+                </a>
+                @endif
+                <a href="{{ route('admin.accounting.reports') }}" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-white rounded-xl bg-emerald-600 hover:bg-emerald-700">
+                    <i class="fas fa-file-excel"></i>
+                    التقارير
+                </a>
             </div>
         </div>
     </section>
 
-    <section class="rounded-3xl bg-white border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100 bg-gradient-to-l from-slate-50 to-white flex flex-wrap items-center justify-between gap-3">
-            <div>
-                <h2 class="text-lg font-black text-slate-900">الهيكل التفصيلي</h2>
-                <p class="text-xs text-slate-500 mt-0.5">اضغط <i class="fas fa-chevron-down text-[10px]"></i> لطي أو فتح الفروع. الروابط تفتح الصفحة المعنية في لوحة التحكم.</p>
+    {{-- ملخص الأنواع --}}
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
+        @foreach($typeCards as $card)
+            @php $theme = $cardThemes[$card['theme']] ?? $cardThemes['sky']; @endphp
+            <div class="dashboard-stat-card rounded-2xl border-2 {{ $theme['border'] }} bg-gradient-to-br {{ $theme['bg'] }} p-4 shadow-lg">
+                <div class="flex items-center justify-between gap-2">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-xs font-bold {{ $theme['label'] }} mb-0.5">{{ $card['label'] }}</p>
+                        <p class="text-xl font-black bg-gradient-to-r {{ $theme['value'] }} bg-clip-text text-transparent tabular-nums">{{ $card['value'] }}</p>
+                        <p class="text-[10px] font-medium {{ $theme['desc'] }} truncate mt-0.5">{{ $card['desc'] }}</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br {{ $theme['icon'] }} flex items-center justify-center text-white shadow-md flex-shrink-0">
+                        <i class="{{ $card['icon'] }} text-xs"></i>
+                    </div>
+                </div>
             </div>
-            <span class="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full">{{ count($roots) }} جذور رئيسية</span>
+        @endforeach
+    </div>
+
+    {{-- الهيكل التفصيلي --}}
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+        <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+                <h3 class="text-sm font-black text-slate-900">الهيكل التفصيلي</h3>
+                <p class="text-[11px] text-slate-500 mt-0.5">اضغط على السهم لطي أو فتح الفروع. الروابط الزرقاء تفتح الصفحة في لوحة التحكم.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <div class="relative min-w-[200px] flex-1 sm:flex-none">
+                    <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input type="search" x-model="$store.chartTreeSearch.query" placeholder="بحث بالاسم أو الكود…"
+                           class="w-full sm:w-56 pr-9 pl-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white focus:border-sky-400 focus:ring-2 focus:ring-sky-100">
+                </div>
+                <button type="button" @click="toggleAll(true)"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 rounded-xl border border-slate-300 hover:bg-white">
+                    <i class="fas fa-expand-alt"></i>
+                    فتح الكل
+                </button>
+                <button type="button" @click="toggleAll(false)"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 rounded-xl border border-slate-300 hover:bg-white">
+                    <i class="fas fa-compress-alt"></i>
+                    طي الكل
+                </button>
+            </div>
         </div>
-        <div class="p-4 sm:p-6 lg:p-8 space-y-6 bg-gradient-to-b from-slate-50/50 to-white">
+
+        <div class="p-4 space-y-4 bg-gradient-to-b from-slate-50/40 to-white">
             @foreach($roots as $root)
-                <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                    <div class="flex flex-wrap items-center gap-3 px-4 py-3.5 border-b border-slate-100 bg-gradient-to-l from-indigo-50/60 to-white">
-                        <span class="font-mono text-sm font-black text-indigo-700 bg-indigo-100 px-2.5 py-1 rounded-lg">{{ $root['code'] ?? '' }}</span>
+                @php
+                    $rootType = $root['type'] ?? 'asset';
+                    $rootTheme = $rootThemes[$rootType] ?? $rootThemes['asset'];
+                @endphp
+                <div class="rounded-2xl border {{ $rootTheme['border'] }} bg-gradient-to-br {{ $rootTheme['bg'] }} shadow-sm overflow-hidden"
+                     x-show="rootVisible(@js($root))"
+                     x-transition>
+                    <div class="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-slate-200/80 bg-white/70">
+                        <div class="w-9 h-9 rounded-xl bg-gradient-to-br {{ $rootTheme['header'] }} flex items-center justify-center text-white shadow-sm">
+                            <i class="fas fa-folder-tree text-sm"></i>
+                        </div>
+                        <span class="font-mono text-sm font-black px-2.5 py-1 rounded-lg border {{ $rootTheme['badge'] }}">{{ $root['code'] ?? '' }}</span>
                         <span class="text-base font-black text-slate-900">{{ $root['name'] ?? '' }}</span>
                     </div>
                     @if(!empty($root['description']))
-                        <p class="px-4 py-2.5 text-xs text-slate-600 border-b border-slate-50 bg-slate-50/30">{{ $root['description'] }}</p>
+                        <p class="px-4 py-2 text-xs text-slate-600 border-b border-slate-100 bg-white/50">{{ $root['description'] }}</p>
                     @endif
-                    <div class="px-3 py-4 sm:px-5">
-                        @include('admin.accounting.partials.chart-node', ['nodes' => $root['children'] ?? [], 'depth' => 0])
+                    <div class="px-3 py-3 sm:px-4">
+                        @include('admin.accounting.partials.chart-node', [
+                            'nodes' => $root['children'] ?? [],
+                            'depth' => 0,
+                            'rootType' => $rootType,
+                        ])
                     </div>
                 </div>
             @endforeach
+
+            <p x-show="$store.chartTreeSearch.query.trim() !== '' && !hasVisibleRoots(@js($roots))"
+               class="text-center text-sm font-semibold text-slate-500 py-8">
+                لا توجد نتائج مطابقة لـ «<span x-text="$store.chartTreeSearch.query"></span>»
+            </p>
         </div>
     </section>
 
-    <p class="text-center text-xs text-slate-500 px-4">
-        الشجرة للعرض والتوافق الداخلي؛ لا تُحدّث قيود اليومية تلقائياً. للأرقام التفصيلية استخدم
-        <a href="{{ route('admin.accounting.reports') }}" class="font-semibold text-sky-600 hover:underline">التقارير المحاسبية</a>
+    <section class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-xs text-slate-600">
+        الشجرة للعرض والتوافق الداخلي؛ لا تُحدّث قيود اليومية تلقائياً.
+        للأرقام التفصيلية استخدم
+        <a href="{{ route('admin.accounting.reports') }}" class="font-bold text-sky-700 hover:underline">التقارير المحاسبية</a>
         والتصدير إلى Excel.
-    </p>
+    </section>
 </div>
+
+@push('scripts')
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.store('chartTreeSearch', { query: '' });
+
+    window.chartNodeMatches = function (node, query) {
+        const q = (query || '').trim().toLowerCase();
+        if (!q) return true;
+        const hay = [node.code || '', node.name || '', node.description || ''].join(' ').toLowerCase();
+        if (hay.includes(q)) return true;
+        return (node.children || []).some((child) => window.chartNodeMatches(child, q));
+    };
+
+    Alpine.data('chartOfAccountsPage', () => ({
+        init() {
+            this.$watch('$store.chartTreeSearch.query', (q) => {
+                if ((q || '').trim()) {
+                    window.dispatchEvent(new CustomEvent('chart-tree-toggle', { detail: { open: true } }));
+                }
+            });
+        },
+        toggleAll(open) {
+            window.dispatchEvent(new CustomEvent('chart-tree-toggle', { detail: { open } }));
+        },
+        rootVisible(root) {
+            return window.chartNodeMatches(root, Alpine.store('chartTreeSearch').query);
+        },
+        hasVisibleRoots(roots) {
+            const q = Alpine.store('chartTreeSearch').query;
+            if (!q.trim()) return true;
+            return roots.some((root) => window.chartNodeMatches(root, q));
+        },
+    }));
+});
+</script>
+@endpush
 @endsection

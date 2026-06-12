@@ -45,23 +45,44 @@
 @section('content')
 <div class="space-y-6 invoice-print-wrapper w-full max-w-none">
     {{-- شريط إجراءات (مخفي عند الطباعة) --}}
-    <section class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden print:hidden" data-print-hide>
-        <div class="px-4 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-                <p class="text-xs font-semibold text-slate-500">فاتورة</p>
-                <h2 class="text-xl font-black text-slate-900 tracking-tight">{{ $invoice->invoice_number }}</h2>
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden print:hidden" data-print-hide>
+        <div class="px-4 py-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-md">
+                    <i class="fas fa-file-invoice"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold text-slate-500">فاتورة</p>
+                    <h2 class="text-lg font-black text-slate-900 tracking-tight">{{ $invoice->invoice_number }}</h2>
+                </div>
             </div>
             <div class="flex flex-wrap items-center gap-2">
-                <a href="{{ route('admin.invoices.edit', $invoice) }}" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                    <i class="fas fa-edit"></i>
+                @if(Route::has('admin.accounting.hub'))
+                <a href="{{ route('admin.accounting.hub') }}" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-white">
+                    <i class="fas fa-calculator text-sky-600"></i>
+                    المحاسبة
+                </a>
+                @endif
+                <a href="{{ route('admin.payments.index') }}?search={{ urlencode($invoice->invoice_number) }}" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-white">
+                    <i class="fas fa-credit-card text-emerald-600"></i>
+                    المدفوعات
+                </a>
+                @if($invoice->order_id)
+                <a href="{{ route('admin.orders.show', $invoice->order_id) }}" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-white">
+                    <i class="fas fa-shopping-cart text-violet-600"></i>
+                    الطلب
+                </a>
+                @endif
+                <a href="{{ route('admin.invoices.edit', $invoice) }}" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-white">
+                    <i class="fas fa-edit text-amber-600"></i>
                     تعديل
                 </a>
-                <button type="button" onclick="window.printInvoice()" class="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-sky-700">
+                <button type="button" onclick="window.printInvoice()" class="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-3 py-2 text-xs font-bold text-white shadow hover:bg-sky-700">
                     <i class="fas fa-print"></i>
                     طباعة
                 </button>
-                <a href="{{ route('admin.invoices.index') }}" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                    <i class="fas fa-arrow-right"></i>
+                <a href="{{ route('admin.invoices.index') }}" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-white">
+                    <i class="fas fa-list"></i>
                     القائمة
                 </a>
             </div>
@@ -273,7 +294,9 @@
                             <tbody class="divide-y divide-slate-100">
                                 @foreach ($invoice->payments as $payment)
                                     <tr class="hover:bg-slate-50/80">
-                                        <td class="px-4 py-3 font-mono font-semibold text-slate-900">{{ $payment->payment_number }}</td>
+                                        <td class="px-4 py-3 font-mono font-semibold text-slate-900">
+                                            <a href="{{ route('admin.payments.show', $payment) }}" class="text-sky-700 hover:underline">{{ $payment->payment_number }}</a>
+                                        </td>
                                         <td class="px-4 py-3 text-center tabular-nums text-slate-700">{{ $payment->paid_at ? $payment->paid_at->format('Y-m-d H:i') : '—' }}</td>
                                         <td class="px-4 py-3 text-center text-slate-600">{{ $payment->payment_method ?? '—' }}</td>
                                         <td class="px-4 py-3 text-center">
