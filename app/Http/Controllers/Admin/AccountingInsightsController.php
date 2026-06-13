@@ -4,26 +4,23 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Expense;
-use App\Models\Payment;
-use App\Models\Transaction;
+use App\Models\Invoice;
+use App\Models\OfflineCourseEnrollment;
+use App\Support\AccountingAnalytics;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\View\View;
-use Illuminate\Support\Facades\DB;
 
 class AccountingInsightsController extends Controller
 {
     public function index(): View
     {
-        $payload = $this->buildPayload(Carbon::now());
-
         return view('admin.accounting.insights', [
-            'initialPayload' => $payload,
+            'initialPayload' => $this->buildPayload(Carbon::now()),
         ]);
     }
 
-    public function metrics(Request $request): JsonResponse
+    public function metrics(): JsonResponse
     {
         try {
             return response()->json($this->buildPayload(Carbon::now()));
@@ -31,37 +28,37 @@ class AccountingInsightsController extends Controller
             report($e);
 
             return response()->json([
-                'message' => 'تعذر حساب المؤشرات.',
+                'message' => 'تعذر حساب المؤشرات: '.$e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * @return array{snapshot: array<string,mixed>, trend: array<string,mixed>, daily: array<string,mixed>, realtime: array<string,mixed>, health: array<string,mixed>}
+     * @return array<string, mixed>
      */
     private function buildPayload(Carbon $now): array
     {
         $todayStart = $now->copy()->startOfDay();
         $todayEnd = $now->copy()->endOfDay();
-
         $yesterdayStart = $now->copy()->subDay()->startOfDay();
         $yesterdayEnd = $now->copy()->subDay()->endOfDay();
-
         $monthStart = $now->copy()->startOfMonth();
         $monthEnd = $now->copy()->endOfMonth();
-
         $prevMonthStart = $now->copy()->subMonthNoOverflow()->startOfMonth();
         $prevMonthEnd = $now->copy()->subMonthNoOverflow()->endOfMonth();
 
-        $revenueToday = $this->revenueBetween($todayStart, $todayEnd);
-        $revenueYesterday = $this->revenueBetween($yesterdayStart, $yesterdayEnd);
-        $revenueMonth = $this->revenueBetween($monthStart, $monthEnd);
-        $revenuePrevMonth = $this->revenueBetween($prevMonthStart, $prevMonthEnd);
+        $revenueToday = AccountingAnalytics::revenueBetween($todayStart, $todayEnd);
+        $revenueYesterday = AccountingAnalytics::revenueBetween($yesterdayStart, $yesterdayEnd);
+        $revenueMonth = AccountingAnalytics::revenueBetween($monthStart, $monthEnd);
+        $revenuePrevMonth = AccountingAnalytics::revenueBetween($prevMonthStart, $prevMonthEnd);
 
-        $expensesToday = $this->expensesBetween($todayStart, $todayEnd);
-        $expensesYesterday = $this->expensesBetween($yesterdayStart, $yesterdayEnd);
-        $expensesMonth = $this->expensesBetween($monthStart, $monthEnd);
-        $expensesPrevMonth = $this->expensesBetween($prevMonthStart, $prevMonthEnd);
+        $expensesToday = AccountingAnalytics::expensesBetween($todayStart, $todayEnd);
+        $expensesYesterday = AccountingAnalytics::expensesBetween($yesterdayStart, $yesterdayEnd);
+        $expensesMonth = AccountingAnalytics::expensesBetween($monthStart, $monthEnd);
+        $expensesPrevMonth = AccountingAnalytics::expensesBetween($prevMonthStart, $prevMonthEnd);
+
+        $expensesMonthRevenue = AccountingAnalytics::expensesBetween($monthStart, $monthEnd, AccountingAnalytics::FUNDING_REVENUE);
+        $expensesMonthPocket = AccountingAnalytics::expensesBetween($monthStart, $monthEnd, AccountingAnalytics::FUNDING_OUT_OF_POCKET);
 
         $netToday = round($revenueToday - $expensesToday, 2);
         $netYesterday = round($revenueYesterday - $expensesYesterday, 2);
@@ -77,61 +74,78 @@ class AccountingInsightsController extends Controller
             'net_month_pct' => $this->pctDelta($netPrevMonth, $netMonth),
         ];
 
-        $seriesDays = 14;
-        $daily = $this->dailySeries($now->copy()->subDays($seriesDays - 1)->startOfDay(), $now->copy()->endOfDay());
+        $dailyRaw = AccountingAnalytics::dailySeries(
+            $now->copy()->subDays(13)->startOfDay(),
+            $now->copy()->endOfDay()
+        );
 
-        $realtime = $this->realtimeCashflowSeries($now->copy()->subHours(6)->startOfMinute(), $now->copy()->endOfMinute(), 5);
+        $daily = [
+            'labels' => $dailyRaw['labels'],
+            'revenue' => $dailyRaw['revenue'],
+            'expenses' => array_map(fn ($i) => round(($dailyRaw['expenses_revenue'][$i] ?? 0) + ($dailyRaw['expenses_pocket'][$i] ?? 0), 2), array_keys($dailyRaw['labels'])),
+            'expenses_revenue' => $dailyRaw['expenses_revenue'],
+            'expenses_pocket' => $dailyRaw['expenses_pocket'],
+            'net' => $dailyRaw['net'],
+        ];
 
-        $cashIn = $this->cashInBetween($monthStart, $monthEnd);
-        $cashOut = $this->cashOutBetween($monthStart, $monthEnd);
+        $realtime = AccountingAnalytics::realtimeCashflowSeries(
+            $now->copy()->subHours(6)->startOfMinute(),
+            $now->copy()->endOfMinute(),
+            5
+        );
+
+        $breakEvenMonth = AccountingAnalytics::breakEvenAnalysis($monthStart, $monthEnd);
+        $breakEvenAllTime = AccountingAnalytics::breakEvenAnalysis($monthStart, $monthEnd, true);
+        $receivables = AccountingAnalytics::receivablesSnapshot();
+
+        $expensesByFundingMonth = Expense::query()
+            ->approved()
+            ->whereBetween('expense_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
+            ->selectRaw('funding_source, COUNT(*) as count, COALESCE(SUM(amount),0) as total')
+            ->groupBy('funding_source')
+            ->get()
+            ->keyBy('funding_source');
+
+        $expensesByCategoryMonth = Expense::query()
+            ->approved()
+            ->whereBetween('expense_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
+            ->selectRaw('category, COUNT(*) as count, COALESCE(SUM(amount),0) as total')
+            ->groupBy('category')
+            ->orderByDesc('total')
+            ->limit(8)
+            ->get();
 
         $snapshot = [
             'as_of' => $now->format('Y-m-d H:i:s'),
             'revenue_today' => $revenueToday,
             'expenses_today' => $expensesToday,
+            'expenses_today_revenue' => AccountingAnalytics::expensesBetween($todayStart, $todayEnd, AccountingAnalytics::FUNDING_REVENUE),
+            'expenses_today_pocket' => AccountingAnalytics::expensesBetween($todayStart, $todayEnd, AccountingAnalytics::FUNDING_OUT_OF_POCKET),
             'net_today' => $netToday,
             'revenue_month' => $revenueMonth,
             'expenses_month' => $expensesMonth,
+            'expenses_month_revenue' => $expensesMonthRevenue,
+            'expenses_month_pocket' => $expensesMonthPocket,
             'net_month' => $netMonth,
-            'cash_in_month' => $cashIn,
-            'cash_out_month' => $cashOut,
+            'operational_net_month' => round($revenueMonth - $expensesMonthRevenue, 2),
+            'pending_invoices_amount' => (float) Invoice::whereIn('status', ['pending', 'overdue'])->sum('total_amount'),
+            'offline_outstanding' => (float) OfflineCourseEnrollment::query()->sum('remaining_amount'),
         ];
 
-        $health = $this->healthLabel($netMonth, $trend['net_month_pct']);
+        $health = $this->healthFromBreakEven($breakEvenMonth, $netMonth, $trend['net_month_pct']);
 
-        return compact('snapshot', 'trend', 'daily', 'realtime', 'health');
-    }
-
-    private function revenueBetween(Carbon $start, Carbon $end): float
-    {
-        return (float) Payment::query()
-            ->where('status', 'completed')
-            ->whereBetween('paid_at', [$start, $end])
-            ->sum('amount');
-    }
-
-    private function expensesBetween(Carbon $start, Carbon $end): float
-    {
-        return (float) Expense::query()
-            ->approved()
-            ->whereBetween('expense_date', [$start->toDateString(), $end->toDateString()])
-            ->sum('amount');
-    }
-
-    private function cashInBetween(Carbon $start, Carbon $end): float
-    {
-        return (float) Transaction::query()
-            ->where('type', 'credit')
-            ->whereBetween('created_at', [$start, $end])
-            ->sum('amount');
-    }
-
-    private function cashOutBetween(Carbon $start, Carbon $end): float
-    {
-        return (float) Transaction::query()
-            ->where('type', 'debit')
-            ->whereBetween('created_at', [$start, $end])
-            ->sum('amount');
+        return [
+            'snapshot' => $snapshot,
+            'trend' => $trend,
+            'daily' => $daily,
+            'realtime' => $realtime,
+            'health' => $health,
+            'break_even_month' => $breakEvenMonth,
+            'break_even_all_time' => $breakEvenAllTime,
+            'receivables' => $receivables,
+            'expenses_by_funding' => $expensesByFundingMonth,
+            'expenses_by_category' => $expensesByCategoryMonth,
+        ];
     }
 
     private function pctDelta(float $prev, float $cur): ?float
@@ -144,115 +158,38 @@ class AccountingInsightsController extends Controller
     }
 
     /**
-     * @return array{labels: list<string>, revenue: list<float>, expenses: list<float>, net: list<float>}
+     * @return array{label: string, tone: 'good'|'warn'|'bad', detail?: string}
      */
-    private function dailySeries(Carbon $start, Carbon $end): array
+    private function healthFromBreakEven(array $breakEven, float $netMonth, ?float $netMonthPct): array
     {
-        $labels = [];
-        $rev = [];
-        $exp = [];
-        $net = [];
-
-        $cursor = $start->copy()->startOfDay();
-        while ($cursor->lte($end)) {
-            $dStart = $cursor->copy()->startOfDay();
-            $dEnd = $cursor->copy()->endOfDay();
-
-            $r = $this->revenueBetween($dStart, $dEnd);
-            $e = $this->expensesBetween($dStart, $dEnd);
-            $n = round($r - $e, 2);
-
-            $labels[] = $cursor->format('m/d');
-            $rev[] = round($r, 2);
-            $exp[] = round($e, 2);
-            $net[] = $n;
-
-            $cursor->addDay();
+        if ($breakEven['reached_full_safety'] ?? false) {
+            return [
+                'label' => $breakEven['label'],
+                'tone' => 'good',
+                'detail' => $breakEven['detail'] ?? '',
+            ];
         }
 
-        return [
-            'labels' => $labels,
-            'revenue' => $rev,
-            'expenses' => $exp,
-            'net' => $net,
-        ];
-    }
-
-    /**
-     * Series لحظي من المعاملات (Cash In/Out/Net) على فواصل دقائق.
-     *
-     * @return array{labels: list<string>, cash_in: list<float>, cash_out: list<float>, net: list<float>, bucket_minutes: int}
-     */
-    private function realtimeCashflowSeries(Carbon $start, Carbon $end, int $bucketMinutes = 5): array
-    {
-        $bucketMinutes = max(1, min(60, (int) $bucketMinutes));
-
-        // MySQL: bucket time label HH:MM where MM floored to bucketMinutes
-        $labelExpr = "CONCAT(LPAD(HOUR(created_at),2,'0'),':',LPAD(FLOOR(MINUTE(created_at)/{$bucketMinutes})*{$bucketMinutes},2,'0'))";
-
-        $rows = Transaction::query()
-            ->whereBetween('created_at', [$start, $end])
-            ->selectRaw("$labelExpr as t, type, COALESCE(SUM(amount),0) as total")
-            ->groupByRaw("{$labelExpr}, type")
-            ->orderByRaw('MIN(created_at)')
-            ->get();
-
-        $mapIn = [];
-        $mapOut = [];
-        foreach ($rows as $r) {
-            $t = (string) ($r->t ?? '');
-            if ($t === '') continue;
-            $total = (float) ($r->total ?? 0);
-            if (($r->type ?? '') === 'credit') {
-                $mapIn[$t] = ($mapIn[$t] ?? 0) + $total;
-            } elseif (($r->type ?? '') === 'debit') {
-                $mapOut[$t] = ($mapOut[$t] ?? 0) + $total;
-            }
+        if ($breakEven['reached_operational_breakeven'] ?? false) {
+            return [
+                'label' => $breakEven['label'],
+                'tone' => ($breakEven['expenses_out_of_pocket'] ?? 0) > 0 ? 'warn' : 'good',
+                'detail' => $breakEven['detail'] ?? '',
+            ];
         }
 
-        $labels = [];
-        $cashIn = [];
-        $cashOut = [];
-        $net = [];
-
-        $cursor = $start->copy()->second(0);
-        while ($cursor->lte($end)) {
-            $minuteBucket = (int) (floor((int) $cursor->format('i') / $bucketMinutes) * $bucketMinutes);
-            $label = sprintf('%02d:%02d', (int) $cursor->format('H'), $minuteBucket);
-
-            $in = (float) ($mapIn[$label] ?? 0);
-            $out = (float) ($mapOut[$label] ?? 0);
-            $labels[] = $label;
-            $cashIn[] = round($in, 2);
-            $cashOut[] = round($out, 2);
-            $net[] = round($in - $out, 2);
-
-            $cursor->addMinutes($bucketMinutes);
-        }
-
-        return [
-            'labels' => $labels,
-            'cash_in' => $cashIn,
-            'cash_out' => $cashOut,
-            'net' => $net,
-            'bucket_minutes' => $bucketMinutes,
-        ];
-    }
-
-    /**
-     * @return array{label: string, tone: 'good'|'warn'|'bad'}
-     */
-    private function healthLabel(float $netMonth, ?float $netMonthPct): array
-    {
         if ($netMonth < 0) {
-            return ['label' => 'خسارة هذا الشهر', 'tone' => 'bad'];
+            return [
+                'label' => 'خسارة هذا الشهر — لم تصل لبر الأمان',
+                'tone' => 'bad',
+                'detail' => $breakEven['detail'] ?? '',
+            ];
         }
 
         if ($netMonthPct !== null && $netMonthPct < -15) {
-            return ['label' => 'ربح لكن في تراجع', 'tone' => 'warn'];
+            return ['label' => 'ربح لكن في تراجع', 'tone' => 'warn', 'detail' => ''];
         }
 
-        return ['label' => 'ربح واتجاه صحي', 'tone' => 'good'];
+        return ['label' => 'ربح جزئي — راقب المصروفات', 'tone' => 'warn', 'detail' => ''];
     }
 }
-

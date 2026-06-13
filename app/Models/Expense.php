@@ -18,6 +18,7 @@ class Expense extends Model
         'currency',
         'expense_date',
         'payment_method',
+        'funding_source',
         'wallet_id',
         'reference_number',
         'attachment',
@@ -106,6 +107,31 @@ class Expense extends Model
         }
 
         return static::categoryLabels()[$category] ?? $category;
+    }
+
+    public static function fundingSourceLabels(): array
+    {
+        return \App\Support\AccountingAnalytics::fundingSourceLabels();
+    }
+
+    public static function fundingSourceLabel(?string $source): string
+    {
+        return \App\Support\AccountingAnalytics::fundingSourceLabel($source);
+    }
+
+    public function scopeFromRevenue($query)
+    {
+        return $query->where('funding_source', \App\Support\AccountingAnalytics::FUNDING_REVENUE);
+    }
+
+    public function scopeOutOfPocket($query)
+    {
+        return $query->where('funding_source', \App\Support\AccountingAnalytics::FUNDING_OUT_OF_POCKET);
+    }
+
+    public function getFundingSourceLabelAttribute(): string
+    {
+        return static::fundingSourceLabel($this->funding_source);
     }
 
     public function getCategoryLabelAttribute()

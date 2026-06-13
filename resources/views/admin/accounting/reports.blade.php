@@ -4,6 +4,13 @@
 @section('header', 'التقارير المحاسبية')
 
 @section('content')
+@php
+    $reportQuery = ['period' => $period];
+    if ($period === 'custom') {
+        $reportQuery['start_date'] = $filter['filterStart'] ?? $startDate->format('Y-m-d');
+        $reportQuery['end_date'] = $filter['filterEnd'] ?? $endDate->format('Y-m-d');
+    }
+@endphp
 <div class="w-full space-y-6">
     <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-sky-200 bg-sky-50/80 px-4 py-3 text-sm">
         <a href="{{ route('admin.accounting.hub') }}" class="inline-flex items-center gap-2 font-semibold text-sky-800 hover:text-sky-950">
@@ -15,6 +22,11 @@
             <i class="fas fa-sitemap"></i>
             شجرة الحسابات
         </a>
+        <span class="text-slate-300">|</span>
+        <a href="{{ route('admin.accounting.receivables') }}" class="inline-flex items-center gap-2 font-semibold text-amber-800 hover:text-amber-950">
+            <i class="fas fa-hand-holding-usd"></i>
+            المديونية
+        </a>
     </div>
     <!-- فلترة الفترة الزمنية -->
     <section class="rounded-3xl bg-white/95 backdrop-blur border border-slate-200 shadow-lg overflow-hidden">
@@ -25,7 +37,7 @@
                     <p class="text-sm text-slate-500 mt-1">تقارير شاملة عن جميع العمليات المالية في الأكاديمية مع تصدير Excel منسّق</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-3">
-                    <a href="{{ route('admin.accounting.reports.export', array_merge(request()->all(), ['type' => 'all'])) }}" 
+                    <a href="{{ route('admin.accounting.reports.export', array_merge($reportQuery, ['type' => 'all'])) }}" 
                        class="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
                         <i class="fas fa-file-excel"></i>
                         تصدير Excel شامل
@@ -42,62 +54,62 @@
                              x-transition
                              class="absolute left-0 mt-2 w-56 rounded-2xl bg-white shadow-xl border border-slate-200 z-50">
                             <div class="p-2 space-y-1">
-                                <a href="{{ route('admin.accounting.reports.export', array_merge(request()->all(), ['type' => 'summary'])) }}" 
+                                <a href="{{ route('admin.accounting.reports.export', array_merge($reportQuery, ['type' => 'summary'])) }}" 
                                    class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg">
                                     <i class="fas fa-chart-pie w-4"></i>
                                     الملخص المالي
                                 </a>
-                                <a href="{{ route('admin.accounting.reports.export', array_merge(request()->all(), ['type' => 'invoices'])) }}" 
+                                <a href="{{ route('admin.accounting.reports.export', array_merge($reportQuery, ['type' => 'invoices'])) }}" 
                                    class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg">
                                     <i class="fas fa-file-invoice w-4"></i>
                                     الفواتير
                                 </a>
-                                <a href="{{ route('admin.accounting.reports.export', array_merge(request()->all(), ['type' => 'payments'])) }}" 
+                                <a href="{{ route('admin.accounting.reports.export', array_merge($reportQuery, ['type' => 'payments'])) }}" 
                                    class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg">
                                     <i class="fas fa-money-bill-wave w-4"></i>
                                     المدفوعات
                                 </a>
-                                <a href="{{ route('admin.accounting.reports.export', array_merge(request()->all(), ['type' => 'transactions'])) }}" 
+                                <a href="{{ route('admin.accounting.reports.export', array_merge($reportQuery, ['type' => 'transactions'])) }}" 
                                    class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg">
                                     <i class="fas fa-exchange-alt w-4"></i>
                                     المعاملات
                                 </a>
-                                <a href="{{ route('admin.accounting.reports.export', array_merge(request()->all(), ['type' => 'expenses'])) }}" 
+                                <a href="{{ route('admin.accounting.reports.export', array_merge($reportQuery, ['type' => 'expenses'])) }}" 
                                    class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg">
                                     <i class="fas fa-receipt w-4"></i>
                                     المصروفات
                                 </a>
-                                <a href="{{ route('admin.accounting.reports.export', array_merge(request()->all(), ['type' => 'wallets'])) }}" 
+                                <a href="{{ route('admin.accounting.reports.export', array_merge($reportQuery, ['type' => 'wallets'])) }}" 
                                    class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg">
                                     <i class="fas fa-wallet w-4"></i>
                                     المحافظ
                                 </a>
-                                <a href="{{ route('admin.accounting.reports.export', array_merge(request()->all(), ['type' => 'orders'])) }}" 
+                                <a href="{{ route('admin.accounting.reports.export', array_merge($reportQuery, ['type' => 'orders'])) }}" 
                                    class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg">
                                     <i class="fas fa-shopping-cart w-4"></i>
                                     الطلبات
                                 </a>
-                                <a href="{{ route('admin.accounting.reports.export', array_merge(request()->all(), ['type' => 'subscriptions'])) }}" 
+                                <a href="{{ route('admin.accounting.reports.export', array_merge($reportQuery, ['type' => 'subscriptions'])) }}" 
                                    class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg">
                                     <i class="fas fa-calendar-check w-4"></i>
                                     الاشتراكات
                                 </a>
-                                <a href="{{ route('admin.accounting.reports.export', array_merge(request()->all(), ['type' => 'withdrawals'])) }}" 
+                                <a href="{{ route('admin.accounting.reports.export', array_merge($reportQuery, ['type' => 'withdrawals'])) }}" 
                                    class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg">
                                     <i class="fas fa-hand-holding-usd w-4"></i>
                                     سحوبات المدربين
                                 </a>
-                                <a href="{{ route('admin.accounting.reports.export', array_merge(request()->all(), ['type' => 'installments'])) }}" 
+                                <a href="{{ route('admin.accounting.reports.export', array_merge($reportQuery, ['type' => 'installments'])) }}" 
                                    class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg">
                                     <i class="fas fa-handshake w-4"></i>
                                     اتفاقيات التقسيط
                                 </a>
-                                <a href="{{ route('admin.accounting.reports.export', array_merge(request()->all(), ['type' => 'offline_enrollments'])) }}" 
+                                <a href="{{ route('admin.accounting.reports.export', array_merge($reportQuery, ['type' => 'offline_enrollments'])) }}" 
                                    class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg">
                                     <i class="fas fa-building w-4"></i>
                                     تسجيلات أوفلاين
                                 </a>
-                                <a href="{{ route('admin.accounting.reports.export', array_merge(request()->all(), ['type' => 'chart'])) }}" 
+                                <a href="{{ route('admin.accounting.reports.export', array_merge($reportQuery, ['type' => 'chart'])) }}" 
                                    class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg">
                                     <i class="fas fa-sitemap w-4"></i>
                                     شجرة الحسابات (جدول)
@@ -107,34 +119,8 @@
                     </div>
                 </div>
             </div>
-            <form method="GET" action="{{ route('admin.accounting.reports') }}" class="space-y-5">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-2">الفترة الزمنية</label>
-                        <select name="period" class="w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-sky-500 focus:border-sky-400" onchange="this.form.submit()">
-                            <option value="day" {{ $period == 'day' ? 'selected' : '' }}>اليوم</option>
-                            <option value="week" {{ $period == 'week' ? 'selected' : '' }}>هذا الأسبوع</option>
-                            <option value="month" {{ $period == 'month' ? 'selected' : '' }}>هذا الشهر</option>
-                            <option value="year" {{ $period == 'year' ? 'selected' : '' }}>هذه السنة</option>
-                            <option value="all" {{ $period == 'all' ? 'selected' : '' }}>الكل</option>
-                            <option value="custom" {{ $period == 'custom' ? 'selected' : '' }}>مخصص</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-2">من تاريخ</label>
-                        <input type="date" name="start_date" value="{{ $startDate ? $startDate->format('Y-m-d') : '' }}" class="w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-sky-500 focus:border-sky-400" />
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-2">إلى تاريخ</label>
-                        <input type="date" name="end_date" value="{{ $endDate ? $endDate->format('Y-m-d') : '' }}" class="w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-sky-500 focus:border-sky-400" />
-                    </div>
-                    <div class="flex items-end">
-                        <button type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">
-                            <i class="fas fa-filter"></i>
-                            تطبيق الفلترة
-                        </button>
-                    </div>
-                </div>
+            <form method="GET" action="{{ route('admin.accounting.reports') }}" id="reportPeriodForm" class="space-y-5">
+                @include('admin.accounting.partials.report-period-filter')
             </form>
         </div>
     </section>
@@ -143,7 +129,7 @@
     <section class="rounded-3xl bg-white/95 backdrop-blur border border-slate-200 shadow-lg overflow-hidden">
         <div class="px-5 py-6 sm:px-8 lg:px-12 border-b border-slate-200">
             <h2 class="text-2xl font-bold text-slate-900">ملخص مالي شامل</h2>
-            <p class="text-sm text-slate-500 mt-1">من {{ $startDate->format('Y-m-d') }} إلى {{ $endDate->format('Y-m-d') }}</p>
+            <p class="text-sm text-slate-500 mt-1">{{ $periodLabel ?? '' }} — من {{ $startDate->format('Y-m-d') }} إلى {{ $endDate->format('Y-m-d') }}</p>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 p-5 sm:p-8">
             <!-- إجمالي الإيرادات -->
@@ -235,6 +221,25 @@
                 <p class="text-xs text-slate-500">مبالغ معتمدة: <strong>{{ number_format($stats['order_stats']['approved_amount'], 2) }} ج.م</strong></p>
             </div>
         </div>
+        @php $ia = $stats['invoice_amounts'] ?? []; @endphp
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 p-5 sm:p-8 pt-0">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <p class="text-xs font-semibold text-slate-500">إجمالي الفواتير (مبلغ)</p>
+                <p class="mt-2 text-xl font-black text-slate-900">{{ number_format($ia['invoiced_total'] ?? 0, 2) }} ج.م</p>
+            </div>
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+                <p class="text-xs font-semibold text-emerald-700">المحصّل فعلياً</p>
+                <p class="mt-2 text-xl font-black text-emerald-800">{{ number_format($ia['collected_total'] ?? 0, 2) }} ج.م</p>
+            </div>
+            <div class="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+                <p class="text-xs font-semibold text-amber-700">متبقي على العملاء</p>
+                <p class="mt-2 text-xl font-black text-amber-800">{{ number_format($ia['outstanding_total'] ?? 0, 2) }} ج.م</p>
+            </div>
+            <div class="rounded-2xl border border-violet-200 bg-violet-50 p-5">
+                <p class="text-xs font-semibold text-violet-700">إجمالي الخصومات</p>
+                <p class="mt-2 text-xl font-black text-violet-800">{{ number_format($ia['discount_total'] ?? 0, 2) }} ج.م</p>
+            </div>
+        </div>
         @php $as = $stats['academy_stats'] ?? []; @endphp
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 p-5 sm:p-8 pt-0">
             <div class="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 to-cyan-50 p-6">
@@ -317,7 +322,7 @@
             <p class="text-sm text-slate-500 mt-1">كل قسم في صفحة منفصلة مع ترقيم الصفحات وتصدير Excel</p>
         </div>
         <div class="p-5 sm:p-8">
-            @php $query = request()->only(['period', 'start_date', 'end_date']); @endphp
+            @php $query = $reportQuery; @endphp
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <a href="{{ route('admin.accounting.reports.invoices', $query) }}" class="flex items-center gap-4 p-4 rounded-2xl border border-slate-200 hover:border-sky-300 hover:bg-sky-50/50 transition-colors">
                     <div class="w-12 h-12 rounded-xl bg-sky-100 flex items-center justify-center"><i class="fas fa-file-invoice text-sky-600"></i></div>
@@ -370,6 +375,220 @@
             </div>
         </div>
     </section>
+
+    @php
+        $dr = $detailedReport ?? [];
+        $pl = $dr['profit_loss'] ?? [];
+        $statusLabels = ['paid' => 'مدفوعة', 'pending' => 'معلقة', 'overdue' => 'متأخرة', 'cancelled' => 'ملغاة', 'draft' => 'مسودة'];
+        $typeLabels = ['course' => 'كورس', 'offline_course' => 'كورس أوفلاين', 'subscription' => 'اشتراك', 'installment' => 'تقسيط', 'other' => 'أخرى'];
+        $paymentMethodLabels = ['cash' => 'نقدي', 'wallet' => 'محفظة', 'bank_transfer' => 'تحويل بنكي', 'online' => 'أونلاين', 'card' => 'بطاقة'];
+    @endphp
+
+    <!-- قائمة الدخل التفصيلية -->
+    <section class="rounded-3xl bg-white/95 backdrop-blur border border-slate-200 shadow-lg overflow-hidden">
+        <div class="px-5 py-6 sm:px-8 border-b border-slate-200">
+            <h3 class="text-lg font-bold text-slate-900">قائمة الدخل (الفترة)</h3>
+            <p class="text-sm text-slate-500 mt-1">ملخص الإيرادات والمصروفات والسحوبات خلال الفترة المحددة</p>
+        </div>
+        <div class="p-5 sm:p-8 overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead>
+                    <tr class="border-b border-slate-200 text-slate-500">
+                        <th class="py-3 px-4 text-right font-semibold">البند</th>
+                        <th class="py-3 px-4 text-left font-semibold">المبلغ (ج.م)</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    <tr><td class="py-3 px-4 text-emerald-700 font-medium">+ إيرادات محصّلة (مدفوعات مكتملة)</td><td class="py-3 px-4 text-left font-bold text-emerald-700">{{ number_format($pl['revenue'] ?? 0, 2) }}</td></tr>
+                    <tr><td class="py-3 px-4 text-slate-700 font-medium">− مصروفات من إيرادات الكورسات</td><td class="py-3 px-4 text-left font-bold">{{ number_format($pl['expenses_from_revenue'] ?? 0, 2) }}</td></tr>
+                    <tr class="bg-emerald-50/50"><td class="py-3 px-4 font-semibold text-emerald-900">= صافي تشغيلي (بر الأمان)</td><td class="py-3 px-4 text-left font-bold {{ ($pl['operational_net'] ?? 0) >= 0 ? 'text-emerald-800' : 'text-rose-800' }}">{{ number_format($pl['operational_net'] ?? 0, 2) }}</td></tr>
+                    <tr><td class="py-3 px-4 text-amber-700 font-medium">− مصروفات من جيب الشركة (تمويل ذاتي)</td><td class="py-3 px-4 text-left font-bold text-amber-700">{{ number_format($pl['expenses_out_of_pocket'] ?? 0, 2) }}</td></tr>
+                    <tr><td class="py-3 px-4 text-rose-700 font-medium">− سحوبات مدربين مكتملة</td><td class="py-3 px-4 text-left font-bold text-rose-700">{{ number_format($pl['withdrawals'] ?? 0, 2) }}</td></tr>
+                    <tr class="bg-sky-50"><td class="py-3 px-4 font-bold text-sky-900">= صافي نهائي</td><td class="py-3 px-4 text-left font-black text-sky-900">{{ number_format($pl['net'] ?? 0, 2) }}</td></tr>
+                </tbody>
+            </table>
+            @if(!empty($pl['break_even']['label']))
+            <p class="mt-4 text-sm rounded-xl border px-4 py-3 {{ ($pl['break_even']['tone'] ?? '') === 'good' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : (($pl['break_even']['tone'] ?? '') === 'bad' ? 'border-rose-200 bg-rose-50 text-rose-900' : 'border-amber-200 bg-amber-50 text-amber-900') }}">
+                <strong>بر الأمان:</strong> {{ $pl['break_even']['label'] }} — {{ $pl['break_even']['detail'] ?? '' }}
+            </p>
+            @endif
+        </div>
+    </section>
+
+    <!-- تفصيل الفواتير والمدفوعات -->
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <section class="rounded-3xl bg-white/95 border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-5 py-5 border-b border-slate-200"><h3 class="font-bold text-slate-900">الفواتير حسب الحالة</h3></div>
+            <div class="p-5 overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead><tr class="text-slate-500 border-b"><th class="py-2 text-right">الحالة</th><th class="py-2 text-right">العدد</th><th class="py-2 text-left">المبلغ</th><th class="py-2 text-left">خصم</th></tr></thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @forelse($dr['invoice_by_status'] ?? [] as $row)
+                        <tr>
+                            <td class="py-2">{{ $statusLabels[$row->status] ?? $row->status }}</td>
+                            <td class="py-2">{{ $row->count }}</td>
+                            <td class="py-2 text-left font-semibold">{{ number_format($row->total_amount, 2) }}</td>
+                            <td class="py-2 text-left text-amber-700">{{ number_format($row->discount_amount ?? 0, 2) }}</td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="4" class="py-6 text-center text-slate-500">لا توجد فواتير في هذه الفترة</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <section class="rounded-3xl bg-white/95 border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-5 py-5 border-b border-slate-200"><h3 class="font-bold text-slate-900">الفواتير حسب النوع</h3></div>
+            <div class="p-5 overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead><tr class="text-slate-500 border-b"><th class="py-2 text-right">النوع</th><th class="py-2 text-right">العدد</th><th class="py-2 text-left">المبلغ</th></tr></thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @forelse($dr['invoice_by_type'] ?? [] as $row)
+                        <tr>
+                            <td class="py-2">{{ $typeLabels[$row->type] ?? ($row->type ?: '—') }}</td>
+                            <td class="py-2">{{ $row->count }}</td>
+                            <td class="py-2 text-left font-semibold">{{ number_format($row->total_amount, 2) }}</td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="3" class="py-6 text-center text-slate-500">لا توجد بيانات</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <section class="rounded-3xl bg-white/95 border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-5 py-5 border-b border-slate-200"><h3 class="font-bold text-slate-900">المدفوعات حسب الحالة</h3></div>
+            <div class="p-5 overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead><tr class="text-slate-500 border-b"><th class="py-2 text-right">الحالة</th><th class="py-2 text-right">العدد</th><th class="py-2 text-left">المبلغ</th></tr></thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @forelse($dr['payments_by_status'] ?? [] as $row)
+                        <tr>
+                            <td class="py-2">{{ $row->status }}</td>
+                            <td class="py-2">{{ $row->count }}</td>
+                            <td class="py-2 text-left font-semibold">{{ number_format($row->total, 2) }}</td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="3" class="py-6 text-center text-slate-500">لا توجد مدفوعات</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <section class="rounded-3xl bg-white/95 border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-5 py-5 border-b border-slate-200"><h3 class="font-bold text-slate-900">تحصيلات حسب طريقة الدفع</h3></div>
+            <div class="p-5 overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead><tr class="text-slate-500 border-b"><th class="py-2 text-right">الطريقة</th><th class="py-2 text-right">العدد</th><th class="py-2 text-left">المبلغ</th></tr></thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @forelse($dr['payments_by_method'] ?? [] as $row)
+                        <tr>
+                            <td class="py-2">{{ $paymentMethodLabels[$row->payment_method] ?? ($row->payment_method ?: '—') }}</td>
+                            <td class="py-2">{{ $row->count }}</td>
+                            <td class="py-2 text-left font-semibold text-emerald-700">{{ number_format($row->total, 2) }}</td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="3" class="py-6 text-center text-slate-500">لا توجد تحصيلات</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <!-- آخر العمليات -->
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <section class="rounded-3xl bg-white/95 border border-slate-200 shadow-lg overflow-hidden xl:col-span-1">
+            <div class="px-5 py-5 border-b border-slate-200 flex justify-between items-center">
+                <h3 class="font-bold text-slate-900">آخر الفواتير</h3>
+                <a href="{{ route('admin.accounting.reports.invoices', $query) }}" class="text-xs text-sky-600 hover:underline">عرض الكل</a>
+            </div>
+            <div class="divide-y divide-slate-100 max-h-96 overflow-y-auto">
+                @forelse($dr['recent_invoices'] ?? [] as $inv)
+                <div class="px-5 py-3 text-sm">
+                    <div class="flex justify-between gap-2">
+                        <span class="font-semibold text-slate-900">{{ $inv->invoice_number }}</span>
+                        <span class="font-bold">{{ number_format($inv->total_amount, 2) }}</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">{{ $inv->user->name ?? '—' }} · {{ $inv->created_at->format('Y-m-d') }}</p>
+                </div>
+                @empty
+                <p class="p-6 text-center text-slate-500 text-sm">لا توجد فواتير</p>
+                @endforelse
+            </div>
+        </section>
+        <section class="rounded-3xl bg-white/95 border border-slate-200 shadow-lg overflow-hidden xl:col-span-1">
+            <div class="px-5 py-5 border-b border-slate-200 flex justify-between items-center">
+                <h3 class="font-bold text-slate-900">آخر المدفوعات</h3>
+                <a href="{{ route('admin.accounting.reports.payments', $query) }}" class="text-xs text-sky-600 hover:underline">عرض الكل</a>
+            </div>
+            <div class="divide-y divide-slate-100 max-h-96 overflow-y-auto">
+                @forelse($dr['recent_payments'] ?? [] as $pay)
+                <div class="px-5 py-3 text-sm">
+                    <div class="flex justify-between gap-2">
+                        <span class="font-semibold text-emerald-800">{{ number_format($pay->amount, 2) }} ج.م</span>
+                        <span class="text-xs text-slate-500">{{ $pay->paid_at?->format('Y-m-d') }}</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">{{ $pay->user->name ?? '—' }} · {{ $paymentMethodLabels[$pay->payment_method] ?? $pay->payment_method }}</p>
+                </div>
+                @empty
+                <p class="p-6 text-center text-slate-500 text-sm">لا توجد مدفوعات</p>
+                @endforelse
+            </div>
+        </section>
+        <section class="rounded-3xl bg-white/95 border border-slate-200 shadow-lg overflow-hidden xl:col-span-1">
+            <div class="px-5 py-5 border-b border-slate-200 flex justify-between items-center">
+                <h3 class="font-bold text-slate-900">آخر المصروفات</h3>
+                <a href="{{ route('admin.accounting.reports.expenses', $query) }}" class="text-xs text-sky-600 hover:underline">عرض الكل</a>
+            </div>
+            <div class="divide-y divide-slate-100 max-h-96 overflow-y-auto">
+                @forelse($dr['recent_expenses'] ?? [] as $exp)
+                <div class="px-5 py-3 text-sm">
+                    <div class="flex justify-between gap-2">
+                        <span class="font-semibold text-rose-800">{{ number_format($exp->amount, 2) }} ج.م</span>
+                        <span class="text-xs text-slate-500">{{ $exp->expense_date?->format('Y-m-d') }}</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">{{ $exp->title ?? '—' }} · {{ \App\Models\Expense::categoryLabel($exp->category) }}</p>
+                </div>
+                @empty
+                <p class="p-6 text-center text-slate-500 text-sm">لا توجد مصروفات</p>
+                @endforelse
+            </div>
+        </section>
+    </div>
+
+    <!-- الإيرادات والمصروفات اليومية -->
+    @if(count($dailyData['days'] ?? []) > 0)
+    <section class="rounded-3xl bg-white/95 backdrop-blur border border-slate-200 shadow-lg overflow-hidden">
+        <div class="px-5 py-6 sm:px-8 border-b border-slate-200">
+            <h3 class="text-lg font-bold text-slate-900">الإيرادات والمصروفات اليومية</h3>
+            <p class="text-sm text-slate-500 mt-1">عرض يومي ضمن الفترة (حتى 90 يوماً)</p>
+        </div>
+        <div class="p-5 sm:p-8 space-y-3 max-h-[28rem] overflow-y-auto">
+            @foreach($dailyData['days'] as $index => $day)
+            @php
+                $dayRev = $dailyData['revenues'][$index] ?? 0;
+                $dayExp = $dailyData['expenses'][$index] ?? 0;
+                $dayMax = max($dayRev, $dayExp, 1);
+            @endphp
+            <div>
+                <div class="flex items-center justify-between mb-1 text-xs">
+                    <span class="font-medium text-slate-700">{{ $day }}</span>
+                    <div class="flex gap-3">
+                        <span class="text-emerald-600">+{{ number_format($dayRev, 2) }}</span>
+                        <span class="text-rose-600">−{{ number_format($dayExp, 2) }}</span>
+                        <span class="font-semibold text-sky-700">{{ number_format($dayRev - $dayExp, 2) }}</span>
+                    </div>
+                </div>
+                <div class="h-2 bg-slate-100 rounded-full overflow-hidden flex">
+                    <div class="bg-emerald-500" style="width: {{ ($dayRev / $dayMax) * 100 }}%"></div>
+                    <div class="bg-rose-400" style="width: {{ ($dayExp / $dayMax) * 100 }}%"></div>
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </section>
+    @endif
 
     <!-- تقارير الإيرادات -->
     <section class="rounded-3xl bg-white/95 backdrop-blur border border-slate-200 shadow-lg overflow-hidden">

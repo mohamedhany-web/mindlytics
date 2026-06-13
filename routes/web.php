@@ -1527,6 +1527,10 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('/accounting/chart-of-accounts', [\App\Http\Controllers\Admin\AccountingHubController::class, 'chart'])->name('accounting.chart');
         Route::get('/accounting/insights', [\App\Http\Controllers\Admin\AccountingInsightsController::class, 'index'])->name('accounting.insights');
         Route::get('/accounting/insights/metrics', [\App\Http\Controllers\Admin\AccountingInsightsController::class, 'metrics'])->name('accounting.insights.metrics');
+        Route::get('/accounting/receivables', [\App\Http\Controllers\Admin\AccountingReceivablesController::class, 'index'])->name('accounting.receivables');
+        Route::post('/accounting/receivables/debts', [\App\Http\Controllers\Admin\AccountingReceivablesController::class, 'storeDebt'])->name('accounting.receivables.debts.store');
+        Route::post('/accounting/receivables/debts/{accountingDebt}/repayment', [\App\Http\Controllers\Admin\AccountingReceivablesController::class, 'addRepayment'])->name('accounting.receivables.debts.repayment');
+        Route::delete('/accounting/receivables/debts/{accountingDebt}', [\App\Http\Controllers\Admin\AccountingReceivablesController::class, 'cancelDebt'])->name('accounting.receivables.debts.cancel');
         Route::get('/accounting/installments', [\App\Http\Controllers\Admin\AccountingInstallmentsController::class, 'index'])->name('accounting.installments');
         Route::get('/accounting/gateway-operations', [\App\Http\Controllers\Admin\AccountingGatewayOperationsController::class, 'index'])->name('accounting.gateway-operations');
 

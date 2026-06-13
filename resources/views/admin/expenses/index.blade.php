@@ -73,6 +73,17 @@
                 </div>
             </div>
         </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-6 pb-6">
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                <p class="text-xs font-semibold text-emerald-800">من إيرادات الكورسات / المحفظة</p>
+                <p class="text-xl font-black text-emerald-900 mt-1">{{ number_format($stats['from_revenue_amount'] ?? 0, 2) }} ج.م</p>
+            </div>
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <p class="text-xs font-semibold text-amber-800">من جيب الشركة (تمويل ذاتي)</p>
+                <p class="text-xl font-black text-amber-900 mt-1">{{ number_format($stats['out_of_pocket_amount'] ?? 0, 2) }} ج.م</p>
+                <p class="text-[11px] text-amber-700 mt-1">هذا الشهر: {{ number_format($stats['this_month_pocket'] ?? 0, 2) }} ج.م</p>
+            </div>
+        </div>
     </section>
     @endif
 
@@ -125,6 +136,7 @@
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ __('العنوان') }}</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ __('الفئة') }}</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ __('المبلغ') }}</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ __('مصدر التمويل') }}</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ __('التاريخ') }}</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ __('الحالة') }}</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ __('الإجراءات') }}</th>
@@ -137,6 +149,13 @@
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ $expense->title }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ $expense->category_label }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ number_format($expense->amount, 2) }} ج.م</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-xs">
+                            @if(($expense->funding_source ?? 'revenue') === 'out_of_pocket')
+                                <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold">من جيب الشركة</span>
+                            @else
+                                <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">من الإيراد</span>
+                            @endif
+                        </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ $expense->expense_date->format('Y-m-d') }}</td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium

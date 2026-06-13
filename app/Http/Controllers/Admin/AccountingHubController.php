@@ -114,6 +114,7 @@ class AccountingHubController extends Controller
                 'items' => [
                     ['label' => 'مؤشرات الشركة', 'route' => 'admin.accounting.insights', 'icon' => 'fa-chart-bar', 'hint' => 'إيراد، مصروفات، صافي ربح/خسارة، واتجاهات لحظية'],
                     ['label' => 'التقارير المحاسبية الشاملة', 'route' => 'admin.accounting.reports', 'icon' => 'fa-file-excel', 'hint' => 'فلاتر زمنية، رسوم بيانية، تصدير Excel'],
+                    ['label' => 'المديونية والذمم', 'route' => 'admin.accounting.receivables', 'icon' => 'fa-hand-holding-usd', 'hint' => 'ذمم مدينة، مستحقات، تمويل من جيب الشركة'],
                     ['label' => 'شجرة الحسابات', 'route' => 'admin.accounting.chart', 'icon' => 'fa-sitemap', 'hint' => 'خريطة الحسابات وربطها بوحدات النظام'],
                     ['label' => 'عمليات بوابات الدفع', 'route' => 'admin.accounting.gateway-operations', 'icon' => 'fa-plug', 'hint' => 'كاشير، فواتيرك، عمولات، ربط طلبات وفواتير ومعاملات'],
                 ],

@@ -14,6 +14,7 @@ use App\Models\Subscription;
 use App\Models\Transaction;
 use App\Models\Wallet;
 use App\Models\WithdrawalRequest;
+use App\Support\AccountingAnalytics;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -29,39 +30,21 @@ class AccountingReportsController extends Controller
 {
     public function index(Request $request)
     {
-        // تحديد الفترة الزمنية
-        $period = $request->get('period', 'month'); // day, week, month, year, all
-        $startDate = $request->get('start_date');
-        $endDate = $request->get('end_date');
+        $filter = $this->resolvePeriodAndDates($request);
+        $period = $filter['period'];
+        $startDate = $filter['startDate'];
+        $endDate = $filter['endDate'];
+        $periodLabel = $filter['periodLabel'];
 
-        // حساب التواريخ حسب الفترة
-        $dates = $this->calculateDateRange($period, $startDate, $endDate);
-        $startDate = $dates['start'];
-        $endDate = $dates['end'];
-
-        // إحصائيات عامة
         $stats = $this->getGeneralStats($startDate, $endDate);
-
-        // تقارير الإيرادات
         $revenueReports = $this->getRevenueReports($startDate, $endDate);
-
-        // تقارير المصروفات
         $expenseReports = $this->getExpenseReports($startDate, $endDate);
-
-        // تقارير الفواتير
         $invoiceReports = $this->getInvoiceReports($startDate, $endDate);
-
-        // تقارير المدفوعات
         $paymentReports = $this->getPaymentReports($startDate, $endDate);
-
-        // تقارير المعاملات
         $transactionReports = $this->getTransactionReports($startDate, $endDate);
-
-        // البيانات الشهرية (لرسم بياني)
         $monthlyData = $this->getMonthlyData($startDate, $endDate);
-
-        // البيانات اليومية (آخر 30 يوم)
-        $dailyData = $this->getDailyData();
+        $dailyData = $this->getDailyData($startDate, $endDate);
+        $detailedReport = $this->getDetailedFinancialReport($startDate, $endDate);
 
         return view('admin.accounting.reports', compact(
             'stats',
@@ -72,180 +55,244 @@ class AccountingReportsController extends Controller
             'transactionReports',
             'monthlyData',
             'dailyData',
+            'detailedReport',
             'period',
             'startDate',
-            'endDate'
+            'endDate',
+            'periodLabel',
+            'filter'
         ));
     }
 
     public function invoices(Request $request)
     {
-        $period = $request->get('period', 'month');
-        $dates = $this->calculateDateRange($period, $request->get('start_date'), $request->get('end_date'));
-        $startDate = $dates['start'];
-        $endDate = $dates['end'];
+        $filter = $this->resolvePeriodAndDates($request);
+        $period = $filter['period'];
+        $startDate = $filter['startDate'];
+        $endDate = $filter['endDate'];
         $stats = $this->getGeneralStats($startDate, $endDate);
         $items = Invoice::with('user')
             ->whereBetween('created_at', [$startDate, $endDate])
             ->orderBy('created_at', 'desc')
             ->paginate(25)
             ->withQueryString();
-        return view('admin.accounting.reports-invoices', compact('stats', 'items', 'startDate', 'endDate', 'period'));
+
+        return view('admin.accounting.reports-invoices', compact('stats', 'items', 'startDate', 'endDate', 'period', 'filter'));
     }
 
     public function payments(Request $request)
     {
-        $period = $request->get('period', 'month');
-        $dates = $this->calculateDateRange($period, $request->get('start_date'), $request->get('end_date'));
-        $startDate = $dates['start'];
-        $endDate = $dates['end'];
+        $filter = $this->resolvePeriodAndDates($request);
+        $period = $filter['period'];
+        $startDate = $filter['startDate'];
+        $endDate = $filter['endDate'];
         $stats = $this->getGeneralStats($startDate, $endDate);
         $items = Payment::with(['user', 'invoice'])
             ->whereBetween('created_at', [$startDate, $endDate])
             ->orderBy('created_at', 'desc')
             ->paginate(25)
             ->withQueryString();
-        return view('admin.accounting.reports-payments', compact('stats', 'items', 'startDate', 'endDate', 'period'));
+
+        return view('admin.accounting.reports-payments', compact('stats', 'items', 'startDate', 'endDate', 'period', 'filter'));
     }
 
     public function transactions(Request $request)
     {
-        $period = $request->get('period', 'month');
-        $dates = $this->calculateDateRange($period, $request->get('start_date'), $request->get('end_date'));
-        $startDate = $dates['start'];
-        $endDate = $dates['end'];
+        $filter = $this->resolvePeriodAndDates($request);
+        $period = $filter['period'];
+        $startDate = $filter['startDate'];
+        $endDate = $filter['endDate'];
         $stats = $this->getGeneralStats($startDate, $endDate);
         $items = Transaction::with('user')
             ->whereBetween('created_at', [$startDate, $endDate])
             ->orderBy('created_at', 'desc')
             ->paginate(25)
             ->withQueryString();
-        return view('admin.accounting.reports-transactions', compact('stats', 'items', 'startDate', 'endDate', 'period'));
+
+        return view('admin.accounting.reports-transactions', compact('stats', 'items', 'startDate', 'endDate', 'period', 'filter'));
     }
 
     public function expenses(Request $request)
     {
-        $period = $request->get('period', 'month');
-        $dates = $this->calculateDateRange($period, $request->get('start_date'), $request->get('end_date'));
-        $startDate = $dates['start'];
-        $endDate = $dates['end'];
+        $filter = $this->resolvePeriodAndDates($request);
+        $period = $filter['period'];
+        $startDate = $filter['startDate'];
+        $endDate = $filter['endDate'];
         $stats = $this->getGeneralStats($startDate, $endDate);
         $items = Expense::query()
             ->whereBetween('expense_date', [$startDate, $endDate])
             ->orderBy('expense_date', 'desc')
             ->paginate(25)
             ->withQueryString();
-        return view('admin.accounting.reports-expenses', compact('stats', 'items', 'startDate', 'endDate', 'period'));
+
+        return view('admin.accounting.reports-expenses', compact('stats', 'items', 'startDate', 'endDate', 'period', 'filter'));
     }
 
     public function wallets(Request $request)
     {
-        $period = $request->get('period', 'all');
-        $dates = $this->calculateDateRange($period, $request->get('start_date'), $request->get('end_date'));
-        $startDate = $dates['start'];
-        $endDate = $dates['end'];
+        $filter = $this->resolvePeriodAndDates($request);
+        $period = $filter['period'];
+        $startDate = $filter['startDate'];
+        $endDate = $filter['endDate'];
         $stats = $this->getGeneralStats($startDate, $endDate);
         $items = Wallet::academyWallets()
             ->withCount('transactions')
             ->orderBy('balance', 'desc')
             ->paginate(25)
             ->withQueryString();
-        return view('admin.accounting.reports-wallets', compact('stats', 'items', 'startDate', 'endDate', 'period'));
+
+        return view('admin.accounting.reports-wallets', compact('stats', 'items', 'startDate', 'endDate', 'period', 'filter'));
     }
 
     public function orders(Request $request)
     {
-        $period = $request->get('period', 'month');
-        $dates = $this->calculateDateRange($period, $request->get('start_date'), $request->get('end_date'));
-        $startDate = $dates['start'];
-        $endDate = $dates['end'];
+        $filter = $this->resolvePeriodAndDates($request);
+        $period = $filter['period'];
+        $startDate = $filter['startDate'];
+        $endDate = $filter['endDate'];
         $stats = $this->getGeneralStats($startDate, $endDate);
         $items = Order::with(['user', 'course', 'learningPath'])
             ->whereBetween('created_at', [$startDate, $endDate])
             ->orderBy('created_at', 'desc')
             ->paginate(25)
             ->withQueryString();
-        return view('admin.accounting.reports-orders', compact('stats', 'items', 'startDate', 'endDate', 'period'));
+
+        return view('admin.accounting.reports-orders', compact('stats', 'items', 'startDate', 'endDate', 'period', 'filter'));
     }
 
-    private function calculateDateRange($period, $startDate = null, $endDate = null)
+    /**
+     * @return array{
+     *     period: string,
+     *     startDate: Carbon,
+     *     endDate: Carbon,
+     *     filterStart: string,
+     *     filterEnd: string,
+     *     periodLabel: string
+     * }
+     */
+    private function resolvePeriodAndDates(Request $request): array
     {
-        if ($startDate && $endDate) {
+        $period = $request->get('period', 'month');
+        $inputStart = $request->get('start_date');
+        $inputEnd = $request->get('end_date');
+
+        if (! in_array($period, ['day', 'week', 'month', 'year', 'all', 'custom'], true)) {
+            $period = 'month';
+        }
+
+        if ($period === 'custom') {
+            if ($inputStart && $inputEnd) {
+                $startDate = Carbon::parse($inputStart)->startOfDay();
+                $endDate = Carbon::parse($inputEnd)->endOfDay();
+                if ($startDate->gt($endDate)) {
+                    [$startDate, $endDate] = [$endDate->copy()->startOfDay(), $startDate->copy()->endOfDay()];
+                }
+            } else {
+                $startDate = Carbon::now()->startOfMonth()->startOfDay();
+                $endDate = Carbon::now()->endOfMonth()->endOfDay();
+            }
+
             return [
-                'start' => Carbon::parse($startDate)->startOfDay(),
-                'end' => Carbon::parse($endDate)->endOfDay()
+                'period' => 'custom',
+                'startDate' => $startDate,
+                'endDate' => $endDate,
+                'filterStart' => $startDate->format('Y-m-d'),
+                'filterEnd' => $endDate->format('Y-m-d'),
+                'periodLabel' => 'فترة مخصصة — '.$startDate->format('Y-m-d').' → '.$endDate->format('Y-m-d'),
             ];
         }
 
-        switch ($period) {
-            case 'custom':
-                if ($startDate && $endDate) {
-                    return [
-                        'start' => Carbon::parse($startDate)->startOfDay(),
-                        'end' => Carbon::parse($endDate)->endOfDay(),
-                    ];
-                }
+        $dates = $this->calculatePresetDateRange($period);
+        $startDate = $dates['start'];
+        $endDate = $dates['end'];
 
-                return [
-                    'start' => Carbon::now()->startOfMonth()->startOfDay(),
-                    'end' => Carbon::now()->endOfMonth()->endOfDay(),
-                ];
+        return [
+            'period' => $period,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'filterStart' => $period === 'custom' ? ($inputStart ?: $startDate->format('Y-m-d')) : '',
+            'filterEnd' => $period === 'custom' ? ($inputEnd ?: $endDate->format('Y-m-d')) : '',
+            'periodLabel' => $this->periodLabel($period, $startDate, $endDate),
+        ];
+    }
+
+    private function periodLabel(string $period, Carbon $startDate, Carbon $endDate): string
+    {
+        return match ($period) {
+            'day' => 'اليوم — '.$startDate->format('Y-m-d'),
+            'week' => 'هذا الأسبوع — '.$startDate->format('Y-m-d').' → '.$endDate->format('Y-m-d'),
+            'month' => 'هذا الشهر — '.$startDate->format('Y-m'),
+            'year' => 'هذه السنة — '.$startDate->format('Y'),
+            'all' => 'كل الفترات — من '.$startDate->format('Y-m-d').' إلى '.$endDate->format('Y-m-d'),
+            default => $startDate->format('Y-m-d').' → '.$endDate->format('Y-m-d'),
+        };
+    }
+
+    private function calculatePresetDateRange(string $period): array
+    {
+        switch ($period) {
             case 'day':
                 return [
                     'start' => Carbon::today()->startOfDay(),
-                    'end' => Carbon::today()->endOfDay()
+                    'end' => Carbon::today()->endOfDay(),
                 ];
             case 'week':
                 return [
                     'start' => Carbon::now()->startOfWeek()->startOfDay(),
-                    'end' => Carbon::now()->endOfWeek()->endOfDay()
-                ];
-            case 'month':
-                return [
-                    'start' => Carbon::now()->startOfMonth()->startOfDay(),
-                    'end' => Carbon::now()->endOfMonth()->endOfDay()
+                    'end' => Carbon::now()->endOfWeek()->endOfDay(),
                 ];
             case 'year':
                 return [
                     'start' => Carbon::now()->startOfYear()->startOfDay(),
-                    'end' => Carbon::now()->endOfYear()->endOfDay()
+                    'end' => Carbon::now()->endOfYear()->endOfDay(),
                 ];
             case 'all':
-            default:
                 return [
                     'start' => Carbon::parse('2020-01-01')->startOfDay(),
-                    'end' => Carbon::now()->endOfDay()
+                    'end' => Carbon::now()->endOfDay(),
+                ];
+            case 'month':
+            default:
+                return [
+                    'start' => Carbon::now()->startOfMonth()->startOfDay(),
+                    'end' => Carbon::now()->endOfMonth()->endOfDay(),
                 ];
         }
     }
 
+    /** @deprecated Use resolvePeriodAndDates() */
+    private function calculateDateRange($period, $startDate = null, $endDate = null)
+    {
+        if ($period === 'custom' && $startDate && $endDate) {
+            return [
+                'start' => Carbon::parse($startDate)->startOfDay(),
+                'end' => Carbon::parse($endDate)->endOfDay(),
+            ];
+        }
+
+        return $this->calculatePresetDateRange((string) $period);
+    }
+
     private function getGeneralStats($startDate, $endDate)
     {
-        // إجمالي الإيرادات (من المدفوعات المكتملة)
-        $totalRevenue = Payment::where('status', 'completed')
+        // إجمالي الإيرادات من المدفوعات المكتملة (مصدر موحّد لتجنب الازدواج مع المعاملات)
+        $totalRevenue = (float) Payment::where('status', 'completed')
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->sum('amount');
 
-        // إجمالي الإيرادات من المعاملات (نوع credit = دائن = إيراد)
-        $totalRevenueFromTransactions = Transaction::where('type', 'credit')
-            ->where('status', 'completed')
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->sum('amount');
-
-        $totalRevenue = $totalRevenue + $totalRevenueFromTransactions;
-
-        // إجمالي المصروفات
-        $totalExpenses = Expense::where('status', 'approved')
+        // إجمالي المصروفات المعتمدة
+        $totalExpenses = (float) Expense::where('status', 'approved')
             ->whereBetween('expense_date', [$startDate, $endDate])
             ->sum('amount');
 
-        // إجمالي المصروفات من المعاملات (نوع debit = مدين = مصروف)
-        $totalExpensesFromTransactions = Transaction::where('type', 'debit')
+        // مصروفات إضافية من معاملات مدينة غير مرتبطة بمصروف مسجّل
+        $totalExpensesFromTransactions = (float) Transaction::where('type', 'debit')
             ->where('status', 'completed')
             ->whereBetween('created_at', [$startDate, $endDate])
+            ->whereNotIn('category', ['expense', 'expense_payment'])
             ->sum('amount');
 
-        $totalExpenses = $totalExpenses + $totalExpensesFromTransactions;
+        $totalExpenses += $totalExpensesFromTransactions;
 
         // الربح الصافي
         $netProfit = $totalRevenue - $totalExpenses;
@@ -255,9 +302,20 @@ class AccountingReportsController extends Controller
         $paidInvoices = Invoice::where('status', 'paid')
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->count();
-        $pendingInvoices = Invoice::where('status', 'pending')
+        $pendingInvoices = Invoice::whereIn('status', ['pending', 'overdue'])
             ->whereBetween('created_at', [$startDate, $endDate])
             ->count();
+
+        $invoiceAmounts = [
+            'invoiced_total' => (float) Invoice::whereBetween('created_at', [$startDate, $endDate])->sum('total_amount'),
+            'collected_total' => (float) Payment::where('status', 'completed')
+                ->whereBetween('paid_at', [$startDate, $endDate])
+                ->sum('amount'),
+            'discount_total' => (float) Invoice::whereBetween('created_at', [$startDate, $endDate])->sum('discount_amount'),
+            'outstanding_total' => (float) Invoice::whereIn('status', ['pending', 'overdue'])
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->sum('total_amount'),
+        ];
 
         // عدد المدفوعات
         $totalPayments = Payment::whereBetween('created_at', [$startDate, $endDate])->count();
@@ -320,12 +378,111 @@ class AccountingReportsController extends Controller
             'wallet_stats' => $walletStats,
             'order_stats' => $orderStats,
             'academy_stats' => $academyStats,
+            'invoice_amounts' => $invoiceAmounts,
+        ];
+    }
+
+    private function getDetailedFinancialReport(Carbon $startDate, Carbon $endDate): array
+    {
+        $invoiceByStatus = Invoice::whereBetween('created_at', [$startDate, $endDate])
+            ->select(
+                'status',
+                DB::raw('COUNT(*) as count'),
+                DB::raw('SUM(total_amount) as total_amount'),
+                DB::raw('SUM(discount_amount) as discount_amount'),
+                DB::raw('SUM(subtotal) as subtotal')
+            )
+            ->groupBy('status')
+            ->get();
+
+        $invoiceByType = Invoice::whereBetween('created_at', [$startDate, $endDate])
+            ->select(
+                'type',
+                DB::raw('COUNT(*) as count'),
+                DB::raw('SUM(total_amount) as total_amount')
+            )
+            ->groupBy('type')
+            ->get();
+
+        $paymentsByStatus = Payment::whereBetween('created_at', [$startDate, $endDate])
+            ->select(
+                'status',
+                DB::raw('COUNT(*) as count'),
+                DB::raw('SUM(amount) as total')
+            )
+            ->groupBy('status')
+            ->get();
+
+        $paymentsByMethod = Payment::where('status', 'completed')
+            ->whereBetween('paid_at', [$startDate, $endDate])
+            ->select(
+                'payment_method',
+                DB::raw('COUNT(*) as count'),
+                DB::raw('SUM(amount) as total')
+            )
+            ->groupBy('payment_method')
+            ->get();
+
+        $transactionsByType = Transaction::whereBetween('created_at', [$startDate, $endDate])
+            ->select(
+                'type',
+                DB::raw('COUNT(*) as count'),
+                DB::raw('SUM(amount) as total')
+            )
+            ->groupBy('type')
+            ->get();
+
+        $recentPayments = Payment::with(['user', 'invoice'])
+            ->whereBetween('paid_at', [$startDate, $endDate])
+            ->where('status', 'completed')
+            ->orderByDesc('paid_at')
+            ->limit(15)
+            ->get();
+
+        $recentExpenses = Expense::query()
+            ->whereBetween('expense_date', [$startDate, $endDate])
+            ->orderByDesc('expense_date')
+            ->limit(15)
+            ->get();
+
+        $recentInvoices = Invoice::with('user')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->orderByDesc('created_at')
+            ->limit(15)
+            ->get();
+
+        $profitLoss = [
+            'revenue' => (float) Payment::where('status', 'completed')
+                ->whereBetween('paid_at', [$startDate, $endDate])
+                ->sum('amount'),
+            'expenses' => (float) Expense::where('status', 'approved')
+                ->whereBetween('expense_date', [$startDate, $endDate])
+                ->sum('amount'),
+            'expenses_from_revenue' => AccountingAnalytics::expensesBetween($startDate, $endDate, AccountingAnalytics::FUNDING_REVENUE),
+            'expenses_out_of_pocket' => AccountingAnalytics::expensesBetween($startDate, $endDate, AccountingAnalytics::FUNDING_OUT_OF_POCKET),
+            'withdrawals' => (float) WithdrawalRequest::where('status', WithdrawalRequest::STATUS_COMPLETED)
+                ->whereBetween('processed_at', [$startDate, $endDate])
+                ->sum('amount'),
+        ];
+        $profitLoss['net'] = $profitLoss['revenue'] - $profitLoss['expenses'] - $profitLoss['withdrawals'];
+        $profitLoss['operational_net'] = $profitLoss['revenue'] - $profitLoss['expenses_from_revenue'];
+        $profitLoss['break_even'] = AccountingAnalytics::breakEvenAnalysis($startDate, $endDate);
+
+        return [
+            'invoice_by_status' => $invoiceByStatus,
+            'invoice_by_type' => $invoiceByType,
+            'payments_by_status' => $paymentsByStatus,
+            'payments_by_method' => $paymentsByMethod,
+            'transactions_by_type' => $transactionsByType,
+            'recent_payments' => $recentPayments,
+            'recent_expenses' => $recentExpenses,
+            'recent_invoices' => $recentInvoices,
+            'profit_loss' => $profitLoss,
         ];
     }
 
     private function getRevenueReports($startDate, $endDate)
     {
-        // الإيرادات من المدفوعات
         $revenueFromPayments = Payment::where('status', 'completed')
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->select(
@@ -336,10 +493,10 @@ class AccountingReportsController extends Controller
             ->groupBy('payment_method')
             ->get();
 
-        // الإيرادات من المعاملات
         $revenueFromTransactions = Transaction::where('type', 'credit')
             ->where('status', 'completed')
             ->whereBetween('created_at', [$startDate, $endDate])
+            ->whereNull('payment_id')
             ->select(
                 DB::raw('SUM(amount) as total'),
                 DB::raw('COUNT(*) as count'),
@@ -442,11 +599,6 @@ class AccountingReportsController extends Controller
                 ->whereBetween('paid_at', [$monthStart, $monthEnd])
                 ->sum('amount');
 
-            $monthRevenue += Transaction::where('type', 'credit')
-                ->where('status', 'completed')
-                ->whereBetween('created_at', [$monthStart, $monthEnd])
-                ->sum('amount');
-
             $monthExpense = Expense::where('status', 'approved')
                 ->whereBetween('expense_date', [$monthStart, $monthEnd])
                 ->sum('amount');
@@ -470,38 +622,37 @@ class AccountingReportsController extends Controller
         ];
     }
 
-    private function getDailyData()
+    private function getDailyData($startDate = null, $endDate = null)
     {
         $days = [];
         $revenues = [];
         $expenses = [];
 
-        for ($i = 29; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i);
-            $dayStart = $date->copy()->startOfDay();
-            $dayEnd = $date->copy()->endOfDay();
+        $end = $endDate ? Carbon::parse($endDate)->copy()->endOfDay() : Carbon::now()->endOfDay();
+        $start = $startDate ? Carbon::parse($startDate)->copy()->startOfDay() : Carbon::now()->subDays(29)->startOfDay();
+
+        if ($start->diffInDays($end) > 90) {
+            $start = $end->copy()->subDays(89)->startOfDay();
+        }
+
+        $current = $start->copy();
+        while ($current->lte($end)) {
+            $dayStart = $current->copy()->startOfDay();
+            $dayEnd = $current->copy()->endOfDay();
 
             $dayRevenue = Payment::where('status', 'completed')
                 ->whereBetween('paid_at', [$dayStart, $dayEnd])
-                ->sum('amount');
-
-            $dayRevenue += Transaction::where('type', 'credit')
-                ->where('status', 'completed')
-                ->whereBetween('created_at', [$dayStart, $dayEnd])
                 ->sum('amount');
 
             $dayExpense = Expense::where('status', 'approved')
                 ->whereBetween('expense_date', [$dayStart, $dayEnd])
                 ->sum('amount');
 
-            $dayExpense += Transaction::where('type', 'debit')
-                ->where('status', 'completed')
-                ->whereBetween('created_at', [$dayStart, $dayEnd])
-                ->sum('amount');
+            $days[] = $current->format('Y-m-d');
+            $revenues[] = (float) $dayRevenue;
+            $expenses[] = (float) $dayExpense;
 
-            $days[] = $date->format('Y-m-d');
-            $revenues[] = $dayRevenue;
-            $expenses[] = $dayExpense;
+            $current->addDay();
         }
 
         return [
@@ -513,14 +664,11 @@ class AccountingReportsController extends Controller
 
     public function export(Request $request)
     {
-        $period = $request->get('period', 'month');
-        $startDate = $request->get('start_date');
-        $endDate = $request->get('end_date');
+        $filter = $this->resolvePeriodAndDates($request);
+        $period = $filter['period'];
+        $startDate = $filter['startDate'];
+        $endDate = $filter['endDate'];
         $type = $request->get('type', 'all');
-
-        $dates = $this->calculateDateRange($period, $startDate, $endDate);
-        $startDate = $dates['start'];
-        $endDate = $dates['end'];
 
         $spreadsheet = new Spreadsheet();
         $spreadsheet->getProperties()

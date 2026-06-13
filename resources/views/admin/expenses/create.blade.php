@@ -112,6 +112,23 @@
                     @enderror
                 </div>
 
+                <!-- مصدر التمويل -->
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        <i class="fas fa-piggy-bank text-amber-600 ml-2"></i>
+                        {{ __('مصدر تمويل المصروف') }} *
+                    </label>
+                    <select name="funding_source" id="funding_source" required
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all">
+                        <option value="revenue" {{ old('funding_source', 'revenue') === 'revenue' ? 'selected' : '' }}>من إيرادات الكورسات / محفظة الأكاديمية</option>
+                        <option value="out_of_pocket" {{ old('funding_source') === 'out_of_pocket' ? 'selected' : '' }}>من جيب الشركة (تمويل ذاتي — فلوس زيادة)</option>
+                    </select>
+                    <p class="text-xs text-amber-700 mt-1">اختر «من جيب الشركة» إذا دفعتم المبلغ من مالكم وليس من إيرادات الطلاب.</p>
+                    @error('funding_source')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 <!-- المحفظة الإلكترونية -->
                 <div id="wallet_field" style="display: none;">
                     <label class="block text-sm font-bold text-gray-700 mb-2">

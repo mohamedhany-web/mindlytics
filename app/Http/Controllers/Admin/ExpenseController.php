@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Expense;
 use App\Models\Wallet;
 use App\Models\ActivityLog;
+use App\Support\AccountingAnalytics;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
@@ -85,10 +86,17 @@ class ExpenseController extends Controller
                 'approved' => Expense::approved()->count(),
                 'rejected' => Expense::rejected()->count(),
                 'total_amount' => Expense::approved()->sum('amount'),
+                'from_revenue_amount' => Expense::approved()->fromRevenue()->sum('amount'),
+                'out_of_pocket_amount' => Expense::approved()->outOfPocket()->sum('amount'),
                 'pending_amount' => Expense::pending()->sum('amount'),
                 'this_month' => Expense::whereMonth('expense_date', now()->month)
                     ->whereYear('expense_date', now()->year)
                     ->approved()
+                    ->sum('amount'),
+                'this_month_pocket' => Expense::whereMonth('expense_date', now()->month)
+                    ->whereYear('expense_date', now()->year)
+                    ->approved()
+                    ->outOfPocket()
                     ->sum('amount'),
             ];
 
@@ -127,6 +135,7 @@ class ExpenseController extends Controller
             'amount' => 'required|numeric|min:0.01',
             'expense_date' => 'required|date',
             'payment_method' => 'required|in:cash,bank_transfer,card,wallet,other',
+            'funding_source' => 'nullable|in:revenue,out_of_pocket',
             'wallet_id' => 'nullable|exists:wallets,id',
             'reference_number' => 'nullable|string|max:255',
             'attachment' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
@@ -150,6 +159,12 @@ class ExpenseController extends Controller
                 $attachmentPath = $request->file('attachment')->store('expenses', 'public');
             }
 
+            $fundingSource = AccountingAnalytics::inferFundingSource(
+                isset($validated['wallet_id']) ? (int) $validated['wallet_id'] : null,
+                $validated['payment_method'],
+                $validated['funding_source'] ?? null
+            );
+
             // إنشاء المصروف
             $expense = Expense::create([
                 'expense_number' => $expenseNumber,
@@ -160,6 +175,7 @@ class ExpenseController extends Controller
                 'currency' => 'EGP',
                 'expense_date' => $validated['expense_date'],
                 'payment_method' => $validated['payment_method'],
+                'funding_source' => $fundingSource,
                 'wallet_id' => $validated['wallet_id'] ?? null,
                 'reference_number' => $validated['reference_number'] ?? null,
                 'attachment' => $attachmentPath,
@@ -214,6 +230,7 @@ class ExpenseController extends Controller
             'amount' => 'required|numeric|min:0.01',
             'expense_date' => 'required|date',
             'payment_method' => 'required|in:cash,bank_transfer,card,wallet,other',
+            'funding_source' => 'nullable|in:revenue,out_of_pocket',
             'wallet_id' => 'nullable|exists:wallets,id',
             'reference_number' => 'nullable|string|max:255',
             'attachment' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
@@ -230,6 +247,13 @@ class ExpenseController extends Controller
                 $attachmentPath = $request->file('attachment')->store('expenses', 'public');
                 $validated['attachment'] = $attachmentPath;
             }
+
+            $fundingSource = AccountingAnalytics::inferFundingSource(
+                isset($validated['wallet_id']) ? (int) $validated['wallet_id'] : null,
+                $validated['payment_method'],
+                $validated['funding_source'] ?? null
+            );
+            $validated['funding_source'] = $fundingSource;
 
             $expense->update($validated);
 

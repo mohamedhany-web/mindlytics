@@ -32,6 +32,14 @@
                     <i class="fas fa-calculator text-sky-600"></i>
                     مركز المحاسبة
                 </a>
+                <a href="{{ route('admin.accounting.receivables') }}" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-amber-800 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100">
+                    <i class="fas fa-hand-holding-usd"></i>
+                    المديونية
+                </a>
+                <a href="{{ route('admin.accounting.reports') }}" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-emerald-800 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100">
+                    <i class="fas fa-file-excel"></i>
+                    التقارير
+                </a>
                 <button type="button" @click="refresh(true)" :disabled="loading"
                         class="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-white rounded-xl bg-sky-600 hover:bg-sky-700 disabled:opacity-60">
                     <i class="fas fa-sync-alt" :class="loading ? 'fa-spin' : ''"></i>
@@ -47,6 +55,12 @@
             <span x-text="errorMsg"></span>
         </div>
     </template>
+    <template x-if="chartLoadError">
+        <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900 text-sm font-semibold flex items-center gap-2">
+            <i class="fas fa-chart-line"></i>
+            <span x-text="chartLoadError"></span>
+        </div>
+    </template>
 
     {{-- الحالة العامة --}}
     <section class="rounded-2xl border shadow-lg overflow-hidden"
@@ -58,13 +72,56 @@
                     <i class="fas fa-heartbeat text-lg"></i>
                 </div>
                 <div>
-                    <p class="text-xs font-semibold text-slate-600">الحالة العامة</p>
+                    <p class="text-xs font-semibold text-slate-600">الحالة العامة / بر الأمان</p>
                     <p class="text-lg font-black text-slate-900" x-text="healthLabel || '—'"></p>
+                    <p class="text-xs text-slate-600 mt-1 max-w-xl" x-show="healthDetail" x-text="healthDetail"></p>
                 </div>
             </div>
-            <p class="text-xs text-slate-600">المقارنات: اليوم ↔ أمس — الشهر ↔ الشهر السابق</p>
+            <p class="text-xs text-slate-600">المقارنات: اليوم ↔ أمس — الشهر ↔ الشهر السابق — بر الأمان = إيرادات تغطي مصروفات التشغيل</p>
         </div>
     </section>
+
+    {{-- بر الأمان + تمويل ذاتي --}}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <section class="lg:col-span-2 rounded-2xl border border-slate-200 bg-white shadow-lg p-5">
+            <h3 class="text-base font-black text-slate-900 mb-3"><i class="fas fa-shield-alt text-sky-600 ml-1"></i> تحليل بر الأمان (الشهر)</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                <div class="rounded-xl bg-emerald-50 border border-emerald-200 p-3">
+                    <p class="text-xs text-emerald-700">إيرادات محصّلة</p>
+                    <p class="font-black text-emerald-800 tabular-nums" x-text="fmt(breakEvenMonth.revenue)"></p>
+                </div>
+                <div class="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                    <p class="text-xs text-slate-600">مصروف من الإيراد</p>
+                    <p class="font-black tabular-nums" x-text="fmt(breakEvenMonth.expenses_from_revenue)"></p>
+                </div>
+                <div class="rounded-xl bg-amber-50 border border-amber-200 p-3">
+                    <p class="text-xs text-amber-800">من جيب الشركة</p>
+                    <p class="font-black text-amber-900 tabular-nums" x-text="fmt(breakEvenMonth.expenses_out_of_pocket)"></p>
+                </div>
+                <div class="rounded-xl border p-3" :class="(breakEvenMonth.operational_net ?? 0) >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'">
+                    <p class="text-xs text-slate-600">صافي تشغيلي</p>
+                    <p class="font-black tabular-nums" :class="(breakEvenMonth.operational_net ?? 0) >= 0 ? 'text-emerald-800' : 'text-rose-800'" x-text="fmt(breakEvenMonth.operational_net)"></p>
+                </div>
+            </div>
+            <p class="text-xs text-slate-600 mt-3" x-text="breakEvenMonth.detail || ''"></p>
+            <p class="text-[11px] text-slate-500 mt-2">
+                كل الفترات:
+                <span class="font-semibold" x-text="breakEvenAllTime.label || '—'"></span>
+                — تمويل ذاتي تراكمي:
+                <span class="font-bold text-amber-700" x-text="fmt(breakEvenAllTime.expenses_out_of_pocket)"></span>
+            </p>
+        </section>
+        <section class="rounded-2xl border border-violet-200 bg-violet-50/50 shadow-lg p-5">
+            <h3 class="text-base font-black text-violet-900 mb-3"><i class="fas fa-hand-holding-usd ml-1"></i> المديونية (لنا)</h3>
+            <p class="text-2xl font-black text-violet-800 tabular-nums" x-text="fmt(receivables.receivables?.total)"></p>
+            <ul class="mt-3 space-y-1 text-xs text-slate-700">
+                <li class="flex justify-between"><span>فواتير معلقة</span><span x-text="fmt(receivables.receivables?.invoices_amount)"></span></li>
+                <li class="flex justify-between"><span>متبقي أوفلاين</span><span x-text="fmt(receivables.receivables?.offline_remaining)"></span></li>
+                <li class="flex justify-between"><span>أقساط</span><span x-text="fmt((receivables.receivables?.installments_pending || 0) + (receivables.receivables?.installments_overdue || 0))"></span></li>
+            </ul>
+            <a href="{{ route('admin.accounting.receivables') }}" class="inline-block mt-3 text-xs font-bold text-violet-700 hover:underline">تفاصيل المديونية ←</a>
+        </section>
+    </div>
 
     {{-- مؤشرات اليوم والشهر --}}
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -132,6 +189,10 @@
                 <div class="min-w-0 flex-1">
                     <p class="text-sm font-bold text-orange-800/80 mb-1">مصروفات الشهر</p>
                     <p class="text-2xl font-black bg-gradient-to-r from-orange-700 to-amber-600 bg-clip-text text-transparent tabular-nums" x-text="fmt(snapshot.expenses_month)"></p>
+                    <p class="text-[11px] text-slate-600 mt-1">
+                        من الإيراد: <span class="font-bold text-emerald-700" x-text="fmt(snapshot.expenses_month_revenue)"></span>
+                        · من جيبنا: <span class="font-bold text-amber-700" x-text="fmt(snapshot.expenses_month_pocket)"></span>
+                    </p>
                 </div>
                 <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-md flex-shrink-0">
                     <i class="fas fa-receipt text-sm"></i>
@@ -262,18 +323,23 @@
 
 @push('scripts')
 <script>window.__accountingInsightsInitial = @json($initialPayload ?? []);</script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="{{ asset('js/chart.umd.min.js') }}" onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.3/chart.umd.min.js'"></script>
 <script>
 (function () {
     const factory = () => ({
         loading: false,
         asOf: null,
         errorMsg: null,
+        chartLoadError: null,
         snapshot: {},
         trend: {},
         daily: {},
         realtime: { labels: [], cash_in: [], cash_out: [], net: [], bucket_minutes: 5 },
+        breakEvenMonth: {},
+        breakEvenAllTime: {},
+        receivables: { receivables: {}, payables: {} },
         healthLabel: null,
+        healthDetail: null,
         healthTone: 'good',
         realtimeChart: null,
         dailyChart: null,
@@ -329,7 +395,11 @@
             this.trend = data.trend || {};
             this.daily = data.daily || {};
             this.realtime = data.realtime || this.realtime;
+            this.breakEvenMonth = data.break_even_month || {};
+            this.breakEvenAllTime = data.break_even_all_time || {};
+            this.receivables = data.receivables || this.receivables;
             this.healthLabel = data.health?.label || null;
+            this.healthDetail = data.health?.detail || null;
             this.healthTone = data.health?.tone || 'good';
             this.asOf = this.snapshot.as_of || null;
         },
@@ -367,16 +437,48 @@
             return new Promise((resolve) => {
                 const tick = (attempt = 0) => {
                     if (typeof Chart !== 'undefined') {
-                        resolve();
+                        resolve(true);
                         return;
                     }
-                    if (attempt >= 50) {
-                        resolve();
+                    if (attempt >= 80) {
+                        resolve(false);
                         return;
                     }
                     setTimeout(() => tick(attempt + 1), 100);
                 };
                 tick();
+            });
+        },
+
+        loadChartJsFallback() {
+            return new Promise((resolve) => {
+                if (typeof Chart !== 'undefined') {
+                    resolve(true);
+                    return;
+                }
+                const urls = [
+                    "{{ asset('js/chart.umd.min.js') }}",
+                    'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.3/chart.umd.min.js',
+                    'https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js',
+                ];
+                let i = 0;
+                const tryNext = () => {
+                    if (typeof Chart !== 'undefined') {
+                        resolve(true);
+                        return;
+                    }
+                    if (i >= urls.length) {
+                        resolve(false);
+                        return;
+                    }
+                    const s = document.createElement('script');
+                    s.src = urls[i++];
+                    s.async = true;
+                    s.onload = () => resolve(typeof Chart !== 'undefined');
+                    s.onerror = tryNext;
+                    document.head.appendChild(s);
+                };
+                tryNext();
             });
         },
 
@@ -414,16 +516,20 @@
         },
 
         ensureDailyChart() {
-            if (this.dailyChart) return;
             const el = document.getElementById('dailyTrendChart');
-            if (!el) return;
+            if (!el || typeof Chart === 'undefined') return;
+            if (this.dailyChart) {
+                this.dailyChart.destroy();
+                this.dailyChart = null;
+            }
             this.dailyChart = this.createChart(el, {
                 type: 'line',
                 data: {
                     labels: [],
                     datasets: [
                         { label: 'إيراد', data: [], borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.12)', tension: 0.3, pointRadius: 2, borderWidth: 2, fill: true },
-                        { label: 'مصروفات', data: [], borderColor: '#f43f5e', backgroundColor: 'rgba(244, 63, 94, 0.12)', tension: 0.3, pointRadius: 2, borderWidth: 2, fill: true },
+                        { label: 'مصروف (إيراد)', data: [], borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', tension: 0.3, pointRadius: 2, borderWidth: 2, fill: true },
+                        { label: 'من جيب الشركة', data: [], borderColor: '#d97706', borderDash: [4, 4], backgroundColor: 'rgba(217, 119, 6, 0.08)', tension: 0.3, pointRadius: 2, borderWidth: 2, fill: false },
                         { label: 'صافي', data: [], borderColor: '#0ea5e9', backgroundColor: 'rgba(14, 165, 233, 0.08)', tension: 0.3, pointRadius: 2, borderWidth: 2, fill: false },
                     ]
                 },
@@ -432,9 +538,12 @@
         },
 
         ensureRealtimeChart() {
-            if (this.realtimeChart) return;
             const el = document.getElementById('companyRealtimeChart');
-            if (!el) return;
+            if (!el || typeof Chart === 'undefined') return;
+            if (this.realtimeChart) {
+                this.realtimeChart.destroy();
+                this.realtimeChart = null;
+            }
             this.realtimeChart = this.createChart(el, {
                 type: 'line',
                 data: {
@@ -450,7 +559,11 @@
         },
 
         safeRenderCharts() {
-            if (typeof Chart === 'undefined') return;
+            if (typeof Chart === 'undefined') {
+                this.chartLoadError = 'تعذر تحميل مكتبة الرسوم البيانية.';
+                return;
+            }
+            this.chartLoadError = null;
             try {
                 this.ensureDailyChart();
                 this.ensureRealtimeChart();
@@ -459,9 +572,10 @@
                 if (this.dailyChart) {
                     this.dailyChart.data.labels = d.labels || [];
                     this.dailyChart.data.datasets[0].data = d.revenue || [];
-                    this.dailyChart.data.datasets[1].data = d.expenses || [];
-                    this.dailyChart.data.datasets[2].data = d.net || [];
-                    this.dailyChart.update('none');
+                    this.dailyChart.data.datasets[1].data = d.expenses_revenue || [];
+                    this.dailyChart.data.datasets[2].data = d.expenses_pocket || [];
+                    this.dailyChart.data.datasets[3].data = d.net || [];
+                    this.dailyChart.update();
                 }
 
                 const rt = this.realtime || {};
@@ -470,19 +584,22 @@
                     this.realtimeChart.data.datasets[0].data = rt.cash_in || [];
                     this.realtimeChart.data.datasets[1].data = rt.cash_out || [];
                     this.realtimeChart.data.datasets[2].data = rt.net || [];
-                    this.realtimeChart.update('none');
+                    this.realtimeChart.update();
                 }
             } catch (e) {
                 console.error('accounting insights chart render failed', e);
+                this.chartLoadError = 'حدث خطأ أثناء رسم المؤشرات.';
             }
         },
 
         async init() {
             this.applyPayload(window.__accountingInsightsInitial || {});
-            await this.waitForChartJs();
+            let ok = await this.waitForChartJs();
+            if (!ok) ok = await this.loadChartJsFallback();
+            if (!ok) this.chartLoadError = 'تعذر تحميل Chart.js — تحقق من الاتصال أو الملف المحلي.';
             this.safeRenderCharts();
             await this.refresh(true);
-            setInterval(() => this.refresh(false), 10_000);
+            setInterval(() => this.refresh(false), 30000);
         }
     });
 
