@@ -4,7 +4,7 @@
 @section('header', 'مؤشرات المحاسبة')
 
 @section('content')
-<div class="space-y-6" x-data="accountingInsights()">
+<div class="space-y-6" x-data="accountingInsights" x-init="init()">
 
     {{-- الهيدر --}}
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
@@ -323,9 +323,143 @@
 
 @push('scripts')
 <script>window.__accountingInsightsInitial = @json($initialPayload ?? []);</script>
-<script src="{{ asset('js/chart.umd.min.js') }}" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js'"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
 (function () {
+    // Chart.js instances must stay outside Alpine reactive state (Proxy breaks Chart.js).
+    let dailyChart = null;
+    let realtimeChart = null;
+
+    function toNumbers(arr) {
+        return (Array.isArray(arr) ? arr : []).map(v => Number(v) || 0);
+    }
+
+    function destroyChartInstance(chart) {
+        if (chart && typeof chart.destroy === 'function') {
+            try {
+                chart.destroy();
+            } catch (_) { /* already destroyed */ }
+        }
+    }
+
+    function destroyChartOnCanvas(canvas) {
+        if (!canvas || typeof Chart === 'undefined') return;
+        const existing = Chart.getChart(canvas);
+        if (existing) {
+            try {
+                existing.destroy();
+            } catch (_) { /* ignore */ }
+        }
+    }
+
+    function chartOptions() {
+        return {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => {
+                            const v = Number(ctx.raw || 0);
+                            return `${ctx.dataset.label}: ${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 14 } },
+                y: { ticks: { callback: (v) => Number(v).toLocaleString('en-US') } }
+            }
+        };
+    }
+
+    function createChart(canvas, config) {
+        if (!canvas || typeof Chart === 'undefined') return null;
+        destroyChartOnCanvas(canvas);
+        return new Chart(canvas, config);
+    }
+
+    function buildDailyChart() {
+        const el = document.getElementById('dailyTrendChart');
+        if (!el || typeof Chart === 'undefined') return false;
+        if (dailyChart && dailyChart.canvas === el) return true;
+
+        destroyChartInstance(dailyChart);
+        dailyChart = null;
+
+        dailyChart = createChart(el, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    { label: 'إيراد', data: [], borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.12)', tension: 0.3, pointRadius: 2, borderWidth: 2, fill: true },
+                    { label: 'مصروف (إيراد)', data: [], borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', tension: 0.3, pointRadius: 2, borderWidth: 2, fill: true },
+                    { label: 'من جيب الشركة', data: [], borderColor: '#d97706', borderDash: [4, 4], backgroundColor: 'rgba(217, 119, 6, 0.08)', tension: 0.3, pointRadius: 2, borderWidth: 2, fill: false },
+                    { label: 'صافي', data: [], borderColor: '#0ea5e9', backgroundColor: 'rgba(14, 165, 233, 0.08)', tension: 0.3, pointRadius: 2, borderWidth: 2, fill: false },
+                ]
+            },
+            options: chartOptions(),
+        });
+        return !!dailyChart;
+    }
+
+    function buildRealtimeChart() {
+        const el = document.getElementById('companyRealtimeChart');
+        if (!el || typeof Chart === 'undefined') return false;
+        if (realtimeChart && realtimeChart.canvas === el) return true;
+
+        destroyChartInstance(realtimeChart);
+        realtimeChart = null;
+
+        realtimeChart = createChart(el, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    { label: 'تدفق داخلي', data: [], borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.08)', tension: 0.3, pointRadius: 0, borderWidth: 2, fill: true },
+                    { label: 'تدفق خارجي', data: [], borderColor: '#f43f5e', backgroundColor: 'rgba(244, 63, 94, 0.08)', tension: 0.3, pointRadius: 0, borderWidth: 2, fill: true },
+                    { label: 'الصافي', data: [], borderColor: '#0ea5e9', backgroundColor: 'rgba(14, 165, 233, 0.08)', tension: 0.3, pointRadius: 0, borderWidth: 2, fill: false },
+                ]
+            },
+            options: chartOptions(),
+        });
+        return !!realtimeChart;
+    }
+
+    function updateDailyChart(daily) {
+        if (!buildDailyChart()) return;
+        const d = daily || {};
+        dailyChart.data.labels = Array.isArray(d.labels) ? [...d.labels] : [];
+        const ds = dailyChart.data.datasets;
+        if (ds[0]) ds[0].data = toNumbers(d.revenue);
+        if (ds[1]) ds[1].data = toNumbers(d.expenses_revenue);
+        if (ds[2]) ds[2].data = toNumbers(d.expenses_pocket);
+        if (ds[3]) ds[3].data = toNumbers(d.net);
+        dailyChart.update('none');
+    }
+
+    function updateRealtimeChart(realtime) {
+        if (!buildRealtimeChart()) return;
+        const rt = realtime || {};
+        realtimeChart.data.labels = Array.isArray(rt.labels) ? [...rt.labels] : [];
+        const ds = realtimeChart.data.datasets;
+        if (ds[0]) ds[0].data = toNumbers(rt.cash_in);
+        if (ds[1]) ds[1].data = toNumbers(rt.cash_out);
+        if (ds[2]) ds[2].data = toNumbers(rt.net);
+        realtimeChart.update('none');
+    }
+
+    function renderCharts(daily, realtime) {
+        if (typeof Chart === 'undefined') {
+            throw new Error('Chart.js not loaded');
+        }
+        updateDailyChart(daily);
+        updateRealtimeChart(realtime);
+    }
+
     const factory = () => ({
         loading: false,
         asOf: null,
@@ -341,8 +475,6 @@
         healthLabel: null,
         healthDetail: null,
         healthTone: 'good',
-        realtimeChart: null,
-        dailyChart: null,
 
         get healthBannerClass() {
             if (this.healthTone === 'bad') return 'border-rose-200 bg-rose-50';
@@ -440,169 +572,14 @@
                         resolve(true);
                         return;
                     }
-                    if (attempt >= 80) {
+                    if (attempt >= 50) {
                         resolve(false);
                         return;
                     }
-                    setTimeout(() => tick(attempt + 1), 100);
+                    setTimeout(() => tick(attempt + 1), 50);
                 };
                 tick();
             });
-        },
-
-        loadChartJsFallback() {
-            return new Promise((resolve) => {
-                if (typeof Chart !== 'undefined') {
-                    resolve(true);
-                    return;
-                }
-                const urls = [
-                    "{{ asset('js/chart.umd.min.js') }}",
-                    'https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js',
-                ];
-                let i = 0;
-                const tryNext = () => {
-                    if (typeof Chart !== 'undefined') {
-                        resolve(true);
-                        return;
-                    }
-                    if (i >= urls.length) {
-                        resolve(false);
-                        return;
-                    }
-                    const s = document.createElement('script');
-                    s.src = urls[i++];
-                    s.async = true;
-                    s.onload = () => resolve(typeof Chart !== 'undefined');
-                    s.onerror = tryNext;
-                    document.head.appendChild(s);
-                };
-                tryNext();
-            });
-        },
-
-        toNumbers(arr) {
-            return (Array.isArray(arr) ? arr : []).map(v => Number(v) || 0);
-        },
-
-        destroyChartInstance(chart) {
-            if (chart && typeof chart.destroy === 'function') {
-                try {
-                    chart.destroy();
-                } catch (_) { /* already destroyed */ }
-            }
-        },
-
-        destroyChartOnCanvas(canvas) {
-            if (!canvas || typeof Chart === 'undefined') return;
-            const existing = Chart.getChart(canvas);
-            if (existing) {
-                try {
-                    existing.destroy();
-                } catch (_) { /* ignore */ }
-            }
-        },
-
-        createChart(canvas, config) {
-            if (!canvas || typeof Chart === 'undefined') return null;
-            this.destroyChartOnCanvas(canvas);
-            return new Chart(canvas, config);
-        },
-
-        chartOptions() {
-            return {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: false,
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                    legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
-                    tooltip: {
-                        callbacks: {
-                            label: (ctx) => {
-                                const v = Number(ctx.raw || 0);
-                                return `${ctx.dataset.label}: ${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 14 } },
-                    y: { ticks: { callback: (v) => Number(v).toLocaleString('en-US') } }
-                }
-            };
-        },
-
-        buildDailyChart() {
-            const el = document.getElementById('dailyTrendChart');
-            if (!el || typeof Chart === 'undefined') return false;
-            if (this.dailyChart && this.dailyChart.canvas === el) return true;
-
-            this.destroyChartInstance(this.dailyChart);
-            this.dailyChart = null;
-
-            this.dailyChart = this.createChart(el, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [
-                        { label: 'إيراد', data: [], borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.12)', tension: 0.3, pointRadius: 2, borderWidth: 2, fill: true },
-                        { label: 'مصروف (إيراد)', data: [], borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', tension: 0.3, pointRadius: 2, borderWidth: 2, fill: true },
-                        { label: 'من جيب الشركة', data: [], borderColor: '#d97706', borderDash: [4, 4], backgroundColor: 'rgba(217, 119, 6, 0.08)', tension: 0.3, pointRadius: 2, borderWidth: 2, fill: false },
-                        { label: 'صافي', data: [], borderColor: '#0ea5e9', backgroundColor: 'rgba(14, 165, 233, 0.08)', tension: 0.3, pointRadius: 2, borderWidth: 2, fill: false },
-                    ]
-                },
-                options: this.chartOptions(),
-            });
-            return !!this.dailyChart;
-        },
-
-        buildRealtimeChart() {
-            const el = document.getElementById('companyRealtimeChart');
-            if (!el || typeof Chart === 'undefined') return false;
-            if (this.realtimeChart && this.realtimeChart.canvas === el) return true;
-
-            this.destroyChartInstance(this.realtimeChart);
-            this.realtimeChart = null;
-
-            this.realtimeChart = this.createChart(el, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [
-                        { label: 'تدفق داخلي', data: [], borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.08)', tension: 0.3, pointRadius: 0, borderWidth: 2, fill: true },
-                        { label: 'تدفق خارجي', data: [], borderColor: '#f43f5e', backgroundColor: 'rgba(244, 63, 94, 0.08)', tension: 0.3, pointRadius: 0, borderWidth: 2, fill: true },
-                        { label: 'الصافي', data: [], borderColor: '#0ea5e9', backgroundColor: 'rgba(14, 165, 233, 0.08)', tension: 0.3, pointRadius: 0, borderWidth: 2, fill: false },
-                    ]
-                },
-                options: this.chartOptions(),
-            });
-            return !!this.realtimeChart;
-        },
-
-        updateDailyChart() {
-            if (!this.buildDailyChart()) return;
-            const d = this.daily || {};
-            const chart = this.dailyChart;
-            chart.data.labels = Array.isArray(d.labels) ? [...d.labels] : [];
-            const ds = chart.data.datasets;
-            if (ds[0]) ds[0].data = this.toNumbers(d.revenue);
-            if (ds[1]) ds[1].data = this.toNumbers(d.expenses_revenue);
-            if (ds[2]) ds[2].data = this.toNumbers(d.expenses_pocket);
-            if (ds[3]) ds[3].data = this.toNumbers(d.net);
-            chart.update('none');
-        },
-
-        updateRealtimeChart() {
-            if (!this.buildRealtimeChart()) return;
-            const rt = this.realtime || {};
-            const chart = this.realtimeChart;
-            chart.data.labels = Array.isArray(rt.labels) ? [...rt.labels] : [];
-            const ds = chart.data.datasets;
-            if (ds[0]) ds[0].data = this.toNumbers(rt.cash_in);
-            if (ds[1]) ds[1].data = this.toNumbers(rt.cash_out);
-            if (ds[2]) ds[2].data = this.toNumbers(rt.net);
-            chart.update('none');
         },
 
         safeRenderCharts() {
@@ -611,12 +588,11 @@
                 return;
             }
             try {
-                this.updateDailyChart();
-                this.updateRealtimeChart();
+                renderCharts(this.daily, this.realtime);
                 this.chartLoadError = null;
             } catch (e) {
                 console.error('accounting insights chart render failed', e);
-                this.chartLoadError = 'حدث خطأ أثناء رسم المؤشرات.';
+                this.chartLoadError = 'حدث خطأ أثناء رسم المؤشرات: ' + (e?.message || e);
             }
         },
 
@@ -630,12 +606,10 @@
             this.applyPayload(window.__accountingInsightsInitial || {});
             await this.waitForDom();
 
-            let ok = typeof Chart !== 'undefined';
-            if (!ok) ok = await this.waitForChartJs();
-            if (!ok) ok = await this.loadChartJsFallback();
+            const ok = typeof Chart !== 'undefined' || await this.waitForChartJs();
 
             if (!ok) {
-                this.chartLoadError = 'تعذر تحميل Chart.js — تأكد من رفع public/js/chart.umd.min.js على السيرفر.';
+                this.chartLoadError = 'تعذر تحميل Chart.js.';
             } else {
                 this.safeRenderCharts();
             }
@@ -645,10 +619,12 @@
         }
     });
 
+    const register = () => Alpine.data('accountingInsights', factory);
+
     if (window.Alpine) {
-        Alpine.data('accountingInsights', factory);
+        register();
     } else {
-        document.addEventListener('alpine:init', () => Alpine.data('accountingInsights', factory));
+        document.addEventListener('alpine:init', register);
     }
 })();
 </script>
