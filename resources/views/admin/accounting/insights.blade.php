@@ -323,7 +323,7 @@
 
 @push('scripts')
 <script>window.__accountingInsightsInitial = @json($initialPayload ?? []);</script>
-<script src="{{ asset('js/chart.umd.min.js') }}" onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.3/chart.umd.min.js'"></script>
+<script src="{{ asset('js/chart.umd.min.js') }}" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js'"></script>
 <script>
 (function () {
     const factory = () => ({
@@ -458,7 +458,6 @@
                 }
                 const urls = [
                     "{{ asset('js/chart.umd.min.js') }}",
-                    'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.3/chart.umd.min.js',
                     'https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js',
                 ];
                 let i = 0;
@@ -482,12 +481,31 @@
             });
         },
 
-        createChart(canvas, config) {
-            if (!canvas || typeof Chart === 'undefined') return null;
+        toNumbers(arr) {
+            return (Array.isArray(arr) ? arr : []).map(v => Number(v) || 0);
+        },
+
+        destroyChartInstance(chart) {
+            if (chart && typeof chart.destroy === 'function') {
+                try {
+                    chart.destroy();
+                } catch (_) { /* already destroyed */ }
+            }
+        },
+
+        destroyChartOnCanvas(canvas) {
+            if (!canvas || typeof Chart === 'undefined') return;
             const existing = Chart.getChart(canvas);
             if (existing) {
-                existing.destroy();
+                try {
+                    existing.destroy();
+                } catch (_) { /* ignore */ }
             }
+        },
+
+        createChart(canvas, config) {
+            if (!canvas || typeof Chart === 'undefined') return null;
+            this.destroyChartOnCanvas(canvas);
             return new Chart(canvas, config);
         },
 
@@ -495,7 +513,7 @@
             return {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: { duration: 300 },
+                animation: false,
                 interaction: { mode: 'index', intersect: false },
                 plugins: {
                     legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
@@ -509,19 +527,20 @@
                     }
                 },
                 scales: {
-                    x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
+                    x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 14 } },
                     y: { ticks: { callback: (v) => Number(v).toLocaleString('en-US') } }
                 }
             };
         },
 
-        ensureDailyChart() {
+        buildDailyChart() {
             const el = document.getElementById('dailyTrendChart');
-            if (!el || typeof Chart === 'undefined') return;
-            if (this.dailyChart) {
-                this.dailyChart.destroy();
-                this.dailyChart = null;
-            }
+            if (!el || typeof Chart === 'undefined') return false;
+            if (this.dailyChart && this.dailyChart.canvas === el) return true;
+
+            this.destroyChartInstance(this.dailyChart);
+            this.dailyChart = null;
+
             this.dailyChart = this.createChart(el, {
                 type: 'line',
                 data: {
@@ -535,15 +554,17 @@
                 },
                 options: this.chartOptions(),
             });
+            return !!this.dailyChart;
         },
 
-        ensureRealtimeChart() {
+        buildRealtimeChart() {
             const el = document.getElementById('companyRealtimeChart');
-            if (!el || typeof Chart === 'undefined') return;
-            if (this.realtimeChart) {
-                this.realtimeChart.destroy();
-                this.realtimeChart = null;
-            }
+            if (!el || typeof Chart === 'undefined') return false;
+            if (this.realtimeChart && this.realtimeChart.canvas === el) return true;
+
+            this.destroyChartInstance(this.realtimeChart);
+            this.realtimeChart = null;
+
             this.realtimeChart = this.createChart(el, {
                 type: 'line',
                 data: {
@@ -556,6 +577,32 @@
                 },
                 options: this.chartOptions(),
             });
+            return !!this.realtimeChart;
+        },
+
+        updateDailyChart() {
+            if (!this.buildDailyChart()) return;
+            const d = this.daily || {};
+            const chart = this.dailyChart;
+            chart.data.labels = Array.isArray(d.labels) ? [...d.labels] : [];
+            const ds = chart.data.datasets;
+            if (ds[0]) ds[0].data = this.toNumbers(d.revenue);
+            if (ds[1]) ds[1].data = this.toNumbers(d.expenses_revenue);
+            if (ds[2]) ds[2].data = this.toNumbers(d.expenses_pocket);
+            if (ds[3]) ds[3].data = this.toNumbers(d.net);
+            chart.update('none');
+        },
+
+        updateRealtimeChart() {
+            if (!this.buildRealtimeChart()) return;
+            const rt = this.realtime || {};
+            const chart = this.realtimeChart;
+            chart.data.labels = Array.isArray(rt.labels) ? [...rt.labels] : [];
+            const ds = chart.data.datasets;
+            if (ds[0]) ds[0].data = this.toNumbers(rt.cash_in);
+            if (ds[1]) ds[1].data = this.toNumbers(rt.cash_out);
+            if (ds[2]) ds[2].data = this.toNumbers(rt.net);
+            chart.update('none');
         },
 
         safeRenderCharts() {
@@ -563,41 +610,36 @@
                 this.chartLoadError = 'تعذر تحميل مكتبة الرسوم البيانية.';
                 return;
             }
-            this.chartLoadError = null;
             try {
-                this.ensureDailyChart();
-                this.ensureRealtimeChart();
-
-                const d = this.daily || {};
-                if (this.dailyChart) {
-                    this.dailyChart.data.labels = d.labels || [];
-                    this.dailyChart.data.datasets[0].data = d.revenue || [];
-                    this.dailyChart.data.datasets[1].data = d.expenses_revenue || [];
-                    this.dailyChart.data.datasets[2].data = d.expenses_pocket || [];
-                    this.dailyChart.data.datasets[3].data = d.net || [];
-                    this.dailyChart.update();
-                }
-
-                const rt = this.realtime || {};
-                if (this.realtimeChart) {
-                    this.realtimeChart.data.labels = rt.labels || [];
-                    this.realtimeChart.data.datasets[0].data = rt.cash_in || [];
-                    this.realtimeChart.data.datasets[1].data = rt.cash_out || [];
-                    this.realtimeChart.data.datasets[2].data = rt.net || [];
-                    this.realtimeChart.update();
-                }
+                this.updateDailyChart();
+                this.updateRealtimeChart();
+                this.chartLoadError = null;
             } catch (e) {
                 console.error('accounting insights chart render failed', e);
                 this.chartLoadError = 'حدث خطأ أثناء رسم المؤشرات.';
             }
         },
 
+        waitForDom() {
+            return new Promise(resolve => {
+                requestAnimationFrame(() => requestAnimationFrame(resolve));
+            });
+        },
+
         async init() {
             this.applyPayload(window.__accountingInsightsInitial || {});
-            let ok = await this.waitForChartJs();
+            await this.waitForDom();
+
+            let ok = typeof Chart !== 'undefined';
+            if (!ok) ok = await this.waitForChartJs();
             if (!ok) ok = await this.loadChartJsFallback();
-            if (!ok) this.chartLoadError = 'تعذر تحميل Chart.js — تحقق من الاتصال أو الملف المحلي.';
-            this.safeRenderCharts();
+
+            if (!ok) {
+                this.chartLoadError = 'تعذر تحميل Chart.js — تأكد من رفع public/js/chart.umd.min.js على السيرفر.';
+            } else {
+                this.safeRenderCharts();
+            }
+
             await this.refresh(true);
             setInterval(() => this.refresh(false), 30000);
         }

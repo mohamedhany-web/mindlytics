@@ -159,7 +159,10 @@ class AccountingAnalytics
 
         $manualPayable = 0.0;
         $manualReceivable = 0.0;
-        if (class_exists(\App\Models\AccountingDebt::class)) {
+        if (
+            class_exists(\App\Models\AccountingDebt::class)
+            && \Illuminate\Support\Facades\Schema::hasTable('accounting_debts')
+        ) {
             $manualPayable = (float) \App\Models\AccountingDebt::query()
                 ->where('direction', \App\Models\AccountingDebt::DIRECTION_PAYABLE)
                 ->whereIn('status', ['active', 'partial'])
