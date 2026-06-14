@@ -1,14 +1,1079 @@
-@extends('layouts.learn-immersive')
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="learn-rtl-root">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
+    <meta name="csrf-token" content="">
+    <title>Mindlytics - Vue.js من الصفر - ابدأ التعلم</title>
+    <meta name="theme-color" content="#0ea5e9">
+<meta name="msapplication-TileColor" content="#0ea5e9">
+<link rel="icon" href="http://127.0.0.1:8000/storage/site/favicon.png?v=1777044280" type="image/x-icon">
+<link rel="shortcut icon" href="http://127.0.0.1:8000/storage/site/favicon.png?v=1777044280" type="image/x-icon">
+<link rel="icon" type="image/png" sizes="16x16" href="http://127.0.0.1:8000/storage/site/favicon.png?v=1777044280">
+<link rel="icon" type="image/png" sizes="32x32" href="http://127.0.0.1:8000/storage/site/favicon.png?v=1777044280">
+<link rel="icon" type="image/png" sizes="48x48" href="http://127.0.0.1:8000/storage/site/favicon.png?v=1777044280">
+<link rel="apple-touch-icon" sizes="180x180" href="http://127.0.0.1:8000/storage/site/logo.png?v=1777069419">
+<link rel="manifest" href="http://127.0.0.1:8000/site.webmanifest">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="csrf-token" content="">
+    <style>
+:root {
+    --learn-primary: #2563EB;
+    --learn-primary-hover: #1D4ED8;
+    --learn-secondary: #06B6D4;
+    --learn-success: #10B981;
+    --learn-warning: #F59E0B;
+    --learn-danger: #EF4444;
+    --learn-bg: #F8FAFC;
+    --learn-card: #FFFFFF;
+    --learn-text: #0F172A;
+    --learn-text-muted: #64748B;
+    --learn-border: #E2E8F0;
+    --learn-radius-lg: 20px;
+    --learn-radius-xl: 24px;
+    --learn-shadow: 0 4px 24px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
+    --learn-shadow-lg: 0 20px 50px rgba(15, 23, 42, 0.12);
+    --learn-glass: rgba(255, 255, 255, 0.82);
+}
 
-@section('title', $course->localized('title') . ' - ' . __('student.learn'))
-@section('header', '')
+[x-cloak] { display: none !important; }
 
-@push('meta')
-<meta name="csrf-token" content="{{ csrf_token() }}">
-@endpush
+.learn-immersive-body {
+    font-family: 'Cairo', 'Inter', sans-serif;
+    background: var(--learn-bg);
+    color: var(--learn-text);
+    overflow-x: hidden;
+}
 
-@push('styles')
-@include('student.my-courses.partials.learn-premium-styles')
+.learn-page {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background:
+        radial-gradient(ellipse 80% 50% at 100% 0%, rgba(37, 99, 235, 0.06), transparent 50%),
+        radial-gradient(ellipse 60% 40% at 0% 100%, rgba(6, 182, 212, 0.05), transparent 45%),
+        var(--learn-bg);
+    direction: rtl;
+    text-align: right;
+}
+
+.learn-rtl-root,
+.learn-immersive-body.learn-rtl {
+    direction: rtl;
+}
+
+.learn-page .learn-sidebar-title i,
+.learn-page .learn-sidebar-stat i,
+.learn-page .curriculum-section-header span i {
+    margin-inline-end: 0.35rem;
+}
+
+/* ─── Sticky learning header ─── */
+.learn-top-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--learn-glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--learn-border);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset;
+}
+
+.learn-top-header-inner {
+    max-width: 1920px;
+    margin: 0 auto;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    flex-wrap: nowrap;
+    direction: rtl;
+}
+
+@media (min-width: 1024px) {
+    .learn-top-header-inner { padding: 0.875rem 1.5rem; gap: 1rem; }
+}
+
+@media (max-width: 767px) {
+    .learn-top-header-inner {
+        flex-wrap: wrap;
+    }
+    .learn-header-progress {
+        order: 10;
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+    }
+    .learn-header-actions {
+        margin-inline-start: auto;
+    }
+}
+
+.learn-header-titles {
+    min-width: 0;
+    flex: 1 1 140px;
+}
+
+.learn-back-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid var(--learn-border);
+    background: var(--learn-card);
+    color: var(--learn-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+.learn-back-btn:hover {
+    border-color: var(--learn-primary);
+    color: var(--learn-primary);
+    background: #EFF6FF;
+}
+
+.learn-header-course {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--learn-primary);
+    margin-bottom: 0.125rem;
+}
+.learn-header-lesson {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--learn-text);
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+@media (min-width: 768px) {
+    .learn-header-lesson { font-size: 1.125rem; }
+}
+
+.learn-header-progress {
+    display: none;
+    flex-direction: column;
+    gap: 0.35rem;
+    flex: 0 1 220px;
+    min-width: 160px;
+    max-width: 280px;
+}
+@media (min-width: 768px) { .learn-header-progress { display: flex; } }
+
+.learn-progress-track {
+    height: 8px;
+    background: #E2E8F0;
+    border-radius: 999px;
+    overflow: hidden;
+    direction: rtl;
+}
+.learn-progress-fill {
+    height: 100%;
+    background: linear-gradient(270deg, var(--learn-primary), var(--learn-secondary));
+    border-radius: 999px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+.learn-progress-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(270deg, transparent, rgba(255,255,255,0.35), transparent);
+    animation: learn-shimmer 2.5s infinite;
+}
+@keyframes learn-shimmer {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+}
+
+.learn-progress-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--learn-text-muted);
+}
+
+.learn-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    margin-inline-start: auto;
+}
+
+.learn-icon-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid var(--learn-border);
+    background: var(--learn-card);
+    color: var(--learn-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.learn-icon-btn:hover, .learn-icon-btn.active {
+    border-color: var(--learn-primary);
+    color: var(--learn-primary);
+    background: #EFF6FF;
+}
+
+.learn-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 12px;
+    background: var(--learn-primary);
+    color: #fff;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+.learn-btn-primary:hover { background: var(--learn-primary-hover); transform: translateY(-1px); }
+
+/* ─── Main layout grid ─── */
+.learn-shell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    max-width: 1920px;
+    margin: 0 auto;
+    width: 100%;
+    min-height: 0;
+}
+
+.learn-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    min-height: 0;
+    direction: rtl;
+}
+
+@media (min-width: 1024px) {
+    .learn-grid {
+        /* sidebar أولاً في DOM → العمود الأيمن | المحتوى → العمود الأيسر */
+        grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
+        gap: 0;
+    }
+}
+
+.learn-main {
+    min-width: 0;
+    overflow-y: auto;
+    padding: 1rem;
+    scroll-behavior: smooth;
+    order: 2;
+}
+@media (min-width: 1024px) {
+    .learn-main {
+        padding: 1.25rem 1.5rem 2rem;
+        order: unset;
+        border-inline-start: 1px solid var(--learn-border);
+    }
+}
+
+/* ─── Achievement strip ─── */
+.learn-achievements {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+@media (min-width: 640px) {
+    .learn-achievements { grid-template-columns: repeat(4, 1fr); }
+}
+
+.learn-achievement-card {
+    background: var(--learn-card);
+    border: 1px solid var(--learn-border);
+    border-radius: 16px;
+    padding: 0.875rem 1rem;
+    box-shadow: var(--learn-shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.learn-achievement-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--learn-shadow-lg);
+}
+.learn-achievement-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+.learn-achievement-value {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--learn-text);
+    line-height: 1;
+}
+.learn-achievement-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--learn-text-muted);
+    margin-top: 0.25rem;
+}
+
+/* ─── Curriculum sidebar ─── */
+.learn-sidebar {
+    background: var(--learn-card);
+    border-top: 1px solid var(--learn-border);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+@media (min-width: 1024px) {
+    .learn-sidebar {
+        border-top: none;
+        border-inline-start: none;
+        position: sticky;
+        top: 73px;
+        height: calc(100dvh - 73px);
+        max-height: calc(100dvh - 73px);
+        box-shadow: -12px 0 40px rgba(15, 23, 42, 0.04);
+    }
+}
+
+.learn-sidebar-header {
+    padding: 1.25rem 1.25rem 1rem;
+    border-bottom: 1px solid var(--learn-border);
+    flex-shrink: 0;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+}
+
+.learn-sidebar-title {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--learn-text);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0;
+}
+.learn-sidebar-title i { color: var(--learn-primary); }
+
+.learn-sidebar-nav-row {
+    display: flex;
+    gap: 0.5rem;
+    margin: 0.75rem 0;
+}
+.learn-sidebar-nav-pill {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 12px;
+    border: 1px solid var(--learn-border);
+    background: var(--learn-card);
+    color: var(--learn-text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.learn-sidebar-nav-pill:hover:not(:disabled) {
+    border-color: var(--learn-primary);
+    color: var(--learn-primary);
+    background: #EFF6FF;
+}
+.learn-sidebar-nav-pill:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+.learn-sidebar-nav-pill--primary {
+    background: var(--learn-primary);
+    border-color: var(--learn-primary);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+.learn-sidebar-nav-pill--primary:hover:not(:disabled) {
+    background: var(--learn-primary-hover);
+    color: #fff;
+}
+
+.learn-sidebar-hint {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #B45309;
+    margin-top: 0.5rem;
+    line-height: 1.45;
+    padding: 0.5rem 0.65rem;
+    border-radius: 10px;
+    background: #FFFBEB;
+    border: 1px solid #FDE68A;
+}
+
+.learn-sidebar-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+.learn-sidebar-stat {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--learn-text-muted);
+    background: var(--learn-bg);
+    border: 1px solid var(--learn-border);
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+}
+
+.learn-search-wrap { position: relative; margin-bottom: 0.75rem; }
+.learn-search-wrap input {
+    width: 100%;
+    padding: 0.625rem 1rem 0.625rem 2.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--learn-border);
+    background: var(--learn-bg);
+    font-size: 0.8125rem;
+    color: var(--learn-text);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    text-align: right;
+}
+.learn-search-wrap input:focus {
+    outline: none;
+    border-color: var(--learn-primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+.learn-search-wrap i {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    inset-inline-end: 0.875rem;
+    color: var(--learn-text-muted);
+    font-size: 0.8125rem;
+    pointer-events: none;
+}
+
+.learn-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+}
+.learn-filter-chip {
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    border: 1px solid var(--learn-border);
+    background: var(--learn-card);
+    color: var(--learn-text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.learn-filter-chip:hover { border-color: var(--learn-primary); color: var(--learn-primary); }
+.learn-filter-chip.active {
+    background: #EFF6FF;
+    border-color: var(--learn-primary);
+    color: var(--learn-primary);
+}
+
+.learn-sidebar-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.75rem 1rem 1.5rem;
+    scrollbar-width: thin;
+    scrollbar-color: #CBD5E1 transparent;
+}
+
+/* ─── Curriculum items ─── */
+.curriculum-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    margin-top: 0.75rem;
+    margin-bottom: 0.375rem;
+    border-radius: 14px;
+    background: var(--learn-bg);
+    border: 1px solid var(--learn-border);
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease;
+    font-weight: 700;
+    font-size: 0.8125rem;
+    color: var(--learn-text);
+}
+.curriculum-section-header:first-of-type { margin-top: 0; }
+.curriculum-section-header:hover {
+    border-color: #BFDBFE;
+    background: #F0F9FF;
+}
+.curriculum-section-chevron {
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--learn-text-muted);
+    font-size: 0.75rem;
+}
+.curriculum-section-header.collapsed .curriculum-section-chevron {
+    transform: rotate(90deg);
+}
+
+.curriculum-section-body {
+    display: block;
+}
+.curriculum-section-body.is-collapsed {
+    display: none !important;
+}
+
+.curriculum-item {
+    display: block;
+    padding: 0.75rem 0.875rem;
+    margin-bottom: 0.375rem;
+    border-radius: 14px;
+    border: 1px solid var(--learn-border);
+    background: var(--learn-card);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+.curriculum-item:hover:not(.locked) {
+    border-color: #BFDBFE;
+    background: #F8FAFC;
+    transform: translateX(2px);
+    box-shadow: var(--learn-shadow);
+}
+
+.curriculum-item.active {
+    border-color: var(--learn-primary);
+    background: linear-gradient(135deg, #EFF6FF 0%, #F0FDFA 100%);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+.curriculum-item.active::before {
+    content: '';
+    position: absolute;
+    inset-inline-end: 0;
+    top: 0.5rem;
+    bottom: 0.5rem;
+    width: 3px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, var(--learn-primary), var(--learn-secondary));
+}
+.curriculum-item.completed { border-color: #A7F3D0; }
+.curriculum-item.locked {
+    opacity: 0.55;
+    cursor: not-allowed;
+    background: #F8FAFC;
+}
+.curriculum-item.locked:hover { transform: none; box-shadow: none; }
+
+.curriculum-item--filtered {
+    display: none !important;
+}
+
+.curriculum-item-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+}
+.curriculum-item-title {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--learn-text);
+    line-height: 1.35;
+    margin-bottom: 0.25rem;
+}
+.curriculum-item-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    font-size: 0.6875rem;
+    color: var(--learn-text-muted);
+}
+
+.learn-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 6px;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.learn-type-video { background: #DBEAFE; color: #1D4ED8; }
+.learn-type-quiz { background: #F3E8FF; color: #7C3AED; }
+.learn-type-assignment { background: #FEF3C7; color: #B45309; }
+.learn-type-exam { background: #E0E7FF; color: #4338CA; }
+.learn-type-live { background: #FEE2E2; color: #DC2626; }
+.learn-type-pattern { background: #FFEDD5; color: #C2410C; }
+.learn-type-reading { background: #D1FAE5; color: #047857; }
+
+/* ─── Content panels ─── */
+.learn-panels-scroll { display: flex; flex-direction: column; gap: 2.5rem; }
+
+.learn-curriculum-panel {
+    background: var(--learn-card);
+    border: 1px solid var(--learn-border);
+    border-radius: var(--learn-radius-xl);
+    overflow: hidden;
+    box-shadow: var(--learn-shadow);
+    transition: box-shadow 0.3s ease, border-color 0.3s ease, opacity 0.3s ease;
+    scroll-margin-top: 100px;
+}
+.learn-curriculum-panel:not(.panel-active) {
+    opacity: 0.72;
+}
+.learn-curriculum-panel.panel-active {
+    opacity: 1;
+    border-color: #BFDBFE;
+    box-shadow: var(--learn-shadow-lg);
+}
+
+.learn-video-hero {
+    position: relative;
+    background: #0F172A;
+    border-radius: var(--learn-radius-lg);
+    overflow: hidden;
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+    margin: 1.25rem 1.25rem 0;
+}
+.learn-video-hero-main {
+    margin: 0 0 1.25rem;
+    scroll-margin-top: 96px;
+}
+.learn-video-hero-main .learn-video-aspect {
+    min-height: 280px;
+}
+@media (min-width: 768px) {
+    .learn-video-hero-main .learn-video-aspect { min-height: 360px; }
+}
+@media (min-width: 1280px) {
+    .learn-video-hero-main .learn-video-aspect { min-height: 440px; }
+}
+.learn-video-progress-bar {
+    padding: 0.75rem 1rem;
+    background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(15,23,42,0.85));
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.learn-video-aspect {
+    aspect-ratio: 16 / 9;
+    width: 100%;
+    position: relative;
+    background: #000;
+    min-height: 200px;
+}
+.lecture-video-mount iframe,
+.lecture-video-mount video,
+.lecture-video-mount #lecture-yt-player-box,
+.lecture-video-mount #lecture-yt-player-box iframe {
+    width: 100% !important;
+    height: 100% !important;
+    border: 0;
+    display: block;
+}
+
+.learn-lesson-info {
+    padding: 1.5rem 1.25rem;
+    border-bottom: 1px solid var(--learn-border);
+}
+.learn-lesson-info h2 {
+    font-size: 1.375rem;
+    font-weight: 800;
+    color: var(--learn-text);
+    margin-bottom: 0.5rem;
+    line-height: 1.3;
+}
+.learn-lesson-desc {
+    font-size: 0.9375rem;
+    color: var(--learn-text-muted);
+    line-height: 1.65;
+    margin-bottom: 1rem;
+}
+.learn-lesson-meta-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.learn-lesson-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--learn-text-muted);
+}
+.learn-lesson-meta-item i { color: var(--learn-primary); width: 16px; text-align: center; }
+.learn-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+}
+.learn-status-progress { background: #FEF3C7; color: #B45309; }
+.learn-status-done { background: #D1FAE5; color: #047857; }
+.learn-status-locked { background: #F1F5F9; color: #64748B; }
+
+/* ─── Prev / Next nav ─── */
+.learn-nav-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--learn-border);
+}
+.learn-nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.125rem;
+    border-radius: 16px;
+    border: 1px solid var(--learn-border);
+    background: var(--learn-card);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: start;
+    min-height: 72px;
+}
+.learn-nav-btn:hover:not(:disabled) {
+    border-color: var(--learn-primary);
+    background: #EFF6FF;
+    box-shadow: var(--learn-shadow);
+}
+.learn-nav-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+.learn-nav-btn.next-primary:not(:disabled) {
+    background: var(--learn-primary);
+    border-color: var(--learn-primary);
+    color: #fff;
+}
+.learn-nav-btn.next-primary:not(:disabled):hover {
+    background: var(--learn-primary-hover);
+}
+.learn-nav-btn.next-primary:not(:disabled) .learn-nav-label,
+.learn-nav-btn.next-primary:not(:disabled) .learn-nav-title { color: #fff; }
+.learn-nav-btn.next-primary:not(:disabled) .learn-nav-label { opacity: 0.85; }
+
+.learn-nav-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--learn-text-muted);
+}
+.learn-nav-title {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--learn-text);
+    line-height: 1.3;
+    margin-top: 0.15rem;
+}
+
+/* ─── Tabs ─── */
+.learn-tabs-nav {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0 1.25rem;
+    border-bottom: 1px solid var(--learn-border);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.learn-tabs-nav::-webkit-scrollbar { display: none; }
+.learn-tab-btn {
+    padding: 0.875rem 1rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--learn-text-muted);
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+.learn-tab-btn:hover { color: var(--learn-primary); }
+.learn-tab-btn.active {
+    color: var(--learn-primary);
+    border-bottom-color: var(--learn-primary);
+}
+
+.learn-tab-panel {
+    padding: 1.25rem;
+    animation: learn-fade-in 0.25s ease;
+}
+@keyframes learn-fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.learn-tab-content h4 {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--learn-text);
+    margin-bottom: 0.5rem;
+    margin-top: 1rem;
+}
+.learn-tab-content h4:first-child { margin-top: 0; }
+.learn-tab-content p, .learn-tab-content li {
+    font-size: 0.875rem;
+    color: var(--learn-text-muted);
+    line-height: 1.65;
+}
+
+.learn-resource-card {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0.875rem 1rem;
+    border-radius: 14px;
+    border: 1px solid var(--learn-border);
+    background: var(--learn-bg);
+    transition: all 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+    margin-bottom: 0.5rem;
+}
+.learn-resource-card:hover {
+    border-color: var(--learn-primary);
+    background: #EFF6FF;
+}
+
+.learn-notes-editor {
+    width: 100%;
+    min-height: 140px;
+    padding: 1rem;
+    border-radius: 14px;
+    border: 1px solid var(--learn-border);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    resize: vertical;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.learn-notes-editor:focus {
+    outline: none;
+    border-color: var(--learn-primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.learn-discussion-placeholder {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: var(--learn-text-muted);
+    font-size: 0.875rem;
+}
+
+/* ─── Auto-advance overlay ─── */
+#autoplay-next-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(8px);
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+}
+#autoplay-next-overlay.is-visible { display: flex; }
+
+.learn-autoplay-card {
+    background: var(--learn-card);
+    border-radius: var(--learn-radius-xl);
+    padding: 2rem 2.25rem;
+    max-width: 440px;
+    width: 100%;
+    text-align: center;
+    box-shadow: var(--learn-shadow-lg);
+    animation: learn-pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes learn-pop-in {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.learn-celebrate {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #D1FAE5, #A7F3D0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    animation: learn-bounce 0.6s ease;
+}
+@keyframes learn-bounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+
+.learn-autoplay-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--learn-text);
+    margin-bottom: 0.35rem;
+}
+.learn-autoplay-next-label {
+    font-size: 0.8125rem;
+    color: var(--learn-text-muted);
+    margin-bottom: 0.25rem;
+}
+.learn-autoplay-next-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--learn-primary);
+    margin-bottom: 1.25rem;
+    line-height: 1.4;
+}
+
+.learn-countdown-ring {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+#autoplay-countdown-num {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--learn-primary);
+    min-width: 36px;
+}
+
+.learn-autoplay-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+.learn-autoplay-actions button {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border-radius: 14px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+}
+#autoplay-btn-now {
+    background: var(--learn-primary);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+#autoplay-btn-now:hover { background: var(--learn-primary-hover); }
+#autoplay-btn-cancel {
+    background: var(--learn-bg);
+    color: var(--learn-text-muted);
+    border: 1px solid var(--learn-border) !important;
+}
+
+/* ─── Mobile bottom bar ─── */
+.learn-mobile-bar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 45;
+    background: var(--learn-glass);
+    backdrop-filter: blur(16px);
+    border-top: 1px solid var(--learn-border);
+    padding: 0.5rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom));
+    gap: 0.5rem;
+}
+@media (min-width: 1024px) { .learn-mobile-bar { display: none; } }
+
+.learn-mobile-bar button {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.5rem;
+    border: none;
+    background: none;
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: var(--learn-text-muted);
+    cursor: pointer;
+    border-radius: 10px;
+}
+.learn-mobile-bar button.active { color: var(--learn-primary); background: #EFF6FF; }
+.learn-mobile-bar button i { font-size: 1.125rem; }
+.learn-mobile-bar button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.learn-mobile-bar button:not(:disabled):active {
+    transform: scale(0.97);
+}
+
+/* Mobile curriculum drawer */
+.learn-drawer-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    z-index: 55;
+}
+.learn-drawer-backdrop.open { display: block; }
+
+@media (max-width: 1023px) {
+    .learn-sidebar {
+        position: fixed;
+        top: 0;
+        inset-inline-end: 0;
+        width: min(100%, 400px);
+        height: 100dvh;
+        z-index: 60;
+        transform: translateX(100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: var(--learn-shadow-lg);
+    }
+    .learn-sidebar.drawer-open { transform: translateX(0); }
+    .learn-main { padding-bottom: 5rem; order: 1; }
+}
+
+/* Skeleton */
+.learn-skeleton {
+    background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
+    background-size: 200% 100%;
+    animation: learn-skeleton 1.5s infinite;
+    border-radius: 8px;
+}
+@keyframes learn-skeleton {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+</style>
 <style>
     .lecture-video-mount, .learn-video-aspect { -webkit-user-select: none; user-select: none; }
     .lesson-video-viewer { display: flex; flex-direction: column; }
@@ -24,87 +1089,277 @@
         border: none !important;
     }
 </style>
-@endpush
+</head>
+<body class="learn-immersive-body learn-rtl antialiased" dir="rtl">
+    <script type="application/json" id="learn-lectures-data">{}</script>
+<script type="application/json" id="learn-next-item-map">[]</script>
+<script type="application/json" id="learn-next-lesson-map">[]</script>
 
-@php
-    // تحضير بيانات المحاضرات للـ JavaScript (مع المواد الظاهرة للطالب + تقدم المشاهدة + نسبة فتح التالي)
-    $currentUser = auth()->user();
-    $lecturesData = $course->lectures->map(function($lecture) use ($course, $currentUser) {
-        $lecture->refresh();
-        $recordingUrl = \DB::table('lectures')->where('id', $lecture->id)->value('recording_url');
-        $videoPlatform = \DB::table('lectures')->where('id', $lecture->id)->value('video_platform');
-        $recordingUrlFinal = $recordingUrl ? trim($recordingUrl) : ($lecture->recording_url ? trim($lecture->recording_url) : null);
-        $videoPlatformFinal = $videoPlatform ? trim(strtolower($videoPlatform)) : ($lecture->video_platform ? trim(strtolower($lecture->video_platform)) : null);
-        if ($recordingUrlFinal) {
-            $resolvedRecording = \App\Support\LectureRecordingResolver::resolve($recordingUrlFinal, $videoPlatformFinal);
-            $recordingUrlFinal = $resolvedRecording['recording_url'] ?: $recordingUrlFinal;
-            $videoPlatformFinal = $resolvedRecording['video_platform'] ?: $videoPlatformFinal;
-        }
-        $materials = $lecture->materials()->where('is_visible_to_student', true)->orderBy('sort_order')->get()->map(function($m) use ($course, $lecture) {
-            return [
-                'id' => $m->id,
-                'title' => $m->title ?: $m->file_name,
-                'file_name' => $m->file_name,
-                'download_url' => route('my-courses.lectures.material.download', [$course->id, $lecture->id, $m->id]),
-            ];
-        })->values()->all();
-        $videoQuestions = $lecture->videoQuestions()->with('question')->orderBy('timestamp_seconds')->get()->filter(function($vq) use ($currentUser) {
-            $showCount = $vq->show_count;
-            if ($showCount === null || $showCount == 0) return true;
-            $answered = \App\Models\LectureVideoQuestionAnswer::where('lecture_video_question_id', $vq->id)->where('user_id', $currentUser->id)->count();
-            return $answered < $showCount;
-        })->map(function($vq) {
-            $payload = $vq->getPayloadForStudent();
-            $showEveryTime = $vq->show_count === null || $vq->show_count == 0;
-            return [
-                'id' => $vq->id,
-                'timestamp_seconds' => (int) $vq->timestamp_seconds,
-                'show_at_end' => (bool) $vq->show_at_end,
-                'text' => $payload['text'] ?? '',
-                'options' => $payload['options'] ?? [],
-                'type' => $payload['type'] ?? 'multiple_choice',
-                'points' => $vq->points,
-                'on_wrong' => $vq->on_wrong,
-                'rewind_seconds' => $vq->rewind_seconds,
-                'show_every_time' => $showEveryTime,
-            ];
-        })->values()->all();
-        $watchProgress = \App\Models\LectureWatchProgress::where('lecture_id', $lecture->id)->where('user_id', $currentUser->id)->first();
-        $progressData = $watchProgress ? [
-            'progress_percent' => (int) $watchProgress->progress_percent,
-            'is_completed' => (bool) $watchProgress->is_completed,
-            'watch_time_seconds' => (int) $watchProgress->watch_time_seconds,
-            'video_duration_seconds' => (int) $watchProgress->video_duration_seconds,
-        ] : null;
-        return [
-            'id' => $lecture->id,
-            'title' => $lecture->title,
-            'description' => $lecture->description,
-            'scheduled_at' => $lecture->scheduled_at ? $lecture->scheduled_at->toIso8601String() : null,
-            'scheduled_at_formatted' => $lecture->scheduled_at ? $lecture->scheduled_at->format('Y/m/d H:i') : null,
-            'duration_minutes' => $lecture->duration_minutes ?? 60,
-            'min_watch_percent_to_unlock_next' => $lecture->min_watch_percent_to_unlock_next,
-            'recording_url' => $recordingUrlFinal,
-            'video_platform' => $videoPlatformFinal,
-            'notes' => $lecture->notes ?? null,
-            'materials' => $materials,
-            'video_questions' => $videoQuestions,
-            'progress' => $progressData,
-        ];
-    })->keyBy('id');
+<div class="learn-page learn-rtl"
+     dir="rtl"
+     data-course-id="11"
+     data-course-progress="0"
+     data-total-items="0"
+     data-completed-items="0"
+     data-lectures-url="http://127.0.0.1:8000/my-courses/11/lectures/_LID_"
+     x-data="courseFocusMode"
+     @keydown.escape.window="if (mobileCurriculumOpen) { mobileCurriculumOpen = false } else { window.location.href='http://127.0.0.1:8000/my-courses/11' }"
+     @keydown.ctrl.f.window.prevent="document.querySelector('.learn-search-input')?.focus()"
+     x-init="initLearnPage()">
+
     
-    $lecturesDataJson = json_encode(
-        $lecturesData->isEmpty() ? (object) [] : $lecturesData,
-        JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE
-    );
-@endphp
+    <div id="autoplay-next-overlay" dir="rtl" role="dialog" aria-modal="true" aria-labelledby="autoplay-title">
+        <div class="learn-autoplay-card">
+            <div class="learn-celebrate" aria-hidden="true">🎉</div>
+            <p class="learn-autoplay-title" id="autoplay-title">تم إكمال الدرس بنجاح!</p>
+            <p class="learn-autoplay-next-label">الدرس التالي</p>
+            <p id="autoplay-next-title" class="learn-autoplay-next-title"></p>
+            <div class="learn-countdown-ring">
+                <svg width="44" height="44" style="transform:rotate(-90deg)" aria-hidden="true">
+                    <circle id="autoplay-ring-bg" cx="22" cy="22" r="18" fill="none" stroke="#E2E8F0" stroke-width="3"/>
+                    <circle id="autoplay-ring" cx="22" cy="22" r="18" fill="none" stroke="#2563EB" stroke-width="3" stroke-dasharray="113" stroke-dashoffset="0"/>
+                </svg>
+                <span id="autoplay-countdown-num">5</span>
+                <span style="font-size:0.8125rem;color:#64748B">ثانية</span>
+            </div>
+            <div class="learn-autoplay-actions">
+                <button type="button" id="autoplay-btn-now" onclick="window._autoplayNow && window._autoplayNow()">
+                    <i class="fas fa-play ml-1"></i> ابدأ الآن
+                </button>
+                <button type="button" id="autoplay-btn-cancel" onclick="window._autoplayCancel && window._autoplayCancel()">
+                    إلغاء
+                </button>
+            </div>
+        </div>
+    </div>
 
-@section('content')
-@include('student.my-courses.partials.learn-page-shell')
-@endsection
+    
+    <header class="learn-top-header">
+        <div class="learn-top-header-inner">
+            <a href="http://127.0.0.1:8000/my-courses/11" class="learn-back-btn" title="رجوع">
+                <i class="fas fa-arrow-right"></i>
+            </a>
+            <div class="learn-header-titles min-w-0">
+                <p class="learn-header-course truncate">Vue.js من الصفر</p>
+                <h1 class="learn-header-lesson" x-text="activeLessonTitle || 'ابدأ التعلم'">ابدأ التعلم</h1>
+            </div>
+            <div class="learn-header-progress">
+                <div class="learn-progress-meta">
+                    <span><span class="learn-progress-count">0</span> / <span class="learn-progress-total">0</span> مكتمل</span>
+                    <span class="learn-progress-pct font-bold text-[#2563EB]">0%</span>
+                </div>
+                <div class="learn-progress-track" role="progressbar" :aria-valuenow="Math.round(0)" aria-valuemin="0" aria-valuemax="100">
+                    <div class="learn-progress-fill" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="learn-header-actions">
+                <button type="button" class="learn-icon-btn lg:hidden" @click="mobileCurriculumOpen = true" aria-label="المنهج">
+                    <i class="fas fa-list-ul"></i>
+                </button>
+                <button type="button" class="learn-icon-btn" @click="document.querySelector('.learn-search-input')?.focus()" aria-label="بحث">
+                    <i class="fas fa-search"></i>
+                </button>
+                <button type="button" class="learn-icon-btn" @click="toggleFullscreen()" :class="{ 'active': isFullscreen }" aria-label="ملء الشاشة">
+                    <i class="fas" :class="isFullscreen ? 'fa-compress' : 'fa-expand'"></i>
+                </button>
+                <button type="button" class="learn-btn-primary hidden sm:inline-flex" @click="toggleFocusMode()">
+                    <i class="fas fa-bolt"></i>
+                    <span x-text="focusMode ? 'وضع عادي' : 'وضع التركيز'">وضع التركيز</span>
+                </button>
+            </div>
+        </div>
+    </header>
 
-@push('scripts')
-<script>
+    <div class="learn-shell">
+        <div class="learn-grid">
+            
+            <aside class="learn-sidebar"
+                   :class="{ 'drawer-open': mobileCurriculumOpen }"
+                   id="learn-curriculum-drawer">
+                <div class="learn-sidebar-header">
+                    <div class="flex items-center justify-between gap-2 mb-1">
+                        <h2 class="learn-sidebar-title">
+                            <i class="fas fa-layer-group"></i>
+                            المنهج
+                        </h2>
+                        <button type="button" class="learn-icon-btn lg:hidden" @click="mobileCurriculumOpen = false" aria-label="إغلاق">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="learn-sidebar-stats">
+                        <span class="learn-sidebar-stat"><i class="fas fa-folder"></i> 0 أقسام</span>
+                        <span class="learn-sidebar-stat"><i class="fas fa-play-circle"></i> 0 عنصر</span>
+                        <span class="learn-sidebar-stat learn-progress-pct">0%</span>
+                    </div>
+                    <div class="learn-sidebar-nav-row hidden lg:flex" role="group" aria-label="تنقل المنهج">
+                        <button type="button" class="learn-sidebar-nav-pill" @click="goNavPrev()" :disabled="!hasNavPrev()" title="السابق">
+                            <i class="fas fa-chevron-right"></i>
+                            <span>السابق</span>
+                        </button>
+                        <button type="button" class="learn-sidebar-nav-pill learn-sidebar-nav-pill--primary" @click="goNavNext()" :disabled="!navNextAllowed()" title="التالي">
+                            <span>التالي</span>
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                    </div>
+                    <div class="learn-search-wrap">
+                        <input type="search"
+                               class="learn-search-input"
+                               x-model="searchQuery"
+                               placeholder="ابحث في الدروس..."
+                               @keydown.escape="searchQuery = ''"
+                               aria-label="بحث في المنهج">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <div class="learn-filter-chips" role="group" aria-label="تصفية">
+                        <button type="button" class="learn-filter-chip" :class="{ 'active': curriculumFilter === 'all' }" @click="curriculumFilter = 'all'; filterCurriculum()">الكل</button>
+                        <button type="button" class="learn-filter-chip" :class="{ 'active': curriculumFilter === 'completed' }" @click="curriculumFilter = 'completed'; filterCurriculum()">مكتمل</button>
+                        <button type="button" class="learn-filter-chip" :class="{ 'active': curriculumFilter === 'progress' }" @click="curriculumFilter = 'progress'; filterCurriculum()">قيد التقدم</button>
+                        <button type="button" class="learn-filter-chip" :class="{ 'active': curriculumFilter === 'unlocked' }" @click="curriculumFilter = 'unlocked'; filterCurriculum()">متاح</button>
+                        <button type="button" class="learn-filter-chip" :class="{ 'active': curriculumFilter === 'locked' }" @click="curriculumFilter = 'locked'; filterCurriculum()">مقفل</button>
+                    </div>
+                    <p class="learn-sidebar-hint"
+                       x-show="selectedLecture && hasNavNext() && !navNextAllowed()" x-cloak>
+                        أكمل نسبة المشاهدة التي حددها المدرب أو شاهد الفيديو حتى النهاية للانتقال إلى العنصر التالي.
+                    </p>
+                </div>
+                <div id="learn-curriculum-sidebar" class="learn-sidebar-scroll">
+                                                        </div>
+            </aside>
+
+            
+            <main class="learn-main" id="learn-main-scroll">
+                
+                <div class="learn-achievements">
+                    <div class="learn-achievement-card">
+                        <div class="learn-achievement-icon" style="background:#EFF6FF;color:#2563EB"><i class="fas fa-chart-line"></i></div>
+                        <div class="learn-achievement-value learn-progress-pct">0%</div>
+                        <div class="learn-achievement-label">إكمال الكورس</div>
+                    </div>
+                    <div class="learn-achievement-card">
+                        <div class="learn-achievement-icon" style="background:#ECFDF5;color:#10B981"><i class="fas fa-check-double"></i></div>
+                        <div class="learn-achievement-value learn-progress-count">0/0</div>
+                        <div class="learn-achievement-label">دروس مكتملة</div>
+                    </div>
+                    <div class="learn-achievement-card">
+                        <div class="learn-achievement-icon" style="background:#FFF7ED;color:#F59E0B"><i class="fas fa-fire"></i></div>
+                        <div class="learn-achievement-value" x-text="streakDays">0</div>
+                        <div class="learn-achievement-label">أيام متتالية</div>
+                    </div>
+                    <div class="learn-achievement-card">
+                        <div class="learn-achievement-icon" style="background:#F0FDFA;color:#06B6D4"><i class="fas fa-star"></i></div>
+                        <div class="learn-achievement-value" x-text="xpPoints">0</div>
+                        <div class="learn-achievement-label">نقاط XP</div>
+                    </div>
+                </div>
+
+                <div x-show="currentSectionDescription" x-transition class="mb-4 p-4 rounded-2xl border border-[#E2E8F0] bg-white text-sm text-[#64748B] leading-relaxed">
+                    <p class="whitespace-pre-wrap" x-text="currentSectionDescription"></p>
+                </div>
+
+                
+                <div x-show="(selectedLesson && showVideoPlayer) || (selectedLecture && showVideoPlayer)"
+                     class="learn-video-hero learn-video-hero-main lesson-video-viewer mb-5">
+                    <div class="learn-video-progress-bar flex-shrink-0" id="learn-watch-percent-bar">
+                        <div class="flex items-center justify-between gap-2 mb-1.5">
+                            <span class="text-sm font-semibold text-sky-300">نسبة المشاهدة</span>
+                            <template x-if="selectedLecture">
+                                <span id="lecture-watch-pct-text" class="text-sm font-bold text-white tabular-nums">0.0%</span>
+                            </template>
+                            <span x-show="selectedLesson && showVideoPlayer"
+                                  x-text="(Math.round((videoProgressPercent || 0) * 10) / 10).toFixed(1) + '%'"
+                                  class="text-sm font-bold text-white tabular-nums">0.0%</span>
+                        </div>
+                        <div class="h-2.5 bg-white/10 rounded-full overflow-hidden">
+                            <template x-if="selectedLecture">
+                                <div id="lecture-watch-pct-fill"
+                                     class="h-full rounded-full transition-all duration-300 min-w-[2px]"
+                                     style="width: 0%; background: linear-gradient(270deg,#38bdf8,#0ea5e9);"></div>
+                            </template>
+                            <div x-show="selectedLesson && showVideoPlayer"
+                                 class="h-full rounded-full transition-all duration-300 min-w-[2px]"
+                                 style="background: linear-gradient(270deg,#38bdf8,#0ea5e9);"
+                                 :style="'width: ' + Math.min(100, Math.max(0, videoProgressPercent || 0)) + '%'"></div>
+                        </div>
+                    </div>
+                    <div class="learn-video-aspect w-full relative bg-black flex-1 min-h-0">
+                        <div id="learn-video-embed"
+                             class="absolute inset-0 w-full h-full lecture-video-mount"
+                             x-show="selectedLecture && showVideoPlayer"></div>
+                        <div x-show="selectedLesson && showVideoPlayer" class="absolute inset-0 w-full h-full">
+                            <div class="relative w-full h-full bg-black" id="video-container"
+     x-data="videoPlayer"
+     x-init="init()">
+    <div class="video-player-area absolute inset-0 w-full h-full" id="video-player">
+        
+        <div x-show="!currentLessonVideoUrl" class="absolute inset-0 flex items-center justify-center text-white p-8 z-10">
+            <div class="text-center">
+                <i class="fas fa-play-circle text-5xl mb-4 opacity-70"></i>
+                <p>اختر محاضرة أو درساً لعرض الفيديو</p>
+            </div>
+        </div>
+        
+        <div class="video-display-wrapper absolute inset-0 w-full h-full" id="video-surface"></div>
+    </div>
+</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div x-show="selectedLecture && !showVideoPlayer" x-transition class="learn-curriculum-panel p-6 mb-5">
+                    <div x-html="lectureContent"></div>
+                </div>
+
+                <div x-show="selectedLecture && lectureMaterials && lectureMaterials.length" x-transition
+                     class="mb-5 rounded-2xl border border-[#E2E8F0] bg-white overflow-hidden shadow-sm">
+                    <div class="px-4 sm:px-5 py-3.5 bg-gradient-to-l from-sky-50 to-white border-b border-[#E2E8F0] flex items-center justify-between gap-3">
+                        <h3 class="text-base font-bold text-[#0F172A] flex items-center gap-2.5">
+                            <span class="w-9 h-9 rounded-xl bg-sky-100 flex items-center justify-center">
+                                <i class="fas fa-paperclip text-sky-600"></i>
+                            </span>
+                            مواد المحاضرة
+                            <span class="text-xs font-semibold text-sky-600 bg-sky-100 px-2.5 py-0.5 rounded-full" x-text="lectureMaterials.length"></span>
+                        </h3>
+                    </div>
+                    <div class="p-4 sm:p-5">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <template x-for="mat in lectureMaterials" :key="mat.id">
+                                <a :href="mat.download_url" target="_blank" rel="noopener"
+                                   class="group flex items-center gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100 hover:bg-sky-50 hover:border-sky-200 transition-all">
+                                    <span class="w-12 h-12 rounded-xl bg-white shadow-sm border border-slate-200 flex items-center justify-center shrink-0">
+                                        <i class="fas text-lg" :class="getMaterialIconClass(mat)"></i>
+                                    </span>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="font-semibold text-[#0F172A] truncate" x-text="mat.title || mat.file_name"></div>
+                                        <div class="text-xs text-[#64748B] truncate" x-text="mat.file_name"></div>
+                                    </div>
+                                    <i class="fas fa-download text-sky-500"></i>
+                                </a>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="learn-curriculum-panels" class="learn-panels-scroll">
+                                            <div class="learn-curriculum-panel panel-active p-12 text-center">
+                            <i class="fas fa-book-open text-5xl text-[#CBD5E1] mb-4"></i>
+                            <p class="text-[#0F172A] font-bold text-lg">لا توجد عناصر في المنهج بعد</p>
+                            <p class="text-[#64748B] text-sm mt-2">ستظهر المحاضرات والواجبات هنا عند إضافتها.</p>
+                        </div>
+                                    </div>
+            </main>
+        </div>
+    </div>
+
+    <div class="learn-drawer-backdrop" :class="{ 'open': mobileCurriculumOpen }" @click="mobileCurriculumOpen = false" x-show="mobileCurriculumOpen" x-cloak></div>
+
+    
+    <nav class="learn-mobile-bar" aria-label="تنقل سريع">
+        <button type="button" @click="goNavPrev()" :disabled="!hasNavPrev()"><i class="fas fa-chevron-right"></i><span>السابق</span></button>
+        <button type="button" class="active" @click="mobileCurriculumOpen = true"><i class="fas fa-list-ul"></i><span>المنهج</span></button>
+        <button type="button" @click="goNavNext()" :disabled="!navNextAllowed()"><i class="fas fa-chevron-left"></i><span>التالي</span></button>
+    </nav>
+</div>
+    <script>
 (function () {
     if (typeof window.learnNavGetNextForButton !== 'function') {
         window.learnNavGetNextForButton = function () { return null; };
@@ -114,7 +1369,233 @@
     }
 })();
 </script>
-@include('student.my-courses.partials.learn-alpine-premium')
+<script>
+window.__learnPremiumMixin = {
+    activePanelType: null,
+    activePanelId: null,
+    activeLessonTitle: '',
+    mobileCurriculumOpen: false,
+    curriculumFilter: 'all',
+    lessonNotes: {},
+    streakDays: 0,
+    xpPoints: 0,
+
+    panelTabs: {},
+
+    panelTabKey(type, id) {
+        return String(type) + '-' + String(id);
+    },
+    getPanelTab(type, id) {
+        return this.panelTabs[this.panelTabKey(type, id)] || 'overview';
+    },
+    setPanelTab(type, id, tab) {
+        this.panelTabs[this.panelTabKey(type, id)] = tab;
+    },
+
+    syncActivePanel(type, id, title) {
+        const panelType = String(type);
+        const panelId = (/^\d+$/.test(String(id))) ? parseInt(id, 10) : id;
+        this.activePanelType = panelType;
+        this.activePanelId = panelId;
+        document.querySelectorAll('#learn-curriculum-sidebar .curriculum-item').forEach(el => el.classList.remove('active'));
+        const sideEl = document.querySelector('#learn-curriculum-sidebar .curriculum-item[data-item-type="' + panelType + '"][data-item-id="' + panelId + '"]');
+        if (sideEl) sideEl.classList.add('active');
+        document.querySelectorAll('.learn-curriculum-panel').forEach(el => el.classList.remove('panel-active'));
+        const panel = document.getElementById('learn-panel-' + panelType + '-' + panelId);
+        if (panel) {
+            panel.classList.add('panel-active');
+            if (!title) {
+                const titleEl = panel.querySelector('.learn-panel-title');
+                title = titleEl ? titleEl.textContent.trim() : '';
+            }
+        }
+        if (title) this.activeLessonTitle = title;
+        if (panel) {
+            this.$nextTick(() => {
+                panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        }
+    },
+
+    initLearnPage() {
+        const descEl = document.getElementById('learn-section-descriptions');
+        if (descEl) try { window.learnSectionDescriptions = JSON.parse(descEl.textContent); } catch(e) { window.learnSectionDescriptions = {}; }
+        else window.learnSectionDescriptions = {};
+        try {
+            const stored = localStorage.getItem('learn-notes-11');
+            if (stored) this.lessonNotes = JSON.parse(stored) || {};
+        } catch (e) { this.lessonNotes = {}; }
+        this.focusMode = true;
+        document.body.classList.add('learn-immersive-active');
+        this.$watch('searchQuery', () => this.filterCurriculum());
+        this.$watch('curriculumFilter', () => this.filterCurriculum());
+        this.updateProgressBar();
+        setInterval(() => this.updateProgressBar(), 100);
+        document.addEventListener('fullscreenchange', () => { this.isFullscreen = !!document.fullscreenElement; });
+        const _learnComp = this;
+        window.addEventListener('video-progress-report', (e) => {
+            const d = e.detail || {};
+            if (d.lectureId != null && String(_learnComp.selectedLecture) !== String(d.lectureId)) return;
+            _learnComp.reportVideoProgressFromPlayer(d.currentSec, d.durationSec, d.isPlaying);
+            if (_learnComp.selectedLecture) {
+                _learnComp.lectureProgressPercent = _learnComp.videoProgressPercent;
+                if (Number(d.durationSec) > 0) _learnComp.lastVideoDurationSec = Number(d.durationSec);
+            }
+        });
+        window.addEventListener('learn-lecture-progress', (e) => {
+            const d = e.detail || {};
+            if (d.lectureId != null && String(_learnComp.selectedLecture) !== String(d.lectureId)) return;
+            if (typeof d.progress_percent === 'number') _learnComp.lectureProgressPercent = d.progress_percent;
+        });
+        window.addEventListener('learn-open-next-item', (e) => {
+            const d = e.detail || {};
+            const hasId = d.id !== undefined && d.id !== null && d.id !== '';
+            if (!hasId || !d.type) return;
+            if (d.type === 'lecture') _learnComp.loadLecture(d.id);
+            else if (d.type === 'lesson') _learnComp.loadLesson(d.id);
+            else if (d.type === 'exam') _learnComp.loadExam(d.id);
+            else if (d.type === 'assignment') _learnComp.loadAssignment(d.id);
+            else if (d.type === 'pattern') _learnComp.loadPattern(d.id);
+        });
+        window.addEventListener('learn-video-ended', (e) => {
+            if (_learnComp._handlingVideoEnded) return;
+            _learnComp._handlingVideoEnded = true;
+            const endedLectureId = (e.detail && e.detail.lectureId) || _learnComp.selectedLecture;
+            const endedLessonId = _learnComp.currentLessonId;
+            const wasLecture = !!endedLectureId && !!(_learnComp.selectedLecture || (e.detail && e.detail.lectureId));
+            const wasLesson = !!endedLessonId && !_learnComp.selectedLecture && _learnComp.showVideoPlayer;
+            if (wasLecture) _learnComp.lectureVideoEndedThisClip = true;
+            if (wasLesson) _learnComp.lessonVideoEndedThisClip = true;
+            (async () => {
+                try {
+                    if (wasLesson && endedLessonId && typeof _learnComp.autoAdvanceAfterVideoEnd === 'function') {
+                        await _learnComp.autoAdvanceAfterVideoEnd('lesson', endedLessonId);
+                    } else if (wasLecture && endedLectureId && typeof _learnComp.autoAdvanceAfterVideoEnd === 'function') {
+                        await _learnComp.autoAdvanceAfterVideoEnd('lecture', endedLectureId);
+                    } else if (typeof window.showAutoAdvanceToNext === 'function') {
+                        if (wasLesson && endedLessonId) window.showAutoAdvanceToNext('lesson', endedLessonId);
+                        else if (wasLecture && endedLectureId) window.showAutoAdvanceToNext('lecture', endedLectureId);
+                    }
+                } finally {
+                    setTimeout(() => { _learnComp._handlingVideoEnded = false; }, 2000);
+                }
+            })();
+        });
+        window.__learnPageComponent = _learnComp;
+        this.$nextTick(async () => {
+            this.curriculumFilter = 'all';
+            this.searchQuery = '';
+            this.filterCurriculum();
+            const params = new URLSearchParams(window.location.search);
+            const lectureParam = params.get('lecture');
+            if (lectureParam && typeof this.loadLecture === 'function') {
+                await this.loadLecture(parseInt(lectureParam, 10) || lectureParam);
+                return;
+            }
+            const first = document.querySelector('#learn-curriculum-sidebar .curriculum-item[data-item-type="lecture"]:not(.locked):not(.curriculum-item--filtered)');
+            if (first && first.dataset.itemId && typeof this.loadLecture === 'function') {
+                await this.loadLecture(first.dataset.itemId);
+            }
+        });
+    },
+
+    saveLessonNote(key, value) {
+        this.lessonNotes[key] = value;
+        try {
+            localStorage.setItem('learn-notes-11', JSON.stringify(this.lessonNotes));
+        } catch (e) {}
+    },
+
+    filterCurriculum() {
+        const q = (this.searchQuery || '').toLowerCase().trim();
+        const f = this.curriculumFilter || 'all';
+        document.querySelectorAll('#learn-curriculum-sidebar .curriculum-item').forEach(el => {
+            const title = (el.querySelector('.curriculum-item-title')?.textContent || '').toLowerCase();
+            const matchQ = !q || title.includes(q);
+            const state = el.dataset.filterState || 'unlocked';
+            let matchF = true;
+            if (f === 'completed') matchF = state === 'completed';
+            else if (f === 'progress') matchF = state === 'progress';
+            else if (f === 'locked') matchF = state === 'locked' || el.classList.contains('locked');
+            else if (f === 'unlocked') matchF = state !== 'locked' && !el.classList.contains('locked');
+            const visible = matchQ && matchF;
+            el.classList.toggle('curriculum-item--filtered', !visible);
+            el.style.removeProperty('display');
+        });
+    },
+
+    async navigateToPanel(type, id, sectionId = null) {
+        if (window._autoplayCancel) window._autoplayCancel();
+        const panelType = String(type);
+        const panelId = (/^\d+$/.test(String(id))) ? parseInt(id, 10) : id;
+        if (sectionId != null) {
+            this.currentSectionDescription = (window.learnSectionDescriptions || {})[String(sectionId)] || '';
+        }
+        const panel = document.getElementById('learn-panel-' + panelType + '-' + panelId);
+        if (panel && panel.dataset.panelLocked === '1') return;
+        if (panelType === 'lecture' && typeof this.loadLecture === 'function') {
+            await this.loadLecture(panelId);
+            return;
+        }
+        if (panelType === 'lesson' && typeof this.loadLesson === 'function') {
+            await this.loadLesson(panelId);
+            this.syncActivePanel('lesson', panelId);
+            this.mobileCurriculumOpen = false;
+            return;
+        }
+        if (panelType === 'assignment' && typeof this.loadAssignment === 'function') {
+            this.loadAssignment(panelId);
+            this.syncActivePanel('assignment', panelId);
+            this.mobileCurriculumOpen = false;
+            return;
+        }
+        if (panelType === 'exam' && typeof this.loadExam === 'function') {
+            this.loadExam(panelId);
+            this.syncActivePanel('exam', panelId);
+            this.mobileCurriculumOpen = false;
+            return;
+        }
+        if (panelType === 'pattern' && typeof this.loadPattern === 'function') {
+            this.loadPattern(panelId);
+            this.syncActivePanel('pattern', panelId);
+            this.mobileCurriculumOpen = false;
+            return;
+        }
+        if (panel) {
+            this.syncActivePanel(panelType, panelId);
+            this.mobileCurriculumOpen = false;
+        }
+    },
+
+    getCurrentNavTypeId() {
+        if (this.selectedLecture) return { type: 'lecture', id: this.selectedLecture };
+        if (this.selectedLesson) return { type: 'lesson', id: this.selectedLesson };
+        if (this.selectedPattern) return { type: 'pattern', id: this.selectedPattern };
+        if (this.activePanelType && this.activePanelId != null) {
+            return { type: this.activePanelType, id: this.activePanelId };
+        }
+        const active = document.querySelector('#learn-curriculum-sidebar .curriculum-item.active');
+        if (active && active.dataset.itemType && active.dataset.itemId) {
+            return { type: active.dataset.itemType, id: active.dataset.itemId };
+        }
+        return null;
+    },
+
+    navNextAllowed() {
+        if (!this.hasNavNext()) return false;
+        if (this.selectedLecture) {
+            const minP = this.getCurrentLectureMinWatchPercent();
+            const pct = Number(this.lectureProgressPercent) || 0;
+            return pct >= minP || !!this.lectureVideoEndedThisClip;
+        }
+        if (this.selectedLesson && this.showVideoPlayer) {
+            const pctL = Number(this.videoProgressPercent) || 0;
+            return pctL >= 90 || !!this.currentLessonCompleted || !!this.lessonVideoEndedThisClip;
+        }
+        return true;
+    },
+};
+</script>
 <script>
 function courseFocusMode() {
     // قراءة بيانات المحاضرات من عنصر script (أدق من data attribute مع روابط طويلة)
@@ -171,16 +1652,6 @@ function courseFocusMode() {
         isFlushingProgress: false,
         _autoAdvancing: false,
         _handlingVideoEnded: false,
-        allowLectureAutoAdvance: true,
-        lectureReplayMode: false,
-        isLectureCompleted(lecture) {
-            if (!lecture) return false;
-            const minP = (lecture.min_watch_percent_to_unlock_next != null && lecture.min_watch_percent_to_unlock_next !== '')
-                ? parseInt(lecture.min_watch_percent_to_unlock_next, 10) : 90;
-            const prog = lecture.progress || {};
-            const pct = prog.progress_percent != null ? parseInt(prog.progress_percent, 10) : 0;
-            return !!(prog.is_completed || pct >= minP);
-        },
         getCurrentNavTypeId() {
             if (this.selectedLecture) return { type: 'lecture', id: this.selectedLecture };
             if (this.selectedLesson) return { type: 'lesson', id: this.selectedLesson };
@@ -403,30 +1874,28 @@ function courseFocusMode() {
         },
         async autoAdvanceAfterVideoEnd(sourceType, sourceId) {
             if (this._autoAdvancing) return;
+            if (sourceType === 'lecture' && this.autoAdvanceFiredForLectureId === sourceId) return;
             this._autoAdvancing = true;
             try {
                 if (sourceType === 'lesson') {
                     await this.flushLessonProgressNow(sourceId, true);
                 } else if (sourceType === 'lecture') {
+                    this.autoAdvanceFiredForLectureId = sourceId;
                     await this.flushLectureProgressNow(sourceId, true);
                     this.lectureVideoEndedThisClip = true;
-                    this.lectureProgressPercent = Math.max(
-                        Number(this.lectureProgressPercent) || 0,
-                        this.getCurrentLectureMinWatchPercent()
-                    );
+                    this.lectureProgressPercent = Math.max(Number(this.lectureProgressPercent) || 0, this.getCurrentLectureMinWatchPercent());
                 }
                 if (typeof this.refreshSidebarLocks === 'function') {
                     await this.refreshSidebarLocks();
                 }
-                if (typeof window.openNextAfterComplete === 'function') {
-                    await window.openNextAfterComplete(sourceType, sourceId, { skipFlush: true });
-                } else if (typeof window.showAutoAdvanceToNext === 'function') {
-                    await window.showAutoAdvanceToNext(sourceType, sourceId);
+                await new Promise(function(r) { setTimeout(r, 150); });
+                if (typeof window.showAutoAdvanceToNext === 'function') {
+                    window.showAutoAdvanceToNext(sourceType, sourceId);
                 }
             } catch (e) {
                 console.warn('autoAdvanceAfterVideoEnd failed', e);
             } finally {
-                setTimeout(() => { this._autoAdvancing = false; }, 2000);
+                setTimeout(() => { this._autoAdvancing = false; }, 2500);
             }
         },
         async flushLessonProgressNow(lessonId, forceCompleted = false) {
@@ -437,7 +1906,7 @@ function courseFocusMode() {
                 const pct = Number(this.lastVideoProgressPercent || 0);
                 const watchTime = Number(this.lastVideoWatchTimeSec || 0);
                 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-                const res = await fetch(`{{ route('my-courses.lesson.progress', [$course, ':lessonId']) }}`.replace(':lessonId', lessonId), {
+                const res = await fetch(`http://127.0.0.1:8000/my-courses/11/lessons/:lessonId/progress`.replace(':lessonId', lessonId), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
                     body: JSON.stringify({
@@ -466,7 +1935,7 @@ function courseFocusMode() {
         },
         async refreshSidebarLocks() {
             try {
-                const res = await fetch(`{{ route('my-courses.curriculum.locks', [$course]) }}`, {
+                const res = await fetch(`http://127.0.0.1:8000/my-courses/11/curriculum/locks`, {
                     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
                 });
                 if (!res.ok) return;
@@ -479,16 +1948,10 @@ function courseFocusMode() {
                     const parts = String(key).split(':');
                     const type = parts[0];
                     const id = parts[1];
-                    const root = document.getElementById('learn-curriculum-sidebar');
-                    const el = root
-                        ? root.querySelector('.curriculum-item[data-item-type="' + type + '"][data-item-id="' + id + '"]')
-                        : document.querySelector('.curriculum-item[data-item-type="' + type + '"][data-item-id="' + id + '"]');
+                    const el = document.querySelector('.curriculum-item[data-item-type="' + type + '"][data-item-id="' + id + '"]');
                     if (el) {
                         el.dataset.itemLocked = locked ? '1' : '0';
                         el.classList.toggle('locked', locked);
-                        if (!locked && typeof window.learnSidebarUnlockItem === 'function') {
-                            window.learnSidebarUnlockItem(type, id);
-                        }
                     }
                     const panel = document.querySelector('.learn-curriculum-panel[data-panel-type="' + type + '"][data-panel-id="' + id + '"]');
                     if (panel) {
@@ -514,21 +1977,13 @@ function courseFocusMode() {
                     const mins = lec && lec.duration_minutes ? parseInt(lec.duration_minutes, 10) : 0;
                     if (mins > 0) dur = mins * 60;
                 }
-                if ((!Number.isFinite(dur) || dur <= 0) && forceComplete) {
-                    const watched = Math.max(
-                        Number(this.lastVideoWatchTimeSec || 0),
-                        Number(this.watchedSeconds || 0),
-                        1
-                    );
-                    dur = watched;
-                }
                 if (!Number.isFinite(dur) || dur <= 0) return;
                 let currentSec = forceComplete
                     ? dur
                     : Math.min(dur, Number(this.lastVideoWatchTimeSec || this.watchedSeconds || 0));
                 if (forceComplete) currentSec = dur;
                 const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-                const res = await fetch('/my-courses/{{ $course->id }}/lectures/' + lectureId + '/progress', {
+                const res = await fetch('/my-courses/11/lectures/' + lectureId + '/progress', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
                     body: JSON.stringify({ current_sec: currentSec, duration_sec: dur })
@@ -563,7 +2018,7 @@ function courseFocusMode() {
                 const watchTime = this.lastVideoWatchTimeSec || 0;
                 try {
                     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-                    const res = await fetch(`{{ route('my-courses.lesson.progress', [$course, ':lessonId']) }}`.replace(':lessonId', lessonId), {
+                    const res = await fetch(`http://127.0.0.1:8000/my-courses/11/lessons/:lessonId/progress`.replace(':lessonId', lessonId), {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
                         body: JSON.stringify({
@@ -591,13 +2046,11 @@ function courseFocusMode() {
             if (this.progressInterval) clearInterval(this.progressInterval);
             this.progressInterval = null;
         },
-        async loadLecture(lectureId, options) {
-            options = options || {};
+        async loadLecture(lectureId) {
             if (window._autoplayCancel) window._autoplayCancel();
             this.lectureVideoEndedThisClip = false;
             this.lessonVideoEndedThisClip = false;
             this.autoAdvanceFiredForLectureId = null;
-            this._lectureAdvanceLockKey = null;
             this.selectedLecture = lectureId;
             this.selectedLesson = null;
             this.selectedPattern = null;
@@ -642,18 +2095,8 @@ function courseFocusMode() {
             }
 
             this.lectureMaterials = lecture.materials || [];
-            const isAlreadyCompleted = this.isLectureCompleted(lecture);
-            this.lectureReplayMode = isAlreadyCompleted && options.autoAdvance !== true;
-            this.allowLectureAutoAdvance = options.autoAdvance === true || !isAlreadyCompleted;
             this.lectureProgressPercent = (lecture.progress && lecture.progress.progress_percent != null) ? lecture.progress.progress_percent : 0;
-            if (this.lectureReplayMode) {
-                this.watchedSeconds = 0;
-                this.lastVideoWatchTimeSec = 0;
-                this.lastVideoProgressPercent = 0;
-                this.videoProgressPercent = 0;
-            } else {
-                this.watchedSeconds = (lecture.progress && lecture.progress.watch_time_seconds != null) ? Number(lecture.progress.watch_time_seconds) : 0;
-            }
+            this.watchedSeconds = (lecture.progress && lecture.progress.watch_time_seconds != null) ? Number(lecture.progress.watch_time_seconds) : 0;
             this.lastReportedTime = null;
             this.activeLessonTitle = lecture.title || '';
             if (typeof this.syncActivePanel === 'function') {
@@ -942,7 +2385,7 @@ function courseFocusMode() {
             if (!lessonId || this.currentLessonCompleted) return;
             try {
                 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-                const res = await fetch('/my-courses/{{ $course->id }}/lessons/' + lessonId + '/progress', {
+                const res = await fetch('/my-courses/11/lessons/' + lessonId + '/progress', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
                     body: JSON.stringify({ completed: true, watch_time: 0 })
@@ -1186,11 +2629,11 @@ function videoPlayer() {
             if (!url || !url.includes('mediadelivery.net')) return null;
             const trimmed = String(url).trim();
             // نفس منطق صفحة المنهج: أي رابط يحتوي embed/libraryId/videoId
-            const m = trimmed.match(/mediadelivery\.net\/(?:play|embed)\/(\d+)\/([a-zA-Z0-9_-]+)/);
+            const m = trimmed.match(/mediadelivery\.net\/embed\/(\d+)\/([a-zA-Z0-9_-]+)/);
             if (m && m[1] && m[2]) {
-                const qIdx = trimmed.indexOf('?');
-                const q = qIdx >= 0 ? trimmed.substring(qIdx) : '';
-                return 'https://iframe.mediadelivery.net/embed/' + m[1] + '/' + m[2] + q;
+                // مهم: لا نحذف query string (token/expires/autoplay...) حتى لا تنكسر حماية Bunny
+                if (!trimmed.startsWith('http')) return 'https://' + trimmed.replace(/^\/+/, '');
+                return trimmed;
             }
             // رابط Bunny بدون نمط embed (نادر): نعيده كما هو بعد إزالة الـ query
             if (trimmed.startsWith('http')) return trimmed;
@@ -1459,21 +2902,8 @@ function videoPlayer() {
         var m = String(url).trim().match(/vimeo\.com\/(?:.*\/)?(\d+)/);
         return m && m[1] ? m[1] : null;
     }
-    function normalizeBunnyEmbedUrl(raw) {
-        if (!raw) return raw;
-        var s = String(raw).trim();
-        var m = s.match(/mediadelivery\.net\/(?:play|embed)\/(\d+)\/([a-zA-Z0-9_-]+)/);
-        if (!m) return s;
-        var qIdx = s.indexOf('?');
-        var q = qIdx >= 0 ? s.substring(qIdx) : '';
-        return 'https://iframe.mediadelivery.net/embed/' + m[1] + '/' + m[2] + q;
-    }
     window.initLectureVideoWithQuestions = function(container, lecture, platform, url, courseId, lectureId) {
         if (!container || !lecture) return;
-        if (typeof window.__learnActiveLecturePlayerCleanup === 'function') {
-            try { window.__learnActiveLecturePlayerCleanup(); } catch (e) {}
-        }
-        if (platform === 'bunny') url = normalizeBunnyEmbedUrl(url);
         var questions = (lecture.video_questions && lecture.video_questions.length) ? lecture.video_questions : [];
         var shownIds = new Set();
         var currentQuestion = null;
@@ -1484,143 +2914,13 @@ function videoPlayer() {
         var submitBtn = null;
         var optionsEl = null;
         var textEl = null;
-        var compAtInit = window.__learnPageComponent;
-        var isReplaySession = !!(compAtInit && compAtInit.lectureReplayMode);
-        var allowAutoAdvance = !(compAtInit && compAtInit.allowLectureAutoAdvance === false);
-        var startFromSec = 0;
-        if (!isReplaySession && lecture.progress && lecture.progress.watch_time_seconds > 0) {
-            startFromSec = Math.floor(lecture.progress.watch_time_seconds);
-        }
+        var startFromSec = (lecture.progress && lecture.progress.watch_time_seconds > 0) ? Math.floor(lecture.progress.watch_time_seconds) : 0;
         var savedDurationSec = (lecture.progress && lecture.progress.video_duration_seconds > 0) ? lecture.progress.video_duration_seconds : 0;
         var durationMinutesFromLecture = (lecture.duration_minutes && parseInt(lecture.duration_minutes, 10) > 0) ? parseInt(lecture.duration_minutes, 10) : 0;
         var fallbackDurationSec = durationMinutesFromLecture > 0 ? durationMinutesFromLecture * 60 : savedDurationSec;
         var hasOpenedNext = false;
-        var hasUnlockedNextInSidebar = false;
         var minPercentToUnlock = (lecture.min_watch_percent_to_unlock_next != null && lecture.min_watch_percent_to_unlock_next !== '') ? parseInt(lecture.min_watch_percent_to_unlock_next, 10) : 90;
         var lectureLearnEndedDispatched = false;
-        var bunnyMessageHandler = null;
-        function cleanupLecturePlayer() {
-            if (checkInterval) {
-                clearInterval(checkInterval);
-                checkInterval = null;
-            }
-            if (bunnyMessageHandler) {
-                window.removeEventListener('message', bunnyMessageHandler);
-                bunnyMessageHandler = null;
-            }
-        }
-        window.__learnActiveLecturePlayerCleanup = cleanupLecturePlayer;
-        function resolveDurationSec(durationSec) {
-            var d = Number(durationSec) || 0;
-            if (d > 0) return d;
-            if (savedDurationSec > 0) return savedDurationSec;
-            if (fallbackDurationSec > 0) return fallbackDurationSec;
-            return 0;
-        }
-        function markCurrentLectureCompletedInSidebar() {
-            var root = document.getElementById('learn-curriculum-sidebar');
-            if (!root) return;
-            var el = root.querySelector('.curriculum-item[data-item-type="lecture"][data-item-id="' + String(lectureId) + '"]');
-            if (!el) return;
-            el.classList.add('completed');
-            el.classList.remove('locked');
-            el.dataset.itemLocked = '0';
-            el.dataset.filterState = 'completed';
-        }
-        function handleProgressSaved(data) {
-            if (!data || !data.success) return;
-            var wrapper = document.querySelector('.learn-page');
-            if (wrapper && data.course_progress != null) wrapper.dataset.courseProgress = data.course_progress;
-            if (wrapper && data.total_items != null) wrapper.dataset.totalItems = data.total_items;
-            if (wrapper && data.completed_items != null) wrapper.dataset.completedItems = data.completed_items;
-            if (typeof updateProgressBar === 'function') updateProgressBar();
-            if (typeof data.progress_percent === 'number') {
-                window.dispatchEvent(new CustomEvent('learn-lecture-progress', { detail: { progress_percent: data.progress_percent, lectureId: lectureId } }));
-            }
-            if (data.is_completed || (typeof data.progress_percent === 'number' && data.progress_percent >= minPercentToUnlock)) {
-                markCurrentLectureCompletedInSidebar();
-            }
-            var comp = window.__learnPageComponent;
-            if (comp && typeof comp.refreshSidebarLocks === 'function') {
-                comp.refreshSidebarLocks();
-            }
-            var reachedUnlockThreshold = data.is_completed || (typeof data.progress_percent === 'number' && data.progress_percent >= minPercentToUnlock);
-            if (reachedUnlockThreshold) {
-                unlockNextLectureInSidebar(lectureId);
-            }
-        }
-        function unlockNextLectureInSidebar(lid) {
-            if (hasUnlockedNextInSidebar) return;
-            hasUnlockedNextInSidebar = true;
-            var comp = window.__learnPageComponent;
-            if (comp) {
-                comp.lectureProgressPercent = Math.max(Number(comp.lectureProgressPercent) || 0, minPercentToUnlock);
-            }
-            var applyUnlock = function() {
-                var nextItem = getNextItemForLectureFromPageMap(lid);
-                if (nextItem && nextItem.type && nextItem.id != null && typeof window.learnSidebarUnlockItem === 'function') {
-                    window.learnSidebarUnlockItem(nextItem.type, nextItem.id);
-                }
-            };
-            if (comp && typeof comp.refreshSidebarLocks === 'function') {
-                comp.refreshSidebarLocks().then(applyUnlock).catch(applyUnlock);
-            } else {
-                applyUnlock();
-            }
-        }
-        function postLectureProgressServer(currentSec, durationSec, onDone) {
-            var dur = resolveDurationSec(durationSec);
-            var cs = Math.max(0, Number(currentSec) || 0);
-            if (!dur && cs > 0) dur = cs;
-            if (!dur) { if (onDone) onDone(null); return; }
-            cs = Math.min(cs, dur);
-            var pct = Math.min(100, Math.round((cs / dur) * 100));
-            window.dispatchEvent(new CustomEvent('learn-lecture-progress', { detail: { progress_percent: pct, lectureId: lectureId } }));
-            window.dispatchEvent(new CustomEvent('video-progress-report', { detail: { currentSec: cs, durationSec: dur, isPlaying: false, lectureId: lectureId } }));
-            var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-            fetch('/my-courses/' + courseId + '/lectures/' + lectureId + '/progress', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
-                body: JSON.stringify({ current_sec: cs, duration_sec: dur })
-            }).then(function(r) { return r.json(); }).then(function(data) {
-                handleProgressSaved(data);
-                if (onDone) onDone(data);
-            }).catch(function() { if (onDone) onDone(null); });
-        }
-        function forceSaveProgressAtEnd(callback) {
-            var finish = function(cs, ds) {
-                var dur = resolveDurationSec(ds);
-                if (!dur && cs > 0) dur = cs;
-                if (!dur && fallbackDurationSec > 0) { dur = fallbackDurationSec; cs = dur; }
-                if (!dur) { if (callback) callback(null); return; }
-                postLectureProgressServer(Math.max(cs, dur), dur, callback);
-            };
-            if (platform === 'youtube' && player && player.getCurrentTime) {
-                finish(player.getCurrentTime(), (player.getDuration && player.getDuration()) || 0);
-                return;
-            }
-            if (platform === 'vimeo' && player && player.getCurrentTime) {
-                player.getCurrentTime().then(function(sec) {
-                    if (player.getDuration) {
-                        player.getDuration().then(function(d) { finish(sec || 0, d || 0); }).catch(function() { finish(sec || 0, 0); });
-                    } else {
-                        finish(sec || 0, 0);
-                    }
-                }).catch(function() { finish(fallbackDurationSec, fallbackDurationSec); });
-                return;
-            }
-            if (platform === 'bunny' && player && player.getCurrentTime) {
-                player.getCurrentTime(function(sec) {
-                    if (player.getDuration) {
-                        player.getDuration(function(d) { finish(sec || 0, d || 0); });
-                    } else {
-                        finish(sec || 0, 0);
-                    }
-                });
-                return;
-            }
-            finish(fallbackDurationSec || savedDurationSec, fallbackDurationSec || savedDurationSec);
-        }
         function dispatchLectureLearnVideoEnded() {
             if (lectureLearnEndedDispatched) return;
             lectureLearnEndedDispatched = true;
@@ -1631,26 +2931,28 @@ function videoPlayer() {
             hasOpenedNext = true;
             var comp = window.__learnPageComponent;
             if (comp) {
+                if (comp.autoAdvanceFiredForLectureId === lid) return;
+                comp.autoAdvanceFiredForLectureId = lid;
                 comp.lectureProgressPercent = Math.max(Number(comp.lectureProgressPercent) || 0, minPercentToUnlock);
                 comp.lectureVideoEndedThisClip = true;
             }
-            unlockNextLectureInSidebar(lid);
-            var openNext = function() {
+            var open = function() {
                 if (typeof window.showAutoAdvanceToNext === 'function') {
                     window.showAutoAdvanceToNext('lecture', lid);
                     return;
                 }
                 var nextItem = getNextItemForLectureFromPageMap(lid);
-                if (!nextItem || !nextItem.type || nextItem.id == null) return;
-                var raw = nextItem.id;
-                var nid = parseInt(String(raw), 10);
-                var openId = (String(nid) === String(raw) && !isNaN(nid)) ? nid : raw;
-                window.dispatchEvent(new CustomEvent('learn-open-next-item', { detail: { type: nextItem.type, id: openId, autoAdvance: true } }));
+                if (nextItem && nextItem.type && nextItem.id) {
+                    if (typeof window.learnSidebarUnlockItem === 'function') {
+                        window.learnSidebarUnlockItem(nextItem.type, nextItem.id);
+                    }
+                    window.dispatchEvent(new CustomEvent('learn-open-next-item', { detail: { type: nextItem.type, id: nextItem.id } }));
+                }
             };
             if (comp && typeof comp.refreshSidebarLocks === 'function') {
-                comp.refreshSidebarLocks().then(openNext).catch(openNext);
+                comp.refreshSidebarLocks().then(open).catch(open);
             } else {
-                openNext();
+                open();
             }
         }
         function progressDetail(currentSec, durationSec, isPlaying) {
@@ -1719,7 +3021,7 @@ function videoPlayer() {
         var resultEmoji = document.getElementById('lecture-vq-result-emoji');
         var resultMessage = document.getElementById('lecture-vq-result-message');
         var continueBtn = document.getElementById('lecture-vq-continue-btn');
-        var isEnglishUi = '{{ app()->getLocale() }}' === 'en';
+        var isEnglishUi = 'ar' === 'en';
         var correctMessagesAr = [
             'عاش جدا! إجابتك صح وممتازة 🔥👏',
             'برافو عليك يا بطل، شغلك عالي اوي 💪✨',
@@ -1846,10 +3148,7 @@ function videoPlayer() {
                     }
                 }
                 if (hasEnd && allEndDone) {
-                    forceSaveProgressAtEnd(function() {
-                        if (!allowAutoAdvance || hasOpenedNext) return;
-                        tryAdvanceLectureFromProgress(lectureId);
-                    });
+                    dispatchLectureLearnVideoEnded();
                     return;
                 }
                 doContinue();
@@ -1944,7 +3243,30 @@ function videoPlayer() {
                                 if (!lastProgressSentAt || now - lastProgressSentAt > 5000) {
                                     lastProgressSentAt = now;
                                     var send = function(cs, ds) {
-                                        postLectureProgressServer(cs, ds);
+                                        var dur = (ds && ds > 0) ? ds : (savedDurationSec > 0 ? savedDurationSec : fallbackDurationSec);
+                                        if (!dur) return;
+                                        var pct = Math.min(100, Math.round((cs / dur) * 100));
+                                        window.dispatchEvent(new CustomEvent('learn-lecture-progress', { detail: { progress_percent: pct } }));
+                                        var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                                        fetch('/my-courses/' + courseId + '/lectures/' + lectureId + '/progress', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                                            body: JSON.stringify({ current_sec: cs, duration_sec: dur })
+                                        }).then(function(r) { return r.json(); }).then(function(data) {
+                                            if (data && data.success) {
+                                                var wrapper = document.querySelector('.learn-page');
+                                                if (wrapper && data.course_progress != null) wrapper.dataset.courseProgress = data.course_progress;
+                                                if (data.total_items != null) wrapper.dataset.totalItems = data.total_items;
+                                                if (data.completed_items != null) wrapper.dataset.completedItems = data.completed_items;
+                                                if (typeof updateProgressBar === 'function') updateProgressBar();
+                                                if (typeof data.progress_percent === 'number') {
+                                                    window.dispatchEvent(new CustomEvent('learn-lecture-progress', { detail: { progress_percent: data.progress_percent } }));
+                                                }
+                                                if (!hasOpenedNext && (data.is_completed || (data.progress_percent >= minPercentToUnlock))) {
+                                                    tryAdvanceLectureFromProgress(lectureId);
+                                                }
+                                            }
+                                        }).catch(function() {});
                                     };
                                     send(currentSec, durForBar);
                                 }
@@ -1982,7 +3304,30 @@ function videoPlayer() {
                                 if (!lastProgressSentAt || now - lastProgressSentAt > 5000) {
                                     lastProgressSentAt = now;
                                     var send = function(cs, ds) {
-                                        postLectureProgressServer(cs, ds);
+                                        var dur = (ds && ds > 0) ? ds : (savedDurationSec > 0 ? savedDurationSec : fallbackDurationSec);
+                                        if (!dur) return;
+                                        var pct = Math.min(100, Math.round((cs / dur) * 100));
+                                        window.dispatchEvent(new CustomEvent('learn-lecture-progress', { detail: { progress_percent: pct } }));
+                                        var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                                        fetch('/my-courses/' + courseId + '/lectures/' + lectureId + '/progress', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                                            body: JSON.stringify({ current_sec: cs, duration_sec: dur })
+                                        }).then(function(r) { return r.json(); }).then(function(data) {
+                                            if (data && data.success) {
+                                                var wrapper = document.querySelector('.learn-page');
+                                                if (wrapper && data.course_progress != null) wrapper.dataset.courseProgress = data.course_progress;
+                                                if (data.total_items != null) wrapper.dataset.totalItems = data.total_items;
+                                                if (data.completed_items != null) wrapper.dataset.completedItems = data.completed_items;
+                                                if (typeof updateProgressBar === 'function') updateProgressBar();
+                                                if (typeof data.progress_percent === 'number') {
+                                                    window.dispatchEvent(new CustomEvent('learn-lecture-progress', { detail: { progress_percent: data.progress_percent } }));
+                                                }
+                                                if (!hasOpenedNext && (data.is_completed || (data.progress_percent >= minPercentToUnlock))) {
+                                                    tryAdvanceLectureFromProgress(lectureId);
+                                                }
+                                            }
+                                        }).catch(function() {});
                                     };
                                     send(currentSec, durForBar);
                                 }
@@ -2010,11 +3355,34 @@ function videoPlayer() {
                     if (!lastProgressSentAt || now - lastProgressSentAt > 5000) {
                         lastProgressSentAt = now;
                         var send = function(currentSec, durationSec) {
-                            postLectureProgressServer(currentSec, durationSec);
+                            var dur = (durationSec && durationSec > 0) ? durationSec : (savedDurationSec > 0 ? savedDurationSec : fallbackDurationSec);
+                            if (!dur) return;
+                            var pct = Math.min(100, Math.round((currentSec / dur) * 100));
+                            window.dispatchEvent(new CustomEvent('learn-lecture-progress', { detail: { progress_percent: pct } }));
+                            var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                            fetch('/my-courses/' + courseId + '/lectures/' + lectureId + '/progress', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                                body: JSON.stringify({ current_sec: currentSec, duration_sec: dur })
+                            }).then(function(r) { return r.json(); }).then(function(data) {
+                                if (data && data.success) {
+                                    var wrapper = document.querySelector('.learn-page');
+                                    if (wrapper && data.course_progress != null) wrapper.dataset.courseProgress = data.course_progress;
+                                    if (data.total_items != null) wrapper.dataset.totalItems = data.total_items;
+                                    if (data.completed_items != null) wrapper.dataset.completedItems = data.completed_items;
+                                    if (typeof updateProgressBar === 'function') updateProgressBar();
+                                    if (typeof data.progress_percent === 'number') {
+                                        window.dispatchEvent(new CustomEvent('learn-lecture-progress', { detail: { progress_percent: data.progress_percent } }));
+                                    }
+                                    if (!hasOpenedNext && (data.is_completed || (data.progress_percent >= minPercentToUnlock))) {
+                                        tryAdvanceLectureFromProgress(lectureId);
+                                    }
+                                }
+                            }).catch(function() {});
                         };
                         if (platform === 'youtube') {
                             var d = (player.getDuration && player.getDuration()) || savedDurationSec || fallbackDurationSec;
-                            send(t, d);
+                            if (d) send(t, d);
                         } else if (platform === 'vimeo' && player.getDuration) {
                             player.getDuration().then(function(d) { send(t, d || savedDurationSec || fallbackDurationSec); });
                         } else if (platform === 'bunny' && player.getDuration) {
@@ -2037,8 +3405,6 @@ function videoPlayer() {
         }
 
         function showEndOfVideoQuestions() {
-            var comp = window.__learnPageComponent;
-            if (comp && comp.selectedLecture != null && String(comp.selectedLecture) !== String(lectureId)) return;
             for (var i = 0; i < questions.length; i++) {
                 var q = questions[i];
                 if (q.show_at_end && !shownIds.has(q.id)) {
@@ -2048,10 +3414,8 @@ function videoPlayer() {
                     return;
                 }
             }
-            forceSaveProgressAtEnd(function() {
-                if (!allowAutoAdvance || hasOpenedNext) return;
-                tryAdvanceLectureFromProgress(lectureId);
-            });
+            // لا أسئلة نهاية متبقية — إشعار موحّد: يحدّث زر التالي (أزرق) وينتقل تلقائياً للعنصر التالي
+            dispatchLectureLearnVideoEnded();
         }
 
         if (platform === 'youtube') {
@@ -2117,20 +3481,6 @@ function videoPlayer() {
             iframe.allow = 'autoplay; fullscreen; picture-in-picture';
             root.appendChild(iframe);
 
-            bunnyMessageHandler = function(event) {
-                try {
-                    var comp = window.__learnPageComponent;
-                    if (!comp || String(comp.selectedLecture) !== String(lectureId)) return;
-                    var origin = String(event.origin || '');
-                    if (!origin.includes('mediadelivery.net')) return;
-                    var data = event.data;
-                    var evt = (data && typeof data === 'object') ? (data.event || data.type || data.name) : null;
-                    var isEnded = typeof evt === 'string' && /^(ended|finish|finished|complete|completed)$/i.test(evt.trim());
-                    if (isEnded) showEndOfVideoQuestions();
-                } catch (e) {}
-            };
-            window.addEventListener('message', bunnyMessageHandler);
-
             function createBunnyPlayer() {
                 if (player) return;
                 if (!window.playerjs || !window.playerjs.Player) return;
@@ -2171,41 +3521,6 @@ function videoPlayer() {
 (function() {
     var _countdownTimer = null;
     var _nextPending = null;
-
-    function resolveNextItem(currentType, currentId) {
-        var next = getNextCurriculumItem(currentType, currentId);
-        if (next) return next;
-        if (currentType !== 'lecture') return null;
-        try {
-            var mapEl = document.getElementById('learn-next-item-map');
-            var map = mapEl && mapEl.textContent ? JSON.parse(mapEl.textContent) : {};
-            var raw = getNextFromNavMap(map, currentId);
-            if (!raw || !raw.type || raw.id == null) return null;
-            return {
-                type: raw.type,
-                id: String(raw.id),
-                el: findCurriculumItemEl(raw.type, raw.id)
-            };
-        } catch (e) {
-            return null;
-        }
-    }
-
-    async function openNextAfterComplete(currentType, currentId, opts) {
-        opts = opts || {};
-        var comp = window.__learnPageComponent;
-        if (!opts.skipFlush && comp) {
-            if (currentType === 'lecture' && typeof comp.flushLectureProgressNow === 'function') {
-                try { await comp.flushLectureProgressNow(currentId, true); } catch (e) {}
-            } else if (currentType === 'lesson' && typeof comp.flushLessonProgressNow === 'function') {
-                try { await comp.flushLessonProgressNow(currentId, true); } catch (e) {}
-            }
-        }
-        if (comp && typeof comp.refreshSidebarLocks === 'function') {
-            try { await comp.refreshSidebarLocks(); } catch (e) {}
-        }
-        return showAutoAdvance(currentType, currentId);
-    }
 
     function parseLearnNextItemMap() {
         try {
@@ -2368,48 +3683,47 @@ function videoPlayer() {
         var raw = item.id;
         var nid = parseInt(String(raw), 10);
         var openId = (String(nid) === String(raw) && !isNaN(nid)) ? nid : raw;
-        window.dispatchEvent(new CustomEvent('learn-open-next-item', { detail: { type: item.type, id: openId, autoAdvance: true } }));
-        var sidebar = document.getElementById('learn-curriculum-sidebar');
-        if (item.el && sidebar) {
-            var sbRect = sidebar.getBoundingClientRect();
-            var elRect = item.el.getBoundingClientRect();
-            if (elRect.top < sbRect.top || elRect.bottom > sbRect.bottom) {
-                item.el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-        }
-        var videoMount = document.querySelector('.learn-video-aspect') || document.getElementById('learn-video-embed');
-        if (videoMount) {
-            videoMount.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        window.dispatchEvent(new CustomEvent('learn-open-next-item', { detail: { type: item.type, id: openId } }));
+        if (item.el) item.el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        setTimeout(function() {
+            var panel = document.getElementById('learn-panel-' + item.type + '-' + item.id);
+            if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 400);
     }
 
     async function showAutoAdvance(currentType, currentId) {
-        if (_countdownTimer) { clearInterval(_countdownTimer); _countdownTimer = null; }
-        _nextPending = null;
-        var overlay = document.getElementById('autoplay-next-overlay');
-        if (overlay) {
-            overlay.classList.remove('is-visible');
-            overlay.style.display = 'none';
-        }
-
         var comp = window.__learnPageComponent;
         if (comp && typeof comp.refreshSidebarLocks === 'function') {
             try { await comp.refreshSidebarLocks(); } catch (e) {}
         }
-
-        var next = resolveNextItem(currentType, currentId);
-        if (!next) {
-            console.warn('showAutoAdvance: no next item for', currentType, currentId);
-            return false;
-        }
-        await loadNextItem(next);
-        return true;
+        var next = getNextCurriculumItem(currentType, currentId);
+        if (!next) return;
+        _nextPending = next;
+        var overlay = document.getElementById('autoplay-next-overlay');
+        var titleEl = document.getElementById('autoplay-next-title');
+        if (titleEl) titleEl.textContent = getItemTitle(next.el) || 'الدرس التالي';
+        if (overlay) { overlay.style.display = 'flex'; overlay.classList.add('is-visible'); }
+        var sec = 5;
+        var numEl = document.getElementById('autoplay-countdown-num');
+        var ring = document.getElementById('autoplay-ring');
+        if (numEl) numEl.textContent = String(sec);
+        if (ring) ring.style.strokeDashoffset = '0';
+        if (_countdownTimer) clearInterval(_countdownTimer);
+        _countdownTimer = setInterval(function() {
+            sec--;
+            if (numEl) numEl.textContent = String(Math.max(0, sec));
+            if (ring) ring.style.strokeDashoffset = String((5 - sec) * (113 / 5));
+            if (sec <= 0) {
+                clearInterval(_countdownTimer);
+                _countdownTimer = null;
+                loadNextItem(_nextPending);
+            }
+        }, 1000);
     }
 
     window._autoplayNow = function() { if (_nextPending) loadNextItem(_nextPending); };
     window._autoplayCancel = function() { hideOverlay(); };
     window.showAutoAdvanceToNext = showAutoAdvance;
-    window.openNextAfterComplete = openNextAfterComplete;
 })();
 
 document.addEventListener('alpine:init', function() {
@@ -2421,4 +3735,6 @@ document.addEventListener('alpine:init', function() {
     }
 });
 </script>
-@endpush
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"></script>
+</body>
+</html>

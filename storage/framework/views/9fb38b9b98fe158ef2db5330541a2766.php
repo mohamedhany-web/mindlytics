@@ -1,14 +1,12 @@
-@extends('layouts.learn-immersive')
+<?php $__env->startSection('title', $course->localized('title') . ' - ' . __('student.learn')); ?>
+<?php $__env->startSection('header', ''); ?>
 
-@section('title', $course->localized('title') . ' - ' . __('student.learn'))
-@section('header', '')
+<?php $__env->startPush('meta'); ?>
+<meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
+<?php $__env->stopPush(); ?>
 
-@push('meta')
-<meta name="csrf-token" content="{{ csrf_token() }}">
-@endpush
-
-@push('styles')
-@include('student.my-courses.partials.learn-premium-styles')
+<?php $__env->startPush('styles'); ?>
+<?php echo $__env->make('student.my-courses.partials.learn-premium-styles', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 <style>
     .lecture-video-mount, .learn-video-aspect { -webkit-user-select: none; user-select: none; }
     .lesson-video-viewer { display: flex; flex-direction: column; }
@@ -24,9 +22,9 @@
         border: none !important;
     }
 </style>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@php
+<?php
     // تحضير بيانات المحاضرات للـ JavaScript (مع المواد الظاهرة للطالب + تقدم المشاهدة + نسبة فتح التالي)
     $currentUser = auth()->user();
     $lecturesData = $course->lectures->map(function($lecture) use ($course, $currentUser) {
@@ -97,13 +95,13 @@
         $lecturesData->isEmpty() ? (object) [] : $lecturesData,
         JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE
     );
-@endphp
+?>
 
-@section('content')
-@include('student.my-courses.partials.learn-page-shell')
-@endsection
+<?php $__env->startSection('content'); ?>
+<?php echo $__env->make('student.my-courses.partials.learn-page-shell', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 (function () {
     if (typeof window.learnNavGetNextForButton !== 'function') {
@@ -114,7 +112,7 @@
     }
 })();
 </script>
-@include('student.my-courses.partials.learn-alpine-premium')
+<?php echo $__env->make('student.my-courses.partials.learn-alpine-premium', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 <script>
 function courseFocusMode() {
     // قراءة بيانات المحاضرات من عنصر script (أدق من data attribute مع روابط طويلة)
@@ -437,7 +435,7 @@ function courseFocusMode() {
                 const pct = Number(this.lastVideoProgressPercent || 0);
                 const watchTime = Number(this.lastVideoWatchTimeSec || 0);
                 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-                const res = await fetch(`{{ route('my-courses.lesson.progress', [$course, ':lessonId']) }}`.replace(':lessonId', lessonId), {
+                const res = await fetch(`<?php echo e(route('my-courses.lesson.progress', [$course, ':lessonId'])); ?>`.replace(':lessonId', lessonId), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
                     body: JSON.stringify({
@@ -466,7 +464,7 @@ function courseFocusMode() {
         },
         async refreshSidebarLocks() {
             try {
-                const res = await fetch(`{{ route('my-courses.curriculum.locks', [$course]) }}`, {
+                const res = await fetch(`<?php echo e(route('my-courses.curriculum.locks', [$course])); ?>`, {
                     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
                 });
                 if (!res.ok) return;
@@ -528,7 +526,7 @@ function courseFocusMode() {
                     : Math.min(dur, Number(this.lastVideoWatchTimeSec || this.watchedSeconds || 0));
                 if (forceComplete) currentSec = dur;
                 const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-                const res = await fetch('/my-courses/{{ $course->id }}/lectures/' + lectureId + '/progress', {
+                const res = await fetch('/my-courses/<?php echo e($course->id); ?>/lectures/' + lectureId + '/progress', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
                     body: JSON.stringify({ current_sec: currentSec, duration_sec: dur })
@@ -563,7 +561,7 @@ function courseFocusMode() {
                 const watchTime = this.lastVideoWatchTimeSec || 0;
                 try {
                     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-                    const res = await fetch(`{{ route('my-courses.lesson.progress', [$course, ':lessonId']) }}`.replace(':lessonId', lessonId), {
+                    const res = await fetch(`<?php echo e(route('my-courses.lesson.progress', [$course, ':lessonId'])); ?>`.replace(':lessonId', lessonId), {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
                         body: JSON.stringify({
@@ -942,7 +940,7 @@ function courseFocusMode() {
             if (!lessonId || this.currentLessonCompleted) return;
             try {
                 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-                const res = await fetch('/my-courses/{{ $course->id }}/lessons/' + lessonId + '/progress', {
+                const res = await fetch('/my-courses/<?php echo e($course->id); ?>/lessons/' + lessonId + '/progress', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
                     body: JSON.stringify({ completed: true, watch_time: 0 })
@@ -1719,7 +1717,7 @@ function videoPlayer() {
         var resultEmoji = document.getElementById('lecture-vq-result-emoji');
         var resultMessage = document.getElementById('lecture-vq-result-message');
         var continueBtn = document.getElementById('lecture-vq-continue-btn');
-        var isEnglishUi = '{{ app()->getLocale() }}' === 'en';
+        var isEnglishUi = '<?php echo e(app()->getLocale()); ?>' === 'en';
         var correctMessagesAr = [
             'عاش جدا! إجابتك صح وممتازة 🔥👏',
             'برافو عليك يا بطل، شغلك عالي اوي 💪✨',
@@ -2421,4 +2419,6 @@ document.addEventListener('alpine:init', function() {
     }
 });
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
+
+<?php echo $__env->make('layouts.learn-immersive', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/student/my-courses/learn.blade.php ENDPATH**/ ?>

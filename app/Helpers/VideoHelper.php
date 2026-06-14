@@ -32,6 +32,13 @@ class VideoHelper
         }
 
         // Bunny.net (Bunny Stream) - iframe أو player.mediadelivery.net
+        if (preg_match('/player\.mediadelivery\.net\/play\/(\d+)\/([a-zA-Z0-9_-]+)/', $url, $matches)) {
+            $parsed = parse_url($url);
+            $query = isset($parsed['query']) ? '?' . $parsed['query'] : '';
+
+            return "https://iframe.mediadelivery.net/embed/{$matches[1]}/{$matches[2]}{$query}";
+        }
+
         if (preg_match('/(?:iframe|player)\.mediadelivery\.net\/embed\/(\d+)\/([a-zA-Z0-9_-]+)/', $url, $matches)) {
             $libraryId = $matches[1];
             $videoId = $matches[2];

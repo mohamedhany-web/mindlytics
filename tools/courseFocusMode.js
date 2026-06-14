@@ -1,121 +1,4 @@
-@extends('layouts.learn-immersive')
 
-@section('title', $course->localized('title') . ' - ' . __('student.learn'))
-@section('header', '')
-
-@push('meta')
-<meta name="csrf-token" content="{{ csrf_token() }}">
-@endpush
-
-@push('styles')
-@include('student.my-courses.partials.learn-premium-styles')
-<style>
-    .lecture-video-mount, .learn-video-aspect { -webkit-user-select: none; user-select: none; }
-    .lesson-video-viewer { display: flex; flex-direction: column; }
-    .lesson-video-viewer * { -webkit-user-select: none; user-select: none; }
-    #learn-video-embed iframe,
-    #learn-video-embed video,
-    #learn-video-embed #lecture-yt-player-box,
-    #learn-video-embed #lecture-yt-player-box iframe {
-        position: absolute !important;
-        inset: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
-        border: none !important;
-    }
-</style>
-@endpush
-
-@php
-    // تحضير بيانات المحاضرات للـ JavaScript (مع المواد الظاهرة للطالب + تقدم المشاهدة + نسبة فتح التالي)
-    $currentUser = auth()->user();
-    $lecturesData = $course->lectures->map(function($lecture) use ($course, $currentUser) {
-        $lecture->refresh();
-        $recordingUrl = \DB::table('lectures')->where('id', $lecture->id)->value('recording_url');
-        $videoPlatform = \DB::table('lectures')->where('id', $lecture->id)->value('video_platform');
-        $recordingUrlFinal = $recordingUrl ? trim($recordingUrl) : ($lecture->recording_url ? trim($lecture->recording_url) : null);
-        $videoPlatformFinal = $videoPlatform ? trim(strtolower($videoPlatform)) : ($lecture->video_platform ? trim(strtolower($lecture->video_platform)) : null);
-        if ($recordingUrlFinal) {
-            $resolvedRecording = \App\Support\LectureRecordingResolver::resolve($recordingUrlFinal, $videoPlatformFinal);
-            $recordingUrlFinal = $resolvedRecording['recording_url'] ?: $recordingUrlFinal;
-            $videoPlatformFinal = $resolvedRecording['video_platform'] ?: $videoPlatformFinal;
-        }
-        $materials = $lecture->materials()->where('is_visible_to_student', true)->orderBy('sort_order')->get()->map(function($m) use ($course, $lecture) {
-            return [
-                'id' => $m->id,
-                'title' => $m->title ?: $m->file_name,
-                'file_name' => $m->file_name,
-                'download_url' => route('my-courses.lectures.material.download', [$course->id, $lecture->id, $m->id]),
-            ];
-        })->values()->all();
-        $videoQuestions = $lecture->videoQuestions()->with('question')->orderBy('timestamp_seconds')->get()->filter(function($vq) use ($currentUser) {
-            $showCount = $vq->show_count;
-            if ($showCount === null || $showCount == 0) return true;
-            $answered = \App\Models\LectureVideoQuestionAnswer::where('lecture_video_question_id', $vq->id)->where('user_id', $currentUser->id)->count();
-            return $answered < $showCount;
-        })->map(function($vq) {
-            $payload = $vq->getPayloadForStudent();
-            $showEveryTime = $vq->show_count === null || $vq->show_count == 0;
-            return [
-                'id' => $vq->id,
-                'timestamp_seconds' => (int) $vq->timestamp_seconds,
-                'show_at_end' => (bool) $vq->show_at_end,
-                'text' => $payload['text'] ?? '',
-                'options' => $payload['options'] ?? [],
-                'type' => $payload['type'] ?? 'multiple_choice',
-                'points' => $vq->points,
-                'on_wrong' => $vq->on_wrong,
-                'rewind_seconds' => $vq->rewind_seconds,
-                'show_every_time' => $showEveryTime,
-            ];
-        })->values()->all();
-        $watchProgress = \App\Models\LectureWatchProgress::where('lecture_id', $lecture->id)->where('user_id', $currentUser->id)->first();
-        $progressData = $watchProgress ? [
-            'progress_percent' => (int) $watchProgress->progress_percent,
-            'is_completed' => (bool) $watchProgress->is_completed,
-            'watch_time_seconds' => (int) $watchProgress->watch_time_seconds,
-            'video_duration_seconds' => (int) $watchProgress->video_duration_seconds,
-        ] : null;
-        return [
-            'id' => $lecture->id,
-            'title' => $lecture->title,
-            'description' => $lecture->description,
-            'scheduled_at' => $lecture->scheduled_at ? $lecture->scheduled_at->toIso8601String() : null,
-            'scheduled_at_formatted' => $lecture->scheduled_at ? $lecture->scheduled_at->format('Y/m/d H:i') : null,
-            'duration_minutes' => $lecture->duration_minutes ?? 60,
-            'min_watch_percent_to_unlock_next' => $lecture->min_watch_percent_to_unlock_next,
-            'recording_url' => $recordingUrlFinal,
-            'video_platform' => $videoPlatformFinal,
-            'notes' => $lecture->notes ?? null,
-            'materials' => $materials,
-            'video_questions' => $videoQuestions,
-            'progress' => $progressData,
-        ];
-    })->keyBy('id');
-    
-    $lecturesDataJson = json_encode(
-        $lecturesData->isEmpty() ? (object) [] : $lecturesData,
-        JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE
-    );
-@endphp
-
-@section('content')
-@include('student.my-courses.partials.learn-page-shell')
-@endsection
-
-@push('scripts')
-<script>
-(function () {
-    if (typeof window.learnNavGetNextForButton !== 'function') {
-        window.learnNavGetNextForButton = function () { return null; };
-    }
-    if (typeof window.learnNavGetPrevForButton !== 'function') {
-        window.learnNavGetPrevForButton = function () { return null; };
-    }
-})();
-</script>
-@include('student.my-courses.partials.learn-alpine-premium')
-<script>
 function courseFocusMode() {
     // قراءة بيانات المحاضرات من عنصر script (أدق من data attribute مع روابط طويلة)
     let lecturesData = {};
@@ -169,18 +52,6 @@ function courseFocusMode() {
         autoAdvanceFiredForLessonId: null,
         autoAdvanceFiredForLectureId: null,
         isFlushingProgress: false,
-        _autoAdvancing: false,
-        _handlingVideoEnded: false,
-        allowLectureAutoAdvance: true,
-        lectureReplayMode: false,
-        isLectureCompleted(lecture) {
-            if (!lecture) return false;
-            const minP = (lecture.min_watch_percent_to_unlock_next != null && lecture.min_watch_percent_to_unlock_next !== '')
-                ? parseInt(lecture.min_watch_percent_to_unlock_next, 10) : 90;
-            const prog = lecture.progress || {};
-            const pct = prog.progress_percent != null ? parseInt(prog.progress_percent, 10) : 0;
-            return !!(prog.is_completed || pct >= minP);
-        },
         getCurrentNavTypeId() {
             if (this.selectedLecture) return { type: 'lecture', id: this.selectedLecture };
             if (this.selectedLesson) return { type: 'lesson', id: this.selectedLesson };
@@ -397,36 +268,12 @@ function courseFocusMode() {
             if (this.currentLessonId && !this.selectedLecture && this.showVideoPlayer) {
                 if (pct >= 90 && this.autoAdvanceFiredForLessonId !== this.currentLessonId) {
                     this.autoAdvanceFiredForLessonId = this.currentLessonId;
-                    this.autoAdvanceAfterVideoEnd('lesson', this.currentLessonId);
+                    this.flushLessonProgressNow(this.currentLessonId, true).then(() => {
+                        if (typeof window.showAutoAdvanceToNext === 'function') {
+                            window.showAutoAdvanceToNext('lesson', this.currentLessonId);
+                        }
+                    });
                 }
-            }
-        },
-        async autoAdvanceAfterVideoEnd(sourceType, sourceId) {
-            if (this._autoAdvancing) return;
-            this._autoAdvancing = true;
-            try {
-                if (sourceType === 'lesson') {
-                    await this.flushLessonProgressNow(sourceId, true);
-                } else if (sourceType === 'lecture') {
-                    await this.flushLectureProgressNow(sourceId, true);
-                    this.lectureVideoEndedThisClip = true;
-                    this.lectureProgressPercent = Math.max(
-                        Number(this.lectureProgressPercent) || 0,
-                        this.getCurrentLectureMinWatchPercent()
-                    );
-                }
-                if (typeof this.refreshSidebarLocks === 'function') {
-                    await this.refreshSidebarLocks();
-                }
-                if (typeof window.openNextAfterComplete === 'function') {
-                    await window.openNextAfterComplete(sourceType, sourceId, { skipFlush: true });
-                } else if (typeof window.showAutoAdvanceToNext === 'function') {
-                    await window.showAutoAdvanceToNext(sourceType, sourceId);
-                }
-            } catch (e) {
-                console.warn('autoAdvanceAfterVideoEnd failed', e);
-            } finally {
-                setTimeout(() => { this._autoAdvancing = false; }, 2000);
             }
         },
         async flushLessonProgressNow(lessonId, forceCompleted = false) {
@@ -437,7 +284,7 @@ function courseFocusMode() {
                 const pct = Number(this.lastVideoProgressPercent || 0);
                 const watchTime = Number(this.lastVideoWatchTimeSec || 0);
                 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-                const res = await fetch(`{{ route('my-courses.lesson.progress', [$course, ':lessonId']) }}`.replace(':lessonId', lessonId), {
+                const res = await fetch(`http://127.0.0.1:8000/my-courses/11/lessons/:lessonId/progress`.replace(':lessonId', lessonId), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
                     body: JSON.stringify({
@@ -466,7 +313,7 @@ function courseFocusMode() {
         },
         async refreshSidebarLocks() {
             try {
-                const res = await fetch(`{{ route('my-courses.curriculum.locks', [$course]) }}`, {
+                const res = await fetch(`http://127.0.0.1:8000/my-courses/11/curriculum/locks`, {
                     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
                 });
                 if (!res.ok) return;
@@ -479,16 +326,10 @@ function courseFocusMode() {
                     const parts = String(key).split(':');
                     const type = parts[0];
                     const id = parts[1];
-                    const root = document.getElementById('learn-curriculum-sidebar');
-                    const el = root
-                        ? root.querySelector('.curriculum-item[data-item-type="' + type + '"][data-item-id="' + id + '"]')
-                        : document.querySelector('.curriculum-item[data-item-type="' + type + '"][data-item-id="' + id + '"]');
+                    const el = document.querySelector('.curriculum-item[data-item-type="' + type + '"][data-item-id="' + id + '"]');
                     if (el) {
                         el.dataset.itemLocked = locked ? '1' : '0';
                         el.classList.toggle('locked', locked);
-                        if (!locked && typeof window.learnSidebarUnlockItem === 'function') {
-                            window.learnSidebarUnlockItem(type, id);
-                        }
                     }
                     const panel = document.querySelector('.learn-curriculum-panel[data-panel-type="' + type + '"][data-panel-id="' + id + '"]');
                     if (panel) {
@@ -505,33 +346,16 @@ function courseFocusMode() {
                 console.warn('refreshSidebarLocks failed', e);
             }
         },
-        async flushLectureProgressNow(lectureId, forceComplete = false) {
+        async flushLectureProgressNow(lectureId) {
             try {
                 if (!lectureId) return;
-                let dur = Number(this.lastVideoDurationSec || 0);
-                if (!Number.isFinite(dur) || dur <= 0) {
-                    const lec = (this.lecturesData || {})[lectureId] || (this.lecturesData || {})[String(lectureId)];
-                    const mins = lec && lec.duration_minutes ? parseInt(lec.duration_minutes, 10) : 0;
-                    if (mins > 0) dur = mins * 60;
-                }
-                if ((!Number.isFinite(dur) || dur <= 0) && forceComplete) {
-                    const watched = Math.max(
-                        Number(this.lastVideoWatchTimeSec || 0),
-                        Number(this.watchedSeconds || 0),
-                        1
-                    );
-                    dur = watched;
-                }
+                const dur = Number(this.lastVideoDurationSec || 0);
                 if (!Number.isFinite(dur) || dur <= 0) return;
-                let currentSec = forceComplete
-                    ? dur
-                    : Math.min(dur, Number(this.lastVideoWatchTimeSec || this.watchedSeconds || 0));
-                if (forceComplete) currentSec = dur;
                 const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-                const res = await fetch('/my-courses/{{ $course->id }}/lectures/' + lectureId + '/progress', {
+                const res = await fetch('/my-courses/11/lectures/' + lectureId + '/progress', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
-                    body: JSON.stringify({ current_sec: currentSec, duration_sec: dur })
+                    body: JSON.stringify({ current_sec: dur, duration_sec: dur })
                 });
                 if (res.ok) {
                     const data = await res.json().catch(() => null);
@@ -563,7 +387,7 @@ function courseFocusMode() {
                 const watchTime = this.lastVideoWatchTimeSec || 0;
                 try {
                     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-                    const res = await fetch(`{{ route('my-courses.lesson.progress', [$course, ':lessonId']) }}`.replace(':lessonId', lessonId), {
+                    const res = await fetch(`http://127.0.0.1:8000/my-courses/11/lessons/:lessonId/progress`.replace(':lessonId', lessonId), {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
                         body: JSON.stringify({
@@ -591,13 +415,10 @@ function courseFocusMode() {
             if (this.progressInterval) clearInterval(this.progressInterval);
             this.progressInterval = null;
         },
-        async loadLecture(lectureId, options) {
-            options = options || {};
+        async loadLecture(lectureId) {
             if (window._autoplayCancel) window._autoplayCancel();
             this.lectureVideoEndedThisClip = false;
             this.lessonVideoEndedThisClip = false;
-            this.autoAdvanceFiredForLectureId = null;
-            this._lectureAdvanceLockKey = null;
             this.selectedLecture = lectureId;
             this.selectedLesson = null;
             this.selectedPattern = null;
@@ -642,18 +463,8 @@ function courseFocusMode() {
             }
 
             this.lectureMaterials = lecture.materials || [];
-            const isAlreadyCompleted = this.isLectureCompleted(lecture);
-            this.lectureReplayMode = isAlreadyCompleted && options.autoAdvance !== true;
-            this.allowLectureAutoAdvance = options.autoAdvance === true || !isAlreadyCompleted;
             this.lectureProgressPercent = (lecture.progress && lecture.progress.progress_percent != null) ? lecture.progress.progress_percent : 0;
-            if (this.lectureReplayMode) {
-                this.watchedSeconds = 0;
-                this.lastVideoWatchTimeSec = 0;
-                this.lastVideoProgressPercent = 0;
-                this.videoProgressPercent = 0;
-            } else {
-                this.watchedSeconds = (lecture.progress && lecture.progress.watch_time_seconds != null) ? Number(lecture.progress.watch_time_seconds) : 0;
-            }
+            this.watchedSeconds = (lecture.progress && lecture.progress.watch_time_seconds != null) ? Number(lecture.progress.watch_time_seconds) : 0;
             this.lastReportedTime = null;
             this.activeLessonTitle = lecture.title || '';
             if (typeof this.syncActivePanel === 'function') {
@@ -942,7 +753,7 @@ function courseFocusMode() {
             if (!lessonId || this.currentLessonCompleted) return;
             try {
                 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-                const res = await fetch('/my-courses/{{ $course->id }}/lessons/' + lessonId + '/progress', {
+                const res = await fetch('/my-courses/11/lessons/' + lessonId + '/progress', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
                     body: JSON.stringify({ completed: true, watch_time: 0 })
@@ -1108,7 +919,6 @@ function courseFocusMode() {
             return btoa(Date.now().toString() + Math.random().toString()).substring(0, 32);
         }
     };
-    return Object.assign(base, window.__learnPremiumMixin || {});
 }
 
 // مشغل الفيديو - عرض رابط الفيديو فقط (iframe / video بالتحكم الأصلي للمنصة)
@@ -1186,11 +996,11 @@ function videoPlayer() {
             if (!url || !url.includes('mediadelivery.net')) return null;
             const trimmed = String(url).trim();
             // نفس منطق صفحة المنهج: أي رابط يحتوي embed/libraryId/videoId
-            const m = trimmed.match(/mediadelivery\.net\/(?:play|embed)\/(\d+)\/([a-zA-Z0-9_-]+)/);
+            const m = trimmed.match(/mediadelivery\.net\/embed\/(\d+)\/([a-zA-Z0-9_-]+)/);
             if (m && m[1] && m[2]) {
-                const qIdx = trimmed.indexOf('?');
-                const q = qIdx >= 0 ? trimmed.substring(qIdx) : '';
-                return 'https://iframe.mediadelivery.net/embed/' + m[1] + '/' + m[2] + q;
+                // مهم: لا نحذف query string (token/expires/autoplay...) حتى لا تنكسر حماية Bunny
+                if (!trimmed.startsWith('http')) return 'https://' + trimmed.replace(/^\/+/, '');
+                return trimmed;
             }
             // رابط Bunny بدون نمط embed (نادر): نعيده كما هو بعد إزالة الـ query
             if (trimmed.startsWith('http')) return trimmed;
@@ -1443,982 +1253,13 @@ function videoPlayer() {
                 if (prevReady) prevReady();
                 setTimeout(loadYT, 500);
             };
+        },
+        escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
     };
+    return Object.assign(base, window.__learnPremiumMixin || {});
 }
-</script>
-<script>
-(function() {
-    function getYoutubeVideoId(url) {
-        if (!url) return null;
-        var u = String(url).trim();
-        return (u.match(/[?&]v=([a-zA-Z0-9_-]{11})/) || [])[1] || (u.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/) || [])[1] || (u.match(/embed\/([a-zA-Z0-9_-]{11})/) || [])[1] || null;
-    }
-    function getVimeoVideoId(url) {
-        if (!url) return null;
-        var m = String(url).trim().match(/vimeo\.com\/(?:.*\/)?(\d+)/);
-        return m && m[1] ? m[1] : null;
-    }
-    function normalizeBunnyEmbedUrl(raw) {
-        if (!raw) return raw;
-        var s = String(raw).trim();
-        var m = s.match(/mediadelivery\.net\/(?:play|embed)\/(\d+)\/([a-zA-Z0-9_-]+)/);
-        if (!m) return s;
-        var qIdx = s.indexOf('?');
-        var q = qIdx >= 0 ? s.substring(qIdx) : '';
-        return 'https://iframe.mediadelivery.net/embed/' + m[1] + '/' + m[2] + q;
-    }
-    window.initLectureVideoWithQuestions = function(container, lecture, platform, url, courseId, lectureId) {
-        if (!container || !lecture) return;
-        if (typeof window.__learnActiveLecturePlayerCleanup === 'function') {
-            try { window.__learnActiveLecturePlayerCleanup(); } catch (e) {}
-        }
-        if (platform === 'bunny') url = normalizeBunnyEmbedUrl(url);
-        var questions = (lecture.video_questions && lecture.video_questions.length) ? lecture.video_questions : [];
-        var shownIds = new Set();
-        var currentQuestion = null;
-        var player = null;
-        var checkInterval = null;
-        var lastProgressSentAt = 0;
-        var overlay = null;
-        var submitBtn = null;
-        var optionsEl = null;
-        var textEl = null;
-        var compAtInit = window.__learnPageComponent;
-        var isReplaySession = !!(compAtInit && compAtInit.lectureReplayMode);
-        var allowAutoAdvance = !(compAtInit && compAtInit.allowLectureAutoAdvance === false);
-        var startFromSec = 0;
-        if (!isReplaySession && lecture.progress && lecture.progress.watch_time_seconds > 0) {
-            startFromSec = Math.floor(lecture.progress.watch_time_seconds);
-        }
-        var savedDurationSec = (lecture.progress && lecture.progress.video_duration_seconds > 0) ? lecture.progress.video_duration_seconds : 0;
-        var durationMinutesFromLecture = (lecture.duration_minutes && parseInt(lecture.duration_minutes, 10) > 0) ? parseInt(lecture.duration_minutes, 10) : 0;
-        var fallbackDurationSec = durationMinutesFromLecture > 0 ? durationMinutesFromLecture * 60 : savedDurationSec;
-        var hasOpenedNext = false;
-        var hasUnlockedNextInSidebar = false;
-        var minPercentToUnlock = (lecture.min_watch_percent_to_unlock_next != null && lecture.min_watch_percent_to_unlock_next !== '') ? parseInt(lecture.min_watch_percent_to_unlock_next, 10) : 90;
-        var lectureLearnEndedDispatched = false;
-        var bunnyMessageHandler = null;
-        function cleanupLecturePlayer() {
-            if (checkInterval) {
-                clearInterval(checkInterval);
-                checkInterval = null;
-            }
-            if (bunnyMessageHandler) {
-                window.removeEventListener('message', bunnyMessageHandler);
-                bunnyMessageHandler = null;
-            }
-        }
-        window.__learnActiveLecturePlayerCleanup = cleanupLecturePlayer;
-        function resolveDurationSec(durationSec) {
-            var d = Number(durationSec) || 0;
-            if (d > 0) return d;
-            if (savedDurationSec > 0) return savedDurationSec;
-            if (fallbackDurationSec > 0) return fallbackDurationSec;
-            return 0;
-        }
-        function markCurrentLectureCompletedInSidebar() {
-            var root = document.getElementById('learn-curriculum-sidebar');
-            if (!root) return;
-            var el = root.querySelector('.curriculum-item[data-item-type="lecture"][data-item-id="' + String(lectureId) + '"]');
-            if (!el) return;
-            el.classList.add('completed');
-            el.classList.remove('locked');
-            el.dataset.itemLocked = '0';
-            el.dataset.filterState = 'completed';
-        }
-        function handleProgressSaved(data) {
-            if (!data || !data.success) return;
-            var wrapper = document.querySelector('.learn-page');
-            if (wrapper && data.course_progress != null) wrapper.dataset.courseProgress = data.course_progress;
-            if (wrapper && data.total_items != null) wrapper.dataset.totalItems = data.total_items;
-            if (wrapper && data.completed_items != null) wrapper.dataset.completedItems = data.completed_items;
-            if (typeof updateProgressBar === 'function') updateProgressBar();
-            if (typeof data.progress_percent === 'number') {
-                window.dispatchEvent(new CustomEvent('learn-lecture-progress', { detail: { progress_percent: data.progress_percent, lectureId: lectureId } }));
-            }
-            if (data.is_completed || (typeof data.progress_percent === 'number' && data.progress_percent >= minPercentToUnlock)) {
-                markCurrentLectureCompletedInSidebar();
-            }
-            var comp = window.__learnPageComponent;
-            if (comp && typeof comp.refreshSidebarLocks === 'function') {
-                comp.refreshSidebarLocks();
-            }
-            var reachedUnlockThreshold = data.is_completed || (typeof data.progress_percent === 'number' && data.progress_percent >= minPercentToUnlock);
-            if (reachedUnlockThreshold) {
-                unlockNextLectureInSidebar(lectureId);
-            }
-        }
-        function unlockNextLectureInSidebar(lid) {
-            if (hasUnlockedNextInSidebar) return;
-            hasUnlockedNextInSidebar = true;
-            var comp = window.__learnPageComponent;
-            if (comp) {
-                comp.lectureProgressPercent = Math.max(Number(comp.lectureProgressPercent) || 0, minPercentToUnlock);
-            }
-            var applyUnlock = function() {
-                var nextItem = getNextItemForLectureFromPageMap(lid);
-                if (nextItem && nextItem.type && nextItem.id != null && typeof window.learnSidebarUnlockItem === 'function') {
-                    window.learnSidebarUnlockItem(nextItem.type, nextItem.id);
-                }
-            };
-            if (comp && typeof comp.refreshSidebarLocks === 'function') {
-                comp.refreshSidebarLocks().then(applyUnlock).catch(applyUnlock);
-            } else {
-                applyUnlock();
-            }
-        }
-        function postLectureProgressServer(currentSec, durationSec, onDone) {
-            var dur = resolveDurationSec(durationSec);
-            var cs = Math.max(0, Number(currentSec) || 0);
-            if (!dur && cs > 0) dur = cs;
-            if (!dur) { if (onDone) onDone(null); return; }
-            cs = Math.min(cs, dur);
-            var pct = Math.min(100, Math.round((cs / dur) * 100));
-            window.dispatchEvent(new CustomEvent('learn-lecture-progress', { detail: { progress_percent: pct, lectureId: lectureId } }));
-            window.dispatchEvent(new CustomEvent('video-progress-report', { detail: { currentSec: cs, durationSec: dur, isPlaying: false, lectureId: lectureId } }));
-            var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-            fetch('/my-courses/' + courseId + '/lectures/' + lectureId + '/progress', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
-                body: JSON.stringify({ current_sec: cs, duration_sec: dur })
-            }).then(function(r) { return r.json(); }).then(function(data) {
-                handleProgressSaved(data);
-                if (onDone) onDone(data);
-            }).catch(function() { if (onDone) onDone(null); });
-        }
-        function forceSaveProgressAtEnd(callback) {
-            var finish = function(cs, ds) {
-                var dur = resolveDurationSec(ds);
-                if (!dur && cs > 0) dur = cs;
-                if (!dur && fallbackDurationSec > 0) { dur = fallbackDurationSec; cs = dur; }
-                if (!dur) { if (callback) callback(null); return; }
-                postLectureProgressServer(Math.max(cs, dur), dur, callback);
-            };
-            if (platform === 'youtube' && player && player.getCurrentTime) {
-                finish(player.getCurrentTime(), (player.getDuration && player.getDuration()) || 0);
-                return;
-            }
-            if (platform === 'vimeo' && player && player.getCurrentTime) {
-                player.getCurrentTime().then(function(sec) {
-                    if (player.getDuration) {
-                        player.getDuration().then(function(d) { finish(sec || 0, d || 0); }).catch(function() { finish(sec || 0, 0); });
-                    } else {
-                        finish(sec || 0, 0);
-                    }
-                }).catch(function() { finish(fallbackDurationSec, fallbackDurationSec); });
-                return;
-            }
-            if (platform === 'bunny' && player && player.getCurrentTime) {
-                player.getCurrentTime(function(sec) {
-                    if (player.getDuration) {
-                        player.getDuration(function(d) { finish(sec || 0, d || 0); });
-                    } else {
-                        finish(sec || 0, 0);
-                    }
-                });
-                return;
-            }
-            finish(fallbackDurationSec || savedDurationSec, fallbackDurationSec || savedDurationSec);
-        }
-        function dispatchLectureLearnVideoEnded() {
-            if (lectureLearnEndedDispatched) return;
-            lectureLearnEndedDispatched = true;
-            window.dispatchEvent(new CustomEvent('learn-video-ended', { detail: { lectureId: lectureId } }));
-        }
-        function tryAdvanceLectureFromProgress(lid) {
-            if (hasOpenedNext) return;
-            hasOpenedNext = true;
-            var comp = window.__learnPageComponent;
-            if (comp) {
-                comp.lectureProgressPercent = Math.max(Number(comp.lectureProgressPercent) || 0, minPercentToUnlock);
-                comp.lectureVideoEndedThisClip = true;
-            }
-            unlockNextLectureInSidebar(lid);
-            var openNext = function() {
-                if (typeof window.showAutoAdvanceToNext === 'function') {
-                    window.showAutoAdvanceToNext('lecture', lid);
-                    return;
-                }
-                var nextItem = getNextItemForLectureFromPageMap(lid);
-                if (!nextItem || !nextItem.type || nextItem.id == null) return;
-                var raw = nextItem.id;
-                var nid = parseInt(String(raw), 10);
-                var openId = (String(nid) === String(raw) && !isNaN(nid)) ? nid : raw;
-                window.dispatchEvent(new CustomEvent('learn-open-next-item', { detail: { type: nextItem.type, id: openId, autoAdvance: true } }));
-            };
-            if (comp && typeof comp.refreshSidebarLocks === 'function') {
-                comp.refreshSidebarLocks().then(openNext).catch(openNext);
-            } else {
-                openNext();
-            }
-        }
-        function progressDetail(currentSec, durationSec, isPlaying) {
-            return { currentSec: currentSec, durationSec: durationSec, isPlaying: !!isPlaying, lectureId: lectureId };
-        }
-        function getNextItemForLectureFromPageMap(lid) {
-            try {
-                var nextMap = document.getElementById('learn-next-item-map');
-                var nextByLecture = nextMap && nextMap.textContent ? JSON.parse(nextMap.textContent) : {};
-                var cand = [String(lid), lid];
-                var n = parseInt(String(lid), 10);
-                if (!isNaN(n)) cand.push(String(n));
-                for (var ci = 0; ci < cand.length; ci++) {
-                    var k = String(cand[ci]);
-                    if (Object.prototype.hasOwnProperty.call(nextByLecture, k)) return nextByLecture[k];
-                }
-                return null;
-            } catch (err) {
-                console.warn('learn-open-next map', err);
-                return null;
-            }
-        }
-
-        function updateLectureBar(pct) {
-            var elText = document.getElementById('lecture-watch-pct-text');
-            var elFill = document.getElementById('lecture-watch-pct-fill');
-            if (elText) elText.textContent = (Math.round((pct || 0) * 10) / 10).toFixed(1) + '%';
-            if (elFill) elFill.style.width = Math.min(100, Math.max(0, pct || 0)) + '%';
-        }
-        var initialPct = (lecture.progress && lecture.progress.progress_percent != null) ? lecture.progress.progress_percent : 0;
-        setTimeout(function() { updateLectureBar(initialPct); }, 400);
-
-        function seekToStartPosition() {
-            if (startFromSec <= 0 || !player) return;
-            if (platform === 'youtube' && player.seekTo) {
-                player.seekTo(startFromSec, true);
-            } else if (platform === 'vimeo' && player.setCurrentTime) {
-                player.setCurrentTime(startFromSec);
-            } else if (platform === 'bunny' && player.setCurrentTime) {
-                player.setCurrentTime(startFromSec);
-            }
-        }
-
-        container.innerHTML = '<div id="lecture-yt-player-box" class="absolute inset-0 w-full h-full"></div>' +
-            '<div id="lecture-vq-overlay" class="hidden absolute inset-0 bg-black/85 flex items-center justify-center p-4 z-20" style="direction:rtl">' +
-            '<div id="lecture-vq-card" class="bg-white rounded-2xl p-6 max-w-lg w-full max-h-[90%] overflow-y-auto shadow-xl">' +
-            '<div id="lecture-vq-question-view">' +
-            '<h3 class="text-lg font-bold text-slate-800 mb-2">سؤال</h3>' +
-            '<p id="lecture-vq-text" class="text-slate-700 mb-4"></p>' +
-            '<div id="lecture-vq-options" class="space-y-2 mb-4"></div>' +
-            '<button type="button" id="lecture-vq-submit" class="w-full py-2.5 bg-sky-500 hover:bg-sky-600 text-white rounded-xl font-semibold">إرسال</button>' +
-            '</div>' +
-            '<div id="lecture-vq-feedback-view" class="hidden text-center">' +
-            '<p id="lecture-vq-result-label" class="text-xl font-bold mb-2"></p>' +
-            '<p id="lecture-vq-result-emoji" class="text-4xl mb-3"></p>' +
-            '<p id="lecture-vq-result-message" class="text-slate-600 mb-4"></p>' +
-            '<button type="button" id="lecture-vq-continue-btn" class="w-full py-2.5 bg-sky-500 hover:bg-sky-600 text-white rounded-xl font-semibold">متابعة</button>' +
-            '</div></div></div>';
-        overlay = document.getElementById('lecture-vq-overlay');
-        submitBtn = document.getElementById('lecture-vq-submit');
-        optionsEl = document.getElementById('lecture-vq-options');
-        textEl = document.getElementById('lecture-vq-text');
-        var questionView = document.getElementById('lecture-vq-question-view');
-        var feedbackView = document.getElementById('lecture-vq-feedback-view');
-        var resultLabel = document.getElementById('lecture-vq-result-label');
-        var resultEmoji = document.getElementById('lecture-vq-result-emoji');
-        var resultMessage = document.getElementById('lecture-vq-result-message');
-        var continueBtn = document.getElementById('lecture-vq-continue-btn');
-        var isEnglishUi = '{{ app()->getLocale() }}' === 'en';
-        var correctMessagesAr = [
-            'عاش جدا! إجابتك صح وممتازة 🔥👏',
-            'برافو عليك يا بطل، شغلك عالي اوي 💪✨',
-            'صح 100%.. كمل بنفس التركيز 🧠✅',
-            'إجابة ممتازة، واضح إنك مركز جدا 🎯',
-            'فل الفل! أنت ماشي صح 👌',
-            'تسلم إيدك، إجابة مظبوطة جدا 🌟',
-            'جامد! كده أنت فاهم النقطة صح 🏆',
-            'ممتاز، إجابة في الجون ⚽✅',
-            'يا سلام! إجابة قوية جدا 🔥',
-            'برافو، أنت متابع الفيديو باحتراف 👏',
-            'إجابة تحفة.. كمل كده 🙌',
-            'صح يا نجم، أداء جميل جدا ⭐'
-        ];
-        var wrongMessagesAr = [
-            'ولا يهمك، دي بسيطة.. جرب تاني 💙',
-            'قربت! ركز ثانية كمان وهتجيبها ✅',
-            'مش مشكلة خالص، الغلط جزء من التعلم 🌱',
-            'ارجع كام ثانية وراجع النقطة دي وهتزبط 👀',
-            'لأ بس تمام، المحاولة الجاية أحسن 💪',
-            'خد نفس وجرّب تاني، أنت قدها 🔥',
-            'إجابة مش مظبوطة، بس أنت ماشي صح 👌',
-            'قربت جدا.. محتاجة تركيز بسيط بس 🎯',
-            'تمام، خلينا نحاول مرة كمان ✨',
-            'مش صح المرة دي.. بس أكيد هتظبط معاك 💯',
-            'ولا تزعل، راجع الجزء اللي فات بسرعة 🎬',
-            'يلا بينا محاولة جديدة، وأنت قدها يا بطل 🚀'
-        ];
-        var correctMessagesEn = [
-            'Awesome! That is exactly right 🔥👏',
-            'Great job, you are really focused 💪✨',
-            '100% correct. Keep it up 🧠✅',
-            'Excellent answer, you nailed it 🎯',
-            'Perfect! You are doing great 👌',
-            'Well done, that was spot on 🌟',
-            'Fantastic work, keep going 🏆',
-            'Brilliant! Right on target ⚽✅',
-            'Nice one! Super strong answer 🔥',
-            'Great focus, you are learning fast 👏',
-            'Amazing answer. Keep moving 🙌',
-            'Correct, champion. Beautiful performance ⭐'
-        ];
-        var wrongMessagesEn = [
-            'No worries, that one was close 💙',
-            'Almost there. Try one more time ✅',
-            'It is okay, mistakes help you learn 🌱',
-            'Replay a few seconds and try again 👀',
-            'Not this time, but you are improving 💪',
-            'Take a breath and go again 🔥',
-            'Not quite right yet, keep pushing 👌',
-            'Very close. Just a little more focus 🎯',
-            'Good attempt. Let us try again ✨',
-            'Incorrect this time, you can do it 💯',
-            'Quick review and retry 🎬',
-            'One more try, you have got this 🚀'
-        ];
-        var labels = isEnglishUi
-            ? { correct: 'Correct Answer ✓', wrong: 'Wrong Answer', pick: 'Choose an answer' }
-            : { correct: 'إجابتك صح ✓', wrong: 'إجابتك غلط', pick: 'اختر إجابة' };
-        var continueHandler = null;
-
-        function showQuestion(q) {
-            currentQuestion = q;
-            if (questionView) questionView.classList.remove('hidden');
-            if (feedbackView) feedbackView.classList.add('hidden');
-            if (textEl) textEl.textContent = q.text || '';
-            if (optionsEl) {
-                optionsEl.innerHTML = '';
-                (q.options || []).forEach(function(opt, i) {
-                    var optStr = (opt != null && typeof opt === 'object') ? (opt.text || opt.label || opt.value || opt.option || String(opt)) : String(opt);
-                    if (!optStr || !optStr.trim()) return;
-                    var label = document.createElement('label');
-                    label.className = 'flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 cursor-pointer';
-                    var radio = document.createElement('input');
-                    radio.type = 'radio';
-                    radio.name = 'lecture_vq_answer';
-                    radio.value = optStr;
-                    radio.className = 'text-sky-500';
-                    label.appendChild(radio);
-                    label.appendChild(document.createTextNode(optStr));
-                    optionsEl.appendChild(label);
-                });
-            }
-            if (overlay) overlay.classList.remove('hidden');
-        }
-        function showFeedback(correct, data) {
-            if (questionView) questionView.classList.add('hidden');
-            if (feedbackView) feedbackView.classList.remove('hidden');
-            if (resultLabel) {
-                resultLabel.textContent = correct ? labels.correct : labels.wrong;
-                resultLabel.className = 'text-xl font-bold mb-2 ' + (correct ? 'text-emerald-600' : 'text-amber-600');
-            }
-            if (resultEmoji) resultEmoji.textContent = correct ? '🎉' : '💪';
-            if (resultMessage) {
-                var arr = correct
-                    ? (isEnglishUi ? correctMessagesEn : correctMessagesAr)
-                    : (isEnglishUi ? wrongMessagesEn : wrongMessagesAr);
-                resultMessage.textContent = arr[Math.floor(Math.random() * arr.length)];
-            }
-            if (continueHandler && continueBtn) continueBtn.removeEventListener('click', continueHandler);
-            continueHandler = function() {
-                hideOverlay();
-                if (submitBtn) submitBtn.disabled = false;
-                // أي أسئلة أخرى تظهر في نهاية الفيديو؟
-                for (var j = 0; j < questions.length; j++) {
-                    var qq = questions[j];
-                    if (qq.show_at_end && !shownIds.has(qq.id)) {
-                        if (player && player.pauseVideo) player.pauseVideo();
-                        if (player && player.pause) player.pause();
-                        showQuestion(qq);
-                        return;
-                    }
-                }
-                if (data.on_wrong === 'rewind' && !data.correct && data.rewind_seconds) {
-                    doRewind(data.rewind_seconds || 0);
-                    return;
-                }
-                // انتهت كل أسئلة نهاية الفيديو → الانتقال للعنصر التالي دون انتظار إعادة تحميل الصفحة
-                var hasEnd = false, allEndDone = true;
-                for (var k = 0; k < questions.length; k++) {
-                    if (questions[k].show_at_end) {
-                        hasEnd = true;
-                        if (!shownIds.has(questions[k].id)) allEndDone = false;
-                    }
-                }
-                if (hasEnd && allEndDone) {
-                    forceSaveProgressAtEnd(function() {
-                        if (!allowAutoAdvance || hasOpenedNext) return;
-                        tryAdvanceLectureFromProgress(lectureId);
-                    });
-                    return;
-                }
-                doContinue();
-            };
-            if (continueBtn) continueBtn.addEventListener('click', continueHandler);
-        }
-        function hideOverlay() {
-            if (overlay) overlay.classList.add('hidden');
-            currentQuestion = null;
-        }
-        function doRewind(rewindSec) {
-            if (!player) return;
-            if (platform === 'youtube' && player.getCurrentTime && player.seekTo && player.playVideo) {
-                var t = player.getCurrentTime();
-                player.seekTo(Math.max(0, t - rewindSec), true);
-                player.playVideo();
-                return;
-            }
-            if (platform === 'vimeo' && player.getCurrentTime) {
-                player.getCurrentTime().then(function(sec) {
-                    var t = sec || 0;
-                    player.setCurrentTime(Math.max(0, t - rewindSec)).then(function() { player.play(); });
-                });
-                return;
-            }
-            if (platform === 'bunny' && player.getCurrentTime && player.setCurrentTime && player.play) {
-                player.getCurrentTime(function(sec) {
-                    var t = sec || 0;
-                    player.setCurrentTime(Math.max(0, t - rewindSec));
-                    player.play();
-                });
-                return;
-            }
-        }
-        function doContinue() {
-            if (player && platform === 'youtube' && player.playVideo) player.playVideo();
-            if (player && platform === 'vimeo' && player.play) player.play();
-            if (player && platform === 'bunny' && player.play) player.play();
-        }
-        function onSubmit() {
-            if (!currentQuestion) return;
-            var selected = document.querySelector('input[name="lecture_vq_answer"]:checked');
-            var answer = selected ? selected.value : '';
-            if (!answer) { alert(labels.pick); return; }
-            if (submitBtn) submitBtn.disabled = true;
-            var answerUrl = '/my-courses/' + courseId + '/lectures/' + lectureId + '/video-questions/' + currentQuestion.id + '/answer';
-            var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-            fetch(answerUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
-                body: JSON.stringify({ answer: answer })
-            }).then(function(r) { return r.json(); }).then(function(data) {
-                if (!(currentQuestion && currentQuestion.show_every_time)) shownIds.add(currentQuestion.id);
-                showFeedback(!!data.correct, data);
-            }).catch(function() {
-                if (submitBtn) submitBtn.disabled = false;
-                hideOverlay();
-                doContinue();
-            });
-        }
-        if (submitBtn) submitBtn.addEventListener('click', onSubmit);
-
-        function startTimeCheck() {
-            if (checkInterval) return;
-            checkInterval = setInterval(function() {
-                if (currentQuestion) return;
-                var t = 0;
-                if (platform === 'youtube' && player && player.getCurrentTime) t = player.getCurrentTime();
-                else if (platform === 'vimeo' && player && player.getCurrentTime) {
-                    player.getCurrentTime().then(function(sec) {
-                        t = sec;
-                        for (var i = 0; i < questions.length; i++) {
-                            var q = questions[i];
-                            if (q.show_at_end) continue;
-                            if (t >= q.timestamp_seconds && !shownIds.has(q.id)) {
-                                if (player.pause) player.pause();
-                                showQuestion(q);
-                                break;
-                            }
-                        }
-                        var currentSec = t;
-                        var durForBar = fallbackDurationSec;
-                        if (player.getDuration) {
-                            player.getDuration().then(function(d) {
-                                durForBar = (d && d > 0) ? d : fallbackDurationSec;
-                                if (durForBar > 0 && typeof currentSec === 'number' && currentSec >= 0) {
-                                    window.dispatchEvent(new CustomEvent('video-progress-report', { detail: { currentSec: currentSec, durationSec: durForBar, isPlaying: true } }));
-                                    window.dispatchEvent(new CustomEvent('learn-lecture-progress', { detail: { progress_percent: Math.min(100, Math.round((currentSec / durForBar) * 100)) } }));
-                                    updateLectureBar(Math.min(100, Math.round((currentSec / durForBar) * 100)));
-                                }
-                                var now = Date.now();
-                                if (!lastProgressSentAt || now - lastProgressSentAt > 5000) {
-                                    lastProgressSentAt = now;
-                                    var send = function(cs, ds) {
-                                        postLectureProgressServer(cs, ds);
-                                    };
-                                    send(currentSec, durForBar);
-                                }
-                            });
-                        } else if (durForBar > 0 && typeof currentSec === 'number' && currentSec >= 0) {
-                            window.dispatchEvent(new CustomEvent('video-progress-report', { detail: { currentSec: currentSec, durationSec: durForBar, isPlaying: true } }));
-                            window.dispatchEvent(new CustomEvent('learn-lecture-progress', { detail: { progress_percent: Math.min(100, Math.round((currentSec / durForBar) * 100)) } }));
-                            updateLectureBar(Math.min(100, Math.round((currentSec / durForBar) * 100)));
-                        }
-                    });
-                    return;
-                } else if (platform === 'bunny' && player && player.getCurrentTime) {
-                    player.getCurrentTime(function(sec) {
-                        t = sec || 0;
-                        for (var i = 0; i < questions.length; i++) {
-                            var q = questions[i];
-                            if (q.show_at_end) continue;
-                            if (t >= q.timestamp_seconds && !shownIds.has(q.id)) {
-                                if (player.pause) player.pause();
-                                showQuestion(q);
-                                break;
-                            }
-                        }
-                        var currentSec = t;
-                        var durForBar = fallbackDurationSec;
-                        if (player.getDuration) {
-                            player.getDuration(function(d) {
-                                durForBar = (d && d > 0) ? d : fallbackDurationSec;
-                                if (durForBar > 0 && typeof currentSec === 'number' && currentSec >= 0) {
-                                    window.dispatchEvent(new CustomEvent('video-progress-report', { detail: { currentSec: currentSec, durationSec: durForBar, isPlaying: true } }));
-                                    window.dispatchEvent(new CustomEvent('learn-lecture-progress', { detail: { progress_percent: Math.min(100, Math.round((currentSec / durForBar) * 100)) } }));
-                                    updateLectureBar(Math.min(100, Math.round((currentSec / durForBar) * 100)));
-                                }
-                                var now = Date.now();
-                                if (!lastProgressSentAt || now - lastProgressSentAt > 5000) {
-                                    lastProgressSentAt = now;
-                                    var send = function(cs, ds) {
-                                        postLectureProgressServer(cs, ds);
-                                    };
-                                    send(currentSec, durForBar);
-                                }
-                            });
-                        } else if (durForBar > 0 && typeof currentSec === 'number' && currentSec >= 0) {
-                            window.dispatchEvent(new CustomEvent('video-progress-report', { detail: { currentSec: currentSec, durationSec: durForBar, isPlaying: true } }));
-                            window.dispatchEvent(new CustomEvent('learn-lecture-progress', { detail: { progress_percent: Math.min(100, Math.round((currentSec / durForBar) * 100)) } }));
-                            updateLectureBar(Math.min(100, Math.round((currentSec / durForBar) * 100)));
-                        }
-                    });
-                    return;
-                }
-                // تحديث شريط النسبة باستمرار (كل ثانية) ثم إرسال للسيرفر كل 5 ثوانٍ — نفس آلية الدروس: video-progress-report
-                if (player && typeof t === 'number' && t >= 0) {
-                    var durForBar = (platform === 'youtube' && player.getDuration) ? player.getDuration() : null;
-                    if (durForBar === 0 || !durForBar) durForBar = fallbackDurationSec;
-                    if (durForBar > 0) {
-                        var pctBar = Math.min(100, Math.round((t / durForBar) * 100));
-                        window.dispatchEvent(new CustomEvent('learn-lecture-progress', { detail: { progress_percent: pctBar } }));
-                        var isPlaying = (platform === 'youtube' && player.getPlayerState && player.getPlayerState() === 1);
-                        window.dispatchEvent(new CustomEvent('video-progress-report', { detail: { currentSec: t, durationSec: durForBar, isPlaying: !!isPlaying } }));
-                        updateLectureBar(pctBar);
-                    }
-                    var now = Date.now();
-                    if (!lastProgressSentAt || now - lastProgressSentAt > 5000) {
-                        lastProgressSentAt = now;
-                        var send = function(currentSec, durationSec) {
-                            postLectureProgressServer(currentSec, durationSec);
-                        };
-                        if (platform === 'youtube') {
-                            var d = (player.getDuration && player.getDuration()) || savedDurationSec || fallbackDurationSec;
-                            send(t, d);
-                        } else if (platform === 'vimeo' && player.getDuration) {
-                            player.getDuration().then(function(d) { send(t, d || savedDurationSec || fallbackDurationSec); });
-                        } else if (platform === 'bunny' && player.getDuration) {
-                            player.getDuration(function(d) { send(t, d || savedDurationSec || fallbackDurationSec); });
-                        } else {
-                            send(t, fallbackDurationSec || savedDurationSec);
-                        }
-                    }
-                }
-                for (var i = 0; i < questions.length; i++) {
-                    var q = questions[i];
-                    if (q.show_at_end) continue;
-                    if (t >= q.timestamp_seconds && !shownIds.has(q.id)) {
-                        if (player && player.pauseVideo) player.pauseVideo();
-                        showQuestion(q);
-                        break;
-                    }
-                }
-            }, 1000);
-        }
-
-        function showEndOfVideoQuestions() {
-            var comp = window.__learnPageComponent;
-            if (comp && comp.selectedLecture != null && String(comp.selectedLecture) !== String(lectureId)) return;
-            for (var i = 0; i < questions.length; i++) {
-                var q = questions[i];
-                if (q.show_at_end && !shownIds.has(q.id)) {
-                    if (player && player.pauseVideo) player.pauseVideo();
-                    if (player && player.pause) player.pause();
-                    showQuestion(q);
-                    return;
-                }
-            }
-            forceSaveProgressAtEnd(function() {
-                if (!allowAutoAdvance || hasOpenedNext) return;
-                tryAdvanceLectureFromProgress(lectureId);
-            });
-        }
-
-        if (platform === 'youtube') {
-            var videoId = getYoutubeVideoId(url);
-            if (!videoId) { container.innerHTML = '<div class="flex items-center justify-center text-white h-full"><p>رابط يوتيوب غير صالح</p></div>'; return; }
-            function createYT() {
-                if (player) return;
-                player = new YT.Player('lecture-yt-player-box', {
-                    videoId: videoId,
-                    width: '100%',
-                    height: '100%',
-                    playerVars: { enablejsapi: 1, origin: window.location.origin, rel: 0 },
-                    events: {
-                        onReady: function() {
-                            startTimeCheck();
-                            setTimeout(seekToStartPosition, 300);
-                        },
-                        onStateChange: function(ev) {
-                            if (ev.data === 0) showEndOfVideoQuestions();
-                        }
-                    }
-                });
-            }
-            if (window.YT && window.YT.Player) {
-                createYT();
-            } else {
-                window.onYouTubeIframeAPIReady = function() {
-                    createYT();
-                };
-                var tag = document.createElement('script');
-                tag.src = 'https://www.youtube.com/iframe_api';
-                var first = document.getElementsByTagName('script')[0];
-                first.parentNode.insertBefore(tag, first);
-            }
-        } else if (platform === 'vimeo') {
-            var vimeoId = getVimeoVideoId(url);
-            if (!vimeoId) { container.innerHTML = '<div class="flex items-center justify-center text-white h-full"><p>رابط فيميوه غير صالح</p></div>'; return; }
-            if (!window.Vimeo) {
-                var s = document.createElement('script');
-                s.src = 'https://player.vimeo.com/api/player.js';
-                s.onload = function() {
-                    player = new Vimeo.Player(document.getElementById('lecture-yt-player-box'), { id: parseInt(vimeoId, 10), width: '100%', height: '100%' });
-                    player.on('ended', showEndOfVideoQuestions);
-                    startTimeCheck();
-                    setTimeout(seekToStartPosition, 500);
-                };
-                document.head.appendChild(s);
-            } else {
-                player = new Vimeo.Player(document.getElementById('lecture-yt-player-box'), { id: parseInt(vimeoId, 10), width: '100%', height: '100%' });
-                player.on('ended', showEndOfVideoQuestions);
-                startTimeCheck();
-                setTimeout(seekToStartPosition, 500);
-            }
-        } else if (platform === 'bunny') {
-            var root = document.getElementById('lecture-yt-player-box');
-            if (!root) return;
-            var iframe = document.createElement('iframe');
-            iframe.src = url;
-            iframe.width = '100%';
-            iframe.height = '100%';
-            iframe.setAttribute('frameborder', '0');
-            iframe.setAttribute('allowfullscreen', 'allowfullscreen');
-            iframe.allow = 'autoplay; fullscreen; picture-in-picture';
-            root.appendChild(iframe);
-
-            bunnyMessageHandler = function(event) {
-                try {
-                    var comp = window.__learnPageComponent;
-                    if (!comp || String(comp.selectedLecture) !== String(lectureId)) return;
-                    var origin = String(event.origin || '');
-                    if (!origin.includes('mediadelivery.net')) return;
-                    var data = event.data;
-                    var evt = (data && typeof data === 'object') ? (data.event || data.type || data.name) : null;
-                    var isEnded = typeof evt === 'string' && /^(ended|finish|finished|complete|completed)$/i.test(evt.trim());
-                    if (isEnded) showEndOfVideoQuestions();
-                } catch (e) {}
-            };
-            window.addEventListener('message', bunnyMessageHandler);
-
-            function createBunnyPlayer() {
-                if (player) return;
-                if (!window.playerjs || !window.playerjs.Player) return;
-                player = new window.playerjs.Player(iframe);
-                player.on('ready', function() {
-                    startTimeCheck();
-                    setTimeout(seekToStartPosition, 500);
-                });
-                player.on('ended', showEndOfVideoQuestions);
-                try { player.on('finish', showEndOfVideoQuestions); } catch (eFin) {}
-                try { player.on('complete', showEndOfVideoQuestions); } catch (eCmp) {}
-            }
-            window.addEventListener('beforeunload', function() {
-                if (!player) return;
-                var t = 0;
-                if (platform === 'youtube' && player.getCurrentTime) t = player.getCurrentTime();
-                var dur = (platform === 'youtube' && player.getDuration) ? player.getDuration() : savedDurationSec;
-                if (t > 0 && dur > 0) {
-                    var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-                    var payload = JSON.stringify({ current_sec: t, duration_sec: dur, _token: csrf });
-                    navigator.sendBeacon('/my-courses/' + courseId + '/lectures/' + lectureId + '/progress', new Blob([payload], { type: 'application/json' }));
-                }
-            });
-
-            if (window.playerjs && window.playerjs.Player) {
-                createBunnyPlayer();
-            } else {
-                var s = document.createElement('script');
-                s.src = '//assets.mediadelivery.net/playerjs/playerjs-latest.min.js';
-                s.onload = function() { createBunnyPlayer(); };
-                document.head.appendChild(s);
-            }
-        }
-    };
-})();
-
-// ===== Auto-advance to next curriculum item =====
-(function() {
-    var _countdownTimer = null;
-    var _nextPending = null;
-
-    function resolveNextItem(currentType, currentId) {
-        var next = getNextCurriculumItem(currentType, currentId);
-        if (next) return next;
-        if (currentType !== 'lecture') return null;
-        try {
-            var mapEl = document.getElementById('learn-next-item-map');
-            var map = mapEl && mapEl.textContent ? JSON.parse(mapEl.textContent) : {};
-            var raw = getNextFromNavMap(map, currentId);
-            if (!raw || !raw.type || raw.id == null) return null;
-            return {
-                type: raw.type,
-                id: String(raw.id),
-                el: findCurriculumItemEl(raw.type, raw.id)
-            };
-        } catch (e) {
-            return null;
-        }
-    }
-
-    async function openNextAfterComplete(currentType, currentId, opts) {
-        opts = opts || {};
-        var comp = window.__learnPageComponent;
-        if (!opts.skipFlush && comp) {
-            if (currentType === 'lecture' && typeof comp.flushLectureProgressNow === 'function') {
-                try { await comp.flushLectureProgressNow(currentId, true); } catch (e) {}
-            } else if (currentType === 'lesson' && typeof comp.flushLessonProgressNow === 'function') {
-                try { await comp.flushLessonProgressNow(currentId, true); } catch (e) {}
-            }
-        }
-        if (comp && typeof comp.refreshSidebarLocks === 'function') {
-            try { await comp.refreshSidebarLocks(); } catch (e) {}
-        }
-        return showAutoAdvance(currentType, currentId);
-    }
-
-    function parseLearnNextItemMap() {
-        try {
-            var el = document.getElementById('learn-next-item-map');
-            if (!el || !el.textContent) return {};
-            return JSON.parse(el.textContent);
-        } catch (e) {
-            return {};
-        }
-    }
-
-    function parseLearnNextLessonMap() {
-        try {
-            var el = document.getElementById('learn-next-lesson-map');
-            if (!el || !el.textContent) return {};
-            return JSON.parse(el.textContent);
-        } catch (e) {
-            return {};
-        }
-    }
-
-    function getNextFromNavMap(map, currentId) {
-        if (!map || currentId == null || currentId === '') return undefined;
-        var sid = String(currentId);
-        if (Object.prototype.hasOwnProperty.call(map, sid)) return map[sid];
-        var n = parseInt(sid, 10);
-        if (!isNaN(n) && Object.prototype.hasOwnProperty.call(map, String(n))) return map[String(n)];
-        for (var k in map) {
-            if (!Object.prototype.hasOwnProperty.call(map, k)) continue;
-            if (String(k) === sid) return map[k];
-            if (!isNaN(n) && parseInt(String(k), 10) === n) return map[k];
-        }
-        return undefined;
-    }
-
-    function findCurriculumItemEl(type, id) {
-        if (!type || id == null || id === '') return null;
-        var root = document.getElementById('learn-curriculum-sidebar');
-        var sel = '.curriculum-item[data-item-type="' + String(type) + '"][data-item-id="' + String(id) + '"]';
-        return root ? root.querySelector(sel) : document.querySelector(sel);
-    }
-
-    function getNextCurriculumItem(currentType, currentId) {
-        // درس تالي من خريطة ترتيب دروس الكورس (الدروس غير مُدرجة في سايدبار المنهج)
-        if (currentType === 'lesson' && currentId != null && currentId !== '') {
-            var lmap = parseLearnNextLessonMap();
-            var nextLesson = getNextFromNavMap(lmap, currentId);
-            if (nextLesson !== undefined) {
-                if (nextLesson === null) return null;
-                if (!nextLesson.type || nextLesson.id == null) return null;
-                return {
-                    type: nextLesson.type,
-                    id: String(nextLesson.id),
-                    el: findCurriculumItemEl(nextLesson.type, nextLesson.id)
-                };
-            }
-        }
-        // ترتيب موثوق من السيرفر (نفس flattenCurriculumItems) — يمنع القفز لعناصر «عشوائية» بسبب تخطي المقفل في الـ DOM
-        if (currentType === 'lecture' && currentId != null && currentId !== '') {
-            var map = parseLearnNextItemMap();
-            var nextFromMap = getNextFromNavMap(map, currentId);
-            if (nextFromMap !== undefined) {
-                if (nextFromMap === null) return null;
-                if (!nextFromMap.type || nextFromMap.id == null) return null;
-                return {
-                    type: nextFromMap.type,
-                    id: String(nextFromMap.id),
-                    el: findCurriculumItemEl(nextFromMap.type, nextFromMap.id)
-                };
-            }
-        }
-
-        var root = document.getElementById('learn-curriculum-sidebar');
-        var items = Array.from((root || document).querySelectorAll('.curriculum-item[data-item-type][data-item-id]'));
-        for (var i = 0; i < items.length; i++) {
-            if (items[i].dataset.itemType === currentType && String(items[i].dataset.itemId) === String(currentId)) {
-                // العنصر التالي مباشرة في ترتيب المنهج (بما في ذلك المقفل) — لا نتخطى المقفل لأن ذلك كان يغيّر التسلسل
-                if (i + 1 < items.length) {
-                    var n = items[i + 1];
-                    return { type: n.dataset.itemType, id: n.dataset.itemId, el: n };
-                }
-                return null;
-            }
-        }
-        return null;
-    }
-
-    function getPrevCurriculumItem(currentType, currentId) {
-        if (!currentType || currentId == null || currentId === '') return null;
-        var root = document.getElementById('learn-curriculum-sidebar');
-        var items = Array.from((root || document).querySelectorAll('.curriculum-item[data-item-type][data-item-id]'));
-        for (var i = 0; i < items.length; i++) {
-            if (items[i].dataset.itemType === currentType && String(items[i].dataset.itemId) === String(currentId)) {
-                if (i > 0) {
-                    var p = items[i - 1];
-                    return { type: p.dataset.itemType, id: p.dataset.itemId, el: p };
-                }
-                return null;
-            }
-        }
-        return null;
-    }
-
-    function learnNavIsTargetLocked(item) {
-        if (!item || !item.el) return false;
-        return String(item.el.dataset.itemLocked || '') === '1';
-    }
-
-    function unlockCurriculumItemEl(el) {
-        if (!el) return;
-        try {
-            el.dataset.itemLocked = '0';
-            el.classList.remove('locked');
-            // لو كان يظهر أيقونة قفل داخل مربع الأيقونة، نحاول استبدالها (تحسين UX فقط)
-            var iconBox = el.querySelector('.w-6.h-6');
-            if (iconBox) {
-                iconBox.classList.remove('bg-gray-600');
-                if (!iconBox.classList.contains('bg-sky-500') && !iconBox.classList.contains('bg-green-500')) {
-                    iconBox.classList.add('bg-sky-500');
-                }
-                var i = iconBox.querySelector('i.fas.fa-lock');
-                if (i) {
-                    i.classList.remove('fa-lock');
-                    i.classList.add('fa-play');
-                }
-            }
-        } catch (e) {}
-    }
-
-    window.learnNavGetNextForButton = getNextCurriculumItem;
-    window.learnNavGetPrevForButton = getPrevCurriculumItem;
-    window.learnNavIsTargetLocked = learnNavIsTargetLocked;
-    window.learnSidebarUnlockItem = function(type, id) {
-        var el = findCurriculumItemEl(type, id);
-        unlockCurriculumItemEl(el);
-    };
-
-    function getItemTitle(el) {
-        var titleEl = el && el.querySelector('.curriculum-item-title');
-        return titleEl ? titleEl.textContent.trim() : '';
-    }
-
-    function hideOverlay() {
-        var overlay = document.getElementById('autoplay-next-overlay');
-        if (overlay) { overlay.classList.remove('is-visible'); overlay.style.display = 'none'; }
-        if (_countdownTimer) { clearInterval(_countdownTimer); _countdownTimer = null; }
-        _nextPending = null;
-    }
-
-    async function loadNextItem(item) {
-        hideOverlay();
-        if (!item) return;
-        var comp = window.__learnPageComponent;
-        if (comp && typeof comp.refreshSidebarLocks === 'function') {
-            try { await comp.refreshSidebarLocks(); } catch (e) {}
-        }
-        if (item.el && String(item.el.dataset.itemLocked || '') === '1') {
-            unlockCurriculumItemEl(item.el);
-        }
-        var raw = item.id;
-        var nid = parseInt(String(raw), 10);
-        var openId = (String(nid) === String(raw) && !isNaN(nid)) ? nid : raw;
-        window.dispatchEvent(new CustomEvent('learn-open-next-item', { detail: { type: item.type, id: openId, autoAdvance: true } }));
-        var sidebar = document.getElementById('learn-curriculum-sidebar');
-        if (item.el && sidebar) {
-            var sbRect = sidebar.getBoundingClientRect();
-            var elRect = item.el.getBoundingClientRect();
-            if (elRect.top < sbRect.top || elRect.bottom > sbRect.bottom) {
-                item.el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-        }
-        var videoMount = document.querySelector('.learn-video-aspect') || document.getElementById('learn-video-embed');
-        if (videoMount) {
-            videoMount.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    }
-
-    async function showAutoAdvance(currentType, currentId) {
-        if (_countdownTimer) { clearInterval(_countdownTimer); _countdownTimer = null; }
-        _nextPending = null;
-        var overlay = document.getElementById('autoplay-next-overlay');
-        if (overlay) {
-            overlay.classList.remove('is-visible');
-            overlay.style.display = 'none';
-        }
-
-        var comp = window.__learnPageComponent;
-        if (comp && typeof comp.refreshSidebarLocks === 'function') {
-            try { await comp.refreshSidebarLocks(); } catch (e) {}
-        }
-
-        var next = resolveNextItem(currentType, currentId);
-        if (!next) {
-            console.warn('showAutoAdvance: no next item for', currentType, currentId);
-            return false;
-        }
-        await loadNextItem(next);
-        return true;
-    }
-
-    window._autoplayNow = function() { if (_nextPending) loadNextItem(_nextPending); };
-    window._autoplayCancel = function() { hideOverlay(); };
-    window.showAutoAdvanceToNext = showAutoAdvance;
-    window.openNextAfterComplete = openNextAfterComplete;
-})();
-
-document.addEventListener('alpine:init', function() {
-    if (typeof courseFocusMode === 'function') {
-        Alpine.data('courseFocusMode', courseFocusMode);
-    }
-    if (typeof videoPlayer === 'function') {
-        Alpine.data('videoPlayer', videoPlayer);
-    }
-});
-</script>
-@endpush
