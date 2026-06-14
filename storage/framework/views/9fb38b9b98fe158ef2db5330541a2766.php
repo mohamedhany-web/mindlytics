@@ -171,6 +171,7 @@ function courseFocusMode() {
         _handlingVideoEnded: false,
         allowLectureAutoAdvance: true,
         lectureReplayMode: false,
+        startLectureFromBeginning: false,
         isLectureCompleted(lecture) {
             if (!lecture) return false;
             const minP = (lecture.min_watch_percent_to_unlock_next != null && lecture.min_watch_percent_to_unlock_next !== '')
@@ -591,6 +592,9 @@ function courseFocusMode() {
         },
         async loadLecture(lectureId, options) {
             options = options || {};
+            if (typeof window.__learnActiveLecturePlayerCleanup === 'function') {
+                try { window.__learnActiveLecturePlayerCleanup(); } catch (e) {}
+            }
             if (window._autoplayCancel) window._autoplayCancel();
             this.lectureVideoEndedThisClip = false;
             this.lessonVideoEndedThisClip = false;
@@ -641,18 +645,23 @@ function courseFocusMode() {
 
             this.lectureMaterials = lecture.materials || [];
             const isAlreadyCompleted = this.isLectureCompleted(lecture);
+            this.startLectureFromBeginning = options.autoAdvance === true || (isAlreadyCompleted && options.autoAdvance !== true);
             this.lectureReplayMode = isAlreadyCompleted && options.autoAdvance !== true;
             this.allowLectureAutoAdvance = options.autoAdvance === true || !isAlreadyCompleted;
             this.lectureProgressPercent = (lecture.progress && lecture.progress.progress_percent != null) ? lecture.progress.progress_percent : 0;
-            if (this.lectureReplayMode) {
+            if (this.startLectureFromBeginning) {
                 this.watchedSeconds = 0;
                 this.lastVideoWatchTimeSec = 0;
                 this.lastVideoProgressPercent = 0;
                 this.videoProgressPercent = 0;
+                this.lastReportedTime = null;
+                if (this.lectureReplayMode) {
+                    this.lectureProgressPercent = 0;
+                }
             } else {
                 this.watchedSeconds = (lecture.progress && lecture.progress.watch_time_seconds != null) ? Number(lecture.progress.watch_time_seconds) : 0;
+                this.lastReportedTime = null;
             }
-            this.lastReportedTime = null;
             this.activeLessonTitle = lecture.title || '';
             if (typeof this.syncActivePanel === 'function') {
                 this.syncActivePanel('lecture', lectureId, lecture.title);
@@ -1484,14 +1493,19 @@ function videoPlayer() {
         var textEl = null;
         var compAtInit = window.__learnPageComponent;
         var isReplaySession = !!(compAtInit && compAtInit.lectureReplayMode);
+        var startFromBeginning = !!(compAtInit && compAtInit.startLectureFromBeginning);
         var allowAutoAdvance = !(compAtInit && compAtInit.allowLectureAutoAdvance === false);
-        var startFromSec = 0;
-        if (!isReplaySession && lecture.progress && lecture.progress.watch_time_seconds > 0) {
-            startFromSec = Math.floor(lecture.progress.watch_time_seconds);
-        }
         var savedDurationSec = (lecture.progress && lecture.progress.video_duration_seconds > 0) ? lecture.progress.video_duration_seconds : 0;
         var durationMinutesFromLecture = (lecture.duration_minutes && parseInt(lecture.duration_minutes, 10) > 0) ? parseInt(lecture.duration_minutes, 10) : 0;
         var fallbackDurationSec = durationMinutesFromLecture > 0 ? durationMinutesFromLecture * 60 : savedDurationSec;
+        var startFromSec = 0;
+        if (!startFromBeginning && !isReplaySession && lecture.progress && lecture.progress.watch_time_seconds > 0) {
+            startFromSec = Math.floor(lecture.progress.watch_time_seconds);
+            var durHint = savedDurationSec > 0 ? savedDurationSec : fallbackDurationSec;
+            if (durHint > 0 && startFromSec >= durHint - 5) {
+                startFromSec = 0;
+            }
+        }
         var hasOpenedNext = false;
         var hasUnlockedNextInSidebar = false;
         var minPercentToUnlock = (lecture.min_watch_percent_to_unlock_next != null && lecture.min_watch_percent_to_unlock_next !== '') ? parseInt(lecture.min_watch_percent_to_unlock_next, 10) : 90;
@@ -1682,7 +1696,14 @@ function videoPlayer() {
         setTimeout(function() { updateLectureBar(initialPct); }, 400);
 
         function seekToStartPosition() {
-            if (startFromSec <= 0 || !player) return;
+            if (startFromSec <= 0 || !player) {
+                if (startFromBeginning && player) {
+                    if (platform === 'youtube' && player.seekTo) player.seekTo(0, true);
+                    else if (platform === 'vimeo' && player.setCurrentTime) player.setCurrentTime(0);
+                    else if (platform === 'bunny' && player.setCurrentTime) player.setCurrentTime(0);
+                }
+                return;
+            }
             if (platform === 'youtube' && player.seekTo) {
                 player.seekTo(startFromSec, true);
             } else if (platform === 'vimeo' && player.setCurrentTime) {
