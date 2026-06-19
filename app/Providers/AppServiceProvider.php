@@ -82,6 +82,7 @@ class AppServiceProvider extends ServiceProvider
             'layouts.public',
             'layouts.student-dashboard',
             'layouts.employee',
+            'layouts.place-manager',
             'layouts.admin-community',
             'layouts.app',
             'layouts.instructor-sidebar',

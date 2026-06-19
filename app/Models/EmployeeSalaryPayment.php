@@ -13,18 +13,24 @@ class EmployeeSalaryPayment extends Model
         'payment_number',
         'base_salary',
         'total_deductions',
+        'total_additions',
         'net_salary',
+        'period_month',
+        'period_year',
         'payment_date',
         'paid_at',
         'status',
         'notes',
         'transfer_receipt_path',
+        'wallet_id',
+        'expense_id',
         'created_by',
     ];
 
     protected $casts = [
         'base_salary' => 'decimal:2',
         'total_deductions' => 'decimal:2',
+        'total_additions' => 'decimal:2',
         'net_salary' => 'decimal:2',
         'payment_date' => 'date',
         'paid_at' => 'date',
@@ -52,6 +58,16 @@ class EmployeeSalaryPayment extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function wallet(): BelongsTo
+    {
+        return $this->belongsTo(Wallet::class);
+    }
+
+    public function expense(): BelongsTo
+    {
+        return $this->belongsTo(Expense::class);
     }
 
     /**

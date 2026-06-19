@@ -36,11 +36,14 @@ class SalesDailyReportController extends Controller
         return view('admin.sales.daily-reports.index', compact('reports', 'reps', 'from', 'to', 'userId', 'status', 'settings', 'stats'));
     }
 
-    public function show(int $id): View
+    public function show(int $id, SalesDailyReportService $service): View
     {
         $report = \App\Models\SalesDailyReport::with(['user', 'contacts.lead', 'autoDeduction'])->findOrFail($id);
+        $kpiComparison = $report->user
+            ? $service->kpiComparisonForReport($report->user, $report, $report->report_date)
+            : null;
 
-        return view('admin.sales.daily-reports.show', compact('report'));
+        return view('admin.sales.daily-reports.show', compact('report', 'kpiComparison'));
     }
 
     public function export(Request $request, SalesDailyReportService $service, SalesDailyReportsExcelExportService $excel): StreamedResponse

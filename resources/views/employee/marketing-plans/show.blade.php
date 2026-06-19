@@ -101,6 +101,18 @@
                     <input type="text" name="color_hex" value="#6366f1" pattern="#[0-9A-Fa-f]{6}" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono">
                 </div>
                 <div class="md:col-span-12">
+                    <label class="block text-xs font-medium text-gray-600 mb-2">التوصيف / الوظائف المسؤولة عن هذه المنصة</label>
+                    <div class="flex flex-wrap gap-2">
+                        @foreach($employeeJobs as $job)
+                            <label class="inline-flex items-center gap-2 rounded-lg border border-violet-100 bg-violet-50/50 px-3 py-1.5 text-xs">
+                                <input type="checkbox" name="employee_job_ids[]" value="{{ $job->id }}" class="rounded border-gray-300 text-violet-600">
+                                <span class="font-semibold text-gray-800">{{ $job->name }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                    <p class="text-[11px] text-gray-500 mt-1">يمكن اختيار أكثر من توصيف — يُطبَّق على كل المنصات المضافة في هذه الدفعة.</p>
+                </div>
+                <div class="md:col-span-12">
                     <label class="block text-xs font-medium text-gray-600 mb-1">استراتيجية المنصة</label>
                     <textarea name="strategy_notes" rows="2" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="نبرة المحتوى، الجمهور، أنواع المنشورات..."></textarea>
                 </div>
@@ -123,6 +135,13 @@
                                     <p class="font-bold text-gray-900">{{ $plat->displayName() }}</p>
                                     @if($plat->profile_url)
                                         <a href="{{ $plat->profile_url }}" target="_blank" rel="noopener" class="text-xs text-blue-600 hover:underline break-all">{{ \Illuminate\Support\Str::limit($plat->profile_url, 56) }}</a>
+                                    @endif
+                                    @if($plat->employeeJobs->isNotEmpty())
+                                        <div class="flex flex-wrap gap-1 mt-2">
+                                            @foreach($plat->employeeJobs as $job)
+                                                <span class="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold bg-violet-100 text-violet-800 border border-violet-200">{{ $job->name }}</span>
+                                            @endforeach
+                                        </div>
                                     @endif
                                 </div>
                             </div>
@@ -166,6 +185,17 @@
                                 <div class="md:col-span-2">
                                     <label class="block text-xs text-gray-600 mb-1">ترتيب</label>
                                     <input type="number" name="sort_order" value="{{ $plat->sort_order }}" min="0" class="w-full rounded-lg border px-3 py-2 text-sm">
+                                </div>
+                                <div class="md:col-span-12">
+                                    <label class="block text-xs text-gray-600 mb-2">التوصيف / الوظائف</label>
+                                    <div class="flex flex-wrap gap-2">
+                                        @foreach($employeeJobs as $job)
+                                            <label class="inline-flex items-center gap-2 rounded-lg border px-2 py-1 text-xs">
+                                                <input type="checkbox" name="employee_job_ids[]" value="{{ $job->id }}" class="rounded" @checked($plat->employeeJobs->contains('id', $job->id))>
+                                                {{ $job->name }}
+                                            </label>
+                                        @endforeach
+                                    </div>
                                 </div>
                                 <div class="md:col-span-12">
                                     <label class="block text-xs text-gray-600 mb-1">استراتيجية</label>
@@ -228,6 +258,15 @@
                     <p class="text-[11px] text-gray-500 mt-2">لو اخترت “عام”، سيتم إنشاء حدث واحد غير مربوط بمنصة. لو اخترت منصات، سيتم إنشاء حدث لكل منصة بنفس المحتوى.</p>
                 </div>
                 <div class="md:col-span-4">
+                    <label class="block text-xs font-medium text-gray-600 mb-1">نوع المحتوى *</label>
+                    <select name="content_type" required class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                        @foreach(\App\Services\MarketingPlanEventAutomationService::contentTypeLabels() as $k => $l)
+                            <option value="{{ $k }}" @selected($k === 'post')>{{ $l }}</option>
+                        @endforeach
+                    </select>
+                    <p class="text-[10px] text-violet-600 mt-1">تصميم → مصمم · مونتاج → مونتير · بوست → تأكيد تنفيذ يومي</p>
+                </div>
+                <div class="md:col-span-4">
                     <label class="block text-xs font-medium text-gray-600 mb-1">الحالة</label>
                     <select name="status" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
                         @foreach(['idea' => 'فكرة', 'draft' => 'مسودة', 'scheduled' => 'مجدول', 'published' => 'منشور', 'skipped' => 'تم التخطي'] as $v => $l)
@@ -249,6 +288,9 @@
                     <textarea name="body" rows="2" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"></textarea>
                 </div>
                 <div class="md:col-span-12">
+                    <label class="inline-flex items-center gap-2 text-sm"><input type="checkbox" name="requires_confirmation" value="1" checked class="rounded border-gray-300"> يتطلب تأكيد «تم التنفيذ/الرفع» (غرامة عند التأخير)</label>
+                </div>
+                <div class="md:col-span-12">
                     <button type="submit" class="px-4 py-2 rounded-lg bg-slate-800 text-white text-sm font-semibold hover:bg-slate-900"><i class="fas fa-calendar-plus ml-1"></i> إضافة للتقويم</button>
                 </div>
             </form>
@@ -259,9 +301,12 @@
                         <tr>
                             <th class="text-right px-3 py-2 font-semibold">الوقت</th>
                             <th class="text-right px-3 py-2 font-semibold">العنوان</th>
+                            <th class="text-right px-3 py-2 font-semibold">النوع</th>
                             <th class="text-right px-3 py-2 font-semibold">المنصة</th>
+                            <th class="text-right px-3 py-2 font-semibold">المسؤول</th>
+                            <th class="text-right px-3 py-2 font-semibold">مهمة</th>
+                            <th class="text-right px-3 py-2 font-semibold">التأكيد</th>
                             <th class="text-right px-3 py-2 font-semibold">الحالة</th>
-                            <th class="text-right px-3 py-2 font-semibold">دورة تصميم</th>
                             <th class="text-right px-3 py-2 font-semibold"></th>
                         </tr>
                     </thead>
@@ -276,6 +321,7 @@
                                     <span class="font-medium text-gray-900">{{ $ev->title }}</span>
                                     @if($ev->body)<p class="text-xs text-gray-600 mt-1 whitespace-pre-wrap">{{ \Illuminate\Support\Str::limit($ev->body, 120) }}</p>@endif
                                 </td>
+                                <td class="px-3 py-2 text-xs font-medium">{{ $contentTypes[$ev->content_type] ?? $ev->content_type ?? '—' }}</td>
                                 <td class="px-3 py-2">
                                     @if($ev->platform)
                                         <span class="inline-flex items-center gap-1 text-xs font-semibold">
@@ -286,14 +332,23 @@
                                         <span class="text-gray-400">—</span>
                                     @endif
                                 </td>
-                                <td class="px-3 py-2 text-xs font-medium">{{ $evtStatus($ev->status) }}</td>
+                                <td class="px-3 py-2 text-xs">{{ $ev->assignee?->name ?? '—' }}</td>
                                 <td class="px-3 py-2 text-xs">
-                                    @if($ev->design_task_cycle_id)
-                                        <a href="{{ route('employee.design-cycles.show', $ev->design_task_cycle_id) }}" class="text-fuchsia-700 font-semibold">#{{ $ev->design_task_cycle_id }}</a>
-                                    @else
-                                        —
+                                    @if($ev->employeeTask)
+                                        <a href="{{ route('employee.tasks.show', $ev->employeeTask) }}" class="text-violet-700 font-bold">#{{ $ev->employeeTask->id }}</a>
+                                    @else — @endif
+                                </td>
+                                <td class="px-3 py-2 text-xs">
+                                    @if($ev->isConfirmed())
+                                        <span class="text-emerald-700 font-bold"><i class="fas fa-check"></i> تم</span>
+                                    @elseif($ev->execution_penalty_deduction_id)
+                                        <span class="text-rose-700 font-bold">غرامة</span>
+                                    @elseif($ev->requires_confirmation)
+                                        <span class="text-amber-700 font-bold">معلق</span>
+                                    @else —
                                     @endif
                                 </td>
+                                <td class="px-3 py-2 text-xs font-medium">{{ $evtStatus($ev->status) }}</td>
                                 <td class="px-3 py-2 whitespace-nowrap">
                                     <details>
                                         <summary class="cursor-pointer text-xs font-semibold text-pink-700">تعديل</summary>
@@ -309,6 +364,11 @@
                                                     <option value="{{ $plat->id }}" {{ (int)$ev->platform_id === (int)$plat->id ? 'selected' : '' }}>{{ $plat->displayName() }}</option>
                                                 @endforeach
                                             </select>
+                                            <select name="content_type" class="w-full rounded border px-2 py-1 text-xs">
+                                                @foreach($contentTypes as $k => $l)
+                                                    <option value="{{ $k }}" @selected($ev->content_type === $k)>{{ $l }}</option>
+                                                @endforeach
+                                            </select>
                                             <select name="status" class="w-full rounded border px-2 py-1 text-xs">
                                                 @foreach(['idea', 'draft', 'scheduled', 'published', 'skipped'] as $v)
                                                     <option value="{{ $v }}" {{ $ev->status === $v ? 'selected' : '' }}>{{ $evtStatus($v) }}</option>
@@ -321,6 +381,7 @@
                                                 @endforeach
                                             </select>
                                             <textarea name="body" rows="2" class="w-full rounded border px-2 py-1 text-xs">{{ $ev->body }}</textarea>
+                                            <label class="flex items-center gap-1 text-xs"><input type="checkbox" name="requires_confirmation" value="1" @checked($ev->requires_confirmation) class="rounded"> يتطلب تأكيد تنفيذ</label>
                                             <button type="submit" class="w-full py-1.5 rounded bg-slate-800 text-white text-xs font-semibold">حفظ</button>
                                         </form>
                                     </details>
@@ -333,7 +394,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-4 py-8 text-center text-gray-500">لا توجد أحداث بعد.</td>
+                                <td colspan="9" class="px-4 py-8 text-center text-gray-500">لا توجد أحداث بعد.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -343,16 +404,6 @@
     </div>
 </div>
 @endsection
-
-@push('scripts')
-<script>
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('marketingPlanPage', () => ({
-            isGeneralEvent: false,
-        }));
-    });
-</script>
-@endpush
 
 @push('scripts')
 <script>

@@ -7,6 +7,7 @@ use App\Models\Notification;
 use App\Models\SalesLead;
 use App\Models\SalesKpiTarget;
 use App\Models\User;
+use App\Services\SalesCategoryStatsService;
 use App\Services\SalesKpiService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -15,7 +16,7 @@ use Illuminate\Validation\Rule;
 
 class SalesKpiController extends Controller
 {
-    public function index(Request $request, SalesKpiService $kpi)
+    public function index(Request $request, SalesKpiService $kpi, SalesCategoryStatsService $categoryStats)
     {
         $period = (string) $request->get('period', 'today');
         if (! in_array($period, ['today', '7d', 'month'], true)) {
@@ -146,11 +147,14 @@ class SalesKpiController extends Controller
                 ->avg(), 1),
         ];
 
+        $categoryPerformance = $categoryStats->monthOverview();
+
         return view('admin.sales.kpi.index', compact(
             'rows',
             'slaSummary',
             'lossReasons',
             'sourcePerformance',
+            'categoryPerformance',
             'reminderMonitoringRows',
             'reminderMonitoringSummary',
             'period',

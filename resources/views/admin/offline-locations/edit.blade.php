@@ -75,6 +75,43 @@
                 <textarea name="description" rows="3" 
                           class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">{{ old('description', $offlineLocation->description) }}</textarea>
             </div>
+
+            <div class="md:col-span-2 pt-4 border-t">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">إعدادات الفوترة والمخالصة</h3>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">سعر الساعة (ج.م)</label>
+                <input type="number" name="hourly_rate" value="{{ old('hourly_rate', $offlineLocation->hourly_rate) }}" step="0.01" min="0"
+                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">المحفظة الافتراضية للخصم</label>
+                <select name="default_wallet_id" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg">
+                    <option value="">— اختر —</option>
+                    @foreach($wallets as $wallet)
+                        <option value="{{ $wallet->id }}" @selected(old('default_wallet_id', $offlineLocation->default_wallet_id) == $wallet->id)>{{ $wallet->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">اسم جهة الاتصال (المورد)</label>
+                <input type="text" name="vendor_contact_name" value="{{ old('vendor_contact_name', $offlineLocation->vendor_contact_name) }}"
+                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">الرقم الضريبي</label>
+                <input type="text" name="vendor_tax_id" value="{{ old('vendor_tax_id', $offlineLocation->vendor_tax_id) }}"
+                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg">
+            </div>
+
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-2">بيانات الحساب البنكي</label>
+                <textarea name="vendor_bank_details" rows="2" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg">{{ old('vendor_bank_details', $offlineLocation->vendor_bank_details) }}</textarea>
+            </div>
         </div>
 
         <div class="mt-6 pt-6 border-t border-gray-200 flex items-center justify-end gap-4">

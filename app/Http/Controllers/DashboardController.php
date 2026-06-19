@@ -61,6 +61,8 @@ class DashboardController extends Controller
                 return $this->studentDashboard();
             case 'branch_manager':
                 return redirect()->route('branch.office.dashboard');
+            case 'place_manager':
+                return redirect()->route('place.office.dashboard');
             default:
                 // إذا كان الدور غير معروف، نعيد إلى الصفحة الرئيسية مع رسالة خطأ
                 Auth::logout();

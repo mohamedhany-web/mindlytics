@@ -595,6 +595,22 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('/payments', [\App\Http\Controllers\Branch\BranchPaymentsController::class, 'index'])->name('payments');
     });
 
+    // لوحة مدير المكان الإداري (تسجيل الساعات والمخالصة الشهرية)
+    Route::prefix('place-office')->name('place.office.')->middleware(['role:place_manager', 'place.office'])->group(function () {
+        Route::get('/', fn () => redirect()->route('place.office.dashboard'));
+        Route::get('/dashboard', [\App\Http\Controllers\Place\PlaceDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/usage-logs', [\App\Http\Controllers\Place\PlaceUsageLogController::class, 'index'])->name('usage-logs.index');
+        Route::get('/usage-logs/create', [\App\Http\Controllers\Place\PlaceUsageLogController::class, 'create'])->name('usage-logs.create');
+        Route::post('/usage-logs', [\App\Http\Controllers\Place\PlaceUsageLogController::class, 'store'])->name('usage-logs.store');
+        Route::get('/settlements', [\App\Http\Controllers\Place\PlaceSettlementController::class, 'index'])->name('settlements.index');
+        Route::get('/settlements/{settlement}', [\App\Http\Controllers\Place\PlaceSettlementController::class, 'show'])->name('settlements.show');
+        Route::post('/settlements/{settlement}/submit', [\App\Http\Controllers\Place\PlaceSettlementController::class, 'submit'])->name('settlements.submit');
+        Route::get('/invoices', [\App\Http\Controllers\Place\PlaceInvoiceController::class, 'index'])->name('invoices.index');
+        Route::get('/invoices/{invoice}', [\App\Http\Controllers\Place\PlaceInvoiceController::class, 'show'])->name('invoices.show');
+        Route::get('/profile', [\App\Http\Controllers\Place\PlaceProfileController::class, 'index'])->name('profile');
+        Route::put('/profile', [\App\Http\Controllers\Place\PlaceProfileController::class, 'update'])->name('profile.update');
+    });
+
     // API لإشعارات الناف بار (تعمل للطالب/المدرب/الموظف)
     Route::prefix('api/nav-notifications')->name('nav-notifications.')->group(function () {
         Route::get('/unread-count', [\App\Http\Controllers\NavbarNotificationController::class, 'unreadCount'])->name('unread-count');
@@ -833,13 +849,15 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::middleware('sales.employee')->prefix('sales')->name('sales.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Employee\SalesDashboardController::class, 'index'])->name('dashboard');
             Route::get('kpi', [\App\Http\Controllers\Employee\SalesKpiController::class, 'index'])->name('kpi.index');
+            Route::get('commissions', [\App\Http\Controllers\Employee\SalesCommissionController::class, 'index'])->name('commissions.index');
             Route::get('reports', [\App\Http\Controllers\Employee\SalesReportController::class, 'index'])->name('reports.index');
-            Route::get('reports/export', [\App\Http\Controllers\Employee\SalesReportController::class, 'export'])->name('reports.export');
             Route::get('daily-reports', [\App\Http\Controllers\Employee\SalesDailyReportController::class, 'index'])->name('daily-reports.index');
             Route::get('daily-reports/edit', [\App\Http\Controllers\Employee\SalesDailyReportController::class, 'edit'])->name('daily-reports.edit');
             Route::post('daily-reports', [\App\Http\Controllers\Employee\SalesDailyReportController::class, 'store'])->name('daily-reports.store');
-            Route::get('leads/export', [\App\Http\Controllers\Employee\SalesLeadController::class, 'export'])->name('leads.export');
+            Route::post('daily-reports/sync-auto', [\App\Http\Controllers\Employee\SalesDailyReportController::class, 'syncAuto'])->name('daily-reports.sync-auto');
+            Route::resource('groups', \App\Http\Controllers\Employee\SalesLeadGroupController::class)->except(['edit']);
             Route::post('leads/{lead}/activities', [\App\Http\Controllers\Employee\SalesLeadController::class, 'storeActivity'])->name('leads.activities.store');
+            Route::post('leads/{lead}/quick-activity', [\App\Http\Controllers\Employee\SalesLeadController::class, 'quickActivity'])->name('leads.quick-activity');
             Route::post('leads/{lead}/csat', [\App\Http\Controllers\Employee\SalesLeadController::class, 'storeCsat'])->name('leads.csat.store');
             Route::resource('leads', \App\Http\Controllers\Employee\SalesLeadController::class);
         });
@@ -888,6 +906,10 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         // المحاسبة والراتب
         Route::get('/accounting', [\App\Http\Controllers\Employee\AccountingController::class, 'index'])->name('accounting.index');
         Route::post('/accounting/bank-account', [\App\Http\Controllers\Employee\AccountingController::class, 'updateBankAccount'])->name('accounting.update-bank');
+
+        Route::get('daily-reports', [\App\Http\Controllers\Employee\EmployeeDailyReportController::class, 'index'])->name('daily-reports.index');
+        Route::get('daily-reports/edit', [\App\Http\Controllers\Employee\EmployeeDailyReportController::class, 'edit'])->name('daily-reports.edit');
+        Route::post('daily-reports', [\App\Http\Controllers\Employee\EmployeeDailyReportController::class, 'store'])->name('daily-reports.store');
         
         // اتفاقيات الموظف
         Route::get('/agreements', [\App\Http\Controllers\Employee\AgreementController::class, 'index'])->name('agreements.index');
@@ -904,6 +926,10 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::post('/notifications/{notification}/mark-read', [\App\Http\Controllers\Employee\EmployeeNotificationController::class, 'markAsRead'])->name('notifications.mark-read');
         Route::post('/notifications/mark-all-read', [\App\Http\Controllers\Employee\EmployeeNotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
         
+        // مهام التسويق اليومية (تأكيد التنفيذ)
+        Route::get('/marketing-today', [\App\Http\Controllers\Employee\MarketingTodayController::class, 'index'])->name('marketing-today.index');
+        Route::post('/marketing-today/{event}/confirm', [\App\Http\Controllers\Employee\MarketingTodayController::class, 'confirm'])->name('marketing-today.confirm');
+
         // التقويم
         Route::get('/calendar', [\App\Http\Controllers\Employee\EmployeeCalendarController::class, 'index'])->name('calendar');
         Route::get('/api/calendar/events', [\App\Http\Controllers\Employee\EmployeeCalendarController::class, 'getEvents'])->name('calendar.events');
@@ -984,10 +1010,19 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::put('kpi/targets', [\App\Http\Controllers\Admin\SalesKpiController::class, 'updateTargets'])->name('kpi.targets.update');
             Route::get('insights', [\App\Http\Controllers\Admin\SalesInsightsController::class, 'index'])->name('insights.index');
             Route::get('commissions', [\App\Http\Controllers\Admin\SalesCommissionController::class, 'index'])->name('commissions.index');
+            Route::resource('groups', \App\Http\Controllers\Admin\SalesLeadGroupController::class)->except(['edit']);
             Route::get('leads/export', [\App\Http\Controllers\Admin\SalesLeadController::class, 'export'])->name('leads.export');
+            Route::get('leads/import', [\App\Http\Controllers\Admin\SalesLeadController::class, 'importForm'])->name('leads.import');
+            Route::get('leads/import/template', [\App\Http\Controllers\Admin\SalesLeadController::class, 'importTemplate'])->name('leads.import.template');
+            Route::post('leads/import', [\App\Http\Controllers\Admin\SalesLeadController::class, 'importStore'])->name('leads.import.store');
             Route::post('leads/{lead}/activities', [\App\Http\Controllers\Admin\SalesLeadController::class, 'storeActivity'])->name('leads.activities.store');
             Route::post('leads/{lead}/confirm-win', [\App\Http\Controllers\Admin\SalesLeadController::class, 'confirmWin'])->name('leads.confirm-win');
             Route::resource('leads', \App\Http\Controllers\Admin\SalesLeadController::class);
+
+            Route::get('categories', [\App\Http\Controllers\Admin\SalesLeadCategoryController::class, 'index'])->name('categories.index');
+            Route::post('categories', [\App\Http\Controllers\Admin\SalesLeadCategoryController::class, 'store'])->name('categories.store');
+            Route::put('categories/{category}', [\App\Http\Controllers\Admin\SalesLeadCategoryController::class, 'update'])->name('categories.update');
+            Route::delete('categories/{category}', [\App\Http\Controllers\Admin\SalesLeadCategoryController::class, 'destroy'])->name('categories.destroy');
         });
 
         // بروفايل الأدمن
@@ -1360,6 +1395,19 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
 
         // إدارة الأماكن للأوفلاين
         Route::resource('offline-locations', \App\Http\Controllers\Admin\OfflineLocationController::class);
+        Route::post('offline-locations/{offlineLocation}/place-managers', [\App\Http\Controllers\Admin\OfflineLocationController::class, 'storePlaceManager'])
+            ->name('offline-locations.place-managers.store');
+
+        Route::get('place-usage-logs', [\App\Http\Controllers\Admin\PlaceUsageLogController::class, 'index'])->name('place-usage-logs.index');
+        Route::post('place-usage-logs/{placeUsageLog}/approve', [\App\Http\Controllers\Admin\PlaceUsageLogController::class, 'approve'])->name('place-usage-logs.approve');
+        Route::post('place-usage-logs/{placeUsageLog}/reject', [\App\Http\Controllers\Admin\PlaceUsageLogController::class, 'reject'])->name('place-usage-logs.reject');
+        Route::post('place-daily-expenses/{placeDailyExpense}/approve', [\App\Http\Controllers\Admin\PlaceDailyExpenseController::class, 'approve'])->name('place-daily-expenses.approve');
+        Route::post('place-daily-expenses/{placeDailyExpense}/reject', [\App\Http\Controllers\Admin\PlaceDailyExpenseController::class, 'reject'])->name('place-daily-expenses.reject');
+
+        Route::get('place-settlements', [\App\Http\Controllers\Admin\PlaceSettlementController::class, 'index'])->name('place-settlements.index');
+        Route::get('place-settlements/{placeSettlement}', [\App\Http\Controllers\Admin\PlaceSettlementController::class, 'show'])->name('place-settlements.show');
+        Route::post('place-settlements/{placeSettlement}/approve', [\App\Http\Controllers\Admin\PlaceSettlementController::class, 'approve'])->name('place-settlements.approve');
+        Route::post('place-settlements/{placeSettlement}/close', [\App\Http\Controllers\Admin\PlaceSettlementController::class, 'close'])->name('place-settlements.close');
 
         // إدارة الكورسات الأوفلاين
         Route::resource('offline-courses', \App\Http\Controllers\Admin\OfflineCourseController::class);
@@ -1422,17 +1470,46 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('design-task-cycles/performance-report/excel', [\App\Http\Controllers\Admin\DesignTaskCycleController::class, 'performanceReportExcel'])->name('design-task-cycles.performance-report.excel');
         Route::prefix('design-task-cycles')->name('design-task-cycles.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\DesignTaskCycleController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Admin\DesignTaskCycleController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Admin\DesignTaskCycleController::class, 'store'])->name('store');
+            Route::get('{design_task_cycle}/edit', [\App\Http\Controllers\Admin\DesignTaskCycleController::class, 'edit'])->name('edit');
+            Route::put('{design_task_cycle}', [\App\Http\Controllers\Admin\DesignTaskCycleController::class, 'update'])->name('update');
+            Route::delete('{design_task_cycle}', [\App\Http\Controllers\Admin\DesignTaskCycleController::class, 'destroy'])->name('destroy');
             Route::post('{design_task_cycle}/notes', [\App\Http\Controllers\Admin\DesignTaskCycleController::class, 'updateNotes'])->name('notes.update');
             Route::post('{design_task_cycle}/cancel', [\App\Http\Controllers\Admin\DesignTaskCycleController::class, 'cancel'])->name('cancel');
             Route::get('{design_task_cycle}', [\App\Http\Controllers\Admin\DesignTaskCycleController::class, 'show'])->name('show');
         });
 
-        Route::get('moderator-marketing-plans', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'index'])->name('moderator-marketing-plans.index');
-        Route::get('moderator-marketing-plans/{plan}', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'show'])->name('moderator-marketing-plans.show');
+        Route::get('moderator-marketing-plans/settings', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'settings'])->name('moderator-marketing-plans.settings');
+        Route::put('moderator-marketing-plans/settings', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'updateSettings'])->name('moderator-marketing-plans.settings.update');
+        Route::prefix('moderator-marketing-plans')->name('moderator-marketing-plans.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'store'])->name('store');
+            Route::get('{plan}/edit', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'edit'])->name('edit');
+            Route::put('{plan}', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'update'])->name('update');
+            Route::delete('{plan}', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'destroy'])->name('destroy');
+            Route::post('{plan}/platforms', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'storePlatform'])->name('platforms.store');
+            Route::put('{plan}/platforms/{platform}', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'updatePlatform'])->name('platforms.update');
+            Route::delete('{plan}/platforms/{platform}', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'destroyPlatform'])->name('platforms.destroy');
+            Route::post('{plan}/events', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'storeEvent'])->name('events.store');
+            Route::put('{plan}/events/{event}', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'updateEvent'])->name('events.update');
+            Route::delete('{plan}/events/{event}', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'destroyEvent'])->name('events.destroy');
+            Route::post('{plan}/events/{event}/confirm', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'confirmEvent'])->name('events.confirm');
+            Route::get('{plan}', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'show'])->name('show');
+        });
 
         Route::get('employee-deductions/daily-report-penalty-settings', [\App\Http\Controllers\Admin\EmployeeDeductionController::class, 'dailyReportPenaltySettings'])->name('employee-deductions.daily-report-penalty-settings');
         Route::put('employee-deductions/daily-report-penalty-settings', [\App\Http\Controllers\Admin\EmployeeDeductionController::class, 'updateDailyReportPenaltySettings'])->name('employee-deductions.daily-report-penalty-settings.update');
         Route::resource('employee-deductions', \App\Http\Controllers\Admin\EmployeeDeductionController::class);
+        Route::resource('employee-additions', \App\Http\Controllers\Admin\EmployeeAdditionController::class);
+
+        Route::prefix('employee-daily-reports')->name('employee-daily-reports.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\EmployeeDailyReportAdminController::class, 'index'])->name('index');
+            Route::get('/settings', [\App\Http\Controllers\Admin\EmployeeDailyReportAdminController::class, 'settings'])->name('settings');
+            Route::put('/settings', [\App\Http\Controllers\Admin\EmployeeDailyReportAdminController::class, 'updateSettings'])->name('settings.update');
+            Route::get('/{id}', [\App\Http\Controllers\Admin\EmployeeDailyReportAdminController::class, 'show'])->name('show')->where('id', '[0-9]+');
+        });
         
         // إدارة الإجازات
         Route::get('/leaves', [\App\Http\Controllers\Admin\AdminLeaveController::class, 'index'])->name('leaves.index');
@@ -1542,6 +1619,16 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('/accounting/reports/expenses', [\App\Http\Controllers\Admin\AccountingReportsController::class, 'expenses'])->name('accounting.reports.expenses');
         Route::get('/accounting/reports/wallets', [\App\Http\Controllers\Admin\AccountingReportsController::class, 'wallets'])->name('accounting.reports.wallets');
         Route::get('/accounting/reports/orders', [\App\Http\Controllers\Admin\AccountingReportsController::class, 'orders'])->name('accounting.reports.orders');
+
+        // رواتب الموظفين — مسير شهري ودفع من المحفظة
+        Route::prefix('employee-salaries')->name('employee-salaries.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\EmployeeSalaryPayrollController::class, 'index'])->name('index');
+            Route::post('/generate', [\App\Http\Controllers\Admin\EmployeeSalaryPayrollController::class, 'generate'])->name('generate');
+            Route::get('/export', [\App\Http\Controllers\Admin\EmployeeSalaryPayrollController::class, 'export'])->name('export');
+            Route::post('/pay-batch', [\App\Http\Controllers\Admin\EmployeeSalaryPayrollController::class, 'payBatch'])->name('pay-batch');
+            Route::get('/pay/{payment}', [\App\Http\Controllers\Admin\EmployeeSalaryPayrollController::class, 'pay'])->name('pay');
+            Route::post('/pay/{payment}', [\App\Http\Controllers\Admin\EmployeeSalaryPayrollController::class, 'markPaid'])->name('mark-paid');
+        });
 
         // الماليات الخاصة بالمدربين (قائمة المدربين ثم المطلوب دفعه لكل مدرب)
         Route::prefix('salaries')->name('salaries.')->group(function () {

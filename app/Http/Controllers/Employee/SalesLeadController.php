@@ -5,13 +5,14 @@ namespace App\Http\Controllers\Employee;
 use App\Http\Controllers\Controller;
 use App\Models\SalesActivity;
 use App\Models\SalesLead;
+use App\Models\SalesLeadCategory;
+use App\Models\SalesLeadGroup;
 use App\Services\SalesAuditService;
-use App\Services\SalesLeadsExcelExportService;
+use App\Services\SalesDailyReportService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SalesLeadController extends Controller
 {
@@ -24,32 +25,26 @@ class SalesLeadController extends Controller
         $this->applySorting($query, $request);
 
         $leads = $query->paginate(20)->withQueryString();
+        $categories = SalesLeadCategory::active()->ordered()->get();
+        $importBatches = SalesLead::query()
+            ->forAssignee(Auth::id())
+            ->whereNotNull('import_batch')
+            ->distinct()
+            ->orderByDesc('import_batch')
+            ->pluck('import_batch');
 
-        return view('employee.sales.leads.index', compact('leads'));
+        $quickCounts = $this->indexQuickCounts(Auth::id());
+        $groups = SalesLeadGroup::forAssignee(Auth::id())->orderBy('name')->get(['id', 'name']);
+
+        return view('employee.sales.leads.index', compact('leads', 'categories', 'importBatches', 'quickCounts', 'groups'));
     }
 
-    public function export(Request $request, SalesLeadsExcelExportService $excel): StreamedResponse
+    public function create(Request $request)
     {
-        $query = $this->indexQuery($request);
-        $this->applySorting($query, $request);
+        $groups = SalesLeadGroup::forAssignee(Auth::id())->orderBy('name')->get(['id', 'name', 'is_admin_managed']);
+        $preselectedGroupId = $request->integer('group') ?: old('sales_lead_group_id');
 
-        $user = Auth::user();
-        $context = 'تصدير بواسطة: ' . ($user->name ?? '') . ' — موظف مبيعات';
-
-        $spreadsheet = $excel->buildSpreadsheet($query, false, $context);
-        $filename = 'عملاء-محتملون-' . now()->format('Y-m-d') . '.xlsx';
-
-        return response()->streamDownload(function () use ($excel, $spreadsheet) {
-            $excel->writeToOutput($spreadsheet);
-            $spreadsheet->disconnectWorksheets();
-        }, $filename, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ]);
-    }
-
-    public function create()
-    {
-        return view('employee.sales.leads.create');
+        return view('employee.sales.leads.create', compact('groups', 'preselectedGroupId'));
     }
 
     public function store(Request $request)
@@ -58,6 +53,7 @@ class SalesLeadController extends Controller
 
         $validated['assigned_to'] = Auth::id();
         $validated['created_by'] = Auth::id();
+        $validated['category_id'] = SalesLeadCategory::defaultGeneralId();
 
         $lead = SalesLead::create($validated);
 
@@ -69,7 +65,15 @@ class SalesLeadController extends Controller
             'موظف مبيعات أنشأ عميلاً محتملاً: ' . $lead->name
         );
 
+        $this->syncTodayDailyReport();
+
         $warnings = $this->duplicateWarnings($request, Auth::id());
+
+        if ($request->input('save_action') === 'another') {
+            return redirect()->route('employee.sales.leads.create')
+                ->with('success', 'تم إضافة «'.$lead->name.'» — سجّل العميل التالي')
+                ->with('sales_duplicate_warnings', $warnings);
+        }
 
         return redirect()->route('employee.sales.leads.show', $lead)
             ->with('success', 'تم إضافة العميل المحتمل')
@@ -79,7 +83,7 @@ class SalesLeadController extends Controller
     public function show(SalesLead $lead)
     {
         $this->authorizeOwn($lead);
-        $lead->load(['activities.user', 'creator']);
+        $lead->load(['activities.user', 'creator', 'category']);
 
         SalesAuditService::log(
             'sales_lead_viewed',
@@ -96,7 +100,9 @@ class SalesLeadController extends Controller
     {
         $this->authorizeOwn($lead);
 
-        return view('employee.sales.leads.edit', compact('lead'));
+        $groups = SalesLeadGroup::forAssignee(Auth::id())->orderBy('name')->get(['id', 'name', 'is_admin_managed']);
+
+        return view('employee.sales.leads.edit', compact('lead', 'groups'));
     }
 
     public function update(Request $request, SalesLead $lead)
@@ -132,6 +138,8 @@ class SalesLeadController extends Controller
             $lead->only(array_keys($validated)),
             'تحديث عميل محتمل: ' . $lead->name
         );
+
+        $this->syncTodayDailyReport();
 
         $warnings = $this->duplicateWarnings($request, (int) $lead->assigned_to, $lead->id);
 
@@ -188,7 +196,87 @@ class SalesLeadController extends Controller
             'نشاط مبيعات على: ' . $lead->name . ' — ' . SalesActivity::typeLabel($activity->type)
         );
 
+        $this->syncTodayDailyReport();
+
         return back()->with('success', 'تم تسجيل النشاط');
+    }
+
+    public function quickActivity(Request $request, SalesLead $lead)
+    {
+        $this->authorizeOwn($lead);
+
+        $validated = $request->validate([
+            'type' => 'required|string|in:call,whatsapp,follow_up,note',
+            'body' => 'nullable|string|max:500',
+        ]);
+
+        $activity = SalesActivity::create([
+            'sales_lead_id' => $lead->id,
+            'user_id' => Auth::id(),
+            'type' => $validated['type'],
+            'title' => match ($validated['type']) {
+                'call' => 'مكالمة سريعة',
+                'whatsapp' => 'واتساب سريع',
+                'follow_up' => 'متابعة سريعة',
+                default => 'ملاحظة سريعة',
+            },
+            'body' => $validated['body'] ?? null,
+        ]);
+
+        $lead->touchLastContactFromActivity($validated['type']);
+
+        if ($validated['type'] === 'follow_up' && $lead->isOpen()) {
+            $lead->update([
+                'next_follow_up_at' => now()->addDay()->setTime(10, 0),
+            ]);
+        }
+
+        SalesAuditService::log(
+            'sales_activity_created',
+            $lead,
+            null,
+            $activity->only(['type', 'title']),
+            'نشاط سريع: ' . $lead->name . ' — ' . SalesActivity::typeLabel($activity->type)
+        );
+
+        $this->syncTodayDailyReport();
+
+        $redirect = $request->input('redirect_to');
+        if ($redirect && str_starts_with($redirect, url('/'))) {
+            return redirect()->to($redirect)->with('success', 'تم التسجيل');
+        }
+
+        return redirect()->route('employee.sales.leads.index', $request->except(['_token', 'type', 'body', 'redirect_to']))
+            ->with('success', 'تم تسجيل «'.SalesActivity::typeLabel($activity->type).'» — '.$lead->name);
+    }
+
+    private function syncTodayDailyReport(): void
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return;
+        }
+
+        app(SalesDailyReportService::class)->syncAutoDraft($user, today());
+    }
+
+    /** @return array{today: int, overdue: int, stale: int, new: int} */
+    private function indexQuickCounts(int $userId): array
+    {
+        $base = SalesLead::query()->forAssignee($userId);
+        $open = fn () => (clone $base)->openPipeline();
+        $staleDays = SalesLead::STALE_CONTACT_DAYS;
+
+        return [
+            'today' => $open()->whereNotNull('next_follow_up_at')->whereDate('next_follow_up_at', today())->count(),
+            'overdue' => $open()->whereNotNull('next_follow_up_at')->where('next_follow_up_at', '<', now())->count(),
+            'stale' => $open()->where(function ($q) use ($staleDays) {
+                $q->where(function ($q2) use ($staleDays) {
+                    $q2->whereNull('last_contacted_at')->where('created_at', '<', now()->subDays($staleDays));
+                })->orWhere('last_contacted_at', '<', now()->subDays($staleDays));
+            })->count(),
+            'new' => (clone $base)->where('stage', 'new')->count(),
+        ];
     }
 
     public function storeCsat(Request $request, SalesLead $lead)
@@ -223,8 +311,17 @@ class SalesLeadController extends Controller
 
     private function indexQuery(Request $request): Builder
     {
-        $query = SalesLead::query()->forAssignee(Auth::id())->with('assignee');
+        $query = SalesLead::query()->forAssignee(Auth::id())->with(['assignee', 'category']);
 
+        if ($request->filled('import_batch')) {
+            $query->where('import_batch', $request->import_batch);
+        }
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+        if ($request->filled('group_id')) {
+            $query->where('sales_lead_group_id', $request->group_id);
+        }
         if ($request->filled('stage')) {
             $query->where('stage', $request->stage);
         }
@@ -341,6 +438,7 @@ class SalesLeadController extends Controller
             'expected_value' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string|max:5000',
             'next_follow_up_at' => 'nullable|date',
+            'sales_lead_group_id' => 'nullable|integer',
             'lost_reason' => 'nullable|string|max:500',
             'lost_reason_code' => 'nullable|string|in:' . implode(',', array_keys(SalesLead::LOSS_REASONS)),
             'lost_reason_custom' => 'nullable|string|max:500',
@@ -371,7 +469,28 @@ class SalesLeadController extends Controller
 
         unset($validated['lost_reason_code'], $validated['lost_reason_custom']);
 
+        if ($request->has('sales_lead_group_id')) {
+            $validated['sales_lead_group_id'] = $this->resolveGroupId($request->input('sales_lead_group_id'));
+        }
+
         return $validated;
+    }
+
+    private function resolveGroupId(mixed $groupId): ?int
+    {
+        if ($groupId === null || $groupId === '') {
+            return null;
+        }
+
+        $id = (int) $groupId;
+        $owned = SalesLeadGroup::forAssignee(Auth::id())->whereKey($id)->exists();
+        if (! $owned) {
+            throw ValidationException::withMessages([
+                'sales_lead_group_id' => ['المجموعة غير موجودة أو غير مسندة إليك.'],
+            ]);
+        }
+
+        return $id;
     }
 
     /**

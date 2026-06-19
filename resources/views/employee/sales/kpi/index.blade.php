@@ -3,6 +3,10 @@
 @section('title', 'KPIs والأداء — المبيعات')
 @section('header', 'KPIs والأداء')
 
+@push('styles')
+@include('employee.sales._styles')
+@endpush
+
 @section('content')
 @php
     $w = config('sales_kpi.weights', []);
@@ -10,14 +14,13 @@
     $wk = $report['week'];
     $mo = $report['month'];
 @endphp
-<div class="space-y-8 pb-10">
-    <div class="flex flex-wrap items-center justify-between gap-4">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900">لوحة مؤشرات الأداء (KPIs)</h1>
-            <p class="text-gray-600 text-sm mt-1">قياس يومي وأسبوعي وشهري مع وزن: نتائج {{ (int) (($w['results'] ?? 0) * 100) }}٪، نشاط {{ (int) (($w['activity'] ?? 0) * 100) }}٪، جودة {{ (int) (($w['quality'] ?? 0) * 100) }}٪، التزام {{ (int) (($w['discipline'] ?? 0) * 100) }}٪</p>
-        </div>
-        <a href="{{ route('employee.sales.dashboard') }}" class="text-sm text-emerald-700 font-semibold hover:underline"><i class="fas fa-arrow-right ml-1"></i> مركز المبيعات</a>
-    </div>
+<div class="space-y-6 pb-6">
+    @include('employee.sales._hero', [
+        'heroTitle' => 'لوحة مؤشرات الأداء (KPIs)',
+        'heroSubtitle' => 'قياس يومي وأسبوعي وشهري — نتائج '.(int)(($w['results'] ?? 0) * 100).'٪ · نشاط '.(int)(($w['activity'] ?? 0) * 100).'٪ · جودة '.(int)(($w['quality'] ?? 0) * 100).'٪ · التزام '.(int)(($w['discipline'] ?? 0) * 100).'٪',
+        'heroIcon' => 'fa-bullseye',
+        'backUrl' => route('employee.sales.dashboard'),
+    ])
 
     <section class="rounded-2xl border-2 border-emerald-600/30 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-lg">
         <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">

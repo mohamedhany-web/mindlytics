@@ -15,4 +15,6 @@ return [
     'penalty_status' => 'pending',
     /** نسبة أيام التقارير المسلّمة المطلوبة شهرياً (عمود الالتزام في KPI) */
     'kpi_submission_target_pct' => 95,
+    /** تذكير قبل موعد التسليم (دقائق) */
+    'reminder_minutes_before' => 15,
 ];

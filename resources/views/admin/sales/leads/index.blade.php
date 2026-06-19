@@ -19,13 +19,24 @@
         'normal' => ['label' => null, 'classes' => 'bg-slate-100 text-slate-700 border border-slate-200'],
     ];
 
-    $hasFilters = request()->hasAny(['assigned_to', 'stage', 'priority', 'follow_up', 'sort', 'stale', 'search']);
+    $hasFilters = request()->hasAny(['assigned_to', 'stage', 'priority', 'follow_up', 'sort', 'stale', 'search', 'category_id', 'import_batch']);
 @endphp
 
 <div class="space-y-6">
     @if(session('success'))
         <div class="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm font-semibold">
             <i class="fas fa-check-circle ml-1"></i>{{ session('success') }}
+        </div>
+    @endif
+    @if(!empty(session('import_errors')))
+        <div class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 max-h-48 overflow-y-auto space-y-1">
+            <p class="font-bold"><i class="fas fa-exclamation-triangle ml-1"></i> تفاصيل التخطي ({{ count(session('import_errors')) }})</p>
+            @foreach(array_slice(session('import_errors'), 0, 20) as $err)
+                <p class="text-xs">{{ $err }}</p>
+            @endforeach
+            @if(count(session('import_errors')) > 20)
+                <p class="text-xs font-semibold">... و {{ count(session('import_errors')) - 20 }} أخرى</p>
+            @endif
         </div>
     @endif
 
@@ -49,6 +60,10 @@
                 <a href="{{ route('admin.sales.transfer.index') }}" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 rounded-xl border border-slate-300 hover:bg-slate-50">
                     <i class="fas fa-exchange-alt text-violet-600"></i>
                     تحويل بيانات
+                </a>
+                <a href="{{ route('admin.sales.leads.import') }}" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl bg-violet-600 hover:bg-violet-700">
+                    <i class="fas fa-file-upload"></i>
+                    استيراد دفعة
                 </a>
                 <a href="{{ route('admin.sales.leads.export', request()->query()) }}" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl bg-sky-600 hover:bg-sky-700">
                     <i class="fas fa-file-excel"></i>
@@ -108,6 +123,21 @@
                                 <option value="{{ $rep->id }}" @selected(request('assigned_to') == $rep->id)>{{ $rep->name }}</option>
                             @endforeach
                         </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">التصنيف</label>
+                        <select name="category_id" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                            <option value="">الكل</option>
+                            @foreach($categories as $cat)
+                                <option value="{{ $cat->id }}" @selected(request('category_id') == $cat->id)>{{ $cat->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">دفعة الاستيراد</label>
+                        <input type="text" name="import_batch" value="{{ request('import_batch') }}"
+                               class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                               placeholder="IMP-...">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">المرحلة</label>
@@ -191,6 +221,7 @@
                     <tr class="bg-slate-50 text-slate-700 border-b border-slate-200">
                         <th class="px-4 py-3 text-right font-semibold">الاسم</th>
                         <th class="px-4 py-3 text-right font-semibold">مسند إلى</th>
+                        <th class="px-4 py-3 text-right font-semibold">التصنيف</th>
                         <th class="px-4 py-3 text-right font-semibold">المرحلة</th>
                         <th class="px-4 py-3 text-right font-semibold">أولوية</th>
                         <th class="px-4 py-3 text-right font-semibold">متابعة</th>
@@ -219,6 +250,16 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-slate-700">{{ $lead->assignee->name ?? '—' }}</td>
+                            <td class="px-4 py-3">
+                                @if($lead->category)
+                                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold border" style="color: {{ $lead->category->color }}; border-color: {{ $lead->category->color }}33; background: {{ $lead->category->color }}15">{{ $lead->category->name }}</span>
+                                    @if($lead->import_batch)
+                                        <p class="text-[10px] text-slate-400 mt-0.5">{{ $lead->import_batch }}</p>
+                                    @endif
+                                @else
+                                    <span class="text-slate-400 text-xs">—</span>
+                                @endif
+                            </td>
                             <td class="px-4 py-3">
                                 <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
                                     {{ \App\Models\SalesLead::stageLabel($lead->stage) }}

@@ -8,27 +8,14 @@ use App\Models\SalesActivity;
 use App\Models\SalesLead;
 use App\Models\User;
 use App\Services\SalesAuditService;
+use App\Services\SalesNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class SalesTransferController extends Controller
 {
-    private const SALES_AUDIT_ACTIONS = [
-        'sales_lead_created',
-        'sales_lead_viewed',
-        'sales_lead_updated',
-        'sales_lead_deleted',
-        'sales_activity_created',
-        'sales_lead_created_admin',
-        'sales_lead_viewed_admin',
-        'sales_lead_updated_admin',
-        'sales_lead_deleted_admin',
-        'sales_lead_reassigned',
-        'sales_activity_created_admin',
-        'sales_lead_won_confirmed',
-        'sales_data_transferred',
-    ];
+    private const SALES_AUDIT_ACTIONS = SalesAuditController::SALES_ACTIONS;
 
     public function index(Request $request)
     {
@@ -98,6 +85,9 @@ class SalesTransferController extends Controller
         if (! User::salesEmployees()->where('is_active', true)->whereKey($toId)->exists()) {
             return back()->withInput()->with('error', 'يرجى اختيار موظف مبيعات (إلى) فعّال.');
         }
+
+        $fromRep = User::salesEmployees()->whereKey($fromId)->first();
+        $toRep = User::salesEmployees()->whereKey($toId)->first();
 
         $summary = DB::transaction(function () use ($fromId, $toId) {
             $moved = [
@@ -171,6 +161,10 @@ class SalesTransferController extends Controller
 
             return $moved;
         });
+
+        if ($fromRep && $toRep) {
+            app(SalesNotificationService::class)->notifyDataTransferred($fromRep, $toRep, $summary);
+        }
 
         return redirect()
             ->route('admin.sales.transfer.index', ['from_user_id' => $fromId])

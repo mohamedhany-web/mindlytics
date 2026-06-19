@@ -6,11 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\SalesActivity;
 use App\Models\SalesLead;
-use App\Services\SalesFullReportExcelExportService;
 use App\Services\SalesKpiService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SalesReportController extends Controller
 {
@@ -101,52 +99,6 @@ class SalesReportController extends Controller
             'auditSample',
             'counts'
         ));
-    }
-
-    public function export(Request $request, SalesKpiService $kpi, SalesFullReportExcelExportService $excel): StreamedResponse
-    {
-        $validated = $request->validate([
-            'date_from' => ['required', 'date'],
-            'date_to' => ['required', 'date', 'after_or_equal:date_from'],
-        ]);
-
-        $user = auth()->user();
-        $start = Carbon::parse($validated['date_from'])->startOfDay();
-        $end = Carbon::parse($validated['date_to'])->endOfDay();
-
-        $exportedBy = 'تصدير من مركز المبيعات — '.($user->name ?? '').' — '.now()->format('Y-m-d H:i');
-
-        $periodReport = $kpi->buildPeriodReport($user, $start, $end);
-        $leads = $this->leadsTouchedInPeriodQuery((int) $user->id, $start, $end)->with(['assignee:id,name', 'creator:id,name'])->get();
-        $activities = $this->activitiesInPeriodQuery((int) $user->id, $start, $end)->with(['lead:id,name,assigned_to', 'user:id,name'])->get();
-        $audit = $this->auditInPeriodQuery($start, $end, (int) $user->id)->with('user:id,name')->get();
-
-        $payload = [
-            'mode' => 'single',
-            'rep' => $user,
-            'start' => $start,
-            'end' => $end,
-            'period_report' => $periodReport,
-            'rep_summaries' => [],
-            'leads' => $leads,
-            'activities' => $activities,
-            'audit_logs' => $audit,
-            'created_by_leads_count' => SalesLead::query()
-                ->where('created_by', $user->id)
-                ->whereBetween('created_at', [$start, $end])
-                ->count(),
-            'context' => $exportedBy,
-        ];
-
-        $spreadsheet = $excel->buildSpreadsheet($payload);
-        $filename = 'تقرير-مبيعات-شامل-'.now()->format('Y-m-d').'-موظف-'.$user->id.'.xlsx';
-
-        return response()->streamDownload(function () use ($excel, $spreadsheet) {
-            $excel->writeToOutput($spreadsheet);
-            $spreadsheet->disconnectWorksheets();
-        }, $filename, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ]);
     }
 
     /**

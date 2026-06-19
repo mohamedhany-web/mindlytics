@@ -1,11 +1,19 @@
-<div class="flex flex-col h-full bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white">
-    <!-- Logo/Brand -->
-    <div class="flex items-center justify-center h-16 px-4 border-b border-slate-700/50">
-        <a href="{{ route('employee.dashboard') }}" class="flex items-center gap-2">
-            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                <i class="fas fa-briefcase text-white text-lg"></i>
+<div class="flex flex-col h-full bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl border-l border-slate-700/50 text-white">
+    <!-- شعار المنصة -->
+    <div class="p-6 border-b-2 border-slate-700/50 bg-slate-900/90 flex-shrink-0">
+        <a href="{{ route('employee.dashboard') }}" class="flex items-center gap-4">
+            <div class="relative">
+                <div class="w-16 h-16 rounded-full flex items-center justify-center shadow-xl overflow-hidden p-1">
+                    <img src="{{ $platformLogoUrl ?? asset('logo-fallback.svg') }}"
+                         alt="{{ config('app.name') }}"
+                         class="w-full h-full object-cover object-center rounded-full"
+                         onerror="this.onerror=null;this.src='{{ asset('logo-fallback.svg') }}';">
+                </div>
             </div>
-            <span class="text-lg font-bold text-white">Mindlytics</span>
+            <div>
+                <h2 class="text-xl font-black bg-gradient-to-r from-blue-300 via-blue-200 to-blue-100 bg-clip-text text-transparent tracking-tight">Mindlytics</h2>
+                <p class="text-xs text-slate-300/80 font-bold">لوحة الموظف</p>
+            </div>
         </a>
     </div>
 
@@ -58,17 +66,29 @@
                 <i class="fas fa-clipboard-check text-base"></i>
                 <span>التقرير اليومي</span>
             </a>
+            <a href="{{ route('employee.marketing-today.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.marketing-today.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-bullhorn text-base"></i>
+                <span>تسويق اليوم</span>
+            </a>
             <a href="{{ route('employee.sales.kpi.index') }}"
                class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.kpi.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
                @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
                 <i class="fas fa-bullseye text-base"></i>
                 <span>KPIs والأداء</span>
             </a>
+            <a href="{{ route('employee.sales.commissions.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.commissions.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-coins text-base"></i>
+                <span>العمولات</span>
+            </a>
             <a href="{{ route('employee.sales.reports.index') }}"
                class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.reports.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
                @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fas fa-file-excel text-base"></i>
-                <span>تقارير Excel</span>
+            <i class="fas fa-chart-bar text-base"></i>
+            <span>تقارير الأداء</span>
             </a>
             <a href="{{ route('employee.sales.leads.index') }}"
                class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.leads.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
@@ -76,7 +96,22 @@
                 <i class="fas fa-user-plus text-base"></i>
                 <span>العملاء المحتملون</span>
             </a>
+            <a href="{{ route('employee.sales.groups.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.groups.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-layer-group text-base"></i>
+                <span>مجموعات العملاء</span>
+            </a>
         </div>
+        @endif
+
+        @if(!auth()->user()->isSalesEmployee())
+        <a href="{{ route('employee.daily-reports.index') }}"
+           class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.daily-reports.*') ? 'bg-sky-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+            <i class="fas fa-clipboard-list text-base"></i>
+            <span>التقرير اليومي</span>
+        </a>
         @endif
 
         <a href="{{ route('employee.leaves.index') }}" 
@@ -132,6 +167,15 @@
                 <span class="mr-auto bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5 min-w-[20px] text-center">{{ $unreadCount > 99 ? '99+' : $unreadCount }}</span>
             @endif
         </a>
+
+        @if(!auth()->user()->isSalesEmployee())
+        <a href="{{ route('employee.marketing-today.index') }}"
+           class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.marketing-today.*') ? 'bg-pink-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+            <i class="fas fa-bullhorn text-base"></i>
+            <span>تسويق اليوم</span>
+        </a>
+        @endif
 
         <a href="{{ route('employee.calendar') }}" 
            class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.calendar*') ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"

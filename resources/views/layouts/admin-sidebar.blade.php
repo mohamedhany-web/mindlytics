@@ -205,11 +205,35 @@
                         </a>
                     </li>
                     <li>
+                        <a href="{{ route('admin.sales.categories.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.categories.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-tags w-4"></i>
+                            <span>تصنيفات العملاء</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.sales.leads.import') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.leads.import*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-file-upload w-4"></i>
+                            <span>استيراد دفعة عملاء</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="{{ route('admin.sales.leads.index') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.leads.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
                             <i class="fas fa-users w-4"></i>
                             <span>العملاء المحتملون</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.sales.groups.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.groups.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-layer-group w-4"></i>
+                            <span>مجموعات العملاء</span>
                         </a>
                     </li>
                     <li>
@@ -467,7 +491,7 @@
 
             <!-- إدارة المحاسبة -->
             @php
-                $accountingOpen = request()->routeIs('admin.invoices.*') || request()->routeIs('admin.payments.*') || request()->routeIs('admin.transactions.*') || request()->routeIs('admin.wallets.*') || request()->routeIs('admin.expenses.*') || request()->routeIs('admin.subscriptions.*') || request()->routeIs('admin.installments.*') || request()->routeIs('admin.accounting.*') || request()->routeIs('admin.salaries.*') || request()->routeIs('admin.employee-agreements.*') || request()->routeIs('admin.accounting.hub') || request()->routeIs('admin.accounting.chart') || request()->routeIs('admin.accounting.gateway-operations');
+                $accountingOpen = request()->routeIs('admin.invoices.*') || request()->routeIs('admin.payments.*') || request()->routeIs('admin.transactions.*') || request()->routeIs('admin.wallets.*') || request()->routeIs('admin.expenses.*') || request()->routeIs('admin.subscriptions.*') || request()->routeIs('admin.installments.*') || request()->routeIs('admin.accounting.*') || request()->routeIs('admin.salaries.*') || request()->routeIs('admin.employee-salaries.*') || request()->routeIs('admin.employee-agreements.*') || request()->routeIs('admin.accounting.hub') || request()->routeIs('admin.accounting.chart') || request()->routeIs('admin.accounting.gateway-operations');
             @endphp
             <li x-data="{ open: {{ $accountingOpen ? 'true' : 'false' }} }">
                 <button type="button" @click="open = !open" :aria-expanded="open" 
@@ -585,6 +609,14 @@
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.employee-agreements.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
                             <i class="fas fa-users-cog w-4"></i>
                             <span>اتفاقيات الموظفين ورواتبهم</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.employee-salaries.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.employee-salaries.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
+                            <i class="fas fa-money-check-alt w-4"></i>
+                            <span>رواتب الموظفين</span>
                         </a>
                     </li>
                     <li>
@@ -1032,7 +1064,7 @@
 
             <!-- إدارة الكورسات الأوفلاين -->
             @php
-                $offlineCoursesOpen = request()->routeIs('admin.offline-courses.*') || request()->routeIs('admin.offline-groups.*') || request()->routeIs('admin.offline-enrollments.*') || request()->routeIs('admin.offline-course-bookings.*') || request()->routeIs('admin.offline-activities.*') || request()->routeIs('admin.offline-agreements.*') || request()->routeIs('admin.offline-locations.*');
+                $offlineCoursesOpen = request()->routeIs('admin.offline-courses.*') || request()->routeIs('admin.offline-groups.*') || request()->routeIs('admin.offline-enrollments.*') || request()->routeIs('admin.offline-course-bookings.*') || request()->routeIs('admin.offline-activities.*') || request()->routeIs('admin.offline-agreements.*') || request()->routeIs('admin.offline-locations.*') || request()->routeIs('admin.place-usage-logs.*') || request()->routeIs('admin.place-settlements.*');
             @endphp
             <li x-data="{ open: {{ $offlineCoursesOpen ? 'true' : 'false' }} }">
                 <button type="button" @click="open = !open" :aria-expanded="open" 
@@ -1050,6 +1082,22 @@
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.offline-locations.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
                             <i class="fas fa-map-marker-alt w-4"></i>
                             <span>{{ __('admin.manage_locations') }}</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.place-usage-logs.index') }}" 
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.place-usage-logs.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
+                            <i class="fas fa-clock w-4"></i>
+                            <span>ساعات الأماكن</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.place-settlements.index') }}" 
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.place-settlements.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
+                            <i class="fas fa-calendar-check w-4"></i>
+                            <span>مخالصات الأماكن</span>
                         </a>
                     </li>
                     <li>
@@ -1109,7 +1157,7 @@
 
             <!-- إدارة الموظفين -->
             @php
-                $employeesOpen = request()->routeIs('admin.employees.*') || request()->routeIs('admin.employee-jobs.*') || request()->routeIs('admin.employee-tasks.*') || request()->routeIs('admin.design-task-cycles.*') || request()->routeIs('admin.moderator-marketing-plans.*') || request()->routeIs('admin.employee-deductions.*') || request()->routeIs('admin.leaves.*') || request()->routeIs('admin.tasks.*') || request()->routeIs('admin.instructor-requests.*');
+                $employeesOpen = request()->routeIs('admin.employees.*') || request()->routeIs('admin.employee-jobs.*') || request()->routeIs('admin.employee-tasks.*') || request()->routeIs('admin.design-task-cycles.*') || request()->routeIs('admin.moderator-marketing-plans.*') || request()->routeIs('admin.employee-deductions.*') || request()->routeIs('admin.employee-additions.*') || request()->routeIs('admin.employee-daily-reports.*') || request()->routeIs('admin.leaves.*') || request()->routeIs('admin.tasks.*') || request()->routeIs('admin.instructor-requests.*');
             @endphp
             <li x-data="{ open: {{ $employeesOpen ? 'true' : 'false' }} }">
                 <button type="button" @click="open = !open" :aria-expanded="open" 
@@ -1158,7 +1206,7 @@
                     <li>
                         <a href="{{ route('admin.design-task-cycles.index') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.design-task-cycles.index') || request()->routeIs('admin.design-task-cycles.show') ? 'bg-fuchsia-600/30 text-white font-semibold border-r-2 border-fuchsia-400' : '' }}">
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.design-task-cycles.index') || request()->routeIs('admin.design-task-cycles.show') || request()->routeIs('admin.design-task-cycles.create') || request()->routeIs('admin.design-task-cycles.edit') ? 'bg-fuchsia-600/30 text-white font-semibold border-r-2 border-fuchsia-400' : '' }}">
                             <i class="fas fa-palette w-4"></i>
                             <span>دورات التصميم (مشرف/مصمم)</span>
                         </a>
@@ -1185,6 +1233,22 @@
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.employee-deductions.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
                             <i class="fas fa-minus-circle w-4"></i>
                             <span>{{ __('admin.employee_deductions') }}</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.employee-additions.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.employee-additions.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-plus-circle w-4"></i>
+                            <span>إضافات الموظفين</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.employee-daily-reports.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.employee-daily-reports.*') ? 'bg-sky-600/30 text-white font-semibold border-r-2 border-sky-400' : '' }}">
+                            <i class="fas fa-clipboard-check w-4"></i>
+                            <span>التقارير اليومية</span>
                         </a>
                     </li>
                     <li>

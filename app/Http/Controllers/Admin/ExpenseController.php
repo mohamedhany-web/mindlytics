@@ -356,6 +356,13 @@ class ExpenseController extends Controller
 
             DB::commit();
 
+            if ($expense->place_monthly_settlement_id) {
+                $settlement = \App\Models\PlaceMonthlySettlement::find($expense->place_monthly_settlement_id);
+                if ($settlement) {
+                    app(\App\Services\PlaceSettlementService::class)->markPaidAfterExpenseApproval($settlement);
+                }
+            }
+
             return back()->with('success', 'تمت الموافقة على المصروف ' . ($wallet ? 'وتم خصم المبلغ من المحفظة' : '') . ' بنجاح');
 
         } catch (\Exception $e) {

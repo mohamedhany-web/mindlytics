@@ -163,37 +163,39 @@ class EmployeeCalendarController extends Controller
             ]);
         }
 
-        if ($user->isModeratorEmployee()) {
-            $mktQuery = ModeratorMarketingCalendarEvent::query()
-                ->whereHas('plan', function ($q) use ($user) {
-                    $q->where('moderator_id', $user->id);
-                })
-                ->with(['plan', 'platform']);
+        $mktQuery = ModeratorMarketingCalendarEvent::query()
+            ->where(function ($q) use ($user) {
+                $q->where('assigned_employee_id', $user->id)
+                    ->orWhereHas('plan', fn ($p) => $p->where('moderator_id', $user->id));
+            })
+            ->with(['plan', 'platform']);
 
-            if ($startDate) {
-                $mktQuery->where('starts_at', '>=', Carbon::parse($startDate)->startOfDay());
-            }
-            if ($endDate) {
-                $mktQuery->where('starts_at', '<=', Carbon::parse($endDate)->endOfDay());
-            }
+        if ($startDate) {
+            $mktQuery->where('starts_at', '>=', Carbon::parse($startDate)->startOfDay());
+        }
+        if ($endDate) {
+            $mktQuery->where('starts_at', '<=', Carbon::parse($endDate)->endOfDay());
+        }
 
-            foreach ($mktQuery->get() as $mkt) {
-                $color = $mkt->platform?->color_hex ?: '#db2777';
-                $planTitle = $mkt->plan?->title ?? '';
-                $events->push((object)[
-                    'calendar_id' => 'mkt_' . $mkt->id,
-                    'id' => 'mkt_' . $mkt->id,
-                    'title' => 'تسويق: ' . $mkt->title . ($planTitle ? ' — ' . $planTitle : ''),
-                    'description' => $mkt->body,
-                    'start_date' => $mkt->starts_at,
-                    'end_date' => $mkt->ends_at ?? $mkt->starts_at,
-                    'is_all_day' => false,
-                    'type' => 'marketing',
-                    'color' => $color,
-                    'priority' => 'medium',
-                    'url' => route('employee.marketing-plans.show', $mkt->plan_id),
-                ]);
-            }
+        foreach ($mktQuery->get() as $mkt) {
+            $color = $mkt->platform?->color_hex ?: '#db2777';
+            $planTitle = $mkt->plan?->title ?? '';
+            $url = $user->isModeratorEmployee() && (int) $mkt->plan?->moderator_id === (int) $user->id
+                ? route('employee.marketing-plans.show', $mkt->plan_id)
+                : route('employee.marketing-today.index');
+            $events->push((object)[
+                'calendar_id' => 'mkt_'.$mkt->id,
+                'id' => 'mkt_'.$mkt->id,
+                'title' => 'تسويق: '.$mkt->title.($planTitle ? ' — '.$planTitle : ''),
+                'description' => $mkt->body,
+                'start_date' => $mkt->starts_at,
+                'end_date' => $mkt->ends_at ?? $mkt->starts_at,
+                'is_all_day' => false,
+                'type' => 'marketing',
+                'color' => $color,
+                'priority' => 'medium',
+                'url' => $url,
+            ]);
         }
 
         // ترتيب الأحداث حسب التاريخ

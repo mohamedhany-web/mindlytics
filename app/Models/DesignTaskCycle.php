@@ -124,6 +124,41 @@ class DesignTaskCycle extends Model
         };
     }
 
+    public static function statusBadgeClass(?string $status): string
+    {
+        return match ($status) {
+            self::STATUS_PENDING_DESIGN => 'bg-amber-100 text-amber-800 border-amber-200',
+            self::STATUS_DESIGN_IN_PROGRESS => 'bg-sky-100 text-sky-800 border-sky-200',
+            self::STATUS_DESIGN_SUBMITTED => 'bg-violet-100 text-violet-800 border-violet-200',
+            self::STATUS_MODERATOR_DELIVERY_PENDING => 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200',
+            self::STATUS_COMPLETED => 'bg-emerald-100 text-emerald-800 border-emerald-200',
+            self::STATUS_CANCELLED => 'bg-slate-200 text-slate-700 border-slate-300',
+            default => 'bg-gray-100 text-gray-800 border-gray-200',
+        };
+    }
+
+    public static function priorityLabel(?string $priority): string
+    {
+        return match ($priority) {
+            'low' => 'منخفضة',
+            'medium' => 'متوسطة',
+            'high' => 'عالية',
+            'urgent' => 'عاجلة',
+            default => $priority ?? '—',
+        };
+    }
+
+    public static function priorityBadgeClass(?string $priority): string
+    {
+        return match ($priority) {
+            'low' => 'bg-slate-100 text-slate-700',
+            'medium' => 'bg-blue-100 text-blue-800',
+            'high' => 'bg-orange-100 text-orange-800',
+            'urgent' => 'bg-rose-100 text-rose-800',
+            default => 'bg-gray-100 text-gray-800',
+        };
+    }
+
     public function isCancelled(): bool
     {
         return $this->status === self::STATUS_CANCELLED;

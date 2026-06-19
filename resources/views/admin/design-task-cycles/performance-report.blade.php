@@ -6,204 +6,515 @@
         7 => 'يوليو', 8 => 'أغسطس', 9 => 'سبتمبر', 10 => 'أكتوبر', 11 => 'نوفمبر', 12 => 'ديسمبر',
     ];
     $excelUrl = route('admin.design-task-cycles.performance-report.excel', ['year' => $year, 'month' => $month]);
+    $direction = $dashboard['direction'] ?? [];
+    $alerts = $dashboard['alerts'] ?? [];
+    $charts = $dashboard['charts'] ?? [];
+    $atRisk = $dashboard['at_risk'] ?? [];
+    $topPerformers = $dashboard['top_performers'] ?? [];
+    $teamHealth = $dashboard['team_health_score'] ?? null;
+    $enrichedRows = $dashboard['enriched_rows'] ?? $rows;
+    $dirStatus = $direction['status'] ?? 'stable';
+    $dirBannerClass = match ($dirStatus) {
+        'growth' => 'border-emerald-200 bg-gradient-to-l from-emerald-50 to-white',
+        'decline' => 'border-rose-200 bg-gradient-to-l from-rose-50 to-white',
+        default => 'border-sky-200 bg-gradient-to-l from-sky-50 to-white',
+    };
+    $dirIconClass = match ($dirStatus) {
+        'growth' => 'text-emerald-600 bg-emerald-100',
+        'decline' => 'text-rose-600 bg-rose-100',
+        default => 'text-sky-600 bg-sky-100',
+    };
+    $inputClass = 'w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500';
 @endphp
 
-@section('title', 'تقرير أداء الموظفين — '.$monthNames[$month].' '.$year)
+@section('title', 'تقرير الأداء — '.$monthNames[$month].' '.$year)
 @section('header', 'تحليل الأداء الشهري — '.$monthNames[$month].' '.$year)
 
 @section('content')
-<div class="space-y-8">
-    <div class="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
-        <form method="get" class="flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1">السنة</label>
-                <input type="number" name="year" value="{{ $year }}" min="2000" max="2100" class="w-28 rounded-xl border-slate-300 text-sm shadow-sm focus:ring-violet-500 focus:border-violet-500">
+<div class="space-y-6">
+    {{-- هيدر + فلاتر --}}
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+        <div class="px-4 py-4 bg-slate-50 border-b flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-white shadow-md">
+                    <i class="fas fa-chart-line text-lg"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-black text-slate-900">مركز تحليل أداء الموظفين</h2>
+                    <p class="text-xs text-slate-600">مهام · تصميم · تقارير يومية · تنبيهات الالتزام</p>
+                </div>
             </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1">الشهر</label>
-                <select name="month" class="rounded-xl border-slate-300 text-sm min-w-[140px] shadow-sm focus:ring-violet-500 focus:border-violet-500">
-                    @for($m = 1; $m <= 12; $m++)
-                        <option value="{{ $m }}" {{ (int) $month === $m ? 'selected' : '' }}>{{ $monthNames[$m] }}</option>
-                    @endfor
-                </select>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ $excelUrl }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-sm">
+                    <i class="fas fa-file-excel"></i> Excel
+                </a>
+                <a href="{{ route('admin.employee-daily-reports.index') }}" class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-300 text-sm font-semibold hover:bg-white">
+                    <i class="fas fa-clipboard-check text-sky-600"></i> التقارير اليومية
+                </a>
+                <a href="{{ route('admin.design-task-cycles.index') }}" class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-300 text-sm font-semibold hover:bg-white">
+                    <i class="fas fa-palette text-fuchsia-600"></i> دورات التصميم
+                </a>
             </div>
-            <button type="submit" class="px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold shadow-md transition-colors">
-                <i class="fas fa-sync-alt ml-2"></i> تحديث التحليل
-            </button>
-        </form>
-        <div class="flex flex-wrap gap-3">
-            <a href="{{ $excelUrl }}" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-lg transition-colors">
-                <i class="fas fa-file-excel"></i>
-                تنزيل Excel (٤ أوراق)
-            </a>
-            <a href="{{ route('admin.design-task-cycles.index') }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border-2 border-slate-200 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50">
-                <i class="fas fa-palette text-violet-600"></i>
-                دورات التصميم
-            </a>
+        </div>
+        <div class="p-4 flex flex-col lg:flex-row lg:items-end gap-4">
+            <form method="get" class="flex flex-wrap items-end gap-3 flex-1">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">السنة</label>
+                    <input type="number" name="year" value="{{ $year }}" min="2000" max="2100" class="w-28 {{ $inputClass }}">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">الشهر</label>
+                    <select name="month" class="{{ $inputClass }} min-w-[140px]">
+                        @for($m = 1; $m <= 12; $m++)
+                            <option value="{{ $m }}" {{ (int) $month === $m ? 'selected' : '' }}>{{ $monthNames[$m] }}</option>
+                        @endfor
+                    </select>
+                </div>
+                <button type="submit" class="px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold">
+                    <i class="fas fa-sync-alt ml-1"></i> تحديث
+                </button>
+            </form>
+            <p class="text-xs text-slate-500">
+                <i class="fas fa-calendar-alt text-violet-500 ml-1"></i>
+                {{ $start->format('Y-m-d') }} — {{ $end->format('Y-m-d') }}
+            </p>
+        </div>
+    </section>
+
+    {{-- اتجاه الفريق --}}
+    <section class="rounded-2xl border shadow-lg overflow-hidden {{ $dirBannerClass }}">
+        <div class="px-5 py-5 flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5">
+            <div class="flex items-start gap-4 flex-1">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center {{ $dirIconClass }}">
+                    <i class="fas fa-compass text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wide">إلى أين نتجه؟</p>
+                    <p class="text-xl font-black text-slate-900 mt-1">{{ $direction['label'] ?? '—' }}</p>
+                    <p class="text-sm text-slate-700 mt-2 max-w-3xl leading-relaxed">{{ $direction['summary'] ?? '' }}</p>
+                    <p class="text-[11px] text-slate-500 mt-2">
+                        مقارنة: {{ $direction['previous_month_label'] ?? '—' }} ← {{ $direction['current_month_label'] ?? '—' }}
+                    </p>
+                </div>
+            </div>
+            <div class="flex flex-col items-center justify-center rounded-2xl bg-white/80 border border-slate-200 px-8 py-4 min-w-[140px]">
+                <p class="text-xs font-semibold text-slate-500">صحة الفريق</p>
+                <p class="text-4xl font-black tabular-nums {{ ($teamHealth ?? 0) >= 75 ? 'text-emerald-600' : (($teamHealth ?? 0) >= 55 ? 'text-amber-600' : 'text-rose-600') }}">
+                    {{ $teamHealth !== null ? $teamHealth.'%' : '—' }}
+                </p>
+                <p class="text-[10px] text-slate-500 mt-1">مؤشر مركّب</p>
+            </div>
+        </div>
+        @if(!empty($direction['metrics']))
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-px bg-slate-200 border-t border-slate-200">
+            @foreach($direction['metrics'] as $dm)
+                <div class="bg-white px-4 py-3">
+                    <p class="text-[11px] text-slate-500 font-semibold">{{ $dm['label'] }}</p>
+                    <p class="text-lg font-black text-slate-900 tabular-nums">
+                        {{ is_numeric($dm['current']) ? number_format($dm['current']) : ($dm['current'] ?? '—') }}
+                        @if(isset($dm['delta_pct']) && $dm['delta_pct'] !== null)
+                            <span class="text-xs font-bold {{ $dm['delta_pct'] >= 0 ? 'text-emerald-600' : 'text-rose-600' }}">
+                                {{ $dm['delta_pct'] >= 0 ? '↑' : '↓' }}{{ abs($dm['delta_pct']) }}%
+                            </span>
+                        @elseif(isset($dm['delta_pts']) && $dm['delta_pts'] !== null)
+                            <span class="text-xs font-bold {{ $dm['delta_pts'] >= 0 ? 'text-emerald-600' : 'text-rose-600' }}">
+                                {{ $dm['delta_pts'] >= 0 ? '+' : '' }}{{ $dm['delta_pts'] }} نقطة
+                            </span>
+                        @elseif(isset($dm['delta']))
+                            <span class="text-xs font-bold {{ $dm['delta'] <= 0 ? 'text-emerald-600' : 'text-rose-600' }}">
+                                {{ $dm['delta'] > 0 ? '+' : '' }}{{ $dm['delta'] }}
+                            </span>
+                        @endif
+                    </p>
+                    <p class="text-[10px] text-slate-400">الشهر السابق: {{ is_numeric($dm['previous'] ?? null) ? number_format($dm['previous']) : ($dm['previous'] ?? '—') }}</p>
+                </div>
+            @endforeach
+        </div>
+        @endif
+    </section>
+
+    {{-- تنبيهات --}}
+    @if(count($alerts) > 0)
+    <section class="space-y-3">
+        <h3 class="text-sm font-black text-slate-900 flex items-center gap-2 px-1">
+            <i class="fas fa-bell text-amber-500"></i>
+            تنبيهات وملاحظات للإدارة
+        </h3>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            @foreach($alerts as $alert)
+                @php
+                    $alertClass = match($alert['level'] ?? 'info') {
+                        'critical' => 'border-rose-300 bg-rose-50 text-rose-900',
+                        'warning' => 'border-amber-300 bg-amber-50 text-amber-900',
+                        'success' => 'border-emerald-300 bg-emerald-50 text-emerald-900',
+                        default => 'border-sky-300 bg-sky-50 text-sky-900',
+                    };
+                    $alertIcon = match($alert['level'] ?? 'info') {
+                        'critical' => 'text-rose-600',
+                        'warning' => 'text-amber-600',
+                        'success' => 'text-emerald-600',
+                        default => 'text-sky-600',
+                    };
+                @endphp
+                <div class="rounded-xl border p-4 flex gap-3 {{ $alertClass }}">
+                    <div class="w-9 h-9 rounded-lg bg-white/70 flex items-center justify-center shrink-0 {{ $alertIcon }}">
+                        <i class="fas {{ $alert['icon'] ?? 'fa-info-circle' }}"></i>
+                    </div>
+                    <div>
+                        <p class="font-bold text-sm">{{ $alert['title'] }}</p>
+                        <p class="text-xs mt-1 leading-relaxed opacity-90">{{ $alert['message'] }}</p>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </section>
+    @endif
+
+    {{-- KPI cards --}}
+    <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+        <div class="rounded-2xl bg-gradient-to-br from-violet-600 to-violet-800 text-white p-4 shadow-lg">
+            <p class="text-[10px] font-semibold text-violet-200 uppercase">مهام مكتملة</p>
+            <p class="text-2xl font-black mt-1 tabular-nums">{{ number_format($summary['tasks_completed']) }}</p>
+            <p class="text-[10px] text-violet-200 mt-1">من {{ number_format($summary['tasks_assigned']) }} مسندة</p>
+        </div>
+        <div class="rounded-2xl bg-white border p-4 shadow-sm">
+            <p class="text-[10px] font-bold text-slate-500 uppercase">التزام الموعد</p>
+            <p class="text-2xl font-black text-slate-900 tabular-nums">{{ $summary['tasks_on_time_rate_pct'] !== null ? $summary['tasks_on_time_rate_pct'].'%' : '—' }}</p>
+            <div class="mt-2 h-1.5 rounded-full bg-slate-100"><div class="h-full rounded-full bg-emerald-500" style="width:{{ min(100, $summary['tasks_on_time_rate_pct'] ?? 0) }}%"></div></div>
+        </div>
+        <div class="rounded-2xl bg-white border p-4 shadow-sm">
+            <p class="text-[10px] font-bold text-slate-500 uppercase">التزام المصمم</p>
+            <p class="text-2xl font-black text-fuchsia-700 tabular-nums">{{ $summary['designer_on_time_rate_pct'] !== null ? $summary['designer_on_time_rate_pct'].'%' : '—' }}</p>
+            <p class="text-[10px] text-slate-500 mt-1">{{ $summary['designer_submissions_month'] }} تسليم</p>
+        </div>
+        <div class="rounded-2xl bg-white border p-4 shadow-sm">
+            <p class="text-[10px] font-bold text-slate-500 uppercase">تسليمات ملفات</p>
+            <p class="text-2xl font-black tabular-nums">{{ number_format($summary['deliverables']) }}</p>
+        </div>
+        <div class="rounded-2xl bg-white border p-4 shadow-sm">
+            <p class="text-[10px] font-bold text-slate-500 uppercase">دورات تصميم</p>
+            <p class="text-2xl font-black text-violet-700 tabular-nums">{{ number_format($summary['design_cycles_touched_month'] ?? 0) }}</p>
+        </div>
+        <div class="rounded-2xl bg-amber-50 border border-amber-200 p-4 shadow-sm">
+            <p class="text-[10px] font-bold text-amber-800 uppercase">متأخرة مفتوحة</p>
+            <p class="text-2xl font-black text-amber-900 tabular-nums">{{ number_format($summary['open_overdue_tasks']) }}</p>
         </div>
     </div>
 
-    <p class="text-sm text-slate-600 flex flex-wrap items-center gap-x-4 gap-y-1">
-        <span><i class="fas fa-calendar-alt text-violet-500 ml-1"></i> الفترة: <strong>{{ $start->format('Y-m-d') }}</strong> — <strong>{{ $end->format('Y-m-d') }}</strong></span>
-        <span class="text-slate-400 hidden sm:inline">|</span>
-        <span>يضم المهام المكتملة خلال الشهر، دورات التصميم ذات النشاط، والتسليمات المسجّلة.</span>
-    </p>
-
-    {{-- مؤشرات تنفيذية --}}
-    <div class="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-        <div class="rounded-2xl bg-gradient-to-br from-violet-600 to-violet-800 text-white p-5 shadow-lg border border-violet-500/30">
-            <p class="text-xs font-semibold text-violet-200 uppercase tracking-wide">مهام مكتملة</p>
-            <p class="text-3xl font-black mt-1 tabular-nums">{{ number_format($summary['tasks_completed']) }}</p>
-            <p class="text-xs text-violet-200 mt-2">من {{ number_format($summary['tasks_assigned']) }} مسندة بالشهر</p>
+    {{-- مخططات --}}
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+        <div class="px-4 py-3 border-b bg-slate-50">
+            <h3 class="text-base font-black text-slate-900"><i class="fas fa-chart-area text-violet-600 ml-1"></i> المخططات التحليلية</h3>
         </div>
-        <div class="rounded-2xl bg-white border border-slate-200 p-5 shadow-sm">
-            <p class="text-xs font-bold text-slate-500 uppercase">التزام الموعد (مهام)</p>
-            <p class="text-3xl font-black text-slate-900 mt-1 tabular-nums">
-                {{ $summary['tasks_on_time_rate_pct'] !== null ? $summary['tasks_on_time_rate_pct'].'%' : '—' }}
-            </p>
-            <div class="mt-3 h-2 rounded-full bg-slate-100 overflow-hidden">
-                <div class="h-full rounded-full bg-emerald-500 transition-all" style="width: {{ min(100, $summary['tasks_on_time_rate_pct'] ?? 0) }}%"></div>
+        <div class="p-4 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div class="rounded-xl border border-slate-200 p-4 lg:col-span-2 xl:col-span-1">
+                <p class="text-xs font-bold text-slate-600 mb-3">إنجاز المهام أسبوعياً</p>
+                <div class="h-56"><canvas id="chartWeekly"></canvas></div>
             </div>
-            <p class="text-xs text-slate-500 mt-2">{{ $summary['tasks_on_time'] }} في الموعد · {{ $summary['tasks_late'] }} متأخر</p>
+            <div class="rounded-xl border border-slate-200 p-4">
+                <p class="text-xs font-bold text-slate-600 mb-3">في الموعد vs متأخر (مهام)</p>
+                <div class="h-56"><canvas id="chartOnTime"></canvas></div>
+            </div>
+            <div class="rounded-xl border border-slate-200 p-4">
+                <p class="text-xs font-bold text-slate-600 mb-3">تسليمات المصممين</p>
+                <div class="h-56"><canvas id="chartDesigner"></canvas></div>
+            </div>
+            <div class="rounded-xl border border-slate-200 p-4 lg:col-span-2">
+                <p class="text-xs font-bold text-slate-600 mb-3">مقارنة الشهر الحالي vs السابق</p>
+                <div class="h-64"><canvas id="chartMonthCompare"></canvas></div>
+            </div>
+            <div class="rounded-xl border border-slate-200 p-4">
+                <p class="text-xs font-bold text-slate-600 mb-3">حالات دورات التصميم</p>
+                <div class="h-56"><canvas id="chartDesignStatus"></canvas></div>
+            </div>
+            <div class="rounded-xl border border-slate-200 p-4">
+                <p class="text-xs font-bold text-slate-600 mb-3">مهام مكتملة حسب النوع</p>
+                <div class="h-56"><canvas id="chartTaskTypes"></canvas></div>
+            </div>
+            <div class="rounded-xl border border-slate-200 p-4 lg:col-span-2">
+                <p class="text-xs font-bold text-slate-600 mb-3">أقل موظفين في مؤشر الصحة (يحتاجون متابعة)</p>
+                <div class="h-64"><canvas id="chartHealth"></canvas></div>
+            </div>
+            <div class="rounded-xl border border-slate-200 p-4 lg:col-span-2 xl:col-span-1">
+                <p class="text-xs font-bold text-slate-600 mb-3">التزام التقارير اليومية (الأضعف)</p>
+                <div class="h-64"><canvas id="chartDaily"></canvas></div>
+            </div>
+            <div class="rounded-xl border border-slate-200 p-4 lg:col-span-2">
+                <p class="text-xs font-bold text-slate-600 mb-3">نسبة إنجاز المهام (أكثر الموظفين تحميلاً)</p>
+                <div class="h-64"><canvas id="chartCompletion"></canvas></div>
+            </div>
         </div>
-        <div class="rounded-2xl bg-white border border-slate-200 p-5 shadow-sm">
-            <p class="text-xs font-bold text-slate-500 uppercase">التزام المصمم</p>
-            <p class="text-3xl font-black text-fuchsia-700 mt-1 tabular-nums">
-                {{ $summary['designer_on_time_rate_pct'] !== null ? $summary['designer_on_time_rate_pct'].'%' : '—' }}
-            </p>
-            <p class="text-xs text-slate-500 mt-2">{{ $summary['designer_submissions_month'] }} تسليم بالشهر</p>
-        </div>
-        <div class="rounded-2xl bg-white border border-slate-200 p-5 shadow-sm">
-            <p class="text-xs font-bold text-slate-500 uppercase">تسليمات ملفات</p>
-            <p class="text-3xl font-black text-slate-900 mt-1 tabular-nums">{{ number_format($summary['deliverables']) }}</p>
-            <p class="text-xs text-slate-500 mt-2">مرفوعة خلال الشهر</p>
-        </div>
-        <div class="rounded-2xl bg-white border border-slate-200 p-5 shadow-sm">
-            <p class="text-xs font-bold text-slate-500 uppercase">دورات التصميم</p>
-            <p class="text-3xl font-black text-violet-700 mt-1 tabular-nums">{{ number_format($summary['design_cycles_touched_month'] ?? 0) }}</p>
-            <p class="text-xs text-slate-500 mt-2">سجلّ نشاط في الفترة</p>
-        </div>
-        <div class="rounded-2xl bg-amber-50 border border-amber-200 p-5 shadow-sm">
-            <p class="text-xs font-bold text-amber-800 uppercase">مفتوحة متأخرة</p>
-            <p class="text-3xl font-black text-amber-900 mt-1 tabular-nums">{{ number_format($summary['open_overdue_tasks']) }}</p>
-            <p class="text-xs text-amber-800/80 mt-2">نهاية الشهر (غير مكتملة)</p>
-        </div>
+    </section>
+
+    {{-- موظفون يحتاجون متابعة + الأفضل --}}
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <section class="rounded-2xl border border-rose-200 bg-white shadow-lg overflow-hidden">
+            <div class="px-4 py-3 bg-rose-50 border-b border-rose-100 flex items-center gap-2">
+                <i class="fas fa-user-shield text-rose-600"></i>
+                <h3 class="font-black text-rose-900 text-sm">يحتاجون متابعة فورية</h3>
+                <span class="mr-auto text-xs bg-rose-200 text-rose-800 px-2 py-0.5 rounded-full font-bold">{{ count($atRisk) }}</span>
+            </div>
+            <div class="divide-y divide-slate-100 max-h-[420px] overflow-y-auto">
+                @forelse($atRisk as $row)
+                    <div class="px-4 py-3 hover:bg-rose-50/30">
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <p class="font-bold text-slate-900">{{ $row['user']->name }}</p>
+                                <p class="text-[11px] text-slate-500">{{ $row['user']->employeeJob->name ?? '—' }}</p>
+                            </div>
+                            @if($row['health_score'] !== null)
+                                <span class="shrink-0 px-2 py-0.5 rounded-lg text-xs font-black {{ $row['health_score'] < 50 ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800' }}">
+                                    {{ $row['health_score'] }}%
+                                </span>
+                            @endif
+                        </div>
+                        @if(!empty($row['risk_flags']))
+                            <ul class="mt-2 space-y-1">
+                                @foreach($row['risk_flags'] as $flag)
+                                    <li class="text-xs text-rose-800 flex items-center gap-1.5"><i class="fas fa-circle text-[5px]"></i>{{ $flag }}</li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </div>
+                @empty
+                    <p class="px-4 py-8 text-center text-sm text-slate-500">لا يوجد موظفون في منطقة الخطر هذا الشهر.</p>
+                @endforelse
+            </div>
+        </section>
+
+        <section class="rounded-2xl border border-emerald-200 bg-white shadow-lg overflow-hidden">
+            <div class="px-4 py-3 bg-emerald-50 border-b border-emerald-100 flex items-center gap-2">
+                <i class="fas fa-star text-emerald-600"></i>
+                <h3 class="font-black text-emerald-900 text-sm">أفضل الأداء</h3>
+            </div>
+            <div class="divide-y divide-slate-100">
+                @forelse($topPerformers as $row)
+                    <div class="px-4 py-3 flex items-center justify-between gap-3 hover:bg-emerald-50/30">
+                        <div>
+                            <p class="font-bold text-slate-900">{{ $row['user']->name }}</p>
+                            <p class="text-[11px] text-slate-500">
+                                {{ $row['tasks_completed_in_month'] }} مهمة · {{ $row['designer_submissions_in_month'] }} تسليم تصميم
+                            </p>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-black">{{ $row['health_score'] }}%</span>
+                    </div>
+                @empty
+                    <p class="px-4 py-8 text-center text-sm text-slate-500">لا بيانات كافية لتحديد الأفضل.</p>
+                @endforelse
+            </div>
+        </section>
     </div>
 
-    {{-- جدول تفصيلي --}}
-    <div class="rounded-2xl border border-slate-200 bg-white shadow-md overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/80 flex flex-wrap items-center justify-between gap-2">
-            <h2 class="text-base font-bold text-slate-900">جدول الأداء حسب الموظف</h2>
-            <span class="text-xs text-slate-500">{{ count($rows) }} موظفاً نشطاً</span>
+    {{-- جدول تفصيلي محسّن --}}
+    <section class="rounded-2xl border border-slate-200 bg-white shadow-lg overflow-hidden">
+        <div class="px-4 py-3 border-b bg-slate-50 flex flex-wrap items-center justify-between gap-2">
+            <h3 class="font-black text-slate-900">جدول الأداء التفصيلي</h3>
+            <span class="text-xs text-slate-500">{{ count($enrichedRows) }} موظف</span>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-[1600px] w-full text-xs">
+            <table class="min-w-[1400px] w-full text-xs">
                 <thead>
                     <tr class="bg-slate-800 text-white">
-                        <th rowspan="2" class="text-right px-3 py-2 font-bold sticky right-0 bg-slate-800 z-20 border-l border-slate-600 min-w-[150px] shadow-[4px_0_8px_-4px_rgba(0,0,0,0.3)]">الموظف</th>
-                        <th rowspan="2" class="text-right px-2 py-2 font-bold border-slate-600 border-l min-w-[100px]">الوظيفة</th>
-                        <th colspan="6" class="text-center px-2 py-1.5 font-bold border-slate-600 border-l bg-violet-900/90">المهام العامة</th>
-                        <th colspan="4" class="text-center px-2 py-1.5 font-bold border-slate-600 border-l bg-fuchsia-900/90">مكتملة حسب النوع</th>
-                        <th colspan="5" class="text-center px-2 py-1.5 font-bold border-slate-600 border-l bg-indigo-900/90">دورات التصميم</th>
-                        <th colspan="4" class="text-center px-2 py-1.5 font-bold border-slate-600 border-l bg-slate-700">المشرف</th>
-                    </tr>
-                    <tr class="bg-slate-700 text-white text-[10px]">
-                        <th class="text-center px-1 py-2 font-semibold border-slate-600 border-l">مسند</th>
-                        <th class="text-center px-1 py-2 font-semibold border-slate-600 border-l">مكتمل</th>
-                        <th class="text-center px-1 py-2 font-semibold border-slate-600 border-l">إنجاز %</th>
-                        <th class="text-center px-1 py-2 font-semibold border-slate-600 border-l">في الموعد</th>
-                        <th class="text-center px-1 py-2 font-semibold border-slate-600 border-l">متأخر</th>
-                        <th class="text-center px-1 py-2 font-semibold border-slate-600 border-l">%موعد</th>
-                        <th class="text-center px-1 py-2 font-semibold border-slate-600 border-l">تصميم</th>
-                        <th class="text-center px-1 py-2 font-semibold border-slate-600 border-l">مونتاج</th>
-                        <th class="text-center px-1 py-2 font-semibold border-slate-600 border-l">مبيعات</th>
-                        <th class="text-center px-1 py-2 font-semibold border-slate-600 border-l">أخرى</th>
-                        <th class="text-center px-1 py-2 font-semibold border-slate-600 border-l">كمصمم</th>
-                        <th class="text-center px-1 py-2 font-semibold border-slate-600 border-l">تسليم</th>
-                        <th class="text-center px-1 py-2 font-semibold border-slate-600 border-l">بموعد</th>
-                        <th class="text-center px-1 py-2 font-semibold border-slate-600 border-l">متأخر</th>
-                        <th class="text-center px-1 py-2 font-semibold border-slate-600 border-l">%موعد</th>
-                        <th class="text-center px-1 py-2 font-semibold border-slate-600 border-l">أنشأ</th>
-                        <th class="text-center px-1 py-2 font-semibold border-slate-600 border-l">أكمل</th>
-                        <th class="text-center px-1 py-2 font-semibold border-slate-600 border-l">ملغاة</th>
-                        <th class="text-center px-1 py-2 font-semibold border-slate-600 border-l">متوسط أيام</th>
+                        <th class="text-right px-3 py-2 font-bold sticky right-0 bg-slate-800 z-10 min-w-[140px]">الموظف</th>
+                        <th class="text-center px-2 py-2 font-bold">الصحة %</th>
+                        <th class="text-center px-2 py-2 font-bold">مسند</th>
+                        <th class="text-center px-2 py-2 font-bold">مكتمل</th>
+                        <th class="text-center px-2 py-2 font-bold">إنجاز %</th>
+                        <th class="text-center px-2 py-2 font-bold">%موعد</th>
+                        <th class="text-center px-2 py-2 font-bold">متأخرة</th>
+                        <th class="text-center px-2 py-2 font-bold">تقرير يومي %</th>
+                        <th class="text-center px-2 py-2 font-bold">تصميم</th>
+                        <th class="text-center px-2 py-2 font-bold">%موعد مصمم</th>
+                        <th class="text-right px-2 py-2 font-bold min-w-[180px]">تنبيهات</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                    @foreach($rows as $i => $row)
-                        <tr class="hover:bg-violet-50/40 {{ $i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50' }}">
-                            <td class="px-3 py-2 font-bold text-slate-900 sticky right-0 z-10 border-l border-slate-100 {{ $i % 2 === 0 ? 'bg-white' : 'bg-slate-50' }}">{{ $row['user']->name }}</td>
-                            <td class="px-2 py-2 text-slate-600 border-slate-100 border-l max-w-[120px] truncate" title="{{ $row['user']->employeeJob->name ?? '' }}">{{ $row['user']->employeeJob->name ?? '—' }}</td>
-                            <td class="text-center px-1 py-2 tabular-nums border-slate-100 border-l">{{ $row['tasks_assigned_in_month'] }}</td>
-                            <td class="text-center px-1 py-2 tabular-nums font-semibold text-violet-800 border-slate-100 border-l">{{ $row['tasks_completed_in_month'] }}</td>
-                            <td class="text-center px-1 py-2 tabular-nums border-slate-100 border-l">{{ $row['tasks_completion_rate_pct'] !== null ? $row['tasks_completion_rate_pct'].'%' : '—' }}</td>
-                            <td class="text-center px-1 py-2 tabular-nums text-emerald-700 border-slate-100 border-l">{{ $row['tasks_on_time'] }}</td>
-                            <td class="text-center px-1 py-2 tabular-nums text-red-600 border-slate-100 border-l">{{ $row['tasks_late'] }}</td>
-                            <td class="text-center px-1 py-2 tabular-nums border-slate-100 border-l">{{ $row['tasks_on_time_rate_pct'] !== null ? $row['tasks_on_time_rate_pct'].'%' : '—' }}</td>
-                            <td class="text-center px-1 py-2 tabular-nums border-slate-100 border-l">{{ $row['tasks_completed_design'] }}</td>
-                            <td class="text-center px-1 py-2 tabular-nums border-slate-100 border-l">{{ $row['tasks_completed_video'] }}</td>
-                            <td class="text-center px-1 py-2 tabular-nums border-slate-100 border-l">{{ $row['tasks_completed_sales'] }}</td>
-                            <td class="text-center px-1 py-2 tabular-nums border-slate-100 border-l">{{ $row['tasks_completed_other'] }}</td>
-                            <td class="text-center px-1 py-2 tabular-nums border-slate-100 border-l">{{ $row['design_cycles_as_designer'] }}</td>
-                            <td class="text-center px-1 py-2 tabular-nums border-slate-100 border-l">{{ $row['designer_submissions_in_month'] }}</td>
-                            <td class="text-center px-1 py-2 tabular-nums border-slate-100 border-l">{{ $row['designer_on_time'] }}</td>
-                            <td class="text-center px-1 py-2 tabular-nums border-slate-100 border-l">{{ $row['designer_late'] }}</td>
-                            <td class="text-center px-1 py-2 tabular-nums border-slate-100 border-l">{{ $row['designer_on_time_rate_pct'] !== null ? $row['designer_on_time_rate_pct'].'%' : '—' }}</td>
-                            <td class="text-center px-1 py-2 tabular-nums border-slate-100 border-l">{{ $row['design_cycles_created_as_moderator'] }}</td>
-                            <td class="text-center px-1 py-2 tabular-nums border-slate-100 border-l">{{ $row['design_cycles_completed_as_moderator'] }}</td>
-                            <td class="text-center px-1 py-2 tabular-nums border-slate-100 border-l">{{ $row['design_cycles_cancelled_as_moderator'] }}</td>
-                            <td class="text-center px-1 py-2 tabular-nums border-slate-100 border-l">{{ $row['moderator_avg_cycle_completion_days'] !== null ? $row['moderator_avg_cycle_completion_days'] : '—' }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    {{-- صف ثانوي: تفاصيل إضافية --}}
-    <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div class="px-5 py-3 border-b border-slate-100 font-bold text-slate-800 text-sm">مؤشرات إضافية (نفس الموظفين)</div>
-        <div class="overflow-x-auto">
-            <table class="min-w-[900px] w-full text-xs">
-                <thead class="bg-slate-100 text-slate-700">
-                    <tr>
-                        <th class="text-right px-3 py-2 font-semibold sticky right-0 bg-slate-100">الموظف</th>
-                        <th class="text-center px-2 py-2 font-semibold">متوسط ساعات الإكمال</th>
-                        <th class="text-center px-2 py-2 font-semibold">مفتوحة متأخرة (آخر الشهر)</th>
-                        <th class="text-center px-2 py-2 font-semibold">تسليمات مرفوعة</th>
-                        <th class="text-center px-2 py-2 font-semibold">مهام بلا موعد (مكتملة)</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    @foreach($rows as $row)
-                        <tr class="hover:bg-slate-50">
-                            <td class="px-3 py-2 font-medium sticky right-0 bg-white">{{ $row['user']->name }}</td>
-                            <td class="text-center py-2 tabular-nums">{{ $row['avg_completion_hours'] !== null ? $row['avg_completion_hours'] : '—' }}</td>
+                    @foreach($enrichedRows as $i => $row)
+                        <tr class="hover:bg-violet-50/30 {{ $i % 2 ? 'bg-slate-50/40' : '' }}">
+                            <td class="px-3 py-2 font-bold sticky right-0 z-10 border-l border-slate-100 {{ $i % 2 ? 'bg-slate-50' : 'bg-white' }}">
+                                {{ $row['user']->name }}
+                                <span class="block text-[10px] font-normal text-slate-500">{{ $row['user']->employeeJob->name ?? '' }}</span>
+                            </td>
+                            <td class="text-center py-2 tabular-nums font-black
+                                {{ ($row['health_score'] ?? 100) < 50 ? 'text-rose-700' : (($row['health_score'] ?? 100) < 70 ? 'text-amber-700' : 'text-emerald-700') }}">
+                                {{ $row['health_score'] !== null ? $row['health_score'].'%' : '—' }}
+                            </td>
+                            <td class="text-center py-2 tabular-nums">{{ $row['tasks_assigned_in_month'] }}</td>
+                            <td class="text-center py-2 tabular-nums font-semibold text-violet-800">{{ $row['tasks_completed_in_month'] }}</td>
+                            <td class="text-center py-2 tabular-nums">{{ $row['tasks_completion_rate_pct'] !== null ? $row['tasks_completion_rate_pct'].'%' : '—' }}</td>
+                            <td class="text-center py-2 tabular-nums">{{ $row['tasks_on_time_rate_pct'] !== null ? $row['tasks_on_time_rate_pct'].'%' : '—' }}</td>
                             <td class="text-center py-2 tabular-nums text-amber-800 font-medium">{{ $row['open_overdue_tasks_end_of_month'] }}</td>
-                            <td class="text-center py-2 tabular-nums">{{ $row['deliverables_submitted'] }}</td>
-                            <td class="text-center py-2 tabular-nums text-slate-500">{{ $row['tasks_no_deadline_completed'] }}</td>
+                            <td class="text-center py-2 tabular-nums {{ ($row['daily_report_rate_pct'] ?? 100) < 70 ? 'text-rose-700 font-bold' : '' }}">
+                                {{ $row['daily_report_rate_pct'] !== null ? $row['daily_report_rate_pct'].'%' : '—' }}
+                            </td>
+                            <td class="text-center py-2 tabular-nums">{{ $row['designer_submissions_in_month'] }}</td>
+                            <td class="text-center py-2 tabular-nums">{{ $row['designer_on_time_rate_pct'] !== null ? $row['designer_on_time_rate_pct'].'%' : '—' }}</td>
+                            <td class="px-2 py-2">
+                                @if(!empty($row['risk_flags']))
+                                    <div class="flex flex-wrap gap-1">
+                                        @foreach(array_slice($row['risk_flags'], 0, 2) as $flag)
+                                            <span class="inline-block px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 text-[10px] font-semibold">{{ $flag }}</span>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <span class="text-emerald-600 text-[10px] font-semibold"><i class="fas fa-check"></i> جيد</span>
+                                @endif
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
         </div>
-    </div>
+    </section>
 
-    <details class="rounded-2xl border border-slate-200 bg-slate-50/80 p-5 text-sm text-slate-700 group">
+    <details class="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 text-sm group">
         <summary class="font-bold text-slate-900 cursor-pointer list-none flex items-center gap-2">
-            <i class="fas fa-info-circle text-violet-600"></i>
-            منطق الحساب والتصدير
+            <i class="fas fa-info-circle text-violet-600"></i> منطق الحساب
             <i class="fas fa-chevron-down mr-auto text-slate-400 group-open:rotate-180 transition-transform"></i>
         </summary>
-        <ul class="mt-4 space-y-2 list-disc list-inside text-xs leading-relaxed max-w-4xl">
-            <li><strong>المهام المسندة:</strong> مهام أُنشئت خلال الشهر (حقل <code class="bg-white px-1 rounded border">created_at</code>).</li>
-            <li><strong>المهام المكتملة:</strong> حالة مكتملة و<code class="bg-white px-1 rounded border">completed_at</code> ضمن الشهر.</li>
-            <li><strong>في الموعد:</strong> إكمال المهمة قبل أو مع نهاية يوم الموعد النهائي.</li>
-            <li><strong>دورات المصمم:</strong> دورات أُنشئت للمصمم خلال الشهر؛ «تسليم المصمم» عندما يقع <code class="bg-white px-1 rounded border">designer_submitted_at</code> في الشهر ومقارنته بـ <code class="bg-white px-1 rounded border">deadline_at</code>.</li>
-            <li><strong>متوسط أيام إكمال الدورة (مشرف):</strong> لدورات اكتملت في الشهر: الفرق بين <code class="bg-white px-1 rounded border">created_at</code> و<code class="bg-white px-1 rounded border">completed_at</code>.</li>
-            <li><strong>ملغاة كمشرف:</strong> دورات بحالة ملغاة و<code class="bg-white px-1 rounded border">updated_at</code> في الشهر (تقريب وقت الإلغاء).</li>
-            <li><strong>ملف Excel:</strong> يتضمن «ملخص تنفيذي»، «أداء الموظفين»، «دورات التصميم» (كل دورة لها نشاط في الشهر)، و«المهام المكتملة» سطراً بسطر مع عمود في الموعد.</li>
+        <ul class="mt-3 space-y-1.5 list-disc list-inside text-xs text-slate-600 max-w-4xl">
+            <li><strong>مؤشر الصحة:</strong> مركّب من إنجاز المهام، الالتزام بالموعد، تسليم التصميم، والتقارير اليومية — مع خصم للمهام المتأخرة المفتوحة.</li>
+            <li><strong>الاتجاه:</strong> مقارنة الشهر الحالي بالسابق في الإنجاز والالتزام والمتأخرات.</li>
+            <li><strong>التقارير اليومية:</strong> نسبة الأيام المُرسلة من إجمالي الأيام المطلوبة لكل موظف.</li>
+            <li><strong>Excel:</strong> تصدير تفصيلي بأربع أوراق عمل.</li>
         </ul>
     </details>
 </div>
 @endsection
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof Chart === 'undefined') return;
+
+    const charts = @json($charts);
+    const fontFamily = 'inherit';
+    Chart.defaults.font.family = fontFamily;
+
+    const colors = {
+        violet: 'rgba(124, 58, 237, 0.85)',
+        emerald: 'rgba(16, 185, 129, 0.85)',
+        rose: 'rgba(244, 63, 94, 0.85)',
+        amber: 'rgba(245, 158, 11, 0.85)',
+        sky: 'rgba(14, 165, 233, 0.85)',
+        fuchsia: 'rgba(192, 38, 211, 0.85)',
+    };
+
+    if (charts.week_labels?.length) {
+        new Chart(document.getElementById('chartWeekly'), {
+            type: 'line',
+            data: {
+                labels: charts.week_labels,
+                datasets: [{
+                    label: 'مهام مكتملة',
+                    data: charts.week_completed,
+                    borderColor: colors.violet,
+                    backgroundColor: 'rgba(124, 58, 237, 0.15)',
+                    fill: true,
+                    tension: 0.35,
+                }],
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+        });
+    }
+
+    new Chart(document.getElementById('chartOnTime'), {
+        type: 'doughnut',
+        data: {
+            labels: charts.on_time_late?.labels || [],
+            datasets: [{ data: charts.on_time_late?.data || [], backgroundColor: [colors.emerald, colors.rose] }],
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } },
+    });
+
+    new Chart(document.getElementById('chartDesigner'), {
+        type: 'doughnut',
+        data: {
+            labels: charts.designer_on_time_late?.labels || [],
+            datasets: [{ data: charts.designer_on_time_late?.data || [], backgroundColor: [colors.fuchsia, colors.amber] }],
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } },
+    });
+
+    if (charts.month_compare?.labels?.length) {
+        new Chart(document.getElementById('chartMonthCompare'), {
+            type: 'bar',
+            data: {
+                labels: charts.month_compare.labels,
+                datasets: [
+                    { label: 'الشهر الحالي', data: charts.month_compare.current, backgroundColor: colors.violet },
+                    { label: 'الشهر السابق', data: charts.month_compare.previous, backgroundColor: 'rgba(148, 163, 184, 0.7)' },
+                ],
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } },
+        });
+    }
+
+    if (charts.design_cycle_status?.labels?.length) {
+        new Chart(document.getElementById('chartDesignStatus'), {
+            type: 'pie',
+            data: {
+                labels: charts.design_cycle_status.labels,
+                datasets: [{ data: charts.design_cycle_status.data, backgroundColor: [colors.amber, colors.sky, colors.violet, colors.fuchsia, colors.emerald, colors.rose] }],
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } },
+        });
+    }
+
+    new Chart(document.getElementById('chartTaskTypes'), {
+        type: 'bar',
+        data: {
+            labels: charts.task_types?.labels || [],
+            datasets: [{ label: 'مكتملة', data: charts.task_types?.data || [], backgroundColor: [colors.violet, colors.sky, colors.emerald, colors.amber] }],
+        },
+        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } },
+    });
+
+    if (charts.health_worst?.labels?.length) {
+        new Chart(document.getElementById('chartHealth'), {
+            type: 'bar',
+            data: {
+                labels: charts.health_worst.labels,
+                datasets: [{
+                    label: 'مؤشر الصحة %',
+                    data: charts.health_worst.data,
+                    backgroundColor: charts.health_worst.data.map(v => v < 50 ? colors.rose : (v < 70 ? colors.amber : colors.emerald)),
+                }],
+            },
+            options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { max: 100, beginAtZero: true } } },
+        });
+    }
+
+    if (charts.daily_compliance?.labels?.length) {
+        new Chart(document.getElementById('chartDaily'), {
+            type: 'bar',
+            data: {
+                labels: charts.daily_compliance.labels,
+                datasets: [{
+                    label: 'التزام %',
+                    data: charts.daily_compliance.data,
+                    backgroundColor: charts.daily_compliance.data.map(v => v < 70 ? colors.rose : colors.emerald),
+                }],
+            },
+            options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { max: 100, beginAtZero: true } } },
+        });
+    }
+
+    if (charts.completion_rates?.labels?.length) {
+        new Chart(document.getElementById('chartCompletion'), {
+            type: 'bar',
+            data: {
+                labels: charts.completion_rates.labels,
+                datasets: [{
+                    label: 'إنجاز %',
+                    data: charts.completion_rates.data,
+                    backgroundColor: colors.violet,
+                }],
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { max: 100, beginAtZero: true } } },
+        });
+    }
+});
+</script>
+@endpush

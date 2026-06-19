@@ -50,7 +50,7 @@
     @else
         <form method="post" action="{{ route('admin.sales.leads.store') }}" class="space-y-6">
             @csrf
-            @include('admin.sales.leads._lead_fields', ['lead' => null, 'salesReps' => $salesReps])
+            @include('admin.sales.leads._lead_fields', ['lead' => null, 'salesReps' => $salesReps, 'categories' => $categories])
 
             <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
                 <div class="px-4 py-4 sm:px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

@@ -84,6 +84,9 @@ class CheckRole
             } elseif ($user->isBranchManager()) {
                 return redirect()->route('branch.office.dashboard')
                     ->with('error', 'غير مسموح لك بالوصول لهذه الصفحة');
+            } elseif ($user->isPlaceManager()) {
+                return redirect()->route('place.office.dashboard')
+                    ->with('error', 'غير مسموح لك بالوصول لهذه الصفحة');
             } else {
                 return redirect()->route('dashboard')
                     ->with('error', 'غير مسموح لك بالوصول لهذه الصفحة');

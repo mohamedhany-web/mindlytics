@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\EmployeeAgreement;
 use App\Models\EmployeeSalaryDeduction;
+use App\Models\SalesActivity;
 use App\Models\SalesDailyReport;
 use App\Models\SalesDailyReportContact;
 use App\Models\SalesLead;
@@ -69,8 +70,9 @@ class SalesDailyReportService
                 if (empty(trim((string) ($c['client_status'] ?? '')))) {
                     $contactErrors[] = "صف التواصل #{$row}: حالة العميل مطلوبة.";
                 }
-                if (empty(trim((string) ($c['client_problems'] ?? '')))) {
-                    $contactErrors[] = "صف التواصل #{$row}: مشاكل/احتياجات العميل مطلوبة.";
+                $problems = trim((string) ($c['client_problems'] ?? ''));
+                if ($problems === '' || $this->isAutoPlaceholderProblems($problems)) {
+                    $contactErrors[] = "صف التواصل #{$row}: مشاكل/احتياجات العميل — يجب كتابتها يدوياً (لا تُحسب تلقائياً).";
                 }
             }
         }
@@ -224,6 +226,386 @@ class SalesDailyReportService
     }
 
     /**
+     * يبني مسودة التقرير من نشاط الموظف (مكالمات، واتساب، متابعات، تغيير مراحل…).
+     *
+     * @return array{
+     *     metrics: array<string, int>,
+     *     contacts: list<array<string, mixed>>,
+     *     activity_notes: string,
+     *     productivity_notes: string,
+     *     activity_count: int
+     * }
+     */
+    public function buildFromActivities(User $user, Carbon $date): array
+    {
+        $start = $date->copy()->startOfDay();
+        $end = $date->copy()->endOfDay();
+
+        $activities = SalesActivity::query()
+            ->where('user_id', $user->id)
+            ->whereBetween('created_at', [$start, $end])
+            ->with(['lead' => fn ($q) => $q->withTrashed()])
+            ->orderBy('created_at')
+            ->get();
+
+        $calls = $activities->where('type', 'call');
+        $meetings = $activities->where('type', 'meeting');
+        $followUps = $activities->where('type', 'follow_up');
+        $messages = $activities->whereIn('type', ['whatsapp', 'email']);
+
+        $stageChanges = $activities->where('type', 'stage_change');
+        $qualified = $stageChanges
+            ->filter(fn (SalesActivity $a) => ($a->meta['to'] ?? null) === 'qualified')
+            ->unique('sales_lead_id')
+            ->count();
+        $bookings = $stageChanges
+            ->filter(fn (SalesActivity $a) => in_array($a->meta['to'] ?? null, ['won', 'proposal'], true))
+            ->unique('sales_lead_id')
+            ->count();
+
+        $touchTypes = ['call', 'meeting', 'follow_up', 'whatsapp', 'email', 'note', 'other'];
+        $touchedLeadIds = $activities
+            ->whereIn('type', $touchTypes)
+            ->pluck('sales_lead_id')
+            ->filter()
+            ->unique();
+
+        $numbersWorked = SalesLead::query()
+            ->whereIn('id', $touchedLeadIds)
+            ->where('assigned_to', $user->id)
+            ->whereNotNull('phone')
+            ->where('phone', '!=', '')
+            ->distinct()
+            ->count('phone');
+
+        if ($numbersWorked === 0) {
+            $numbersWorked = $touchedLeadIds->count();
+        }
+
+        $callsAnswered = $activities
+            ->whereIn('type', ['call', 'whatsapp'])
+            ->filter(fn (SalesActivity $a) => $a->lead && $a->lead->source === 'call')
+            ->unique('sales_lead_id')
+            ->count();
+
+        $metrics = [
+            'messages_replied' => $messages->count(),
+            'leads_qualified' => $qualified,
+            'bookings_from_leads' => $bookings,
+            'numbers_worked' => $numbersWorked,
+            'followups_done' => $followUps->count(),
+            'calls_made' => $calls->count(),
+            'meetings_held' => $meetings->count(),
+            'calls_answered' => $callsAnswered,
+        ];
+
+        $contacts = $this->buildContactRowsFromActivities($activities);
+
+        return [
+            'metrics' => $metrics,
+            'contacts' => $contacts,
+            'activity_notes' => $this->buildActivityNotesTimeline($activities),
+            'productivity_notes' => $this->buildProductivityNotes($metrics, $activities),
+            'activity_count' => $activities->count(),
+        ];
+    }
+
+    /**
+     * عملاء تواصل معهم الموظف في يوم معيّن — للاختيار في التقرير.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function leadsTouchedOnDate(User $user, Carbon $date): array
+    {
+        $start = $date->copy()->startOfDay();
+        $end = $date->copy()->endOfDay();
+
+        $activities = SalesActivity::query()
+            ->where('user_id', $user->id)
+            ->whereBetween('created_at', [$start, $end])
+            ->with(['lead' => fn ($q) => $q->withTrashed()])
+            ->orderByDesc('created_at')
+            ->get();
+
+        return $this->buildContactRowsFromActivities($activities);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, SalesActivity>  $activities
+     * @return list<array<string, mixed>>
+     */
+    private function buildContactRowsFromActivities(Collection $activities): array
+    {
+        $contactActivityTypes = ['call', 'meeting', 'whatsapp', 'follow_up'];
+
+        $grouped = $activities
+            ->whereIn('type', $contactActivityTypes)
+            ->filter(fn (SalesActivity $a) => $a->lead && trim((string) $a->lead->phone) !== '')
+            ->groupBy('sales_lead_id');
+
+        $contacts = [];
+        foreach ($grouped as $leadActivities) {
+            /** @var SalesActivity $activity */
+            $activity = $leadActivities->sortByDesc('created_at')->first();
+            $lead = $activity->lead;
+            if (! $lead) {
+                continue;
+            }
+
+            $contacts[] = [
+                'sales_lead_id' => $lead->id,
+                'contact_name' => $lead->name,
+                'contact_phone' => $lead->phone,
+                'interaction_type' => $activity->type === 'meeting'
+                    ? SalesDailyReportContact::TYPE_MEETING
+                    : SalesDailyReportContact::TYPE_CALL,
+                'client_status' => $this->contactStatusText($activity, $lead),
+                'client_problems' => $this->contactProblemsText($activity, $lead),
+                'activity_type' => $activity->type,
+                'activity_label' => SalesActivity::typeLabel($activity->type),
+                'auto_filled' => true,
+            ];
+        }
+
+        usort($contacts, fn ($a, $b) => strcmp($a['contact_name'], $b['contact_name']));
+
+        return $contacts;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function suggestedContactsForReport(User $user, Carbon $date, ?SalesDailyReport $report): array
+    {
+        $fromActivity = $this->leadsTouchedOnDate($user, $date);
+
+        if ($fromActivity !== []) {
+            return $fromActivity;
+        }
+
+        if (! $report) {
+            return [];
+        }
+
+        return $report->contacts->map(fn ($c) => [
+            'sales_lead_id' => $c->sales_lead_id,
+            'contact_name' => $c->contact_name,
+            'contact_phone' => $c->contact_phone,
+            'interaction_type' => $c->interaction_type,
+            'client_status' => $c->client_status,
+            'client_problems' => $c->client_problems,
+            'activity_type' => $c->interaction_type,
+            'activity_label' => $c->interactionTypeLabel(),
+            'auto_filled' => true,
+        ])->values()->all();
+    }
+
+
+    /**
+     * يحدّث مسودة اليوم من النشاط المسجّل — لا يمس التقارير المسلّمة.
+     */
+    public function syncAutoDraft(User $user, Carbon $date): ?SalesDailyReport
+    {
+        if ($date->isFuture() || ! $this->isWorkDay($date, $user)) {
+            return null;
+        }
+
+        $report = SalesDailyReport::forUser($user->id)
+            ->whereDate('report_date', $date)
+            ->first();
+
+        if ($report?->isSubmitted()) {
+            return $report;
+        }
+
+        $built = $this->buildFromActivities($user, $date);
+
+        $report = SalesDailyReport::firstOrNew([
+            'user_id' => $user->id,
+            'report_date' => $date->toDateString(),
+        ]);
+
+        $report->fill($built['metrics']);
+        $report->activity_notes = $built['activity_notes'] ?: null;
+        $report->productivity_notes = $built['productivity_notes'] ?: null;
+        $report->status = SalesDailyReport::STATUS_DRAFT;
+        $report->user_id = $user->id;
+        $report->report_date = $date->toDateString();
+
+        $check = $this->validateCompleteness($built['metrics'], $built['contacts']);
+        $report->missing_fields = array_merge(
+            $check['missing'],
+            $check['contact_errors'] !== [] ? ['contacts'] : []
+        );
+
+        $report->save();
+        $this->syncContacts($report, $built['contacts'], $user->id);
+
+        return $report->fresh(['contacts.lead']);
+    }
+
+    private function contactProblemsText(SalesActivity $activity, SalesLead $lead): string
+    {
+        $body = trim((string) ($activity->body ?? ''));
+        if ($body !== '') {
+            return $body;
+        }
+
+        $notes = trim((string) ($lead->notes ?? ''));
+        if ($notes !== '') {
+            return $notes;
+        }
+
+        $interest = trim((string) ($lead->interest ?? ''));
+        if ($interest !== '') {
+            return 'الاهتمام: '.$interest;
+        }
+
+        return '';
+    }
+
+    private function contactStatusText(SalesActivity $activity, SalesLead $lead): string
+    {
+        $parts = [
+            'مرحلة: '.SalesLead::stageLabel($lead->stage),
+            'مصدر: '.SalesLead::sourceLabel($lead->source ?? 'other'),
+            'أولوية: '.SalesLead::priorityLabel($lead->priority ?? 'normal'),
+            SalesActivity::typeLabel($activity->type),
+        ];
+
+        if ($activity->title) {
+            $parts[] = $activity->title;
+        }
+
+        if ($lead->company) {
+            $parts[] = 'شركة: '.$lead->company;
+        }
+
+        return implode(' | ', $parts);
+    }
+
+    private function isAutoPlaceholderProblems(string $text): bool
+    {
+        return str_contains($text, 'تم التسجيل تلقائياً من النشاط');
+    }
+
+    /**
+     * مقارنة تقرير اليوم بأهداف KPI اليومية.
+     *
+     * @param  array<string, int|null>|SalesDailyReport  $report
+     * @return array{
+     *     status: string,
+     *     status_label: string,
+     *     overall_pct: float,
+     *     lines: list<array{key: string, label: string, actual: int, target: int, pct: float, status: string}>
+     * }
+     */
+    public function kpiComparisonForReport(User $user, array|SalesDailyReport $report, Carbon $date): array
+    {
+        $metrics = $report instanceof SalesDailyReport
+            ? [
+                'calls_made' => (int) ($report->calls_made ?? 0),
+                'meetings_held' => (int) ($report->meetings_held ?? 0),
+                'followups_done' => (int) ($report->followups_done ?? 0),
+                'numbers_worked' => (int) ($report->numbers_worked ?? 0),
+                'leads_qualified' => (int) ($report->leads_qualified ?? 0),
+                'bookings_from_leads' => (int) ($report->bookings_from_leads ?? 0),
+            ]
+            : $report;
+
+        $targets = app(SalesKpiService::class)->mergedTargets($user, $date->copy()->startOfMonth());
+
+        $map = [
+            ['key' => 'calls', 'label' => 'مكالمات', 'actual' => $metrics['calls_made'] ?? 0, 'target' => (int) ($targets['calls_daily'] ?? 0)],
+            ['key' => 'meetings', 'label' => 'اجتماعات', 'actual' => $metrics['meetings_held'] ?? 0, 'target' => (int) ($targets['meetings_daily'] ?? 0)],
+            ['key' => 'followups', 'label' => 'متابعات', 'actual' => $metrics['followups_done'] ?? 0, 'target' => (int) ($targets['followups_daily'] ?? 0)],
+            ['key' => 'leads', 'label' => 'تأهيل/Leads', 'actual' => $metrics['leads_qualified'] ?? 0, 'target' => max(1, (int) round(((float) ($targets['leads_daily'] ?? 20)) / 10))],
+        ];
+
+        $lines = [];
+        $pcts = [];
+        foreach ($map as $row) {
+            $target = max(0, $row['target']);
+            $actual = max(0, (int) $row['actual']);
+            $pct = $target > 0 ? min(100.0, round($actual / $target * 100, 1)) : ($actual > 0 ? 100.0 : 0.0);
+            $status = $pct >= 100 ? 'met' : ($pct >= 70 ? 'near' : 'behind');
+            $lines[] = array_merge($row, ['pct' => $pct, 'status' => $status]);
+            $pcts[] = $pct;
+        }
+
+        $overall = count($pcts) ? round(array_sum($pcts) / count($pcts), 1) : 0.0;
+        $status = $overall >= 100 ? 'met' : ($overall >= 70 ? 'near' : 'behind');
+        $statusLabel = match ($status) {
+            'met' => 'تحقيق الأهداف — ممتاز',
+            'near' => 'قريب من الهدف — يحتاج دفعة',
+            default => 'أقل من الهدف — يحتاج متابعة',
+        };
+
+        return [
+            'status' => $status,
+            'status_label' => $statusLabel,
+            'overall_pct' => $overall,
+            'lines' => $lines,
+        ];
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, SalesActivity>  $activities
+     */
+    private function buildActivityNotesTimeline(Collection $activities): string
+    {
+        if ($activities->isEmpty()) {
+            return '';
+        }
+
+        $lines = $activities
+            ->filter(fn (SalesActivity $a) => $a->type !== 'stage_change')
+            ->map(function (SalesActivity $a) {
+                $time = $a->created_at?->format('H:i') ?? '';
+                $leadName = $a->lead?->name ?? '—';
+                $label = SalesActivity::typeLabel($a->type);
+                $extra = trim((string) ($a->body ?? ''));
+
+                return '• '.$time.' — '.$label.': '.$leadName.($extra !== '' ? ' — '.$extra : '');
+            })
+            ->values();
+
+        $stageLines = $activities
+            ->where('type', 'stage_change')
+            ->map(function (SalesActivity $a) {
+                $time = $a->created_at?->format('H:i') ?? '';
+                $leadName = $a->lead?->name ?? '—';
+
+                return '• '.$time.' — تغيير مرحلة: '.$leadName.' — '.trim((string) ($a->body ?? ''));
+            });
+
+        return $lines->merge($stageLines)->implode("\n");
+    }
+
+    /**
+     * @param  array<string, int>  $metrics
+     * @param  \Illuminate\Support\Collection<int, SalesActivity>  $activities
+     */
+    private function buildProductivityNotes(array $metrics, Collection $activities): string
+    {
+        if ($activities->isEmpty()) {
+            return '';
+        }
+
+        $parts = [
+            'مكالمات: '.$metrics['calls_made'],
+            'ردود: '.$metrics['calls_answered'],
+            'متابعات: '.$metrics['followups_done'],
+            'اجتماعات: '.$metrics['meetings_held'],
+            'أرقام: '.$metrics['numbers_worked'],
+            'رسائل: '.$metrics['messages_replied'],
+        ];
+
+        return 'ملخّص تلقائي — '.implode(' · ', $parts);
+    }
+
+
+    /**
      * نسبة أيام العمل التي سُلّم فيها التقرير (لـ KPI).
      */
     public function submissionRatePct(int $userId, Carbon $start, Carbon $end): ?float
@@ -310,6 +692,12 @@ class SalesDailyReportService
         } else {
             $report->update(['auto_deduction_id' => $deduction->id]);
         }
+
+        app(SalesNotificationService::class)->notifyDailyReportPenalty(
+            $employee,
+            $deduction,
+            $date->format('Y-m-d')
+        );
 
         return $deduction;
     }

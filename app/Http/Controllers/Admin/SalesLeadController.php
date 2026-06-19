@@ -5,10 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\SalesActivity;
 use App\Models\SalesLead;
+use App\Models\SalesLeadCategory;
+use App\Models\SalesLeadGroup;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\SalesAuditService;
 use App\Services\SalesLeadsExcelExportService;
+use App\Services\SalesLeadsImportService;
+use App\Services\SalesNotificationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -37,8 +41,9 @@ class SalesLeadController extends Controller
 
         $leads = $query->paginate(25)->withQueryString();
         $salesReps = User::salesEmployees()->orderBy('name')->get(['id', 'name']);
+        $categories = SalesLeadCategory::active()->ordered()->get();
 
-        return view('admin.sales.leads.index', compact('leads', 'salesReps', 'stats'));
+        return view('admin.sales.leads.index', compact('leads', 'salesReps', 'stats', 'categories'));
     }
 
     public function export(Request $request, SalesLeadsExcelExportService $excel): StreamedResponse
@@ -64,8 +69,9 @@ class SalesLeadController extends Controller
     public function create()
     {
         $salesReps = User::salesEmployees()->where('is_active', true)->orderBy('name')->get();
+        $categories = SalesLeadCategory::active()->ordered()->get();
 
-        return view('admin.sales.leads.create', compact('salesReps'));
+        return view('admin.sales.leads.create', compact('salesReps', 'categories'));
     }
 
     public function store(Request $request)
@@ -84,6 +90,8 @@ class SalesLeadController extends Controller
             'الإدارة أنشأت عميلاً محتملاً: ' . $lead->name . ' — مسند إلى: ' . ($lead->assignee->name ?? $lead->assigned_to)
         );
 
+        app(SalesNotificationService::class)->notifyLeadAssigned($lead->fresh(['assignee', 'category']));
+
         $warnings = $this->duplicateWarnings($request, (int) $validated['assigned_to']);
 
         return redirect()->route('admin.sales.leads.show', $lead)
@@ -91,9 +99,103 @@ class SalesLeadController extends Controller
             ->with('sales_duplicate_warnings', $warnings);
     }
 
+    public function importForm()
+    {
+        $salesReps = User::salesEmployees()->where('is_active', true)->orderBy('name')->get();
+        $categories = SalesLeadCategory::active()->ordered()->get();
+
+        $stats = [
+            'reps' => $salesReps->count(),
+            'categories' => $categories->count(),
+            'import_batches' => (int) SalesLead::query()->whereNotNull('import_batch')->distinct()->count('import_batch'),
+            'imported_leads' => (int) SalesLead::query()->whereNotNull('import_batch')->count(),
+        ];
+
+        $recentBatches = SalesLead::query()
+            ->whereNotNull('import_batch')
+            ->selectRaw('import_batch, COUNT(*) as leads_count, MAX(created_at) as imported_at')
+            ->groupBy('import_batch')
+            ->orderByDesc('imported_at')
+            ->limit(5)
+            ->get();
+
+        $groups = SalesLeadGroup::query()
+            ->with('assignee:id,name')
+            ->orderBy('name')
+            ->get(['id', 'name', 'assigned_to', 'is_admin_managed']);
+
+        return view('admin.sales.leads.import', compact('salesReps', 'categories', 'stats', 'recentBatches', 'groups'));
+    }
+
+    public function importTemplate(SalesLeadsExcelExportService $excel): StreamedResponse
+    {
+        $spreadsheet = $excel->buildImportTemplate();
+        $filename = 'قالب-استيراد-عملاء-'.now()->format('Y-m-d').'.xlsx';
+
+        return response()->streamDownload(function () use ($excel, $spreadsheet) {
+            $excel->writeToOutput($spreadsheet);
+            $spreadsheet->disconnectWorksheets();
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    public function importStore(Request $request, SalesLeadsImportService $importService)
+    {
+        $validated = $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+            'assigned_to_ids' => 'required_without:group_id|array|min:1',
+            'assigned_to_ids.*' => 'exists:users,id',
+            'category_id' => 'required|exists:sales_lead_categories,id',
+            'source' => 'nullable|string|in:'.implode(',', array_keys(SalesLead::SOURCES)),
+            'default_priority' => 'nullable|string|in:'.implode(',', array_keys(SalesLead::PRIORITIES)),
+            'group_id' => 'nullable|integer|exists:sales_lead_groups,id',
+        ], [
+            'file.required' => 'اختر ملف Excel أو CSV.',
+            'category_id.required' => 'التصنيف مطلوب لتنظيم البيانات.',
+            'assigned_to_ids.required_without' => 'اختر موظف مبيعات واحد على الأقل، أو حدّد مجموعة.',
+        ]);
+
+        $assigneeIds = array_map('intval', $validated['assigned_to_ids'] ?? []);
+        if (! empty($validated['group_id'])) {
+            $group = SalesLeadGroup::query()->findOrFail((int) $validated['group_id']);
+            $assigneeIds = [(int) $group->assigned_to];
+        }
+
+        foreach ($assigneeIds as $repId) {
+            $this->assertSalesRep((int) $repId);
+        }
+
+        try {
+            $result = $importService->import(
+                $request->file('file'),
+                $assigneeIds,
+                (int) $validated['category_id'],
+                (int) auth()->id(),
+                $validated['source'] ?? 'other',
+                $validated['default_priority'] ?? 'normal',
+                isset($validated['group_id']) ? (int) $validated['group_id'] : null,
+            );
+        } catch (\Throwable $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+
+        $repSummary = User::query()->whereIn('id', array_keys(array_filter($result['per_rep'] ?? [])))
+            ->pluck('name', 'id')
+            ->map(fn ($name, $id) => $name.': '.($result['per_rep'][$id] ?? 0))
+            ->implode(' · ');
+
+        return redirect()->route('admin.sales.leads.index', array_filter([
+            'category_id' => $validated['category_id'],
+            'import_batch' => $result['batch_id'],
+            'group_id' => $validated['group_id'] ?? null,
+        ]))->with('success', "تم استيراد {$result['created']} عميل — تخطي {$result['skipped']}.".($repSummary ? " ({$repSummary})" : ''))
+            ->with('import_errors', $result['errors']);
+    }
+
     public function show(SalesLead $lead)
     {
-        $lead->load(['activities.user', 'assignee', 'creator']);
+        $lead->load(['activities.user', 'assignee', 'creator', 'category']);
 
         SalesAuditService::log(
             'sales_lead_viewed_admin',
@@ -109,8 +211,9 @@ class SalesLeadController extends Controller
     public function edit(SalesLead $lead)
     {
         $salesReps = User::salesEmployees()->where('is_active', true)->orderBy('name')->get();
+        $categories = SalesLeadCategory::active()->ordered()->get();
 
-        return view('admin.sales.leads.edit', compact('lead', 'salesReps'));
+        return view('admin.sales.leads.edit', compact('lead', 'salesReps', 'categories'));
     }
 
     public function update(Request $request, SalesLead $lead)
@@ -135,6 +238,7 @@ class SalesLeadController extends Controller
                 ['assigned_to' => $lead->assigned_to],
                 'إعادة إسناد عميل: ' . $lead->name
             );
+            app(SalesNotificationService::class)->notifyLeadAssigned($lead->fresh(['assignee', 'category']), (int) $oldAssignee);
         }
 
         if ($oldStage !== $lead->stage) {
@@ -284,6 +388,8 @@ class SalesLeadController extends Controller
 
             DB::commit();
 
+            app(SalesNotificationService::class)->notifyCommissionPaid($rep, $lead->fresh(), $txn);
+
             return back()->with('success', 'تم اعتماد الفوز وصرف الكوميشن بنجاح.');
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -293,8 +399,14 @@ class SalesLeadController extends Controller
 
     private function indexQuery(Request $request): Builder
     {
-        $query = SalesLead::query()->with(['assignee', 'creator']);
+        $query = SalesLead::query()->with(['assignee', 'creator', 'category']);
 
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+        if ($request->filled('import_batch')) {
+            $query->where('import_batch', $request->import_batch);
+        }
         if ($request->filled('assigned_to')) {
             $query->where('assigned_to', $request->assigned_to);
         }
@@ -422,6 +534,7 @@ class SalesLeadController extends Controller
         ];
         if ($admin) {
             $rules['assigned_to'] = 'required|exists:users,id';
+            $rules['category_id'] = 'required|exists:sales_lead_categories,id';
             $rules['csat_rating'] = 'nullable|integer|min:1|max:5';
             $rules['csat_comment'] = 'nullable|string|max:1000';
         }

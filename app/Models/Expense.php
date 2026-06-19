@@ -20,6 +20,8 @@ class Expense extends Model
         'payment_method',
         'funding_source',
         'wallet_id',
+        'offline_location_id',
+        'place_monthly_settlement_id',
         'reference_number',
         'attachment',
         'status',
@@ -43,6 +45,16 @@ class Expense extends Model
     public function wallet()
     {
         return $this->belongsTo(Wallet::class);
+    }
+
+    public function offlineLocation()
+    {
+        return $this->belongsTo(OfflineLocation::class, 'offline_location_id');
+    }
+
+    public function placeMonthlySettlement()
+    {
+        return $this->belongsTo(PlaceMonthlySettlement::class, 'place_monthly_settlement_id');
     }
 
     public function approvedBy()

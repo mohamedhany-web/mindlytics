@@ -37,7 +37,7 @@
     <form method="post" action="{{ route('admin.sales.leads.update', $lead) }}" class="space-y-6">
         @csrf
         @method('PUT')
-        @include('admin.sales.leads._lead_fields', ['lead' => $lead, 'salesReps' => $salesReps])
+        @include('admin.sales.leads._lead_fields', ['lead' => $lead, 'salesReps' => $salesReps, 'categories' => $categories ?? []])
 
         <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
             <div class="px-4 py-4 sm:px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

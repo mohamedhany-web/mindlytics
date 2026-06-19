@@ -62,6 +62,7 @@ class User extends Authenticatable
         'two_factor_recovery_codes',
         'two_factor_confirmed_at',
         'branch_id',
+        'offline_location_id',
     ];
 
     /**
@@ -196,7 +197,7 @@ class User extends Authenticatable
     }
 
     /**
-     * هل هذا المستخدم مطلوب له تفعيل المصادقة الثنائية (أدمن ومدير عام والمدربين فقط)
+     * هل هذا المستخدم مطلوب له تفعيل المصادقة الثنائية (أدمن ومدير عام والمدربين ومدير الفرع)
      */
     public function requiresTwoFactor(): bool
     {
@@ -391,6 +392,19 @@ class User extends Authenticatable
     public function isBranchManager(): bool
     {
         return $this->role === 'branch_manager';
+    }
+
+    /**
+     * مدير مكان إداري (لوحة place-office)
+     */
+    public function isPlaceManager(): bool
+    {
+        return $this->role === 'place_manager';
+    }
+
+    public function offlineLocation()
+    {
+        return $this->belongsTo(OfflineLocation::class, 'offline_location_id');
     }
 
     /**
@@ -698,6 +712,16 @@ class User extends Authenticatable
     public function salaryPayments()
     {
         return $this->hasMany(EmployeeSalaryPayment::class, 'employee_id');
+    }
+
+    public function salaryAdditions()
+    {
+        return $this->hasMany(EmployeeSalaryAddition::class, 'employee_id');
+    }
+
+    public function employeeDailyReports()
+    {
+        return $this->hasMany(EmployeeDailyReport::class, 'user_id');
     }
 
     /**

@@ -75,6 +75,21 @@
                     <textarea name="description" rows="3" 
                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">{{ old('description') }}</textarea>
                 </div>
+
+                <div class="md:col-span-2 pt-2 border-t"><h3 class="font-bold text-gray-900">إعدادات الفوترة</h3></div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">سعر الساعة (ج.م)</label>
+                    <input type="number" name="hourly_rate" value="{{ old('hourly_rate') }}" step="0.01" min="0" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">المحفظة الافتراضية</label>
+                    <select name="default_wallet_id" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg">
+                        <option value="">—</option>
+                        @foreach($wallets ?? [] as $wallet)
+                            <option value="{{ $wallet->id }}" @selected(old('default_wallet_id') == $wallet->id)>{{ $wallet->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
         </div>
 

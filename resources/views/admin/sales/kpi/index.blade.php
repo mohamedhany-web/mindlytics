@@ -143,6 +143,58 @@
         </div>
     </section>
 
+    {{-- أداء التصنيفات --}}
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+                <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                    <i class="fas fa-tags text-emerald-600"></i>
+                    أداء التصنيفات
+                </h3>
+                <p class="text-xs text-slate-600">Leads / فوز / إيراد / متابعات متأخرة — الشهر الحالي.</p>
+            </div>
+            <a href="{{ route('admin.sales.categories.index') }}" class="text-xs font-semibold text-emerald-700 hover:underline">إدارة التصنيفات</a>
+        </div>
+        <div class="overflow-x-auto">
+            @if(($categoryPerformance ?? collect())->isEmpty())
+                <div class="text-center py-8 px-4">
+                    <p class="text-sm text-slate-500">لا توجد بيانات تصنيفات بعد.</p>
+                </div>
+            @else
+                <table class="min-w-[760px] w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-700 border-b border-slate-200">
+                            <th class="px-4 py-3 text-right font-semibold">التصنيف</th>
+                            <th class="px-4 py-3 text-center font-semibold">إجمالي</th>
+                            <th class="px-4 py-3 text-center font-semibold">مفتوح</th>
+                            <th class="px-4 py-3 text-center font-semibold">جديد الشهر</th>
+                            <th class="px-4 py-3 text-center font-semibold">فوز</th>
+                            <th class="px-4 py-3 text-center font-semibold">Conversion</th>
+                            <th class="px-4 py-3 text-left font-semibold">إيراد</th>
+                            <th class="px-4 py-3 text-center font-semibold">متأخر</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @foreach($categoryPerformance as $row)
+                            <tr class="hover:bg-slate-50">
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-bold border" style="color: {{ $row['category']->color }}; border-color: {{ $row['category']->color }}44; background: {{ $row['category']->color }}12">{{ $row['category']->name }}</span>
+                                </td>
+                                <td class="px-4 py-3 text-center tabular-nums">{{ $row['total'] }}</td>
+                                <td class="px-4 py-3 text-center tabular-nums">{{ $row['open'] }}</td>
+                                <td class="px-4 py-3 text-center tabular-nums">{{ $row['created_month'] }}</td>
+                                <td class="px-4 py-3 text-center tabular-nums text-emerald-700 font-bold">{{ $row['won_month'] }}</td>
+                                <td class="px-4 py-3 text-center tabular-nums">{{ $row['conversion'] !== null ? number_format($row['conversion'], 1).'%' : '—' }}</td>
+                                <td class="px-4 py-3 text-left tabular-nums">{{ number_format($row['revenue_month'], 0) }}</td>
+                                <td class="px-4 py-3 text-center tabular-nums {{ $row['overdue'] > 0 ? 'text-rose-600 font-bold' : '' }}">{{ $row['overdue'] }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @endif
+        </div>
+    </section>
+
     {{-- مراقبة إشعارات المتابعة --}}
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
         <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

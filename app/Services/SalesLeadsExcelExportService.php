@@ -50,7 +50,7 @@ class SalesLeadsExcelExportService
         $sheet->setTitle('العملاء المحتملون');
         $sheet->setRightToLeft(true);
 
-        $lastColIndex = $includeAssignee ? 12 : 11;
+        $lastColIndex = $includeAssignee ? 14 : 13;
         $lastCol = Coordinate::stringFromColumnIndex($lastColIndex);
 
         $statsQuery = clone $query;
@@ -199,8 +199,8 @@ class SalesLeadsExcelExportService
         $sheet->getRowDimension(5)->setRowHeight(8);
 
         $headers = $includeAssignee
-            ? ['الاسم', 'مسند إلى', 'الهاتف', 'البريد', 'الشركة', 'المصدر', 'المرحلة', 'الأولوية', 'قيمة متوقعة (ج.م)', 'متابعة تالية', 'آخر تواصل', 'تاريخ الإنشاء']
-            : ['الاسم', 'الهاتف', 'البريد', 'الشركة', 'المصدر', 'المرحلة', 'الأولوية', 'قيمة متوقعة (ج.م)', 'متابعة تالية', 'آخر تواصل', 'تاريخ الإنشاء'];
+            ? ['الاسم', 'مسند إلى', 'التصنيف', 'دفعة الاستيراد', 'الهاتف', 'البريد', 'الشركة', 'المصدر', 'المرحلة', 'الأولوية', 'قيمة متوقعة (ج.م)', 'متابعة تالية', 'آخر تواصل', 'تاريخ الإنشاء']
+            : ['الاسم', 'التصنيف', 'دفعة الاستيراد', 'الهاتف', 'البريد', 'الشركة', 'المصدر', 'المرحلة', 'الأولوية', 'قيمة متوقعة (ج.م)', 'متابعة تالية', 'آخر تواصل', 'تاريخ الإنشاء'];
 
         $c = 1;
         foreach ($headers as $h) {
@@ -234,14 +234,16 @@ class SalesLeadsExcelExportService
         ]);
         $sheet->getRowDimension($tableHeaderRow)->setRowHeight(32);
 
-        $valueCol = Coordinate::stringFromColumnIndex($includeAssignee ? 9 : 8);
+        $valueCol = Coordinate::stringFromColumnIndex($includeAssignee ? 11 : 10);
 
         $rowNum = $tableHeaderRow + 1;
         $alternate = false;
 
         $dataQuery = $query->clone()->orderBy('id');
         if ($includeAssignee) {
-            $dataQuery->with('assignee');
+            $dataQuery->with(['assignee', 'category']);
+        } else {
+            $dataQuery->with('category');
         }
 
         foreach ($dataQuery->cursor() as $l) {
@@ -252,6 +254,8 @@ class SalesLeadsExcelExportService
                 ? [
                     $l->name,
                     $l->assignee->name ?? '—',
+                    $l->category?->name ?? '—',
+                    $l->import_batch ?? '—',
                     $l->phone,
                     $l->email,
                     $l->company,
@@ -265,6 +269,8 @@ class SalesLeadsExcelExportService
                 ]
                 : [
                     $l->name,
+                    $l->category?->name ?? '—',
+                    $l->import_batch ?? '—',
                     $l->phone,
                     $l->email,
                     $l->company,
@@ -319,7 +325,7 @@ class SalesLeadsExcelExportService
             }
 
             $pr = $l->priority ?? 'normal';
-            $prioCol = Coordinate::stringFromColumnIndex($includeAssignee ? 8 : 7);
+            $prioCol = Coordinate::stringFromColumnIndex($includeAssignee ? 10 : 9);
             if ($pr === 'urgent') {
                 $sheet->getStyle($prioCol . $rowNum)->applyFromArray([
                     'fill' => [
@@ -339,7 +345,7 @@ class SalesLeadsExcelExportService
             }
 
             if ($l->isOpen() && $l->isFollowUpOverdue()) {
-                $followCol = Coordinate::stringFromColumnIndex($includeAssignee ? 10 : 9);
+                $followCol = Coordinate::stringFromColumnIndex($includeAssignee ? 12 : 11);
                 $sheet->getStyle($followCol . $rowNum)->applyFromArray([
                     'font' => [
                         'bold' => true,
@@ -374,6 +380,40 @@ class SalesLeadsExcelExportService
         $sheet->getPageSetup()->setFitToWidth(1);
         $sheet->getPageSetup()->setFitToHeight(0);
         $sheet->getHeaderFooter()->setOddFooter('&L&' . $appName . ' &R& صفحة &P / &N');
+
+        return $spreadsheet;
+    }
+
+    public function buildImportTemplate(): Spreadsheet
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('قالب الاستيراد');
+        $sheet->setRightToLeft(true);
+
+        $headers = ['الاسم', 'الهاتف', 'البريد', 'الشركة', 'الاهتمام', 'القيمة', 'ملاحظات', 'الأولوية'];
+        foreach ($headers as $i => $header) {
+            $col = Coordinate::stringFromColumnIndex($i + 1);
+            $sheet->setCellValue($col.'1', $header);
+        }
+
+        $sheet->setCellValue('A2', 'أحمد محمد');
+        $sheet->setCellValue('B2', '01001234567');
+        $sheet->setCellValue('C2', 'ahmed@example.com');
+        $sheet->setCellValue('D2', 'شركة مثال');
+        $sheet->setCellValue('E2', 'دورة Laravel');
+        $sheet->setCellValue('F2', 5000);
+        $sheet->setCellValue('G2', 'عميل مهتم');
+        $sheet->setCellValue('H2', 'عادي');
+
+        $sheet->getStyle('A1:H1')->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => self::WHITE]],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => self::EMERALD_700]],
+        ]);
+
+        for ($i = 1; $i <= 8; $i++) {
+            $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($i))->setAutoSize(true);
+        }
 
         return $spreadsheet;
     }

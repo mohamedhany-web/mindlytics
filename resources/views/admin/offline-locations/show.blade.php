@@ -97,6 +97,122 @@
         @endif
     </div>
 
+    <!-- الفوترة ومدير المكان -->
+    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200 space-y-6">
+        <h2 class="text-xl font-bold text-gray-900">الفوترة والمخالصة الشهرية</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div><span class="text-gray-500">سعر الساعة</span><p class="font-semibold">{{ $offlineLocation->hourly_rate ? number_format((float) $offlineLocation->hourly_rate, 2).' ج.م' : '—' }}</p></div>
+            <div><span class="text-gray-500">المحفظة</span><p class="font-semibold">{{ $offlineLocation->defaultWallet?->name ?? '—' }}</p></div>
+        </div>
+        <div class="flex gap-3 text-sm">
+            <a href="{{ route('admin.place-settlements.index', ['location_id' => $offlineLocation->id]) }}" class="text-blue-600">مخالصات هذا المكان</a>
+            <a href="{{ route('admin.place-usage-logs.index', ['location_id' => $offlineLocation->id]) }}" class="text-blue-600">سجلات الساعات</a>
+        </div>
+    </div>
+
+    @if (session('generated_place_manager_password'))
+        <div class="rounded-2xl border-2 border-amber-300 bg-amber-50 p-6 text-amber-950 shadow-lg">
+            <h3 class="font-black text-lg mb-2 flex items-center gap-2"><i class="fas fa-key text-amber-600"></i> بيانات الدخول (عرض لمرة واحدة)</h3>
+            <p class="text-sm mb-4 text-amber-900/90">أرسل هذه البيانات لمدير المكان عبر قناة آمنة.</p>
+            <div class="grid sm:grid-cols-3 gap-4 text-sm">
+                <div class="bg-white/90 rounded-xl p-4 border border-amber-200">
+                    <p class="text-xs font-semibold text-amber-800 mb-1">البريد (اسم المستخدم)</p>
+                    <p class="font-mono break-all" dir="ltr">{{ session('generated_place_manager_email') }}</p>
+                </div>
+                <div class="bg-white/90 rounded-xl p-4 border border-amber-200">
+                    <p class="text-xs font-semibold text-amber-800 mb-1">رقم الهاتف</p>
+                    <p class="font-mono break-all" dir="ltr">{{ session('generated_place_manager_phone') }}</p>
+                </div>
+                <div class="bg-white/90 rounded-xl p-4 border border-amber-200">
+                    <p class="text-xs font-semibold text-amber-800 mb-1">كلمة المرور</p>
+                    <p class="font-mono break-all select-all" dir="ltr">{{ session('generated_place_manager_password') }}</p>
+                </div>
+            </div>
+            <p class="text-xs mt-4 text-amber-900/80">
+                تسجيل الدخول: <a class="underline font-semibold text-blue-700" href="{{ url('/login') }}" dir="ltr">{{ url('/login') }}</a>
+                — لوحة المكان: <a class="underline font-semibold text-blue-700" href="{{ url('/place-office') }}" dir="ltr">{{ url('/place-office') }}</a>
+            </p>
+        </div>
+    @endif
+
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+        <div class="px-6 py-5 border-b border-slate-200 bg-slate-50">
+            <h3 class="text-lg font-black text-slate-900">مديرو المكان</h3>
+            <p class="text-xs text-slate-600 mt-1">حسابات بصلاحية <code class="text-xs bg-slate-200 px-1.5 py-0.5 rounded">place_manager</code> — نفس تصميم لوحة الموظف</p>
+        </div>
+
+        @if(($placeManagers ?? collect())->isNotEmpty())
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead class="bg-slate-50">
+                        <tr class="text-xs font-semibold uppercase text-slate-700">
+                            <th class="px-6 py-4 text-right">الاسم</th>
+                            <th class="px-6 py-4 text-right">البريد</th>
+                            <th class="px-6 py-4 text-right">الهاتف</th>
+                            <th class="px-6 py-4 text-right">آخر دخول</th>
+                            <th class="px-6 py-4 text-right">الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @foreach($placeManagers as $m)
+                            <tr class="hover:bg-slate-50/80">
+                                <td class="px-6 py-4 font-semibold">{{ $m->name }}</td>
+                                <td class="px-6 py-4 font-mono text-xs" dir="ltr">{{ $m->email }}</td>
+                                <td class="px-6 py-4 font-mono text-xs" dir="ltr">{{ $m->phone }}</td>
+                                <td class="px-6 py-4 text-slate-600">{{ $m->last_login_at?->diffForHumans() ?? '—' }}</td>
+                                <td class="px-6 py-4">
+                                    <span class="px-2 py-1 rounded-full text-xs font-semibold {{ $m->is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600' }}">
+                                        {{ $m->is_active ? 'نشط' : 'غير نشط' }}
+                                    </span>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @else
+            <form action="{{ route('admin.offline-locations.place-managers.store', $offlineLocation) }}" method="POST" class="p-6 space-y-6">
+                @csrf
+                <h4 class="font-bold text-gray-900 border-b pb-3">إنشاء حساب مدير المكان — بيانات كاملة</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">الاسم الكامل *</label>
+                        <input type="text" name="name" value="{{ old('name') }}" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg">
+                        @error('name')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">البريد الإلكتروني (اسم المستخدم) *</label>
+                        <input type="email" name="email" value="{{ old('email') }}" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg" dir="ltr">
+                        @error('email')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">رقم الهاتف *</label>
+                        <input type="text" name="phone" value="{{ old('phone') }}" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg" dir="ltr">
+                        @error('phone')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">كلمة المرور *</label>
+                        <input type="password" name="password" required minlength="8" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg" dir="ltr">
+                        @error('password')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">العنوان</label>
+                        <input type="text" name="address" value="{{ old('address') }}" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" name="is_active" value="1" checked class="rounded border-gray-300 text-blue-600">
+                            <span class="text-sm font-medium text-gray-700">حساب نشط</span>
+                        </label>
+                    </div>
+                </div>
+                <button type="submit" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold">
+                    <i class="fas fa-user-plus ml-2"></i>إنشاء حساب مدير المكان
+                </button>
+            </form>
+        @endif
+    </section>
+
     <!-- الكورسات المرتبطة -->
     @if($offlineLocation->courses->count() > 0)
     <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">

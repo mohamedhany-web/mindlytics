@@ -108,6 +108,9 @@ class TwoFactorController extends Controller
         if ($user->isBranchManager()) {
             return redirect()->intended(route('branch.office.dashboard'));
         }
+        if ($user->isPlaceManager()) {
+            return redirect()->intended(route('place.office.dashboard'));
+        }
         if ($user->isInstructor()) {
             return redirect()->intended(route('instructor.courses.index'));
         }
@@ -216,6 +219,9 @@ class TwoFactorController extends Controller
         }
         if ($user->isBranchManager()) {
             return 'branch.office.dashboard';
+        }
+        if ($user->isPlaceManager()) {
+            return 'place.office.dashboard';
         }
         if ($user->isInstructor()) {
             return 'instructor.courses.index';

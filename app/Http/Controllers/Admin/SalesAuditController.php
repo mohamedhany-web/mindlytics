@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class SalesAuditController extends Controller
 {
-    private const SALES_ACTIONS = [
+    public const SALES_ACTIONS = [
         'sales_lead_created',
         'sales_lead_viewed',
         'sales_lead_updated',
@@ -20,6 +20,10 @@ class SalesAuditController extends Controller
         'sales_lead_deleted_admin',
         'sales_lead_reassigned',
         'sales_activity_created_admin',
+        'sales_lead_won_confirmed',
+        'sales_leads_bulk_import',
+        'sales_lead_csat_recorded',
+        'sales_data_transferred',
     ];
 
     public function index(Request $request)
@@ -58,11 +62,11 @@ class SalesAuditController extends Controller
             'logs' => $logs,
             'stats' => $stats,
             'filterUsers' => $filterUsers,
-            'actionLabels' => $this->actionLabels(),
+            'actionLabels' => self::actionLabels(),
         ]);
     }
 
-    private function actionLabels(): array
+    public static function actionLabels(): array
     {
         return [
             'sales_lead_created' => 'إنشاء عميل (موظف)',
@@ -76,6 +80,10 @@ class SalesAuditController extends Controller
             'sales_lead_deleted_admin' => 'حذف عميل (إدارة)',
             'sales_lead_reassigned' => 'إعادة إسناد',
             'sales_activity_created_admin' => 'نشاط (إدارة)',
+            'sales_lead_won_confirmed' => 'اعتماد فوز + عمولة',
+            'sales_leads_bulk_import' => 'استيراد دفعة عملاء',
+            'sales_lead_csat_recorded' => 'تسجيل CSAT',
+            'sales_data_transferred' => 'تحويل بيانات مبيعات',
         ];
     }
 }

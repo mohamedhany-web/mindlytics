@@ -53,6 +53,9 @@ class SalesLead extends Model
     protected $fillable = [
         'assigned_to',
         'created_by',
+        'category_id',
+        'sales_lead_group_id',
+        'import_batch',
         'name',
         'phone',
         'email',
@@ -98,6 +101,16 @@ class SalesLead extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(SalesLeadCategory::class, 'category_id');
+    }
+
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(SalesLeadGroup::class, 'sales_lead_group_id');
     }
 
     public function activities(): HasMany

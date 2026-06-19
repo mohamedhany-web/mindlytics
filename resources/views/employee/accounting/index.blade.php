@@ -14,7 +14,7 @@
 
     @if($activeAgreement)
         <!-- الكاردات في بداية الصفحة -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             <div class="dashboard-card rounded-2xl p-6 card-hover-effect border-2 border-green-200/50 hover:border-green-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 253, 250, 0.95) 50%, rgba(209, 250, 229, 0.9) 100%);">
                 <div class="flex items-center justify-between">
                     <div>
@@ -51,7 +51,19 @@
                 </div>
             </div>
 
-            <div class="dashboard-card rounded-2xl p-6 card-hover-effect border-2 border-amber-200/50 hover:border-amber-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 251, 235, 0.95) 50%, rgba(254, 243, 199, 0.9) 100%);">
+            <div class="dashboard-card rounded-2xl p-6 card-hover-effect border-2 border-emerald-200/50 hover:border-emerald-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(236, 253, 245, 0.95) 50%, rgba(209, 250, 229, 0.9) 100%);">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-600 mb-1">إضافات الشهر الحالي</p>
+                        <p class="text-3xl font-black text-emerald-700">{{ number_format($stats['current_month_additions'] ?? 0, 2) }} ج.م</p>
+                    </div>
+                    <div class="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
+                        <i class="fas fa-plus-circle text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-card rounded-2xl p-6 card-hover-effect border-2 border-amber-200/50 hover:border-amber-300/70 shadow-xl hover:shadow-2xl transition-all duration-300 md:col-span-2" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 251, 235, 0.95) 50%, rgba(254, 243, 199, 0.9) 100%);">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm font-semibold text-gray-600 mb-1">كوميشن الشهر الحالي</p>
@@ -233,6 +245,34 @@
                                 @elseif($deduction->type === 'penalty') غرامة
                                 @else أخرى
                                 @endif
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
+        <!-- الإضافات الخارجية الأخيرة -->
+        @if(isset($recentAdditions) && $recentAdditions->count() > 0)
+        <div class="bg-white rounded-xl shadow-lg p-6 border border-emerald-100">
+            <h2 class="text-xl font-bold text-gray-900 mb-4"><i class="fas fa-plus-circle text-emerald-600 mr-2"></i>الإضافات الخارجية الأخيرة</h2>
+            <div class="space-y-3">
+                @foreach($recentAdditions as $addition)
+                <div class="border border-emerald-100 rounded-lg p-4 hover:bg-emerald-50/30 transition-colors">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <h4 class="font-semibold text-gray-900">{{ $addition->title }}</h4>
+                            @if($addition->description)
+                                <p class="text-sm text-gray-600 mt-1">{{ $addition->description }}</p>
+                            @endif
+                            <p class="text-xs text-gray-500 mt-1">{{ $addition->addition_date->format('Y-m-d') }} — {{ $addition->addition_number }}</p>
+                        </div>
+                        <div class="text-left shrink-0">
+                            <p class="text-lg font-bold text-emerald-600">+{{ number_format($addition->amount, 2) }} ج.م</p>
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">
+                                {{ \App\Models\EmployeeSalaryAddition::typeLabels()[$addition->type] ?? $addition->type }}
                             </span>
                         </div>
                     </div>

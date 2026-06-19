@@ -239,6 +239,10 @@ class AuthController extends Controller
                 return redirect()->intended(route('branch.office.dashboard'));
             }
 
+            if ($user->isPlaceManager()) {
+                return redirect()->intended(route('place.office.dashboard'));
+            }
+
             if ($user->isInstructor()) {
                 return redirect()->intended(route('instructor.dashboard'));
             }

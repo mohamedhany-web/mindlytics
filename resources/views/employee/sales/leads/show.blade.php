@@ -175,6 +175,12 @@
                     @endphp
                     <span class="px-3 py-1 rounded-full text-xs font-bold {{ $prClass }}">{{ \App\Models\SalesLead::priorityLabel($pr) }}</span>
                     <span class="text-sm text-gray-500">{{ \App\Models\SalesLead::sourceLabel($lead->source) }}</span>
+                    @if($lead->category)
+                        <span class="px-3 py-1 rounded-full text-xs font-bold" style="color: {{ $lead->category->color }}; background: {{ $lead->category->color }}18">{{ $lead->category->name }}</span>
+                    @endif
+                    @if($lead->import_batch)
+                        <span class="text-xs text-gray-400">دفعة: {{ $lead->import_batch }}</span>
+                    @endif
                 </div>
                 <h2 class="text-lg font-bold text-gray-900">{{ $lead->name }}</h2>
                 <dl class="space-y-3 text-sm border-t border-gray-100 pt-4">

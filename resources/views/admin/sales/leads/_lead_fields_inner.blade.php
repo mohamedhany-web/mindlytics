@@ -28,6 +28,16 @@
     </div>
 
     <div>
+        <label class="{{ $labelClass }}">التصنيف <span class="text-rose-600">*</span></label>
+        <select name="category_id" required class="{{ $inputClass }}">
+            <option value="">— اختر التصنيف —</option>
+            @foreach($categories ?? \App\Models\SalesLeadCategory::active()->ordered()->get() as $cat)
+                <option value="{{ $cat->id }}" @selected(old('category_id', $lead->category_id ?? '') == $cat->id)>{{ $cat->name }}</option>
+            @endforeach
+        </select>
+        @error('category_id')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
+    </div>
+    <div>
         <label class="{{ $labelClass }}">المصدر <span class="text-rose-600">*</span></label>
         <select name="source" required class="{{ $inputClass }}">
             @foreach(\App\Models\SalesLead::SOURCES as $k => $label)

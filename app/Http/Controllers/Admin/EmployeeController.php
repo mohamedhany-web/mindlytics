@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\EmployeeJob;
+use App\Services\UserDeletionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -200,10 +201,23 @@ class EmployeeController extends Controller
     /**
      * حذف موظف
      */
-    public function destroy(User $employee)
+    public function destroy(User $employee, UserDeletionService $deletionService)
     {
-        $employee->delete();
-        return redirect()->route('admin.employees.index')
-                        ->with('success', 'تم حذف الموظف بنجاح');
+        if (! $employee->is_employee) {
+            abort(404);
+        }
+
+        try {
+            $result = $deletionService->deleteEmployee($employee);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors());
+        }
+
+        $message = 'تم حذف الموظف بنجاح';
+        if (($result['unassigned_leads'] ?? 0) > 0) {
+            $message .= ' — تم إلغاء تعيين ' . $result['unassigned_leads'] . ' عميل محتمل (يمكن إعادة تعيينهم من قسم المبيعات).';
+        }
+
+        return redirect()->route('admin.employees.index')->with('success', $message);
     }
 }

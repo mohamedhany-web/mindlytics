@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SalesDailyReport;
 use App\Models\SalesLead;
 use App\Services\SalesDailyReportService;
+use App\Services\SalesNotificationService;
 use App\Support\SalesDailyReportSettings;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -38,6 +39,15 @@ class SalesDailyReportController extends Controller
         $isWeeklyOffToday = $user->isWeeklyOff($date);
         $isLeaveToday = $user->isOnApprovedLeave($date);
 
+        $autoSynced = false;
+        if ($date->isToday() && $isWorkDayToday && ! ($report?->isSubmitted())) {
+            $synced = $service->syncAutoDraft($user, $date);
+            if ($synced) {
+                $report = $synced;
+                $autoSynced = true;
+            }
+        }
+
         return view('employee.sales.daily-reports.index', compact(
             'report',
             'recent',
@@ -47,7 +57,8 @@ class SalesDailyReportController extends Controller
             'service',
             'isWorkDayToday',
             'isWeeklyOffToday',
-            'isLeaveToday'
+            'isLeaveToday',
+            'autoSynced'
         ));
     }
 
@@ -82,6 +93,17 @@ class SalesDailyReportController extends Controller
                 ->with('info', 'تم تسليم تقرير هذا اليوم ولا يمكن تعديله.');
         }
 
+        $report = $service->syncAutoDraft($user, $date);
+        $autoFilled = (bool) $report;
+
+        $kpiComparison = $report
+            ? $service->kpiComparisonForReport($user, $report, $date)
+            : $service->kpiComparisonForReport($user, array_fill_keys($service->requiredFieldKeys(), 0), $date);
+
+        $settings = SalesDailyReportSettings::all();
+
+        $todayLeads = $service->leadsTouchedOnDate($user, $date);
+
         $leads = SalesLead::query()
             ->forAssignee($user->id)
             ->openPipeline()
@@ -91,7 +113,40 @@ class SalesDailyReportController extends Controller
         $fieldLabels = collect($service->requiredFieldKeys())
             ->mapWithKeys(fn ($k) => [$k => $service->fieldLabel($k)]);
 
-        return view('employee.sales.daily-reports.edit', compact('report', 'date', 'leads', 'fieldLabels'));
+        $suggestedContacts = $service->suggestedContactsForReport($user, $date, $report);
+
+        return view('employee.sales.daily-reports.edit', compact(
+            'report', 'date', 'leads', 'fieldLabels', 'autoFilled', 'kpiComparison', 'settings', 'todayLeads', 'suggestedContacts'
+        ));
+    }
+
+    public function syncAuto(Request $request, SalesDailyReportService $service): RedirectResponse
+    {
+        $user = Auth::user();
+        $date = $request->filled('date')
+            ? Carbon::parse($request->date)->startOfDay()
+            : today();
+
+        if ($date->isFuture()) {
+            return back()->with('error', 'لا يمكن مزامنة تقرير مستقبلي.');
+        }
+
+        $existing = SalesDailyReport::forUser($user->id)
+            ->whereDate('report_date', $date)
+            ->first();
+
+        if ($existing?->isSubmitted()) {
+            return back()->with('info', 'التقرير مسلّم ولا يمكن تحديثه تلقائياً.');
+        }
+
+        $report = $service->syncAutoDraft($user, $date);
+
+        if (! $report) {
+            return back()->with('info', 'لا يُطلَب تقرير لهذا اليوم.');
+        }
+
+        return redirect()->route('employee.sales.daily-reports.edit', ['date' => $date->toDateString()])
+            ->with('success', 'تم تحديث التقرير تلقائياً من نشاطك ('.$date->format('Y-m-d').').');
     }
 
     public function store(Request $request, SalesDailyReportService $service): RedirectResponse
@@ -101,11 +156,17 @@ class SalesDailyReportController extends Controller
         $date = Carbon::parse($validated['report_date'])->startOfDay();
         $submit = ($validated['action'] ?? 'draft') === 'submit';
 
-        $service->saveReport($user, $date, $validated, $validated['contacts'] ?? [], $submit);
+        $report = $service->saveReport($user, $date, $validated, $validated['contacts'] ?? [], $submit);
+
+        $comparison = null;
+        if ($submit) {
+            $comparison = $service->kpiComparisonForReport($user, $report, $date);
+            app(SalesNotificationService::class)->notifyDailyReportSubmitted($user, $report, $comparison);
+        }
 
         $msg = $submit
-            ? 'تم تسليم التقرير اليومي بنجاح.'
-            : 'تم حفظ المسودة. أكمل الحقول ثم اضغط «تسليم نهائي» لتجنب الخصم التلقائي.';
+            ? 'تم تسليم التقرير — '.($comparison['status_label'] ?? '')
+            : 'تم حفظ المسودة. أكمل الحقول اليدوية ثم اضغط «تسليم نهائي».';
 
         return redirect()->route('employee.sales.daily-reports.index', ['date' => $date->toDateString()])
             ->with('success', $msg);

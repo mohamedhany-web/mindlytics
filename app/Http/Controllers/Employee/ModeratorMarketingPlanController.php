@@ -4,28 +4,57 @@ namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
 use App\Models\DesignTaskCycle;
+use App\Models\EmployeeJob;
 use App\Models\ModeratorMarketingCalendarEvent;
 use App\Models\ModeratorMarketingPlan;
 use App\Models\ModeratorMarketingPlatform;
+use App\Services\MarketingPlanEventAutomationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class ModeratorMarketingPlanController extends Controller
 {
+    public function __construct(
+        protected MarketingPlanEventAutomationService $marketingAutomation
+    ) {}
+
     private function assertOwnPlan(ModeratorMarketingPlan $plan): void
     {
-        abort_unless((int) $plan->moderator_id === (int) Auth::id(), 403);
+        $user = Auth::user();
+        if ($user && method_exists($user, 'isAdmin') && $user->isAdmin()) {
+            return;
+        }
+        abort_unless((int) $plan->moderator_id === (int) $user?->id, 403);
+    }
+
+    private function planModeratorId(ModeratorMarketingPlan $plan): int
+    {
+        $user = Auth::user();
+        if ($user?->isAdmin()) {
+            return (int) $plan->moderator_id;
+        }
+
+        return (int) $user->id;
     }
 
     public function index()
     {
+        $moderatorId = Auth::id();
+
         $plans = ModeratorMarketingPlan::query()
-            ->where('moderator_id', Auth::id())
+            ->where('moderator_id', $moderatorId)
             ->withCount(['platforms', 'calendarEvents'])
             ->latest()
             ->paginate(15);
 
-        return view('employee.marketing-plans.index', compact('plans'));
+        $stats = [
+            'total' => ModeratorMarketingPlan::where('moderator_id', $moderatorId)->count(),
+            'active' => ModeratorMarketingPlan::where('moderator_id', $moderatorId)->where('status', 'active')->count(),
+            'platforms' => \App\Models\ModeratorMarketingPlatform::whereHas('plan', fn ($q) => $q->where('moderator_id', $moderatorId))->count(),
+            'events' => \App\Models\ModeratorMarketingCalendarEvent::whereHas('plan', fn ($q) => $q->where('moderator_id', $moderatorId))->count(),
+        ];
+
+        return view('employee.marketing-plans.index', compact('plans', 'stats'));
     }
 
     public function create()
@@ -73,20 +102,22 @@ class ModeratorMarketingPlanController extends Controller
     {
         $this->assertOwnPlan($marketing_plan);
         $plan = $marketing_plan->load([
-            'platforms',
-            'calendarEvents' => fn ($q) => $q->with('platform')->orderBy('starts_at'),
+            'platforms.employeeJobs',
+            'calendarEvents' => fn ($q) => $q->with(['platform', 'assignee', 'employeeTask'])->orderBy('starts_at'),
             'designTaskCycle',
         ]);
 
         $cycles = DesignTaskCycle::query()
-            ->where('moderator_id', Auth::id())
+            ->where('moderator_id', $this->planModeratorId($marketing_plan))
             ->orderByDesc('id')
             ->limit(100)
             ->get(['id', 'title', 'status']);
 
         $platformLabels = ModeratorMarketingPlatform::platformLabels();
+        $employeeJobs = EmployeeJob::active()->orderBy('name')->get();
+        $contentTypes = MarketingPlanEventAutomationService::contentTypeLabels();
 
-        return view('employee.marketing-plans.show', compact('plan', 'cycles', 'platformLabels'));
+        return view('employee.marketing-plans.show', compact('plan', 'cycles', 'platformLabels', 'employeeJobs', 'contentTypes'));
     }
 
     public function edit(ModeratorMarketingPlan $marketing_plan)
@@ -94,7 +125,7 @@ class ModeratorMarketingPlanController extends Controller
         $this->assertOwnPlan($marketing_plan);
         $plan = $marketing_plan;
         $cycles = DesignTaskCycle::query()
-            ->where('moderator_id', Auth::id())
+            ->where('moderator_id', $this->planModeratorId($marketing_plan))
             ->orderByDesc('id')
             ->limit(100)
             ->get(['id', 'title', 'status']);
@@ -119,7 +150,7 @@ class ModeratorMarketingPlanController extends Controller
         if (! empty($validated['design_task_cycle_id'])) {
             $ok = DesignTaskCycle::query()
                 ->where('id', $validated['design_task_cycle_id'])
-                ->where('moderator_id', Auth::id())
+                ->where('moderator_id', $this->planModeratorId($marketing_plan))
                 ->exists();
             if (! $ok) {
                 return back()->withErrors(['design_task_cycle_id' => 'دورة التصميم غير صالحة.'])->withInput();
@@ -158,6 +189,8 @@ class ModeratorMarketingPlanController extends Controller
             'strategy_notes' => ['nullable', 'string', 'max:10000'],
             'cadence_notes' => ['nullable', 'string', 'max:10000'],
             'color_hex' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'employee_job_ids' => ['nullable', 'array'],
+            'employee_job_ids.*' => ['integer', 'exists:employee_jobs,id'],
         ]);
 
         $keys = array_keys(ModeratorMarketingPlatform::platformLabels());
@@ -193,6 +226,7 @@ class ModeratorMarketingPlanController extends Controller
 
         $maxSort = (int) $marketing_plan->platforms()->max('sort_order');
         $color = $validated['color_hex'] ?? '#6366f1';
+        $jobIds = array_map('intval', $validated['employee_job_ids'] ?? []);
 
         $created = 0;
         foreach ($platformKeys as $pk) {
@@ -206,7 +240,7 @@ class ModeratorMarketingPlanController extends Controller
             }
 
             $maxSort++;
-            ModeratorMarketingPlatform::create([
+            $platform = ModeratorMarketingPlatform::create([
                 'plan_id' => $marketing_plan->id,
                 'platform_key' => $pk,
                 'custom_label' => $validated['custom_label'] ?? null,
@@ -216,6 +250,9 @@ class ModeratorMarketingPlanController extends Controller
                 'color_hex' => $color,
                 'sort_order' => $maxSort,
             ]);
+            if ($jobIds !== []) {
+                $platform->employeeJobs()->sync($jobIds);
+            }
             $created++;
         }
 
@@ -239,6 +276,8 @@ class ModeratorMarketingPlanController extends Controller
             'cadence_notes' => ['nullable', 'string', 'max:10000'],
             'color_hex' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:65535'],
+            'employee_job_ids' => ['nullable', 'array'],
+            'employee_job_ids.*' => ['integer', 'exists:employee_jobs,id'],
         ]);
 
         $keys = array_keys(ModeratorMarketingPlatform::platformLabels());
@@ -249,7 +288,11 @@ class ModeratorMarketingPlanController extends Controller
             $validated['custom_label'] = null;
         }
 
+        $jobIds = array_map('intval', $request->input('employee_job_ids', []));
+        unset($validated['employee_job_ids']);
+
         $platform->update($validated);
+        $platform->employeeJobs()->sync($jobIds);
 
         return back()->with('success', 'تم تحديث المنصة.');
     }
@@ -276,6 +319,9 @@ class ModeratorMarketingPlanController extends Controller
             'starts_at' => ['required', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
             'status' => ['required', 'in:idea,draft,scheduled,published,skipped'],
+            'content_type' => ['required', 'in:'.implode(',', array_keys(MarketingPlanEventAutomationService::contentTypeLabels()))],
+            'requires_confirmation' => ['nullable', 'boolean'],
+            'assigned_employee_id' => ['nullable', 'exists:users,id'],
             'design_task_cycle_id' => ['nullable', 'exists:design_task_cycles,id'],
         ]);
 
@@ -299,7 +345,7 @@ class ModeratorMarketingPlanController extends Controller
         if (! empty($validated['design_task_cycle_id'])) {
             $ok = DesignTaskCycle::query()
                 ->where('id', $validated['design_task_cycle_id'])
-                ->where('moderator_id', Auth::id())
+                ->where('moderator_id', $this->planModeratorId($marketing_plan))
                 ->exists();
             if (! $ok) {
                 return back()->withErrors(['design_task_cycle_id' => 'دورة التصميم غير صالحة.'])->withInput();
@@ -310,6 +356,9 @@ class ModeratorMarketingPlanController extends Controller
             'plan_id' => $marketing_plan->id,
             'title' => $validated['title'],
             'body' => $validated['body'] ?? null,
+            'content_type' => $validated['content_type'],
+            'assigned_employee_id' => $validated['assigned_employee_id'] ?? null,
+            'requires_confirmation' => $request->boolean('requires_confirmation', true),
             'starts_at' => $validated['starts_at'],
             'ends_at' => $validated['ends_at'] ?? null,
             'status' => $validated['status'],
@@ -317,17 +366,20 @@ class ModeratorMarketingPlanController extends Controller
         ];
 
         if ($platformIds === []) {
-            ModeratorMarketingCalendarEvent::create($base + ['platform_id' => null]);
-            return back()->with('success', 'تمت إضافة الحدث للتقويم.');
+            $ev = ModeratorMarketingCalendarEvent::create($base + ['platform_id' => null]);
+            $this->marketingAutomation->afterEventSaved($ev);
+
+            return back()->with('success', 'تمت إضافة الحدث للتقويم وربط المسؤول تلقائياً.');
         }
 
         $created = 0;
         foreach ($platformIds as $pid) {
-            ModeratorMarketingCalendarEvent::create($base + ['platform_id' => $pid]);
+            $ev = ModeratorMarketingCalendarEvent::create($base + ['platform_id' => $pid]);
+            $this->marketingAutomation->afterEventSaved($ev);
             $created++;
         }
 
-        return back()->with('success', 'تمت إضافة الحدث لعدد '.$created.' منصة/منصات.');
+        return back()->with('success', 'تمت إضافة الحدث لعدد '.$created.' منصة/منصات مع التوجيه التلقائي.');
     }
 
     public function updateEvent(Request $request, ModeratorMarketingPlan $marketing_plan, ModeratorMarketingCalendarEvent $event)
@@ -342,6 +394,9 @@ class ModeratorMarketingPlanController extends Controller
             'starts_at' => ['required', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
             'status' => ['required', 'in:idea,draft,scheduled,published,skipped'],
+            'content_type' => ['required', 'in:'.implode(',', array_keys(MarketingPlanEventAutomationService::contentTypeLabels()))],
+            'requires_confirmation' => ['nullable', 'boolean'],
+            'assigned_employee_id' => ['nullable', 'exists:users,id'],
             'design_task_cycle_id' => ['nullable', 'exists:design_task_cycles,id'],
         ]);
 
@@ -360,7 +415,7 @@ class ModeratorMarketingPlanController extends Controller
         if (! empty($validated['design_task_cycle_id'])) {
             $ok = DesignTaskCycle::query()
                 ->where('id', $validated['design_task_cycle_id'])
-                ->where('moderator_id', Auth::id())
+                ->where('moderator_id', $this->planModeratorId($marketing_plan))
                 ->exists();
             if (! $ok) {
                 return back()->withErrors(['design_task_cycle_id' => 'دورة التصميم غير صالحة.'])->withInput();
@@ -369,7 +424,10 @@ class ModeratorMarketingPlanController extends Controller
             $validated['design_task_cycle_id'] = null;
         }
 
+        $validated['requires_confirmation'] = $request->boolean('requires_confirmation', true);
+
         $event->update($validated);
+        $this->marketingAutomation->afterEventSaved($event->fresh());
 
         return back()->with('success', 'تم تحديث الحدث.');
     }

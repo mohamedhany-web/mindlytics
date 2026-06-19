@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class ModeratorMarketingPlatform extends Model
 {
@@ -26,9 +26,19 @@ class ModeratorMarketingPlatform extends Model
         return $this->belongsTo(ModeratorMarketingPlan::class, 'plan_id');
     }
 
-    public function calendarEvents(): HasMany
+    public function calendarEvents(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(ModeratorMarketingCalendarEvent::class, 'platform_id');
+    }
+
+    public function employeeJobs(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            EmployeeJob::class,
+            'moderator_mkt_platform_jobs',
+            'platform_id',
+            'employee_job_id'
+        )->withTimestamps();
     }
 
     public function displayName(): string
@@ -36,6 +46,7 @@ class ModeratorMarketingPlatform extends Model
         if ($this->platform_key === 'other' && $this->custom_label) {
             return $this->custom_label;
         }
+
         return self::platformLabels()[$this->platform_key] ?? $this->platform_key;
     }
 

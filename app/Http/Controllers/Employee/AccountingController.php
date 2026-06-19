@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
 use App\Models\EmployeeAgreement;
+use App\Models\EmployeeSalaryAddition;
 use App\Models\EmployeeSalaryDeduction;
 use App\Models\EmployeeSalaryPayment;
 use App\Models\Transaction;
@@ -33,6 +34,16 @@ class AccountingController extends Controller
         $lastPayment = EmployeeSalaryPayment::where('employee_id', $user->id)
             ->orderBy('payment_date', 'desc')
             ->first();
+
+        $currentMonthAdditions = EmployeeSalaryAddition::where('employee_id', $user->id)
+            ->where('status', 'applied')
+            ->whereYear('addition_date', Carbon::now()->year)
+            ->whereMonth('addition_date', Carbon::now()->month)
+            ->sum('amount');
+
+        $totalAdditions = EmployeeSalaryAddition::where('employee_id', $user->id)
+            ->where('status', 'applied')
+            ->sum('amount');
 
         // حساب إجمالي الخصومات للشهر الحالي
         $currentMonthDeductions = EmployeeSalaryDeduction::where('employee_id', $user->id)
@@ -93,7 +104,13 @@ class AccountingController extends Controller
             ->limit(10)
             ->get();
 
-        // حساب تاريخ الاستحقاق القادم (عادة آخر يوم في الشهر)
+        $recentAdditions = EmployeeSalaryAddition::where('employee_id', $user->id)
+            ->where('status', 'applied')
+            ->orderByDesc('addition_date')
+            ->limit(10)
+            ->get();
+
+        // حساب تاريخ الاستحقاق القادم
         $nextPaymentDate = null;
         if ($activeAgreement) {
             $nextPaymentDate = Carbon::now()->endOfMonth();
@@ -109,9 +126,13 @@ class AccountingController extends Controller
             'total_deductions' => $totalDeductions,
             'total_paid' => $totalPaid,
             'next_payment_date' => $nextPaymentDate,
-            'net_salary' => $activeAgreement ? ($activeAgreement->salary - $currentMonthDeductions) : 0,
+            'net_salary' => $activeAgreement
+                ? ($activeAgreement->salary - $currentMonthDeductions + $currentMonthAdditions + $currentMonthCommission)
+                : 0,
             'current_month_commission' => $currentMonthCommission,
             'total_commission' => $totalCommission,
+            'current_month_additions' => $currentMonthAdditions,
+            'total_additions' => $totalAdditions,
         ];
 
         return view('employee.accounting.index', compact(
@@ -120,6 +141,7 @@ class AccountingController extends Controller
             'upcomingPayments',
             'allPayments',
             'recentDeductions',
+            'recentAdditions',
             'recentCommissionTxns',
             'stats'
         ));

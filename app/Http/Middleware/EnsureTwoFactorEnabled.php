@@ -30,7 +30,16 @@ class EnsureTwoFactorEnabled
             return $next($request);
         }
 
+        // لوحة مدير المكان: بدون مصادقة ثنائية
+        if ($request->is('place-office') || $request->is('place-office/*')) {
+            return $next($request);
+        }
+
         $user = auth()->user();
+
+        if ($user?->isPlaceManager()) {
+            return $next($request);
+        }
 
         // إذا كان إلزام 2FA للأدمن معطّلاً من الإعدادات (للمرونة عند فقدان الرمز أو مشكلة)
         if (!$user->requiresTwoFactor() || !config('app.admin_2fa_required', true)) {

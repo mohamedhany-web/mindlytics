@@ -22,6 +22,7 @@ class EmployeeTask extends Model
         'progress',
         'notes',
         'design_cycle_id',
+        'marketing_event_id',
     ];
 
     protected $casts = [
@@ -58,6 +59,11 @@ class EmployeeTask extends Model
     public function designCycle(): BelongsTo
     {
         return $this->belongsTo(DesignTaskCycle::class, 'design_cycle_id');
+    }
+
+    public function marketingEvent(): BelongsTo
+    {
+        return $this->belongsTo(ModeratorMarketingCalendarEvent::class, 'marketing_event_id');
     }
 
     /**

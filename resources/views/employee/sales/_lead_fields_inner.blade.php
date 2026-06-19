@@ -1,4 +1,4 @@
-@php $lead = $lead ?? null; @endphp
+@php $lead = $lead ?? null; $groups = $groups ?? collect(); @endphp
 <div class="md:col-span-2">
     <label class="block text-sm font-medium text-gray-700 mb-1">الاسم <span class="text-red-500">*</span></label>
     <input type="text" name="name" required value="{{ old('name', $lead->name ?? '') }}" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
@@ -39,6 +39,18 @@
         @endforeach
     </select>
     <p class="text-xs text-gray-500 mt-1">عاجل يظهر في لوحة التحكم ويُرتّب أعلى القائمة عند اختيار ترتيب الأولوية.</p>
+</div>
+<div>
+    <label class="block text-sm font-medium text-gray-700 mb-1">المجموعة <span class="text-gray-400">(اختياري)</span></label>
+    <select name="sales_lead_group_id" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+        <option value="">— بدون مجموعة —</option>
+        @foreach($groups as $group)
+            <option value="{{ $group->id }}" @selected(old('sales_lead_group_id', $lead->sales_lead_group_id ?? '') == $group->id)>
+                {{ $group->name }}@if($group->is_admin_managed ?? false) (إدارة) @endif
+            </option>
+        @endforeach
+    </select>
+    @error('sales_lead_group_id')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
 </div>
 <div>
     <label class="block text-sm font-medium text-gray-700 mb-1">قيمة متوقعة (ج.م)</label>
