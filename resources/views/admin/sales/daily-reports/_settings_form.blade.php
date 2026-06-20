@@ -2,6 +2,8 @@
     $s = $settings;
     $layout = $layout ?? 'compact';
     $cancelUrl = $cancelUrl ?? route('admin.sales.daily-reports.index');
+    $method = $method ?? (str_contains((string) ($formAction ?? ''), 'update') ? 'PUT' : 'POST');
+    $defaults = config('sales_daily_report', []);
     $inputClass = 'w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500';
     $penaltyInputClass = 'w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-rose-400 focus:border-rose-400';
 @endphp
@@ -98,7 +100,7 @@
                     <div class="sm:col-span-2">
                         <label class="block text-xs font-semibold text-slate-700 mb-1.5">عنوان الخصم</label>
                         <input type="text" name="penalty_title"
-                               value="{{ old('penalty_title', $s['penalty_title'] ?? '') }}" required class="{{ $penaltyInputClass }}">
+                               value="{{ old('penalty_title', $s['penalty_title'] ?? $defaults['penalty_title'] ?? '') }}" required class="{{ $penaltyInputClass }}">
                     </div>
                     <div class="sm:col-span-2">
                         <label class="block text-xs font-semibold text-slate-700 mb-1.5">وصف الخصم</label>
@@ -197,7 +199,7 @@
                 </div>
                 <div class="md:col-span-2">
                     <label class="block text-xs font-semibold text-slate-700 mb-1">عنوان الخصم</label>
-                    <input type="text" name="penalty_title" value="{{ old('penalty_title', $s['penalty_title'] ?? '') }}" required class="{{ $penaltyInputClass }}">
+                    <input type="text" name="penalty_title" value="{{ old('penalty_title', $s['penalty_title'] ?? $defaults['penalty_title'] ?? '') }}" required class="{{ $penaltyInputClass }}">
                 </div>
                 <div class="md:col-span-2">
                     <label class="block text-xs font-semibold text-slate-700 mb-1">وصف الخصم</label>

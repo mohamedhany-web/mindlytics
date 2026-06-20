@@ -8,6 +8,16 @@
   @if(session('success'))
     <div class="rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 px-5 py-4 font-semibold">{{ session('success') }}</div>
   @endif
+  @if($errors->any())
+    <div class="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-5 py-4 text-sm">
+      <p class="font-semibold mb-1"><i class="fas fa-exclamation-circle ml-1"></i> يوجد أخطاء في النموذج:</p>
+      <ul class="list-disc list-inside space-y-0.5">
+        @foreach($errors->all() as $error)
+          <li>{{ $error }}</li>
+        @endforeach
+      </ul>
+    </div>
+  @endif
 
   <section class="rounded-2xl bg-white border-2 border-slate-200 shadow-xl overflow-hidden">
     <div class="px-6 py-5 border-b bg-gradient-to-r from-rose-50 to-white flex flex-wrap items-center justify-between gap-3">
@@ -20,6 +30,7 @@
     <div class="p-6">
       @include('admin.sales.daily-reports._settings_form', [
           'formAction' => route('admin.employee-deductions.daily-report-penalty-settings.update'),
+          'method' => 'PUT',
           'settings' => $settings,
           'cancelUrl' => route('admin.employee-deductions.index'),
           'layout' => 'compact',

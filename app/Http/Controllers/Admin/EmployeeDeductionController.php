@@ -142,6 +142,12 @@ class EmployeeDeductionController extends Controller
      */
     public function updateDailyReportPenaltySettings(Request $request): RedirectResponse
     {
+        if ($request->filled('deadline_time')) {
+            $request->merge([
+                'deadline_time' => substr((string) $request->input('deadline_time'), 0, 5),
+            ]);
+        }
+
         $validated = $request->validate([
             'enabled' => 'nullable|boolean',
             'work_days_only' => 'nullable|boolean',
