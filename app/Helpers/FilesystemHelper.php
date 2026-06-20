@@ -164,3 +164,20 @@ if (!function_exists('community_disk')) {
         return config('filesystems.community_disk', 'local');
     }
 }
+
+if (!function_exists('hr_recruitment_disk')) {
+    /**
+     * قرص تخزين ملفات التوظيف (CV + مرفقات).
+     *
+     * @return string اسم القرص في config/filesystems.php (مثل r2 أو public)
+     */
+    function hr_recruitment_disk(): string
+    {
+        $envDisk = env('FILESYSTEM_DISK_HR_RECRUITMENT');
+        if ($envDisk !== null && $envDisk !== '' && in_array($envDisk, ['r2', 'public', 'local'], true)) {
+            return $envDisk;
+        }
+
+        return config('filesystems.hr_recruitment_disk', 'r2');
+    }
+}

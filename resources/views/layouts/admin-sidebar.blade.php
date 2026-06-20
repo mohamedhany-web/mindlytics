@@ -287,6 +287,46 @@
                 </ul>
             </li>
 
+            @php
+                $hrMenuOpen = request()->routeIs('admin.hr.*');
+            @endphp
+            <li x-data="{ open: {{ $hrMenuOpen ? 'true' : 'false' }} }">
+                <button type="button" @click="open = !open" :aria-expanded="open"
+                        class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-user-friends w-5 text-pink-400 group-hover:text-white"></i>
+                        <span class="font-medium">HR</span>
+                    </div>
+                    <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
+                </button>
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
+                    <li>
+                        <a href="{{ route('admin.hr.jobs.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.hr.jobs.*') ? 'bg-pink-600/30 text-white font-semibold border-r-2 border-pink-400' : '' }}">
+                            <i class="fas fa-briefcase w-4"></i>
+                            <span>الوظائف</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.hr.applications.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.hr.applications.*') ? 'bg-pink-600/30 text-white font-semibold border-r-2 border-pink-400' : '' }}">
+                            <i class="fas fa-inbox w-4"></i>
+                            <span>طلبات التوظيف</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.hr.rubrics.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.hr.rubrics.*') ? 'bg-pink-600/30 text-white font-semibold border-r-2 border-pink-400' : '' }}">
+                            <i class="fas fa-star-half-alt w-4"></i>
+                            <span>قوالب التقييم</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
             <!-- إدارة النظام -->
             @php
                 $systemManagementOpen = request()->routeIs('admin.system-settings.*') || request()->routeIs('admin.users.*') || request()->routeIs('admin.orders.*') || request()->routeIs('admin.notifications.*') || request()->routeIs('admin.employee-notifications.*') || request()->routeIs('admin.activity-log*') || request()->routeIs('admin.two-factor-logs.*') || request()->routeIs('admin.statistics.*') || request()->routeIs('admin.performance.*');

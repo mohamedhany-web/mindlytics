@@ -61,6 +61,13 @@ Route::get('/storage/{path}', function ($path) {
     return response()->file($realPath, $headers);
 })->where('path', '.*')->name('storage.file')->middleware('web');
 
+// Careers (Public) — التوظيف
+Route::get('/careers', [\App\Http\Controllers\CareersController::class, 'index'])->name('careers.index');
+Route::get('/careers/{job}', [\App\Http\Controllers\CareersController::class, 'show'])->name('careers.show');
+Route::post('/careers/{job}/apply', [\App\Http\Controllers\CareersController::class, 'apply'])
+    ->middleware('throttle:20,1')
+    ->name('careers.apply');
+
 // Sitemap Route
 Route::get('/sitemap.xml', function() {
     $sitemap = '<?xml version="1.0" encoding="UTF-8"?>
@@ -1023,6 +1030,16 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('categories', [\App\Http\Controllers\Admin\SalesLeadCategoryController::class, 'store'])->name('categories.store');
             Route::put('categories/{category}', [\App\Http\Controllers\Admin\SalesLeadCategoryController::class, 'update'])->name('categories.update');
             Route::delete('categories/{category}', [\App\Http\Controllers\Admin\SalesLeadCategoryController::class, 'destroy'])->name('categories.destroy');
+        });
+
+        // HR (Recruitment / ATS)
+        Route::prefix('hr')->name('hr.')->group(function () {
+            Route::resource('jobs', \App\Http\Controllers\Admin\Hr\JobPostingController::class);
+            Route::get('applications', [\App\Http\Controllers\Admin\Hr\ApplicationController::class, 'index'])->name('applications.index');
+            Route::get('applications/{application}', [\App\Http\Controllers\Admin\Hr\ApplicationController::class, 'show'])->name('applications.show');
+            Route::put('applications/{application}/status', [\App\Http\Controllers\Admin\Hr\ApplicationController::class, 'updateStatus'])->name('applications.status');
+            Route::put('applications/{application}/score', [\App\Http\Controllers\Admin\Hr\ApplicationController::class, 'saveScore'])->name('applications.score');
+            Route::resource('rubrics', \App\Http\Controllers\Admin\Hr\RubricController::class)->except(['show']);
         });
 
         // بروفايل الأدمن
