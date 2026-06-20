@@ -12,6 +12,8 @@ class RubricController extends Controller
 {
     public function index(): View
     {
+        HrRubric::ensureDefaultExists();
+
         $rubrics = HrRubric::query()->with('creator:id,name')->orderByDesc('is_default')->orderByDesc('updated_at')->paginate(20);
 
         $stats = [
@@ -24,12 +26,7 @@ class RubricController extends Controller
 
     public function create(): View
     {
-        $defaultCriteria = [
-            ['key' => 'experience', 'label' => 'الخبرة', 'weight' => 1, 'max' => 10],
-            ['key' => 'skills', 'label' => 'المهارات', 'weight' => 1, 'max' => 10],
-            ['key' => 'education', 'label' => 'التعليم', 'weight' => 1, 'max' => 10],
-            ['key' => 'communication', 'label' => 'التواصل', 'weight' => 1, 'max' => 10],
-        ];
+        $defaultCriteria = HrRubric::defaultCriteriaTemplate();
 
         return view('admin.hr.rubrics.create', compact('defaultCriteria'));
     }
@@ -39,13 +36,16 @@ class RubricController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'is_default' => 'nullable|boolean',
-            'criteria_json' => 'required|string',
+            'criteria' => 'required|array|min:1',
+            'criteria.*.key' => 'required|string|max:60|regex:/^[a-z0-9_]+$/',
+            'criteria.*.label' => 'required|string|max:255',
+            'criteria.*.weight' => 'required|numeric|min:0',
+            'criteria.*.max' => 'required|numeric|min:0.1',
+        ], [
+            'criteria.*.key.regex' => 'المفتاح يجب أن يكون حروف إنجليزية صغيرة وأرقام و _ فقط.',
         ]);
 
-        $criteria = json_decode((string) $validated['criteria_json'], true);
-        if (! is_array($criteria) || $criteria === []) {
-            return back()->withErrors(['criteria_json' => 'صيغة JSON غير صحيحة أو فارغة.'])->withInput();
-        }
+        $criteria = $this->normalizeCriteriaInput($validated['criteria']);
 
         if ($request->boolean('is_default')) {
             HrRubric::query()->update(['is_default' => false]);
@@ -71,13 +71,16 @@ class RubricController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'is_default' => 'nullable|boolean',
-            'criteria_json' => 'required|string',
+            'criteria' => 'required|array|min:1',
+            'criteria.*.key' => 'required|string|max:60|regex:/^[a-z0-9_]+$/',
+            'criteria.*.label' => 'required|string|max:255',
+            'criteria.*.weight' => 'required|numeric|min:0',
+            'criteria.*.max' => 'required|numeric|min:0.1',
+        ], [
+            'criteria.*.key.regex' => 'المفتاح يجب أن يكون حروف إنجليزية صغيرة وأرقام و _ فقط.',
         ]);
 
-        $criteria = json_decode((string) $validated['criteria_json'], true);
-        if (! is_array($criteria) || $criteria === []) {
-            return back()->withErrors(['criteria_json' => 'صيغة JSON غير صحيحة أو فارغة.'])->withInput();
-        }
+        $criteria = $this->normalizeCriteriaInput($validated['criteria']);
 
         if ($request->boolean('is_default')) {
             HrRubric::query()->where('id', '!=', $rubric->id)->update(['is_default' => false]);
@@ -96,7 +99,39 @@ class RubricController extends Controller
     {
         $rubric->delete();
 
+        HrRubric::ensureDefaultExists();
+
         return redirect()->route('admin.hr.rubrics.index')->with('success', 'تم حذف قالب التقييم.');
     }
-}
 
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     * @return list<array{key: string, label: string, weight: float, max: float}>
+     */
+    private function normalizeCriteriaInput(array $rows): array
+    {
+        $out = [];
+        $keys = [];
+
+        foreach ($rows as $row) {
+            $key = strtolower(trim((string) ($row['key'] ?? '')));
+            if ($key === '' || in_array($key, $keys, true)) {
+                continue;
+            }
+
+            $keys[] = $key;
+            $out[] = [
+                'key' => $key,
+                'label' => trim((string) ($row['label'] ?? $key)),
+                'weight' => max(0.0, (float) ($row['weight'] ?? 1)),
+                'max' => max(0.1, (float) ($row['max'] ?? 10)),
+            ];
+        }
+
+        if ($out === []) {
+            abort(422, 'يجب إضافة معيار واحد على الأقل.');
+        }
+
+        return $out;
+    }
+}

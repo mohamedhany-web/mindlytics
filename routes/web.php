@@ -65,7 +65,7 @@ Route::get('/storage/{path}', function ($path) {
 Route::get('/careers', [\App\Http\Controllers\CareersController::class, 'index'])->name('careers.index');
 Route::get('/careers/{job}', [\App\Http\Controllers\CareersController::class, 'show'])->name('careers.show');
 Route::get('/careers/{job}/apply', function (\App\Models\HrJobPosting $job) {
-    abort_unless($job->is_published, 404);
+    abort_unless($job->is_published && $job->isOpen(), 404);
 
     return redirect()->route('careers.show', $job);
 })->name('careers.apply.form');
@@ -1043,7 +1043,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('applications', [\App\Http\Controllers\Admin\Hr\ApplicationController::class, 'index'])->name('applications.index');
             Route::get('applications/{application}', [\App\Http\Controllers\Admin\Hr\ApplicationController::class, 'show'])->name('applications.show');
             Route::put('applications/{application}/status', [\App\Http\Controllers\Admin\Hr\ApplicationController::class, 'updateStatus'])->name('applications.status');
-            Route::put('applications/{application}/score', [\App\Http\Controllers\Admin\Hr\ApplicationController::class, 'saveScore'])->name('applications.score');
+            Route::post('applications/{application}/rescore', [\App\Http\Controllers\Admin\Hr\ApplicationController::class, 'rescore'])->name('applications.rescore');
+            Route::delete('applications/{application}', [\App\Http\Controllers\Admin\Hr\ApplicationController::class, 'destroy'])->name('applications.destroy');
             Route::resource('rubrics', \App\Http\Controllers\Admin\Hr\RubricController::class)->except(['show']);
         });
 

@@ -7,6 +7,7 @@ use App\Models\HrJobApplication;
 use App\Models\HrJobPosting;
 use App\Models\Notification;
 use App\Models\User;
+use App\Services\Hr\AtsScoringService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -16,6 +17,9 @@ use Illuminate\View\View;
 
 class CareersController extends Controller
 {
+    public function __construct(
+        private readonly AtsScoringService $scoringService,
+    ) {}
     public function index(): View
     {
         $jobs = HrJobPosting::query()
@@ -29,14 +33,14 @@ class CareersController extends Controller
 
     public function show(HrJobPosting $job): View
     {
-        abort_unless($job->is_published, 404);
+        abort_unless($job->is_published && $job->isOpen(), 404);
 
         return view('careers.show', compact('job'));
     }
 
     public function apply(Request $request, HrJobPosting $job): RedirectResponse
     {
-        abort_unless($job->is_published, 404);
+        abort_unless($job->is_published && $job->isOpen(), 404);
 
         $validated = $request->validate([
             'full_name' => 'required|string|max:255',
@@ -61,7 +65,7 @@ class CareersController extends Controller
             'linkedin_url' => $validated['linkedin_url'] ?? null,
             'portfolio_url' => $validated['portfolio_url'] ?? null,
             'cover_letter' => $validated['cover_letter'] ?? null,
-            'status' => 'new',
+            'status' => 'applied',
             'source' => 'website',
             'submitted_at' => now(),
         ]);
@@ -81,6 +85,15 @@ class CareersController extends Controller
             return back()
                 ->withInput()
                 ->withErrors(['cv' => 'تعذّر رفع الملف. يرجى المحاولة مرة أخرى أو التواصل معنا.']);
+        }
+
+        try {
+            $this->scoringService->processApplication($application->fresh(['cvFile', 'job']));
+        } catch (\Throwable $e) {
+            Log::warning('HR auto-scoring failed', [
+                'application_id' => $application->id,
+                'message' => $e->getMessage(),
+            ]);
         }
 
         try {

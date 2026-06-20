@@ -20,6 +20,10 @@ class JobPostingController extends Controller
             $q->where('is_published', $published);
         }
 
+        if ($request->filled('status') && array_key_exists($request->status, HrJobPosting::STATUSES)) {
+            $q->where('status', $request->status);
+        }
+
         if ($request->filled('search')) {
             $s = trim((string) $request->search);
             $q->where(function ($qq) use ($s) {
@@ -33,6 +37,7 @@ class JobPostingController extends Controller
 
         $stats = [
             'total' => HrJobPosting::count(),
+            'open' => HrJobPosting::open()->count(),
             'published' => HrJobPosting::where('is_published', true)->count(),
             'applications' => HrJobApplication::count(),
         ];
@@ -52,20 +57,12 @@ class JobPostingController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'department' => 'nullable|string|max:120',
-            'location' => 'nullable|string|max:120',
-            'employment_type' => 'nullable|string|max:60',
-            'description' => 'nullable|string',
-            'requirements' => 'nullable|string',
-            'is_published' => 'nullable|boolean',
-        ]);
+        $validated = $this->validateJob($request);
 
         $job = HrJobPosting::create([
             ...$validated,
-            'is_published' => $request->boolean('is_published'),
-            'published_at' => $request->boolean('is_published') ? now() : null,
+            'is_published' => $request->boolean('is_published') && ($validated['status'] ?? 'open') === 'open',
+            'published_at' => $request->boolean('is_published') && ($validated['status'] ?? 'open') === 'open' ? now() : null,
             'created_by' => auth()->id(),
         ]);
 
@@ -81,18 +78,11 @@ class JobPostingController extends Controller
 
     public function update(Request $request, HrJobPosting $job): RedirectResponse
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'department' => 'nullable|string|max:120',
-            'location' => 'nullable|string|max:120',
-            'employment_type' => 'nullable|string|max:60',
-            'description' => 'nullable|string',
-            'requirements' => 'nullable|string',
-            'is_published' => 'nullable|boolean',
-        ]);
+        $validated = $this->validateJob($request);
 
         $wasPublished = (bool) $job->is_published;
-        $nowPublished = $request->boolean('is_published');
+        $status = $validated['status'] ?? 'open';
+        $nowPublished = $request->boolean('is_published') && $status === 'open';
 
         $job->update([
             ...$validated,
@@ -109,5 +99,34 @@ class JobPostingController extends Controller
 
         return redirect()->route('admin.hr.jobs.index')->with('success', 'تم حذف الوظيفة.');
     }
-}
 
+    /**
+     * @return array<string, mixed>
+     */
+    private function validateJob(Request $request): array
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'department' => 'nullable|string|max:120',
+            'location' => 'nullable|string|max:120',
+            'employment_type' => 'nullable|string|max:60',
+            'description' => 'nullable|string',
+            'requirements' => 'nullable|string',
+            'required_skills' => 'nullable|string|max:5000',
+            'required_experience' => 'nullable|integer|min:0|max:50',
+            'required_education' => 'nullable|string|in:'.implode(',', array_keys(config('hr.education_levels', []))),
+            'status' => 'required|string|in:'.implode(',', array_keys(HrJobPosting::STATUSES)),
+            'is_published' => 'nullable|boolean',
+        ]);
+
+        $skills = array_values(array_unique(array_filter(array_map(
+            'trim',
+            preg_split('/[,،\n]+/', (string) ($validated['required_skills'] ?? '')) ?: []
+        ))));
+
+        $validated['required_skills'] = $skills;
+        unset($validated['is_published']);
+
+        return $validated;
+    }
+}

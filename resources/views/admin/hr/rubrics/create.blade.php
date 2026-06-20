@@ -19,7 +19,7 @@
     <section class="{{ $hrSectionClass }} max-w-4xl">
         <div class="px-5 py-4 border-b border-slate-200 bg-slate-50/80">
             <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <i class="fas fa-code text-pink-600"></i>
+                <i class="fas fa-list text-pink-600"></i>
                 بيانات القالب
             </h3>
         </div>

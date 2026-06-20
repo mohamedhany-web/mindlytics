@@ -313,15 +313,7 @@
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.hr.applications.*') ? 'bg-pink-600/30 text-white font-semibold border-r-2 border-pink-400' : '' }}">
                             <i class="fas fa-inbox w-4"></i>
-                            <span>طلبات التوظيف</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.hr.rubrics.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.hr.rubrics.*') ? 'bg-pink-600/30 text-white font-semibold border-r-2 border-pink-400' : '' }}">
-                            <i class="fas fa-star-half-alt w-4"></i>
-                            <span>قوالب التقييم</span>
+                            <span>المتقدمون والسكور</span>
                         </a>
                     </li>
                 </ul>

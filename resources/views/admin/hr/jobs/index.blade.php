@@ -17,8 +17,9 @@
         'actions' => '<a href="' . route('admin.hr.jobs.create') . '" class="' . $hrBtnPrimary . '"><i class="fas fa-plus"></i> وظيفة جديدة</a>',
         'statCards' => [
             ['label' => 'إجمالي الوظائف', 'value' => number_format($stats['total'] ?? 0), 'icon' => 'fas fa-briefcase', 'bg' => 'bg-pink-100', 'text' => 'text-pink-600', 'description' => 'كل الوظائف المسجلة'],
-            ['label' => 'منشورة', 'value' => number_format($stats['published'] ?? 0), 'icon' => 'fas fa-globe', 'bg' => 'bg-emerald-100', 'text' => 'text-emerald-600', 'description' => 'ظاهرة في صفحة التوظيف'],
-            ['label' => 'طلبات التوظيف', 'value' => number_format($stats['applications'] ?? 0), 'icon' => 'fas fa-inbox', 'bg' => 'bg-sky-100', 'text' => 'text-sky-600', 'description' => 'إجمالي التقديمات'],
+            ['label' => 'مفتوحة', 'value' => number_format($stats['open'] ?? 0), 'icon' => 'fas fa-door-open', 'bg' => 'bg-emerald-100', 'text' => 'text-emerald-600', 'description' => 'تقبل التقديم'],
+            ['label' => 'منشورة', 'value' => number_format($stats['published'] ?? 0), 'icon' => 'fas fa-globe', 'bg' => 'bg-sky-100', 'text' => 'text-sky-600', 'description' => 'ظاهرة في صفحة التوظيف'],
+            ['label' => 'طلبات التوظيف', 'value' => number_format($stats['applications'] ?? 0), 'icon' => 'fas fa-inbox', 'bg' => 'bg-violet-100', 'text' => 'text-violet-600', 'description' => 'إجمالي التقديمات'],
         ],
     ])
 

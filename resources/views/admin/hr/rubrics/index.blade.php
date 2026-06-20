@@ -42,7 +42,7 @@
                         <tr class="hover:bg-slate-50/70 transition-colors">
                             <td class="px-6 py-4">
                                 <div class="font-bold text-slate-900">{{ $rubric->name }}</div>
-                                <div class="text-xs text-slate-500 mt-0.5">معايير: {{ is_array($rubric->criteria_json) ? count($rubric->criteria_json) : 0 }}</div>
+                                <div class="text-xs text-slate-500 mt-0.5">معايير: {{ count($rubric->normalizedCriteria()) }}</div>
                             </td>
                             <td class="px-6 py-4 text-center">
                                 @if($rubric->is_default)
