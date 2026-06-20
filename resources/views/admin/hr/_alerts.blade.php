@@ -5,7 +5,7 @@
     </div>
 @endif
 
-@if($errors->any())
+@if(isset($errors) && $errors->any())
     <div class="rounded-xl border-2 border-rose-200 bg-rose-50 text-rose-800 px-5 py-4 text-sm">
         <p class="font-semibold mb-1 flex items-center gap-2"><i class="fas fa-exclamation-circle"></i> يوجد أخطاء:</p>
         <ul class="list-disc list-inside space-y-0.5 mr-1">

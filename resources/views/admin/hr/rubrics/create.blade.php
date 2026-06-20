@@ -4,7 +4,6 @@
 @section('header', 'قالب تقييم جديد — HR')
 
 @section('content')
-@include('admin.hr._shared')
 
 <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" style="background: #f8fafc; min-height: 100vh;">
     @include('admin.hr._nav', ['active' => 'rubrics'])

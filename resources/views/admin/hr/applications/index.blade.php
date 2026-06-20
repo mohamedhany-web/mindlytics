@@ -4,7 +4,6 @@
 @section('header', 'طلبات التوظيف — HR')
 
 @section('content')
-@include('admin.hr._shared')
 
 @php
     $statusLabels = \App\Models\HrJobApplication::STATUSES;
