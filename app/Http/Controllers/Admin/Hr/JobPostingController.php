@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Hr;
 
 use App\Http\Controllers\Controller;
+use App\Models\HrJobApplication;
 use App\Models\HrJobPosting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,7 +31,13 @@ class JobPostingController extends Controller
 
         $jobs = $q->paginate(20)->withQueryString();
 
-        return view('admin.hr.jobs.index', compact('jobs'));
+        $stats = [
+            'total' => HrJobPosting::count(),
+            'published' => HrJobPosting::where('is_published', true)->count(),
+            'applications' => HrJobApplication::count(),
+        ];
+
+        return view('admin.hr.jobs.index', compact('jobs', 'stats'));
     }
 
     public function show(HrJobPosting $job): RedirectResponse

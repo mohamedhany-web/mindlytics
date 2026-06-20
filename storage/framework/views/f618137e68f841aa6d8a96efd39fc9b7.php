@@ -59,6 +59,29 @@
         </div>
     </section>
 
+    <?php if($kpiComparison ?? null): ?>
+        <?php
+            $kc = $kpiComparison;
+            $kcClass = match ($kc['status'] ?? '') {
+                'met' => 'border-emerald-200 bg-emerald-50',
+                'near' => 'border-amber-200 bg-amber-50',
+                default => 'border-rose-200 bg-rose-50',
+            };
+        ?>
+        <section class="rounded-2xl border <?php echo e($kcClass); ?> p-5">
+            <h3 class="font-black text-slate-900 mb-2"><i class="fas fa-bullseye ml-1"></i> مقارنة KPI ليوم التقرير</h3>
+            <p class="text-sm font-semibold mb-3"><?php echo e($kc['status_label'] ?? ''); ?> — <?php echo e($kc['overall_pct'] ?? 0); ?>%</p>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                <?php $__currentLoopData = $kc['lines'] ?? []; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $line): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <div class="rounded-lg bg-white/80 border border-white px-3 py-2">
+                        <p class="text-slate-600 text-xs"><?php echo e($line['label']); ?></p>
+                        <p class="font-bold"><?php echo e($line['actual']); ?> / <?php echo e($line['target']); ?> (<?php echo e($line['pct']); ?>%)</p>
+                    </div>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+            </div>
+        </section>
+    <?php endif; ?>
+
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
     
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden h-full">

@@ -14,7 +14,12 @@ class RubricController extends Controller
     {
         $rubrics = HrRubric::query()->with('creator:id,name')->orderByDesc('is_default')->orderByDesc('updated_at')->paginate(20);
 
-        return view('admin.hr.rubrics.index', compact('rubrics'));
+        $stats = [
+            'total' => HrRubric::count(),
+            'default' => HrRubric::where('is_default', true)->count(),
+        ];
+
+        return view('admin.hr.rubrics.index', compact('rubrics', 'stats'));
     }
 
     public function create(): View

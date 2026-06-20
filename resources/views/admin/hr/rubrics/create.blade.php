@@ -1,46 +1,41 @@
 @extends('layouts.admin')
 
-@section('title', 'HR — قالب تقييم جديد')
-@section('header', 'HR — قالب تقييم جديد')
+@section('title', 'قالب تقييم جديد — HR')
+@section('header', 'قالب تقييم جديد — HR')
 
 @section('content')
-<div class="max-w-4xl space-y-6">
-    <div class="flex items-center justify-between gap-3">
-        <div>
-            <h2 class="text-xl font-black text-slate-900">قالب تقييم جديد</h2>
-            <p class="text-xs text-slate-600 mt-1">أنشئ Rubric بمعايير وأوزان لحساب Score.</p>
-        </div>
-        <a href="{{ route('admin.hr.rubrics.index') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50">
-            <i class="fas fa-arrow-right"></i>
-            رجوع
-        </a>
-    </div>
+@include('admin.hr._shared')
 
-    @if($errors->any())
-        <div class="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm">
-            <p class="font-semibold mb-1"><i class="fas fa-exclamation-circle ml-1"></i> يوجد أخطاء:</p>
-            <ul class="list-disc list-inside space-y-0.5">
-                @foreach($errors->all() as $e)
-                    <li>{{ $e }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+<div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" style="background: #f8fafc; min-height: 100vh;">
+    @include('admin.hr._nav', ['active' => 'rubrics'])
+    @include('admin.hr._alerts')
 
-    <form method="post" action="{{ route('admin.hr.rubrics.store') }}" class="rounded-2xl border border-slate-200 bg-white p-6 space-y-6">
-        @csrf
-        @include('admin.hr.rubrics._form', ['defaultCriteria' => $defaultCriteria])
+    @include('admin.hr._page-header', [
+        'title' => 'قالب تقييم جديد',
+        'subtitle' => 'أنشئ Rubric بمعايير وأوزان لحساب درجة المتقدم.',
+        'icon' => 'fas fa-plus-circle',
+        'actions' => '<a href="' . route('admin.hr.rubrics.index') . '" class="' . $hrBtnSecondary . '"><i class="fas fa-arrow-right"></i> رجوع للقائمة</a>',
+    ])
 
-        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
-            <button class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-sm font-semibold">
-                <i class="fas fa-save"></i>
-                إنشاء
-            </button>
-            <a href="{{ route('admin.hr.rubrics.index') }}" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50">
-                إلغاء
-            </a>
+    <section class="{{ $hrSectionClass }} max-w-4xl">
+        <div class="px-5 py-4 border-b border-slate-200 bg-slate-50/80">
+            <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <i class="fas fa-code text-pink-600"></i>
+                بيانات القالب
+            </h3>
         </div>
-    </form>
+        <form method="post" action="{{ route('admin.hr.rubrics.store') }}" class="p-5 sm:p-6 space-y-6">
+            @csrf
+            @include('admin.hr.rubrics._form', ['defaultCriteria' => $defaultCriteria])
+
+            <div class="flex flex-wrap items-center gap-2 pt-4 border-t border-slate-200">
+                <button type="submit" class="{{ $hrBtnPrimary }}">
+                    <i class="fas fa-save"></i>
+                    إنشاء القالب
+                </button>
+                <a href="{{ route('admin.hr.rubrics.index') }}" class="{{ $hrBtnSecondary }}">إلغاء</a>
+            </div>
+        </form>
+    </section>
 </div>
 @endsection
-

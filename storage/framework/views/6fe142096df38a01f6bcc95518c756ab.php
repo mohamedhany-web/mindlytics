@@ -3,6 +3,10 @@
 <?php $__env->startSection('title', 'KPIs والأداء — المبيعات'); ?>
 <?php $__env->startSection('header', 'KPIs والأداء'); ?>
 
+<?php $__env->startPush('styles'); ?>
+<?php echo $__env->make('employee.sales._styles', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+<?php $__env->stopPush(); ?>
+
 <?php $__env->startSection('content'); ?>
 <?php
     $w = config('sales_kpi.weights', []);
@@ -10,14 +14,13 @@
     $wk = $report['week'];
     $mo = $report['month'];
 ?>
-<div class="space-y-8 pb-10">
-    <div class="flex flex-wrap items-center justify-between gap-4">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900">لوحة مؤشرات الأداء (KPIs)</h1>
-            <p class="text-gray-600 text-sm mt-1">قياس يومي وأسبوعي وشهري مع وزن: نتائج <?php echo e((int) (($w['results'] ?? 0) * 100)); ?>٪، نشاط <?php echo e((int) (($w['activity'] ?? 0) * 100)); ?>٪، جودة <?php echo e((int) (($w['quality'] ?? 0) * 100)); ?>٪، التزام <?php echo e((int) (($w['discipline'] ?? 0) * 100)); ?>٪</p>
-        </div>
-        <a href="<?php echo e(route('employee.sales.dashboard')); ?>" class="text-sm text-emerald-700 font-semibold hover:underline"><i class="fas fa-arrow-right ml-1"></i> مركز المبيعات</a>
-    </div>
+<div class="space-y-6 pb-6">
+    <?php echo $__env->make('employee.sales._hero', [
+        'heroTitle' => 'لوحة مؤشرات الأداء (KPIs)',
+        'heroSubtitle' => 'قياس يومي وأسبوعي وشهري — نتائج '.(int)(($w['results'] ?? 0) * 100).'٪ · نشاط '.(int)(($w['activity'] ?? 0) * 100).'٪ · جودة '.(int)(($w['quality'] ?? 0) * 100).'٪ · التزام '.(int)(($w['discipline'] ?? 0) * 100).'٪',
+        'heroIcon' => 'fa-bullseye',
+        'backUrl' => route('employee.sales.dashboard'),
+    ], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
     <section class="rounded-2xl border-2 border-emerald-600/30 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-lg">
         <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">

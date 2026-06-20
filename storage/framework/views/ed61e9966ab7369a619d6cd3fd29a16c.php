@@ -229,6 +229,14 @@
                         </a>
                     </li>
                     <li>
+                        <a href="<?php echo e(route('admin.sales.groups.index')); ?>"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.sales.groups.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : ''); ?>">
+                            <i class="fas fa-layer-group w-4"></i>
+                            <span>مجموعات العملاء</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="<?php echo e(route('admin.sales.transfer.index')); ?>"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.sales.transfer.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : ''); ?>">
@@ -274,6 +282,46 @@
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.sales.commissions.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : ''); ?>">
                             <i class="fas fa-coins w-4"></i>
                             <span>كوميشن المبيعات</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            <?php
+                $hrMenuOpen = request()->routeIs('admin.hr.*');
+            ?>
+            <li x-data="{ open: <?php echo e($hrMenuOpen ? 'true' : 'false'); ?> }">
+                <button type="button" @click="open = !open" :aria-expanded="open"
+                        class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-user-friends w-5 text-pink-400 group-hover:text-white"></i>
+                        <span class="font-medium">HR</span>
+                    </div>
+                    <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
+                </button>
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
+                    <li>
+                        <a href="<?php echo e(route('admin.hr.jobs.index')); ?>"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.hr.jobs.*') ? 'bg-pink-600/30 text-white font-semibold border-r-2 border-pink-400' : ''); ?>">
+                            <i class="fas fa-briefcase w-4"></i>
+                            <span>الوظائف</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="<?php echo e(route('admin.hr.applications.index')); ?>"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.hr.applications.*') ? 'bg-pink-600/30 text-white font-semibold border-r-2 border-pink-400' : ''); ?>">
+                            <i class="fas fa-inbox w-4"></i>
+                            <span>طلبات التوظيف</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="<?php echo e(route('admin.hr.rubrics.index')); ?>"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.hr.rubrics.*') ? 'bg-pink-600/30 text-white font-semibold border-r-2 border-pink-400' : ''); ?>">
+                            <i class="fas fa-star-half-alt w-4"></i>
+                            <span>قوالب التقييم</span>
                         </a>
                     </li>
                 </ul>

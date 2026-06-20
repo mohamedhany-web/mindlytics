@@ -10,7 +10,7 @@
         <form method="post" action="<?php echo e(route('employee.sales.leads.update', $lead)); ?>">
             <?php echo csrf_field(); ?>
             <?php echo method_field('PUT'); ?>
-            <?php echo $__env->make('employee.sales._lead_fields', ['lead' => $lead], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+            <?php echo $__env->make('employee.sales._lead_fields', ['lead' => $lead, 'groups' => $groups ?? collect()], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
             <div class="mt-6 flex gap-3">
                 <button type="submit" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold">حفظ</button>
                 <a href="<?php echo e(route('employee.sales.leads.show', $lead)); ?>" class="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700">إلغاء</a>

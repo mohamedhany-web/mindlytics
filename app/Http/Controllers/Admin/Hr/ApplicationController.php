@@ -43,7 +43,14 @@ class ApplicationController extends Controller
         $applications = $q->paginate(25)->withQueryString();
         $jobs = HrJobPosting::query()->orderByDesc('updated_at')->get(['id', 'title']);
 
-        return view('admin.hr.applications.index', compact('applications', 'jobs'));
+        $stats = [
+            'total' => HrJobApplication::count(),
+            'new' => HrJobApplication::where('status', 'new')->count(),
+            'interview' => HrJobApplication::where('status', 'interview')->count(),
+            'hired' => HrJobApplication::where('status', 'hired')->count(),
+        ];
+
+        return view('admin.hr.applications.index', compact('applications', 'jobs', 'stats'));
     }
 
     public function show(HrJobApplication $application): View

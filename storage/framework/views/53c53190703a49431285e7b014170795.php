@@ -1,4 +1,4 @@
-<?php $lead = $lead ?? null; ?>
+<?php $lead = $lead ?? null; $groups = $groups ?? collect(); ?>
 <div class="md:col-span-2">
     <label class="block text-sm font-medium text-gray-700 mb-1">الاسم <span class="text-red-500">*</span></label>
     <input type="text" name="name" required value="<?php echo e(old('name', $lead->name ?? '')); ?>" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
@@ -39,6 +39,25 @@
         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
     </select>
     <p class="text-xs text-gray-500 mt-1">عاجل يظهر في لوحة التحكم ويُرتّب أعلى القائمة عند اختيار ترتيب الأولوية.</p>
+</div>
+<div>
+    <label class="block text-sm font-medium text-gray-700 mb-1">المجموعة <span class="text-gray-400">(اختياري)</span></label>
+    <select name="sales_lead_group_id" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+        <option value="">— بدون مجموعة —</option>
+        <?php $__currentLoopData = $groups; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $group): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <option value="<?php echo e($group->id); ?>" <?php if(old('sales_lead_group_id', $lead->sales_lead_group_id ?? '') == $group->id): echo 'selected'; endif; ?>>
+                <?php echo e($group->name); ?><?php if($group->is_admin_managed ?? false): ?> (إدارة) <?php endif; ?>
+            </option>
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+    </select>
+    <?php $__errorArgs = ['sales_lead_group_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="text-red-600 text-xs mt-1"><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
 </div>
 <div>
     <label class="block text-sm font-medium text-gray-700 mb-1">قيمة متوقعة (ج.م)</label>

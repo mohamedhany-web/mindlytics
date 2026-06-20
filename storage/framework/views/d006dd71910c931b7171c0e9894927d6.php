@@ -27,8 +27,8 @@
         <a href="<?php echo e(route('place.office.usage-logs.index')); ?>"
            class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 <?php echo e(request()->routeIs('place.office.usage-logs.*') ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'); ?>"
            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-            <i class="fas fa-clock text-base"></i>
-            <span>سجل الساعات</span>
+            <i class="fas fa-clipboard-list text-base"></i>
+            <span>التسجيل اليومي</span>
         </a>
 
         <a href="<?php echo e(route('place.office.settlements.index')); ?>"

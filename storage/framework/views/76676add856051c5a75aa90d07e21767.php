@@ -22,9 +22,28 @@
         ['name' => 'الأولوية', 'required' => false, 'aliases' => 'priority — عادي، مرتفع، عاجل'],
     ];
     $oldRepIds = collect(old('assigned_to_ids', []))->map(fn ($id) => (int) $id)->all();
+    $groupOptions = $groups->map(fn ($g) => [
+        'id' => $g->id,
+        'assigned_to' => $g->assigned_to,
+        'label' => $g->name.' — '.$g->assignee?->name,
+        'admin' => (bool) $g->is_admin_managed,
+    ])->values();
 ?>
 
-<div class="space-y-6" x-data="{ fileName: '', dragOver: false }">
+<div class="space-y-6" x-data="{
+    fileName: '',
+    dragOver: false,
+    selectedGroupId: '<?php echo e(old('group_id', '')); ?>',
+    groups: <?php echo json_encode($groupOptions, 15, 512) ?>,
+    applyGroupAssignee() {
+        if (!this.selectedGroupId) return;
+        const group = this.groups.find(g => String(g.id) === String(this.selectedGroupId));
+        if (!group) return;
+        document.querySelectorAll('.rep-checkbox').forEach(c => {
+            c.checked = String(c.value) === String(group.assigned_to);
+        });
+    }
+}" x-init="if (selectedGroupId) applyGroupAssignee()">
     <?php if(session('error')): ?>
         <div class="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm font-semibold">
             <i class="fas fa-exclamation-circle ml-1"></i><?php echo e(session('error')); ?>
@@ -62,6 +81,10 @@
                 <a href="<?php echo e(route('admin.sales.categories.index')); ?>" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 rounded-xl border border-slate-300 hover:bg-white">
                     <i class="fas fa-tags text-teal-600"></i>
                     التصنيفات
+                </a>
+                <a href="<?php echo e(route('admin.sales.groups.index')); ?>" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 rounded-xl border border-slate-300 hover:bg-white">
+                    <i class="fas fa-layer-group text-indigo-600"></i>
+                    مجموعات العملاء
                 </a>
                 <a href="<?php echo e(route('admin.sales.leads.import.template')); ?>" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl bg-emerald-600 hover:bg-emerald-700">
                     <i class="fas fa-download"></i>
@@ -172,6 +195,41 @@ unset($__errorArgs, $__bag); ?>
                                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                 </select>
                             </div>
+                            <div class="sm:col-span-2">
+                                <div class="flex items-center justify-between gap-2 mb-1">
+                                    <label class="block text-xs font-semibold text-slate-700">مجموعة العملاء <span class="font-normal text-slate-500">(اختياري)</span></label>
+                                    <a href="<?php echo e(route('admin.sales.groups.create')); ?>" target="_blank" class="text-xs font-semibold text-indigo-600 hover:underline">+ مجموعة جديدة</a>
+                                </div>
+                                <select name="group_id" class="<?php echo e($selectClass); ?>"
+                                        x-model="selectedGroupId"
+                                        @change="applyGroupAssignee()">
+                                    <option value="">— بدون مجموعة —</option>
+                                    <?php $__currentLoopData = $groups; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $group): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                        <option value="<?php echo e($group->id); ?>" <?php if(old('group_id') == $group->id): echo 'selected'; endif; ?>>
+                                            <?php echo e($group->name); ?> — <?php echo e($group->assignee?->name); ?>
+
+                                            <?php if($group->is_admin_managed): ?> (إدارة) <?php endif; ?>
+                                        </option>
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                </select>
+                                <?php $__errorArgs = ['group_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="text-xs text-rose-600 mt-1"><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                                <p class="text-xs text-slate-500 mt-1.5 flex items-start gap-1.5" x-show="selectedGroupId">
+                                    <i class="fas fa-info-circle text-indigo-500 mt-0.5"></i>
+                                    <span>عند اختيار مجموعة، تُسند كل الدفعة لموظف المجموعة ويظهر لها في لوحة الموظف.</span>
+                                </p>
+                                <?php if($groups->isEmpty()): ?>
+                                    <p class="text-xs text-amber-700 mt-1">
+                                        <a href="<?php echo e(route('admin.sales.groups.create')); ?>" class="underline">أنشئ مجموعة</a> وخصّصها لموظف مبيعات، ثم ارجع للاستيراد.
+                                    </p>
+                                <?php endif; ?>
+                            </div>
                         </div>
 
                         
@@ -253,6 +311,10 @@ unset($__errorArgs, $__bag); ?>
                     <li class="flex gap-3">
                         <span class="w-9 h-9 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center flex-shrink-0 text-sm"><i class="fas fa-tags"></i></span>
                         <div><p class="text-sm font-bold text-slate-900">اختر التصنيف</p><p class="text-xs text-slate-600">يُطبَّق على كل صف في الدفعة.</p></div>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 text-sm"><i class="fas fa-layer-group"></i></span>
+                        <div><p class="text-sm font-bold text-slate-900">مجموعة اختيارية</p><p class="text-xs text-slate-600">أنشئ مجموعة من الإدارة وخصّصها لموظف — العملاء المستوردون ينضمون إليها تلقائياً.</p></div>
                     </li>
                     <li class="flex gap-3">
                         <span class="w-9 h-9 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center flex-shrink-0 text-sm"><i class="fas fa-random"></i></span>

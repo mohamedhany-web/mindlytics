@@ -3,11 +3,18 @@
 <?php $__env->startSection('title', 'عمولات المبيعات'); ?>
 <?php $__env->startSection('header', 'عمولات المبيعات'); ?>
 
+<?php $__env->startPush('styles'); ?>
+<?php echo $__env->make('employee.sales._styles', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+<?php $__env->stopPush(); ?>
+
 <?php $__env->startSection('content'); ?>
 <div class="space-y-6">
-    <div class="flex flex-wrap items-center justify-between gap-4">
-        <a href="<?php echo e(route('employee.sales.dashboard')); ?>" class="text-sm text-gray-600 hover:text-emerald-600"><i class="fas fa-arrow-right ml-1"></i> مركز المبيعات</a>
-    </div>
+    <?php echo $__env->make('employee.sales._hero', [
+        'heroTitle' => 'عمولات المبيعات',
+        'heroSubtitle' => 'ملخص العمولات المعتمدة والمعلّقة — '.$periodLabel,
+        'heroIcon' => 'fa-coins',
+        'backUrl' => route('employee.sales.dashboard'),
+    ], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
     <section class="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
         <div class="px-5 py-4 bg-gradient-to-l from-amber-50 to-white border-b border-amber-100">
