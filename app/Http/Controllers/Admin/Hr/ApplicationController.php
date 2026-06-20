@@ -7,6 +7,7 @@ use App\Models\HrJobApplication;
 use App\Models\HrJobPosting;
 use App\Services\Hr\AtsScoringService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -103,7 +104,7 @@ class ApplicationController extends Controller
         return redirect()->route('admin.hr.applications.index')->with('success', 'تم حذف التقديم.');
     }
 
-    private function applyApplicationFilters(Builder $q, Request $request): void
+    private function applyApplicationFilters(Builder|Relation $q, Request $request): void
     {
         if ($request->filled('status') && array_key_exists($request->status, HrJobApplication::STATUSES)) {
             $q->where('status', $request->status);
