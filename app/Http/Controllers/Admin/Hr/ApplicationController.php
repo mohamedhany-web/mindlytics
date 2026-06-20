@@ -119,7 +119,7 @@ class ApplicationController extends Controller
                 'sender_id' => null,
                 'title' => 'تم تقييم متقدم',
                 'message' => 'تم حفظ تقييم المتقدم «'.$application->full_name.'» بدرجة '.$score->total_score.'.',
-                'type' => 'info',
+                'type' => 'system',
                 'priority' => 'normal',
                 'audience' => 'admin',
                 'action_url' => route('admin.hr.applications.show', $application),

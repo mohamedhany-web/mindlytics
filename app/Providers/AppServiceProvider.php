@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use App\Support\PlatformSettings;
 use App\Support\SiteBranding;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Gate;
@@ -121,6 +122,10 @@ class AppServiceProvider extends ServiceProvider
                 'hrBtnDark' => 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold transition-all',
                 'hrSectionClass' => 'rounded-2xl bg-white border-2 border-slate-200/50 shadow-xl overflow-hidden',
             ]);
+        });
+
+        View::composer(['components.unified-footer', 'public.contact'], function ($view) {
+            $view->with('platformContact', PlatformSettings::contactPage());
         });
 
         // إجبار روابط الموقع على HTTPS: الإنتاج، أو عندما يكون APP_URL أصلاً https (يشمل استضافة خلف بروكسي)

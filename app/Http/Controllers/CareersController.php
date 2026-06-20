@@ -9,6 +9,7 @@ use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -65,19 +66,36 @@ class CareersController extends Controller
             'submitted_at' => now(),
         ]);
 
-        $disk = hr_recruitment_disk();
+        try {
+            $this->storeFile($application, $request->file('cv'), 'cv');
+            foreach ($request->file('attachments', []) as $file) {
+                $this->storeFile($application, $file, 'attachment');
+            }
+        } catch (\Throwable $e) {
+            Log::error('HR application file upload failed', [
+                'application_id' => $application->id,
+                'message' => $e->getMessage(),
+            ]);
+            $application->delete();
 
-        $this->storeFile($application, $request->file('cv'), 'cv', $disk);
-        foreach ($request->file('attachments', []) as $file) {
-            $this->storeFile($application, $file, 'attachment', $disk);
+            return back()
+                ->withInput()
+                ->withErrors(['cv' => 'تعذّر رفع الملف. يرجى المحاولة مرة أخرى أو التواصل معنا.']);
         }
 
-        $this->notifyAdminsNewApplication($application);
+        try {
+            $this->notifyAdminsNewApplication($application);
+        } catch (\Throwable $e) {
+            Log::warning('HR application saved but admin notification failed', [
+                'application_id' => $application->id,
+                'message' => $e->getMessage(),
+            ]);
+        }
 
         return redirect()->route('careers.show', $job)->with('success', 'تم إرسال طلبك بنجاح. سيتم التواصل معك بعد المراجعة.');
     }
 
-    private function storeFile(HrJobApplication $application, $file, string $kind, string $disk): void
+    private function storeFile(HrJobApplication $application, $file, string $kind): void
     {
         if (! $file) {
             return;
@@ -89,7 +107,7 @@ class CareersController extends Controller
         $safeName = $base.'-'.Str::random(6).($ext ? '.'.$ext : '');
 
         $folder = "hr/recruitment/{$application->job_posting_id}/{$application->id}/".($kind === 'cv' ? 'cv' : 'attachments');
-        $path = Storage::disk($disk)->putFileAs($folder, $file, $safeName);
+        [$disk, $path] = $this->uploadHrFile($folder, $file, $safeName);
 
         HrApplicationFile::create([
             'job_application_id' => $application->id,
@@ -102,8 +120,36 @@ class CareersController extends Controller
         ]);
     }
 
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private function uploadHrFile(string $folder, $file, string $safeName): array
+    {
+        $preferred = hr_recruitment_disk();
+        $candidates = array_values(array_unique(array_filter([
+            $preferred,
+            $preferred !== 'public' ? 'public' : null,
+        ])));
+
+        $lastError = null;
+
+        foreach ($candidates as $disk) {
+            try {
+                $path = Storage::disk($disk)->putFileAs($folder, $file, $safeName);
+                if ($path) {
+                    return [$disk, $path];
+                }
+            } catch (\Throwable $e) {
+                $lastError = $e;
+            }
+        }
+
+        throw new \RuntimeException($lastError?->getMessage() ?: 'Unable to store HR recruitment file.');
+    }
+
     private function notifyAdminsNewApplication(HrJobApplication $application): void
     {
+        $application->loadMissing('job');
         $jobTitle = $application->job?->title;
         $title = 'طلب توظيف جديد';
         $message = 'متقدم جديد: '.$application->full_name.($jobTitle ? ' — وظيفة: '.$jobTitle : '');
@@ -119,7 +165,7 @@ class CareersController extends Controller
                 'sender_id' => null,
                 'title' => $title,
                 'message' => $message,
-                'type' => 'info',
+                'type' => 'system',
                 'priority' => 'high',
                 'audience' => 'admin',
                 'action_url' => route('admin.hr.applications.show', $application),
@@ -129,4 +175,3 @@ class CareersController extends Controller
         }
     }
 }
-

@@ -24,6 +24,7 @@ class SystemSettingsController extends Controller
             'gatewayFeeMode' => (string) ($all['gateway_fee_mode'] ?? 'none'),
             'gatewayFeePercent' => (string) ($all['gateway_fee_percent'] ?? '0'),
             'gatewayFeeFixed' => (string) ($all['gateway_fee_fixed'] ?? '0'),
+            'contactPage' => PlatformSettings::contactPage(),
         ]);
     }
 
@@ -36,6 +37,16 @@ class SystemSettingsController extends Controller
             'gateway_fee_mode' => ['required', Rule::in(['none', 'percent', 'fixed'])],
             'gateway_fee_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'gateway_fee_fixed' => ['nullable', 'numeric', 'min:0'],
+            'contact_hero_title' => ['required', 'string', 'max:255'],
+            'contact_hero_subtitle' => ['nullable', 'string', 'max:500'],
+            'contact_address' => ['nullable', 'string', 'max:500'],
+            'contact_phone' => ['nullable', 'string', 'max:60'],
+            'contact_email' => ['nullable', 'email', 'max:255'],
+            'contact_whatsapp' => ['nullable', 'string', 'max:30'],
+            'contact_hours' => ['nullable', 'array', 'max:7'],
+            'contact_hours.*.label' => ['nullable', 'string', 'max:120'],
+            'contact_hours.*.value' => ['nullable', 'string', 'max:120'],
+            'contact_hours.*.closed' => ['nullable', 'boolean'],
         ]);
 
         $disk = Storage::disk('public');
@@ -82,6 +93,15 @@ class SystemSettingsController extends Controller
             'gateway_fee_mode' => $validated['gateway_fee_mode'],
             'gateway_fee_percent' => (string) ($validated['gateway_fee_percent'] ?? '0'),
             'gateway_fee_fixed' => (string) ($validated['gateway_fee_fixed'] ?? '0'),
+            'contact_page' => [
+                'hero_title' => $validated['contact_hero_title'],
+                'hero_subtitle' => (string) ($validated['contact_hero_subtitle'] ?? ''),
+                'address' => (string) ($validated['contact_address'] ?? ''),
+                'phone' => (string) ($validated['contact_phone'] ?? ''),
+                'email' => (string) ($validated['contact_email'] ?? ''),
+                'whatsapp' => preg_replace('/\D+/', '', (string) ($validated['contact_whatsapp'] ?? '')),
+                'hours' => PlatformSettings::normalizeContactHours($request->input('contact_hours', [])),
+            ],
         ]);
 
         if ($validated['platform_payment_mode'] === 'fawaterak' && $fawaterakOn && ! app(FawaterakService::class)->isConfigured()) {

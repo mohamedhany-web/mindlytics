@@ -64,6 +64,11 @@ Route::get('/storage/{path}', function ($path) {
 // Careers (Public) — التوظيف
 Route::get('/careers', [\App\Http\Controllers\CareersController::class, 'index'])->name('careers.index');
 Route::get('/careers/{job}', [\App\Http\Controllers\CareersController::class, 'show'])->name('careers.show');
+Route::get('/careers/{job}/apply', function (\App\Models\HrJobPosting $job) {
+    abort_unless($job->is_published, 404);
+
+    return redirect()->route('careers.show', $job);
+})->name('careers.apply.form');
 Route::post('/careers/{job}/apply', [\App\Http\Controllers\CareersController::class, 'apply'])
     ->middleware('throttle:20,1')
     ->name('careers.apply');

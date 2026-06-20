@@ -175,6 +175,87 @@
                 </section>
             </div>
 
+            {{-- صفحة التواصل --}}
+            <section class="rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50 overflow-hidden">
+                <div class="px-6 py-5 lg:px-8 lg:py-6 border-b border-slate-100 bg-gradient-to-l from-sky-600 to-blue-600 text-white">
+                    <div class="flex items-center gap-3">
+                        <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 backdrop-blur">
+                            <i class="fas fa-envelope-open-text text-xl"></i>
+                        </span>
+                        <div>
+                            <h3 class="text-lg font-black">صفحة تواصل معنا</h3>
+                            <p class="text-sm text-sky-100/90 mt-0.5">العنوان، الهاتف، البريد، واتساب، وساعات العمل — تظهر في /contact والفوتر</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6 lg:p-8 space-y-6">
+                    @php
+                        $hoursRows = old('contact_hours', $contactPage['hours'] ?? []);
+                        while (count($hoursRows) < 5) {
+                            $hoursRows[] = ['label' => '', 'value' => '', 'closed' => false];
+                        }
+                    @endphp
+                    <div class="grid sm:grid-cols-2 gap-5">
+                        <div>
+                            <label class="text-sm font-bold text-slate-800">عنوان الصفحة (Hero)</label>
+                            <input type="text" name="contact_hero_title" value="{{ old('contact_hero_title', $contactPage['hero_title'] ?? '') }}" required
+                                   class="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+                        </div>
+                        <div>
+                            <label class="text-sm font-bold text-slate-800">الوصف تحت العنوان</label>
+                            <input type="text" name="contact_hero_subtitle" value="{{ old('contact_hero_subtitle', $contactPage['hero_subtitle'] ?? '') }}"
+                                   class="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-sm font-bold text-slate-800">العنوان (اختياري)</label>
+                        <input type="text" name="contact_address" value="{{ old('contact_address', $contactPage['address'] ?? '') }}"
+                               class="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" placeholder="مثال: القاهرة، مصر">
+                    </div>
+                    <div class="grid sm:grid-cols-3 gap-5">
+                        <div>
+                            <label class="text-sm font-bold text-slate-800">الهاتف</label>
+                            <input type="text" name="contact_phone" value="{{ old('contact_phone', $contactPage['phone'] ?? '') }}"
+                                   class="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" dir="ltr" placeholder="01044610507">
+                        </div>
+                        <div>
+                            <label class="text-sm font-bold text-slate-800">البريد الإلكتروني</label>
+                            <input type="email" name="contact_email" value="{{ old('contact_email', $contactPage['email'] ?? '') }}"
+                                   class="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" dir="ltr">
+                        </div>
+                        <div>
+                            <label class="text-sm font-bold text-slate-800">واتساب (أرقام فقط)</label>
+                            <input type="text" name="contact_whatsapp" value="{{ old('contact_whatsapp', $contactPage['whatsapp'] ?? '') }}"
+                                   class="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" dir="ltr" placeholder="201044610507">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-sm font-bold text-slate-800 mb-3 block">ساعات العمل</label>
+                        <div class="space-y-3">
+                            @foreach(array_slice($hoursRows, 0, 5) as $i => $row)
+                                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center rounded-xl border border-slate-200 bg-slate-50/80 p-3">
+                                    <div class="sm:col-span-4">
+                                        <input type="text" name="contact_hours[{{ $i }}][label]" value="{{ $row['label'] ?? '' }}"
+                                               placeholder="اليوم / الفترة" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                                    </div>
+                                    <div class="sm:col-span-5">
+                                        <input type="text" name="contact_hours[{{ $i }}][value]" value="{{ $row['value'] ?? '' }}"
+                                               placeholder="9:00 ص - 6:00 م" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                                    </div>
+                                    <label class="sm:col-span-3 inline-flex items-center gap-2 text-sm font-semibold text-slate-700 cursor-pointer">
+                                        <input type="hidden" name="contact_hours[{{ $i }}][closed]" value="0">
+                                        <input type="checkbox" name="contact_hours[{{ $i }}][closed]" value="1" class="rounded border-slate-300 text-rose-600"
+                                               @checked(!empty($row['closed']))>
+                                        مغلق
+                                    </label>
+                                </div>
+                            @endforeach
+                        </div>
+                        <p class="text-xs text-slate-500 mt-2">اترك «اليوم» فارغاً لحذف الصف. الصفوف المعلّمة «مغلق» تظهر بلون مختلف.</p>
+                    </div>
+                </div>
+            </section>
+
             <div class="sticky bottom-4 z-20">
                 <div class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 backdrop-blur px-4 py-3 shadow-lg">
                     <button type="submit" class="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-2xl bg-gradient-to-l from-blue-600 to-indigo-600 text-white text-sm font-black shadow-lg shadow-blue-500/25 hover:from-blue-700 hover:to-indigo-700 transition-all">

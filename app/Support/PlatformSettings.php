@@ -64,6 +64,76 @@ class PlatformSettings
     }
 
     /**
+     * @return array{
+     *     hero_title: string,
+     *     hero_subtitle: string,
+     *     address: string,
+     *     phone: string,
+     *     email: string,
+     *     whatsapp: string,
+     *     hours: array<int, array{label: string, value: string, closed: bool}>
+     * }
+     */
+    public static function contactPage(): array
+    {
+        $defaults = [
+            'hero_title' => 'تواصل معنا',
+            'hero_subtitle' => 'نحن هنا للإجابة على استفساراتك ومساعدتك في رحلتك التعليمية',
+            'address' => '',
+            'phone' => '01044610507',
+            'email' => 'info@mindlytics-academy.com',
+            'whatsapp' => '201044610507',
+            'hours' => [
+                ['label' => 'الأحد - الخميس', 'value' => '9:00 ص - 6:00 م', 'closed' => false],
+                ['label' => 'الجمعة', 'value' => 'مغلق', 'closed' => true],
+                ['label' => 'السبت', 'value' => '10:00 ص - 2:00 م', 'closed' => false],
+            ],
+        ];
+
+        $stored = self::all()['contact_page'] ?? [];
+        if (! is_array($stored)) {
+            return $defaults;
+        }
+
+        $merged = array_merge($defaults, $stored);
+        if (isset($stored['hours']) && is_array($stored['hours']) && $stored['hours'] !== []) {
+            $merged['hours'] = self::normalizeContactHours($stored['hours']);
+        }
+
+        return $merged;
+    }
+
+    /**
+     * @param  array<int, mixed>  $rows
+     * @return array<int, array{label: string, value: string, closed: bool}>
+     */
+    public static function normalizeContactHours(array $rows): array
+    {
+        $out = [];
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $label = trim((string) ($row['label'] ?? ''));
+            if ($label === '') {
+                continue;
+            }
+            $out[] = [
+                'label' => $label,
+                'value' => trim((string) ($row['value'] ?? '')),
+                'closed' => filter_var($row['closed'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            ];
+        }
+
+        return $out;
+    }
+
+    public static function phoneDigits(string $phone): string
+    {
+        return preg_replace('/\D+/', '', $phone) ?: '';
+    }
+
+    /**
      * @param  array<string, mixed>  $data
      */
     public static function save(array $data): void
