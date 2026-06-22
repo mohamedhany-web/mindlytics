@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WhatsAppBatchItem extends Model
 {
+    protected $table = 'whatsapp_batch_items';
+
     protected $fillable = [
         'batch_id',
         'recipient_name',

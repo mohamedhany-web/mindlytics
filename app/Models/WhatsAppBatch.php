@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WhatsAppBatch extends Model
 {
+    protected $table = 'whatsapp_batches';
+
     protected $fillable = [
         'title',
         'source_type',

@@ -19,8 +19,9 @@ class WhatsAppBatchService
         }
 
         try {
-            $ready = Schema::hasTable('whatsapp_batches')
-                && Schema::hasTable('whatsapp_batch_items');
+            $batchTable = (new WhatsAppBatch)->getTable();
+            $itemTable = (new WhatsAppBatchItem)->getTable();
+            $ready = Schema::hasTable($batchTable) && Schema::hasTable($itemTable);
         } catch (\Throwable) {
             $ready = false;
         }
