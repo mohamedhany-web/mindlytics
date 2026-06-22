@@ -1570,6 +1570,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/qr', [\App\Http\Controllers\Admin\WhatsAppController::class, 'qrJson'])->name('qr');
             Route::post('/start', [\App\Http\Controllers\Admin\WhatsAppController::class, 'startBridge'])->name('start');
             Route::post('/logout', [\App\Http\Controllers\Admin\WhatsAppController::class, 'logoutBridge'])->name('logout');
+            Route::get('/batches', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'index'])->name('batches.index');
+            Route::get('/batches/{batch}', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'show'])->name('batches.show');
+            Route::get('/batches/{batch}/status', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'statusJson'])->name('batches.status');
         });
 
         // إدارة الرسائل والتقارير

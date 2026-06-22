@@ -211,40 +211,57 @@
                 </form>
             </div>
 
-            <div class="px-6 py-3 border-b border-slate-100 bg-slate-50/60">
-                <form method="POST" action="{{ route('admin.workshops.send-whatsapp', $workshop) }}" class="flex flex-col gap-3">
+            <div class="px-6 py-3 border-b border-slate-100 bg-gradient-to-r from-emerald-50/80 to-green-50/50">
+                <form id="workshop-whatsapp-form" method="POST" action="{{ route('admin.workshops.send-whatsapp', $workshop) }}" class="space-y-3"
+                      onsubmit="return confirmWhatsappSend(this);">
                     @csrf
-                    <div class="flex flex-wrap items-center gap-3 text-sm text-slate-700">
-                        <span class="font-semibold">إرسال رسالة واتساب:</span>
-                        <label class="inline-flex items-center gap-1">
-                            <input type="radio" name="scope" value="all" class="text-green-600 border-slate-300 focus:ring-green-500" checked>
-                            <span>لكل الأرقام</span>
-                        </label>
-                        <label class="inline-flex items-center gap-1">
-                            <input type="radio" name="scope" value="phone" class="text-green-600 border-slate-300 focus:ring-green-500">
-                            <span>رقم معين</span>
-                        </label>
-                        <input type="text" name="phone" placeholder="2010xxxxxxx"
-                               class="w-full md:w-52 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-green-500/70 focus:border-green-500"
-                               onfocus="document.querySelectorAll('input[name=&quot;scope&quot;]').forEach(r=>{ if(r.value==='phone') r.checked=true; });">
-                        <select name="attendance_mode"
-                                class="w-full md:w-40 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-green-500/70 focus:border-green-500">
-                            <option value="all">فلترة: الكل</option>
-                            <option value="online">فلترة: أونلاين</option>
-                            <option value="offline">فلترة: أوفلاين</option>
-                        </select>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-2 text-sm font-bold text-slate-800">
+                            <i class="fab fa-whatsapp text-emerald-600 text-lg"></i>
+                            <span>إرسال واتساب للمسجلين</span>
+                            <span class="text-xs font-normal text-slate-500">({{ $whatsappEligibleCount ?? 0 }} لديهم رقم)</span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 text-xs">
+                            <label class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-emerald-400">
+                                <input type="checkbox" id="wa-select-all-page" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                <span>تحديد الصفحة</span>
+                            </label>
+                            <label class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white border border-emerald-200 cursor-pointer hover:bg-emerald-50">
+                                <input type="checkbox" name="select_all" value="1" id="wa-select-all-workshop" class="rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500">
+                                <span class="font-semibold text-emerald-800">تحديد كل المسجلين ({{ $whatsappEligibleCount ?? 0 }})</span>
+                            </label>
+                            <select name="attendance_mode" id="wa-attendance-filter"
+                                    class="rounded-lg border border-slate-200 px-2 py-1.5 text-slate-800 focus:ring-emerald-500 focus:border-emerald-500">
+                                <option value="all">فلترة: الكل</option>
+                                <option value="online">أونلاين فقط</option>
+                                <option value="offline">أوفلاين فقط</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="flex flex-col md:flex-row items-start md:items-center gap-2">
-                        <textarea name="message" rows="2" required
-                                  class="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-green-500/70 focus:border-green-500"
-                                  placeholder="اكتب رسالة واتساب جاهزة (مثال: أهلاً بكم في الورشة، رابط جروب الواتساب: https://chat.whatsapp.com/...)"></textarea>
+                    <textarea name="message" rows="3" required maxlength="4096"
+                              class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500"
+                              placeholder="مرحباً {name}،&#10;شكراً لتسجيلك في ورشة «{workshop_title}».&#10;موعد الورشة: {workshop_date}">{{ old('message') }}</textarea>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <p class="text-[11px] text-slate-500">
+                            متغيرات: <code class="bg-white px-1 rounded">{name}</code>
+                            <code class="bg-white px-1 rounded">{workshop_title}</code>
+                            · إرسال آمن عبر Queue — تأخير عشوائي + حد {{ config('whatsapp.pacing.max_per_day', 320) }}/يوم
+                        </p>
+                        @if(!empty($latestWhatsappBatch))
+                            <a href="{{ route('admin.whatsapp.batches.show', $latestWhatsappBatch) }}"
+                               class="text-xs text-emerald-700 hover:underline font-semibold inline-flex items-center gap-1">
+                                <i class="fas fa-tasks"></i>
+                                آخر دفعة: {{ $latestWhatsappBatch->statusLabel() }}
+                                ({{ $latestWhatsappBatch->sent_count }}/{{ $latestWhatsappBatch->total_count }})
+                            </a>
+                        @endif
                         <button type="submit"
-                                class="inline-flex items-center gap-1 rounded-xl bg-green-600 hover:bg-green-700 px-4 py-2 text-xs font-semibold text-white shadow-md whitespace-nowrap">
+                                class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-700 hover:to-green-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-500/20">
                             <i class="fab fa-whatsapp"></i>
-                            <span>فتح واتساب</span>
+                            <span>إرسال للمحددين</span>
+                            <span id="wa-selected-count" class="bg-white/20 px-2 py-0.5 rounded-lg text-xs">0</span>
                         </button>
                     </div>
-                    <p class="text-[11px] text-slate-500">سيتم فتح تبويب/تبويبات واتساب جاهزة لكل رقم مع الرسالة المكتوبة.</p>
                 </form>
             </div>
 
@@ -272,6 +289,9 @@
                 <table class="min-w-full divide-y divide-slate-200">
                     <thead class="bg-slate-50">
                         <tr>
+                            <th class="px-3 py-3 text-center w-10">
+                                <span class="sr-only">تحديد</span>
+                            </th>
                             <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">#</th>
                             <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">الطالب</th>
                             <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">التواصل</th>
@@ -282,7 +302,16 @@
                     </thead>
                     <tbody class="bg-white divide-y divide-slate-100">
                         @forelse($registrations as $reg)
-                            <tr class="hover:bg-slate-50/80 transition-colors">
+                            <tr class="hover:bg-slate-50/80 transition-colors {{ $reg->phone ? '' : 'opacity-60' }}">
+                                <td class="px-3 py-3 text-center">
+                                    @if($reg->phone)
+                                        <input type="checkbox" name="registration_ids[]" value="{{ $reg->id }}"
+                                               form="workshop-whatsapp-form"
+                                               class="wa-reg-checkbox rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                    @else
+                                        <span class="text-slate-300" title="لا يوجد رقم">—</span>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3 text-sm text-slate-500">{{ $reg->id }}</td>
                                 <td class="px-4 py-3 text-sm text-slate-800 font-semibold">
                                     {{ $reg->name }}
@@ -303,7 +332,7 @@
                                     @if($reg->whatsapp_link_sent_at)
                                         <div class="inline-flex items-center gap-1 rounded-full bg-green-50 border border-green-200 px-2 py-0.5 text-[10px] font-semibold text-green-700">
                                             <i class="fab fa-whatsapp"></i>
-                                            <span>تم إرسال رابط الواتساب</span>
+                                            <span>تم إرسال واتساب</span>
                                             <span class="text-green-600/80">({{ $reg->whatsapp_link_sent_at->format('Y-m-d H:i') }})</span>
                                         </div>
                                     @endif
@@ -334,7 +363,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-6 py-8 text-center text-slate-500 text-sm">
+                                <td colspan="7" class="px-6 py-8 text-center text-slate-500 text-sm">
                                     لا توجد تسجيلات حتى الآن.
                                 </td>
                             </tr>
@@ -383,6 +412,59 @@
 </div>
 
 @push('scripts')
+    <script>
+        (function () {
+            const selectPage = document.getElementById('wa-select-all-page');
+            const selectAllWorkshop = document.getElementById('wa-select-all-workshop');
+            const countEl = document.getElementById('wa-selected-count');
+            const checkboxes = () => document.querySelectorAll('.wa-reg-checkbox');
+
+            function updateCount() {
+                if (selectAllWorkshop?.checked) {
+                    countEl.textContent = 'الكل ({{ $whatsappEligibleCount ?? 0 }})';
+                    return;
+                }
+                const n = document.querySelectorAll('.wa-reg-checkbox:checked').length;
+                countEl.textContent = String(n);
+            }
+
+            selectPage?.addEventListener('change', function () {
+                checkboxes().forEach(cb => { cb.checked = selectPage.checked; });
+                if (selectPage.checked && selectAllWorkshop) {
+                    selectAllWorkshop.checked = false;
+                }
+                updateCount();
+            });
+
+            selectAllWorkshop?.addEventListener('change', function () {
+                if (selectAllWorkshop.checked) {
+                    checkboxes().forEach(cb => { cb.checked = false; });
+                    if (selectPage) selectPage.checked = false;
+                }
+                updateCount();
+            });
+
+            checkboxes().forEach(cb => cb.addEventListener('change', function () {
+                if (this.checked && selectAllWorkshop) {
+                    selectAllWorkshop.checked = false;
+                }
+                updateCount();
+            }));
+
+            window.confirmWhatsappSend = function (form) {
+                const all = selectAllWorkshop?.checked;
+                const selected = document.querySelectorAll('.wa-reg-checkbox:checked').length;
+                if (!all && selected === 0) {
+                    alert('يرجى تحديد مشترك واحد على الأقل، أو تفعيل «تحديد كل المسجلين».');
+                    return false;
+                }
+                const n = all ? {{ (int) ($whatsappEligibleCount ?? 0) }} : selected;
+                return confirm('بدء إرسال ' + n + ' رسالة في الخلفية؟\n\nسيتم توجيهك لصفحة متابعة — من تم ومن فشل.');
+            };
+
+            updateCount();
+        })();
+    </script>
     <script src="https://unpkg.com/html5-qrcode@2.3.10/html5-qrcode.min.js"></script>
     <script>
         document.addEventListener('alpine:init', () => {

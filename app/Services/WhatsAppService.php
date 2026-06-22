@@ -17,7 +17,8 @@ class WhatsAppService
     private $localApiUrl;
 
     public function __construct(
-        private ?WhatsAppBridgeService $bridge = null
+        private ?WhatsAppBridgeService $bridge = null,
+        private ?WhatsAppPacingService $pacing = null
     ) {
         $this->apiUrl = config('services.whatsapp.api_url', 'https://graph.facebook.com/v18.0');
         $this->apiToken = config('services.whatsapp.api_token');
@@ -25,6 +26,7 @@ class WhatsAppService
         $this->localApiUrl = WhatsAppBridgeSettings::bridgeUrl()
             ?: config('services.whatsapp.local_api_url', 'http://localhost:3001');
         $this->bridge ??= app(WhatsAppBridgeService::class);
+        $this->pacing ??= app(WhatsAppPacingService::class);
     }
 
     protected function serviceType(): string
@@ -35,9 +37,12 @@ class WhatsAppService
     /**
      * إرسال رسالة واتساب
      */
-    public function sendMessage(string $phoneNumber, string $message, string $type = 'text', array $data = [])
+    public function sendMessage(string $phoneNumber, string $message, string $type = 'text', array $options = [])
     {
         try {
+            $actorId = $options['user_id'] ?? auth()->id();
+            $batchId = $options['batch_id'] ?? null;
+
             // تنسيق رقم الهاتف (إضافة رمز الدولة إذا لم يكن موجوداً)
             $formattedPhone = $this->formatPhoneNumber($phoneNumber);
 
@@ -47,7 +52,7 @@ class WhatsAppService
             if ($serviceType === 'disabled') {
                 // وضع التجربة - حفظ في قاعدة البيانات فقط
                 $whatsappMessage = WhatsAppMessage::create([
-                    'user_id' => auth()->id(),
+                    'user_id' => $actorId,
                     'phone_number' => $formattedPhone,
                     'message' => $message,
                     'type' => $type,
@@ -62,7 +67,7 @@ class WhatsAppService
                     'test_mode' => true
                 ];
             } elseif (in_array($serviceType, ['local', 'wwebjs'], true)) {
-                return $this->sendViaBridge($formattedPhone, $message, $type);
+                return $this->sendViaBridge($formattedPhone, $message, $type, $actorId, $batchId);
             } elseif ($serviceType === 'custom') {
                 // استخدام API مخصص من المستخدم
                 return $this->sendViaCustomAPI($formattedPhone, $message, $type);
@@ -87,7 +92,7 @@ class WhatsAppService
 
             // تسجيل الرسالة في قاعدة البيانات
             $whatsappMessage = WhatsAppMessage::create([
-                'user_id' => auth()->id(),
+                'user_id' => $actorId,
                 'phone_number' => $formattedPhone,
                 'message' => $message,
                 'type' => $type,
@@ -136,14 +141,35 @@ class WhatsAppService
     /**
      * إرسال عبر whatsapp-web.js Bridge (Node.js خارج Shared Hosting)
      */
-    private function sendViaBridge(string $phoneNumber, string $message, string $type = 'text')
+    private function sendViaBridge(string $phoneNumber, string $message, string $type = 'text', ?int $actorId = null, ?int $batchId = null)
     {
         try {
-            $result = $this->bridge->sendMessage($phoneNumber, $message);
+            $actorId ??= auth()->id();
+
+            if ($limitError = $this->pacing->assertCanSend()) {
+                WhatsAppMessage::create([
+                    'user_id' => $actorId,
+                    'phone_number' => $phoneNumber,
+                    'message' => $message,
+                    'type' => $type,
+                    'status' => 'failed',
+                    'error_message' => $limitError,
+                ]);
+
+                return ['success' => false, 'error' => $limitError];
+            }
+
+            $this->pacing->waitBeforeSend($batchId);
+
+            $result = $this->bridge->sendMessage(
+                $phoneNumber,
+                $message,
+                $this->pacing->simulateTyping()
+            );
             $responseData = $result['data'] ?? [];
 
             $whatsappMessage = WhatsAppMessage::create([
-                'user_id' => auth()->id(),
+                'user_id' => $actorId,
                 'phone_number' => $phoneNumber,
                 'message' => $message,
                 'type' => $type,
@@ -155,6 +181,8 @@ class WhatsAppService
             ]);
 
             if ($result['success'] ?? false) {
+                $this->pacing->recordSuccessfulSend();
+
                 Log::info('WhatsApp message sent via bridge', [
                     'phone' => $phoneNumber,
                     'message_id' => $whatsappMessage->id,
@@ -184,7 +212,7 @@ class WhatsAppService
             ]);
 
             WhatsAppMessage::create([
-                'user_id' => auth()->id(),
+                'user_id' => $actorId ?? auth()->id(),
                 'phone_number' => $phoneNumber,
                 'message' => $message,
                 'type' => $type,
@@ -204,7 +232,7 @@ class WhatsAppService
      */
     private function sendViaLocalService(string $phoneNumber, string $message, string $type = 'text')
     {
-        return $this->sendViaBridge($phoneNumber, $message, $type);
+        return $this->sendViaBridge($phoneNumber, $message, $type, auth()->id());
     }
 
     /**

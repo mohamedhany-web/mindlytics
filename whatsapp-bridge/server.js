@@ -204,6 +204,18 @@ app.post('/api/send', authMiddleware, async (req, res) => {
     }
     try {
         const chatId = formatChatId(phone);
+        const chat = await client.getChatById(chatId);
+
+        if (req.body.simulate_typing !== false) {
+            const typingMs = 1800 + Math.floor(Math.random() * 3200);
+            try {
+                await chat.sendStateTyping();
+            } catch (_) {
+                /* ignore */
+            }
+            await new Promise((r) => setTimeout(r, typingMs));
+        }
+
         const result = await client.sendMessage(chatId, String(message));
         res.json({
             success: true,

@@ -108,17 +108,21 @@ class WhatsAppBridgeService
     /**
      * @return array{success: bool, data?: array<string, mixed>, error?: string}
      */
-    public function sendMessage(string $phone, string $message): array
+    public function sendMessage(string $phone, string $message, bool $simulateTyping = true): array
     {
         if (! $this->isConfigured()) {
             return ['success' => false, 'error' => 'إعدادات الجسر غير مكتملة.'];
         }
 
         try {
-            $response = $this->client()->post($this->baseUrl() . '/api/send', [
-                'phone' => $phone,
-                'message' => $message,
-            ]);
+            $timeout = config('whatsapp.pacing.simulate_typing', true) ? 120 : 45;
+            $response = $this->client()
+                ->timeout($timeout)
+                ->post($this->baseUrl() . '/api/send', [
+                    'phone' => $phone,
+                    'message' => $message,
+                    'simulate_typing' => $simulateTyping,
+                ]);
 
             $body = $response->json();
 

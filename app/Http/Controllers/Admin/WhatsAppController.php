@@ -3,8 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdvancedCourse;
+use App\Models\MessageTemplate;
+use App\Models\User;
 use App\Models\WhatsAppMessage;
+use App\Services\WhatsAppBatchService;
 use App\Services\WhatsAppBridgeService;
+use App\Services\WhatsAppPacingService;
 use App\Services\WhatsAppService;
 use App\Support\WhatsAppBridgeSettings;
 use Illuminate\Http\Request;
@@ -13,7 +18,8 @@ class WhatsAppController extends Controller
 {
     public function __construct(
         private WhatsAppBridgeService $bridge,
-        private WhatsAppService $whatsapp
+        private WhatsAppService $whatsapp,
+        private WhatsAppBatchService $whatsappBatch
     ) {}
 
     public function index()
@@ -29,25 +35,66 @@ class WhatsAppController extends Controller
             'failed' => WhatsAppMessage::where('status', 'failed')->count(),
         ];
 
-        return view('admin.whatsapp.index', compact('settings', 'status', 'bridgeError', 'stats'));
+        $pacingStats = app(WhatsAppPacingService::class)->usageStats();
+
+        return view('admin.whatsapp.index', compact('settings', 'status', 'bridgeError', 'stats', 'pacingStats'));
     }
 
     public function sendForm()
     {
-        return view('admin.whatsapp.send');
+        $students = User::students()
+            ->whereNotNull('phone')
+            ->where('phone', '!=', '')
+            ->select('id', 'name', 'phone')
+            ->orderBy('name')
+            ->get();
+
+        $templates = MessageTemplate::active()->get(['id', 'title', 'content', 'type']);
+        $courses = AdvancedCourse::active()->select('id', 'title')->orderBy('title')->get();
+
+        $statusResult = $this->bridge->getStatus();
+        $connectionStatus = $statusResult['success']
+            ? ($statusResult['data']['status'] ?? 'unknown')
+            : 'unreachable';
+
+        $recentMessages = WhatsAppMessage::with('user')
+            ->latest()
+            ->limit(6)
+            ->get();
+
+        return view('admin.whatsapp.send', compact(
+            'students',
+            'templates',
+            'courses',
+            'connectionStatus',
+            'recentMessages'
+        ));
     }
 
     public function sendMessage(Request $request)
     {
+        $recipientType = $request->input('recipient_type', 'manual');
+
+        if (in_array($recipientType, ['single_student', 'course_students', 'all_students'], true)) {
+            return $this->sendBulkMessages($request);
+        }
+
         $request->validate([
             'phone' => 'required|string|max:30',
             'message' => 'required|string|max:4096',
+            'template_id' => 'nullable|exists:message_templates,id',
         ], [
             'phone.required' => 'رقم الهاتف مطلوب',
             'message.required' => 'نص الرسالة مطلوب',
         ]);
 
-        $result = $this->whatsapp->sendMessage($request->phone, $request->message);
+        $message = $request->message;
+        if ($request->filled('template_id')) {
+            $template = MessageTemplate::findOrFail($request->template_id);
+            $message = $template->render($this->genericTemplateVariables());
+        }
+
+        $result = $this->whatsapp->sendMessage($request->phone, $message);
 
         if ($result['success'] ?? false) {
             return redirect()
@@ -58,6 +105,121 @@ class WhatsAppController extends Controller
         return back()
             ->withInput()
             ->with('error', $result['error'] ?? 'فشل إرسال الرسالة.');
+    }
+
+    protected function sendBulkMessages(Request $request)
+    {
+        $request->validate([
+            'recipient_type' => 'required|in:single_student,course_students,all_students',
+            'user_id' => 'required_if:recipient_type,single_student|nullable|exists:users,id',
+            'course_id' => 'required_if:recipient_type,course_students|nullable|exists:advanced_courses,id',
+            'message' => 'required|string|max:4096',
+            'template_id' => 'nullable|exists:message_templates,id',
+        ], [
+            'user_id.required_if' => 'يجب اختيار الطالب',
+            'course_id.required_if' => 'يجب اختيار الكورس',
+            'message.required' => 'نص الرسالة مطلوب',
+        ]);
+
+        $students = $this->resolveRecipients($request);
+
+        if ($students->isEmpty()) {
+            return back()->withInput()->with('error', 'لا يوجد مستلمون لديهم أرقام هواتف.');
+        }
+
+        $template = $request->filled('template_id')
+            ? MessageTemplate::findOrFail($request->template_id)
+            : null;
+
+        $items = $students->shuffle()->map(function (User $student) use ($request, $template) {
+            if (empty($student->phone)) {
+                return null;
+            }
+
+            $finalMessage = $request->message;
+            if ($template) {
+                $finalMessage = $template->render($this->getStudentVariables($student));
+            }
+
+            return [
+                'recipient_name' => $student->name,
+                'phone' => $student->phone,
+                'message' => $finalMessage,
+                'message_type' => 'text',
+                'user_id' => $student->id,
+            ];
+        })->filter();
+
+        if ($items->isEmpty()) {
+            return back()->withInput()->with('error', 'لا يوجد مستلمون لديهم أرقام هواتف.');
+        }
+
+        $batch = $this->whatsappBatch->createAndDispatch(
+            sourceType: 'admin_bulk',
+            sourceId: null,
+            title: 'إرسال جماعي — ' . now()->format('Y-m-d H:i'),
+            messageTemplate: $request->message,
+            items: $items,
+            createdBy: (int) auth()->id(),
+            meta: [
+                'recipient_type' => $request->recipient_type,
+                'course_id' => $request->course_id,
+                'template_id' => $request->template_id,
+            ]
+        );
+
+        return redirect()
+            ->route('admin.whatsapp.batches.show', $batch)
+            ->with('success', 'تم بدء إرسال ' . $items->count() . ' رسالة في الخلفية.');
+    }
+
+    protected function resolveRecipients(Request $request)
+    {
+        return match ($request->recipient_type) {
+            'single_student' => User::students()
+                ->where('id', $request->user_id)
+                ->whereNotNull('phone')
+                ->where('phone', '!=', '')
+                ->get(),
+            'course_students' => User::students()
+                ->whereNotNull('phone')
+                ->where('phone', '!=', '')
+                ->whereHas('courseEnrollments', fn ($q) => $q->where('advanced_course_id', $request->course_id))
+                ->get(),
+            'all_students' => User::students()
+                ->whereNotNull('phone')
+                ->where('phone', '!=', '')
+                ->get(),
+            default => collect(),
+        };
+    }
+
+    protected function getStudentVariables(User $student): array
+    {
+        $reportData = $this->whatsapp->generateStudentReportData($student);
+
+        return [
+            'student_name' => $student->name,
+            'student_phone' => $student->phone,
+            'courses_count' => count($reportData['courses']),
+            'avg_score' => $reportData['overall']['average_score'],
+            'total_exams' => count($reportData['exams']),
+            'month_name' => now()->locale('ar')->format('F Y'),
+            'overall_grade' => $reportData['overall']['grade'],
+            'platform_name' => config('app.name', 'Mindlytics'),
+            'support_phone' => config('services.platform.support_phone', ''),
+            'date' => now()->format('d/m/Y'),
+        ];
+    }
+
+    protected function genericTemplateVariables(): array
+    {
+        return [
+            'student_name' => 'الطالب',
+            'platform_name' => config('app.name', 'Mindlytics'),
+            'date' => now()->format('d/m/Y'),
+            'month_name' => now()->locale('ar')->format('F Y'),
+        ];
     }
 
     public function messages(Request $request)
