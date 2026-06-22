@@ -119,7 +119,7 @@ class WhatsAppPacingService
 
     private function isOutsideBusinessHours(): bool
     {
-        if (! config('whatsapp.pacing.business_hours_only', true)) {
+        if (! config('whatsapp.pacing.business_hours_only', false)) {
             return false;
         }
 

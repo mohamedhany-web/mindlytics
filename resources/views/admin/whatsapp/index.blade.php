@@ -73,7 +73,7 @@
                 <p class="mt-1 text-sky-800/90">
                     اليوم: <strong>{{ $pacingStats['day'] }}/{{ $pacingStats['max_day'] }}</strong> رسالة ·
                     هذه الساعة: <strong>{{ $pacingStats['hour'] }}/{{ $pacingStats['max_hour'] }}</strong> ·
-                    تأخير 5–14 ث · استراحة كل 20 رسالة · ساعات 9–21
+                    تأخير 5–14 ث · استراحة كل 20 رسالة · إرسال على مدار اليوم
                 </p>
             </div>
         @endif

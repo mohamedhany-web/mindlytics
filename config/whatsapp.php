@@ -19,8 +19,8 @@ return [
         'max_per_hour' => (int) env('WHATSAPP_MAX_PER_HOUR', 70),
         'max_per_day' => (int) env('WHATSAPP_MAX_PER_DAY', 320),
 
-        /** إرسال داخل ساعات العمل فقط (توقيت التطبيق) */
-        'business_hours_only' => env('WHATSAPP_BUSINESS_HOURS_ONLY', true),
+        /** إرسال داخل ساعات العمل فقط (توقيت التطبيق) — false = إرسال على مدار اليوم */
+        'business_hours_only' => env('WHATSAPP_BUSINESS_HOURS_ONLY', false),
         'business_start' => (int) env('WHATSAPP_BUSINESS_START', 9),
         'business_end' => (int) env('WHATSAPP_BUSINESS_END', 21),
 
