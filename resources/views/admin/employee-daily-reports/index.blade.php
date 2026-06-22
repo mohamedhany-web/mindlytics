@@ -8,6 +8,12 @@
     @if(session('success'))
         <div class="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm font-semibold">{{ session('success') }}</div>
     @endif
+    @if(!empty($penaltiesSynced))
+        <div class="rounded-xl border border-amber-200 bg-amber-50 text-amber-900 px-4 py-3 text-sm">
+            <i class="fas fa-gavel ml-1"></i>
+            تم تطبيق أو تحديث <strong>{{ $penaltiesSynced }}</strong> خصم تلقائي للأيام بدون تسليم.
+        </div>
+    @endif
 
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
         <div class="px-4 py-4 bg-slate-50 border-b flex flex-wrap items-center justify-between gap-3">
@@ -20,9 +26,10 @@
             </div>
             <a href="{{ route('admin.employee-daily-reports.settings') }}" class="px-4 py-2 rounded-xl border border-slate-300 text-sm font-semibold hover:bg-white">الإعدادات</a>
         </div>
-        <div class="grid grid-cols-3 gap-3 p-4">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4">
             <div class="rounded-xl border p-4"><p class="text-xs text-slate-600">مُرسل اليوم</p><p class="text-2xl font-black">{{ $stats['total_today'] }}</p></div>
             <div class="rounded-xl border border-rose-200 bg-rose-50 p-4"><p class="text-xs text-rose-700">لم يُرسلوا اليوم</p><p class="text-2xl font-black text-rose-800">{{ $stats['missing_today'] }}</p></div>
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-4"><p class="text-xs text-amber-800">بخصم تلقائي</p><p class="text-2xl font-black text-amber-900">{{ $stats['with_penalty'] ?? 0 }}</p></div>
             <div class="rounded-xl border p-4"><p class="text-xs text-slate-600">موظفون نشطون</p><p class="text-2xl font-black">{{ $stats['employees'] }}</p></div>
         </div>
     </section>

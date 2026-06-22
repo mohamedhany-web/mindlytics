@@ -24,6 +24,17 @@ class EmployeePayrollService
      */
     public function previewPeriod(int $month, int $year): Collection
     {
+        $from = Carbon::create($year, $month, 1)->startOfDay();
+        $to = Carbon::create($year, $month, 1)->endOfMonth()->startOfDay();
+        if ($to->gt(now())) {
+            $to = now()->copy()->startOfDay();
+        }
+
+        if ($from->lte($to)) {
+            app(SalesDailyReportService::class)->applyDuePenaltiesInRange($from, $to);
+            app(EmployeeDailyReportService::class)->applyDuePenaltiesInRange($from, $to);
+        }
+
         return $this->activeEmployeesWithAgreement()
             ->map(fn (User $employee) => $this->buildPayrollRow($employee, $month, $year));
     }

@@ -12,7 +12,7 @@ return [
     'penalty_title' => 'غرامة عدم تسليم التقرير اليومي للمبيعات',
     'penalty_description' => 'خصم تلقائي لعدم تسليم التقرير اليومي الإلزامي قبل نهاية اليوم.',
     'penalty_type' => 'penalty',
-    'penalty_status' => 'pending',
+    'penalty_status' => 'applied',
     /** نسبة أيام التقارير المسلّمة المطلوبة شهرياً (عمود الالتزام في KPI) */
     'kpi_submission_target_pct' => 95,
     /** تذكير قبل موعد التسليم (دقائق) */

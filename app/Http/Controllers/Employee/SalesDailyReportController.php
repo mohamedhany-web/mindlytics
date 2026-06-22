@@ -25,13 +25,8 @@ class SalesDailyReportController extends Controller
 
         $report = SalesDailyReport::forUser($user->id)
             ->whereDate('report_date', $date)
-            ->with('contacts.lead')
+            ->with(['contacts.lead', 'autoDeduction'])
             ->first();
-
-        $recent = SalesDailyReport::forUser($user->id)
-            ->orderByDesc('report_date')
-            ->limit(14)
-            ->get();
 
         $todaySubmitted = $service->todayReportFor($user)?->isSubmitted() ?? false;
         $settings = SalesDailyReportSettings::all();
@@ -47,6 +42,18 @@ class SalesDailyReportController extends Controller
                 $autoSynced = true;
             }
         }
+
+        $service->applyDuePenaltiesInRange(
+            now()->subDays(30)->startOfDay(),
+            now()->startOfDay(),
+            collect([$user])
+        );
+
+        $recent = SalesDailyReport::forUser($user->id)
+            ->with('autoDeduction')
+            ->orderByDesc('report_date')
+            ->limit(14)
+            ->get();
 
         return view('employee.sales.daily-reports.index', compact(
             'report',

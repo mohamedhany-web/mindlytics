@@ -20,7 +20,19 @@ class EmployeeDailyReportAdminController extends Controller
 
         $employees = User::employees()->where('is_active', true)->orderBy('name')->get();
 
-        $query = EmployeeDailyReport::query()->with('user');
+        $rangeFrom = $request->filled('date')
+            ? $date->copy()->startOfDay()
+            : now()->copy()->startOfMonth()->startOfDay();
+        $rangeTo = $request->filled('date')
+            ? $date->copy()->startOfDay()
+            : now()->copy()->startOfDay();
+
+        $penaltyEmployees = $request->filled('user_id')
+            ? $employees->where('id', (int) $request->user_id)
+            : $employees;
+        $penaltiesSynced = $service->applyDuePenaltiesInRange($rangeFrom, $rangeTo, $penaltyEmployees);
+
+        $query = EmployeeDailyReport::query()->with(['user', 'autoDeduction']);
 
         if ($request->filled('user_id')) {
             $query->where('user_id', $request->user_id);
@@ -56,10 +68,14 @@ class EmployeeDailyReportAdminController extends Controller
             'total_today' => EmployeeDailyReport::whereDate('report_date', today())->where('status', 'submitted')->count(),
             'missing_today' => count($missingToday),
             'employees' => $employees->count(),
+            'with_penalty' => EmployeeDailyReport::query()
+                ->whereBetween('report_date', [$rangeFrom->toDateString(), $rangeTo->toDateString()])
+                ->whereNotNull('auto_deduction_id')
+                ->count(),
         ];
 
         return view('admin.employee-daily-reports.index', compact(
-            'reports', 'employees', 'missingToday', 'complianceRows', 'stats', 'date'
+            'reports', 'employees', 'missingToday', 'complianceRows', 'stats', 'date', 'penaltiesSynced'
         ));
     }
 

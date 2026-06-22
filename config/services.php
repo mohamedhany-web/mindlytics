@@ -59,6 +59,7 @@ return [
         'app_secret' => env('WHATSAPP_APP_SECRET'),
         'enabled' => env('WHATSAPP_ENABLED', false),
         'local_api_url' => env('WHATSAPP_LOCAL_API_URL', 'http://localhost:3001'),
+        'bridge_token' => env('WHATSAPP_BRIDGE_TOKEN'),
         // إعدادات API مخصص
         'request_method' => env('WHATSAPP_REQUEST_METHOD', 'POST'),
         'phone_param' => env('WHATSAPP_PHONE_PARAM', 'phone'),

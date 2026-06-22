@@ -675,9 +675,7 @@ class SalesDailyReportService
                 ? $settings['penalty_type']
                 : 'penalty',
             'deduction_date' => $date->toDateString(),
-            'status' => in_array($settings['penalty_status'] ?? 'pending', ['pending', 'applied', 'cancelled'], true)
-                ? $settings['penalty_status']
-                : 'pending',
+            'status' => 'applied',
             'notes' => 'تقرير يومي مبيعات — تاريخ '.$date->format('Y-m-d'),
             'created_by' => null,
         ]);
@@ -700,6 +698,73 @@ class SalesDailyReportService
         );
 
         return $deduction;
+    }
+
+    /**
+     * هل انتهى موعد تسليم التقرير لهذا اليوم (يُسمح بتطبيق الخصم)؟
+     */
+    public function isPenaltyDueForDate(Carbon $date): bool
+    {
+        if ($date->isFuture()) {
+            return false;
+        }
+
+        if ($date->isToday()) {
+            $time = (string) (SalesDailyReportSettings::all()['deadline_time'] ?? '23:59');
+            [$h, $m] = array_pad(explode(':', $time), 2, '0');
+
+            return now()->greaterThan($date->copy()->setTime((int) $h, (int) $m, 59));
+        }
+
+        return true;
+    }
+
+    /**
+     * تطبيق الخصومات المستحقة لأيام عمل بدون تسليم (بدون انتظار Cron).
+     *
+     * @param  iterable<int, User>|null  $employees
+     */
+    public function applyDuePenaltiesInRange(Carbon $from, Carbon $to, ?iterable $employees = null): int
+    {
+        if (! SalesDailyReportSettings::enabled() || ! SalesDailyReportSettings::penaltyEnabled()) {
+            return 0;
+        }
+
+        $this->ensureLinkedAutoDeductionsApplied();
+
+        $employees = $employees ?? User::salesEmployees()->where('is_active', true)->get();
+        $count = 0;
+        $cursor = $from->copy()->startOfDay();
+        $end = $to->copy()->startOfDay();
+
+        while ($cursor->lte($end)) {
+            if ($this->isPenaltyDueForDate($cursor)) {
+                foreach ($employees as $employee) {
+                    if ($this->applyPenaltyForDate($employee, $cursor)) {
+                        $count++;
+                    }
+                }
+            }
+            $cursor->addDay();
+        }
+
+        return $count;
+    }
+
+    private function ensureLinkedAutoDeductionsApplied(): void
+    {
+        $ids = SalesDailyReport::query()
+            ->whereNotNull('auto_deduction_id')
+            ->pluck('auto_deduction_id');
+
+        if ($ids->isEmpty()) {
+            return;
+        }
+
+        EmployeeSalaryDeduction::query()
+            ->whereIn('id', $ids)
+            ->where('status', 'pending')
+            ->update(['status' => 'applied']);
     }
 
     /**

@@ -20,7 +20,14 @@ class EmployeeDailyReportController extends Controller
             ? Carbon::parse($request->date)->startOfDay()
             : now()->startOfDay();
 
+        $service->applyDuePenaltiesInRange(
+            now()->subDays(30)->startOfDay(),
+            now()->startOfDay(),
+            collect([$user])
+        );
+
         $reports = EmployeeDailyReport::forUser($user->id)
+            ->with('autoDeduction')
             ->orderByDesc('report_date')
             ->limit(60)
             ->get();

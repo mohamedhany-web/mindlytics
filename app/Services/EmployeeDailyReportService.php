@@ -122,7 +122,7 @@ class EmployeeDailyReportService
             'description' => 'لم يُسلّم التقرير اليومي لتاريخ '.$date->format('Y-m-d'),
             'amount' => EmployeeDailyReportSettings::penaltyAmount(),
             'type' => 'penalty',
-            'deduction_date' => $date,
+            'deduction_date' => $date->toDateString(),
             'status' => 'applied',
             'created_by' => null,
         ]);
@@ -132,7 +132,7 @@ class EmployeeDailyReportService
         } else {
             EmployeeDailyReport::create([
                 'user_id' => $employee->id,
-                'report_date' => $date,
+                'report_date' => $date->toDateString(),
                 'status' => EmployeeDailyReport::STATUS_DRAFT,
                 'auto_deduction_id' => $deduction->id,
             ]);
@@ -152,6 +152,65 @@ class EmployeeDailyReportService
         ]);
 
         return $deduction;
+    }
+
+    public function isPenaltyDueForDate(Carbon $date): bool
+    {
+        if ($date->isFuture()) {
+            return false;
+        }
+
+        if ($date->isToday()) {
+            return now()->greaterThan($date->copy()->endOfDay());
+        }
+
+        return true;
+    }
+
+    /**
+     * @param  iterable<int, User>|null  $employees
+     */
+    public function applyDuePenaltiesInRange(Carbon $from, Carbon $to, ?iterable $employees = null): int
+    {
+        if (! EmployeeDailyReportSettings::enabled() || ! EmployeeDailyReportSettings::penaltyEnabled()) {
+            return 0;
+        }
+
+        $this->ensureLinkedAutoDeductionsApplied();
+
+        $employees = $employees ?? User::employees()->where('is_active', true)->get();
+        $count = 0;
+        $cursor = $from->copy()->startOfDay();
+        $end = $to->copy()->startOfDay();
+
+        while ($cursor->lte($end)) {
+            if ($this->isPenaltyDueForDate($cursor)) {
+                foreach ($employees as $employee) {
+                    if ($this->applyPenaltyForDate($employee, $cursor)) {
+                        $count++;
+                    }
+                }
+            }
+            $cursor->addDay();
+        }
+
+        return $count;
+    }
+
+    private function ensureLinkedAutoDeductionsApplied(): void
+    {
+        $ids = EmployeeDailyReport::query()
+            ->whereNotNull('auto_deduction_id')
+            ->pluck('auto_deduction_id');
+
+        if ($ids->isEmpty()) {
+            return;
+        }
+
+        EmployeeSalaryDeduction::query()
+            ->whereIn('id', $ids)
+            ->where('status', 'pending')
+            ->update(['status' => 'applied']);
     }
 
     public function sendReminder(User $employee): void

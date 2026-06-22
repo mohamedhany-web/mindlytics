@@ -23,8 +23,13 @@ class SalesDailyReportController extends Controller
         $userId = $request->filled('user_id') ? (int) $request->user_id : null;
         $status = $request->get('status');
 
-        $reports = $service->reportsQuery($userId, $from, $to, $status);
         $reps = User::salesEmployees()->where('is_active', true)->orderBy('name')->get();
+        $penaltyEmployees = $userId
+            ? $reps->where('id', $userId)
+            : $reps;
+        $penaltiesSynced = $service->applyDuePenaltiesInRange($from->copy()->startOfDay(), $to->copy()->startOfDay(), $penaltyEmployees);
+
+        $reports = $service->reportsQuery($userId, $from, $to, $status);
         $settings = SalesDailyReportSettings::all();
 
         $stats = [
@@ -33,7 +38,7 @@ class SalesDailyReportController extends Controller
             'with_penalty' => $reports->whereNotNull('auto_deduction_id')->count(),
         ];
 
-        return view('admin.sales.daily-reports.index', compact('reports', 'reps', 'from', 'to', 'userId', 'status', 'settings', 'stats'));
+        return view('admin.sales.daily-reports.index', compact('reports', 'reps', 'from', 'to', 'userId', 'status', 'settings', 'stats', 'penaltiesSynced'));
     }
 
     public function show(int $id, SalesDailyReportService $service): View
