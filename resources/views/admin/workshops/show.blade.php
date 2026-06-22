@@ -212,6 +212,12 @@
             </div>
 
             <div class="px-6 py-3 border-b border-slate-100 bg-gradient-to-r from-emerald-50/80 to-green-50/50">
+                @if(empty($whatsappBatchesReady))
+                    <div class="mb-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900 flex items-start gap-2">
+                        <i class="fas fa-exclamation-triangle text-amber-600 mt-0.5"></i>
+                        <p>إرسال الواتساب بالدفعات يحتاج تحديث السيرفر: <code class="bg-white px-1 rounded">php artisan migrate</code></p>
+                    </div>
+                @endif
                 <form id="workshop-whatsapp-form" method="POST" action="{{ route('admin.workshops.send-whatsapp', $workshop) }}" class="space-y-3"
                       onsubmit="return confirmWhatsappSend(this);">
                     @csrf
@@ -247,7 +253,7 @@
                             <code class="bg-white px-1 rounded">{workshop_title}</code>
                             · إرسال آمن عبر Queue — تأخير عشوائي + حد {{ config('whatsapp.pacing.max_per_day', 320) }}/يوم
                         </p>
-                        @if(!empty($latestWhatsappBatch))
+                        @if(!empty($latestWhatsappBatch) && \Illuminate\Support\Facades\Route::has('admin.whatsapp.batches.show'))
                             <a href="{{ route('admin.whatsapp.batches.show', $latestWhatsappBatch) }}"
                                class="text-xs text-emerald-700 hover:underline font-semibold inline-flex items-center gap-1">
                                 <i class="fas fa-tasks"></i>

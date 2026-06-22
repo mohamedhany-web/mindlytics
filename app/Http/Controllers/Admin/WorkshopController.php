@@ -7,7 +7,6 @@ use App\Mail\WorkshopAcceptanceMail;
 use App\Models\SalesLead;
 use App\Models\User;
 use App\Models\Workshop;
-use App\Models\WhatsAppBatch;
 use App\Models\WorkshopRegistration;
 use App\Services\WhatsAppBatchService;
 use Illuminate\Support\Facades\DB;
@@ -19,10 +18,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class WorkshopController extends Controller
 {
-    public function __construct(
-        private WhatsAppBatchService $whatsappBatch
-    ) {}
-
     public function index()
     {
         $workshops = Workshop::query()
@@ -89,10 +84,10 @@ class WorkshopController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        $latestWhatsappBatch = WhatsAppBatch::where('source_type', 'workshop')
-            ->where('source_id', $workshop->id)
-            ->latest()
-            ->first();
+        $whatsappBatchesReady = class_exists(WhatsAppBatchService::class) && WhatsAppBatchService::isReady();
+        $latestWhatsappBatch = $whatsappBatchesReady
+            ? app(WhatsAppBatchService::class)->latestForWorkshop($workshop->id)
+            : null;
 
         return view('admin.workshops.show', compact(
             'workshop',
@@ -101,7 +96,8 @@ class WorkshopController extends Controller
             'emailPendingCount',
             'whatsappEligibleCount',
             'salesReps',
-            'latestWhatsappBatch'
+            'latestWhatsappBatch',
+            'whatsappBatchesReady'
         ));
     }
 
@@ -429,6 +425,10 @@ class WorkshopController extends Controller
             return back()->with('error', 'لا توجد تسجيلات بأرقام واتساب صالحة للإرسال.');
         }
 
+        if (! class_exists(WhatsAppBatchService::class) || ! WhatsAppBatchService::isReady()) {
+            return back()->with('error', 'ميزة إرسال الواتساب غير جاهزة على السيرفر. ارفع آخر تحديث ثم نفّذ: php artisan migrate');
+        }
+
         $items = $registrations->shuffle()->map(function (WorkshopRegistration $reg) use ($data, $workshop) {
             return [
                 'recipient_name' => $reg->name,
@@ -439,7 +439,7 @@ class WorkshopController extends Controller
             ];
         });
 
-        $batch = $this->whatsappBatch->createAndDispatch(
+        $batch = app(WhatsAppBatchService::class)->createAndDispatch(
             sourceType: 'workshop',
             sourceId: $workshop->id,
             title: 'ورشة: ' . $workshop->title,

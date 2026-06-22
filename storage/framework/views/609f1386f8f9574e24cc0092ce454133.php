@@ -1,0 +1,12 @@
+
+
+
+
+
+
+
+
+
+
+
+<?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views\admin\courses\edit.blade.php ENDPATH**/ ?>
