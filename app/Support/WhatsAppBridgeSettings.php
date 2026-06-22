@@ -14,8 +14,8 @@ class WhatsAppBridgeSettings
     private static function defaults(): array
     {
         return [
-            'service_type' => config('services.whatsapp.type', 'disabled'),
-            'bridge_url' => rtrim((string) config('services.whatsapp.local_api_url', 'http://localhost:3001'), '/'),
+            'service_type' => (string) config('services.whatsapp.type', 'wwebjs'),
+            'bridge_url' => rtrim((string) config('services.whatsapp.local_api_url', 'https://wa-api.mindlytics-academy.com'), '/'),
             'bridge_token' => (string) config('services.whatsapp.bridge_token', ''),
         ];
     }
@@ -33,7 +33,20 @@ class WhatsAppBridgeSettings
         $raw = $disk->get(self::STORAGE_PATH);
         $data = json_decode($raw, true);
 
-        return array_merge(self::defaults(), is_array($data) ? $data : []);
+        $merged = array_merge(self::defaults(), is_array($data) ? $data : []);
+
+        // لو الإعدادات المحفوظة ناقصة، استخدم قيم config/.env
+        if (($merged['bridge_url'] ?? '') === '') {
+            $merged['bridge_url'] = self::defaults()['bridge_url'];
+        }
+        if (($merged['bridge_token'] ?? '') === '') {
+            $merged['bridge_token'] = self::defaults()['bridge_token'];
+        }
+        if (($merged['service_type'] ?? 'disabled') === 'disabled' && config('services.whatsapp.enabled')) {
+            $merged['service_type'] = self::defaults()['service_type'];
+        }
+
+        return $merged;
     }
 
     public static function serviceType(): string

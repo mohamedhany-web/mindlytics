@@ -62,6 +62,16 @@
                     <p class="text-amber-700/80">متبقي</p>
                 </div>
             </div>
+            @if($batch->pendingCount() > 0)
+                <form method="POST" action="{{ route('admin.whatsapp.batches.retry', $batch) }}" class="px-5 pb-5">
+                    @csrf
+                    <button type="submit" class="{{ $waBtnPrimary }} !text-sm">
+                        <i class="fas fa-redo"></i>
+                        إعادة تشغيل الإرسال ({{ $batch->pendingCount() }} معلّقة)
+                    </button>
+                    <p class="text-[11px] text-slate-500 mt-2">إذا بقيت «في الانتظار» أكثر من دقيقة، اضغط هنا بعد رفع آخر تحديث.</p>
+                </form>
+            @endif
         </div>
     </section>
 

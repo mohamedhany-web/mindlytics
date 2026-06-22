@@ -5,10 +5,15 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\WhatsAppBatch;
 use App\Models\Workshop;
+use App\Services\WhatsAppBatchService;
 use Illuminate\Http\Request;
 
 class WhatsAppBatchController extends Controller
 {
+    public function __construct(
+        private WhatsAppBatchService $batchService
+    ) {}
+
     public function index(Request $request)
     {
         $batches = WhatsAppBatch::with('creator')
@@ -75,5 +80,16 @@ class WhatsAppBatchController extends Controller
                 'sent_at' => optional($item->sent_at)->format('Y-m-d H:i'),
             ]),
         ]);
+    }
+
+    public function retry(WhatsAppBatch $batch)
+    {
+        if ($batch->pendingCount() === 0 && $batch->isFinished()) {
+            return back()->with('error', 'لا توجد رسائل معلّقة في هذه الدفعة.');
+        }
+
+        $this->batchService->retryBatch($batch);
+
+        return back()->with('success', 'تم إعادة تشغيل الإرسال — انتظر بضع ثوانٍ ثم حدّث الصفحة.');
     }
 }

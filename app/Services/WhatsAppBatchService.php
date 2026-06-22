@@ -84,8 +84,29 @@ class WhatsAppBatchService
             ]);
         }
 
-        ProcessWhatsAppBatchJob::dispatch($batch->id);
+        ProcessWhatsAppBatchJob::dispatchAfterResponse($batch->id);
 
         return $batch;
+    }
+
+    /**
+     * إعادة تشغيل دفعة عالقة (pending/processing)
+     */
+    public function retryBatch(WhatsAppBatch $batch): void
+    {
+        if ($batch->isFinished() && $batch->pendingCount() === 0) {
+            return;
+        }
+
+        $batch->update([
+            'status' => 'pending',
+            'completed_at' => null,
+        ]);
+
+        if (config('whatsapp.dispatch_after_response', true)) {
+            ProcessWhatsAppBatchJob::dispatchAfterResponse($batch->id);
+        } else {
+            ProcessWhatsAppBatchJob::dispatch($batch->id);
+        }
     }
 }

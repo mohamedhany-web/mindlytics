@@ -1573,6 +1573,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/batches', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'index'])->name('batches.index');
             Route::get('/batches/{batch}', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'show'])->name('batches.show');
             Route::get('/batches/{batch}/status', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'statusJson'])->name('batches.status');
+            Route::post('/batches/{batch}/retry', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'retry'])->name('batches.retry');
         });
 
         // إدارة الرسائل والتقارير

@@ -33,4 +33,12 @@ return [
         'simulate_typing' => env('WHATSAPP_SIMULATE_TYPING', true),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | إرسال الدفعات بدون Queue Worker (مهم على Hostinger)
+    |--------------------------------------------------------------------------
+    | true = يبدأ الإرسال فوراً بعد تحميل صفحة المتابعة (لا ينتظر cron)
+    */
+    'dispatch_after_response' => env('WHATSAPP_DISPATCH_AFTER_RESPONSE', true),
+
 ];
