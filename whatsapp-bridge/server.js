@@ -15,6 +15,23 @@ const PORT = parseInt(process.env.PORT || '3001', 10);
 const API_TOKEN = process.env.API_TOKEN || '';
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '*').split(',').map((s) => s.trim());
 
+const fs = require('fs');
+const chromiumPaths = [
+    process.env.CHROMIUM_PATH,
+    '/usr/bin/chromium-browser',
+    '/usr/bin/chromium',
+    '/usr/bin/google-chrome',
+].filter(Boolean);
+
+function resolveExecutablePath() {
+    for (const p of chromiumPaths) {
+        if (fs.existsSync(p)) {
+            return p;
+        }
+    }
+    return undefined;
+}
+
 const app = express();
 app.use(express.json({ limit: '1mb' }));
 app.use(cors({ origin: ALLOWED_ORIGINS.includes('*') ? true : ALLOWED_ORIGINS }));
@@ -67,6 +84,7 @@ async function buildClient() {
         authStrategy: new LocalAuth({ dataPath: './.wwebjs_auth' }),
         puppeteer: {
             headless: true,
+            executablePath: resolveExecutablePath(),
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
