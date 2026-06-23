@@ -93,7 +93,7 @@ class WhatsAppBridgeService
         }
 
         try {
-            $response = $this->client()->post($this->baseUrl() . '/api/start');
+            $response = $this->client()->timeout(90)->post($this->baseUrl() . '/api/repair');
 
             if ($response->successful()) {
                 return ['success' => true, 'data' => $response->json()];
@@ -103,6 +103,16 @@ class WhatsAppBridgeService
         } catch (\Throwable $e) {
             return ['success' => false, 'error' => $e->getMessage()];
         }
+    }
+
+    /**
+     * إصلاح الجلسة بدون logout — يحافظ على الربط السابق
+     *
+     * @return array{success: bool, data?: array<string, mixed>, error?: string}
+     */
+    public function repair(): array
+    {
+        return $this->start();
     }
 
     /**

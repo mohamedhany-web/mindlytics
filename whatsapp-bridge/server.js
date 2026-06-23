@@ -9,6 +9,10 @@ const express = require('express');
 const cors = require('cors');
 const QRCode = require('qrcode');
 const fs = require('fs');
+const path = require('path');
+const { exec } = require('child_process');
+const { promisify } = require('util');
+const execAsync = promisify(exec);
 const { Client, LocalAuth } = require('whatsapp-web.js');
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
@@ -94,7 +98,11 @@ function sleep(ms) {
 }
 
 function cleanupSessionLock() {
+    const sessionDir = path.resolve('./.wwebjs_auth/session');
     const lockCandidates = [
+        path.join(sessionDir, 'SingletonLock'),
+        path.join(sessionDir, 'SingletonCookie'),
+        path.join(sessionDir, 'SingletonSocket'),
         './.wwebjs_auth/session/SingletonLock',
         './.wwebjs_auth/session/SingletonCookie',
         './.wwebjs_auth/session/SingletonSocket',
@@ -109,6 +117,48 @@ function cleanupSessionLock() {
             /* ignore */
         }
     }
+}
+
+/** قتل Chrome العالق — يحافظ على جلسة .wwebjs_auth (بدون logout) */
+async function killStaleChromium() {
+    cleanupSessionLock();
+    if (process.platform !== 'linux') {
+        return;
+    }
+    const authPath = path.resolve('./.wwebjs_auth');
+    try {
+        await execAsync(`pkill -f "${authPath}/session" 2>/dev/null || true`);
+        await sleep(1500);
+        cleanupSessionLock();
+    } catch (_) {
+        /* ignore */
+    }
+}
+
+/**
+ * إصلاح الاتصال بدون مسح الربط — يحل "browser is already running"
+ */
+async function repairSession() {
+    if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+    }
+
+    console.log('Repairing WhatsApp session (keeping auth)...');
+    await destroyClient();
+    await killStaleChromium();
+    initializing = false;
+    client = null;
+    state.lastError = null;
+    state.lastErrorAt = null;
+
+    await buildClient(true);
+    await sleep(3000);
+    if (client) {
+        await refreshClientInfo();
+    }
+
+    return connectionSnapshot();
 }
 
 function isBrowserLockError(err) {
@@ -144,12 +194,14 @@ function scheduleReconnect(delayMs = 5000) {
     }, delayMs);
 }
 
-async function buildClient() {
+async function buildClient(fromRepair = false) {
     if (client || initializing) {
         return;
     }
     initializing = true;
-    state.lastError = null;
+    if (!fromRepair) {
+        state.lastError = null;
+    }
     cleanupSessionLock();
 
     client = new Client({
@@ -217,11 +269,13 @@ async function buildClient() {
         await client.initialize();
     } catch (err) {
         if (isBrowserLockError(err)) {
-            cleanupSessionLock();
+            await killStaleChromium();
             await destroyClient();
             await sleep(2000);
             initializing = false;
-            return buildClient();
+            if (!fromRepair) {
+                return buildClient(true);
+            }
         }
         state.status = 'error';
         state.lastError = err.message;
@@ -440,8 +494,13 @@ app.post('/api/start', authMiddleware, async (_req, res) => {
     if (state.status === 'ready' && client) {
         return res.json({ success: true, status: state.status, message: 'Already connected.' });
     }
-    await buildClient();
-    res.json({ success: true, status: state.status, message: 'Initialization started.' });
+    const snapshot = await repairSession();
+    res.json({ success: true, message: 'Repair started.', ...snapshot });
+});
+
+app.post('/api/repair', authMiddleware, async (_req, res) => {
+    const snapshot = await repairSession();
+    res.json({ success: true, message: 'Session repaired without logout.', ...snapshot });
 });
 
 app.post('/api/send', authMiddleware, async (req, res) => {
@@ -468,27 +527,8 @@ app.post('/api/send', authMiddleware, async (req, res) => {
 });
 
 app.post('/api/restart', authMiddleware, async (_req, res) => {
-    try {
-        if (client) {
-            try {
-                await client.destroy();
-            } catch (_) {
-                /* ignore */
-            }
-        }
-    } catch (_) {
-        /* ignore */
-    }
-    client = null;
-    initializing = false;
-    state.status = 'disconnected';
-    state.phone = null;
-    state.pushname = null;
-    state.qr = null;
-    cleanupSessionLock();
-    await sleep(1500);
-    await buildClient();
-    res.json({ success: true, status: state.status, message: 'Bridge restart initiated.' });
+    const snapshot = await repairSession();
+    res.json({ success: true, message: 'Bridge restart initiated.', ...snapshot });
 });
 
 app.post('/api/logout', authMiddleware, async (_req, res) => {

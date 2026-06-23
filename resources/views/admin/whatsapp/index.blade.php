@@ -135,7 +135,8 @@
                 @if(!empty($status['last_error']) && !$isConnected)
                     <div class="rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800">
                         <span class="font-semibold">خطأ الاتصال:</span> {{ $status['last_error'] }}
-                        <p class="text-xs mt-2 text-rose-700/90">على VPS: <code class="bg-white px-1 rounded">pm2 restart mindlytics-whatsapp</code> ثم «بدء / إعادة الاتصال».</p>
+                        <p class="text-xs mt-2 text-rose-700/90">Chrome عالق على VPS — اضغط «إصلاح الاتصال» أو نفّذ على السيرفر:<br>
+                        <code class="bg-white px-1 rounded text-[10px]">pm2 stop mindlytics-whatsapp && pkill -f wwebjs_auth && pm2 start mindlytics-whatsapp</code></p>
                     </div>
                 @endif
 
@@ -143,8 +144,8 @@
                     <form method="POST" action="{{ route('admin.whatsapp.start') }}">
                         @csrf
                         <button type="submit" class="{{ $waBtnPrimary }}">
-                            <i class="fas fa-sync-alt"></i>
-                            بدء / إعادة الاتصال
+                            <i class="fas fa-wrench"></i>
+                            إصلاح الاتصال (بدون قطع)
                         </button>
                     </form>
                     <form method="POST" action="{{ route('admin.whatsapp.logout') }}" onsubmit="return confirm('قطع اتصال الواتساب؟ ستحتاج مسح QR من جديد.');">

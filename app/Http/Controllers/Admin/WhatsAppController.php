@@ -291,7 +291,7 @@ class WhatsAppController extends Controller
         $result = $this->bridge->start();
 
         if ($result['success'] ?? false) {
-            return back()->with('success', 'تم بدء تهيئة الاتصال — امسح QR خلال ثوانٍ.');
+            return back()->with('success', 'تم إصلاح الاتصال — انتظر 10 ثوانٍ ثم حدّث الصفحة. الربط السابق محفوظ.');
         }
 
         return back()->with('error', $result['error'] ?? 'فشل بدء الجسر.');
