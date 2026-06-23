@@ -41,4 +41,7 @@ return [
     */
     'dispatch_after_response' => env('WHATSAPP_DISPATCH_AFTER_RESPONSE', true),
 
+    /** مهلة HTTP للـ Bridge (ثوانٍ) — الدفعات الكبيرة تحتاج وقتاً أطول */
+    'bridge_timeout' => (int) env('WHATSAPP_BRIDGE_TIMEOUT', 180),
+
 ];

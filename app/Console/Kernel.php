@@ -51,12 +51,6 @@ class Kernel extends ConsoleKernel
                  ->dailyAt('00:45')
                  ->runInBackground()
                  ->withoutOverlapping();
-
-        // معالجة Queue الواتساب (دفعات الإرسال في الخلفية)
-        $schedule->command('queue:work database --stop-when-empty --max-time=55 --tries=1')
-                 ->everyMinute()
-                 ->withoutOverlapping()
-                 ->runInBackground();
     }
 
     /**

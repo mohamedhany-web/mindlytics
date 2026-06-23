@@ -35,7 +35,11 @@ class WhatsAppBatchController extends Controller
         $itemsQuery = $batch->items()->orderBy('sort_order');
 
         if (in_array($filter, ['sent', 'failed', 'pending'], true)) {
-            $itemsQuery->where('status', $filter);
+            if ($filter === 'pending') {
+                $itemsQuery->whereIn('status', ['pending', 'processing']);
+            } else {
+                $itemsQuery->where('status', $filter);
+            }
         }
 
         $items = $itemsQuery->paginate(50)->withQueryString();

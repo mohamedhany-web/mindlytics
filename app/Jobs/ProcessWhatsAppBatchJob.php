@@ -3,37 +3,55 @@
 namespace App\Jobs;
 
 use App\Models\WhatsAppBatch;
+use App\Models\WhatsAppBatchItem;
 use App\Models\WorkshopRegistration;
-use App\Services\WhatsAppPacingService;
 use App\Services\WhatsAppService;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
-class ProcessWhatsAppBatchJob implements ShouldQueue
+/**
+ * يُنفَّذ مرة واحدة عبر dispatchAfterResponse (بدون Queue) لتجنّب الإرسال المكرر.
+ */
+class ProcessWhatsAppBatchJob
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
-    public int $timeout = 7200;
-
-    public int $tries = 1;
+    use Dispatchable;
 
     public function __construct(public int $batchId) {}
 
-    public function handle(WhatsAppService $whatsapp, WhatsAppPacingService $pacing): void
+    public function handle(WhatsAppService $whatsapp): void
+    {
+        $lock = Cache::lock('wa_process_batch_' . $this->batchId, 7200);
+
+        if (! $lock->get()) {
+            Log::info('WhatsApp batch skipped — already processing', ['batch_id' => $this->batchId]);
+
+            return;
+        }
+
+        try {
+            $this->processBatch($whatsapp);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    private function processBatch(WhatsAppService $whatsapp): void
     {
         $batch = WhatsAppBatch::find($this->batchId);
 
-        if (! $batch || $batch->isFinished()) {
+        if (! $batch) {
+            return;
+        }
+
+        if ($batch->status === 'completed' && $batch->pendingCount() === 0) {
             return;
         }
 
         $batch->update([
             'status' => 'processing',
             'started_at' => $batch->started_at ?? now(),
+            'completed_at' => null,
         ]);
 
         $items = $batch->items()
@@ -42,6 +60,17 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
             ->get();
 
         foreach ($items as $item) {
+            $claimed = WhatsAppBatchItem::query()
+                ->where('id', $item->id)
+                ->where('status', 'pending')
+                ->update(['status' => 'processing']);
+
+            if ($claimed === 0) {
+                continue;
+            }
+
+            $item->refresh();
+
             $result = $whatsapp->sendMessage(
                 $item->phone,
                 $item->message,
@@ -84,28 +113,6 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
             'batch_id' => $batch->id,
             'sent' => $batch->sent_count,
             'failed' => $batch->failed_count,
-        ]);
-    }
-
-    public function failed(\Throwable $exception): void
-    {
-        $batch = WhatsAppBatch::find($this->batchId);
-
-        if (! $batch) {
-            return;
-        }
-
-        $batch->update([
-            'status' => 'completed',
-            'completed_at' => now(),
-            'meta' => array_merge($batch->meta ?? [], [
-                'job_error' => $exception->getMessage(),
-            ]),
-        ]);
-
-        Log::error('WhatsApp batch job failed', [
-            'batch_id' => $this->batchId,
-            'error' => $exception->getMessage(),
         ]);
     }
 }

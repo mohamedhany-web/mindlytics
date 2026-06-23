@@ -115,7 +115,7 @@ class WhatsAppBridgeService
         }
 
         try {
-            $timeout = config('whatsapp.pacing.simulate_typing', true) ? 120 : 45;
+            $timeout = (int) config('whatsapp.bridge_timeout', 180);
             $response = $this->client()
                 ->timeout($timeout)
                 ->post($this->baseUrl() . '/api/send', [
@@ -157,6 +157,28 @@ class WhatsAppBridgeService
             }
 
             return ['success' => false, 'error' => $response->json('error') ?? 'فشل تسجيل الخروج.'];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * @return array{success: bool, data?: array<string, mixed>, error?: string}
+     */
+    public function restart(): array
+    {
+        if (! $this->isConfigured()) {
+            return ['success' => false, 'error' => 'إعدادات الجسر غير مكتملة.'];
+        }
+
+        try {
+            $response = $this->client()->timeout(60)->post($this->baseUrl() . '/api/restart');
+
+            if ($response->successful()) {
+                return ['success' => true, 'data' => $response->json()];
+            }
+
+            return ['success' => false, 'error' => $response->json('error') ?? 'فشل إعادة تشغيل الجسر.'];
         } catch (\Throwable $e) {
             return ['success' => false, 'error' => $e->getMessage()];
         }

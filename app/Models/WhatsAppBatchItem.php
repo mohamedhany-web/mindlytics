@@ -42,6 +42,7 @@ class WhatsAppBatchItem extends Model
     {
         return match ($this->status) {
             'pending' => 'في الانتظار',
+            'processing' => 'جاري الإرسال',
             'sent' => 'تم الإرسال',
             'failed' => 'فشل',
             default => $this->status,

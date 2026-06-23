@@ -5,7 +5,13 @@
 
 @section('content')
 @php
+    $isConnected = (bool) ($status['connected'] ?? $status['healthy'] ?? (($status['status'] ?? '') === 'ready'));
     $connectionStatus = $status['status'] ?? 'unknown';
+    if ($isConnected) {
+        $connectionStatus = 'ready';
+    } elseif (!empty($status['last_error'])) {
+        $connectionStatus = 'error';
+    }
     $statusMeta = [
         'ready' => ['label' => 'متصل وجاهز', 'badge' => 'bg-emerald-100 text-emerald-800 border-emerald-200', 'icon' => 'fas fa-check-circle', 'iconColor' => 'text-emerald-500', 'ring' => 'ring-emerald-500/20'],
         'qr' => ['label' => 'بانتظار مسح QR', 'badge' => 'bg-amber-100 text-amber-800 border-amber-200', 'icon' => 'fas fa-qrcode', 'iconColor' => 'text-amber-500', 'ring' => 'ring-amber-500/20'],
@@ -116,6 +122,9 @@
                             @if(!empty($status['platform']))
                                 <p class="text-xs text-slate-500 mt-1"><i class="fas fa-mobile-alt ml-1"></i>{{ $status['platform'] }}</p>
                             @endif
+                        @elseif($isConnected)
+                            <p class="text-lg font-black text-emerald-800">الواتساب متصل ويعمل</p>
+                            <p class="text-xs text-slate-500 mt-1">الجلسة نشطة — يمكنك الإرسال (رقم الحساب يظهر لاحقاً أحياناً)</p>
                         @else
                             <p class="text-sm font-semibold text-slate-700">لم يتم ربط رقم واتساب بعد</p>
                             <p class="text-xs text-slate-500 mt-1">امسح QR من البطاقة المجاورة أو من تطبيق واتساب</p>
@@ -123,9 +132,10 @@
                     </div>
                 </div>
 
-                @if(!empty($status['last_error']))
+                @if(!empty($status['last_error']) && !$isConnected)
                     <div class="rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800">
-                        <span class="font-semibold">آخر خطأ:</span> {{ $status['last_error'] }}
+                        <span class="font-semibold">خطأ الاتصال:</span> {{ $status['last_error'] }}
+                        <p class="text-xs mt-2 text-rose-700/90">على VPS: <code class="bg-white px-1 rounded">pm2 restart mindlytics-whatsapp</code> ثم «بدء / إعادة الاتصال».</p>
                     </div>
                 @endif
 
@@ -256,7 +266,7 @@ function whatsappQr() {
                 const statusRes = await fetch(@json(route('admin.whatsapp.status')));
                 const statusJson = await statusRes.json();
                 const data = statusJson.data || {};
-                this.connected = data.status === 'ready';
+                this.connected = !!(data.connected || data.healthy || data.status === 'ready');
                 if (this.connected) {
                     this.qrImage = null;
                     this.message = '';

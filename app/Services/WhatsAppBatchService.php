@@ -6,6 +6,7 @@ use App\Jobs\ProcessWhatsAppBatchJob;
 use App\Models\WhatsAppBatch;
 use App\Models\WhatsAppBatchItem;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 
 class WhatsAppBatchService
@@ -89,12 +90,16 @@ class WhatsAppBatchService
         return $batch;
     }
 
-    /**
-     * إعادة تشغيل دفعة عالقة (pending/processing)
-     */
     public function retryBatch(WhatsAppBatch $batch): void
     {
-        if ($batch->isFinished() && $batch->pendingCount() === 0) {
+        WhatsAppBatchItem::query()
+            ->where('batch_id', $batch->id)
+            ->where('status', 'processing')
+            ->update(['status' => 'pending']);
+
+        $pendingCount = $batch->items()->where('status', 'pending')->count();
+
+        if ($pendingCount === 0) {
             return;
         }
 
@@ -103,10 +108,6 @@ class WhatsAppBatchService
             'completed_at' => null,
         ]);
 
-        if (config('whatsapp.dispatch_after_response', true)) {
-            ProcessWhatsAppBatchJob::dispatchAfterResponse($batch->id);
-        } else {
-            ProcessWhatsAppBatchJob::dispatch($batch->id);
-        }
+        ProcessWhatsAppBatchJob::dispatchAfterResponse($batch->id);
     }
 }

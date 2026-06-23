@@ -429,7 +429,9 @@ class WorkshopController extends Controller
             return back()->with('error', 'ميزة إرسال الواتساب غير جاهزة على السيرفر. ارفع آخر تحديث ثم نفّذ: php artisan migrate');
         }
 
-        $items = $registrations->shuffle()->map(function (WorkshopRegistration $reg) use ($data, $workshop) {
+        $items = $registrations->shuffle()
+            ->unique(fn (WorkshopRegistration $reg) => $this->normalizePhone($reg->phone))
+            ->map(function (WorkshopRegistration $reg) use ($data, $workshop) {
             return [
                 'recipient_name' => $reg->name,
                 'phone' => $reg->phone,
