@@ -577,9 +577,10 @@ class SalesDailyReportService
                 $leadName = $a->lead?->name ?? '—';
 
                 return '• '.$time.' — تغيير مرحلة: '.$leadName.' — '.trim((string) ($a->body ?? ''));
-            });
+            })
+            ->values();
 
-        return $lines->merge($stageLines)->implode("\n");
+        return $lines->concat($stageLines)->implode("\n");
     }
 
     /**
