@@ -318,7 +318,7 @@
                             <i class="fas fa-circle text-[6px]"></i>
                             {{ \App\Models\SalesActivity::typeLabel($act->type) }}
                         </span>
-                        <span class="tabular-nums">{{ $act->created_at->format('Y-m-d H:i') }} — {{ $act->user->name ?? '—' }}</span>
+                        <span class="tabular-nums">{{ $act->created_at->format('Y-m-d H:i') }} — {{ $act->user?->name ?? '—' }}</span>
                     </div>
                     @if($act->title)
                         <p class="font-semibold text-slate-900 text-sm">{{ $act->title }}</p>

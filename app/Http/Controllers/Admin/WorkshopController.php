@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Mail\WorkshopAcceptanceMail;
 use App\Models\SalesLead;
+use App\Models\SalesLeadGroup;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopRegistration;
@@ -12,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -78,12 +80,20 @@ class WorkshopController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
+        $salesLeadGroupsByRep = SalesLeadGroup::query()
+            ->orderBy('name')
+            ->get(['id', 'name', 'assigned_to', 'is_admin_managed'])
+            ->groupBy('assigned_to')
+            ->map(fn ($groups) => $groups->values())
+            ->all();
+
         return view('admin.workshops.show', compact(
             'workshop',
             'registrations',
             'filterMode',
             'emailPendingCount',
-            'salesReps'
+            'salesReps',
+            'salesLeadGroupsByRep'
         ));
     }
 
@@ -91,6 +101,7 @@ class WorkshopController extends Controller
     {
         $validated = $request->validate([
             'assigned_to' => 'required|integer|exists:users,id',
+            'sales_lead_group_id' => 'nullable|integer',
         ]);
 
         $assigneeId = (int) $validated['assigned_to'];
@@ -99,11 +110,16 @@ class WorkshopController extends Controller
             return back()->with('error', 'يرجى اختيار موظف مبيعات فعّال.');
         }
 
+        $groupId = $this->resolveConvertLeadGroupId($validated['sales_lead_group_id'] ?? null, $assigneeId);
+        if ($groupId === false) {
+            return back()->with('error', 'مجموعة العملاء المختارة غير مسندة لموظف المبيعات المحدد.');
+        }
+
         $created = 0;
         $skipped = 0;
 
-        DB::transaction(function () use ($workshop, $assigneeId, &$created, &$skipped) {
-            $workshop->registrations()->orderBy('id')->chunk(200, function ($chunk) use ($workshop, $assigneeId, &$created, &$skipped) {
+        DB::transaction(function () use ($workshop, $assigneeId, $groupId, &$created, &$skipped) {
+            $workshop->registrations()->orderBy('id')->chunk(200, function ($chunk) use ($workshop, $assigneeId, $groupId, &$created, &$skipped) {
                 foreach ($chunk as $reg) {
                     $marker = '[workshop_registration:' . $reg->id . ']';
 
@@ -150,6 +166,7 @@ class WorkshopController extends Controller
                     SalesLead::create([
                         'assigned_to' => $assigneeId,
                         'created_by' => auth()->id(),
+                        'sales_lead_group_id' => $groupId,
                         'name' => $reg->name ?: 'عميل محتمل من ورشة',
                         'phone' => $reg->phone,
                         'email' => $reg->email,
@@ -166,6 +183,25 @@ class WorkshopController extends Controller
         });
 
         return back()->with('success', "تم تحويل {$created} تسجيل إلى Leads، وتم تخطي {$skipped} سجل (مكرر أو محوّل مسبقاً).");
+    }
+
+    /**
+     * @return int|null|false  null = بدون مجموعة، false = مجموعة غير صالحة
+     */
+    private function resolveConvertLeadGroupId(mixed $groupId, int $assigneeId): int|null|false
+    {
+        if ($groupId === null || $groupId === '') {
+            return null;
+        }
+
+        if (! Schema::hasTable('sales_lead_groups') || ! Schema::hasColumn('sales_leads', 'sales_lead_group_id')) {
+            return null;
+        }
+
+        $id = (int) $groupId;
+        $owned = SalesLeadGroup::query()->where('assigned_to', $assigneeId)->whereKey($id)->exists();
+
+        return $owned ? $id : false;
     }
 
     /**

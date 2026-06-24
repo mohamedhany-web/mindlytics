@@ -177,6 +177,22 @@ class AppServiceProvider extends ServiceProvider
             [\App\Listeners\SecurityEventListener::class, 'handleLogout']
         );
 
+        \Illuminate\Support\Facades\Log::listen(function (\Illuminate\Log\Events\MessageLogged $event) {
+            if (! in_array($event->level, ['error', 'critical', 'alert', 'emergency', 'warning'], true)) {
+                return;
+            }
+
+            try {
+                app(\App\Services\PlatformErrorLogger::class)->recordLog(
+                    $event->level,
+                    (string) $event->message,
+                    is_array($event->context) ? $event->context : []
+                );
+            } catch (\Throwable) {
+                // تجاهل
+            }
+        });
+
         Gate::before(function ($user, $ability) {
             if (method_exists($user, 'hasPermission')) {
                 return $user->hasPermission($ability) ? true : null;

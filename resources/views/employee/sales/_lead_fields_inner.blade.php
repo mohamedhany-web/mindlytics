@@ -30,6 +30,7 @@
             <option value="{{ $k }}" @selected(old('stage', $lead->stage ?? 'new') === $k)>{{ $label }}</option>
         @endforeach
     </select>
+    @error('stage')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
 </div>
 <div>
     <label class="block text-sm font-medium text-gray-700 mb-1">الأولوية <span class="text-red-500">*</span></label>
@@ -55,10 +56,12 @@
 <div>
     <label class="block text-sm font-medium text-gray-700 mb-1">قيمة متوقعة (ج.م)</label>
     <input type="number" step="0.01" min="0" name="expected_value" value="{{ old('expected_value', $lead->expected_value ?? '') }}" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+    @error('expected_value')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
 </div>
 <div>
     <label class="block text-sm font-medium text-gray-700 mb-1">متابعة تالية</label>
     <input type="datetime-local" name="next_follow_up_at" value="{{ old('next_follow_up_at', ($lead && $lead->next_follow_up_at) ? $lead->next_follow_up_at->format('Y-m-d\TH:i') : '') }}" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+    @error('next_follow_up_at')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
 </div>
 <div class="md:col-span-2">
     <label class="block text-sm font-medium text-gray-700 mb-1">اهتمام / منتج</label>

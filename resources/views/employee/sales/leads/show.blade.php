@@ -134,7 +134,7 @@
                                         <time class="text-xs text-gray-500 font-medium tabular-nums" datetime="{{ $act->created_at->toIso8601String() }}">
                                             {{ $act->created_at->format('Y-m-d H:i') }}
                                             <span class="text-gray-400">·</span>
-                                            {{ $act->user->name ?? '—' }}
+                                            {{ $act->user?->name ?? '—' }}
                                         </time>
                                     </div>
                                     @if($act->title)

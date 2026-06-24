@@ -36,6 +36,14 @@ class EmployeeDeductionController extends Controller
             $query->where('type', $request->type);
         }
 
+        if ($request->filled('date_from')) {
+            $query->whereDate('deduction_date', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('deduction_date', '<=', $request->date_to);
+        }
+
         if ($request->filled('search')) {
             $search = trim($request->search);
             $query->where(function ($q) use ($search) {
@@ -220,6 +228,75 @@ class EmployeeDeductionController extends Controller
 
         return redirect()->route('admin.employee-deductions.index')
             ->with('success', 'تم تحديث الخصم بنجاح.');
+    }
+
+    /**
+     * معاينة أو حذف خصومات ضمن نطاق تاريخ (مع فلاتر اختيارية).
+     */
+    public function bulkDestroyByDateRange(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'date_from' => 'required|date',
+            'date_to' => 'required|date|after_or_equal:date_from',
+            'employee_id' => 'nullable|integer|exists:users,id',
+            'status' => 'nullable|in:pending,applied,cancelled',
+            'type' => 'nullable|in:tax,insurance,loan,penalty,other',
+            'preview_only' => 'nullable|boolean',
+            'confirmed' => 'nullable|boolean',
+        ]);
+
+        $query = $this->bulkDateRangeQuery($validated);
+        $count = (clone $query)->count();
+
+        if ($request->boolean('preview_only')) {
+            return redirect()->route('admin.employee-deductions.index')
+                ->with('delete_preview', $count)
+                ->withInput($request->only(['date_from', 'date_to', 'employee_id', 'status', 'type']));
+        }
+
+        if (! $request->boolean('confirmed')) {
+            return back()
+                ->with('error', 'يجب تفعيل تأكيد الحذف قبل التنفيذ.')
+                ->withInput();
+        }
+
+        if ($count === 0) {
+            return back()->with('error', 'لا توجد خصومات مطابقة للنطاق المحدد.');
+        }
+
+        $deleted = 0;
+        (clone $query)->orderBy('id')->chunkById(200, function ($chunk) use (&$deleted) {
+            $deleted += $chunk->count();
+            EmployeeSalaryDeduction::query()->whereIn('id', $chunk->pluck('id'))->delete();
+        });
+
+        return redirect()->route('admin.employee-deductions.index')
+            ->with('success', "تم حذف {$deleted} خصم من الفترة المحددة.");
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return \Illuminate\Database\Eloquent\Builder<EmployeeSalaryDeduction>
+     */
+    private function bulkDateRangeQuery(array $filters)
+    {
+        $query = EmployeeSalaryDeduction::query()
+            ->whereDate('deduction_date', '>=', $filters['date_from'])
+            ->whereDate('deduction_date', '<=', $filters['date_to']);
+
+        if (! empty($filters['employee_id'])) {
+            $query->where('employee_id', $filters['employee_id']);
+        }
+
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (! empty($filters['type'])) {
+            $query->where('type', $filters['type']);
+        }
+
+        return $query;
     }
 
     /**

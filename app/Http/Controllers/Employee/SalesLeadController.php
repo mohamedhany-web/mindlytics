@@ -12,6 +12,8 @@ use App\Services\SalesDailyReportService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 class SalesLeadController extends Controller
@@ -257,7 +259,15 @@ class SalesLeadController extends Controller
             return;
         }
 
-        app(SalesDailyReportService::class)->syncAutoDraft($user, today());
+        try {
+            app(SalesDailyReportService::class)->syncAutoDraft($user, today());
+        } catch (\Throwable $e) {
+            Log::warning('sales.daily_report.sync_failed', [
+                'user_id' => $user->id,
+                'message' => $e->getMessage(),
+            ]);
+            report($e);
+        }
     }
 
     /** @return array{today: int, overdue: int, stale: int, new: int} */
@@ -469,8 +479,18 @@ class SalesLeadController extends Controller
 
         unset($validated['lost_reason_code'], $validated['lost_reason_custom']);
 
-        if ($request->has('sales_lead_group_id')) {
+        if (array_key_exists('expected_value', $validated) && $validated['expected_value'] === '') {
+            $validated['expected_value'] = null;
+        }
+
+        if (
+            $request->has('sales_lead_group_id')
+            && Schema::hasTable('sales_lead_groups')
+            && Schema::hasColumn('sales_leads', 'sales_lead_group_id')
+        ) {
             $validated['sales_lead_group_id'] = $this->resolveGroupId($request->input('sales_lead_group_id'));
+        } else {
+            unset($validated['sales_lead_group_id']);
         }
 
         return $validated;
@@ -515,12 +535,20 @@ class SalesLeadController extends Controller
             }
         }
 
-        // 2) إذا كان موعد المتابعة متأخر، لا تسمح بالحفظ بدون تعديل الموعد لمستقبل
+        // 2) إذا كان موعد المتابعة متأخر، لا تسمح بالحفظ بدون موعد جديد في المستقبل
         if ($lead->isOpen() && $lead->isFollowUpOverdue()) {
             $nf = $validated['next_follow_up_at'] ?? null;
-            if ($nf === null) {
+            if ($nf === null || $nf === '') {
                 throw ValidationException::withMessages([
                     'next_follow_up_at' => ['لا يمكن الحفظ والمتابعة متأخرة بدون تحديد موعد متابعة جديد.'],
+                ]);
+            }
+
+            $parsedFollowUp = \Carbon\Carbon::parse($nf);
+
+            if ($parsedFollowUp->isPast()) {
+                throw ValidationException::withMessages([
+                    'next_follow_up_at' => ['موعد المتابعة متأخر — حدّد موعداً جديداً في المستقبل قبل الحفظ.'],
                 ]);
             }
         }

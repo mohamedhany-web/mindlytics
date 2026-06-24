@@ -48,13 +48,17 @@
                 <i class="fas fa-file-excel"></i>
                 <span>تحميل بيانات المسجلين (CSV)</span>
             </a>
-            <form action="{{ route('admin.workshops.convert-to-leads', $workshop) }}" method="POST" class="flex items-center gap-2 flex-wrap" onsubmit="return confirm('تحويل كل تسجيلات الورشة إلى Leads في قسم المبيعات؟ سيتم تخطي المكرر تلقائياً.');">
+            <form id="convert-to-leads-form" action="{{ route('admin.workshops.convert-to-leads', $workshop) }}" method="POST" class="flex items-center gap-2 flex-wrap"
+                  onsubmit="return confirm('تحويل كل تسجيلات الورشة إلى Leads في قسم المبيعات؟ سيتم تخطي المكرر تلقائياً.');">
                 @csrf
-                <select name="assigned_to" required class="rounded-xl border border-slate-300 px-3 py-2.5 text-xs font-semibold text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500 min-w-[180px]">
+                <select name="assigned_to" id="convert-assigned-to" required class="rounded-xl border border-slate-300 px-3 py-2.5 text-xs font-semibold text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500 min-w-[180px]">
                     <option value="">اختر موظف مبيعات</option>
                     @foreach(($salesReps ?? collect()) as $rep)
                         <option value="{{ $rep->id }}">{{ $rep->name }}</option>
                     @endforeach
+                </select>
+                <select name="sales_lead_group_id" id="convert-lead-group" class="rounded-xl border border-slate-300 px-3 py-2.5 text-xs font-semibold text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500 min-w-[200px]">
+                    <option value="">مجموعة العملاء (اختياري)</option>
                 </select>
                 <button type="submit"
                         class="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md">
@@ -377,6 +381,29 @@
 </div>
 
 @push('scripts')
+    <script>
+        (function () {
+            const groupsByRep = @json($salesLeadGroupsByRep ?? []);
+            const repSelect = document.getElementById('convert-assigned-to');
+            const groupSelect = document.getElementById('convert-lead-group');
+
+            function refreshLeadGroups() {
+                if (!repSelect || !groupSelect) return;
+                const repId = String(repSelect.value || '');
+                groupSelect.innerHTML = '<option value="">مجموعة العملاء (اختياري)</option>';
+                const list = groupsByRep[repId] || groupsByRep[Number(repId)] || [];
+                list.forEach(function (g) {
+                    const opt = document.createElement('option');
+                    opt.value = g.id;
+                    opt.textContent = g.name + (g.is_admin_managed ? ' (إدارة)' : '');
+                    groupSelect.appendChild(opt);
+                });
+            }
+
+            repSelect?.addEventListener('change', refreshLeadGroups);
+            refreshLeadGroups();
+        })();
+    </script>
     <script src="https://unpkg.com/html5-qrcode@2.3.10/html5-qrcode.min.js"></script>
     <script>
         document.addEventListener('alpine:init', () => {

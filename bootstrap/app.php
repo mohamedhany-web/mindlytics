@@ -140,6 +140,15 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
         
+        // تسجيل الأخطاء في لوحة الإدارة (قاعدة البيانات)
+        $exceptions->reportable(function (\Throwable $e) {
+            try {
+                app(\App\Services\PlatformErrorLogger::class)->recordException($e, request());
+            } catch (\Throwable) {
+                // لا نكسر الطلب الأصلي
+            }
+        });
+
         // معالجة الأخطاء العامة
         $exceptions->render(function (\Throwable $e, \Illuminate\Http\Request $request) {
             if ($e instanceof \Illuminate\Validation\ValidationException) {
@@ -159,16 +168,6 @@ return Application::configure(basePath: dirname(__DIR__))
                 return redirect()->to(url('/admin/employee-agreements/create'))
                     ->with('error', 'حدث خطأ: ' . $msg);
             }
-            // تسجيل الخطأ قبل عرض صفحة الخطأ
-            \Illuminate\Support\Facades\Log::error('Unhandled exception: ' . $e->getMessage(), [
-                'exception' => get_class($e),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
-                'url' => $request->fullUrl(),
-                'method' => $request->method(),
-                'user_id' => \Illuminate\Support\Facades\Auth::id(),
-            ]);
             
             if ($request->expectsJson()) {
                 return response()->json([

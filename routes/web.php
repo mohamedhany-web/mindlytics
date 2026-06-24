@@ -1211,6 +1211,12 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('/activity-log/{activityLog}', [\App\Http\Controllers\Admin\ActivityLogController::class, 'show'])->name('activity-log.show');
         Route::post('/activity-log/clear', [\App\Http\Controllers\Admin\ActivityLogController::class, 'destroy'])->name('activity-log.destroy');
 
+        // سجل أخطاء المنصة
+        Route::get('/platform-errors', [\App\Http\Controllers\Admin\PlatformErrorLogController::class, 'index'])->name('platform-errors.index');
+        Route::get('/platform-errors/{platformError}', [\App\Http\Controllers\Admin\PlatformErrorLogController::class, 'show'])->name('platform-errors.show');
+        Route::patch('/platform-errors/{platformError}/status', [\App\Http\Controllers\Admin\PlatformErrorLogController::class, 'updateStatus'])->name('platform-errors.update-status');
+        Route::post('/platform-errors/bulk', [\App\Http\Controllers\Admin\PlatformErrorLogController::class, 'bulkUpdate'])->name('platform-errors.bulk');
+
         // سجلات التحقق الثنائي (2FA)
         Route::get('/two-factor-logs', [\App\Http\Controllers\Admin\TwoFactorLogController::class, 'index'])->name('two-factor-logs.index');
 
@@ -1524,6 +1530,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
 
         Route::get('employee-deductions/daily-report-penalty-settings', [\App\Http\Controllers\Admin\EmployeeDeductionController::class, 'dailyReportPenaltySettings'])->name('employee-deductions.daily-report-penalty-settings');
         Route::put('employee-deductions/daily-report-penalty-settings', [\App\Http\Controllers\Admin\EmployeeDeductionController::class, 'updateDailyReportPenaltySettings'])->name('employee-deductions.daily-report-penalty-settings.update');
+        Route::post('employee-deductions/bulk-delete-by-date', [\App\Http\Controllers\Admin\EmployeeDeductionController::class, 'bulkDestroyByDateRange'])->name('employee-deductions.bulk-delete-by-date');
         Route::resource('employee-deductions', \App\Http\Controllers\Admin\EmployeeDeductionController::class);
         Route::resource('employee-additions', \App\Http\Controllers\Admin\EmployeeAdditionController::class);
 

@@ -12,6 +12,20 @@
         </div>
     @endif
 
+    @if(session('error'))
+        <div class="rounded-xl bg-rose-50 border border-rose-200 text-rose-800 px-5 py-4 flex items-center gap-3 shadow-sm">
+            <i class="fas fa-exclamation-circle text-rose-600 text-xl"></i>
+            <span class="font-semibold">{{ session('error') }}</span>
+        </div>
+    @endif
+
+    @if(session('delete_preview') !== null)
+        <div class="rounded-xl bg-amber-50 border border-amber-300 text-amber-950 px-5 py-4 shadow-sm">
+            <p class="font-bold"><i class="fas fa-info-circle ml-1"></i> معاينة الحذف: يوجد <strong>{{ number_format(session('delete_preview')) }}</strong> خصم مطابق للنطاق المحدد.</p>
+            <p class="text-sm mt-1 text-amber-800">راجع الفترة ثم فعّل «تأكيد الحذف» واضغط حذف نهائي.</p>
+        </div>
+    @endif
+
     <!-- الهيدر -->
     <section class="rounded-2xl bg-white/95 backdrop-blur border-2 border-slate-200/50 shadow-xl overflow-hidden">
         <div class="px-5 py-6 sm:px-8 lg:px-12 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -97,9 +111,85 @@
                         <option value="other" {{ request('type') == 'other' ? 'selected' : '' }}>أخرى</option>
                     </select>
                 </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">من تاريخ</label>
+                    <input type="date" name="date_from" value="{{ request('date_from') }}" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">إلى تاريخ</label>
+                    <input type="date" name="date_to" value="{{ request('date_to') }}" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500">
+                </div>
                 <div class="md:col-span-2 lg:col-span-4 flex gap-2">
                     <button type="submit" class="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-semibold text-sm"><i class="fas fa-search ml-1"></i> بحث</button>
                     <a href="{{ route('admin.employee-deductions.index') }}" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold text-sm">إعادة تعيين</a>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- حذف بنطاق تاريخ -->
+    <section class="rounded-2xl bg-white border-2 border-rose-200/80 shadow-xl overflow-hidden">
+        <div class="px-5 py-4 border-b border-rose-100 bg-rose-50/60">
+            <h3 class="text-lg font-bold text-rose-900 flex items-center gap-2">
+                <i class="fas fa-calendar-times text-rose-600"></i>
+                حذف خصومات بنطاق تاريخ
+            </h3>
+            <p class="text-xs text-rose-800/80 mt-1">احذف خصومات محددة بين تاريخين — مع إمكانية تقييد الموظف أو الحالة أو النوع. يُنصح بالمعاينة أولاً.</p>
+        </div>
+        <div class="p-5">
+            <form method="POST" action="{{ route('admin.employee-deductions.bulk-delete-by-date') }}" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                  onsubmit="return confirmBulkDelete(this);">
+                @csrf
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">من تاريخ <span class="text-rose-600">*</span></label>
+                    <input type="date" name="date_from" required value="{{ old('date_from') }}" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">إلى تاريخ <span class="text-rose-600">*</span></label>
+                    <input type="date" name="date_to" required value="{{ old('date_to') }}" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">الموظف (اختياري)</label>
+                    <select name="employee_id" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm">
+                        <option value="">جميع الموظفين</option>
+                        @foreach($employees as $emp)
+                            <option value="{{ $emp->id }}" @selected(old('employee_id') == $emp->id)>{{ $emp->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">الحالة (اختياري)</label>
+                    <select name="status" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm">
+                        <option value="">الكل</option>
+                        <option value="pending" @selected(old('status') === 'pending')>معلقة</option>
+                        <option value="applied" @selected(old('status') === 'applied')>مطبقة</option>
+                        <option value="cancelled" @selected(old('status') === 'cancelled')>ملغاة</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">نوع الخصم (اختياري)</label>
+                    <select name="type" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm">
+                        <option value="">الكل</option>
+                        <option value="tax" @selected(old('type') === 'tax')>ضريبة</option>
+                        <option value="insurance" @selected(old('type') === 'insurance')>تأمين</option>
+                        <option value="loan" @selected(old('type') === 'loan')>قرض</option>
+                        <option value="penalty" @selected(old('type') === 'penalty')>غرامة</option>
+                        <option value="other" @selected(old('type') === 'other')>أخرى</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <label class="inline-flex items-center gap-2 text-sm text-rose-900 font-semibold cursor-pointer">
+                        <input type="checkbox" name="confirmed" value="1" class="rounded border-rose-300 text-rose-600 focus:ring-rose-500">
+                        <span>أؤكد حذف السجلات المطابقة نهائياً</span>
+                    </label>
+                </div>
+                <div class="md:col-span-2 lg:col-span-3 flex flex-wrap gap-2 pt-1">
+                    <button type="submit" name="preview_only" value="1" class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-semibold text-sm">
+                        <i class="fas fa-eye ml-1"></i> معاينة العدد
+                    </button>
+                    <button type="submit" class="px-4 py-2.5 bg-rose-700 hover:bg-rose-800 text-white rounded-xl font-semibold text-sm">
+                        <i class="fas fa-trash-alt ml-1"></i> حذف نهائي للنطاق
+                    </button>
                 </div>
             </form>
         </div>
@@ -169,4 +259,21 @@
         @endif
     </section>
 </div>
+
+@push('scripts')
+<script>
+    function confirmBulkDelete(form) {
+        const isPreview = document.activeElement && document.activeElement.name === 'preview_only';
+        if (isPreview) return true;
+        const confirmed = form.querySelector('input[name="confirmed"]')?.checked;
+        if (!confirmed) {
+            alert('فعّل «أؤكد حذف السجلات المطابقة نهائياً» أو اضغط معاينة العدد أولاً.');
+            return false;
+        }
+        const from = form.querySelector('input[name="date_from"]')?.value;
+        const to = form.querySelector('input[name="date_to"]')?.value;
+        return confirm('حذف كل الخصومات من ' + from + ' إلى ' + to + '؟\n\nلا يمكن التراجع عن هذا الإجراء.');
+    }
+</script>
+@endpush
 @endsection
