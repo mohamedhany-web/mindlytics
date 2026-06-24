@@ -18,7 +18,7 @@ class PlatformErrorLogController extends Controller
     {
         if (! Schema::hasTable('platform_error_logs')) {
             return view('admin.platform-errors.index', [
-                'errors' => new LengthAwarePaginator([], 0, 25),
+                'errorLogs' => new LengthAwarePaginator([], 0, 25),
                 'stats' => ['open' => 0, 'today' => 0, 'critical' => 0, 'resolved_week' => 0],
                 'userOptions' => collect(),
                 'topFingerprints' => collect(),
@@ -39,7 +39,7 @@ class PlatformErrorLogController extends Controller
                     ->count(),
             ];
 
-            $errors = (clone $query)
+            $errorLogs = (clone $query)
                 ->with(['user:id,name,email'])
                 ->orderByDesc('created_at')
                 ->paginate(25)
@@ -60,7 +60,7 @@ class PlatformErrorLogController extends Controller
             $topFingerprints = $this->topUnresolvedFingerprints();
 
             return view('admin.platform-errors.index', compact(
-                'errors',
+                'errorLogs',
                 'stats',
                 'userOptions',
                 'topFingerprints'
@@ -69,7 +69,7 @@ class PlatformErrorLogController extends Controller
             report($e);
 
             return view('admin.platform-errors.index', [
-                'errors' => new LengthAwarePaginator([], 0, 25),
+                'errorLogs' => new LengthAwarePaginator([], 0, 25),
                 'stats' => ['open' => 0, 'today' => 0, 'critical' => 0, 'resolved_week' => 0],
                 'userOptions' => collect(),
                 'topFingerprints' => collect(),

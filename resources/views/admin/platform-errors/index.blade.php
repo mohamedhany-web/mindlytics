@@ -173,7 +173,7 @@ php artisan view:clear</pre>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 bg-white">
-                        @forelse($errors as $err)
+                        @forelse($errorLogs as $err)
                             @php
                                 $levelClass = match($err->level) {
                                     'critical' => 'bg-rose-100 text-rose-800 border-rose-200',
@@ -249,8 +249,8 @@ php artisan view:clear</pre>
             </div>
         </form>
 
-        @if($errors->hasPages())
-            <div class="px-5 py-4 border-t border-slate-100">{{ $errors->links() }}</div>
+        @if($errorLogs->hasPages())
+            <div class="px-5 py-4 border-t border-slate-100">{{ $errorLogs->links() }}</div>
         @endif
     </section>
 </div>
