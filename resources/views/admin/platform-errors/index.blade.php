@@ -20,6 +20,22 @@
 @endphp
 
 <div class="space-y-6">
+    @if(!empty($setupRequired))
+        <div class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-4 text-sm text-amber-950">
+            <p class="font-bold text-base mb-1"><i class="fas fa-database ml-1"></i> إعداد قاعدة البيانات مطلوب</p>
+            <p class="mb-2">جدول <code class="font-mono text-xs bg-white px-1 rounded">platform_error_logs</code> غير موجود على السيرفر. نفّذ على الاستضافة:</p>
+            <pre class="text-xs bg-slate-900 text-emerald-300 rounded-lg p-3 overflow-x-auto font-mono">php artisan migrate --force
+php artisan route:clear
+php artisan view:clear</pre>
+        </div>
+    @endif
+
+    @if(!empty($loadError))
+        <div class="rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-900 font-medium">
+            <i class="fas fa-exclamation-triangle ml-1"></i>{{ $loadError }}
+        </div>
+    @endif
+
     @if(session('success'))
         <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 font-medium">
             <i class="fas fa-check-circle ml-1"></i>{{ session('success') }}

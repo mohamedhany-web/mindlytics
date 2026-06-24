@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PlatformErrorLog extends Model
 {
+    protected $table = 'platform_error_logs';
+
     public const STATUSES = [
         'open' => 'مفتوح',
         'acknowledged' => 'قيد المعالجة',

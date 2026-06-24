@@ -7,53 +7,87 @@ use App\Models\PlatformErrorLog;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 class PlatformErrorLogController extends Controller
 {
     public function index(Request $request)
     {
-        $query = $this->filteredQuery($request);
+        if (! Schema::hasTable('platform_error_logs')) {
+            return view('admin.platform-errors.index', [
+                'errors' => new LengthAwarePaginator([], 0, 25),
+                'stats' => ['open' => 0, 'today' => 0, 'critical' => 0, 'resolved_week' => 0],
+                'userOptions' => collect(),
+                'topFingerprints' => collect(),
+                'setupRequired' => true,
+            ]);
+        }
 
-        $statsBase = PlatformErrorLog::query();
-        $stats = [
-            'open' => (clone $statsBase)->open()->count(),
-            'today' => (clone $statsBase)->whereDate('created_at', today())->count(),
-            'critical' => (clone $statsBase)->unresolved()->where('level', 'critical')->count(),
-            'resolved_week' => (clone $statsBase)->where('status', 'resolved')
-                ->where('resolved_at', '>=', now()->subDays(7))
-                ->count(),
-        ];
+        try {
+            $query = $this->filteredQuery($request);
 
-        $errors = (clone $query)
-            ->with(['user:id,name,email'])
-            ->orderByDesc('created_at')
-            ->paginate(25)
-            ->withQueryString();
+            $statsBase = PlatformErrorLog::query();
+            $stats = [
+                'open' => (clone $statsBase)->open()->count(),
+                'today' => (clone $statsBase)->whereDate('created_at', today())->count(),
+                'critical' => (clone $statsBase)->unresolved()->where('level', 'critical')->count(),
+                'resolved_week' => (clone $statsBase)->where('status', 'resolved')
+                    ->where('resolved_at', '>=', now()->subDays(7))
+                    ->count(),
+            ];
 
-        $userOptions = User::query()
-            ->whereIn('id', PlatformErrorLog::query()->whereNotNull('user_id')->distinct()->pluck('user_id'))
-            ->orderBy('name')
-            ->get(['id', 'name', 'email']);
+            $errors = (clone $query)
+                ->with(['user:id,name,email'])
+                ->orderByDesc('created_at')
+                ->paginate(25)
+                ->withQueryString();
 
-        $topFingerprints = PlatformErrorLog::query()
-            ->unresolved()
-            ->selectRaw('fingerprint, COUNT(*) as hits, MAX(message) as sample_message, MAX(exception_class) as sample_class')
-            ->groupBy('fingerprint')
-            ->orderByDesc('hits')
-            ->limit(5)
-            ->get();
+            $userIds = PlatformErrorLog::query()
+                ->whereNotNull('user_id')
+                ->distinct()
+                ->pluck('user_id');
 
-        return view('admin.platform-errors.index', compact(
-            'errors',
-            'stats',
-            'userOptions',
-            'topFingerprints'
-        ));
+            $userOptions = $userIds->isEmpty()
+                ? collect()
+                : User::query()
+                    ->whereIn('id', $userIds)
+                    ->orderBy('name')
+                    ->get(['id', 'name', 'email']);
+
+            $topFingerprints = $this->topUnresolvedFingerprints();
+
+            return view('admin.platform-errors.index', compact(
+                'errors',
+                'stats',
+                'userOptions',
+                'topFingerprints'
+            ));
+        } catch (\Throwable $e) {
+            report($e);
+
+            return view('admin.platform-errors.index', [
+                'errors' => new LengthAwarePaginator([], 0, 25),
+                'stats' => ['open' => 0, 'today' => 0, 'critical' => 0, 'resolved_week' => 0],
+                'userOptions' => collect(),
+                'topFingerprints' => collect(),
+                'loadError' => config('app.debug')
+                    ? $e->getMessage()
+                    : 'تعذّر تحميل السجل. تأكد من تشغيل migration الجدول على السيرفر.',
+            ]);
+        }
     }
 
     public function show(PlatformErrorLog $platformError)
     {
+        if (! Schema::hasTable('platform_error_logs')) {
+            return redirect()
+                ->route('admin.platform-errors.index')
+                ->with('error', 'جدول سجل الأخطاء غير موجود. نفّذ php artisan migrate على السيرفر.');
+        }
+
         $platformError->load(['user:id,name,email', 'resolver:id,name']);
 
         $similar = PlatformErrorLog::query()
@@ -180,5 +214,41 @@ class PlatformErrorLogController extends Controller
         }
 
         return $query;
+    }
+
+    private function topUnresolvedFingerprints(): Collection
+    {
+        try {
+            return PlatformErrorLog::query()
+                ->unresolved()
+                ->select('fingerprint')
+                ->selectRaw('COUNT(*) as hits')
+                ->selectRaw('MAX(message) as sample_message')
+                ->selectRaw('MAX(exception_class) as sample_class')
+                ->groupBy('fingerprint')
+                ->orderByDesc('hits')
+                ->limit(5)
+                ->get();
+        } catch (\Throwable) {
+            return PlatformErrorLog::query()
+                ->unresolved()
+                ->latest('id')
+                ->limit(200)
+                ->get(['fingerprint', 'message', 'exception_class'])
+                ->groupBy('fingerprint')
+                ->map(function (Collection $items, string $fingerprint) {
+                    $first = $items->first();
+
+                    return (object) [
+                        'fingerprint' => $fingerprint,
+                        'hits' => $items->count(),
+                        'sample_message' => $first?->message,
+                        'sample_class' => $first?->exception_class,
+                    ];
+                })
+                ->sortByDesc('hits')
+                ->take(5)
+                ->values();
+        }
     }
 }
