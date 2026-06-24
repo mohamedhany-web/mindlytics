@@ -1558,24 +1558,6 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/operations', [\App\Http\Controllers\Admin\QualityControlController::class, 'operations'])->name('operations');
         });
 
-        // قسم الواتساب (whatsapp-web.js Bridge)
-        Route::prefix('whatsapp')->name('whatsapp.')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Admin\WhatsAppController::class, 'index'])->name('index');
-            Route::get('/send', [\App\Http\Controllers\Admin\WhatsAppController::class, 'sendForm'])->name('send');
-            Route::post('/send', [\App\Http\Controllers\Admin\WhatsAppController::class, 'sendMessage'])->name('send.post');
-            Route::get('/messages', [\App\Http\Controllers\Admin\WhatsAppController::class, 'messages'])->name('messages');
-            Route::get('/settings', [\App\Http\Controllers\Admin\WhatsAppController::class, 'settings'])->name('settings');
-            Route::post('/settings', [\App\Http\Controllers\Admin\WhatsAppController::class, 'updateSettings'])->name('settings.update');
-            Route::get('/status', [\App\Http\Controllers\Admin\WhatsAppController::class, 'statusJson'])->name('status');
-            Route::get('/qr', [\App\Http\Controllers\Admin\WhatsAppController::class, 'qrJson'])->name('qr');
-            Route::post('/start', [\App\Http\Controllers\Admin\WhatsAppController::class, 'startBridge'])->name('start');
-            Route::post('/logout', [\App\Http\Controllers\Admin\WhatsAppController::class, 'logoutBridge'])->name('logout');
-            Route::get('/batches', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'index'])->name('batches.index');
-            Route::get('/batches/{batch}', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'show'])->name('batches.show');
-            Route::get('/batches/{batch}/status', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'statusJson'])->name('batches.status');
-            Route::post('/batches/{batch}/retry', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'retry'])->name('batches.retry');
-        });
-
         // إدارة الرسائل والتقارير
         Route::prefix('messages')->name('messages.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\MessagesController::class, 'index'])->name('index');

@@ -8,7 +8,6 @@ use App\Models\SalesLead;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopRegistration;
-use App\Services\WhatsAppBatchService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -74,30 +73,17 @@ class WorkshopController extends Controller
             ->whereNull('acceptance_email_sent_at')
             ->count();
 
-        $whatsappEligibleCount = (int) $workshop->registrations()
-            ->whereNotNull('phone')
-            ->where('phone', '!=', '')
-            ->count();
-
         $salesReps = User::salesEmployees()
             ->where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'name']);
-
-        $whatsappBatchesReady = class_exists(WhatsAppBatchService::class) && WhatsAppBatchService::isReady();
-        $latestWhatsappBatch = $whatsappBatchesReady
-            ? app(WhatsAppBatchService::class)->latestForWorkshop($workshop->id)
-            : null;
 
         return view('admin.workshops.show', compact(
             'workshop',
             'registrations',
             'filterMode',
             'emailPendingCount',
-            'whatsappEligibleCount',
-            'salesReps',
-            'latestWhatsappBatch',
-            'whatsappBatchesReady'
+            'salesReps'
         ));
     }
 
@@ -382,108 +368,67 @@ class WorkshopController extends Controller
         return back()->with('success', 'تم إرسال نموذج قبول الورشة إلى ' . $count . ' مشترك/مشتركة.');
     }
 
-    /**
-     * إرسال رسائل واتساب للمسجلين عبر Bridge (تحديد يدوي أو كل المسجلين).
-     */
     public function sendWhatsappMessages(Request $request, Workshop $workshop)
     {
         $data = $request->validate([
-            'message' => 'required|string|max:4096',
-            'select_all' => 'nullable|boolean',
-            'registration_ids' => 'nullable|array',
-            'registration_ids.*' => 'integer|exists:workshop_registrations,id',
-            'attendance_mode' => 'nullable|in:all,online,offline',
-        ], [
-            'message.required' => 'نص الرسالة مطلوب',
+            'scope' => 'required|in:all,phone',
+            'phone' => 'nullable|string|max:30',
+            'message' => 'required|string|max:2000',
         ]);
 
-        if ($request->boolean('select_all')) {
-            $query = $workshop->registrations()
-                ->whereNotNull('phone')
-                ->where('phone', '!=', '');
+        $numbers = [];
+        $targetRegistrations = collect();
 
-            $attendanceMode = $data['attendance_mode'] ?? 'all';
-            if (in_array($attendanceMode, ['online', 'offline'], true)) {
-                $query->where('attendance_mode', $attendanceMode);
+        if ($data['scope'] === 'phone') {
+            if (empty($data['phone'])) {
+                return back()->with('error', 'يرجى إدخال رقم الهاتف عند اختيار الإرسال لرقم محدد.');
             }
+            $normalizedPhone = $this->normalizePhone($data['phone']);
+            $numbers[] = $normalizedPhone;
 
-            $registrations = $query->get();
+            $targetRegistrations = $workshop->registrations()
+                ->whereNotNull('phone')
+                ->get()
+                ->filter(fn ($reg) => $this->normalizePhone($reg->phone) === $normalizedPhone)
+                ->values();
         } else {
-            $ids = array_filter($data['registration_ids'] ?? []);
-            if ($ids === []) {
-                return back()->with('error', 'يرجى تحديد مشترك واحد على الأقل من الجدول.');
-            }
-
-            $registrations = $workshop->registrations()
-                ->whereIn('id', $ids)
+            $targetRegistrations = $workshop->registrations()
                 ->whereNotNull('phone')
-                ->where('phone', '!=', '')
                 ->get();
+
+            $numbers = $targetRegistrations
+                ->pluck('phone')
+                ->map(fn ($phone) => $this->normalizePhone($phone))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
         }
 
-        if ($registrations->isEmpty()) {
-            return back()->with('error', 'لا توجد تسجيلات بأرقام واتساب صالحة للإرسال.');
+        $numbers = array_values(array_filter($numbers));
+
+        if (count($numbers) === 0) {
+            return back()->with('error', 'لا توجد أرقام واتساب متاحة للإرسال.');
         }
 
-        if (! class_exists(WhatsAppBatchService::class) || ! WhatsAppBatchService::isReady()) {
-            return back()->with('error', 'ميزة إرسال الواتساب غير جاهزة على السيرفر. ارفع آخر تحديث ثم نفّذ: php artisan migrate');
+        if ($targetRegistrations->isNotEmpty()) {
+            $now = now();
+            WorkshopRegistration::whereIn('id', $targetRegistrations->pluck('id')->all())
+                ->update(['whatsapp_link_sent_at' => $now]);
         }
 
-        $items = $registrations->shuffle()
-            ->unique(fn (WorkshopRegistration $reg) => $this->normalizePhone($reg->phone))
-            ->map(function (WorkshopRegistration $reg) use ($data, $workshop) {
+        $links = collect($numbers)->map(function ($phone) use ($data) {
             return [
-                'recipient_name' => $reg->name,
-                'phone' => $reg->phone,
-                'message' => $this->renderWorkshopWhatsappMessage($data['message'], $reg, $workshop),
-                'message_type' => 'workshop',
-                'workshop_registration_id' => $reg->id,
+                'phone' => $phone,
+                'url' => 'https://web.whatsapp.com/send/?phone=' . $phone . '&text=' . urlencode($data['message']) . '&type=phone_number&app_absent=0',
             ];
-        });
+        })->all();
 
-        $batch = app(WhatsAppBatchService::class)->createAndDispatch(
-            sourceType: 'workshop',
-            sourceId: $workshop->id,
-            title: 'ورشة: ' . $workshop->title,
-            messageTemplate: $data['message'],
-            items: $items,
-            createdBy: (int) auth()->id(),
-            meta: [
-                'workshop_id' => $workshop->id,
-                'select_all' => $request->boolean('select_all'),
-                'attendance_mode' => $data['attendance_mode'] ?? 'all',
-            ]
-        );
-
-        return redirect()
-            ->route('admin.whatsapp.batches.show', $batch)
-            ->with('success', 'تم بدء إرسال ' . $items->count() . ' رسالة في الخلفية — تابع التقدم أدناه.');
-    }
-
-    private function renderWorkshopWhatsappMessage(string $template, WorkshopRegistration $reg, Workshop $workshop): string
-    {
-        $attendance = $reg->attendance_mode === 'offline'
-            ? 'حضور في المقر'
-            : ($reg->attendance_mode === 'online' ? 'حضور أونلاين' : '');
-
-        $replacements = [
-            '{name}' => $reg->name,
-            '{{name}}' => $reg->name,
-            '{student_name}' => $reg->name,
-            '{{student_name}}' => $reg->name,
-            '{email}' => $reg->email ?? '',
-            '{{email}}' => $reg->email ?? '',
-            '{phone}' => $reg->phone ?? '',
-            '{{phone}}' => $reg->phone ?? '',
-            '{workshop_title}' => $workshop->title,
-            '{{workshop_title}}' => $workshop->title,
-            '{workshop_date}' => optional($workshop->starts_at)->format('Y-m-d H:i') ?? '',
-            '{{workshop_date}}' => optional($workshop->starts_at)->format('Y-m-d H:i') ?? '',
-            '{attendance_mode}' => $attendance,
-            '{{attendance_mode}}' => $attendance,
-        ];
-
-        return str_replace(array_keys($replacements), array_values($replacements), $template);
+        return view('admin.workshops.whatsapp-launch', [
+            'workshop' => $workshop,
+            'links' => $links,
+            'message' => $data['message'],
+        ]);
     }
 
     private function normalizePhone(?string $phone): ?string

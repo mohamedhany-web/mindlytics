@@ -319,54 +319,6 @@
                 </ul>
             </li>
 
-            @php
-                $whatsappMenuOpen = request()->routeIs('admin.whatsapp.*');
-            @endphp
-            <li x-data="{ open: {{ $whatsappMenuOpen ? 'true' : 'false' }} }">
-                <button type="button" @click="open = !open" :aria-expanded="open"
-                        class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
-                    <div class="flex items-center gap-3">
-                        <i class="fab fa-whatsapp w-5 text-emerald-400 group-hover:text-white"></i>
-                        <span class="font-medium">قسم الواتساب</span>
-                    </div>
-                    <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
-                </button>
-                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
-                    <li>
-                        <a href="{{ route('admin.whatsapp.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.whatsapp.index') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-tachometer-alt w-4"></i>
-                            <span>لوحة الواتساب</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.whatsapp.send') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.whatsapp.send*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-paper-plane w-4"></i>
-                            <span>إرسال رسالة</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.whatsapp.messages') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.whatsapp.messages') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-list w-4"></i>
-                            <span>سجل الرسائل</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.whatsapp.settings') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.whatsapp.settings*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-plug w-4"></i>
-                            <span>إعدادات الربط</span>
-                        </a>
-                    </li>
-                </ul>
-            </li>
-
             <!-- إدارة النظام -->
             @php
                 $systemManagementOpen = request()->routeIs('admin.system-settings.*') || request()->routeIs('admin.users.*') || request()->routeIs('admin.orders.*') || request()->routeIs('admin.notifications.*') || request()->routeIs('admin.employee-notifications.*') || request()->routeIs('admin.activity-log*') || request()->routeIs('admin.two-factor-logs.*') || request()->routeIs('admin.statistics.*') || request()->routeIs('admin.performance.*');

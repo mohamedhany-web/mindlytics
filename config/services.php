@@ -51,15 +51,14 @@ return [
     |
     */
     'whatsapp' => [
-        'type' => env('WHATSAPP_TYPE', 'wwebjs'),
+        'type' => env('WHATSAPP_TYPE', 'disabled'), // disabled, local, official, custom
         'api_url' => env('WHATSAPP_API_URL', 'https://graph.facebook.com/v18.0'),
         'api_token' => env('WHATSAPP_API_TOKEN'),
         'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
         'webhook_verify_token' => env('WHATSAPP_WEBHOOK_VERIFY_TOKEN'),
         'app_secret' => env('WHATSAPP_APP_SECRET'),
-        'enabled' => env('WHATSAPP_ENABLED', true),
-        'local_api_url' => env('WHATSAPP_LOCAL_API_URL', 'https://wa-api.mindlytics-academy.com'),
-        'bridge_token' => env('WHATSAPP_BRIDGE_TOKEN', '912fb7e56a6bff331d4498abf43ed5c20e08140cbf5133607897af99817082e8'),
+        'enabled' => env('WHATSAPP_ENABLED', false),
+        'local_api_url' => env('WHATSAPP_LOCAL_API_URL', 'http://localhost:3001'),
         // إعدادات API مخصص
         'request_method' => env('WHATSAPP_REQUEST_METHOD', 'POST'),
         'phone_param' => env('WHATSAPP_PHONE_PARAM', 'phone'),
