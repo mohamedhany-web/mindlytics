@@ -24,28 +24,23 @@
         ['name' => 'الأولوية', 'required' => false, 'aliases' => 'priority — عادي، مرتفع، عاجل'],
     ];
     $oldRepIds = collect(old('assigned_to_ids', []))->map(fn ($id) => (int) $id)->all();
-    $groupOptions = $groups->map(fn ($g) => [
-        'id' => $g->id,
-        'assigned_to' => $g->assigned_to,
-        'label' => $g->name.' — '.$g->assignee?->name,
-        'admin' => (bool) $g->is_admin_managed,
-    ])->values();
+    $groupOptions = $groups->map(function ($g) {
+        $memberIds = $g->memberIds()->map(fn ($id) => (int) $id)->values()->all();
+        $memberNames = $g->members->isNotEmpty()
+            ? $g->members->pluck('name')->implode('، ')
+            : ($g->assignee?->name ?? '—');
+
+        return [
+            'id' => $g->id,
+            'assigned_to' => $g->assigned_to,
+            'member_ids' => $memberIds,
+            'label' => $g->name.' — '.$memberNames,
+            'admin' => (bool) $g->is_admin_managed,
+        ];
+    })->values();
 @endphp
 
-<div class="space-y-6" x-data="{
-    fileName: '',
-    dragOver: false,
-    selectedGroupId: '{{ old('group_id', '') }}',
-    groups: @json($groupOptions),
-    applyGroupAssignee() {
-        if (!this.selectedGroupId) return;
-        const group = this.groups.find(g => String(g.id) === String(this.selectedGroupId));
-        if (!group) return;
-        document.querySelectorAll('.rep-checkbox').forEach(c => {
-            c.checked = String(c.value) === String(group.assigned_to);
-        });
-    }
-}" x-init="if (selectedGroupId) applyGroupAssignee()">
+<div class="space-y-6" x-data="salesLeadImportPage">
     @if(session('error'))
         <div class="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm font-semibold">
             <i class="fas fa-exclamation-circle ml-1"></i>{{ session('error') }}
@@ -192,8 +187,13 @@
                                         @change="applyGroupAssignee()">
                                     <option value="">— بدون مجموعة —</option>
                                     @foreach($groups as $group)
+                                        @php
+                                            $groupMemberLabel = $group->members->isNotEmpty()
+                                                ? $group->members->pluck('name')->implode('، ')
+                                                : ($group->assignee?->name ?? '—');
+                                        @endphp
                                         <option value="{{ $group->id }}" @selected(old('group_id') == $group->id)>
-                                            {{ $group->name }} — {{ $group->assignee?->name }}
+                                            {{ $group->name }} — {{ $groupMemberLabel }}
                                             @if($group->is_admin_managed) (إدارة) @endif
                                         </option>
                                     @endforeach
@@ -201,7 +201,7 @@
                                 @error('group_id')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
                                 <p class="text-xs text-slate-500 mt-1.5 flex items-start gap-1.5" x-show="selectedGroupId">
                                     <i class="fas fa-info-circle text-indigo-500 mt-0.5"></i>
-                                    <span>عند اختيار مجموعة، تُسند كل الدفعة لموظف المجموعة ويظهر لها في لوحة الموظف.</span>
+                                    <span>عند اختيار مجموعة، يُحدَّد موظفوها تلقائياً ويُوزَّع العملاء عليهم بالتناوب داخل نفس المجموعة.</span>
                                 </p>
                                 @if($groups->isEmpty())
                                     <p class="text-xs text-amber-700 mt-1">
@@ -366,3 +366,40 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('alpine:init', function () {
+    Alpine.data('salesLeadImportPage', function () {
+        return {
+            fileName: '',
+            dragOver: false,
+            selectedGroupId: @json((string) old('group_id', '')),
+            groups: @json($groupOptions),
+            init() {
+                if (this.selectedGroupId) {
+                    this.applyGroupAssignee();
+                }
+            },
+            applyGroupAssignee() {
+                if (!this.selectedGroupId) {
+                    return;
+                }
+                const group = this.groups.find(function (g) {
+                    return String(g.id) === String(this.selectedGroupId);
+                }.bind(this));
+                if (!group) {
+                    return;
+                }
+                const memberIds = (group.member_ids && group.member_ids.length)
+                    ? group.member_ids.map(String)
+                    : [String(group.assigned_to)];
+                document.querySelectorAll('.rep-checkbox').forEach(function (checkbox) {
+                    checkbox.checked = memberIds.includes(String(checkbox.value));
+                });
+            },
+        };
+    });
+});
+</script>
+@endpush

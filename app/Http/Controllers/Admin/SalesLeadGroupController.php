@@ -16,7 +16,7 @@ class SalesLeadGroupController extends Controller
     public function index(): View
     {
         $groups = SalesLeadGroup::query()
-            ->with(['assignee:id,name', 'creator:id,name'])
+            ->with(['assignee:id,name', 'creator:id,name', 'members:id,name'])
             ->withCount('leads')
             ->orderByDesc('updated_at')
             ->paginate(20);
@@ -36,39 +36,48 @@ class SalesLeadGroupController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:120',
             'description' => 'nullable|string|max:2000',
-            'assigned_to' => 'required|integer|exists:users,id',
+            'member_ids' => 'required|array|min:1',
+            'member_ids.*' => 'integer|exists:users,id',
             'lead_ids' => 'nullable|array',
             'lead_ids.*' => 'integer|exists:sales_leads,id',
         ]);
 
-        $rep = User::findOrFail($validated['assigned_to']);
-        if (! $rep->isSalesEmployee()) {
-            return back()->withErrors(['assigned_to' => 'المستخدم ليس موظف مبيعات.'])->withInput();
+        $memberIds = $this->resolveMemberIds($validated['member_ids']);
+        if ($memberIds === null) {
+            return back()->withErrors(['member_ids' => 'اختر موظفي مبيعات فعّالين.'])->withInput();
         }
 
         $group = SalesLeadGroup::create([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
-            'assigned_to' => $rep->id,
+            'assigned_to' => $memberIds[0],
             'created_by' => Auth::id(),
             'is_admin_managed' => true,
         ]);
 
-        $this->syncGroupLeads($group, $validated['lead_ids'] ?? [], (int) $rep->id);
+        $group->syncMembers($memberIds);
+        $this->syncGroupLeads($group, $validated['lead_ids'] ?? [], $memberIds);
+
+        $repNames = User::query()->whereIn('id', $memberIds)->orderBy('name')->pluck('name')->implode('، ');
 
         return redirect()->route('admin.sales.groups.show', $group)
-            ->with('success', 'تم إنشاء المجموعة وإسنادها لـ '.$rep->name);
+            ->with('success', 'تم إنشاء المجموعة وإسنادها لـ '.$repNames);
     }
 
     public function show(SalesLeadGroup $group): View
     {
-        $group->load(['assignee', 'creator', 'leads' => fn ($q) => $q->orderBy('name')]);
+        $group->load([
+            'assignee',
+            'creator',
+            'members:id,name',
+            'leads' => fn ($q) => $q->with('assignee:id,name')->orderBy('name'),
+        ]);
+
         $reps = User::salesEmployees()->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+        $memberIds = $group->memberIds()->all();
+
         $availableLeads = SalesLead::query()
-            ->where(function ($q) use ($group) {
-                $q->where('assigned_to', $group->assigned_to)
-                    ->orWhereNull('assigned_to');
-            })
+            ->when($memberIds !== [], fn ($q) => $q->whereIn('assigned_to', $memberIds))
             ->orderBy('name')
             ->limit(500)
             ->get(['id', 'name', 'phone', 'assigned_to', 'sales_lead_group_id']);
@@ -81,23 +90,25 @@ class SalesLeadGroupController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:120',
             'description' => 'nullable|string|max:2000',
-            'assigned_to' => 'required|integer|exists:users,id',
+            'member_ids' => 'required|array|min:1',
+            'member_ids.*' => 'integer|exists:users,id',
             'lead_ids' => 'nullable|array',
             'lead_ids.*' => 'integer|exists:sales_leads,id',
         ]);
 
-        $rep = User::findOrFail($validated['assigned_to']);
-        if (! $rep->isSalesEmployee()) {
-            return back()->withErrors(['assigned_to' => 'المستخدم ليس موظف مبيعات.'])->withInput();
+        $memberIds = $this->resolveMemberIds($validated['member_ids']);
+        if ($memberIds === null) {
+            return back()->withErrors(['member_ids' => 'اختر موظفي مبيعات فعّالين.'])->withInput();
         }
 
         $group->update([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
-            'assigned_to' => $rep->id,
+            'assigned_to' => $memberIds[0],
         ]);
 
-        $this->syncGroupLeads($group, $validated['lead_ids'] ?? [], (int) $rep->id);
+        $group->syncMembers($memberIds);
+        $this->syncGroupLeads($group, $validated['lead_ids'] ?? [], $memberIds);
 
         return redirect()->route('admin.sales.groups.show', $group)
             ->with('success', 'تم تحديث المجموعة');
@@ -112,9 +123,35 @@ class SalesLeadGroupController extends Controller
     }
 
     /**
-     * @param  list<int|string>  $leadIds
+     * @param  list<int|string>  $rawIds
+     * @return list<int>|null
      */
-    private function syncGroupLeads(SalesLeadGroup $group, array $leadIds, int $assigneeId): void
+    private function resolveMemberIds(array $rawIds): ?array
+    {
+        $ids = collect($rawIds)->map(fn ($id) => (int) $id)->unique()->filter()->values();
+
+        if ($ids->isEmpty()) {
+            return null;
+        }
+
+        $valid = User::salesEmployees()
+            ->where('is_active', true)
+            ->whereIn('id', $ids)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id);
+
+        if ($valid->count() !== $ids->count()) {
+            return null;
+        }
+
+        return $ids->all();
+    }
+
+    /**
+     * @param  list<int|string>  $leadIds
+     * @param  list<int>  $memberIds
+     */
+    private function syncGroupLeads(SalesLeadGroup $group, array $leadIds, array $memberIds): void
     {
         $ids = collect($leadIds)->map(fn ($id) => (int) $id)->unique()->values();
 
@@ -126,9 +163,9 @@ class SalesLeadGroupController extends Controller
             return;
         }
 
-        SalesLead::whereIn('id', $ids)->update([
-            'sales_lead_group_id' => $group->id,
-            'assigned_to' => $assigneeId,
-        ]);
+        SalesLead::query()
+            ->whereIn('id', $ids)
+            ->whereIn('assigned_to', $memberIds)
+            ->update(['sales_lead_group_id' => $group->id]);
     }
 }

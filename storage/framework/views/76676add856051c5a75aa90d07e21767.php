@@ -22,28 +22,23 @@
         ['name' => 'الأولوية', 'required' => false, 'aliases' => 'priority — عادي، مرتفع، عاجل'],
     ];
     $oldRepIds = collect(old('assigned_to_ids', []))->map(fn ($id) => (int) $id)->all();
-    $groupOptions = $groups->map(fn ($g) => [
-        'id' => $g->id,
-        'assigned_to' => $g->assigned_to,
-        'label' => $g->name.' — '.$g->assignee?->name,
-        'admin' => (bool) $g->is_admin_managed,
-    ])->values();
+    $groupOptions = $groups->map(function ($g) {
+        $memberIds = $g->memberIds()->map(fn ($id) => (int) $id)->values()->all();
+        $memberNames = $g->members->isNotEmpty()
+            ? $g->members->pluck('name')->implode('، ')
+            : ($g->assignee?->name ?? '—');
+
+        return [
+            'id' => $g->id,
+            'assigned_to' => $g->assigned_to,
+            'member_ids' => $memberIds,
+            'label' => $g->name.' — '.$memberNames,
+            'admin' => (bool) $g->is_admin_managed,
+        ];
+    })->values();
 ?>
 
-<div class="space-y-6" x-data="{
-    fileName: '',
-    dragOver: false,
-    selectedGroupId: '<?php echo e(old('group_id', '')); ?>',
-    groups: <?php echo json_encode($groupOptions, 15, 512) ?>,
-    applyGroupAssignee() {
-        if (!this.selectedGroupId) return;
-        const group = this.groups.find(g => String(g.id) === String(this.selectedGroupId));
-        if (!group) return;
-        document.querySelectorAll('.rep-checkbox').forEach(c => {
-            c.checked = String(c.value) === String(group.assigned_to);
-        });
-    }
-}" x-init="if (selectedGroupId) applyGroupAssignee()">
+<div class="space-y-6" x-data="salesLeadImportPage">
     <?php if(session('error')): ?>
         <div class="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm font-semibold">
             <i class="fas fa-exclamation-circle ml-1"></i><?php echo e(session('error')); ?>
@@ -205,8 +200,13 @@ unset($__errorArgs, $__bag); ?>
                                         @change="applyGroupAssignee()">
                                     <option value="">— بدون مجموعة —</option>
                                     <?php $__currentLoopData = $groups; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $group): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                        <?php
+                                            $groupMemberLabel = $group->members->isNotEmpty()
+                                                ? $group->members->pluck('name')->implode('، ')
+                                                : ($group->assignee?->name ?? '—');
+                                        ?>
                                         <option value="<?php echo e($group->id); ?>" <?php if(old('group_id') == $group->id): echo 'selected'; endif; ?>>
-                                            <?php echo e($group->name); ?> — <?php echo e($group->assignee?->name); ?>
+                                            <?php echo e($group->name); ?> — <?php echo e($groupMemberLabel); ?>
 
                                             <?php if($group->is_admin_managed): ?> (إدارة) <?php endif; ?>
                                         </option>
@@ -222,7 +222,7 @@ endif;
 unset($__errorArgs, $__bag); ?>
                                 <p class="text-xs text-slate-500 mt-1.5 flex items-start gap-1.5" x-show="selectedGroupId">
                                     <i class="fas fa-info-circle text-indigo-500 mt-0.5"></i>
-                                    <span>عند اختيار مجموعة، تُسند كل الدفعة لموظف المجموعة ويظهر لها في لوحة الموظف.</span>
+                                    <span>عند اختيار مجموعة، يُحدَّد موظفوها تلقائياً ويُوزَّع العملاء عليهم بالتناوب داخل نفس المجموعة.</span>
                                 </p>
                                 <?php if($groups->isEmpty()): ?>
                                     <p class="text-xs text-amber-700 mt-1">
@@ -395,5 +395,42 @@ unset($__errorArgs, $__bag); ?>
     </div>
 </div>
 <?php $__env->stopSection(); ?>
+
+<?php $__env->startPush('scripts'); ?>
+<script>
+document.addEventListener('alpine:init', function () {
+    Alpine.data('salesLeadImportPage', function () {
+        return {
+            fileName: '',
+            dragOver: false,
+            selectedGroupId: <?php echo json_encode((string) old('group_id', ''), 512) ?>,
+            groups: <?php echo json_encode($groupOptions, 15, 512) ?>,
+            init() {
+                if (this.selectedGroupId) {
+                    this.applyGroupAssignee();
+                }
+            },
+            applyGroupAssignee() {
+                if (!this.selectedGroupId) {
+                    return;
+                }
+                const group = this.groups.find(function (g) {
+                    return String(g.id) === String(this.selectedGroupId);
+                }.bind(this));
+                if (!group) {
+                    return;
+                }
+                const memberIds = (group.member_ids && group.member_ids.length)
+                    ? group.member_ids.map(String)
+                    : [String(group.assigned_to)];
+                document.querySelectorAll('.rep-checkbox').forEach(function (checkbox) {
+                    checkbox.checked = memberIds.includes(String(checkbox.value));
+                });
+            },
+        };
+    });
+});
+</script>
+<?php $__env->stopPush(); ?>
 
 <?php echo $__env->make('layouts.admin', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views\admin\sales\leads\import.blade.php ENDPATH**/ ?>

@@ -176,7 +176,7 @@ php artisan view:clear</pre>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 bg-white">
-                        <?php $__empty_1 = true; $__currentLoopData = $errors; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $err): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                        <?php $__empty_1 = true; $__currentLoopData = $errorLogs; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $err): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                             <?php
                                 $levelClass = match($err->level) {
                                     'critical' => 'bg-rose-100 text-rose-800 border-rose-200',
@@ -255,8 +255,8 @@ php artisan view:clear</pre>
             </div>
         </form>
 
-        <?php if($errors->hasPages()): ?>
-            <div class="px-5 py-4 border-t border-slate-100"><?php echo e($errors->links()); ?></div>
+        <?php if($errorLogs->hasPages()): ?>
+            <div class="px-5 py-4 border-t border-slate-100"><?php echo e($errorLogs->links()); ?></div>
         <?php endif; ?>
     </section>
 </div>

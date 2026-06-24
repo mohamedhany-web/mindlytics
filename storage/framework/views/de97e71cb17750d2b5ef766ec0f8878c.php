@@ -18,6 +18,14 @@
             <?php if($group->description): ?>
                 <p class="text-sm text-slate-500 mt-1"><?php echo e($group->description); ?></p>
             <?php endif; ?>
+            <?php if(($group->members ?? collect())->count() > 1): ?>
+                <p class="text-xs text-sky-700 mt-1">
+                    <i class="fas fa-user-friends ml-1"></i>
+                    مجموعة مشتركة مع: <?php echo e($group->members->where('id', '!=', auth()->id())->pluck('name')->implode('، ') ?: 'فريق المبيعات'); ?>
+
+                    — تظهر لك عملاؤك فقط (<?php echo e($group->leads->count()); ?>).
+                </p>
+            <?php endif; ?>
         </div>
         <div class="flex flex-wrap gap-2">
             <a href="<?php echo e(route('employee.sales.groups.index')); ?>" class="px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-700">المجموعات</a>

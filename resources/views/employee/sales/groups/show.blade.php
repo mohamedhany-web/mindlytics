@@ -18,6 +18,13 @@
             @if($group->description)
                 <p class="text-sm text-slate-500 mt-1">{{ $group->description }}</p>
             @endif
+            @if(($group->members ?? collect())->count() > 1)
+                <p class="text-xs text-sky-700 mt-1">
+                    <i class="fas fa-user-friends ml-1"></i>
+                    مجموعة مشتركة مع: {{ $group->members->where('id', '!=', auth()->id())->pluck('name')->implode('، ') ?: 'فريق المبيعات' }}
+                    — تظهر لك عملاؤك فقط ({{ $group->leads->count() }}).
+                </p>
+            @endif
         </div>
         <div class="flex flex-wrap gap-2">
             <a href="{{ route('employee.sales.groups.index') }}" class="px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-700">المجموعات</a>

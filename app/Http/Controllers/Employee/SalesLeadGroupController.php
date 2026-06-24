@@ -14,8 +14,11 @@ class SalesLeadGroupController extends Controller
 {
     public function index(): View
     {
-        $groups = SalesLeadGroup::forAssignee(Auth::id())
-            ->withCount('leads')
+        $userId = (int) Auth::id();
+
+        $groups = SalesLeadGroup::forAssignee($userId)
+            ->with(['members:id,name'])
+            ->withCount(['leads as leads_count' => fn ($q) => $q->where('assigned_to', $userId)])
             ->orderBy('name')
             ->get();
 
@@ -49,6 +52,8 @@ class SalesLeadGroupController extends Controller
             'is_admin_managed' => false,
         ]);
 
+        $group->syncMembers([(int) Auth::id()]);
+
         return redirect()->route('employee.sales.groups.show', $group)
             ->with('success', 'تم إنشاء المجموعة «'.$group->name.'»');
     }
@@ -57,9 +62,14 @@ class SalesLeadGroupController extends Controller
     {
         $this->authorizeGroup($group);
 
-        $group->load(['leads' => fn ($q) => $q->orderBy('name')]);
+        $userId = (int) Auth::id();
 
-        $availableLeads = SalesLead::forAssignee(Auth::id())
+        $group->load([
+            'members:id,name',
+            'leads' => fn ($q) => $q->where('assigned_to', $userId)->orderBy('name'),
+        ]);
+
+        $availableLeads = SalesLead::forAssignee($userId)
             ->openPipeline()
             ->where(function ($q) use ($group) {
                 $q->whereNull('sales_lead_group_id')
@@ -124,6 +134,6 @@ class SalesLeadGroupController extends Controller
 
     private function authorizeGroup(SalesLeadGroup $group): void
     {
-        abort_unless((int) $group->assigned_to === (int) Auth::id(), 403);
+        abort_unless($group->userHasAccess((int) Auth::id()), 403);
     }
 }

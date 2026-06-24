@@ -120,7 +120,7 @@ class SalesLeadController extends Controller
             ->get();
 
         $groups = SalesLeadGroup::query()
-            ->with('assignee:id,name')
+            ->with(['assignee:id,name', 'members:id,name'])
             ->orderBy('name')
             ->get(['id', 'name', 'assigned_to', 'is_admin_managed']);
 
@@ -157,9 +157,29 @@ class SalesLeadController extends Controller
         ]);
 
         $assigneeIds = array_map('intval', $validated['assigned_to_ids'] ?? []);
+
         if (! empty($validated['group_id'])) {
-            $group = SalesLeadGroup::query()->findOrFail((int) $validated['group_id']);
-            $assigneeIds = [(int) $group->assigned_to];
+            $group = SalesLeadGroup::query()->with('members:id')->findOrFail((int) $validated['group_id']);
+            $memberIds = $group->memberIds()->map(fn ($id) => (int) $id)->filter()->values()->all();
+
+            if ($assigneeIds === [] && $memberIds !== []) {
+                $assigneeIds = $memberIds;
+            } elseif ($assigneeIds !== [] && $memberIds !== []) {
+                $assigneeIds = array_values(array_intersect($assigneeIds, $memberIds));
+                if ($assigneeIds === []) {
+                    return back()
+                        ->withInput()
+                        ->withErrors(['assigned_to_ids' => 'الموظفون المختارون ليسوا ضمن مجموعة العملاء المحددة.']);
+                }
+            } elseif ($assigneeIds === [] && $group->assigned_to) {
+                $assigneeIds = [(int) $group->assigned_to];
+            }
+        }
+
+        if ($assigneeIds === []) {
+            return back()
+                ->withInput()
+                ->withErrors(['assigned_to_ids' => 'اختر موظف مبيعات واحد على الأقل، أو مجموعة تضم موظفين.']);
         }
 
         foreach ($assigneeIds as $repId) {
