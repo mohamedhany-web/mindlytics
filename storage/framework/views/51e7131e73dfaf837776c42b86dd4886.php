@@ -1,0 +1,1107 @@
+<?php $adminLocale = app()->getLocale(); $adminRtl = $adminLocale === 'ar'; ?>
+<!DOCTYPE html>
+<html lang="<?php echo e($adminLocale); ?>" dir="<?php echo e($adminRtl ? 'rtl' : 'ltr'); ?>">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
+    <title><?php echo $__env->yieldContent('title', __('auth.dashboard')); ?> - <?php echo e(config('app.name')); ?></title>
+    
+    <?php echo $__env->make('components.favicon-meta', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Alpine.js (نسخة ثابتة لضمان عمل الدروب داون) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    
+    <!-- Custom Styles -->
+    <style>
+        * {
+            font-family: 'IBM Plex Sans Arabic', sans-serif;
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        html {
+            margin: 0 !important;
+            padding: 0 !important;
+            height: 100% !important;
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+            position: relative !important;
+            -webkit-text-size-adjust: 100% !important;
+            -ms-text-size-adjust: 100% !important;
+        }
+        
+        body {
+            margin: 0 !important;
+            padding: 0 !important;
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+            min-height: 100vh !important;
+            height: auto !important;
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+            position: relative !important;
+            top: 0 !important;
+            -webkit-font-smoothing: antialiased !important;
+            -moz-osx-font-smoothing: grayscale !important;
+        }
+        
+        @media (max-width: 1023px) {
+            html {
+                overflow: auto !important;
+            }
+            
+            body {
+                overflow: auto !important;
+                height: auto !important;
+                min-height: 100vh !important;
+            }
+        }
+        
+        /* Remove all spacing from body direct children */
+        body > * {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+        }
+        
+        /* Main container - no spacing */
+        body > div.flex.h-screen {
+            margin: 0 !important;
+            padding: 0 !important;
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+            top: 0 !important;
+        }
+        
+        /* Sidebar container - full height using h-full like student sidebar */
+        aside[class*="lg:fixed"] {
+            position: fixed !important;
+            top: 0 !important;
+            bottom: 0 !important;
+            right: 0 !important;
+            left: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+            transform: translateY(0) !important;
+            z-index: 20 !important;
+            isolation: isolate !important;
+        }
+        
+        aside[class*="lg:fixed"] > div {
+            height: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+            transform: translateY(0) !important;
+            position: relative !important;
+            isolation: isolate !important;
+        }
+        
+        /* Ensure sidebar logo section starts from top */
+        aside[class*="lg:fixed"] > div > div:first-child {
+            margin: 0 !important;
+            padding: 0 !important;
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+            position: relative !important;
+            isolation: isolate !important;
+        }
+        
+        /* Remove any spacing from logo section padding */
+        aside[class*="lg:fixed"] > div > div:first-child.p-6 {
+            padding-top: 1.5rem !important;
+            padding-bottom: 1.5rem !important;
+            padding-right: 1.5rem !important;
+            padding-left: 1.5rem !important;
+            margin-top: 0 !important;
+        }
+        
+        /* Ensure main content area is separate */
+        body > div.flex.h-screen > div.flex.flex-col.flex-1 {
+            position: relative !important;
+            z-index: 10 !important;
+            isolation: isolate !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            overflow: hidden !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+        
+        /* Ensure header is separate */
+        header.sticky {
+            position: sticky !important;
+            z-index: 30 !important;
+            isolation: isolate !important;
+            flex-shrink: 0 !important;
+        }
+        
+        /* Ensure main content is separate and scrollable - optimized for smooth scroll */
+        main {
+            position: relative !important;
+            z-index: 1 !important;
+            isolation: isolate !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            flex: 1 1 auto !important;
+            min-height: 0 !important;
+            max-height: 100% !important;
+            -webkit-overflow-scrolling: touch !important;
+            pointer-events: auto !important;
+            touch-action: pan-y !important;
+        }
+        
+        /* إصلاح التمرير - التأكد من أن main يستقبل wheel events */
+        main,
+        main * {
+            pointer-events: auto !important;
+        }
+        
+        /* منع أي عنصر من منع التمرير */
+        main {
+            overscroll-behavior: contain !important;
+        }
+        
+        /* إصلاح إضافي - التأكد من أن main قابل للتمرير */
+        main {
+            height: auto !important;
+            min-height: 100% !important;
+        }
+        
+        /* التأكد من أن الحاوية الرئيسية لا تمنع التمرير */
+        body > div.flex.h-screen > div.flex.flex-col.flex-1 > main {
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+        }
+        
+        /* Sidebar nav - allow scrolling */
+        aside nav.sidebar {
+            overflow-y: auto;
+            overflow-x: hidden;
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+        
+        /* Scrollbar مخفي — التمرير يعمل بدون تأثير على التصميم */
+        html,
+        body,
+        main,
+        .sidebar {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        html::-webkit-scrollbar,
+        body::-webkit-scrollbar,
+        main::-webkit-scrollbar,
+        .sidebar::-webkit-scrollbar {
+            display: none;
+            width: 0;
+            height: 0;
+        }
+        
+        .nav-link {
+            @apply flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-700 hover:bg-gray-100 hover:text-gray-900;
+        }
+        
+        .nav-link.active {
+            @apply bg-blue-100 text-blue-700;
+        }
+
+        /* لوحة التحكم — نشط أبيض داخل السايدبار فقط */
+        .admin-nav-dashboard-active {
+            background: #ffffff !important;
+            color: #0f172a !important;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+        }
+
+        .admin-nav-dashboard-active .bridge-icon {
+            color: #4f46e5 !important;
+        }
+
+        /* ── Admin Sidebar — هيكل موحّد ── */
+        .admin-sidebar-root {
+            contain: none !important;
+        }
+
+        .admin-sidebar-nav {
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+        }
+
+        .admin-sidebar-nav > ul > li {
+            position: relative;
+        }
+
+        .admin-sidebar-nav li[x-data] > button {
+            gap: 0.75rem;
+        }
+
+        .admin-sidebar-nav li[x-data] > button[aria-expanded="true"] {
+            background: rgba(51, 65, 85, 0.45);
+            color: #ffffff;
+        }
+
+        .admin-sidebar-sub {
+            margin-top: 0.375rem;
+            margin-right: 0.75rem;
+            padding-right: 0.625rem;
+            border-right: 2px solid rgba(100, 116, 139, 0.45);
+            display: flex;
+            flex-direction: column;
+            gap: 0.125rem;
+        }
+
+        .admin-sidebar-sub a {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.875rem;
+            font-size: 0.8125rem;
+            line-height: 1.35;
+            border-radius: 0.5rem;
+            color: rgb(203 213 225);
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .admin-sidebar-sub a:hover {
+            background: rgba(51, 65, 85, 0.55);
+            color: #ffffff;
+        }
+
+        .admin-sidebar-sub a.font-semibold {
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .admin-sidebar-sub .admin-sidebar-sub {
+            margin-top: 0.25rem;
+            margin-right: 0.5rem;
+            border-color: rgba(100, 116, 139, 0.3);
+        }
+
+        .admin-sidebar-sub li[x-data] > button {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 0.875rem;
+            font-size: 0.8125rem;
+            border-radius: 0.5rem;
+            color: rgb(148 163 184);
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .admin-sidebar-sub li[x-data] > button:hover,
+        .admin-sidebar-sub li[x-data] > button[aria-expanded="true"] {
+            background: rgba(51, 65, 85, 0.45);
+            color: #ffffff;
+        }
+
+        @media (max-width: 1023px) {
+            .admin-nav-dashboard-active {
+                border-radius: 0.75rem !important;
+            }
+        }
+        
+        .btn-primary {
+            @apply bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors;
+        }
+        
+        .btn-secondary {
+            @apply bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-colors;
+        }
+        
+        .btn-success {
+            @apply bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors;
+        }
+        
+        .btn-danger {
+            @apply bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors;
+        }
+        
+        .btn-warning {
+            @apply bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-medium transition-colors;
+        }
+        
+        /* Dashboard Cards — minimal hover, no lift animation */
+        .dashboard-stat-card {
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .dashboard-stat-card:hover {
+            box-shadow: 0 8px 16px -4px rgba(15, 23, 42, 0.1);
+        }
+
+        .card-hover-effect {
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .card-hover-effect:hover {
+            transform: none;
+        }
+        
+        /* Dashboard Background */
+        main {
+            background: #f8fafc;
+        }
+        
+        /* Ensure content has enough bottom spacing */
+        main > div:last-child {
+            padding-bottom: 3rem !important;
+        }
+        
+        /* Enhanced Card Styles - no backdrop-filter for scroll performance */
+        .dashboard-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .dashboard-card:hover {
+            border-color: rgba(59, 130, 246, 0.4);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        /* Card Icon Enhancement */
+        .card-icon {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+            box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.4);
+        }
+        
+        .card-icon:hover {
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 8px 20px 0 rgba(59, 130, 246, 0.5);
+        }
+        
+        /* Section Headers */
+        .section-header {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%);
+            border-bottom: 2px solid rgba(59, 130, 246, 0.2);
+        }
+        
+        /* List Items Enhancement */
+        .list-item-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(240, 249, 255, 0.8) 100%);
+            border: 1px solid rgba(59, 130, 246, 0.15);
+            transition: all 0.3s ease;
+        }
+        
+        .list-item-card:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(224, 242, 254, 0.9) 100%);
+            border-color: rgba(59, 130, 246, 0.3);
+            transform: translateX(-4px);
+        }
+        
+        /* Mobile optimization for cards */
+        @media (max-width: 640px) {
+            .dashboard-card {
+                width: 100% !important;
+                max-width: 100% !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                padding: 1rem !important;
+            }
+            
+            main > div {
+                padding-left: 0.75rem !important;
+                padding-right: 0.75rem !important;
+            }
+            
+            /* Ensure grid takes full width on mobile */
+            .grid {
+                width: 100% !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                gap: 1rem !important;
+            }
+            
+            /* Larger text and icons on mobile */
+            .dashboard-card .text-4xl {
+                font-size: 2rem !important;
+                line-height: 1.2 !important;
+            }
+            
+            .dashboard-card .text-3xl {
+                font-size: 1.75rem !important;
+                line-height: 1.2 !important;
+            }
+            
+            .dashboard-card .card-icon,
+            .dashboard-card .w-16 {
+                width: 3.5rem !important;
+                height: 3.5rem !important;
+            }
+            
+            .dashboard-card .text-xl {
+                font-size: 1.25rem !important;
+            }
+            
+            .dashboard-card .text-sm {
+                font-size: 0.875rem !important;
+            }
+        }
+        
+        /* Mobile responsive fixes */
+        @media (max-width: 1023px) {
+            body > div.flex {
+                flex-direction: column !important;
+                min-height: 100vh !important;
+                height: auto !important;
+            }
+            
+            body > div.flex > div.flex.flex-col.flex-1 {
+                width: 100% !important;
+                padding-right: 0 !important;
+            }
+            
+            /* Ensure header is full width on mobile */
+            header.sticky {
+                width: 100% !important;
+            }
+            
+            /* Ensure main content is full width */
+            main {
+                width: 100% !important;
+                overflow-x: hidden !important;
+            }
+            
+            /* Fix dropdown on mobile */
+            .relative.z-40 > div[x-show] {
+                left: 0.5rem !important;
+                right: auto !important;
+                width: calc(100% - 1rem) !important;
+                max-width: 20rem !important;
+            }
+        }
+        
+        /* Very small screens */
+        @media (max-width: 375px) {
+            header.sticky {
+                height: 3.5rem !important;
+            }
+            
+            header.sticky h1 {
+                font-size: 0.875rem !important;
+            }
+            
+            .dashboard-card {
+                padding: 0.75rem !important;
+            }
+        }
+    </style>
+    
+    <?php echo $__env->yieldPushContent('styles'); ?>
+</head>
+<body class="bg-gray-50" style="margin: 0 !important; padding: 0 !important; margin-top: 0 !important; padding-top: 0 !important; top: 0 !important; position: relative !important;"
+      x-data="{ 
+          sidebarOpen: false
+      }" 
+      x-init="
+          // إزالة الوضع المظلم من النظام - محسّن للأداء
+          function removeDarkMode() {
+              if (document.documentElement.classList.contains('dark')) {
+                  document.documentElement.classList.remove('dark');
+              }
+          }
+          removeDarkMode();
+          
+          // مراقبة وإزالة الوضع المظلم - محسّنة للأداء
+          let darkModeObserver = null;
+          if (typeof MutationObserver !== 'undefined') {
+              darkModeObserver = new MutationObserver(function(mutations) {
+                  for (let i = 0; i < mutations.length; i++) {
+                      if (mutations[i].type === 'attributes' && mutations[i].attributeName === 'class') {
+                          if (document.documentElement.classList.contains('dark')) {
+                              removeDarkMode();
+                          }
+                          break;
+                      }
+                  }
+              });
+              darkModeObserver.observe(document.documentElement, {
+                  attributes: true,
+                  attributeFilter: ['class']
+              });
+          }
+          
+          // إغلاق السايدبار فوراً عند التهيئة على desktop فقط
+          if (window.innerWidth >= 1024) {
+              sidebarOpen = false;
+          }
+          
+          // مراقبة تغيير القيمة لمنع فتح السايدبار على desktop فقط
+          $watch('sidebarOpen', value => {
+              if (window.innerWidth >= 1024 && value === true) {
+                  sidebarOpen = false;
+              }
+          });
+          
+          // إغلاق السايدبار عند النقر على الروابط
+          window.addEventListener('close-sidebar', () => {
+              sidebarOpen = false;
+          });
+          
+          // إغلاق السايدبار عند تغيير حجم النافذة إلى desktop
+          let resizeTimeout;
+          window.addEventListener('resize', () => {
+              clearTimeout(resizeTimeout);
+              resizeTimeout = setTimeout(() => {
+                  if (window.innerWidth >= 1024) {
+                      sidebarOpen = false;
+                  }
+              }, 150);
+          });
+      "
+      @close-sidebar.window="sidebarOpen = false">
+    <div class="flex min-h-screen lg:h-screen overflow-x-hidden" style="margin: 0 !important; padding: 0 !important; margin-top: 0 !important; padding-top: 0 !important; top: 0 !important; position: relative !important; isolation: isolate !important;">
+        <!-- Sidebar - Fixed and isolated -->
+        <aside class="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:right-0 lg:z-20 flex-shrink-0 inset-y-0" style="position: fixed !important; z-index: 20 !important; isolation: isolate !important;">
+            <?php if(request()->routeIs('branch.office.*')): ?>
+                <?php echo $__env->make('layouts.branch-office-sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+            <?php else: ?>
+                <?php echo $__env->make('layouts.admin-sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+            <?php endif; ?>
+        </aside>
+
+        <!-- Mobile sidebar -->
+        <div x-show="sidebarOpen" 
+             x-cloak
+             @click.away="if (window.innerWidth < 1024) sidebarOpen = false"
+             x-transition:enter="transition ease-out duration-150"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-100"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 z-50 lg:hidden"
+             style="display: none;"
+             x-bind:style="sidebarOpen ? 'display: block !important;' : 'display: none !important;'">
+            <div class="fixed inset-0 bg-black/60" @click="sidebarOpen = false" style="transition: opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+                <div class="absolute inset-y-0 right-0 flex flex-col w-64 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl transform transition-transform duration-150 ease-out border-l border-slate-700/50"
+                 style="will-change: transform; backface-visibility: hidden; transform: translate3d(0, 0, 0);"
+                 :class="sidebarOpen ? 'translate-x-0' : 'translate-x-full'">
+                <div class="absolute top-4 left-4 z-50">
+                    <button @click="sidebarOpen = false" class="flex items-center justify-center h-10 w-10 rounded-full bg-slate-700/50 hover:bg-slate-600/50 text-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400/50 shadow-lg">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+                <!-- Sidebar content for mobile -->
+                <?php if(request()->routeIs('branch.office.*')): ?>
+                    <?php echo $__env->make('layouts.branch-office-sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+                <?php else: ?>
+                    <?php echo $__env->make('layouts.admin-sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Main content area - Separate layer -->
+        <div class="flex flex-col flex-1 min-w-0 lg:pr-64 w-full lg:h-screen" style="position: relative !important; z-index: 10 !important; isolation: isolate !important;">
+            <!-- Top navigation - Sticky header inside main content -->
+            <header class="sticky top-0 z-30 flex-shrink-0 flex h-14 sm:h-16 bg-gradient-to-r from-slate-50 via-blue-50 to-slate-100 shadow-lg border-b border-slate-200/50 bg-white/95 overflow-visible" style="position: sticky !important; z-index: 30 !important; isolation: isolate !important; overflow: visible !important;">
+                <button @click="sidebarOpen = true" class="px-3 sm:px-4 border-l border-slate-200/50 text-slate-700 hover:bg-slate-100/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-400 lg:hidden transition-colors">
+                    <i class="fas fa-bars text-base sm:text-lg"></i>
+                </button>
+                
+                <div class="flex-1 px-3 sm:px-6 flex justify-between items-center gap-2">
+                    <div class="flex-1 flex items-center gap-2 sm:gap-4 min-w-0">
+                        <h1 class="text-sm sm:text-lg font-black text-slate-800 drop-shadow-sm truncate">
+                            <?php if (! empty(trim($__env->yieldContent('header')))): ?>
+                                <?php echo $__env->yieldContent('header'); ?>
+                            <?php else: ?>
+                                <?php echo $__env->yieldContent('page_title', 'لوحة الإدارة'); ?>
+                            <?php endif; ?>
+                        </h1>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+                        <?php if (isset($component)) { $__componentOriginal8d3bff7d7383a45350f7495fc470d934 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal8d3bff7d7383a45350f7495fc470d934 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.language-switcher','data' => []] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('language-switcher'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes([]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal8d3bff7d7383a45350f7495fc470d934)): ?>
+<?php $attributes = $__attributesOriginal8d3bff7d7383a45350f7495fc470d934; ?>
+<?php unset($__attributesOriginal8d3bff7d7383a45350f7495fc470d934); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal8d3bff7d7383a45350f7495fc470d934)): ?>
+<?php $component = $__componentOriginal8d3bff7d7383a45350f7495fc470d934; ?>
+<?php unset($__componentOriginal8d3bff7d7383a45350f7495fc470d934); ?>
+<?php endif; ?>
+                        <!-- User dropdown -->
+                        <div class="relative z-40" x-data="{ open: false }" @click.outside="open = false">
+                            <div>
+                                <button @click.stop="open = !open" type="button" class="max-w-xs bg-white hover:bg-gray-50 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-slate-200/50 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400"
+                                        :aria-expanded="open" aria-haspopup="true">
+                                    <?php if(auth()->user()->profile_image): ?>
+                                        <img src="<?php echo e(asset('storage/' . auth()->user()->profile_image)); ?>" alt="<?php echo e(auth()->user()->name); ?>" class="w-7 h-7 sm:w-9 sm:h-9 rounded-full object-cover shadow-md flex-shrink-0 ring-2 ring-slate-200/50" onerror="this.style.display='none'; this.nextElementSibling?.classList.remove('hidden');">
+                                        <div class="w-7 h-7 sm:w-9 sm:h-9 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-full hidden flex items-center justify-center text-white font-black text-xs sm:text-sm shadow-md flex-shrink-0"><?php echo e(substr(auth()->user()->name, 0, 1)); ?></div>
+                                    <?php else: ?>
+                                        <div class="w-7 h-7 sm:w-9 sm:h-9 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-full flex items-center justify-center text-white font-black text-xs sm:text-sm shadow-md flex-shrink-0">
+                                            <?php echo e(substr(auth()->user()->name, 0, 1)); ?>
+
+                                        </div>
+                                    <?php endif; ?>
+                                    <span class="hidden sm:block text-slate-700 text-xs sm:text-sm font-bold truncate max-w-[100px] sm:max-w-none"><?php echo e(auth()->user()->name); ?></span>
+                                    <i class="fas fa-chevron-down text-slate-600 text-xs transition-transform duration-200 flex-shrink-0" :class="open ? 'rotate-180' : ''"></i>
+                                </button>
+                            </div>
+                            
+                            <div x-show="open"
+                                 x-cloak
+                                 x-transition:enter="transition ease-out duration-100"
+                                 x-transition:enter-start="opacity-0 scale-95"
+                                 x-transition:enter-end="opacity-100 scale-100"
+                                 x-transition:leave="transition ease-in duration-75"
+                                 x-transition:leave-start="opacity-100 scale-100"
+                                 x-transition:leave-end="opacity-0 scale-95"
+                                 class="origin-top-right absolute left-0 right-auto mt-2 w-56 rounded-2xl shadow-2xl bg-white border border-slate-200/50 ring-1 ring-black ring-opacity-5 overflow-hidden"
+                                 style="z-index: 9999;">
+                                <div class="py-2">
+                                    <?php if(request()->routeIs('branch.office.*')): ?>
+                                        <a href="<?php echo e(route('branch.office.dashboard')); ?>" class="flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                                            <i class="fas fa-home w-4 text-slate-500"></i>
+                                            لوحة الفرع
+                                        </a>
+                                        <a href="<?php echo e(url('/')); ?>" target="_blank" rel="noopener" class="flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                                            <i class="fas fa-external-link-alt w-4 text-slate-500"></i>
+                                            الموقع العام
+                                        </a>
+                                    <?php else: ?>
+                                    <a href="<?php echo e(route('admin.dashboard')); ?>" class="flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                                        <i class="fas fa-home w-4 text-slate-500"></i>
+                                        لوحة التحكم
+                                    </a>
+                                    <a href="<?php echo e(route('admin.profile')); ?>" class="flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                                        <i class="fas fa-user w-4 text-slate-500"></i>
+                                        الملف الشخصي
+                                    </a>
+                                    <a href="<?php echo e(route('settings')); ?>" class="flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                                        <i class="fas fa-cog w-4 text-slate-500"></i>
+                                        الإعدادات
+                                    </a>
+                                    <?php endif; ?>
+                                    <div class="border-t border-slate-200 my-2"></div>
+                                    <form method="POST" action="<?php echo e(route('logout')); ?>">
+                                        <?php echo csrf_field(); ?>
+                                        <button type="submit" class="flex items-center gap-3 w-full text-right px-4 py-3 text-sm text-slate-700 hover:bg-red-50 hover:text-red-600 transition-colors">
+                                            <i class="fas fa-sign-out-alt w-4 text-slate-500"></i>
+                                            تسجيل الخروج
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page content - Scrollable area -->
+            <main class="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-br from-gray-50 via-white to-gray-50" style="position: relative !important; z-index: 1 !important; isolation: isolate !important; flex: 1 1 auto !important; min-height: 0 !important;">
+                <!-- Flash Messages -->
+                <div class="px-3 sm:px-6 pt-4 sm:pt-6 space-y-3">
+                    <?php if(session('success')): ?>
+                        <div class="bg-gradient-to-r from-emerald-500 to-green-600 border-2 border-emerald-400 text-white px-6 py-4 rounded-2xl shadow-xl relative" role="alert">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <i class="fas fa-check-circle text-xl"></i>
+                                    <span class="font-semibold"><?php echo e(session('success')); ?></span>
+                                </div>
+                                <button onclick="this.parentElement.parentElement.style.display='none'" class="text-white/80 hover:text-white transition-colors">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if(session('error')): ?>
+                        <div class="bg-gradient-to-r from-rose-500 to-red-600 border-2 border-rose-400 text-white px-6 py-4 rounded-2xl shadow-xl relative" role="alert">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <i class="fas fa-exclamation-circle text-xl"></i>
+                                    <span class="font-semibold"><?php echo e(session('error')); ?></span>
+                                </div>
+                                <button onclick="this.parentElement.parentElement.style.display='none'" class="text-white/80 hover:text-white transition-colors">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if(session('warning')): ?>
+                        <div class="bg-gradient-to-r from-amber-500 to-yellow-600 border-2 border-amber-400 text-white px-6 py-4 rounded-2xl shadow-xl relative" role="alert">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <i class="fas fa-exclamation-triangle text-xl"></i>
+                                    <span class="font-semibold"><?php echo e(session('warning')); ?></span>
+                                </div>
+                                <button onclick="this.parentElement.parentElement.style.display='none'" class="text-white/80 hover:text-white transition-colors">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if($errors->any()): ?>
+                        <div class="bg-white border-2 border-rose-200 rounded-2xl shadow-xl p-5" role="alert" aria-live="polite">
+                            <div class="flex items-start gap-3">
+                                <div class="flex-shrink-0 mt-0.5 text-rose-600">
+                                    <i class="fas fa-circle-exclamation text-xl"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="font-black text-slate-900 mb-2">يوجد أخطاء في البيانات المدخلة</div>
+                                    <ul class="list-disc pr-6 space-y-1 text-sm text-slate-700">
+                                        <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $message): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                            <li><?php echo e($message); ?></li>
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <div class="px-3 sm:px-6 pb-8 sm:pb-12">
+                    <?php echo $__env->yieldContent('content'); ?>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <?php echo $__env->yieldPushContent('scripts'); ?>
+
+    <script>
+        // إزالة الوضع المظلم - محسّن للأداء (بدون intervals)
+        (function() {
+            function forceLightMode() {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                }
+            }
+            
+            // إزالة فوراً
+            forceLightMode();
+            
+            // إزالة عند تحميل الصفحة
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', forceLightMode);
+            } else {
+                forceLightMode();
+            }
+            
+            // مراقبة التغييرات وإزالة كلاس dark - محسّنة للأداء
+            if (typeof MutationObserver !== 'undefined') {
+                const observer = new MutationObserver(function(mutations) {
+                    for (let i = 0; i < mutations.length; i++) {
+                        if (mutations[i].type === 'attributes' && mutations[i].attributeName === 'class') {
+                            if (document.documentElement.classList.contains('dark')) {
+                                forceLightMode();
+                            }
+                            break;
+                        }
+                    }
+                });
+                
+                observer.observe(document.documentElement, {
+                    attributes: true,
+                    attributeFilter: ['class']
+                });
+            }
+            
+            // إزالة عند تغيير الصفحة
+            window.addEventListener('pageshow', forceLightMode);
+        })();
+        
+        // رفع السايدبار للأعلى تلقائياً فقط عند تحميل الصفحة (مرة واحدة)
+        (function() {
+            let hasScrolled = false;
+            let isUserScrolling = false;
+            
+            // تتبع التمرير من المستخدم
+            const sidebarNav = document.querySelector('aside nav.sidebar');
+            if (sidebarNav) {
+                sidebarNav.addEventListener('scroll', function() {
+                    isUserScrolling = true;
+                    hasScrolled = true;
+                });
+                
+                sidebarNav.addEventListener('wheel', function() {
+                    isUserScrolling = true;
+                });
+                
+                sidebarNav.addEventListener('touchstart', function() {
+                    isUserScrolling = true;
+                });
+            }
+            
+            function scrollSidebarToTop() {
+                // لا ترفع إذا كان المستخدم يقوم بالتمرير
+                if (isUserScrolling || hasScrolled) {
+                    return;
+                }
+                
+                const sidebar = document.querySelector('aside[class*="lg:fixed"]');
+                const nav = document.querySelector('aside nav.sidebar');
+                
+                if (sidebar && sidebar.scrollTop === 0) {
+                    sidebar.scrollTop = 0;
+                }
+                
+                if (nav && nav.scrollTop === 0) {
+                    nav.scrollTop = 0;
+                }
+            }
+            
+            // رفع فقط عند تحميل الصفحة (مرة واحدة)
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    setTimeout(scrollSidebarToTop, 100);
+                });
+            } else {
+                setTimeout(scrollSidebarToTop, 100);
+            }
+            
+            // رفع فقط عند تحميل الصفحة بالكامل (مرة واحدة)
+            window.addEventListener('load', function() {
+                if (!hasScrolled) {
+                    setTimeout(scrollSidebarToTop, 100);
+                }
+            });
+        })();
+    </script>
+    
+    <script>
+        // إصلاح المسافة البيضاء - محسّن للأداء
+        (function() {
+            function fixSidebarPosition() {
+                // إصلاح شامل للمسافة البيضاء
+                const html = document.documentElement;
+                const body = document.body;
+                const mainContainer = document.querySelector('body > div.flex.h-screen');
+                const sidebar = document.querySelector('aside[class*="lg:fixed"]');
+                const sidebarContainer = document.querySelector('aside[class*="lg:fixed"] > div');
+                const sidebarLogo = document.querySelector('aside[class*="lg:fixed"] > div > div:first-child');
+                
+                // إصلاح html و body
+                if (html) {
+                    html.style.marginTop = '0';
+                    html.style.paddingTop = '0';
+                    html.style.top = '0';
+                }
+                
+                if (body) {
+                    body.style.marginTop = '0';
+                    body.style.paddingTop = '0';
+                    body.style.top = '0';
+                }
+                
+                // إصلاح الحاوية الرئيسية
+                if (mainContainer) {
+                    mainContainer.style.marginTop = '0';
+                    mainContainer.style.paddingTop = '0';
+                    mainContainer.style.top = '0';
+                }
+                
+                // إصلاح موضع السايدبار
+                if (sidebar) {
+                    sidebar.style.top = '0';
+                    sidebar.style.bottom = '0';
+                    sidebar.style.marginTop = '0';
+                    sidebar.style.paddingTop = '0';
+                    sidebar.style.transform = 'translateY(0)';
+                }
+                
+                // إصلاح موضع الحاوية الداخلية
+                if (sidebarContainer) {
+                    sidebarContainer.style.marginTop = '0';
+                    sidebarContainer.style.paddingTop = '0';
+                    sidebarContainer.style.top = '0';
+                    sidebarContainer.style.transform = 'translateY(0)';
+                }
+                
+                // إصلاح موضع اللوجو
+                if (sidebarLogo) {
+                    sidebarLogo.style.marginTop = '0';
+                    sidebarLogo.style.paddingTop = '1.5rem';
+                }
+            }
+            
+            // إصلاح فوراً
+            fixSidebarPosition();
+            
+            // إصلاح عند تحميل الصفحة - مرة واحدة فقط
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    setTimeout(fixSidebarPosition, 50);
+                });
+            } else {
+                setTimeout(fixSidebarPosition, 50);
+            }
+            
+            // إصلاح عند تحميل الصفحة بالكامل - مرة واحدة فقط
+            window.addEventListener('load', function() {
+                setTimeout(fixSidebarPosition, 100);
+            }, { once: true });
+            
+            // إصلاح عند تغيير الصفحة
+            window.addEventListener('pageshow', function() {
+                setTimeout(fixSidebarPosition, 50);
+            });
+        })();
+        
+        // إغلاق السايدبار عند النقر على أي رابط في السايدبار على الموبايل - محسّن للأداء
+        document.addEventListener('DOMContentLoaded', function() {
+            let resizeTimeout;
+            
+            // إغلاق السايدبار عند النقر على أي رابط في السايدبار على الموبايل
+            document.addEventListener('click', function(e) {
+                const link = e.target.closest('a');
+                if (link && window.innerWidth < 1024) {
+                    const sidebar = link.closest('nav, [class*="sidebar"], aside');
+                    if (sidebar) {
+                        // إرسال event لإغلاق السايدبار
+                        window.dispatchEvent(new CustomEvent('close-sidebar'));
+                    }
+                }
+            }, true);
+            
+            // إغلاق السايدبار عند تغيير حجم النافذة إلى desktop - مع debounce
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(function() {
+                    if (window.innerWidth >= 1024) {
+                        window.dispatchEvent(new CustomEvent('close-sidebar'));
+                    }
+                }, 150);
+            });
+            
+            // التأكد من أن main قابل للتمرير (بدون اعتراض wheel - التمرير الأصلي أسرع)
+            function ensureMainScrollable() {
+                const mainElement = document.querySelector('main');
+                if (!mainElement) {
+                    setTimeout(ensureMainScrollable, 100);
+                    return;
+                }
+                mainElement.style.setProperty('overflow-y', 'auto', 'important');
+                mainElement.style.setProperty('overflow-x', 'hidden', 'important');
+                mainElement.style.setProperty('pointer-events', 'auto', 'important');
+                mainElement.style.setProperty('touch-action', 'pan-y', 'important');
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function() { ensureMainScrollable(); });
+            } else {
+                ensureMainScrollable();
+            }
+            window.addEventListener('load', function() { ensureMainScrollable(); });
+        });
+    </script>
+    
+    <style>
+        [x-cloak] {
+            display: none !important;
+        }
+        
+        /* Mobile sidebar - allow it to work on mobile */
+        @media (max-width: 1023px) {
+            [x-show*="sidebarOpen"] {
+                z-index: 50 !important;
+                isolation: isolate !important;
+            }
+        }
+        
+        /* Prevent any layout interference */
+        body > div.flex.h-screen {
+            position: relative !important;
+            isolation: isolate !important;
+            contain: layout style paint !important;
+        }
+        
+        /* Ensure sidebar is always on top layer */
+        aside[class*="lg:fixed"] {
+            contain: layout style paint !important;
+        }
+        
+        /* Prevent content from overlapping sidebar */
+        @media (min-width: 1024px) {
+            .lg\:pr-64 {
+                padding-right: 16rem !important;
+            }
+        }
+        
+        @media (max-width: 1023px) {
+            .lg\:pr-64 {
+                padding-right: 0 !important;
+            }
+        }
+        
+        /* Ensure all layers are properly isolated */
+        * {
+            box-sizing: border-box !important;
+        }
+        
+        /* Force sidebar to stay in place */
+        aside[class*="lg:fixed"] {
+            transform: none !important;
+        }
+        
+        /* Ensure main content doesn't interfere */
+        body > div.flex.h-screen > div.flex.flex-col.flex-1 {
+            contain: layout style paint !important;
+        }
+        
+        /* Isolate header - لا نستخدم contain paint حتى لا يُقصّ الدروب داون */
+        header.sticky {
+            contain: layout style !important;
+        }
+        
+        /* Main - no contain for smooth native scroll */
+        main {
+            contain: none !important;
+        }
+        
+        /* Dropdown menu styles */
+        .relative.z-40 {
+            z-index: 40 !important;
+        }
+        
+        .relative.z-40 > div[x-show] {
+            z-index: 9999 !important;
+            position: absolute !important;
+        }
+        
+        /* Ensure dropdown is visible */
+        [x-cloak] {
+            display: none !important;
+        }
+        
+        /* Dropdown animation */
+        .origin-top-right {
+            transform-origin: top right;
+        }
+    </style>
+</body>
+</html>
+
+<?php /**PATH /Users/cityphone/Documents/all Mindlytics Project/Mindlytics/resources/views/layouts/admin.blade.php ENDPATH**/ ?>

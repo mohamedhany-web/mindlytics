@@ -6,7 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\ApiUserResource;
 use App\Jobs\ProcessStudentRegistration;
 use App\Models\User;
+use App\Models\WorkshopPromoCode;
 use App\Services\Branch\BranchResolver;
+use App\Services\WorkshopPromoService;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -113,6 +116,7 @@ class AuthController extends Controller
             'email' => 'required|email|unique:users,email',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'referral_code' => 'nullable|string|max:32',
+            'promo_code' => 'nullable|string|max:32',
         ], [
             'name.required' => 'الاسم مطلوب',
             'country_code.required' => 'كود الدولة مطلوب',
@@ -162,6 +166,31 @@ class AuthController extends Controller
             ], 422);
         }
 
+        $promoCode = $request->filled('promo_code') ? strtoupper(trim((string) $request->promo_code)) : null;
+        if ($promoCode) {
+            if (! Schema::hasTable('workshop_promo_codes')) {
+                return response()->json([
+                    'message' => 'نظام أكواد الورش غير متاح حالياً',
+                    'errors' => ['promo_code' => ['نظام أكواد الورش غير متاح حالياً']],
+                ], 422);
+            }
+
+            $promo = WorkshopPromoCode::where('code', $promoCode)->first();
+            if (! $promo) {
+                return response()->json([
+                    'message' => 'كود خصم الورشة غير صحيح',
+                    'errors' => ['promo_code' => ['كود خصم الورشة غير صحيح']],
+                ], 422);
+            }
+
+            if (! $promo->isValid()) {
+                return response()->json([
+                    'message' => 'كود خصم الورشة منتهي أو غير نشط',
+                    'errors' => ['promo_code' => ['كود خصم الورشة منتهي أو غير نشط']],
+                ], 422);
+            }
+        }
+
         $branchId = BranchResolver::fromHost($request->getHost())?->id;
 
         $user = User::create([
@@ -178,17 +207,28 @@ class AuthController extends Controller
             ? strtoupper(trim((string) $request->referral_code))
             : null;
 
-        ProcessStudentRegistration::dispatch($user->id, $referral)->onQueue('registrations');
+        $promoResult = app(WorkshopPromoService::class)->tryActivateOnRegistration($user, $promoCode);
+
+        ProcessStudentRegistration::dispatch($user->id, $referral, $promoCode)->onQueue('registrations');
 
         $expiresAt = now()->addDays(14);
         $plainToken = $user->createToken('mobile', ['*'], $expiresAt)->plainTextToken;
 
-        return response()->json([
+        $response = [
             'token' => $plainToken,
             'token_type' => 'Bearer',
             'expires_at' => $expiresAt->toIso8601String(),
             'user' => new ApiUserResource($user),
-        ], 201);
+        ];
+
+        if ($promoResult !== null) {
+            $response['promo_activation'] = [
+                'success' => $promoResult['success'],
+                'message' => $promoResult['message'],
+            ];
+        }
+
+        return response()->json($response, 201);
     }
 
     public function user(Request $request): ApiUserResource

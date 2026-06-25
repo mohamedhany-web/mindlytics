@@ -17,35 +17,6 @@ class WorkshopPromoCodeController extends Controller
 {
     public function index(Request $request)
     {
-        $query = WorkshopPromoCode::with(['workshop', 'creator'])
-            ->withCount('activations')
-            ->orderByDesc('created_at');
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('code', 'like', "%{$search}%")
-                    ->orWhere('title', 'like', "%{$search}%");
-            });
-        }
-
-        if ($request->filled('status')) {
-            if ($request->status === 'active') {
-                $query->active();
-            } elseif ($request->status === 'expired') {
-                $query->where(function ($q) {
-                    $q->where('is_active', false)
-                        ->orWhere('expires_at', '<', now());
-                });
-            }
-        }
-
-        if ($request->filled('workshop_id')) {
-            $query->where('workshop_id', $request->workshop_id);
-        }
-
-        $promoCodes = $query->paginate(15)->withQueryString();
-
         $stats = [
             'total' => 0,
             'active' => 0,
@@ -53,11 +24,41 @@ class WorkshopPromoCodeController extends Controller
             'used' => 0,
         ];
         $recentActivations = collect();
+        $promoCodes = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15);
 
         if (Schema::hasTable('workshop_promo_codes')) {
+            $query = WorkshopPromoCode::with(['workshop', 'creator'])
+                ->withCount('activations')
+                ->orderByDesc('created_at');
+
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('code', 'like', "%{$search}%")
+                        ->orWhere('title', 'like', "%{$search}%");
+                });
+            }
+
+            if ($request->filled('status')) {
+                if ($request->status === 'active') {
+                    $query->active();
+                } elseif ($request->status === 'expired') {
+                    $query->where(function ($q) {
+                        $q->where('is_active', false)
+                            ->orWhere('expires_at', '<', now());
+                    });
+                }
+            }
+
+            if ($request->filled('workshop_id')) {
+                $query->where('workshop_id', $request->workshop_id);
+            }
+
+            $promoCodes = $query->paginate(15)->withQueryString();
             $stats['total'] = WorkshopPromoCode::count();
             $stats['active'] = WorkshopPromoCode::active()->count();
         }
+
         if (Schema::hasTable('workshop_promo_activations')) {
             $stats['activations'] = WorkshopPromoActivation::count();
             $stats['used'] = WorkshopPromoActivation::where('status', 'used')->count();

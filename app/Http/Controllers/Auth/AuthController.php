@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Mail\TwoFactorCodeMail;
 use App\Models\TwoFactorLog;
 use App\Models\User;
+use App\Models\WorkshopPromoCode;
 use App\Support\BranchContext;
 use App\Services\WorkshopPromoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -317,6 +319,22 @@ class AuthController extends Controller
             return back()->withErrors(['phone' => 'رقم الهاتف مسجل مسبقاً'])->withInput()->with(compact('phoneCountries', 'defaultCountry'));
         }
 
+        $promoCode = $request->filled('promo_code') ? strtoupper(trim((string) $request->promo_code)) : null;
+        if ($promoCode) {
+            if (! Schema::hasTable('workshop_promo_codes')) {
+                return back()->withErrors(['promo_code' => 'نظام أكواد الورش غير متاح حالياً'])->withInput()->with(compact('phoneCountries', 'defaultCountry'));
+            }
+
+            $promo = WorkshopPromoCode::where('code', $promoCode)->first();
+            if (! $promo) {
+                return back()->withErrors(['promo_code' => 'كود خصم الورشة غير صحيح — أنشئ الكود أولاً من لوحة أكواد الورش'])->withInput()->with(compact('phoneCountries', 'defaultCountry'));
+            }
+
+            if (! $promo->isValid()) {
+                return back()->withErrors(['promo_code' => 'كود خصم الورشة منتهي أو غير نشط'])->withInput()->with(compact('phoneCountries', 'defaultCountry'));
+            }
+        }
+
         // التسجيل متاح فقط للطلاب — ربط الحساب بفرع الدومين عند التسجيل من موقع فرع (وإلا يبقى null فيُعيَّن الفرع الافتراضي في نموذج User)
         $branchId = app(BranchContext::class)->id();
 
@@ -333,14 +351,14 @@ class AuthController extends Controller
         // تفعيل كود الورشة فوراً — لا نعتمد على Queue حتى لا يضيع التفعيل
         $promoResult = app(WorkshopPromoService::class)->tryActivateOnRegistration(
             $user,
-            $request->input('promo_code')
+            $promoCode
         );
 
-        // معالجة كود الإحالة في Queue (كود الورشة يُفعَّل أعلاه مباشرة)
+        // معالجة كود الإحالة في Queue — كود الورشة يُمرَّر كنسخة احتياطية إن فشل التفعيل المباشر
         \App\Jobs\ProcessStudentRegistration::dispatch(
             $user->id,
             $request->referral_code,
-            null
+            $promoCode
         )->onQueue('registrations');
 
         Auth::login($user);

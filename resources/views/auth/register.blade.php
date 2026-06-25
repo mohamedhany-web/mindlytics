@@ -737,7 +737,8 @@
                         <div class="input-wrap">
                             <label for="promo_code_m">كود خصم الورشة (اختياري)</label>
                             <input type="text" name="promo_code" id="promo_code_m" value="{{ old('promo_code', request('promo', request('code'))) }}"
-                                   class="form-input w-full font-mono uppercase" placeholder="WS-XXXXXX">
+                                   class="form-input w-full font-mono uppercase @error('promo_code') border-red-500 @enderror" placeholder="WS-XXXXXX">
+                            @error('promo_code')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
                         </div>
 
                         <div class="flex items-start gap-2 mb-4">
@@ -945,8 +946,11 @@
                                 كود خصم الورشة (اختياري)
                             </label>
                             <input type="text" name="promo_code" id="promo_code" value="{{ $defaultPromo }}"
-                                   class="form-input w-full px-4 py-3 rounded-xl font-mono uppercase"
+                                   class="form-input w-full px-4 py-3 rounded-xl font-mono uppercase @error('promo_code') border-red-500 @enderror"
                                    placeholder="WS-XXXXXX">
+                            @error('promo_code')
+                                <p class="mt-1 text-xs text-red-600 font-medium">{{ $message }}</p>
+                            @enderror
                             <p class="text-xs text-[var(--text-muted)] mt-1">إن حضرت ورشة وحصلت على كود خصم، أدخله هنا لتفعيله على حسابك</p>
                         </div>
 
