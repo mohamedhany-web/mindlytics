@@ -462,14 +462,34 @@ async function refreshClientInfo() {
     return state.status === 'ready' && !!client;
 }
 
+async function isActuallyConnected() {
+    if (!client) {
+        return false;
+    }
+
+    try {
+        const wwebState = await client.getState();
+        return wwebState === 'CONNECTED';
+    } catch (err) {
+        if (isProtocolError(err) && (state.status === 'ready' || state.status === 'degraded')) {
+            return true;
+        }
+
+        return false;
+    }
+}
+
 function connectionSnapshot() {
-    const connected = (state.status === 'ready' || state.status === 'degraded') && !!client;
+    const sessionPresent = (state.status === 'ready' || state.status === 'degraded') && !!client;
+    const connected = sessionPresent;
 
     return {
         success: true,
         status: state.status,
         connected,
         healthy: connected,
+        /** يُملأ في /api/status بعد فحص getState() — يطابق ما يحتاجه الإرسال */
+        send_ready: null,
         phone: state.phone,
         pushname: state.pushname,
         platform: state.platform,
@@ -552,20 +572,37 @@ async function markSendError(err) {
 }
 
 async function ensureReady() {
-    if (client && (state.status === 'ready' || state.status === 'degraded')) {
-        await refreshClientInfo();
-        if (state.status === 'ready' && client) {
-            return true;
+    for (let attempt = 0; attempt < 2; attempt++) {
+        if (client && (state.status === 'ready' || state.status === 'degraded')) {
+            await refreshClientInfo();
+            if (await isActuallyConnected()) {
+                if (state.status === 'degraded') {
+                    state.status = 'ready';
+                }
+                return true;
+            }
+        }
+
+        if (!client && !initializing) {
+            await buildClient();
+            await sleep(2000);
+        }
+
+        if (client) {
+            await refreshClientInfo();
+            if (await isActuallyConnected()) {
+                return true;
+            }
+        }
+
+        if (attempt === 0) {
+            console.log('ensureReady: session not ready — running repair before send...');
+            await repairSession();
+            await sleep(3000);
         }
     }
-    if (!client && !initializing) {
-        await buildClient();
-        await sleep(2000);
-    }
-    if (client) {
-        await refreshClientInfo();
-    }
-    return state.status === 'ready' && !!client;
+
+    return false;
 }
 
 async function sendOneMessage(phone, message, simulateTyping = true) {
@@ -655,7 +692,10 @@ app.get('/api/status', authMiddleware, async (_req, res) => {
     if (client) {
         await refreshClientInfo();
     }
-    res.json(connectionSnapshot());
+    const snapshot = connectionSnapshot();
+    snapshot.send_ready = await isActuallyConnected();
+    snapshot.healthy = snapshot.send_ready;
+    res.json(snapshot);
 });
 
 app.get('/api/qr', authMiddleware, async (_req, res) => {

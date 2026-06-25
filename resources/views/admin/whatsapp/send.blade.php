@@ -5,12 +5,11 @@
 
 @section('content')
 @php
-    $connectionBadges = [
-        'ready' => ['label' => 'متصل', 'class' => 'bg-emerald-100 text-emerald-800 border-emerald-200'],
-        'qr' => ['label' => 'بانتظار QR', 'class' => 'bg-amber-100 text-amber-800 border-amber-200'],
-        'unreachable' => ['label' => 'الجسر غير متاح', 'class' => 'bg-rose-100 text-rose-800 border-rose-200'],
+    $canSend = (bool) ($connectionMeta['can_send'] ?? false);
+    $connBadge = [
+        'label' => $connectionMeta['label'] ?? 'غير معروف',
+        'class' => $connectionMeta['badge_class'] ?? 'bg-slate-100 text-slate-700 border-slate-200',
     ];
-    $connBadge = $connectionBadges[$connectionStatus] ?? ['label' => $connectionStatus, 'class' => 'bg-slate-100 text-slate-700 border-slate-200'];
     $templatesJson = $templates->map(fn ($t) => [
         'id' => $t->id,
         'title' => $t->title,
@@ -164,20 +163,27 @@ function whatsappSendForm() {
         'icon' => 'fas fa-paper-plane',
         'actions' => '
             <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border ' . $connBadge['class'] . '">
-                <span class="w-2 h-2 rounded-full ' . ($connectionStatus === 'ready' ? 'bg-emerald-500 animate-pulse' : 'bg-current opacity-60') . '"></span>
+                <span class="w-2 h-2 rounded-full ' . ($canSend ? 'bg-emerald-500 animate-pulse' : 'bg-current opacity-60') . '"></span>
                 ' . $connBadge['label'] . '
             </span>
             <a href="' . route('admin.whatsapp.index') . '" class="' . $waBtnSecondary . '"><i class="fas fa-qrcode"></i> الاتصال</a>
         ',
     ])
 
-    @if($connectionStatus !== 'ready')
+    @if(! $canSend)
         <div class="rounded-2xl border-2 border-amber-200 bg-amber-50 px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 text-sm text-amber-900">
             <div class="flex items-start gap-3 flex-1">
                 <i class="fas fa-exclamation-triangle text-amber-600 text-lg mt-0.5"></i>
                 <div>
-                    <p class="font-bold">الواتساب غير متصل بالكامل</p>
-                    <p class="mt-0.5 text-amber-800/90">تأكد من Bridge على VPS وامسح QR قبل الإرسال — وإلا ستُسجَّل الرسائل كفاشلة.</p>
+                    <p class="font-bold">الواتساب غير جاهز للإرسال</p>
+                    <p class="mt-0.5 text-amber-800/90">
+                        {{ $connectionMeta['label'] ?? 'تحقق من الاتصال' }}
+                        @if(!empty($connectionMeta['last_error']))
+                            — {{ $connectionMeta['last_error'] }}
+                        @else
+                            — تأكد من Bridge على VPS وامسح QR أو أدخل رمز الربط قبل الإرسال.
+                        @endif
+                    </p>
                 </div>
             </div>
             <a href="{{ route('admin.whatsapp.index') }}" class="{{ $waBtnPrimary }} text-sm shrink-0">فتح لوحة الاتصال</a>

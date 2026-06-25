@@ -5,15 +5,11 @@
 
 @section('content')
 @php
-    $isConnected = (bool) ($status['connected'] ?? $status['healthy'] ?? (($status['status'] ?? '') === 'ready'));
-    $connectionStatus = $status['status'] ?? 'unknown';
-    if ($isConnected) {
-        $connectionStatus = 'ready';
-    } elseif (!empty($status['last_error'])) {
-        $connectionStatus = 'error';
-    }
+    $connectionStatus = $connectionMeta['status'] ?? 'unknown';
+    $isConnected = (bool) ($connectionMeta['can_send'] ?? false);
     $statusMeta = [
         'ready' => ['label' => 'متصل وجاهز', 'badge' => 'bg-emerald-100 text-emerald-800 border-emerald-200', 'icon' => 'fas fa-check-circle', 'iconColor' => 'text-emerald-500', 'ring' => 'ring-emerald-500/20'],
+        'degraded' => ['label' => 'جلسة غير جاهزة', 'badge' => 'bg-amber-100 text-amber-800 border-amber-200', 'icon' => 'fas fa-exclamation-triangle', 'iconColor' => 'text-amber-500', 'ring' => 'ring-amber-500/20'],
         'qr' => ['label' => 'بانتظار مسح QR', 'badge' => 'bg-amber-100 text-amber-800 border-amber-200', 'icon' => 'fas fa-qrcode', 'iconColor' => 'text-amber-500', 'ring' => 'ring-amber-500/20'],
         'pairing' => ['label' => 'بانتظار رمز الربط', 'badge' => 'bg-violet-100 text-violet-800 border-violet-200', 'icon' => 'fas fa-key', 'iconColor' => 'text-violet-500', 'ring' => 'ring-violet-500/20'],
         'authenticated' => ['label' => 'تمت المصادقة', 'badge' => 'bg-sky-100 text-sky-800 border-sky-200', 'icon' => 'fas fa-shield-alt', 'iconColor' => 'text-sky-500', 'ring' => 'ring-sky-500/20'],

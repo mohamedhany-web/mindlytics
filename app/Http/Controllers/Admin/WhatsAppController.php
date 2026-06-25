@@ -28,6 +28,7 @@ class WhatsAppController extends Controller
         $statusResult = $this->bridge->getStatus();
         $status = $statusResult['success'] ? ($statusResult['data'] ?? []) : [];
         $bridgeError = $statusResult['success'] ? null : ($statusResult['error'] ?? null);
+        $connectionMeta = $this->bridge->connectionMeta($status, $statusResult['success'] ?? false);
 
         $stats = [
             'total' => WhatsAppMessage::count(),
@@ -37,7 +38,7 @@ class WhatsAppController extends Controller
 
         $pacingStats = app(WhatsAppPacingService::class)->usageStats();
 
-        return view('admin.whatsapp.index', compact('settings', 'status', 'bridgeError', 'stats', 'pacingStats'));
+        return view('admin.whatsapp.index', compact('settings', 'status', 'bridgeError', 'connectionMeta', 'stats', 'pacingStats'));
     }
 
     public function sendForm()
@@ -53,9 +54,8 @@ class WhatsAppController extends Controller
         $courses = AdvancedCourse::active()->select('id', 'title')->orderBy('title')->get();
 
         $statusResult = $this->bridge->getStatus();
-        $connectionStatus = $statusResult['success']
-            ? ($statusResult['data']['status'] ?? 'unknown')
-            : 'unreachable';
+        $bridgeStatus = $statusResult['success'] ? ($statusResult['data'] ?? []) : [];
+        $connectionMeta = $this->bridge->connectionMeta($bridgeStatus, $statusResult['success'] ?? false);
 
         $recentMessages = WhatsAppMessage::with('user')
             ->latest()
@@ -66,7 +66,8 @@ class WhatsAppController extends Controller
             'students',
             'templates',
             'courses',
-            'connectionStatus',
+            'bridgeStatus',
+            'connectionMeta',
             'recentMessages'
         ));
     }
@@ -77,6 +78,15 @@ class WhatsAppController extends Controller
 
         if (in_array($recipientType, ['single_student', 'course_students', 'all_students'], true)) {
             return $this->sendBulkMessages($request);
+        }
+
+        if (WhatsAppBridgeSettings::usesBridge()) {
+            $ready = $this->bridge->ensureReadyForSend();
+            if (! ($ready['success'] ?? false)) {
+                return back()
+                    ->withInput()
+                    ->with('error', $this->bridge->translateError($ready['error'] ?? 'الواتساب غير جاهز للإرسال.'));
+            }
         }
 
         $request->validate([
@@ -104,7 +114,7 @@ class WhatsAppController extends Controller
 
         return back()
             ->withInput()
-            ->with('error', $result['error'] ?? 'فشل إرسال الرسالة.');
+            ->with('error', $this->bridge->translateError($result['error'] ?? 'فشل إرسال الرسالة.'));
     }
 
     protected function sendBulkMessages(Request $request)
@@ -152,6 +162,15 @@ class WhatsAppController extends Controller
 
         if ($items->isEmpty()) {
             return back()->withInput()->with('error', 'لا يوجد مستلمون لديهم أرقام هواتف.');
+        }
+
+        if (WhatsAppBridgeSettings::usesBridge()) {
+            $ready = $this->bridge->ensureReadyForSend();
+            if (! ($ready['success'] ?? false)) {
+                return back()
+                    ->withInput()
+                    ->with('error', $this->bridge->translateError($ready['error'] ?? 'الواتساب غير جاهز للإرسال الجماعي.'));
+            }
         }
 
         $batch = $this->whatsappBatch->createAndDispatch(
