@@ -295,6 +295,10 @@ class EmployeeAgreementController extends Controller
      */
     public function storePayment(Request $request, EmployeeAgreement $employeeAgreement)
     {
+        if (! $employeeAgreement->isPayrollActive()) {
+            return back()->with('error', 'لا يمكن إنشاء دفعة راتب — الاتفاقية موقوفة أو غير نشطة.');
+        }
+
         $request->validate([
             'payment_date' => 'required|date',
             'total_deductions' => 'nullable|numeric|min:0',
@@ -350,5 +354,94 @@ class EmployeeAgreementController extends Controller
         $agreement = $payment->agreement;
         return redirect()->route('admin.employee-agreements.show', $agreement)
             ->with('success', 'تم تسجيل الدفع ورفع إيصال التحويل. ستظهر المدفوعة في قسم المحاسبة للموظف.');
+    }
+
+    /**
+     * إيقاف الاتفاقية — تجميد الموظف أو إنهاء علاقة العمل (لا رواتب جديدة).
+     */
+    public function stop(Request $request, EmployeeAgreement $employeeAgreement)
+    {
+        if (! in_array($employeeAgreement->status, ['active', 'draft', 'suspended'], true)) {
+            return back()->with('error', 'الاتفاقية موقوفة أو منتهية بالفعل.');
+        }
+
+        $validated = $request->validate([
+            'stop_type' => 'required|in:suspended,terminated',
+            'deactivate_account' => 'nullable|boolean',
+            'stop_note' => 'nullable|string|max:1000',
+        ]);
+
+        $stopType = $validated['stop_type'];
+        $deactivate = $request->boolean('deactivate_account', $stopType === 'terminated');
+        $today = now()->toDateString();
+        $label = $stopType === 'suspended' ? 'تجميد الاتفاقية' : 'إيقاف الاتفاقية / مغادرة الشركة';
+        $noteLine = '['.now()->format('Y-m-d H:i')."] {$label}";
+        if (! empty($validated['stop_note'])) {
+            $noteLine .= ' — '.$validated['stop_note'];
+        }
+
+        try {
+            DB::transaction(function () use ($employeeAgreement, $stopType, $deactivate, $today, $noteLine) {
+                $employeeAgreement->update([
+                    'status' => $stopType,
+                    'end_date' => $employeeAgreement->end_date ?? $today,
+                    'notes' => trim(($employeeAgreement->notes ?? '')."\n".$noteLine),
+                ]);
+
+                $employeeAgreement->payments()
+                    ->whereIn('status', ['pending', 'overdue'])
+                    ->update(['status' => 'cancelled']);
+
+                if ($deactivate && $employeeAgreement->employee) {
+                    $employeeAgreement->employee->update(['is_active' => false]);
+                }
+            });
+
+            $msg = $stopType === 'suspended'
+                ? 'تم تجميد الاتفاقية — لن تُنشأ رواتب جديدة حتى إعادة التفعيل.'
+                : 'تم إيقاف الاتفاقية — الموظف لن يُحسب عليه راتب جديد.';
+
+            if ($deactivate) {
+                $msg .= ' تم تعطيل حساب الموظف.';
+            }
+
+            return back()->with('success', $msg);
+        } catch (\Throwable $e) {
+            Log::error('Employee agreement stop failed: '.$e->getMessage(), [
+                'agreement_id' => $employeeAgreement->id,
+            ]);
+
+            return back()->with('error', 'تعذّر إيقاف الاتفاقية: '.mb_substr($e->getMessage(), 0, 200));
+        }
+    }
+
+    /**
+     * إعادة تفعيل اتفاقية مجمّدة.
+     */
+    public function reactivate(EmployeeAgreement $employeeAgreement)
+    {
+        if ($employeeAgreement->status !== 'suspended') {
+            return back()->with('error', 'يمكن إعادة التفعيل للاتفاقيات المجمّدة فقط. للموقوف نهائياً أنشئ اتفاقية جديدة.');
+        }
+
+        try {
+            DB::transaction(function () use ($employeeAgreement) {
+                $employeeAgreement->update([
+                    'status' => 'active',
+                    'end_date' => null,
+                    'notes' => trim(($employeeAgreement->notes ?? '')."\n[".now()->format('Y-m-d H:i').'] إعادة تفعيل الاتفاقية'),
+                ]);
+
+                if ($employeeAgreement->employee && ! $employeeAgreement->employee->is_active) {
+                    $employeeAgreement->employee->update(['is_active' => true]);
+                }
+            });
+
+            return back()->with('success', 'تم إعادة تفعيل الاتفاقية — يمكن إنشاء رواتب من جديد.');
+        } catch (\Throwable $e) {
+            Log::error('Employee agreement reactivate failed: '.$e->getMessage());
+
+            return back()->with('error', 'تعذّر إعادة التفعيل.');
+        }
     }
 }

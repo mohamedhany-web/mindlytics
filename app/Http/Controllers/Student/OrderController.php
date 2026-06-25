@@ -91,6 +91,34 @@ class OrderController extends Controller
 
         $couponId = null;
         $couponDiscountAmount = 0;
+        $appliedCoupon = null;
+        $workshopPromoService = app(\App\Services\WorkshopPromoService::class);
+
+        // خصم كود الورشة (كوبون خاص تلقائي)
+        if (! $request->filled('applied_coupon_id')) {
+            $workshopCoupon = $workshopPromoService->getCouponForAdvancedCourse(auth()->user(), $advancedCourse);
+            if ($workshopCoupon) {
+                $couponDiscountAmount = $workshopCoupon->calculateDiscount($finalAmount);
+                if ($couponDiscountAmount > 0) {
+                    $discountAmount += $couponDiscountAmount;
+                    $finalAmount -= $couponDiscountAmount;
+                    $couponId = $workshopCoupon->id;
+                    $appliedCoupon = $workshopCoupon;
+                    $workshopCoupon->incrementUsage();
+                    \App\Models\CouponUsage::create([
+                        'coupon_id' => $workshopCoupon->id,
+                        'user_id' => auth()->id(),
+                        'discount_amount' => $couponDiscountAmount,
+                        'order_amount' => $originalAmount,
+                        'final_amount' => $finalAmount,
+                    ]);
+                    $activation = \App\Models\WorkshopPromoActivation::where('coupon_id', $workshopCoupon->id)->first();
+                    if ($activation) {
+                        $workshopPromoService->markUsed($activation, 'advanced_course', $advancedCourse->id);
+                    }
+                }
+            }
+        }
 
         // التحقق من كوبون يدوي إذا كان موجوداً
         if ($request->filled('applied_coupon_id')) {
@@ -109,11 +137,10 @@ class OrderController extends Controller
                     $discountAmount += $couponDiscountAmount;
                     $finalAmount -= $couponDiscountAmount;
                     $couponId = $coupon->id;
-                    
-                    // زيادة عدد مرات استخدام الكوبون
+                    $appliedCoupon = $coupon;
+
                     $coupon->incrementUsage();
-                    
-                    // تسجيل استخدام الكوبون
+
                     \App\Models\CouponUsage::create([
                         'coupon_id' => $coupon->id,
                         'user_id' => auth()->id(),
@@ -121,6 +148,11 @@ class OrderController extends Controller
                         'order_amount' => $originalAmount,
                         'final_amount' => $finalAmount,
                     ]);
+
+                    $activation = \App\Models\WorkshopPromoActivation::where('coupon_id', $coupon->id)->first();
+                    if ($activation) {
+                        $workshopPromoService->markUsed($activation, 'advanced_course', $advancedCourse->id);
+                    }
                 }
             }
         }
@@ -148,7 +180,7 @@ class OrderController extends Controller
             }
         }
         if ($couponDiscountAmount > 0) {
-            $discountNotes[] = "خصم الكوبون (" . ($coupon->code ?? '') . "): " . number_format($couponDiscountAmount, 2) . " ج.م";
+            $discountNotes[] = 'خصم الكوبون ('.($appliedCoupon->code ?? '').'): '.number_format($couponDiscountAmount, 2).' ج.م';
         }
         if (!empty($discountNotes)) {
             $orderData['notes'] .= (!empty($orderData['notes']) ? "\n" : '') . implode("\n", $discountNotes);

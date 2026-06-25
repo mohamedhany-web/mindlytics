@@ -332,7 +332,8 @@ class AuthController extends Controller
         // معالجة كود الإحالة في Queue لتقليل الضغط على السيرفر
         \App\Jobs\ProcessStudentRegistration::dispatch(
             $user->id,
-            $request->referral_code
+            $request->referral_code,
+            $request->promo_code
         )->onQueue('registrations');
 
         Auth::login($user);

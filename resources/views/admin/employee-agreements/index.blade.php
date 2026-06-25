@@ -139,8 +139,8 @@
                         <option value="">جميع الحالات</option>
                         <option value="draft" {{ request('status') == 'draft' ? 'selected' : '' }}>مسودة</option>
                         <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>نشط</option>
-                        <option value="suspended" {{ request('status') == 'suspended' ? 'selected' : '' }}>معلق</option>
-                        <option value="terminated" {{ request('status') == 'terminated' ? 'selected' : '' }}>منتهي</option>
+                        <option value="suspended" {{ request('status') == 'suspended' ? 'selected' : '' }}>مجمّد</option>
+                        <option value="terminated" {{ request('status') == 'terminated' ? 'selected' : '' }}>موقوف / مغادرة</option>
                         <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>مكتمل</option>
                     </select>
                 </div>
@@ -212,8 +212,8 @@
                                     $statusBadges = [
                                         'draft' => ['label' => 'مسودة', 'classes' => 'bg-slate-100 text-slate-700 border-slate-200'],
                                         'active' => ['label' => 'نشط', 'classes' => 'bg-emerald-100 text-emerald-700 border-emerald-200'],
-                                        'suspended' => ['label' => 'معلق', 'classes' => 'bg-amber-100 text-amber-700 border-amber-200'],
-                                        'terminated' => ['label' => 'منتهي', 'classes' => 'bg-rose-100 text-rose-700 border-rose-200'],
+                                        'suspended' => ['label' => 'مجمّد', 'classes' => 'bg-amber-100 text-amber-700 border-amber-200'],
+                                        'terminated' => ['label' => 'موقوف', 'classes' => 'bg-rose-100 text-rose-700 border-rose-200'],
                                         'completed' => ['label' => 'مكتمل', 'classes' => 'bg-blue-100 text-blue-700 border-blue-200'],
                                     ];
                                     $status = $statusBadges[$agreement->status] ?? ['label' => $agreement->status, 'classes' => 'bg-slate-100 text-slate-700 border-slate-200'];
@@ -230,7 +230,7 @@
                                 @endif
                             </td>
                             <td class="px-6 py-4">
-                                <div class="flex items-center justify-center gap-2">
+                                <div class="flex items-center justify-center gap-1 flex-wrap">
                                     <a href="{{ route('admin.employee-agreements.show', $agreement) }}" 
                                        class="w-9 h-9 flex items-center justify-center bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg transition-colors duration-200"
                                        title="عرض">
@@ -241,6 +241,28 @@
                                        title="تعديل">
                                         <i class="fas fa-edit text-sm"></i>
                                     </a>
+                                    @if(in_array($agreement->status, ['active', 'draft'], true))
+                                        <form action="{{ route('admin.employee-agreements.stop', $agreement) }}" method="POST" class="inline-flex items-center gap-1 agreement-stop-form"
+                                              data-employee="{{ htmlspecialchars($agreement->employee->name ?? '', ENT_QUOTES, 'UTF-8') }}">
+                                            @csrf
+                                            <select name="stop_type" class="agreement-stop-type text-[10px] border border-slate-200 rounded-lg px-1 py-1 max-w-[5.5rem] bg-white" title="نوع الإيقاف">
+                                                <option value="terminated">مغادرة</option>
+                                                <option value="suspended">تجميد</option>
+                                            </select>
+                                            <input type="hidden" name="deactivate_account" value="1" class="agreement-deactivate-flag">
+                                            <button type="submit" class="w-9 h-9 flex items-center justify-center bg-orange-50 hover:bg-orange-100 text-orange-600 rounded-lg transition-colors duration-200" title="إيقاف الاتفاقية — لا رواتب جديدة">
+                                                <i class="fas fa-ban text-sm"></i>
+                                            </button>
+                                        </form>
+                                    @elseif($agreement->status === 'suspended')
+                                        <form action="{{ route('admin.employee-agreements.reactivate', $agreement) }}" method="POST" class="inline-block"
+                                              onsubmit="return confirm('إعادة تفعيل اتفاقية {{ htmlspecialchars($agreement->employee->name ?? '', ENT_QUOTES, 'UTF-8') }}؟');">
+                                            @csrf
+                                            <button type="submit" class="w-9 h-9 flex items-center justify-center bg-sky-50 hover:bg-sky-100 text-sky-600 rounded-lg" title="إعادة تفعيل">
+                                                <i class="fas fa-play text-sm"></i>
+                                            </button>
+                                        </form>
+                                    @endif
                                     <form action="{{ route('admin.employee-agreements.destroy', $agreement) }}" method="POST" class="inline-block" onsubmit="return confirm('هل أنت متأكد من حذف هذه الاتفاقية؟');">
                                         @csrf
                                         @method('DELETE')
@@ -280,13 +302,25 @@
 
 @push('scripts')
 <script>
-// حماية من XSS في البحث
-const filterForm = document.getElementById('filterForm');
-if (filterForm) {
-    filterForm.addEventListener('submit', function(e) {
-        // Sanitization يتم في الخادم
+document.querySelectorAll('.agreement-stop-form').forEach(function (form) {
+    const typeSelect = form.querySelector('.agreement-stop-type');
+    const deactivateInput = form.querySelector('.agreement-deactivate-flag');
+    if (typeSelect && deactivateInput) {
+        typeSelect.addEventListener('change', function () {
+            deactivateInput.value = typeSelect.value === 'terminated' ? '1' : '0';
+        });
+    }
+    form.addEventListener('submit', function (e) {
+        const name = form.dataset.employee || 'الموظف';
+        const type = typeSelect ? typeSelect.value : 'terminated';
+        const msg = type === 'suspended'
+            ? 'تجميد اتفاقية «' + name + '»؟ لن يُحسب راتب جديد حتى إعادة التفعيل.'
+            : 'إيقاف اتفاقية «' + name + '» (مغادرة/ترحيل)؟ لن يُحسب راتب جديد.';
+        if (!confirm(msg)) {
+            e.preventDefault();
+        }
     });
-}
+});
 </script>
 @endpush
 @endsection

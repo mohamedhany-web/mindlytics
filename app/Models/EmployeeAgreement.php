@@ -62,10 +62,49 @@ class EmployeeAgreement extends Model
     }
 
     /**
-     * إنشاء رقم اتفاقية تلقائي
+     * هل تُحتسب رواتب على هذه الاتفاقية؟
      */
+    public function isPayrollActive(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function statusLabels(): array
+    {
+        return [
+            'draft' => 'مسودة',
+            'active' => 'نشط',
+            'suspended' => 'مجمّد',
+            'terminated' => 'موقوف / مغادرة',
+            'completed' => 'مكتمل',
+        ];
+    }
     public static function generateAgreementNumber(): string
     {
-        return 'EMP-AGR-' . date('Y') . '-' . str_pad(self::count() + 1, 6, '0', STR_PAD_LEFT);
+        $year = date('Y');
+        $prefix = 'EMP-AGR-'.$year.'-';
+        $prefixLength = strlen($prefix);
+
+        $maxSeq = self::query()
+            ->where('agreement_number', 'like', $prefix.'%')
+            ->pluck('agreement_number')
+            ->map(function (string $number) use ($prefixLength) {
+                $suffix = substr($number, $prefixLength);
+
+                return ctype_digit($suffix) ? (int) $suffix : 0;
+            })
+            ->max() ?? 0;
+
+        for ($i = 1; $i <= 50; $i++) {
+            $candidate = $prefix.str_pad((string) ($maxSeq + $i), 6, '0', STR_PAD_LEFT);
+            if (! self::query()->where('agreement_number', $candidate)->exists()) {
+                return $candidate;
+            }
+        }
+
+        return $prefix.str_pad((string) now()->format('His'), 6, '0', STR_PAD_LEFT);
     }
 }

@@ -374,6 +374,19 @@
                                 
                                 <!-- حقل كوبون الخصم -->
                                 @if($advancedCourse->price && $advancedCourse->price > 0)
+                                @if(!empty($workshopPromoPreview))
+                                <div class="mb-4 rounded-2xl p-4 border-2 border-violet-300 bg-violet-50">
+                                    <p class="text-sm font-black text-violet-900 flex items-center gap-2">
+                                        <i class="fas fa-star text-amber-500"></i>
+                                        لديك خصم ورشة مفعّل!
+                                    </p>
+                                    <p class="text-sm text-violet-800 mt-1">
+                                        خصم <strong>{{ number_format($workshopPromoPreview['discount_amount'], 2) }} ج.م</strong>
+                                        — السعر بعد الخصم: <strong>{{ number_format($workshopPromoPreview['final_amount'], 2) }} ج.م</strong>
+                                    </p>
+                                    <input type="hidden" name="applied_coupon_id" id="applied_coupon_id" value="{{ $workshopPromoCoupon->id }}">
+                                </div>
+                                @else
                                 <div class="bg-gradient-to-br from-[#2CA9BD]/10 to-[#65DBE4]/10 rounded-2xl p-5 border-2 border-[#2CA9BD]/20">
                                     <label class="block text-sm font-black text-[#1C2C39] mb-3 flex items-center gap-2">
                                         <div class="w-8 h-8 bg-gradient-to-br from-[#2CA9BD] to-[#65DBE4] rounded-lg flex items-center justify-center shadow-md">
@@ -400,6 +413,7 @@
                                     <div id="couponMessage" class="mt-3 text-sm hidden"></div>
                                     <input type="hidden" name="applied_coupon_id" id="applied_coupon_id" value="">
                                 </div>
+                                @endif
                                 @endif
                                 
                                 <div>

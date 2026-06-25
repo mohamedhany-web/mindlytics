@@ -34,7 +34,7 @@ class ReferralController extends Controller
             });
         }
 
-        $referrals = $query->paginate(20);
+        $referrals = $query->paginate(20)->withQueryString();
 
         $stats = [
             'total' => Referral::count(),

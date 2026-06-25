@@ -734,6 +734,12 @@
                             </div>
                         </div>
 
+                        <div class="input-wrap">
+                            <label for="promo_code_m">كود خصم الورشة (اختياري)</label>
+                            <input type="text" name="promo_code" id="promo_code_m" value="{{ old('promo_code', request('promo', request('code'))) }}"
+                                   class="form-input w-full font-mono uppercase" placeholder="WS-XXXXXX">
+                        </div>
+
                         <div class="flex items-start gap-2 mb-4">
                             <input type="checkbox" id="terms_m" required class="mt-0.5 h-4 w-4 rounded border-[var(--input-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]">
                             <label for="terms_m" class="text-xs text-[var(--text-muted)]">{{ __('auth.agree_terms') }} <a href="#" class="link-primary">{{ __('auth.terms_of_use') }}</a> {{ __('auth.and') }} <a href="#" class="link-primary">{{ __('auth.privacy_policy') }}</a></label>
@@ -922,6 +928,26 @@
                                     </button>
                                 </div>
                             </div>
+                        </div>
+
+                        @php
+                            $defaultPromo = old('promo_code', request('promo', request('code')));
+                            $defaultRef = old('referral_code', request('ref'));
+                        @endphp
+                        <div class="md:col-span-2">
+                            <label for="referral_code" class="block text-sm font-bold text-[var(--text-dark)] mb-1.5">كود الإحالة (اختياري)</label>
+                            <input type="text" name="referral_code" id="referral_code" value="{{ $defaultRef }}"
+                                   class="form-input w-full px-4 py-3 rounded-xl font-mono uppercase" placeholder="REF...">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="promo_code" class="block text-sm font-bold text-[var(--text-dark)] mb-1.5">
+                                <i class="fas fa-ticket-alt text-violet-600 ml-1"></i>
+                                كود خصم الورشة (اختياري)
+                            </label>
+                            <input type="text" name="promo_code" id="promo_code" value="{{ $defaultPromo }}"
+                                   class="form-input w-full px-4 py-3 rounded-xl font-mono uppercase"
+                                   placeholder="WS-XXXXXX">
+                            <p class="text-xs text-[var(--text-muted)] mt-1">إن حضرت ورشة وحصلت على كود خصم، أدخله هنا لتفعيله على حسابك</p>
                         </div>
 
                         <!-- موافقة على الشروط -->

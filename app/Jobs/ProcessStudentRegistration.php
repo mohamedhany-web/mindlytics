@@ -23,7 +23,8 @@ class ProcessStudentRegistration implements ShouldQueue
      */
     public function __construct(
         public int $userId,
-        public ?string $referralCode = null
+        public ?string $referralCode = null,
+        public ?string $promoCode = null
     ) {}
 
     /**
@@ -43,6 +44,10 @@ class ProcessStudentRegistration implements ShouldQueue
                 if ($referrer && $referrer->id !== $user->id) {
                     $referralService->processReferral($referrer, $user, $referralCode);
                 }
+            }
+
+            if ($this->promoCode) {
+                app(\App\Services\WorkshopPromoService::class)->activateForUser($user, $this->promoCode);
             }
 
             // إنشاء كود إحالة للمستخدم الجديد

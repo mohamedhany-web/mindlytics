@@ -42,6 +42,29 @@ class CourseController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('student.courses.show', compact('advancedCourse', 'existingOrder', 'isEnrolled', 'availableWallets'));
+        $workshopPromoCoupon = null;
+        $workshopPromoPreview = null;
+        if (auth()->check() && $advancedCourse->price > 0) {
+            $workshopPromoCoupon = app(\App\Services\WorkshopPromoService::class)
+                ->getCouponForAdvancedCourse(auth()->user(), $advancedCourse);
+            if ($workshopPromoCoupon) {
+                $discount = $workshopPromoCoupon->calculateDiscount((float) $advancedCourse->price);
+                $workshopPromoPreview = [
+                    'code' => $workshopPromoCoupon->code,
+                    'title' => $workshopPromoCoupon->title ?? $workshopPromoCoupon->name,
+                    'discount_amount' => $discount,
+                    'final_amount' => max(0, (float) $advancedCourse->price - $discount),
+                ];
+            }
+        }
+
+        return view('student.courses.show', compact(
+            'advancedCourse',
+            'existingOrder',
+            'isEnrolled',
+            'availableWallets',
+            'workshopPromoCoupon',
+            'workshopPromoPreview'
+        ));
     }
 }

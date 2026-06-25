@@ -119,12 +119,26 @@ class OfflineEnrollmentController extends Controller
         $discountAmount = 0;
         $finalAmount = $listPrice;
         $paidAmount = 0;
+        $workshopActivation = null;
 
         if ($validated['payment_type'] === 'free') {
             $finalAmount = 0;
             $paidAmount = 0;
         } else {
             $discountAmount = $this->resolveEnrollmentDiscount($request, $listPrice);
+
+            if ($discountAmount <= 0) {
+                $student = User::find($validated['user_id']);
+                if ($student) {
+                    $promoResult = app(\App\Services\WorkshopPromoService::class)
+                        ->calculateOfflineDiscount($student, $offlineCourse, $listPrice);
+                    if ($promoResult['discount'] > 0) {
+                        $discountAmount = $promoResult['discount'];
+                        $workshopActivation = $promoResult['activation'];
+                    }
+                }
+            }
+
             $finalAmount = max(0, round($listPrice - $discountAmount, 2));
 
             if ($validated['payment_type'] === 'full') {
@@ -178,6 +192,14 @@ class OfflineEnrollmentController extends Controller
 
             if ($createdEnrollment && (float) $createdEnrollment->remaining_amount > 0 && (float) $createdEnrollment->paid_amount > 0) {
                 app(AutoInstallmentAgreementService::class)->ensureFromOfflineEnrollment($createdEnrollment, auth()->id());
+            }
+
+            if ($workshopActivation && $discountAmount > 0) {
+                app(\App\Services\WorkshopPromoService::class)->markUsed(
+                    $workshopActivation,
+                    'offline_course',
+                    $offlineCourse->id
+                );
             }
 
             DB::commit();

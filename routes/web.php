@@ -724,6 +724,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
     // الإحالات
     Route::get('/referrals', [\App\Http\Controllers\Student\ReferralController::class, 'index'])->name('referrals.index');
     Route::post('/referrals/copy-link', [\App\Http\Controllers\Student\ReferralController::class, 'copyLink'])->name('referrals.copy-link');
+    Route::post('/promo-code/activate', [\App\Http\Controllers\Student\WorkshopPromoController::class, 'activate'])
+        ->middleware('auth')
+        ->name('promo-code.activate');
     
     // API للتحقق من الكوبون
     Route::post('/api/validate-coupon', [\App\Http\Controllers\Student\CouponController::class, 'validateCoupon'])->name('api.validate-coupon');
@@ -1730,6 +1733,12 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
                 ->name('store');
             Route::post('payments/{payment}/mark-paid', [\App\Http\Controllers\Admin\EmployeeAgreementController::class, 'markPaymentPaid'])->name('payments.mark-paid');
             Route::post('{employeeAgreement}/payments', [\App\Http\Controllers\Admin\EmployeeAgreementController::class, 'storePayment'])->name('payments.store');
+            Route::post('{employeeAgreement}/stop', [\App\Http\Controllers\Admin\EmployeeAgreementController::class, 'stop'])
+                ->middleware('throttle:20,5')
+                ->name('stop');
+            Route::post('{employeeAgreement}/reactivate', [\App\Http\Controllers\Admin\EmployeeAgreementController::class, 'reactivate'])
+                ->middleware('throttle:20,5')
+                ->name('reactivate');
             Route::get('/{employeeAgreement}', [\App\Http\Controllers\Admin\EmployeeAgreementController::class, 'show'])->name('show');
             Route::get('/{employeeAgreement}/edit', [\App\Http\Controllers\Admin\EmployeeAgreementController::class, 'edit'])->name('edit');
             Route::put('/{employeeAgreement}', [\App\Http\Controllers\Admin\EmployeeAgreementController::class, 'update'])
@@ -1765,6 +1774,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::resource('coupons', \App\Http\Controllers\Admin\CouponController::class);
         // إدارة برامج الإحالات
         Route::resource('referral-programs', \App\Http\Controllers\Admin\ReferralProgramController::class);
+        Route::get('workshop-promo-codes/preview-discount', [\App\Http\Controllers\Admin\WorkshopPromoCodeController::class, 'previewDiscount'])
+            ->name('workshop-promo-codes.preview-discount');
+        Route::resource('workshop-promo-codes', \App\Http\Controllers\Admin\WorkshopPromoCodeController::class);
         
         // إدارة الإحالات
         Route::prefix('referrals')->name('referrals.')->group(function () {

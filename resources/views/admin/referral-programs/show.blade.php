@@ -3,35 +3,27 @@
 @section('title', 'تفاصيل برنامج الإحالات - Mindlytics')
 
 @section('content')
-<div class="p-6 bg-gray-50 min-h-screen">
-    <div class="max-w-6xl mx-auto">
-        <!-- Header -->
-        <div class="mb-6">
-            <div class="flex items-center justify-between mb-4">
-                <div>
-                    <h1 class="text-3xl font-bold text-gray-900 mb-2">
-                        <i class="fas fa-gift text-sky-600 ml-3"></i>
-                        {{ $referralProgram->name }}
-                    </h1>
-                    <p class="text-gray-600">{{ $referralProgram->description }}</p>
-                </div>
-                <div class="flex gap-3">
-                    <a href="{{ route('admin.referral-programs.edit', $referralProgram) }}" 
-                       class="bg-gradient-to-l from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white px-5 py-2.5 rounded-lg font-medium transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2">
-                        <i class="fas fa-edit"></i>
-                        تعديل
-                    </a>
-                    <a href="{{ route('admin.referral-programs.index') }}" 
-                       class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-5 py-2.5 rounded-lg font-medium transition-colors">
-                        <i class="fas fa-arrow-right ml-2"></i>
-                        العودة
-                    </a>
-                </div>
+<div class="p-3 sm:p-6 space-y-6" style="background:#f8fafc;min-height:100vh;">
+    @include('admin.marketing._flash')
+    @include('admin.marketing._tabs', ['active' => 'referrals'])
+
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-6 border-b border-slate-100 flex flex-wrap items-start justify-between gap-4">
+            <div>
+                <p class="text-xs font-bold text-sky-600 uppercase tracking-wide mb-1">برنامج إحالة</p>
+                <h1 class="text-2xl font-black text-slate-900">{{ $referralProgram->name }}</h1>
+                @if($referralProgram->description)
+                    <p class="text-sm text-slate-600 mt-1">{{ $referralProgram->description }}</p>
+                @endif
+            </div>
+            <div class="flex gap-2">
+                <a href="{{ route('admin.referral-programs.edit', $referralProgram) }}" class="px-4 py-2 rounded-xl bg-amber-500 text-white text-sm font-bold hover:bg-amber-600"><i class="fas fa-edit ml-1"></i> تعديل</a>
+                <a href="{{ route('admin.referral-programs.index') }}" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold">رجوع</a>
             </div>
         </div>
 
         <!-- Statistics -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 p-5 border-b border-slate-100 bg-slate-50/50">
             <div class="bg-white rounded-2xl shadow-lg p-6 border-r-4 border-sky-500">
                 <p class="text-gray-500 text-sm font-medium mb-1">إجمالي الإحالات</p>
                 <p class="text-3xl font-bold text-gray-900">{{ number_format($stats['total_referrals']) }}</p>
@@ -54,7 +46,7 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-5">
             <!-- Program Details -->
             <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
                 <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
@@ -163,6 +155,6 @@
                 @endif
             </div>
         </div>
-    </div>
+    </section>
 </div>
 @endsection

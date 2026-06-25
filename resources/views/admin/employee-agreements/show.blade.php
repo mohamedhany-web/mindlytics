@@ -15,7 +15,31 @@
                 </h2>
                 <p class="text-sm text-slate-500 mt-2">رقم الاتفاقية: <span class="font-semibold">{{ $employeeAgreement->agreement_number }}</span></p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+                @if(in_array($employeeAgreement->status, ['active', 'draft'], true))
+                    <form action="{{ route('admin.employee-agreements.stop', $employeeAgreement) }}" method="POST" class="inline-flex flex-wrap items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2"
+                          onsubmit="return confirm(document.getElementById('stop-type-select').value === 'suspended' ? 'تجميد الاتفاقية؟ لن يُحسب راتب جديد.' : 'إيقاف الاتفاقية نهائياً (مغادرة الشركة)؟ لن يُحسب راتب جديد.');">
+                        @csrf
+                        <span class="text-xs font-bold text-orange-800"><i class="fas fa-ban ml-1"></i>إيقاف</span>
+                        <select name="stop_type" id="stop-type-select" class="text-xs rounded-lg border border-orange-200 px-2 py-1 bg-white">
+                            <option value="terminated">مغادرة / ترحيل من الشركة</option>
+                            <option value="suspended">تجميد مؤقت</option>
+                        </select>
+                        <label class="text-[11px] text-orange-900 inline-flex items-center gap-1">
+                            <input type="checkbox" name="deactivate_account" value="1" checked class="rounded border-orange-300">
+                            تعطيل حساب الموظف
+                        </label>
+                        <input type="text" name="stop_note" placeholder="سبب (اختياري)" class="text-xs rounded-lg border border-orange-200 px-2 py-1 w-32 max-w-full">
+                        <button type="submit" class="px-3 py-1.5 text-xs font-bold text-white bg-orange-600 rounded-lg hover:bg-orange-700">تأكيد الإيقاف</button>
+                    </form>
+                @elseif($employeeAgreement->status === 'suspended')
+                    <form action="{{ route('admin.employee-agreements.reactivate', $employeeAgreement) }}" method="POST" class="inline-block" onsubmit="return confirm('إعادة تفعيل الاتفاقية؟');">
+                        @csrf
+                        <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-sky-600 rounded-xl hover:bg-sky-700">
+                            <i class="fas fa-play"></i> إعادة تفعيل
+                        </button>
+                    </form>
+                @endif
                 <a href="{{ route('admin.employee-agreements.edit', $employeeAgreement) }}" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-amber-600 rounded-xl shadow hover:bg-amber-700 transition-all">
                     <i class="fas fa-edit"></i>
                     تعديل
@@ -73,8 +97,8 @@
                                 $statusBadges = [
                                     'draft' => ['label' => 'مسودة', 'classes' => 'bg-slate-100 text-slate-700'],
                                     'active' => ['label' => 'نشط', 'classes' => 'bg-emerald-100 text-emerald-700'],
-                                    'suspended' => ['label' => 'معلق', 'classes' => 'bg-amber-100 text-amber-700'],
-                                    'terminated' => ['label' => 'منتهي', 'classes' => 'bg-rose-100 text-rose-700'],
+                                    'suspended' => ['label' => 'مجمّد', 'classes' => 'bg-amber-100 text-amber-700'],
+                                    'terminated' => ['label' => 'موقوف', 'classes' => 'bg-rose-100 text-rose-700'],
                                     'completed' => ['label' => 'مكتمل', 'classes' => 'bg-blue-100 text-blue-700'],
                                 ];
                                 $status = $statusBadges[$employeeAgreement->status] ?? ['label' => $employeeAgreement->status, 'classes' => 'bg-slate-100 text-slate-700'];

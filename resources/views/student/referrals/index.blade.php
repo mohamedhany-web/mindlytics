@@ -18,6 +18,39 @@
         </div>
     </div>
 
+    @if(session('success'))
+        <div class="mb-6 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 px-5 py-4 font-semibold">{{ session('success') }}</div>
+    @endif
+    @if(session('error'))
+        <div class="mb-6 rounded-xl bg-red-50 border border-red-200 text-red-800 px-5 py-4 font-semibold">{{ session('error') }}</div>
+    @endif
+
+    {{-- كود خصم الورشة --}}
+    <div class="mb-8 rounded-2xl border-2 border-violet-200 bg-gradient-to-br from-violet-50 to-white p-6 shadow-sm">
+        <h2 class="text-lg font-black text-violet-900 mb-1 flex items-center gap-2">
+            <i class="fas fa-ticket-alt"></i> كود خصم الورشة
+        </h2>
+        <p class="text-sm text-violet-800/80 mb-4">حضرت ورشة؟ فعّل الكود هنا ليظهر الخصم عند شراء الكورسات</p>
+        @if(!empty($workshopActivation) && $workshopActivation->isUsable())
+            <div class="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-emerald-800 text-sm font-semibold">
+                <i class="fas fa-check-circle ml-1"></i>
+                خصم مفعّل: {{ $workshopActivation->promoCode?->discountLabel() ?? '' }}
+                @if($workshopActivation->promoCode?->expires_at)
+                    — ينتهي {{ $workshopActivation->promoCode->expires_at->format('Y-m-d') }}
+                @endif
+            </div>
+        @else
+            <form action="{{ route('promo-code.activate') }}" method="POST" class="flex flex-col sm:flex-row gap-3">
+                @csrf
+                <input type="text" name="promo_code" required placeholder="WS-XXXXXX"
+                       class="flex-1 rounded-xl border border-violet-200 px-4 py-3 font-mono uppercase focus:ring-2 focus:ring-violet-500">
+                <button type="submit" class="rounded-xl bg-violet-600 hover:bg-violet-700 text-white px-6 py-3 font-bold whitespace-nowrap">
+                    تفعيل الكود
+                </button>
+            </form>
+        @endif
+    </div>
+
     <!-- Statistics Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <!-- إجمالي الإحالات -->

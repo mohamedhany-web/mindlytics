@@ -4,10 +4,10 @@
 @section('header', 'إنشاء برنامج إحالات جديد')
 
 @section('content')
-<div class="p-6 bg-gray-50 min-h-screen">
-    <div class="max-w-4xl mx-auto">
-        <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
-            <h1 class="text-2xl font-bold text-gray-900 mb-6">إنشاء برنامج إحالات جديد</h1>
+<div class="p-3 sm:p-6 space-y-6" style="background:#f8fafc;min-height:100vh;">
+    @include('admin.marketing._tabs', ['active' => 'referrals'])
+    <div class="max-w-4xl mx-auto rounded-2xl bg-white border border-slate-200 shadow-sm p-6 sm:p-8">
+            <h1 class="text-xl font-black text-slate-900 mb-6">إنشاء برنامج إحالات جديد</h1>
             
             <form action="{{ route('admin.referral-programs.store') }}" method="POST" class="space-y-6">
                 @csrf
@@ -162,7 +162,6 @@
                     </button>
                 </div>
             </form>
-        </div>
     </div>
 </div>
 @endsection
