@@ -21,7 +21,138 @@
         'name' => $s->name,
         'phone' => $s->phone,
     ])->values();
+    $waSendConfig = [
+        'templates' => $templatesJson,
+        'students' => $studentsJson,
+        'oldRecipient' => old('recipient_type', 'manual'),
+        'oldMessage' => old('message', ''),
+        'oldPhone' => old('phone', ''),
+        'oldUserId' => old('user_id', ''),
+        'oldCourseId' => old('course_id', ''),
+        'oldTemplateId' => old('template_id', ''),
+    ];
+    $templateVariables = [
+        ['var' => '{{student_name}}', 'desc' => 'اسم الطالب'],
+        ['var' => '{{courses_count}}', 'desc' => 'عدد الكورسات'],
+        ['var' => '{{avg_score}}', 'desc' => 'متوسط الدرجات'],
+        ['var' => '{{month_name}}', 'desc' => 'الشهر الحالي'],
+        ['var' => '{{date}}', 'desc' => 'التاريخ'],
+        ['var' => '{{platform_name}}', 'desc' => 'اسم المنصة'],
+    ];
 @endphp
+
+<script>window.__waSendFormConfig = @json($waSendConfig);</script>
+<script>
+function whatsappSendForm() {
+    const config = window.__waSendFormConfig || {};
+    return {
+        recipientType: config.oldRecipient || 'manual',
+        message: config.oldMessage || '',
+        phone: config.oldPhone || '',
+        userId: config.oldUserId ? String(config.oldUserId) : '',
+        courseId: config.oldCourseId ? String(config.oldCourseId) : '',
+        templateId: config.oldTemplateId ? String(config.oldTemplateId) : '',
+        templates: config.templates || [],
+        students: config.students || [],
+        submitting: false,
+
+        setRecipientType(type) {
+            this.recipientType = type;
+        },
+
+        get charCount() {
+            return (this.message || '').length;
+        },
+
+        get previewText() {
+            if (!this.message || !this.message.trim()) {
+                return 'اكتب رسالتك لرؤية المعاينة هنا...';
+            }
+            return this.message;
+        },
+
+        get recipientHint() {
+            if (this.recipientType === 'manual') {
+                return this.phone ? `إلى: ${this.phone}` : 'أدخل رقم الهاتف أعلاه';
+            }
+            if (this.recipientType === 'single_student' && this.userId) {
+                const s = this.students.find(x => String(x.id) === String(this.userId));
+                return s ? `إلى: ${s.name} — ${s.phone}` : '';
+            }
+            if (this.recipientType === 'all_students') {
+                return `إرسال جماعي — ${this.students.length} طالب`;
+            }
+            if (this.recipientType === 'course_students') {
+                return this.courseId ? 'إرسال لطلاب الكورس المحدد' : 'اختر الكورس أعلاه';
+            }
+            return '';
+        },
+
+        recipientPanelTitle() {
+            const map = {
+                manual: 'أدخل رقم الهاتف للإرسال',
+                single_student: 'اختر الطالب المستلم',
+                course_students: 'اختر الكورس',
+                all_students: 'إرسال لجميع الطلاب',
+            };
+            return map[this.recipientType] || 'تفاصيل المستلم';
+        },
+
+        selectedStudentPhone() {
+            const s = this.students.find(x => String(x.id) === String(this.userId));
+            return s ? s.phone : '';
+        },
+
+        applyTemplate() {
+            const t = this.templates.find(x => String(x.id) === String(this.templateId));
+            if (t && t.content) {
+                this.message = t.content;
+            }
+        },
+
+        onStudentPick() {
+            const s = this.students.find(x => String(x.id) === String(this.userId));
+            if (s) this.phone = s.phone;
+        },
+
+        insertVariable(v) {
+            this.message = (this.message || '') + v;
+        },
+
+        submitLabel() {
+            const map = {
+                manual: 'إرسال الآن',
+                single_student: 'إرسال للطالب',
+                course_students: 'إرسال لطلاب الكورس',
+                all_students: 'إرسال جماعي',
+            };
+            return map[this.recipientType] || 'إرسال';
+        },
+
+        onSubmit(e) {
+            if (this.recipientType === 'all_students' || this.recipientType === 'course_students' || this.recipientType === 'single_student') {
+                const n = this.recipientType === 'single_student' ? 1
+                    : (this.recipientType === 'course_students' ? 'طلاب الكورس' : this.students.length);
+                if (!confirm('بدء إرسال ' + n + ' رسالة في الخلفية؟\n\nسيتم توجيهك لصفحة متابعة — من تم ومن فشل.')) {
+                    e.preventDefault();
+                    return;
+                }
+            }
+            this.submitting = true;
+        },
+
+        resetForm() {
+            this.message = '';
+            this.phone = '';
+            this.userId = '';
+            this.courseId = '';
+            this.templateId = '';
+            this.recipientType = 'manual';
+            this.submitting = false;
+        },
+    };
+}
+</script>
 
 <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" style="background: #f8fafc; min-height: 100vh;">
     @include('admin.whatsapp._alerts')
@@ -54,16 +185,7 @@
     @endif
 
     <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6"
-         x-data="whatsappSendForm({
-            templates: @json($templatesJson),
-            students: @json($studentsJson),
-            oldRecipient: @json(old('recipient_type', 'manual')),
-            oldMessage: @json(old('message', '')),
-            oldPhone: @json(old('phone', '')),
-            oldUserId: @json(old('user_id', '')),
-            oldCourseId: @json(old('course_id', '')),
-            oldTemplateId: @json(old('template_id', '')),
-         })">
+         x-data="whatsappSendForm()">
 
         <form method="POST" action="{{ route('admin.whatsapp.send.post') }}" @submit="onSubmit" class="xl:col-span-8 space-y-4">
             @csrf
@@ -85,16 +207,16 @@
                             'course_students' => ['icon' => 'fas fa-book', 'label' => 'طلاب كورس', 'desc' => 'إرسال جماعي'],
                             'all_students' => ['icon' => 'fas fa-users', 'label' => 'كل الطلاب', 'desc' => 'كل من لديه رقم'],
                         ] as $type => $meta)
-                            <label class="cursor-pointer group">
-                                <input type="radio" name="recipient_type_radio" value="{{ $type }}" x-model="recipientType" class="sr-only peer">
-                                <div class="h-full p-4 rounded-xl border-2 border-slate-200 bg-white transition-all
-                                            peer-checked:border-emerald-500 peer-checked:bg-emerald-50/80 peer-checked:shadow-md peer-checked:shadow-emerald-500/10
-                                            hover:border-emerald-300 group-hover:shadow-sm">
-                                    <i class="{{ $meta['icon'] }} text-emerald-600 text-lg mb-2 block"></i>
-                                    <p class="font-bold text-slate-900 text-sm">{{ $meta['label'] }}</p>
-                                    <p class="text-[11px] text-slate-500 mt-0.5">{{ $meta['desc'] }}</p>
-                                </div>
-                            </label>
+                            <button type="button"
+                                    @click="setRecipientType('{{ $type }}')"
+                                    :class="recipientType === '{{ $type }}'
+                                        ? 'border-emerald-500 bg-emerald-50/80 shadow-md shadow-emerald-500/10'
+                                        : 'border-slate-200 bg-white hover:border-emerald-300'"
+                                    class="h-full p-4 rounded-xl border-2 text-right transition-all cursor-pointer">
+                                <i class="{{ $meta['icon'] }} text-emerald-600 text-lg mb-2 block"></i>
+                                <p class="font-bold text-slate-900 text-sm">{{ $meta['label'] }}</p>
+                                <p class="text-[11px] text-slate-500 mt-0.5">{{ $meta['desc'] }}</p>
+                            </button>
                         @endforeach
                     </div>
 
@@ -105,7 +227,7 @@
                             <span x-text="recipientPanelTitle()"></span>
                         </p>
 
-                        <div x-show="recipientType === 'manual'" x-transition.opacity>
+                        <div x-show="recipientType === 'manual'" x-cloak x-transition.opacity>
                             <label class="{{ $waLabelClass }}">رقم الهاتف للإرسال</label>
                             <div class="relative">
                                 <span class="absolute inset-y-0 left-3 flex items-center text-slate-400"><i class="fas fa-phone"></i></span>
@@ -119,7 +241,7 @@
                             @error('phone')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
                         </div>
 
-                        <div x-show="recipientType === 'single_student'" x-transition.opacity style="display: none;">
+                        <div x-show="recipientType === 'single_student'" x-cloak x-transition.opacity>
                             <label class="{{ $waLabelClass }}">اختر الطالب</label>
                             <select name="user_id" x-model="userId"
                                     :required="recipientType === 'single_student'"
@@ -141,7 +263,7 @@
                             @error('user_id')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
                         </div>
 
-                        <div x-show="recipientType === 'course_students'" x-transition.opacity style="display: none;">
+                        <div x-show="recipientType === 'course_students'" x-cloak x-transition.opacity>
                             <label class="{{ $waLabelClass }}">اختر الكورس</label>
                             <select name="course_id" x-model="courseId"
                                     :required="recipientType === 'course_students'"
@@ -156,7 +278,7 @@
                             @error('course_id')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
                         </div>
 
-                        <div x-show="recipientType === 'all_students'" x-transition.opacity style="display: none;"
+                        <div x-show="recipientType === 'all_students'" x-cloak x-transition.opacity
                              class="rounded-lg bg-violet-100/80 border border-violet-200 px-4 py-3 text-sm text-violet-900 flex items-start gap-2">
                             <i class="fas fa-info-circle mt-0.5 shrink-0"></i>
                             <span>سيتم الإرسال لـ <strong>{{ $students->count() }}</strong> طالب لديهم رقم هاتف — عبر دفعة في الخلفية مع فاصل آمن بين الرسائل.</span>
@@ -253,18 +375,11 @@
                     </h3>
                 </div>
                 <div class="p-4 grid grid-cols-1 gap-1.5 text-xs">
-                    @foreach([
-                        '{{student_name}}' => 'اسم الطالب',
-                        '{{courses_count}}' => 'عدد الكورسات',
-                        '{{avg_score}}' => 'متوسط الدرجات',
-                        '{{month_name}}' => 'الشهر الحالي',
-                        '{{date}}' => 'التاريخ',
-                        '{{platform_name}}' => 'اسم المنصة',
-                    ] as $var => $desc)
-                        <button type="button" @click="insertVariable(@json($var))"
+                    @foreach($templateVariables as $item)
+                        <button type="button" @click="insertVariable(@js($item['var']))"
                                 class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg hover:bg-emerald-50 border border-transparent hover:border-emerald-200 text-right transition-colors group">
-                            <code class="bg-slate-100 group-hover:bg-white px-1.5 py-0.5 rounded font-mono text-emerald-700">{{ $var }}</code>
-                            <span class="text-slate-500">{{ $desc }}</span>
+                            <code class="bg-slate-100 group-hover:bg-white px-1.5 py-0.5 rounded font-mono text-emerald-700">{{ $item['var'] }}</code>
+                            <span class="text-slate-500">{{ $item['desc'] }}</span>
                         </button>
                     @endforeach
                 </div>
@@ -299,113 +414,4 @@
         </div>
     </div>
 </div>
-
-@push('scripts')
-<script>
-function whatsappSendForm(config) {
-    return {
-        recipientType: config.oldRecipient || 'manual',
-        message: config.oldMessage || '',
-        phone: config.oldPhone || '',
-        userId: config.oldUserId || '',
-        courseId: config.oldCourseId || '',
-        templateId: config.oldTemplateId || '',
-        templates: config.templates || [],
-        students: config.students || [],
-        submitting: false,
-
-        get charCount() {
-            return (this.message || '').length;
-        },
-
-        get previewText() {
-            if (!this.message || !this.message.trim()) {
-                return 'اكتب رسالتك لرؤية المعاينة هنا...';
-            }
-            return this.message;
-        },
-
-        get recipientHint() {
-            if (this.recipientType === 'manual') {
-                return this.phone ? `إلى: ${this.phone}` : 'أدخل رقم الهاتف أعلاه';
-            }
-            if (this.recipientType === 'single_student' && this.userId) {
-                const s = this.students.find(x => String(x.id) === String(this.userId));
-                return s ? `إلى: ${s.name} — ${s.phone}` : '';
-            }
-            if (this.recipientType === 'all_students') {
-                return `إرسال جماعي — ${this.students.length} طالب`;
-            }
-            if (this.recipientType === 'course_students') {
-                return this.courseId ? 'إرسال لطلاب الكورس المحدد' : 'اختر الكورس أعلاه';
-            }
-            return '';
-        },
-
-        recipientPanelTitle() {
-            const map = {
-                manual: 'أدخل رقم الهاتف للإرسال',
-                single_student: 'اختر الطالب المستلم',
-                course_students: 'اختر الكورس',
-                all_students: 'إرسال لجميع الطلاب',
-            };
-            return map[this.recipientType] || 'تفاصيل المستلم';
-        },
-
-        selectedStudentPhone() {
-            const s = this.students.find(x => String(x.id) === String(this.userId));
-            return s ? s.phone : '';
-        },
-
-        applyTemplate() {
-            const t = this.templates.find(x => String(x.id) === String(this.templateId));
-            if (t && t.content) {
-                this.message = t.content;
-            }
-        },
-
-        onStudentPick() {
-            const s = this.students.find(x => String(x.id) === String(this.userId));
-            if (s) this.phone = s.phone;
-        },
-
-        insertVariable(v) {
-            this.message = (this.message || '') + v;
-        },
-
-        submitLabel() {
-            const map = {
-                manual: 'إرسال الآن',
-                single_student: 'إرسال للطالب',
-                course_students: 'إرسال لطلاب الكورس',
-                all_students: 'إرسال جماعي',
-            };
-            return map[this.recipientType] || 'إرسال';
-        },
-
-        onSubmit(e) {
-            if (this.recipientType === 'all_students' || this.recipientType === 'course_students' || this.recipientType === 'single_student') {
-                const n = this.recipientType === 'single_student' ? 1
-                    : (this.recipientType === 'course_students' ? 'طلاب الكورس' : this.students.length);
-                if (!confirm('بدء إرسال ' + n + ' رسالة في الخلفية؟\n\nسيتم توجيهك لصفحة متابعة — من تم ومن فشل.')) {
-                    e.preventDefault();
-                    return;
-                }
-            }
-            this.submitting = true;
-        },
-
-        resetForm() {
-            this.message = '';
-            this.phone = '';
-            this.userId = '';
-            this.courseId = '';
-            this.templateId = '';
-            this.recipientType = 'manual';
-            this.submitting = false;
-        },
-    };
-}
-</script>
-@endpush
 @endsection
