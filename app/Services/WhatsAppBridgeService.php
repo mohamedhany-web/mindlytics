@@ -196,28 +196,21 @@ class WhatsAppBridgeService
         }
         $connected = (bool) ($data['connected'] ?? false);
         $lastError = $data['last_error'] ?? null;
+        $sessionPresent = $connected && in_array($status, ['ready', 'degraded'], true);
 
-        if ($sendReady) {
+        if ($sendReady || $sessionPresent) {
             return [
                 'can_send' => true,
                 'status' => 'ready',
-                'label' => 'متصل وجاهز للإرسال',
+                'label' => $sendReady ? 'متصل وجاهز للإرسال' : 'متصل',
                 'badge_class' => 'bg-emerald-100 text-emerald-800 border-emerald-200',
                 'last_error' => null,
             ];
         }
 
-        if ($connected && in_array($status, ['ready', 'degraded'], true)) {
-            return [
-                'can_send' => false,
-                'status' => 'degraded',
-                'label' => 'جلسة غير جاهزة للإرسال',
-                'badge_class' => 'bg-amber-100 text-amber-800 border-amber-200',
-                'last_error' => is_string($lastError) ? $lastError : null,
-            ];
-        }
-
         $labels = [
+            'ready' => 'الجلسة غير مكتملة',
+            'degraded' => 'جلسة غير مستقرة',
             'qr' => 'بانتظار QR',
             'pairing' => 'بانتظار رمز الربط',
             'authenticated' => 'تمت المصادقة',
@@ -278,35 +271,48 @@ class WhatsAppBridgeService
         }
 
         $data = $status['data'] ?? [];
-        $sendReady = $data['send_ready'] ?? null;
-        if ($sendReady === null) {
-            $sendReady = (($data['status'] ?? '') === 'ready') && ($data['connected'] ?? false);
-        }
-        if ($sendReady) {
+        $meta = $this->connectionMeta($data, true);
+
+        if ($meta['can_send']) {
             return ['success' => true, 'data' => $data];
         }
 
-        $repair = $this->start();
-        if ($repair['success'] ?? false) {
-            sleep(! empty($repair['restarting']) ? 12 : 5);
-            $status = $this->getStatus();
-            $retryReady = $status['data']['send_ready'] ?? null;
-            if ($retryReady === null) {
-                $retryReady = (($status['data']['status'] ?? '') === 'ready') && ($status['data']['connected'] ?? false);
-            }
-            if ($retryReady) {
-                return ['success' => true, 'data' => $status['data'] ?? []];
+        $bridgeStatus = (string) ($data['status'] ?? '');
+        $shouldRepair = ! ($data['connected'] ?? false)
+            && in_array($bridgeStatus, ['disconnected', 'error', 'auth_failure', 'unknown'], true);
+
+        if ($shouldRepair) {
+            $repair = $this->start();
+            if ($repair['success'] ?? false) {
+                sleep(! empty($repair['restarting']) ? 12 : 4);
+                $status = $this->getStatus();
+                $data = $status['data'] ?? [];
+                $meta = $this->connectionMeta($data, true);
+                if ($meta['can_send']) {
+                    return ['success' => true, 'data' => $data];
+                }
             }
         }
 
-        $meta = $this->connectionMeta($data, true);
-        $detail = $meta['last_error'] ? ' (' . $meta['last_error'] . ')' : '';
-
         return [
             'success' => false,
-            'error' => $meta['label'] . ' — لا يمكن الإرسال الآن.' . $detail,
+            'error' => $this->formatSendBlockedError($meta),
             'data' => $data,
         ];
+    }
+
+    /**
+     * @param  array{label?: string, last_error?: ?string}  $meta
+     */
+    private function formatSendBlockedError(array $meta): string
+    {
+        $label = (string) ($meta['label'] ?? 'الواتساب غير جاهز للإرسال');
+        if (in_array($label, ['ready', 'degraded', 'unknown'], true)) {
+            $label = 'الواتساب غير جاهز للإرسال';
+        }
+        $detail = ! empty($meta['last_error']) ? ' (' . $meta['last_error'] . ')' : '';
+
+        return $label . ' — لا يمكن الإرسال الآن.' . $detail;
     }
 
     /**
@@ -316,14 +322,6 @@ class WhatsAppBridgeService
     {
         if (! $this->isConfigured()) {
             return ['success' => false, 'error' => 'إعدادات الجسر غير مكتملة.'];
-        }
-
-        $ready = $this->ensureReadyForSend();
-        if (! ($ready['success'] ?? false)) {
-            return [
-                'success' => false,
-                'error' => $this->translateError($ready['error'] ?? 'الواتساب غير جاهز للإرسال.'),
-            ];
         }
 
         try {

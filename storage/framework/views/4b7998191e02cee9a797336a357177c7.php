@@ -368,8 +368,11 @@ function whatsappConnect() {
             try {
                 const statusRes = await fetch(statusUrl);
                 const statusJson = await statusRes.json();
-                const data = statusJson.data || {};
-                this.connected = !!(data.connected || data.healthy || data.status === 'ready');
+                const data = statusJson.data || statusJson;
+                this.connected = !!(
+                    data.send_ready
+                    || (data.connected && (data.status === 'ready' || data.status === 'degraded'))
+                );
                 if (this.connected) {
                     this.qrImage = null;
                     this.pairingCode = null;

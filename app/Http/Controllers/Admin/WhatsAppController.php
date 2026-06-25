@@ -80,15 +80,6 @@ class WhatsAppController extends Controller
             return $this->sendBulkMessages($request);
         }
 
-        if (WhatsAppBridgeSettings::usesBridge()) {
-            $ready = $this->bridge->ensureReadyForSend();
-            if (! ($ready['success'] ?? false)) {
-                return back()
-                    ->withInput()
-                    ->with('error', $this->bridge->translateError($ready['error'] ?? 'الواتساب غير جاهز للإرسال.'));
-            }
-        }
-
         $request->validate([
             'phone' => 'required|string|max:30',
             'message' => 'required|string|max:4096',
@@ -162,15 +153,6 @@ class WhatsAppController extends Controller
 
         if ($items->isEmpty()) {
             return back()->withInput()->with('error', 'لا يوجد مستلمون لديهم أرقام هواتف.');
-        }
-
-        if (WhatsAppBridgeSettings::usesBridge()) {
-            $ready = $this->bridge->ensureReadyForSend();
-            if (! ($ready['success'] ?? false)) {
-                return back()
-                    ->withInput()
-                    ->with('error', $this->bridge->translateError($ready['error'] ?? 'الواتساب غير جاهز للإرسال الجماعي.'));
-            }
         }
 
         $batch = $this->whatsappBatch->createAndDispatch(
