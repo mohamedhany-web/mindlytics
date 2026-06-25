@@ -117,6 +117,18 @@ class WhatsAppPacingService
         ];
     }
 
+    public function remainingDailyQuota(): ?int
+    {
+        if (! $this->enabled()) {
+            return null;
+        }
+
+        $stats = $this->usageStats();
+        $remaining = $stats['max_day'] - $stats['day'];
+
+        return max(0, $remaining);
+    }
+
     private function isOutsideBusinessHours(): bool
     {
         if (! config('whatsapp.pacing.business_hours_only', false)) {

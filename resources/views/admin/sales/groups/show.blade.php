@@ -9,6 +9,15 @@
 @endphp
 <div class="space-y-4">
     @if(session('success'))<div class="text-sm text-emerald-700">{{ session('success') }}</div>@endif
+    @if(session('error'))<div class="text-sm text-rose-700">{{ session('error') }}</div>@endif
+
+    @include('admin.sales.groups._whatsapp_bulk', [
+        'group' => $group,
+        'leadsWithPhone' => $leadsWithPhone ?? collect(),
+        'formAction' => route('admin.sales.groups.whatsapp.store', $group),
+        'latestBatch' => $latestBatch ?? null,
+        'latestBatchUrl' => isset($latestBatch) ? route('admin.whatsapp.batches.show', $latestBatch) : null,
+    ])
 
     <form method="post" action="{{ route('admin.sales.groups.update', $group) }}" class="bg-white border rounded-xl p-5 space-y-4">
         @csrf @method('PUT')

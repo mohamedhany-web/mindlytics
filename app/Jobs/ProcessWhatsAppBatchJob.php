@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use App\Models\SalesActivity;
+use App\Models\SalesLead;
 use App\Models\WhatsAppBatch;
 use App\Models\WhatsAppBatchItem;
 use App\Models\WorkshopRegistration;
@@ -89,15 +91,7 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
 
             $item->refresh();
 
-            $result = $whatsapp->sendMessage(
-                $item->phone,
-                $item->message,
-                $item->message_type,
-                [
-                    'user_id' => $item->user_id ?? $batch->created_by,
-                    'batch_id' => $batch->id,
-                ]
-            );
+            $result = $this->sendWithRetries($whatsapp, $item, $batch);
 
             if ($result['success'] ?? false) {
                 $item->update([
@@ -112,6 +106,8 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
                     WorkshopRegistration::where('id', $item->workshop_registration_id)
                         ->update(['whatsapp_link_sent_at' => now()]);
                 }
+
+                $this->recordSalesLeadActivity($batch, $item);
             } else {
                 $item->update([
                     'status' => 'failed',
@@ -160,5 +156,100 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
             ->where('status', 'processing')
             ->where('updated_at', '<', now()->subMinutes($staleMinutes))
             ->update(['status' => 'pending']);
+    }
+
+    /**
+     * @return array{success?: bool, message_id?: int, error?: string}
+     */
+    private function sendWithRetries(WhatsAppService $whatsapp, WhatsAppBatchItem $item, WhatsAppBatch $batch): array
+    {
+        $maxAttempts = max(1, (int) config('whatsapp.batch_max_attempts', 3));
+        $lastResult = ['success' => false, 'error' => 'فشل الإرسال'];
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            $lastResult = $whatsapp->sendMessage(
+                $item->phone,
+                $item->message,
+                $item->message_type,
+                [
+                    'user_id' => $item->user_id ?? $batch->created_by,
+                    'batch_id' => $batch->id,
+                ]
+            );
+
+            if ($lastResult['success'] ?? false) {
+                return $lastResult;
+            }
+
+            $error = (string) ($lastResult['error'] ?? '');
+            if ($attempt >= $maxAttempts || ! $this->isTransientWhatsAppError($error)) {
+                return $lastResult;
+            }
+
+            Log::info('WhatsApp batch item retry', [
+                'batch_id' => $batch->id,
+                'item_id' => $item->id,
+                'attempt' => $attempt + 1,
+                'error' => $error,
+            ]);
+
+            sleep(min(45, 8 * $attempt));
+        }
+
+        return $lastResult;
+    }
+
+    private function isTransientWhatsAppError(string $error): bool
+    {
+        $error = mb_strtolower($error);
+
+        $needles = [
+            'not connected',
+            'غير متصل',
+            'غير جاهز',
+            'bridge',
+            'timeout',
+            'timed out',
+            'econnreset',
+            '502',
+            '503',
+            '504',
+            'protocol',
+            'degraded',
+            'chrome',
+            'session',
+            'try again',
+            'انتظر',
+        ];
+
+        foreach ($needles as $needle) {
+            if (str_contains($error, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function recordSalesLeadActivity(WhatsAppBatch $batch, WhatsAppBatchItem $item): void
+    {
+        if ($batch->source_type !== 'sales_group' || ! $item->sales_lead_id) {
+            return;
+        }
+
+        $lead = SalesLead::find($item->sales_lead_id);
+        if (! $lead) {
+            return;
+        }
+
+        SalesActivity::create([
+            'sales_lead_id' => $lead->id,
+            'user_id' => $batch->created_by,
+            'type' => 'whatsapp',
+            'title' => 'واتساب جماعي — دفعة #' . $batch->id,
+            'body' => mb_substr($item->message, 0, 500),
+        ]);
+
+        $lead->touchLastContactFromActivity('whatsapp');
     }
 }

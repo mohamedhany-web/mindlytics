@@ -79,6 +79,7 @@ class WhatsAppBatchService
                 'message' => $item['message'],
                 'message_type' => $item['message_type'] ?? 'text',
                 'workshop_registration_id' => $item['workshop_registration_id'] ?? null,
+                'sales_lead_id' => $item['sales_lead_id'] ?? null,
                 'user_id' => $item['user_id'] ?? null,
                 'sort_order' => $order++,
                 'status' => 'pending',

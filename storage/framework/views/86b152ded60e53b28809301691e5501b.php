@@ -7,6 +7,15 @@
 ?>
 <div class="space-y-4">
     <?php if(session('success')): ?><div class="text-sm text-emerald-700"><?php echo e(session('success')); ?></div><?php endif; ?>
+    <?php if(session('error')): ?><div class="text-sm text-rose-700"><?php echo e(session('error')); ?></div><?php endif; ?>
+
+    <?php echo $__env->make('admin.sales.groups._whatsapp_bulk', [
+        'group' => $group,
+        'leadsWithPhone' => $leadsWithPhone ?? collect(),
+        'formAction' => route('admin.sales.groups.whatsapp.store', $group),
+        'latestBatch' => $latestBatch ?? null,
+        'latestBatchUrl' => isset($latestBatch) ? route('admin.whatsapp.batches.show', $latestBatch) : null,
+    ], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
     <form method="post" action="<?php echo e(route('admin.sales.groups.update', $group)); ?>" class="bg-white border rounded-xl p-5 space-y-4">
         <?php echo csrf_field(); ?> <?php echo method_field('PUT'); ?>

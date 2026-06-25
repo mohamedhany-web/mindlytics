@@ -53,6 +53,9 @@ return [
     /** دقائق قبل اعتبار عنصر «processing» عالقاً وإعادته لـ pending */
     'batch_stale_minutes' => max(1, (int) env('WHATSAPP_BATCH_STALE_MINUTES', 10)),
 
+    /** محاولات إرسال لكل مستلم قبل تسجيل فشل نهائي */
+    'batch_max_attempts' => max(1, (int) env('WHATSAPP_BATCH_MAX_ATTEMPTS', 3)),
+
     /** طابور Laravel المنفصل — لا يختلط مع تسجيل الطلاب أو أي jobs أخرى */
     'queue' => env('WHATSAPP_QUEUE', 'whatsapp'),
 

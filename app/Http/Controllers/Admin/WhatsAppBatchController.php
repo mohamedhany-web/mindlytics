@@ -48,11 +48,15 @@ class WhatsAppBatchController extends Controller
         $items = $itemsQuery->paginate(50)->withQueryString();
 
         $workshop = null;
+        $salesGroup = null;
         if ($batch->source_type === 'workshop' && $batch->source_id) {
             $workshop = Workshop::find($batch->source_id);
         }
+        if ($batch->source_type === 'sales_group' && $batch->source_id) {
+            $salesGroup = \App\Models\SalesLeadGroup::find($batch->source_id);
+        }
 
-        return view('admin.whatsapp.batches.show', compact('batch', 'items', 'filter', 'workshop'));
+        return view('admin.whatsapp.batches.show', compact('batch', 'items', 'filter', 'workshop', 'salesGroup'));
     }
 
     public function statusJson(WhatsAppBatch $batch)

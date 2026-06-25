@@ -870,6 +870,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('daily-reports', [\App\Http\Controllers\Employee\SalesDailyReportController::class, 'store'])->name('daily-reports.store');
             Route::post('daily-reports/sync-auto', [\App\Http\Controllers\Employee\SalesDailyReportController::class, 'syncAuto'])->name('daily-reports.sync-auto');
             Route::resource('groups', \App\Http\Controllers\Employee\SalesLeadGroupController::class)->except(['edit']);
+            Route::post('groups/{group}/whatsapp-bulk', [\App\Http\Controllers\Employee\SalesGroupWhatsAppController::class, 'store'])->name('groups.whatsapp.store');
+            Route::get('groups/{group}/whatsapp-batches/{batch}', [\App\Http\Controllers\Employee\SalesGroupWhatsAppController::class, 'showBatch'])->name('groups.whatsapp-batches.show');
+            Route::get('groups/{group}/whatsapp-batches/{batch}/status', [\App\Http\Controllers\Employee\SalesGroupWhatsAppController::class, 'statusJson'])->name('groups.whatsapp-batches.status');
             Route::post('leads/{lead}/activities', [\App\Http\Controllers\Employee\SalesLeadController::class, 'storeActivity'])->name('leads.activities.store');
             Route::post('leads/{lead}/quick-activity', [\App\Http\Controllers\Employee\SalesLeadController::class, 'quickActivity'])->name('leads.quick-activity');
             Route::post('leads/{lead}/csat', [\App\Http\Controllers\Employee\SalesLeadController::class, 'storeCsat'])->name('leads.csat.store');
@@ -1025,6 +1028,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('insights', [\App\Http\Controllers\Admin\SalesInsightsController::class, 'index'])->name('insights.index');
             Route::get('commissions', [\App\Http\Controllers\Admin\SalesCommissionController::class, 'index'])->name('commissions.index');
             Route::resource('groups', \App\Http\Controllers\Admin\SalesLeadGroupController::class)->except(['edit']);
+            Route::post('groups/{group}/whatsapp-bulk', [\App\Http\Controllers\Admin\SalesGroupWhatsAppController::class, 'store'])->name('groups.whatsapp.store');
+            Route::get('groups/{group}/whatsapp-batches/{batch}', [\App\Http\Controllers\Admin\SalesGroupWhatsAppController::class, 'showBatch'])->name('groups.whatsapp-batches.show');
+            Route::get('groups/{group}/whatsapp-batches/{batch}/status', [\App\Http\Controllers\Admin\SalesGroupWhatsAppController::class, 'statusJson'])->name('groups.whatsapp-batches.status');
             Route::get('leads/export', [\App\Http\Controllers\Admin\SalesLeadController::class, 'export'])->name('leads.export');
             Route::get('leads/import', [\App\Http\Controllers\Admin\SalesLeadController::class, 'importForm'])->name('leads.import');
             Route::get('leads/import/template', [\App\Http\Controllers\Admin\SalesLeadController::class, 'importTemplate'])->name('leads.import.template');

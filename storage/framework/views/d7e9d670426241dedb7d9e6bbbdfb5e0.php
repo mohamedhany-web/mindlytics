@@ -9,7 +9,9 @@
     <?php
         $backUrl = $workshop
             ? route('admin.workshops.show', $workshop)
-            : route('admin.whatsapp.batches.index');
+            : ($salesGroup ?? null
+                ? route('admin.sales.groups.show', $salesGroup)
+                : route('admin.whatsapp.batches.index'));
     ?>
 
     <?php echo $__env->make('admin.whatsapp._page-header', [

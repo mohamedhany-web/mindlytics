@@ -86,6 +86,15 @@
         </div>
 
         <aside class="xl:col-span-4 space-y-4">
+            <?php echo $__env->make('admin.sales.groups._whatsapp_bulk', [
+                'group' => $group,
+                'leadsWithPhone' => $leadsWithPhone ?? collect(),
+                'formAction' => route('employee.sales.groups.whatsapp.store', $group),
+                'latestBatch' => $latestBatch ?? null,
+                'latestBatchUrl' => isset($latestBatch) ? route('employee.sales.groups.whatsapp-batches.show', [$group, $latestBatch]) : null,
+                'panelClass' => 'sales-panel p-4 space-y-4',
+            ], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+
             <div class="sales-panel p-4">
                 <h3 class="font-bold text-slate-900 text-sm mb-3">عملاء المجموعة (<?php echo e($group->leads->count()); ?>)</h3>
                 <ul class="space-y-2 max-h-96 overflow-y-auto text-sm">

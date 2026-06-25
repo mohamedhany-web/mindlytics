@@ -19,6 +19,7 @@ class WhatsAppBatchItem extends Model
         'error_message',
         'whatsapp_message_id',
         'workshop_registration_id',
+        'sales_lead_id',
         'user_id',
         'sort_order',
         'sent_at',

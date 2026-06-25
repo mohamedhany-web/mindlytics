@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Employee;
 use App\Http\Controllers\Controller;
 use App\Models\SalesLead;
 use App\Models\SalesLeadGroup;
+use App\Services\SalesLeadWhatsAppBatchService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -78,7 +79,10 @@ class SalesLeadGroupController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'phone', 'sales_lead_group_id']);
 
-        return view('employee.sales.groups.show', compact('group', 'availableLeads'));
+        $latestBatch = app(SalesLeadWhatsAppBatchService::class)->latestForGroup($group->id);
+        $leadsWithPhone = $group->leads->filter(fn ($l) => ! empty($l->phone));
+
+        return view('employee.sales.groups.show', compact('group', 'availableLeads', 'latestBatch', 'leadsWithPhone'));
     }
 
     public function update(Request $request, SalesLeadGroup $group): RedirectResponse
