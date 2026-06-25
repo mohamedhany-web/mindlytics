@@ -4,6 +4,8 @@
     $waConfigured = \App\Support\WhatsAppBridgeSettings::usesBridge();
     $pacing = app(\App\Services\WhatsAppPacingService::class)->usageStats();
     $remainingToday = app(\App\Services\WhatsAppPacingService::class)->remainingDailyQuota();
+    $waTemplateVars = ['{{name}}', '{{company}}', '{{phone}}'];
+    $messagePlaceholder = 'مرحباً {{name}}، ...';
 @endphp
 
 <section class="{{ $panelClass ?? 'bg-white border border-slate-200 rounded-xl p-5 space-y-4' }}">
@@ -48,13 +50,14 @@
             <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">نص الرسالة</label>
                 <textarea name="message" rows="5" required maxlength="4096"
-                          placeholder="مرحباً @{{name}}، ..."
+                          placeholder="{{ $messagePlaceholder }}"
                           class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm">{{ old('message') }}</textarea>
                 @error('message')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
                 <p class="text-xs text-slate-500 mt-1">
-                    متغيرات: <code class="bg-slate-100 px-1 rounded">{{ '{{name}}' }}</code>
-                    <code class="bg-slate-100 px-1 rounded">{{ '{{company}}' }}</code>
-                    <code class="bg-slate-100 px-1 rounded">{{ '{{phone}}' }}</code>
+                    متغيرات:
+                    @foreach($waTemplateVars as $var)
+                        <code class="bg-slate-100 px-1 rounded">{{ $var }}</code>
+                    @endforeach
                 </p>
             </div>
             <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold">
