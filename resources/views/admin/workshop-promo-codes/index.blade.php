@@ -132,5 +132,83 @@
             <div class="px-4 py-3 border-t border-slate-100">{{ $promoCodes->links() }}</div>
         @endif
     </div>
+
+    {{-- آخر من فعّل الأكواد --}}
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mt-6">
+        <div class="px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-bold text-slate-800">آخر التفعيلات</h2>
+                <p class="text-sm text-slate-500 mt-0.5">من سجّل وفعّل كود ورشة — يظهر هنا فور التسجيل</p>
+            </div>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-50 text-violet-700 text-sm font-medium">
+                <i class="fas fa-bolt text-xs"></i>
+                {{ number_format($stats['activations']) }} تفعيل
+            </span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-slate-600">
+                    <tr>
+                        <th class="px-4 py-3 text-right font-semibold">الطالب</th>
+                        <th class="px-4 py-3 text-right font-semibold">الكود</th>
+                        <th class="px-4 py-3 text-right font-semibold">الورشة</th>
+                        <th class="px-4 py-3 text-right font-semibold">الخصم</th>
+                        <th class="px-4 py-3 text-right font-semibold">الحالة</th>
+                        <th class="px-4 py-3 text-right font-semibold">تاريخ التفعيل</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    @forelse($recentActivations as $act)
+                        <tr class="hover:bg-slate-50/80">
+                            <td class="px-4 py-3">
+                                @if($act->user)
+                                    <div class="font-medium text-slate-800">{{ $act->user->name }}</div>
+                                    <div class="text-xs text-slate-500">{{ $act->user->email ?? $act->user->phone }}</div>
+                                @else
+                                    <span class="text-slate-400">—</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3">
+                                @if($act->promoCode)
+                                    <a href="{{ route('admin.workshop-promo-codes.show', $act->promoCode) }}" class="font-mono text-violet-700 hover:underline">{{ $act->promoCode->code }}</a>
+                                @else
+                                    <span class="text-slate-400">—</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-slate-600">{{ $act->promoCode?->workshop?->title ?? '—' }}</td>
+                            <td class="px-4 py-3">
+                                @if($act->promoCode)
+                                    @if($act->promoCode->discount_type === 'percent')
+                                        {{ rtrim(rtrim(number_format((float) $act->promoCode->discount_value, 2), '0'), '.') }}%
+                                    @else
+                                        {{ number_format((float) $act->promoCode->discount_value, 0) }} ج.م
+                                    @endif
+                                @else
+                                    —
+                                @endif
+                            </td>
+                            <td class="px-4 py-3">
+                                @if($act->status === 'used')
+                                    <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">مستخدم</span>
+                                @elseif($act->status === 'expired')
+                                    <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">منتهي</span>
+                                @else
+                                    <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">نشط</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-slate-600 whitespace-nowrap">{{ $act->activated_at?->format('Y-m-d H:i') ?? '—' }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="px-6 py-12 text-center text-slate-500">
+                                <i class="fas fa-user-clock text-3xl text-slate-300 mb-2 block"></i>
+                                لا توجد تفعيلات بعد — عند تسجيل طالب بكود ورشة سيظهر هنا مباشرة
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 @endsection

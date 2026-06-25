@@ -7,9 +7,11 @@ use App\Models\AdvancedCourse;
 use App\Models\OfflineCourse;
 use App\Models\User;
 use App\Models\Workshop;
+use App\Models\WorkshopPromoActivation;
 use App\Models\WorkshopPromoCode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class WorkshopPromoCodeController extends Controller
 {
@@ -45,15 +47,29 @@ class WorkshopPromoCodeController extends Controller
         $promoCodes = $query->paginate(15)->withQueryString();
 
         $stats = [
-            'total' => WorkshopPromoCode::count(),
-            'active' => WorkshopPromoCode::active()->count(),
-            'activations' => DB::table('workshop_promo_activations')->count(),
-            'used' => DB::table('workshop_promo_activations')->where('status', 'used')->count(),
+            'total' => 0,
+            'active' => 0,
+            'activations' => 0,
+            'used' => 0,
         ];
+        $recentActivations = collect();
+
+        if (Schema::hasTable('workshop_promo_codes')) {
+            $stats['total'] = WorkshopPromoCode::count();
+            $stats['active'] = WorkshopPromoCode::active()->count();
+        }
+        if (Schema::hasTable('workshop_promo_activations')) {
+            $stats['activations'] = WorkshopPromoActivation::count();
+            $stats['used'] = WorkshopPromoActivation::where('status', 'used')->count();
+            $recentActivations = WorkshopPromoActivation::with(['user', 'promoCode.workshop'])
+                ->latest('activated_at')
+                ->limit(25)
+                ->get();
+        }
 
         $workshops = Workshop::orderByDesc('starts_at')->limit(50)->get(['id', 'title', 'slug']);
 
-        return view('admin.workshop-promo-codes.index', compact('promoCodes', 'stats', 'workshops'));
+        return view('admin.workshop-promo-codes.index', compact('promoCodes', 'stats', 'workshops', 'recentActivations'));
     }
 
     public function create()

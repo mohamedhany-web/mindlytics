@@ -7,6 +7,7 @@ use App\Mail\TwoFactorCodeMail;
 use App\Models\TwoFactorLog;
 use App\Models\User;
 use App\Support\BranchContext;
+use App\Services\WorkshopPromoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -329,14 +330,28 @@ class AuthController extends Controller
             'branch_id' => $branchId,
         ]);
 
-        // معالجة كود الإحالة في Queue لتقليل الضغط على السيرفر
+        // تفعيل كود الورشة فوراً — لا نعتمد على Queue حتى لا يضيع التفعيل
+        $promoResult = app(WorkshopPromoService::class)->tryActivateOnRegistration(
+            $user,
+            $request->input('promo_code')
+        );
+
+        // معالجة كود الإحالة في Queue (كود الورشة يُفعَّل أعلاه مباشرة)
         \App\Jobs\ProcessStudentRegistration::dispatch(
             $user->id,
             $request->referral_code,
-            $request->promo_code
+            null
         )->onQueue('registrations');
 
         Auth::login($user);
+
+        if ($promoResult !== null) {
+            if ($promoResult['success']) {
+                session()->flash('success', $promoResult['message']);
+            } else {
+                session()->flash('warning', 'تعذّر تفعيل كود الورشة: '.$promoResult['message'].' — يمكنك إدخاله لاحقاً من صفحة الإحالات.');
+            }
+        }
 
         // التحقق من وجود redirect URL في session (من صفحة التسجيل)
         $redirectUrl = session('register_redirect');

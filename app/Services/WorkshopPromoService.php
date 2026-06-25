@@ -9,10 +9,52 @@ use App\Models\User;
 use App\Models\WorkshopPromoActivation;
 use App\Models\WorkshopPromoCode;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class WorkshopPromoService
 {
+    /**
+     * تفعيل كود عند التسجيل — فوري (لا يعتمد على Queue).
+     *
+     * @return array{success: bool, message: string}|null
+     */
+    public function tryActivateOnRegistration(User $user, ?string $rawCode): ?array
+    {
+        if ($rawCode === null || trim($rawCode) === '') {
+            return null;
+        }
+
+        if (! Schema::hasTable('workshop_promo_activations') || ! Schema::hasTable('workshop_promo_codes')) {
+            Log::error('Workshop promo tables missing — run migration 2026_06_20_200000_create_workshop_promo_codes_table');
+
+            return [
+                'success' => false,
+                'message' => 'نظام أكواد الورش غير مفعّل على السيرفر بعد',
+            ];
+        }
+
+        $result = $this->activateForUser($user, $rawCode);
+
+        if ($result['success']) {
+            Log::info('Workshop promo activated on registration', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'code' => strtoupper(trim($rawCode)),
+            ]);
+        } else {
+            Log::warning('Workshop promo activation failed on registration', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'code' => strtoupper(trim($rawCode)),
+                'reason' => $result['message'],
+            ]);
+        }
+
+        return $result;
+    }
+
     /**
      * تفعيل كود ورشة للمستخدم — ينشئ كوبون خاص به.
      */

@@ -47,7 +47,19 @@ class ProcessStudentRegistration implements ShouldQueue
             }
 
             if ($this->promoCode) {
-                app(\App\Services\WorkshopPromoService::class)->activateForUser($user, $this->promoCode);
+                $user = User::find($this->userId);
+                if ($user) {
+                    $existing = \App\Models\WorkshopPromoActivation::where('user_id', $user->id)->exists();
+                    if (! $existing) {
+                        $result = app(\App\Services\WorkshopPromoService::class)->activateForUser($user, $this->promoCode);
+                        if (! ($result['success'] ?? false)) {
+                            Log::warning('Workshop promo failed in registration job', [
+                                'user_id' => $this->userId,
+                                'message' => $result['message'] ?? 'unknown',
+                            ]);
+                        }
+                    }
+                }
             }
 
             // إنشاء كود إحالة للمستخدم الجديد
