@@ -7,8 +7,10 @@ echo "Stopping PM2..."
 pm2 stop mindlytics-whatsapp 2>/dev/null || true
 
 echo "Killing stale Chromium for wwebjs session..."
-pkill -f "wwebjs_auth/session" 2>/dev/null || true
-sleep 2
+pkill -9 -f "wwebjs_auth/session" 2>/dev/null || true
+pkill -9 -f "wwebjs_auth" 2>/dev/null || true
+pkill -9 -f "mindlytics-whatsapp-bridge" 2>/dev/null || true
+sleep 3
 
 echo "Removing lock files..."
 rm -f .wwebjs_auth/session/SingletonLock

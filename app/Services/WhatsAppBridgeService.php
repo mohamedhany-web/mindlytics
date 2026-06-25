@@ -93,7 +93,7 @@ class WhatsAppBridgeService
         }
 
         try {
-            $response = $this->client()->timeout(90)->post($this->baseUrl() . '/api/repair');
+            $response = $this->client()->timeout(120)->post($this->baseUrl() . '/api/repair');
 
             if ($response->successful()) {
                 return ['success' => true, 'data' => $response->json()];
@@ -185,25 +185,59 @@ class WhatsAppBridgeService
             return ['success' => false, 'error' => 'إعدادات الجسر غير مكتملة.'];
         }
 
+        // إصلاح Chrome العالق قبل طلب رمز الربط
+        $this->repair();
+
+        return $this->postPairingCode($phone);
+    }
+
+    /**
+     * @return array{success: bool, data?: array<string, mixed>, error?: string}
+     */
+    private function postPairingCode(string $phone, bool $isRetry = false): array
+    {
         try {
             $response = $this->client()
-                ->timeout(90)
+                ->timeout(120)
                 ->post($this->baseUrl() . '/api/pairing-code', ['phone' => $phone]);
 
-            $body = $response->json();
+            $body = $response->json() ?? [];
+            $lastError = (string) ($body['last_error'] ?? $body['error'] ?? '');
 
-            if ($response->successful()) {
+            if ($response->successful() && ($body['success'] ?? false) && $lastError === '') {
                 return ['success' => true, 'data' => is_array($body) ? $body : []];
+            }
+
+            if (! $isRetry && $this->isBrowserLockError($lastError)) {
+                Log::info('WhatsApp pairing browser lock — retrying after repair', ['error' => $lastError]);
+                $this->repair();
+
+                return $this->postPairingCode($phone, true);
             }
 
             return [
                 'success' => false,
-                'error' => $body['error'] ?? 'فشل طلب رمز الربط.',
+                'error' => $lastError !== '' ? $lastError : 'فشل طلب رمز الربط.',
                 'data' => is_array($body) ? $body : [],
             ];
         } catch (\Throwable $e) {
+            if (! $isRetry && $this->isBrowserLockError($e->getMessage())) {
+                $this->repair();
+
+                return $this->postPairingCode($phone, true);
+            }
+
             return ['success' => false, 'error' => $e->getMessage()];
         }
+    }
+
+    private function isBrowserLockError(string $message): bool
+    {
+        $message = strtolower($message);
+
+        return str_contains($message, 'browser is already running')
+            || str_contains($message, 'userdataDir')
+            || str_contains($message, 'userdata dir');
     }
 
     /**

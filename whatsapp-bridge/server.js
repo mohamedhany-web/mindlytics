@@ -120,61 +120,89 @@ function sleep(ms) {
 }
 
 function cleanupSessionLock() {
-    const sessionDir = path.resolve('./.wwebjs_auth/session');
-    const lockCandidates = [
-        path.join(sessionDir, 'SingletonLock'),
-        path.join(sessionDir, 'SingletonCookie'),
-        path.join(sessionDir, 'SingletonSocket'),
-        './.wwebjs_auth/session/SingletonLock',
-        './.wwebjs_auth/session/SingletonCookie',
-        './.wwebjs_auth/session/SingletonSocket',
+    const sessionDirs = [
+        path.resolve('./.wwebjs_auth/session'),
+        path.resolve('./.wwebjs_auth/session-default'),
     ];
-    for (const p of lockCandidates) {
-        try {
-            if (fs.existsSync(p)) {
-                fs.unlinkSync(p);
-                console.log('Removed stale lock:', p);
+
+    for (const sessionDir of sessionDirs) {
+        const lockCandidates = [
+            path.join(sessionDir, 'SingletonLock'),
+            path.join(sessionDir, 'SingletonCookie'),
+            path.join(sessionDir, 'SingletonSocket'),
+            path.join(sessionDir, 'lockfile'),
+        ];
+        for (const p of lockCandidates) {
+            try {
+                if (fs.existsSync(p)) {
+                    fs.unlinkSync(p);
+                    console.log('Removed stale lock:', p);
+                }
+            } catch (_) {
+                /* ignore */
             }
-        } catch (_) {
-            /* ignore */
         }
     }
 }
 
-/** قتل Chrome العالق — يحافظ على جلسة .wwebjs_auth (بدون logout) */
+/** قتل Chrome/Puppeteer العالق — يحافظ على مجلد .wwebjs_auth (بدون logout) */
 async function killStaleChromium() {
     cleanupSessionLock();
-    if (process.platform !== 'linux') {
-        return;
-    }
+
     const authPath = path.resolve('./.wwebjs_auth');
-    try {
-        await execAsync(`pkill -f "${authPath}/session" 2>/dev/null || true`);
-        await sleep(1500);
-        cleanupSessionLock();
-    } catch (_) {
-        /* ignore */
+    const sessionPath = path.join(authPath, 'session');
+
+    if (process.platform === 'linux') {
+        const patterns = [
+            sessionPath,
+            authPath,
+            'wwebjs_auth/session',
+            'wwebjs_auth',
+            'mindlytics-whatsapp-bridge',
+        ];
+        for (const pattern of patterns) {
+            try {
+                await execAsync(`pkill -9 -f "${pattern}" 2>/dev/null || true`);
+            } catch (_) {
+                /* ignore */
+            }
+        }
     }
+
+    await sleep(2500);
+    cleanupSessionLock();
+}
+
+/**
+ * تجهيز جلسة جديدة — يوقف العميل، ينتظر initialize الجاري، ويقتل Chrome العالق.
+ */
+async function prepareForNewSession() {
+    if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+    }
+
+    await destroyClient();
+
+    for (let i = 0; i < 40 && initializing; i++) {
+        await sleep(250);
+    }
+
+    initializing = false;
+    client = null;
+    await killStaleChromium();
 }
 
 /**
  * إصلاح الاتصال بدون مسح الربط — يحل "browser is already running"
  */
 async function repairSession() {
-    if (reconnectTimer) {
-        clearTimeout(reconnectTimer);
-        reconnectTimer = null;
-    }
-
     console.log('Repairing WhatsApp session (keeping auth)...');
-    await destroyClient();
-    await killStaleChromium();
-    initializing = false;
-    client = null;
+    await prepareForNewSession();
     state.lastError = null;
     state.lastErrorAt = null;
 
-    await buildClient(true);
+    await buildClient(true, !state.pairingMode, 0);
     await sleep(3000);
     if (client) {
         await refreshClientInfo();
@@ -216,7 +244,7 @@ function scheduleReconnect(delayMs = 5000) {
     }, delayMs);
 }
 
-async function buildClient(fromRepair = false, useQrMode = false) {
+async function buildClient(fromRepair = false, useQrMode = false, lockAttempt = 0) {
     if (client || initializing) {
         return;
     }
@@ -319,20 +347,22 @@ async function buildClient(fromRepair = false, useQrMode = false) {
     try {
         await client.initialize();
     } catch (err) {
-        if (isBrowserLockError(err)) {
-            await killStaleChromium();
+        if (isBrowserLockError(err) && lockAttempt < 4) {
+            console.log(`Browser lock — cleanup attempt ${lockAttempt + 1}/4`);
             await destroyClient();
-            await sleep(2000);
+            await killStaleChromium();
             initializing = false;
-            if (!fromRepair) {
-                return buildClient(true);
-            }
+            client = null;
+            await sleep(2000 + lockAttempt * 1000);
+            return buildClient(true, useQrMode, lockAttempt + 1);
         }
         state.status = 'error';
         state.lastError = err.message;
         state.lastErrorAt = new Date().toISOString();
         await destroyClient();
-        scheduleReconnect(10000);
+        if (!isBrowserLockError(err)) {
+            scheduleReconnect(10000);
+        }
     } finally {
         initializing = false;
     }
@@ -398,15 +428,8 @@ async function startPairingMode(phone) {
         throw new Error('Invalid phone. Use country code + number, e.g. 2010xxxxxxxx.');
     }
 
-    if (reconnectTimer) {
-        clearTimeout(reconnectTimer);
-        reconnectTimer = null;
-    }
+    await prepareForNewSession();
 
-    await destroyClient();
-    await killStaleChromium();
-    initializing = false;
-    client = null;
     state.lastError = null;
     state.lastErrorAt = null;
     state.qr = null;
@@ -415,27 +438,31 @@ async function startPairingMode(phone) {
     state.pairingMode = true;
     state.status = 'pairing';
 
-    await buildClient(false, false);
-    await sleep(2500);
+    await buildClient(false, false, 0);
+    await sleep(3000);
+
+    if (state.lastError && isBrowserLockError({ message: state.lastError })) {
+        console.log('Pairing: browser still locked — running full repair...');
+        await prepareForNewSession();
+        state.pairingPhone = digits;
+        state.pairingMode = true;
+        state.status = 'pairing';
+        state.lastError = null;
+        state.lastErrorAt = null;
+        await buildClient(true, false, 0);
+        await sleep(3000);
+    }
 
     return connectionSnapshot();
 }
 
 async function switchToQrMode() {
-    if (reconnectTimer) {
-        clearTimeout(reconnectTimer);
-        reconnectTimer = null;
-    }
-
-    await destroyClient();
-    await killStaleChromium();
-    initializing = false;
-    client = null;
+    await prepareForNewSession();
     clearPairingState();
     state.status = 'disconnected';
     state.qr = null;
 
-    await buildClient(false, true);
+    await buildClient(false, true, 0);
     await sleep(2000);
 
     return connectionSnapshot();
@@ -680,6 +707,14 @@ app.post('/api/pairing-code', authMiddleware, async (req, res) => {
     }
     try {
         const snapshot = await startPairingMode(phone);
+        if (snapshot.last_error) {
+            return res.status(503).json({
+                success: false,
+                error: snapshot.last_error,
+                hint: 'Chrome عالق على VPS — نفّذ: bash repair-vps.sh أو pm2 restart mindlytics-whatsapp',
+                ...snapshot,
+            });
+        }
         res.json({
             success: true,
             message: 'Pairing mode started. Poll GET /api/pairing-code for the code.',
@@ -720,5 +755,7 @@ app.listen(PORT, () => {
     if (!API_TOKEN) {
         console.warn('WARNING: Set API_TOKEN in .env before production use.');
     }
-    buildClient().catch((err) => console.error('Init error:', err.message));
+    prepareForNewSession()
+        .then(() => buildClient(false, true, 0))
+        .catch((err) => console.error('Init error:', err.message));
 });

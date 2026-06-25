@@ -331,7 +331,7 @@ function whatsappConnect() {
     const qrUrl = @json(route('admin.whatsapp.qr'));
     const pairingGetUrl = @json(route('admin.whatsapp.pairing'));
     const pairingPostUrl = @json(route('admin.whatsapp.pairing.request'));
-    const qrModeUrl = @json(route('admin.whatsapp.qr-mode'));
+    const repairUrl = @json(route('admin.whatsapp.start'));
 
     return {
         mode: 'qr',
@@ -414,7 +414,7 @@ function whatsappConnect() {
         async requestPairing() {
             if (!this.pairingPhone.trim()) return;
             this.loading = true;
-            this.message = '';
+            this.message = 'جاري إصلاح الاتصال وطلب رمز الربط...';
             try {
                 const res = await fetch(pairingPostUrl, {
                     method: 'POST',
@@ -427,9 +427,15 @@ function whatsappConnect() {
                 });
                 const json = await res.json();
                 if (!json.success) {
-                    this.message = json.error || 'فشل طلب رمز الربط — تأكد من تحديث Bridge على VPS';
+                    const err = json.error || '';
+                    if (err.includes('browser is already running') || err.includes('userDataDir')) {
+                        this.message = 'Chrome عالق على VPS — اضغط «إصلاح الاتصال» ثم أعد المحاولة، أو نفّذ repair-vps.sh على السيرفر.';
+                    } else {
+                        this.message = err || 'فشل طلب رمز الربط — تأكد من تحديث server.js على VPS';
+                    }
                     return;
                 }
+                this.message = '';
                 await this.refreshPairing(true);
             } catch (e) {
                 this.message = 'تعذّر الاتصال بالجسر';
