@@ -1,0 +1,20 @@
+{
+  "name": "mindlytics-whatsapp-bridge",
+  "version": "1.0.0",
+  "description": "HTTP bridge for Mindlytics Laravel ↔ whatsapp-web.js (runs on Node VPS, not shared hosting)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4",
+    "whatsapp-web.js": "^1.26.0"
+  }
+}

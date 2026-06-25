@@ -211,5 +211,11 @@ return Application::configure(basePath: dirname(__DIR__))
             ->dailyAt(\App\Support\MarketingPlanSettings::reminderTime());
         $schedule->command('marketing:apply-execution-penalties')
             ->dailyAt(\App\Support\MarketingPlanSettings::confirmationDeadlineTime());
+
+        // معالجة طابور Laravel (دفعات الواتساب وغيرها) — مناسب لـ Hostinger عبر cron كل دقيقة
+        $schedule->command('queue:work --stop-when-empty --max-time=55 --max-jobs=50')
+            ->everyMinute()
+            ->withoutOverlapping()
+            ->runInBackground();
     })
     ->create();
