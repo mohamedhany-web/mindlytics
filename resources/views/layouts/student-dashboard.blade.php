@@ -686,7 +686,11 @@ x-init="
             <!-- Main Content -->
             <main class="flex-1 overflow-auto bg-gray-50 min-w-0 w-full">
                 <div class="w-full max-w-full p-4 sm:p-6 lg:p-8">
-                    @if(session('success') && !session('payment_success_modal'))
+                    @if(session('workshop_promo_welcome_modal'))
+                        @include('components.workshop-promo-welcome-modal')
+                    @endif
+
+                    @if(session('success') && !session('payment_success_modal') && !session('workshop_promo_welcome_modal'))
                         <div class="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm font-medium">
                             {{ session('success') }}
                         </div>

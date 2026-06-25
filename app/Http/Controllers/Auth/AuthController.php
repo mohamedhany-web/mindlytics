@@ -365,7 +365,17 @@ class AuthController extends Controller
 
         if ($promoResult !== null) {
             if ($promoResult['success']) {
-                session()->flash('success', $promoResult['message']);
+                $promo = $promoResult['promo'] ?? null;
+                $promo?->loadMissing('workshop');
+
+                session()->flash('workshop_promo_welcome_modal', true);
+                session()->flash('workshop_promo_welcome', [
+                    'name' => $user->name,
+                    'code' => $promo?->code,
+                    'discount' => $promo?->discountLabel(),
+                    'workshop' => $promo?->workshop?->title,
+                    'expires' => $promo?->expiryLabel(),
+                ]);
             } else {
                 session()->flash('warning', 'تعذّر تفعيل كود الورشة: '.$promoResult['message'].' — يمكنك إدخاله لاحقاً من صفحة الإحالات.');
             }
