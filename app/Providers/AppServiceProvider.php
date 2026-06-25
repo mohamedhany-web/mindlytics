@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -197,6 +200,26 @@ class AppServiceProvider extends ServiceProvider
             if (method_exists($user, 'hasPermission')) {
                 return $user->hasPermission($ability) ? true : null;
             }
+        });
+
+        $this->configureRateLimiting();
+    }
+
+    protected function configureRateLimiting(): void
+    {
+        // تسجيل حساب جديد — 15 محاولة كل 15 دقيقة لكل IP (يسمح بتصحيح الأخطاء)
+        RateLimiter::for('register', function (Request $request) {
+            return Limit::perMinutes(15, 15)->by($request->ip());
+        });
+
+        // تسجيل الدخول
+        RateLimiter::for('login', function (Request $request) {
+            return Limit::perMinutes(20, 15)->by($request->ip());
+        });
+
+        // استعادة كلمة المرور
+        RateLimiter::for('password-reset', function (Request $request) {
+            return Limit::perMinutes(8, 15)->by($request->ip());
         });
     }
 }

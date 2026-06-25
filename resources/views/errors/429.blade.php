@@ -201,10 +201,21 @@
                         <i class="fas fa-redo"></i>
                         <span>إعادة المحاولة</span>
                     </button>
-                    <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center justify-center gap-2 bg-white text-purple-600 px-8 py-4 rounded-full font-bold text-base border-2 border-purple-600 hover:bg-purple-50 transition-all duration-300">
+                    @auth
+                    <a href="{{ route('dashboard') }}" class="inline-flex items-center justify-center gap-2 bg-white text-purple-600 px-8 py-4 rounded-full font-bold text-base border-2 border-purple-600 hover:bg-purple-50 transition-all duration-300">
                         <i class="fas fa-home"></i>
                         <span>{{ __('errors.back_dashboard') }}</span>
                     </a>
+                    @else
+                    <a href="{{ route('register') }}" class="inline-flex items-center justify-center gap-2 bg-white text-purple-600 px-8 py-4 rounded-full font-bold text-base border-2 border-purple-600 hover:bg-purple-50 transition-all duration-300">
+                        <i class="fas fa-user-plus"></i>
+                        <span>صفحة التسجيل</span>
+                    </a>
+                    <a href="{{ url('/') }}" class="inline-flex items-center justify-center gap-2 bg-white text-slate-600 px-8 py-4 rounded-full font-bold text-base border-2 border-slate-200 hover:bg-slate-50 transition-all duration-300">
+                        <i class="fas fa-home"></i>
+                        <span>الرئيسية</span>
+                    </a>
+                    @endauth
                 </div>
 
                 <!-- عداد تنازلي -->

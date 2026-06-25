@@ -91,8 +91,18 @@ return Application::configure(basePath: dirname(__DIR__))
                     'retry_after' => $e->getHeaders()['Retry-After'] ?? 60
                 ], 429);
             }
-            
-            $retryAfter = $e->getHeaders()['Retry-After'] ?? 60;
+
+            $retryAfter = (int) ($e->getHeaders()['Retry-After'] ?? 60);
+
+            // تسجيل جديد: ارجع للنموذج برسالة واضحة بدل صفحة 429
+            if ($request->is('register') && $request->isMethod('POST')) {
+                return redirect()->route('register')
+                    ->withInput($request->except('password', 'password_confirmation'))
+                    ->withErrors([
+                        'email' => 'محاولات تسجيل كثيرة. انتظر '.max(1, (int) ceil($retryAfter / 60)).' دقيقة ثم حاول مرة أخرى.',
+                    ]);
+            }
+
             return response()->view('errors.429', ['retry_after' => $retryAfter], 429)
                 ->withHeaders(['Retry-After' => $retryAfter]);
         });

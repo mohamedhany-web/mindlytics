@@ -241,7 +241,7 @@ Route::prefix('community')->name('community.')->group(function () {
         Route::get('/login', [\App\Http\Controllers\Community\AuthController::class, 'showLogin'])->name('login');
         Route::post('/login', [\App\Http\Controllers\Community\AuthController::class, 'login'])->middleware('throttle:20,15')->name('login.post');
         Route::get('/register', [\App\Http\Controllers\Community\AuthController::class, 'showRegister'])->name('register');
-        Route::post('/register', [\App\Http\Controllers\Community\AuthController::class, 'register'])->middleware('throttle:5,1')->name('register.post');
+        Route::post('/register', [\App\Http\Controllers\Community\AuthController::class, 'register'])->middleware('throttle:register')->name('register.post');
     });
     Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Community\DashboardController::class, 'index'])->name('dashboard');
@@ -559,15 +559,14 @@ Route::get('/package/{slug}', function ($slug) {
 // مسارات المصادقة - محمية بحيث لا يمكن الوصول إليها إذا كان المستخدم مسجل دخول
 Route::middleware(['guest', 'guest-only'])->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:20,15'); // 20 طلب كل 15 دقيقة — يتضمن الدخول + إعادة المحاولة مع 2FA
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
-    // Rate limiting للتسجيل: 5 محاولات في الدقيقة من نفس IP
-    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
+    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register');
     // نسيت كلمة المرور: طلب رابط إعادة التعيين + صفحة تعيين كلمة مرور جديدة
     Route::get('/forgot-password', [\App\Http\Controllers\Auth\ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
-    Route::post('/forgot-password', [\App\Http\Controllers\Auth\ForgotPasswordController::class, 'sendResetLinkEmail'])->middleware('throttle:5,1')->name('password.email');
+    Route::post('/forgot-password', [\App\Http\Controllers\Auth\ForgotPasswordController::class, 'sendResetLinkEmail'])->middleware('throttle:password-reset')->name('password.email');
     Route::get('/reset-password/{token}', [\App\Http\Controllers\Auth\ResetPasswordController::class, 'showResetForm'])->name('password.reset');
-    Route::post('/reset-password', [\App\Http\Controllers\Auth\ResetPasswordController::class, 'reset'])->middleware('throttle:5,1')->name('password.update');
+    Route::post('/reset-password', [\App\Http\Controllers\Auth\ResetPasswordController::class, 'reset'])->middleware('throttle:password-reset')->name('password.update');
 });
 
 // المصادقة الثنائية (2FA) - بعد إدخال البريد وكلمة المرور للمدربين/الإدمن/الموظفين
