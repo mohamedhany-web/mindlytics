@@ -212,8 +212,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('marketing:apply-execution-penalties')
             ->dailyAt(\App\Support\MarketingPlanSettings::confirmationDeadlineTime());
 
-        // معالجة طابور Laravel (دفعات الواتساب وغيرها) — مناسب لـ Hostinger عبر cron كل دقيقة
-        $schedule->command('queue:work --stop-when-empty --max-time=55 --max-jobs=50')
+        // طابور الواتساب فقط — معزول عن sales والتسجيل وغيرها
+        $schedule->command('queue:work --queue=whatsapp --stop-when-empty --max-time=55 --max-jobs=50')
             ->everyMinute()
             ->withoutOverlapping()
             ->runInBackground();

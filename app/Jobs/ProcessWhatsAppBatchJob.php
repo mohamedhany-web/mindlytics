@@ -23,7 +23,10 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
 
     public int $tries = 1;
 
-    public function __construct(public int $batchId) {}
+    public function __construct(public int $batchId)
+    {
+        $this->onQueue((string) config('whatsapp.queue', 'whatsapp'));
+    }
 
     public function handle(WhatsAppService $whatsapp): void
     {

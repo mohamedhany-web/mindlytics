@@ -65,8 +65,10 @@
             oldTemplateId: @json(old('template_id', '')),
          })">
 
-        {{-- النموذج الرئيسي --}}
-        <div class="xl:col-span-8 space-y-4">
+        <form method="POST" action="{{ route('admin.whatsapp.send.post') }}" @submit="onSubmit" class="xl:col-span-8 space-y-4">
+            @csrf
+            <input type="hidden" name="recipient_type" :value="recipientType">
+
             <section class="{{ $waSectionClass }}">
                 <div class="px-5 py-4 border-b border-slate-200">
                     <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -75,7 +77,7 @@
                     </h3>
                     <p class="text-sm text-slate-500 mt-1">اختر طريقة تحديد من تريد مراسلته</p>
                 </div>
-                <div class="p-5">
+                <div class="p-5 space-y-5">
                     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
                         @foreach([
                             'manual' => ['icon' => 'fas fa-phone', 'label' => 'رقم يدوي', 'desc' => 'إدخال رقم مباشرة'],
@@ -95,6 +97,71 @@
                             </label>
                         @endforeach
                     </div>
+
+                    {{-- تفاصيل المستلم حسب الاختيار --}}
+                    <div class="rounded-xl border-2 border-emerald-200/80 bg-emerald-50/40 p-4 sm:p-5">
+                        <p class="text-sm font-bold text-emerald-900 mb-3 flex items-center gap-2">
+                            <i class="fas fa-arrow-left text-emerald-600"></i>
+                            <span x-text="recipientPanelTitle()"></span>
+                        </p>
+
+                        <div x-show="recipientType === 'manual'" x-transition.opacity>
+                            <label class="{{ $waLabelClass }}">رقم الهاتف للإرسال</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-3 flex items-center text-slate-400"><i class="fas fa-phone"></i></span>
+                                <input type="text" name="phone" x-model="phone"
+                                       placeholder="01012345678 أو 201012345678"
+                                       :required="recipientType === 'manual'"
+                                       :disabled="recipientType !== 'manual'"
+                                       class="{{ $waInputClass }} pl-10 dir-ltr text-right font-mono text-base disabled:bg-slate-100 disabled:cursor-not-allowed">
+                            </div>
+                            <p class="text-xs text-slate-600 mt-2">أدخل رقم الواتساب — يُضاف رمز مصر +20 تلقائياً عند الإرسال.</p>
+                            @error('phone')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div x-show="recipientType === 'single_student'" x-transition.opacity style="display: none;">
+                            <label class="{{ $waLabelClass }}">اختر الطالب</label>
+                            <select name="user_id" x-model="userId"
+                                    :required="recipientType === 'single_student'"
+                                    :disabled="recipientType !== 'single_student'"
+                                    class="{{ $waSelectClass }} disabled:bg-slate-100" @change="onStudentPick">
+                                <option value="">— اختر طالباً —</option>
+                                @foreach($students as $student)
+                                    <option value="{{ $student->id }}" data-phone="{{ $student->phone }}">
+                                        {{ $student->name }} — {{ $student->phone }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <template x-if="userId && selectedStudentPhone()">
+                                <p class="text-xs text-emerald-800 mt-2 font-mono dir-ltr text-right">
+                                    <i class="fas fa-check-circle ml-1"></i>
+                                    سيُرسل إلى: <span x-text="selectedStudentPhone()"></span>
+                                </p>
+                            </template>
+                            @error('user_id')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div x-show="recipientType === 'course_students'" x-transition.opacity style="display: none;">
+                            <label class="{{ $waLabelClass }}">اختر الكورس</label>
+                            <select name="course_id" x-model="courseId"
+                                    :required="recipientType === 'course_students'"
+                                    :disabled="recipientType !== 'course_students'"
+                                    class="{{ $waSelectClass }} disabled:bg-slate-100">
+                                <option value="">— اختر كورساً —</option>
+                                @foreach($courses as $course)
+                                    <option value="{{ $course->id }}">{{ $course->title }}</option>
+                                @endforeach
+                            </select>
+                            <p class="text-xs text-slate-600 mt-2">يُرسل لجميع الطلاب المسجّلين في الكورس ولديهم رقم هاتف.</p>
+                            @error('course_id')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div x-show="recipientType === 'all_students'" x-transition.opacity style="display: none;"
+                             class="rounded-lg bg-violet-100/80 border border-violet-200 px-4 py-3 text-sm text-violet-900 flex items-start gap-2">
+                            <i class="fas fa-info-circle mt-0.5 shrink-0"></i>
+                            <span>سيتم الإرسال لـ <strong>{{ $students->count() }}</strong> طالب لديهم رقم هاتف — عبر دفعة في الخلفية مع فاصل آمن بين الرسائل.</span>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -106,60 +173,6 @@
                     </h3>
                 </div>
                 <div class="p-5 sm:p-6">
-                    <form method="POST" action="{{ route('admin.whatsapp.send.post') }}" @submit="onSubmit">
-                        @csrf
-                        <input type="hidden" name="recipient_type" :value="recipientType">
-
-                        {{-- رقم يدوي --}}
-                        <div x-show="recipientType === 'manual'" x-cloak class="mb-5">
-                            <label class="{{ $waLabelClass }}">رقم الهاتف</label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-3 flex items-center text-slate-400"><i class="fas fa-phone"></i></span>
-                                <input type="text" name="phone" x-model="phone"
-                                       placeholder="01012345678 أو 201012345678"
-                                       :required="recipientType === 'manual'"
-                                       class="{{ $waInputClass }} pl-10 dir-ltr text-right font-mono">
-                            </div>
-                            <p class="text-xs text-slate-500 mt-1.5">يُضاف رمز مصر +20 تلقائياً</p>
-                            @error('phone')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
-                        </div>
-
-                        {{-- طالب واحد --}}
-                        <div x-show="recipientType === 'single_student'" x-cloak class="mb-5">
-                            <label class="{{ $waLabelClass }}">اختر الطالب</label>
-                            <select name="user_id" x-model="userId" :required="recipientType === 'single_student'"
-                                    class="{{ $waSelectClass }}" @change="onStudentPick">
-                                <option value="">— اختر طالباً —</option>
-                                @foreach($students as $student)
-                                    <option value="{{ $student->id }}" data-phone="{{ $student->phone }}">
-                                        {{ $student->name }} — {{ $student->phone }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('user_id')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
-                        </div>
-
-                        {{-- كورس --}}
-                        <div x-show="recipientType === 'course_students'" x-cloak class="mb-5">
-                            <label class="{{ $waLabelClass }}">اختر الكورس</label>
-                            <select name="course_id" x-model="courseId" :required="recipientType === 'course_students'"
-                                    class="{{ $waSelectClass }}">
-                                <option value="">— اختر كورساً —</option>
-                                @foreach($courses as $course)
-                                    <option value="{{ $course->id }}">{{ $course->title }}</option>
-                                @endforeach
-                            </select>
-                            @error('course_id')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
-                        </div>
-
-                        {{-- تحذير جماعي --}}
-                        <div x-show="recipientType === 'all_students'" x-cloak
-                             class="mb-5 rounded-xl bg-violet-50 border border-violet-200 px-4 py-3 text-sm text-violet-900 flex items-start gap-2">
-                            <i class="fas fa-info-circle mt-0.5"></i>
-                            <span>سيتم الإرسال لـ <strong>{{ $students->count() }}</strong> طالب لديهم رقم هاتف — مع فاصل 0.5 ثانية بين كل رسالة.</span>
-                        </div>
-
-                        {{-- قالب --}}
                         <div class="mb-5">
                             <label class="{{ $waLabelClass }}">قالب رسالة (اختياري)</label>
                             <select name="template_id" x-model="templateId" @change="applyTemplate" class="{{ $waSelectClass }}">
@@ -201,10 +214,9 @@
                                 <i class="fas fa-history"></i> السجل
                             </a>
                         </div>
-                    </form>
                 </div>
             </section>
-        </div>
+        </form>
 
         {{-- الشريط الجانبي --}}
         <div class="xl:col-span-4 space-y-4">
@@ -227,7 +239,7 @@
                                 <i class="fas fa-check-double text-[10px] text-sky-500"></i>
                             </div>
                         </div>
-                        <p class="text-[10px] text-slate-600 mt-2 text-center" x-show="recipientType !== 'manual'" x-text="recipientHint"></p>
+                        <p class="text-[10px] text-slate-600 mt-2 text-center" x-text="recipientHint"></p>
                     </div>
                 </div>
             </section>
@@ -314,17 +326,35 @@ function whatsappSendForm(config) {
         },
 
         get recipientHint() {
+            if (this.recipientType === 'manual') {
+                return this.phone ? `إلى: ${this.phone}` : 'أدخل رقم الهاتف أعلاه';
+            }
             if (this.recipientType === 'single_student' && this.userId) {
                 const s = this.students.find(x => String(x.id) === String(this.userId));
-                return s ? `إلى: ${s.name}` : '';
+                return s ? `إلى: ${s.name} — ${s.phone}` : '';
             }
             if (this.recipientType === 'all_students') {
                 return `إرسال جماعي — ${this.students.length} طالب`;
             }
             if (this.recipientType === 'course_students') {
-                return 'إرسال لجميع طلاب الكورس المسجّلين';
+                return this.courseId ? 'إرسال لطلاب الكورس المحدد' : 'اختر الكورس أعلاه';
             }
             return '';
+        },
+
+        recipientPanelTitle() {
+            const map = {
+                manual: 'أدخل رقم الهاتف للإرسال',
+                single_student: 'اختر الطالب المستلم',
+                course_students: 'اختر الكورس',
+                all_students: 'إرسال لجميع الطلاب',
+            };
+            return map[this.recipientType] || 'تفاصيل المستلم';
+        },
+
+        selectedStudentPhone() {
+            const s = this.students.find(x => String(x.id) === String(this.userId));
+            return s ? s.phone : '';
         },
 
         applyTemplate() {
@@ -372,6 +402,7 @@ function whatsappSendForm(config) {
             this.courseId = '';
             this.templateId = '';
             this.recipientType = 'manual';
+            this.submitting = false;
         },
     };
 }
