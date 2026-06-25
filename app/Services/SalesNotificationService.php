@@ -10,6 +10,7 @@ use App\Models\SalesLead;
 use App\Models\SalesLeadCategory;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\Workshop;
 use App\Support\SalesDailyReportSettings;
 use Illuminate\Support\Facades\Mail;
 
@@ -72,6 +73,65 @@ class SalesNotificationService
                 ])
             );
         }
+    }
+
+    /**
+     * @param  array{new: list<string>, existing: list<string>}  $repSummary
+     */
+    public function notifyWorkshopLeadsTransferred(User $rep, Workshop $workshop, array $repSummary, string $batchId): void
+    {
+        $newNames = $repSummary['new'] ?? [];
+        $existingNames = $repSummary['existing'] ?? [];
+        $newCount = count($newNames);
+        $existingCount = count($existingNames);
+
+        if ($newCount === 0 && $existingCount === 0) {
+            return;
+        }
+
+        $parts = [];
+        if ($newCount > 0) {
+            $preview = implode('، ', array_slice($newNames, 0, 6));
+            if ($newCount > 6) {
+                $preview .= ' … و'.($newCount - 6).' آخرين';
+            }
+            $parts[] = $newCount.' عميل جديد: '.$preview;
+        }
+        if ($existingCount > 0) {
+            $preview = implode('، ', array_slice($existingNames, 0, 6));
+            if ($existingCount > 6) {
+                $preview .= ' … و'.($existingCount - 6).' آخرين';
+            }
+            $parts[] = $existingCount.' موجود مسبقاً (تم ربطهم بالورشة): '.$preview;
+        }
+
+        $title = 'ترحيل من ورشة: '.$workshop->title;
+        $message = implode(' | ', $parts);
+
+        $actionUrl = $newCount > 0
+            ? route('employee.sales.leads.index', ['import_batch' => $batchId])
+            : route('employee.sales.leads.index');
+
+        Notification::create([
+            'user_id' => $rep->id,
+            'sender_id' => auth()->id(),
+            'title' => $title,
+            'message' => $message,
+            'type' => 'employee',
+            'priority' => 'high',
+            'audience' => 'employee',
+            'action_url' => $actionUrl,
+            'action_text' => $newCount > 0 ? 'عرض العملاء الجدد' : 'عرض العملاء',
+            'data' => [
+                'kind' => 'workshop_leads_transferred',
+                'workshop_id' => $workshop->id,
+                'import_batch' => $batchId,
+                'new_count' => $newCount,
+                'existing_count' => $existingCount,
+                'new_names' => $newNames,
+                'existing_names' => $existingNames,
+            ],
+        ]);
     }
 
     public function notifyBulkImport(User $rep, int $count, string $batchId, ?SalesLeadCategory $category = null): void

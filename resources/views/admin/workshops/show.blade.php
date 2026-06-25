@@ -31,6 +31,57 @@
         </div>
     @endif
 
+    @php $transferSummary = session('workshop_transfer_summary'); @endphp
+    @if(is_array($transferSummary) && (!empty($transferSummary['new']) || !empty($transferSummary['existing']) || !empty($transferSummary['already'])))
+        <div class="rounded-2xl border border-blue-200 bg-white shadow-sm overflow-hidden">
+            <div class="px-5 py-4 border-b border-blue-100 bg-gradient-to-r from-blue-50 to-white">
+                <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                    <i class="fas fa-clipboard-list text-blue-600"></i>
+                    تفاصيل آخر ترحيل
+                </h3>
+                @if(!empty($transferSummary['batch_id']))
+                    <p class="text-xs text-slate-500 mt-1 font-mono">دفعة: {{ $transferSummary['batch_id'] }}</p>
+                @endif
+            </div>
+            <div class="p-5 grid md:grid-cols-3 gap-4 text-sm">
+                <div class="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
+                    <p class="text-xs font-bold text-emerald-800 mb-2">عملاء جدد ({{ count($transferSummary['new'] ?? []) }})</p>
+                    @forelse($transferSummary['new'] ?? [] as $row)
+                        <div class="flex items-center justify-between gap-2 py-1 border-b border-emerald-100 last:border-0 text-xs">
+                            <span class="font-semibold text-slate-800">{{ $row['name'] }}</span>
+                            <span class="text-slate-500">{{ $row['assignee'] ?? '—' }}</span>
+                        </div>
+                    @empty
+                        <p class="text-xs text-slate-500">لا يوجد</p>
+                    @endforelse
+                </div>
+                <div class="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+                    <p class="text-xs font-bold text-amber-800 mb-2">موجودون مسبقاً — تم الربط ({{ count($transferSummary['existing'] ?? []) }})</p>
+                    @forelse($transferSummary['existing'] ?? [] as $row)
+                        <div class="flex items-center justify-between gap-2 py-1 border-b border-amber-100 last:border-0 text-xs">
+                            <span class="font-semibold text-slate-800">{{ $row['name'] }}</span>
+                            <a href="{{ route('admin.sales.leads.show', $row['lead_id']) }}" class="text-blue-600 hover:underline">{{ $row['assignee'] ?? 'Lead' }}</a>
+                        </div>
+                    @empty
+                        <p class="text-xs text-slate-500">لا يوجد</p>
+                    @endforelse
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-xs font-bold text-slate-700 mb-2">مُرحَّلون سابقاً — تم التخطي ({{ count($transferSummary['already'] ?? []) }})</p>
+                    @forelse($transferSummary['already'] ?? [] as $name)
+                        <div class="py-1 border-b border-slate-100 last:border-0 text-xs text-slate-600">{{ $name }}</div>
+                    @empty
+                        <p class="text-xs text-slate-500">لا يوجد</p>
+                    @endforelse
+                </div>
+            </div>
+            <div class="px-5 pb-4 text-xs text-slate-500">
+                <i class="fas fa-bell text-blue-500 ml-1"></i>
+                تم إرسال إشعار لكل موظف مبيعات يوضح من الجدد ومن الموجودين مسبقاً.
+            </div>
+        </div>
+    @endif
+
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
         <div class="px-5 py-6 sm:px-8 border-b border-slate-200 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
@@ -158,6 +209,7 @@
                             </h3>
                             <p class="text-xs text-slate-600 mt-1 max-w-xl">
                                 يُرحَّل <strong>المسجّلون الجدد فقط</strong>. من سبق ترحيلهم يظهرون بعلامة «مُرحَّل» ولن يُعاد توزيعهم.
+                                إن وُجد العميل مسبقاً في Leads يُربَط بالورشة دون إنشاء تكرار.
                                 @if($stats['pending_leads'] > 0)
                                     <span class="text-amber-700 font-semibold">({{ $stats['pending_leads'] }} جاهز للترحيل الآن)</span>
                                 @endif

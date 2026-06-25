@@ -9,6 +9,7 @@ use App\Models\SalesLeadGroup;
 use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopRegistration;
+use App\Services\SalesNotificationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -158,21 +159,27 @@ class WorkshopController extends Controller
         }
 
         $created = 0;
-        $skipped = 0;
+        $linkedExisting = 0;
         $skippedAlready = 0;
-        $skippedDuplicate = 0;
-        $createdByRep = array_fill_keys($assigneeIds, 0);
+        $createdByRep = array_fill_keys($assigneeIds, ['new' => [], 'existing' => []]);
         $assigneeCount = count($assigneeIds);
         $hasConversionColumn = Schema::hasColumn('workshop_registrations', 'converted_to_lead_at');
+        $batchId = 'WS-'.$workshop->id.'-'.now()->format('YmdHis');
+        $transferSummary = [
+            'batch_id' => $batchId,
+            'new' => [],
+            'existing' => [],
+            'already' => [],
+        ];
 
-        DB::transaction(function () use ($workshop, $assigneeIds, $assigneeCount, $groupId, $hasConversionColumn, &$created, &$skipped, &$skippedAlready, &$skippedDuplicate, &$createdByRep) {
+        DB::transaction(function () use ($workshop, $assigneeIds, $assigneeCount, $groupId, $hasConversionColumn, $batchId, &$created, &$linkedExisting, &$skippedAlready, &$createdByRep, &$transferSummary) {
             $registrations = $workshop->registrations()->orderBy('id')->get();
             $eligible = [];
 
             foreach ($registrations as $reg) {
                 if ($this->registrationAlreadyConverted($reg, $hasConversionColumn)) {
-                    $skipped++;
                     $skippedAlready++;
+                    $transferSummary['already'][] = $reg->name ?: ('#'.$reg->id);
 
                     continue;
                 }
@@ -182,44 +189,41 @@ class WorkshopController extends Controller
 
             foreach ($eligible as $index => $reg) {
                 $assigneeId = $assigneeIds[$index % $assigneeCount];
+                $notes = $this->buildLeadNotesFromRegistration($workshop, $reg);
+                $displayName = $reg->name ?: 'عميل محتمل من ورشة';
 
-                $duplicateByContact = SalesLead::query()
-                    ->where('assigned_to', $assigneeId)
-                    ->where(function ($q) use ($reg) {
-                        if (! empty($reg->phone)) {
-                            $q->orWhere('phone', $reg->phone);
-                        }
-                        if (! empty($reg->email)) {
-                            $q->orWhere('email', $reg->email);
-                        }
-                    })
-                    ->exists();
+                $existingLead = $this->findExistingLeadByContact($reg);
 
-                if ($duplicateByContact) {
-                    $skipped++;
-                    $skippedDuplicate++;
+                if ($existingLead) {
+                    $existingLead->update([
+                        'notes' => trim(($existingLead->notes ?? '')."\n\n".$notes),
+                        'interest' => $existingLead->interest ?: 'الاهتمام بورشة: '.$workshop->title,
+                    ]);
+
+                    $this->markRegistrationConverted($reg, $existingLead->id, $hasConversionColumn);
+
+                    $linkedExisting++;
+                    $transferSummary['existing'][] = [
+                        'name' => $displayName,
+                        'lead_id' => $existingLead->id,
+                        'assignee' => $existingLead->assignee?->name,
+                    ];
+
+                    $repId = (int) $existingLead->assigned_to;
+                    if (! isset($createdByRep[$repId])) {
+                        $createdByRep[$repId] = ['new' => [], 'existing' => []];
+                    }
+                    $createdByRep[$repId]['existing'][] = $displayName;
 
                     continue;
                 }
-
-                $attendanceLabel = $reg->attendance_mode === 'offline'
-                    ? 'أوفلاين'
-                    : ($reg->attendance_mode === 'online' ? 'أونلاين' : 'غير محدد');
-
-                $notes = trim(
-                    "تم التحويل تلقائياً من تسجيل ورشة.\n"
-                    ."[workshop:{$workshop->id}] [workshop_registration:{$reg->id}]\n"
-                    ."اسم الورشة: {$workshop->title}\n"
-                    ."نوع الحضور: {$attendanceLabel}\n"
-                    .'تاريخ التسجيل: '.optional($reg->created_at)->format('Y-m-d H:i')
-                    .(! empty($reg->notes) ? "\nملاحظات التسجيل: {$reg->notes}" : '')
-                );
 
                 $lead = SalesLead::create([
                     'assigned_to' => $assigneeId,
                     'created_by' => auth()->id(),
                     'sales_lead_group_id' => $groupId,
-                    'name' => $reg->name ?: 'عميل محتمل من ورشة',
+                    'import_batch' => $batchId,
+                    'name' => $displayName,
                     'phone' => $reg->phone,
                     'email' => $reg->email,
                     'source' => 'event',
@@ -229,55 +233,80 @@ class WorkshopController extends Controller
                     'notes' => $notes,
                 ]);
 
-                if ($hasConversionColumn) {
-                    $reg->update([
-                        'converted_to_lead_at' => now(),
-                        'sales_lead_id' => $lead->id,
-                    ]);
-                }
+                $this->markRegistrationConverted($reg, $lead->id, $hasConversionColumn);
 
                 $created++;
-                $createdByRep[$assigneeId]++;
+                $transferSummary['new'][] = [
+                    'name' => $displayName,
+                    'lead_id' => $lead->id,
+                    'assignee' => User::query()->whereKey($assigneeId)->value('name'),
+                ];
+                $createdByRep[$assigneeId]['new'][] = $displayName;
             }
         });
 
-        $distribution = collect($createdByRep)
-            ->filter(fn ($count) => $count > 0)
-            ->map(function ($count, $userId) {
-                $name = User::query()->whereKey($userId)->value('name') ?? '#'.$userId;
+        $notificationService = app(SalesNotificationService::class);
+        foreach ($createdByRep as $repId => $repSummary) {
+            if (empty($repSummary['new']) && empty($repSummary['existing'])) {
+                continue;
+            }
 
-                return $name.': '.$count;
+            $rep = User::query()->find($repId);
+            if ($rep) {
+                $notificationService->notifyWorkshopLeadsTransferred($rep, $workshop, $repSummary, $batchId);
+            }
+        }
+
+        $distribution = collect($createdByRep)
+            ->filter(fn ($summary) => count($summary['new']) > 0 || count($summary['existing']) > 0)
+            ->map(function ($summary, $userId) {
+                $name = User::query()->whereKey($userId)->value('name') ?? '#'.$userId;
+                $parts = [];
+                if (count($summary['new']) > 0) {
+                    $parts[] = count($summary['new']).' جديد';
+                }
+                if (count($summary['existing']) > 0) {
+                    $parts[] = count($summary['existing']).' موجود';
+                }
+
+                return $name.': '.implode(' + ', $parts);
             })
             ->implode(' · ');
 
-        if ($created === 0) {
+        if ($created === 0 && $linkedExisting === 0) {
             $message = 'لا يوجد مسجّلون جدد للترحيل.';
             if ($skippedAlready > 0) {
                 $message .= " ({$skippedAlready} مُرحَّل مسبقاً)";
             }
-            if ($skippedDuplicate > 0) {
-                $message .= " ({$skippedDuplicate} مكرر عند موظف)";
-            }
 
-            return back()->with('error', $message);
+            return back()
+                ->with('error', $message)
+                ->with('workshop_transfer_summary', $transferSummary);
         }
 
-        $message = "تم ترحيل {$created} مسجّل جديد فقط إلى Leads.";
+        $message = "تم ترحيل {$created} عميل جديد";
+        if ($linkedExisting > 0) {
+            $message .= " وربط {$linkedExisting} موجود مسبقاً";
+        }
+        $message .= ' إلى Leads.';
         if ($skippedAlready > 0) {
             $message .= " تخطّي {$skippedAlready} مُرحَّل سابقاً.";
-        }
-        if ($skippedDuplicate > 0) {
-            $message .= " تخطّي {$skippedDuplicate} مكرر.";
         }
         if ($distribution !== '') {
             $message .= ' التوزيع: '.$distribution.'.';
         }
 
-        return back()->with('success', $message);
+        return back()
+            ->with('success', $message)
+            ->with('workshop_transfer_summary', $transferSummary);
     }
 
     private function registrationAlreadyConverted(WorkshopRegistration $registration, bool $hasConversionColumn): bool
     {
+        if ($registration->isConvertedToLead()) {
+            return true;
+        }
+
         if ($hasConversionColumn && $registration->converted_to_lead_at) {
             return true;
         }
@@ -285,6 +314,83 @@ class WorkshopController extends Controller
         return SalesLead::query()
             ->where('notes', 'like', '%[workshop_registration:'.$registration->id.']%')
             ->exists();
+    }
+
+    private function markRegistrationConverted(WorkshopRegistration $registration, int $leadId, bool $hasConversionColumn): void
+    {
+        if (! $hasConversionColumn) {
+            return;
+        }
+
+        $registration->update([
+            'converted_to_lead_at' => now(),
+            'sales_lead_id' => $leadId,
+        ]);
+    }
+
+    private function buildLeadNotesFromRegistration(Workshop $workshop, WorkshopRegistration $reg): string
+    {
+        $attendanceLabel = $reg->attendance_mode === 'offline'
+            ? 'أوفلاين'
+            : ($reg->attendance_mode === 'online' ? 'أونلاين' : 'غير محدد');
+
+        $checkedIn = $reg->checked_in_at
+            ? 'نعم — '.$reg->checked_in_at->format('Y-m-d H:i')
+            : 'لا';
+
+        return trim(
+            "تم التحويل تلقائياً من تسجيل ورشة.\n"
+            ."[workshop:{$workshop->id}] [workshop_registration:{$reg->id}]\n"
+            ."اسم الورشة: {$workshop->title}\n"
+            ."نوع الحضور: {$attendanceLabel}\n"
+            ."تأكيد الحضور: {$checkedIn}\n"
+            .'حالة التسجيل: '.($reg->status ?: '—')."\n"
+            .'تاريخ التسجيل: '.optional($reg->created_at)->format('Y-m-d H:i')
+            .(! empty($reg->notes) ? "\nملاحظات التسجيل: {$reg->notes}" : '')
+        );
+    }
+
+    private function findExistingLeadByContact(WorkshopRegistration $reg): ?SalesLead
+    {
+        $email = $reg->email ? strtolower(trim($reg->email)) : null;
+        $phoneVariants = $this->phoneMatchVariants($reg->phone);
+
+        if (! $email && $phoneVariants === []) {
+            return null;
+        }
+
+        return SalesLead::query()
+            ->with('assignee:id,name')
+            ->where(function ($q) use ($email, $phoneVariants) {
+                if ($email) {
+                    $q->whereRaw('LOWER(TRIM(email)) = ?', [$email]);
+                }
+                if ($phoneVariants !== []) {
+                    $q->orWhereIn('phone', $phoneVariants);
+                }
+            })
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function phoneMatchVariants(?string $phone): array
+    {
+        if (! $phone) {
+            return [];
+        }
+
+        $normalized = $this->normalizePhone($phone);
+        $variants = array_filter(array_unique([
+            trim($phone),
+            $normalized,
+            $normalized && str_starts_with($normalized, '20') ? '0'.substr($normalized, 2) : null,
+            $normalized && str_starts_with($normalized, '20') ? '+'.substr($normalized, 0, 2).' '.substr($normalized, 2) : null,
+        ]));
+
+        return array_values($variants);
     }
 
     /**
