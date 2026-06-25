@@ -142,8 +142,11 @@
                 @if(!empty($status['last_error']) && !$isConnected)
                     <div class="rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800">
                         <span class="font-semibold">خطأ الاتصال:</span> {{ $status['last_error'] }}
-                        <p class="text-xs mt-2 text-rose-700/90">Chrome عالق على VPS — اضغط «إصلاح الاتصال» أو نفّذ على السيرفر:<br>
-                        <code class="bg-white px-1 rounded text-[10px]">pm2 stop mindlytics-whatsapp && pkill -f wwebjs_auth && pm2 start mindlytics-whatsapp</code></p>
+                        <p class="text-xs mt-2 text-rose-700/90">
+                            Chrome عالق على VPS — اضغط <strong>«إصلاح الاتصال»</strong> (يعيد تشغيل Bridge تلقائياً)، انتظر 15 ثانية، ثم جرّب QR أو رمز الربط.
+                        </p>
+                        <p class="text-xs mt-2 text-rose-700/90">أو على السيرفر:</p>
+                        <code class="block bg-white px-2 py-1 rounded text-[10px] mt-1 dir-ltr text-left">cd /opt/mindlytics-whatsapp-bridge && bash repair-vps.sh</code>
                     </div>
                 @endif
 
@@ -427,6 +430,11 @@ function whatsappConnect() {
                 });
                 const json = await res.json();
                 if (!json.success) {
+                    if (json.restarting) {
+                        this.message = json.error || 'Bridge يُعاد تشغيله — انتظر 15 ثانية ثم أعد المحاولة.';
+                        setTimeout(() => this.refreshPairing(true), 16000);
+                        return;
+                    }
                     const err = json.error || '';
                     if (err.includes('browser is already running') || err.includes('userDataDir')) {
                         this.message = 'Chrome عالق على VPS — اضغط «إصلاح الاتصال» ثم أعد المحاولة، أو نفّذ repair-vps.sh على السيرفر.';

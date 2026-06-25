@@ -340,7 +340,11 @@ class WhatsAppController extends Controller
         $result = $this->bridge->start();
 
         if ($result['success'] ?? false) {
-            return back()->with('success', 'تم إصلاح الاتصال — انتظر 10 ثوانٍ ثم حدّث الصفحة. الربط السابق محفوظ.');
+            $message = ! empty($result['restarting'])
+                ? 'تم قتل Chrome العالق وإعادة تشغيل Bridge على VPS — انتظر 15 ثانية ثم حدّث الصفحة.'
+                : 'تم إصلاح الاتصال — انتظر 10 ثوانٍ ثم حدّث الصفحة. الربط السابق محفوظ.';
+
+            return back()->with('success', $message);
         }
 
         return back()->with('error', $result['error'] ?? 'فشل بدء الجسر.');

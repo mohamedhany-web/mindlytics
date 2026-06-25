@@ -32,7 +32,7 @@ class WhatsAppBridgeService
     }
 
     /**
-     * @return array{success: bool, data?: array<string, mixed>, error?: string}
+     * @return array{success: bool, data?: array<string, mixed>, error?: string, restarting?: bool}
      */
     public function getStatus(): array
     {
@@ -84,7 +84,7 @@ class WhatsAppBridgeService
     }
 
     /**
-     * @return array{success: bool, data?: array<string, mixed>, error?: string}
+     * @return array{success: bool, data?: array<string, mixed>, error?: string, restarting?: bool}
      */
     public function start(): array
     {
@@ -92,11 +92,23 @@ class WhatsAppBridgeService
             return ['success' => false, 'error' => 'إعدادات الجسر غير مكتملة.'];
         }
 
+        $status = $this->getStatus();
+        $lastError = (string) ($status['data']['last_error'] ?? '');
+
+        if ($this->isBrowserLockError($lastError)) {
+            return $this->forceRepair();
+        }
+
         try {
             $response = $this->client()->timeout(120)->post($this->baseUrl() . '/api/repair');
 
             if ($response->successful()) {
-                return ['success' => true, 'data' => $response->json()];
+                $data = $response->json();
+                if (! empty($data['restarting'])) {
+                    return ['success' => true, 'data' => $data, 'restarting' => true];
+                }
+
+                return ['success' => true, 'data' => $data];
             }
 
             return ['success' => false, 'error' => $response->json('error') ?? 'فشل بدء الاتصال.'];
@@ -106,13 +118,57 @@ class WhatsAppBridgeService
     }
 
     /**
-     * إصلاح الجلسة بدون logout — يحافظ على الربط السابق
-     *
-     * @return array{success: bool, data?: array<string, mixed>, error?: string}
+     * @return array{success: bool, data?: array<string, mixed>, error?: string, restarting?: bool}
      */
     public function repair(): array
     {
         return $this->start();
+    }
+
+    /**
+     * @return array{success: bool, data?: array<string, mixed>, error?: string, restarting?: bool}
+     */
+    public function forceRepair(): array
+    {
+        if (! $this->isConfigured()) {
+            return ['success' => false, 'error' => 'إعدادات الجسر غير مكتملة.'];
+        }
+
+        try {
+            $response = $this->client()->timeout(45)->post($this->baseUrl() . '/api/force-repair');
+
+            if ($response->status() === 404) {
+                return $this->legacyRepair();
+            }
+
+            if ($response->successful()) {
+                return ['success' => true, 'data' => $response->json(), 'restarting' => true];
+            }
+
+            return ['success' => false, 'error' => $response->json('error') ?? 'فشل الإصلاح القوي.'];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * @return array{success: bool, data?: array<string, mixed>, error?: string, restarting?: bool}
+     */
+    private function legacyRepair(): array
+    {
+        try {
+            $response = $this->client()->timeout(120)->post($this->baseUrl() . '/api/repair');
+
+            if ($response->successful()) {
+                $data = $response->json();
+
+                return ['success' => true, 'data' => $data, 'restarting' => ! empty($data['restarting'])];
+            }
+
+            return ['success' => false, 'error' => $response->json('error') ?? 'فشل الإصلاح.'];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
     }
 
     /**
@@ -177,7 +233,7 @@ class WhatsAppBridgeService
     }
 
     /**
-     * @return array{success: bool, data?: array<string, mixed>, error?: string}
+     * @return array{success: bool, data?: array<string, mixed>, error?: string, restarting?: bool}
      */
     public function requestPairingCode(string $phone): array
     {
@@ -185,14 +241,26 @@ class WhatsAppBridgeService
             return ['success' => false, 'error' => 'إعدادات الجسر غير مكتملة.'];
         }
 
-        // إصلاح Chrome العالق قبل طلب رمز الربط
-        $this->repair();
+        $status = $this->getStatus();
+        $lastError = (string) ($status['data']['last_error'] ?? '');
+
+        if ($this->isBrowserLockError($lastError)) {
+            $force = $this->forceRepair();
+            if ($force['success'] ?? false) {
+                return [
+                    'success' => false,
+                    'restarting' => true,
+                    'error' => 'تم إعادة تشغيل Bridge — انتظر 15 ثانية ثم أعد طلب رمز الربط.',
+                    'data' => $force['data'] ?? [],
+                ];
+            }
+        }
 
         return $this->postPairingCode($phone);
     }
 
     /**
-     * @return array{success: bool, data?: array<string, mixed>, error?: string}
+     * @return array{success: bool, data?: array<string, mixed>, error?: string, restarting?: bool}
      */
     private function postPairingCode(string $phone, bool $isRetry = false): array
     {
@@ -208,11 +276,26 @@ class WhatsAppBridgeService
                 return ['success' => true, 'data' => is_array($body) ? $body : []];
             }
 
-            if (! $isRetry && $this->isBrowserLockError($lastError)) {
-                Log::info('WhatsApp pairing browser lock — retrying after repair', ['error' => $lastError]);
-                $this->repair();
+            if (! empty($body['restarting'])) {
+                return [
+                    'success' => false,
+                    'restarting' => true,
+                    'error' => 'Bridge يُعاد تشغيله — انتظر 15 ثانية ثم أعد المحاولة.',
+                    'data' => is_array($body) ? $body : [],
+                ];
+            }
 
-                return $this->postPairingCode($phone, true);
+            if (! $isRetry && $this->isBrowserLockError($lastError)) {
+                Log::info('WhatsApp pairing browser lock — force repair', ['error' => $lastError]);
+                $force = $this->forceRepair();
+                if ($force['success'] ?? false) {
+                    return [
+                        'success' => false,
+                        'restarting' => true,
+                        'error' => 'تم إعادة تشغيل Bridge — انتظر 15 ثانية ثم أعد طلب رمز الربط.',
+                        'data' => $force['data'] ?? [],
+                    ];
+                }
             }
 
             return [
@@ -222,9 +305,14 @@ class WhatsAppBridgeService
             ];
         } catch (\Throwable $e) {
             if (! $isRetry && $this->isBrowserLockError($e->getMessage())) {
-                $this->repair();
-
-                return $this->postPairingCode($phone, true);
+                $force = $this->forceRepair();
+                if ($force['success'] ?? false) {
+                    return [
+                        'success' => false,
+                        'restarting' => true,
+                        'error' => 'تم إعادة تشغيل Bridge — انتظر 15 ثانية ثم أعد طلب رمز الربط.',
+                    ];
+                }
             }
 
             return ['success' => false, 'error' => $e->getMessage()];
@@ -289,20 +377,6 @@ class WhatsAppBridgeService
      */
     public function restart(): array
     {
-        if (! $this->isConfigured()) {
-            return ['success' => false, 'error' => 'إعدادات الجسر غير مكتملة.'];
-        }
-
-        try {
-            $response = $this->client()->timeout(60)->post($this->baseUrl() . '/api/restart');
-
-            if ($response->successful()) {
-                return ['success' => true, 'data' => $response->json()];
-            }
-
-            return ['success' => false, 'error' => $response->json('error') ?? 'فشل إعادة تشغيل الجسر.'];
-        } catch (\Throwable $e) {
-            return ['success' => false, 'error' => $e->getMessage()];
-        }
+        return $this->forceRepair();
     }
 }

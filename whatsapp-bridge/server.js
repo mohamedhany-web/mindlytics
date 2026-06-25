@@ -58,6 +58,8 @@ const state = {
 let client = null;
 let initializing = false;
 let reconnectTimer = null;
+let reconnectPaused = false;
+let restartScheduled = false;
 
 /** طابور إرسال — رسالة واحدة في كل مرة (يمنع crash Puppeteer) */
 const sendQueue = [];
@@ -153,12 +155,39 @@ async function killStaleChromium() {
     const sessionPath = path.join(authPath, 'session');
 
     if (process.platform === 'linux') {
+        try {
+            await execAsync(`fuser -k "${sessionPath}" 2>/dev/null || true`);
+        } catch (_) {
+            /* ignore */
+        }
+
+        try {
+            const { stdout } = await execAsync('pgrep -af "chromium|chrome" 2>/dev/null || true');
+            for (const line of stdout.split('\n')) {
+                if (!line.includes('wwebjs_auth') && !line.includes('mindlytics-whatsapp')) {
+                    continue;
+                }
+                const pid = parseInt(line.trim().split(/\s+/)[0], 10);
+                if (pid > 1 && pid !== process.pid) {
+                    try {
+                        process.kill(pid, 'SIGKILL');
+                        console.log('Killed stale browser pid:', pid);
+                    } catch (_) {
+                        /* ignore */
+                    }
+                }
+            }
+        } catch (_) {
+            /* ignore */
+        }
+
         const patterns = [
             sessionPath,
             authPath,
             'wwebjs_auth/session',
             'wwebjs_auth',
             'mindlytics-whatsapp-bridge',
+            '--user-data-dir=' + sessionPath,
         ];
         for (const pattern of patterns) {
             try {
@@ -169,8 +198,20 @@ async function killStaleChromium() {
         }
     }
 
-    await sleep(2500);
+    await sleep(3500);
     cleanupSessionLock();
+}
+
+function scheduleProcessRestart(reason) {
+    if (restartScheduled) {
+        return;
+    }
+    restartScheduled = true;
+    reconnectPaused = true;
+    console.log('Bridge process restart scheduled:', reason);
+    setTimeout(() => {
+        process.exit(0);
+    }, 600);
 }
 
 /**
@@ -182,9 +223,12 @@ async function prepareForNewSession() {
         reconnectTimer = null;
     }
 
+    reconnectPaused = false;
+    restartScheduled = false;
+
     await destroyClient();
 
-    for (let i = 0; i < 40 && initializing; i++) {
+    for (let i = 0; i < 60 && initializing; i++) {
         await sleep(250);
     }
 
@@ -208,6 +252,15 @@ async function repairSession() {
         await refreshClientInfo();
     }
 
+    if (state.lastError && isBrowserLockError({ message: state.lastError })) {
+        scheduleProcessRestart('repair-browser-lock');
+        return {
+            ...connectionSnapshot(),
+            restarting: true,
+            message: 'Chrome عالق — يُعاد تشغيل Bridge تلقائياً. انتظر 15 ثانية.',
+        };
+    }
+
     return connectionSnapshot();
 }
 
@@ -224,14 +277,22 @@ async function destroyClient() {
     client = null;
     initializing = false;
     try {
+        if (old.pupBrowser) {
+            await old.pupBrowser.close();
+        }
+    } catch (_) {
+        /* ignore */
+    }
+    try {
         await old.destroy();
     } catch (_) {
         /* ignore */
     }
+    await sleep(800);
 }
 
 function scheduleReconnect(delayMs = 5000) {
-    if (reconnectTimer) {
+    if (reconnectPaused || reconnectTimer) {
         return;
     }
     reconnectTimer = setTimeout(async () => {
@@ -360,7 +421,10 @@ async function buildClient(fromRepair = false, useQrMode = false, lockAttempt = 
         state.lastError = err.message;
         state.lastErrorAt = new Date().toISOString();
         await destroyClient();
-        if (!isBrowserLockError(err)) {
+        if (isBrowserLockError(err)) {
+            reconnectPaused = true;
+            scheduleProcessRestart('initialize-browser-lock');
+        } else {
             scheduleReconnect(10000);
         }
     } finally {
@@ -442,15 +506,13 @@ async function startPairingMode(phone) {
     await sleep(3000);
 
     if (state.lastError && isBrowserLockError({ message: state.lastError })) {
-        console.log('Pairing: browser still locked — running full repair...');
-        await prepareForNewSession();
-        state.pairingPhone = digits;
-        state.pairingMode = true;
-        state.status = 'pairing';
-        state.lastError = null;
-        state.lastErrorAt = null;
-        await buildClient(true, false, 0);
-        await sleep(3000);
+        console.log('Pairing: browser still locked — scheduling process restart...');
+        scheduleProcessRestart('pairing-browser-lock');
+        return {
+            ...connectionSnapshot(),
+            restarting: true,
+            message: 'Chrome عالق — يُعاد تشغيل Bridge. انتظر 15 ثانية ثم أعد طلب الرمز.',
+        };
     }
 
     return connectionSnapshot();
@@ -634,7 +696,25 @@ app.post('/api/start', authMiddleware, async (_req, res) => {
 
 app.post('/api/repair', authMiddleware, async (_req, res) => {
     const snapshot = await repairSession();
-    res.json({ success: true, message: 'Session repaired without logout.', ...snapshot });
+    res.json({ success: true, message: snapshot.message || 'Session repaired without logout.', ...snapshot });
+});
+
+/** إصلاح قوي — يقتل Chrome ويعيد تشغيل عملية Node عبر PM2 */
+app.post('/api/force-repair', authMiddleware, async (_req, res) => {
+    try {
+        await prepareForNewSession();
+        state.lastError = null;
+        state.lastErrorAt = null;
+        state.status = 'disconnected';
+        res.json({
+            success: true,
+            restarting: true,
+            message: 'تم قتل Chrome العالق — Bridge يُعاد تشغيله الآن. انتظر 15 ثانية.',
+        });
+        scheduleProcessRestart('api-force-repair');
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
 });
 
 app.post('/api/send', authMiddleware, async (req, res) => {
@@ -755,7 +835,11 @@ app.listen(PORT, () => {
     if (!API_TOKEN) {
         console.warn('WARNING: Set API_TOKEN in .env before production use.');
     }
+    // لا نفتح Chrome تلقائياً — يمنع تعارض browser is already running
     prepareForNewSession()
-        .then(() => buildClient(false, true, 0))
-        .catch((err) => console.error('Init error:', err.message));
+        .then(() => {
+            state.status = 'disconnected';
+            console.log('Bridge ready — call /api/repair or /api/pairing-code to connect.');
+        })
+        .catch((err) => console.error('Startup cleanup error:', err.message));
 });
