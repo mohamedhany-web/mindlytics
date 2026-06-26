@@ -1122,6 +1122,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('/get-subjects-by-year', [\App\Http\Controllers\Admin\AdvancedCourseController::class, 'getSubjectsByYear'])->name('advanced-courses.get-subjects-by-year');
 
         // الاجتماعات / الورش
+        Route::get('workshops/{workshop}/confirmations', [\App\Http\Controllers\Admin\WorkshopController::class, 'confirmations'])
+            ->name('workshops.confirmations');
         Route::post('workshops/{workshop}/deactivate', [\App\Http\Controllers\Admin\WorkshopController::class, 'deactivate'])
             ->name('workshops.deactivate');
         Route::post('workshops/{workshop}/activate', [\App\Http\Controllers\Admin\WorkshopController::class, 'activate'])

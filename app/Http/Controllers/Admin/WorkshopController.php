@@ -10,7 +10,6 @@ use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopRegistration;
 use App\Services\SalesNotificationService;
-use App\Services\WorkshopAttendanceService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -119,10 +118,6 @@ class WorkshopController extends Controller
             ->values()
             ->all();
 
-        $attendanceService = app(WorkshopAttendanceService::class);
-        $confirmedAttendees = $attendanceService->confirmedAttendees($workshop);
-        $confirmedCount = $confirmedAttendees->count();
-
         return view('admin.workshops.show', compact(
             'workshop',
             'registrations',
@@ -131,9 +126,23 @@ class WorkshopController extends Controller
             'stats',
             'emailPendingCount',
             'salesReps',
-            'salesLeadGroups',
+            'salesLeadGroups'
+        ));
+    }
+
+    public function confirmations(Workshop $workshop)
+    {
+        $confirmedAttendees = $workshop->registrations()
+            ->whereNotNull('checked_in_at')
+            ->orderByDesc('checked_in_at')
+            ->get();
+
+        $confirmUrl = route('public.workshops.confirm.show', $workshop->slug);
+
+        return view('admin.workshops.confirmations', compact(
+            'workshop',
             'confirmedAttendees',
-            'confirmedCount'
+            'confirmUrl'
         ));
     }
 
