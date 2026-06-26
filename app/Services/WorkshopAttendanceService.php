@@ -4,21 +4,25 @@ namespace App\Services;
 
 use App\Models\Workshop;
 use App\Models\WorkshopRegistration;
+use Illuminate\Support\Str;
 
 class WorkshopAttendanceService
 {
     /**
-     * @return array{status: 'success'|'already'|'not_found', message: string, registration: ?WorkshopRegistration}
+     * @return array{status: 'success'|'already'|'created', message: string, registration: ?WorkshopRegistration}
      */
     public function confirmByNameAndPhone(Workshop $workshop, string $name, string $phone): array
     {
+        $name = trim($name);
         $registration = $this->findRegistration($workshop, $name, $phone);
 
         if (! $registration) {
+            $registration = $this->createWalkInRegistration($workshop, $name, $phone);
+
             return [
-                'status' => 'not_found',
-                'message' => 'لم نجد حجزاً بهذا الاسم ورقم الهاتف في هذه الورشة. تأكد من البيانات أو تواصل مع فريق الدعم.',
-                'registration' => null,
+                'status' => 'created',
+                'message' => 'تم تسجيل حضورك وتأكيده بنجاح، '.$registration->name.'! سيتم إصدار شهادة الورشة لك قريباً.',
+                'registration' => $registration,
             ];
         }
 
@@ -30,6 +34,10 @@ class WorkshopAttendanceService
             ];
         }
 
+        if ($this->normalizeName($registration->name) !== $this->normalizeName($name)) {
+            $registration->name = $name;
+        }
+
         $registration->checked_in_at = now();
         $registration->save();
 
@@ -38,6 +46,37 @@ class WorkshopAttendanceService
             'message' => 'تم تأكيد حضورك بنجاح، '.($registration->name ?: 'عزيزنا').'! سيتم إصدار شهادة الورشة لك قريباً.',
             'registration' => $registration->fresh(),
         ];
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Collection<int, WorkshopRegistration>
+     */
+    public function confirmedAttendees(Workshop $workshop)
+    {
+        return $workshop->registrations()
+            ->whereNotNull('checked_in_at')
+            ->orderByDesc('checked_in_at')
+            ->get(['id', 'name', 'checked_in_at', 'created_at']);
+    }
+
+    private function createWalkInRegistration(Workshop $workshop, string $name, string $phone): WorkshopRegistration
+    {
+        $attendanceMode = match ($workshop->mode) {
+            'offline' => 'offline',
+            'online' => 'online',
+            default => 'online',
+        };
+
+        return WorkshopRegistration::create([
+            'workshop_id' => $workshop->id,
+            'name' => $name,
+            'phone' => $phone,
+            'attendance_mode' => $attendanceMode,
+            'status' => 'confirmed',
+            'notes' => 'تأكيد حضور مباشر — دون حجز مسبق',
+            'checkin_token' => (string) Str::uuid(),
+            'checked_in_at' => now(),
+        ]);
     }
 
     public function findRegistration(Workshop $workshop, string $name, string $phone): ?WorkshopRegistration

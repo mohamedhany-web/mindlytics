@@ -93,8 +93,14 @@
                 </div>
                 <h1 class="text-3xl sm:text-4xl font-black text-slate-900 mb-3">تأكيد حضور الورشة</h1>
                 <p class="text-slate-600 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
-                    أدخل اسمك ورقم هاتفك كما سجّلتهما عند الحجز لتأكيد حضورك واستحقاقك لشهادة الورشة.
+                    سجّل حضورك باسمك ورقم هاتفك — <strong>لا يشترط الحجز المسبق</strong>. تظهر أسماء المؤكدين في القائمة أدناه.
                 </p>
+                @if(($confirmedCount ?? 0) > 0)
+                    <p class="mt-3 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100 text-emerald-800 text-sm font-bold">
+                        <i class="fas fa-users"></i>
+                        {{ number_format($confirmedCount) }} أكّدوا الحضور
+                    </p>
+                @endif
             </div>
         </section>
 
@@ -134,7 +140,7 @@
                         <div class="mt-5 pt-4 border-t border-slate-100">
                             <p class="text-xs text-slate-500 leading-relaxed">
                                 <i class="fas fa-info-circle text-blue-500 ml-1"></i>
-                                يجب أن تطابق البيانات ما أدخلته وقت التسجيل. بعد التأكيد، يُراجع فريق الأكاديمية حضورك لإصدار الشهادة.
+                                حتى لو لم تحجز مسبقاً يمكنك التأكيد الآن. إن حجزت سابقاً، أدخل نفس الاسم والهاتف.
                             </p>
                         </div>
                     </div>
@@ -187,45 +193,75 @@
                             </div>
                         @endif
 
-                        @unless(session('success') || session('info'))
-                            <form method="POST" action="{{ route('public.workshops.confirm.store', $workshop->slug) }}" class="space-y-5">
-                                @csrf
+                        <form method="POST" action="{{ route('public.workshops.confirm.store', $workshop->slug) }}" class="space-y-5">
+                            @csrf
 
-                                <div>
-                                    <label for="name" class="block text-sm font-bold text-slate-800 mb-2">
-                                        الاسم الكامل <span class="text-rose-500">*</span>
-                                    </label>
-                                    <input type="text" id="name" name="name" value="{{ old('name') }}"
-                                           class="form-input" placeholder="كما سجّلته عند الحجز" required autocomplete="name">
-                                </div>
-
-                                <div>
-                                    <label for="phone" class="block text-sm font-bold text-slate-800 mb-2">
-                                        رقم الهاتف / واتساب <span class="text-rose-500">*</span>
-                                    </label>
-                                    <input type="tel" id="phone" name="phone" value="{{ old('phone') }}"
-                                           class="form-input" placeholder="01xxxxxxxxx أو 201xxxxxxxxx" required autocomplete="tel" dir="ltr">
-                                    <p class="text-[11px] text-slate-500 mt-1.5">استخدم نفس الرقم الذي أدخلته عند التسجيل.</p>
-                                </div>
-
-                                <button type="submit"
-                                        class="btn-primary w-full inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold text-white shadow-lg">
-                                    <i class="fas fa-circle-check"></i>
-                                    <span>تأكيد حضوري</span>
-                                </button>
-
-                                <p class="text-[11px] text-slate-500 text-center leading-relaxed">
-                                    بالضغط على «تأكيد حضوري» أنت تؤكد مشاركتك في الورشة وتوافق على استخدام بياناتك لإصدار الشهادة.
-                                </p>
-                            </form>
-                        @else
-                            <div class="text-center py-4">
-                                <a href="{{ url('/') }}" class="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700">
-                                    <i class="fas fa-home"></i>
-                                    العودة للصفحة الرئيسية
-                                </a>
+                            <div>
+                                <label for="name" class="block text-sm font-bold text-slate-800 mb-2">
+                                    الاسم الكامل <span class="text-rose-500">*</span>
+                                </label>
+                                <input type="text" id="name" name="name" value="{{ old('name') }}"
+                                       class="form-input" placeholder="اسمك كما تريد أن يظهر في الشهادة" required autocomplete="name">
                             </div>
-                        @endunless
+
+                            <div>
+                                <label for="phone" class="block text-sm font-bold text-slate-800 mb-2">
+                                    رقم الهاتف / واتساب <span class="text-rose-500">*</span>
+                                </label>
+                                <input type="tel" id="phone" name="phone" value="{{ old('phone') }}"
+                                       class="form-input" placeholder="01xxxxxxxxx أو 201xxxxxxxxx" required autocomplete="tel" dir="ltr">
+                            </div>
+
+                            <button type="submit"
+                                    class="btn-primary w-full inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold text-white shadow-lg">
+                                <i class="fas fa-circle-check"></i>
+                                <span>تأكيد حضوري</span>
+                            </button>
+
+                            <p class="text-[11px] text-slate-500 text-center leading-relaxed">
+                                بالضغط على «تأكيد حضوري» أنت تؤكد مشاركتك في الورشة وتوافق على استخدام بياناتك لإصدار الشهادة.
+                            </p>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            {{-- قائمة من أكّدوا الحضور --}}
+            <div class="max-w-4xl mx-auto mt-8">
+                <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                    <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
+                                <i class="fas fa-list-check text-emerald-600"></i>
+                                من أكّدوا الحضور
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-0.5">الأسماء تظهر هنا فور التأكيد</p>
+                        </div>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-sm font-bold">
+                            {{ number_format($confirmedCount ?? 0) }}
+                        </span>
+                    </div>
+                    <div class="max-h-[420px] overflow-y-auto">
+                        @forelse($confirmedAttendees ?? [] as $attendee)
+                            <div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50/80">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <span class="flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center text-xs font-bold">
+                                        {{ mb_substr($attendee->name, 0, 1) }}
+                                    </span>
+                                    <span class="font-semibold text-slate-800 truncate">{{ $attendee->name }}</span>
+                                </div>
+                                <span class="text-[11px] text-slate-400 whitespace-nowrap flex-shrink-0">
+                                    <i class="fas fa-check-circle text-emerald-500 ml-1"></i>
+                                    {{ $attendee->checked_in_at?->format('Y-m-d H:i') }}
+                                </span>
+                            </div>
+                        @empty
+                            <div class="px-6 py-14 text-center text-slate-500">
+                                <i class="fas fa-user-clock text-3xl text-slate-300 mb-3 block"></i>
+                                <p class="text-sm font-medium">لا يوجد مؤكدون بعد</p>
+                                <p class="text-xs mt-1">كن أول من يؤكد حضوره من النموذج أعلاه</p>
+                            </div>
+                        @endforelse
                     </div>
                 </div>
             </div>

@@ -55,9 +55,16 @@ foreach ($registrations as $reg) {
     }
 }
 
-$result = $service->confirmByNameAndPhone($workshop, 'Unknown Person', '01999999999');
-echo ($result['status'] === 'not_found' ? 'OK  ' : 'FAIL')." unknown registration => {$result['status']}\n";
-if ($result['status'] !== 'not_found') {
+// negative walk-in should create
+$walkIn = $service->confirmByNameAndPhone($workshop, 'زائر جديد', '01555555555');
+echo ($walkIn['status'] === 'created' ? 'OK  ' : 'FAIL')." walk-in => {$walkIn['status']}\n";
+if ($walkIn['status'] !== 'created') {
+    $failed++;
+}
+
+$unknown = $service->confirmByNameAndPhone($workshop, 'Unknown Person', '01999999999');
+echo ($unknown['status'] === 'created' || $unknown['status'] === 'already' ? 'OK  ' : 'FAIL')." new phone => {$unknown['status']}\n";
+if (! in_array($unknown['status'], ['created', 'already'], true)) {
     $failed++;
 }
 

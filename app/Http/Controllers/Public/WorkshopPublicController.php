@@ -72,8 +72,11 @@ class WorkshopPublicController extends Controller
     public function showConfirm(string $slug)
     {
         $workshop = Workshop::where('slug', $slug)->firstOrFail();
+        $attendanceService = app(WorkshopAttendanceService::class);
+        $confirmedAttendees = $attendanceService->confirmedAttendees($workshop);
+        $confirmedCount = $confirmedAttendees->count();
 
-        return view('public.workshop-confirm', compact('workshop'));
+        return view('public.workshop-confirm', compact('workshop', 'confirmedAttendees', 'confirmedCount'));
     }
 
     public function confirmAttendance(Request $request, string $slug)
@@ -91,13 +94,10 @@ class WorkshopPublicController extends Controller
             $data['phone']
         );
 
-        if ($result['status'] === 'not_found') {
-            return back()
-                ->with('error', $result['message'])
-                ->withInput();
-        }
-
-        $flashKey = $result['status'] === 'already' ? 'info' : 'success';
+        $flashKey = match ($result['status']) {
+            'already' => 'info',
+            default => 'success',
+        };
 
         return back()
             ->with($flashKey, $result['message'])
