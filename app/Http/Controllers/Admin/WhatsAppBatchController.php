@@ -96,6 +96,10 @@ class WhatsAppBatchController extends Controller
 
     public function retry(WhatsAppBatch $batch)
     {
+        if ($batch->status === 'cancelled') {
+            return back()->with('error', 'هذه الدفعة موقوفة.');
+        }
+
         if ($batch->pendingCount() === 0 && $batch->isFinished()) {
             return back()->with('error', 'لا توجد رسائل معلّقة في هذه الدفعة.');
         }
@@ -103,5 +107,20 @@ class WhatsAppBatchController extends Controller
         $this->batchService->retryBatch($batch);
 
         return back()->with('success', 'تم إعادة تشغيل الإرسال — انتظر بضع ثوانٍ ثم حدّث الصفحة.');
+    }
+
+    public function cancel(WhatsAppBatch $batch)
+    {
+        if ($batch->isFinished()) {
+            return back()->with('error', 'الدفعة منتهية بالفعل — لا يمكن إيقافها.');
+        }
+
+        $stopped = $this->batchService->cancelBatch($batch);
+
+        if ($stopped === 0 && $batch->fresh()->status !== 'cancelled') {
+            return back()->with('error', 'تعذّر إيقاف الدفعة.');
+        }
+
+        return back()->with('success', 'تم إيقاف الإرسال — ' . $stopped . ' رسالة متبقية لن تُرسل.');
     }
 }

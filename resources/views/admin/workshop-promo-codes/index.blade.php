@@ -138,7 +138,7 @@
         <div class="px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
             <div>
                 <h2 class="text-lg font-bold text-slate-800">آخر التفعيلات</h2>
-                <p class="text-sm text-slate-500 mt-0.5">من سجّل وفعّل كود ورشة — يظهر هنا فور التسجيل</p>
+                <p class="text-sm text-slate-500 mt-0.5">من سجّل وفعّل كود ورشة — يظهر هنا فور التسجيل. يمكنك إسناد كل تفعيل لموظف مبيعات مع متابعة مجدولة.</p>
             </div>
             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-50 text-violet-700 text-sm font-medium">
                 <i class="fas fa-bolt text-xs"></i>
@@ -155,6 +155,9 @@
                         <th class="px-4 py-3 text-right font-semibold">الخصم</th>
                         <th class="px-4 py-3 text-right font-semibold">الحالة</th>
                         <th class="px-4 py-3 text-right font-semibold">تاريخ التفعيل</th>
+                        <th class="px-4 py-3 text-right font-semibold">مسند إلى</th>
+                        <th class="px-4 py-3 text-right font-semibold">متابعة</th>
+                        <th class="px-4 py-3 text-right font-semibold">المبيعات</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -197,10 +200,11 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-slate-600 whitespace-nowrap">{{ $act->activated_at?->format('Y-m-d H:i') ?? '—' }}</td>
+                            @include('admin.workshop-promo-codes._activation_sales_cells', ['act' => $act])
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-12 text-center text-slate-500">
+                            <td colspan="9" class="px-6 py-12 text-center text-slate-500">
                                 <i class="fas fa-user-clock text-3xl text-slate-300 mb-2 block"></i>
                                 لا توجد تفعيلات بعد — عند تسجيل طالب بكود ورشة سيظهر هنا مباشرة
                             </td>

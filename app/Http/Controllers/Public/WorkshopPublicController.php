@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Public;
 use App\Http\Controllers\Controller;
 use App\Models\Workshop;
 use App\Models\WorkshopRegistration;
+use App\Services\WorkshopAttendanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -66,6 +67,41 @@ class WorkshopPublicController extends Controller
         WorkshopRegistration::create($data);
 
         return back()->with('success', 'تم استلام طلب التسجيل في الورشة بنجاح. سنقوم بالتواصل معك في حال وجود أي تفاصيل إضافية.');
+    }
+
+    public function showConfirm(string $slug)
+    {
+        $workshop = Workshop::where('slug', $slug)->firstOrFail();
+
+        return view('public.workshop-confirm', compact('workshop'));
+    }
+
+    public function confirmAttendance(Request $request, string $slug)
+    {
+        $workshop = Workshop::where('slug', $slug)->firstOrFail();
+
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:50',
+        ]);
+
+        $result = app(WorkshopAttendanceService::class)->confirmByNameAndPhone(
+            $workshop,
+            $data['name'],
+            $data['phone']
+        );
+
+        if ($result['status'] === 'not_found') {
+            return back()
+                ->with('error', $result['message'])
+                ->withInput();
+        }
+
+        $flashKey = $result['status'] === 'already' ? 'info' : 'success';
+
+        return back()
+            ->with($flashKey, $result['message'])
+            ->with('confirmed_registration', $result['registration']);
     }
 }
 

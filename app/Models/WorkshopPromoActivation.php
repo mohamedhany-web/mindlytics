@@ -18,6 +18,7 @@ class WorkshopPromoActivation extends Model
     protected $fillable = [
         'workshop_promo_code_id',
         'user_id',
+        'sales_lead_id',
         'coupon_id',
         'status',
         'activated_at',
@@ -39,6 +40,11 @@ class WorkshopPromoActivation extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function salesLead(): BelongsTo
+    {
+        return $this->belongsTo(SalesLead::class);
     }
 
     public function coupon(): BelongsTo

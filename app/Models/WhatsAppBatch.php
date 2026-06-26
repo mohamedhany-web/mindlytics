@@ -72,7 +72,7 @@ class WhatsAppBatch extends Model
             'pending' => 'في الانتظار',
             'processing' => 'جاري الإرسال',
             'completed' => 'اكتمل',
-            'cancelled' => 'ملغى',
+            'cancelled' => 'موقوف',
             default => $this->status,
         };
     }

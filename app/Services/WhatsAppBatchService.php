@@ -93,6 +93,10 @@ class WhatsAppBatchService
 
     public function retryBatch(WhatsAppBatch $batch): void
     {
+        if ($batch->status === 'cancelled') {
+            throw new \RuntimeException('هذه الدفعة موقوفة — لا يمكن إعادة التشغيل تلقائياً.');
+        }
+
         WhatsAppBatchItem::query()
             ->where('batch_id', $batch->id)
             ->where('status', 'processing')
@@ -112,6 +116,35 @@ class WhatsAppBatchService
         self::dispatchBatch($batch->id);
     }
 
+    public function cancelBatch(WhatsAppBatch $batch): int
+    {
+        if ($batch->isFinished()) {
+            return 0;
+        }
+
+        Cache::put('wa_batch_cancelled_' . $batch->id, true, now()->addDays(7));
+
+        $count = WhatsAppBatchItem::query()
+            ->where('batch_id', $batch->id)
+            ->whereIn('status', ['pending', 'processing'])
+            ->update([
+                'status' => 'cancelled',
+                'error_message' => 'تم إيقاف الإرسال يدوياً',
+            ]);
+
+        $batch->update([
+            'status' => 'cancelled',
+            'completed_at' => now(),
+        ]);
+
+        return $count;
+    }
+
+    public static function isCancelled(int $batchId): bool
+    {
+        return (bool) Cache::get('wa_batch_cancelled_' . $batchId);
+    }
+
     /**
      * جدولة معالجة الدفعة.
      * - أول تشغيل: بعد إرسال الرد للمتصفح (لا يعلّق صفحة الإدارة).
@@ -119,6 +152,11 @@ class WhatsAppBatchService
      */
     public static function dispatchBatch(int $batchId, bool $afterResponse = false): void
     {
+        $batch = WhatsAppBatch::find($batchId);
+        if (! $batch || $batch->status === 'cancelled' || self::isCancelled($batchId)) {
+            return;
+        }
+
         Cache::put('wa_batch_dispatched_' . $batchId, now()->timestamp, now()->addHours(6));
 
         if ($afterResponse && config('whatsapp.dispatch_after_response', true)) {

@@ -46,6 +46,7 @@ class WhatsAppBatchItem extends Model
             'processing' => 'جاري الإرسال',
             'sent' => 'تم الإرسال',
             'failed' => 'فشل',
+            'cancelled' => 'موقوف',
             default => $this->status,
         };
     }

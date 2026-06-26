@@ -37,6 +37,7 @@
                     <span id="batch-status-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border
                         @if($batch->status === 'processing') bg-sky-100 text-sky-800 border-sky-200
                         @elseif($batch->status === 'completed') bg-emerald-100 text-emerald-800 border-emerald-200
+                        @elseif($batch->status === 'cancelled') bg-slate-200 text-slate-800 border-slate-300
                         @else bg-amber-100 text-amber-800 border-amber-200 @endif">
                         <i id="batch-status-icon" class="fas {{ $batch->status === 'processing' ? 'fa-spinner fa-spin' : 'fa-info-circle' }}"></i>
                         <span id="batch-status-label">{{ $batch->statusLabel() }}</span>
@@ -64,15 +65,25 @@
                     <p class="text-amber-700/80">متبقي</p>
                 </div>
             </div>
-            @if($batch->pendingCount() > 0)
-                <form method="POST" action="{{ route('admin.whatsapp.batches.retry', $batch) }}" class="px-5 pb-5">
-                    @csrf
-                    <button type="submit" class="{{ $waBtnPrimary }} !text-sm">
-                        <i class="fas fa-redo"></i>
-                        إعادة تشغيل الإرسال ({{ $batch->pendingCount() }} معلّقة)
-                    </button>
-                    <p class="text-[11px] text-slate-500 mt-2">إذا بقيت «في الانتظار» أكثر من دقيقة، اضغط هنا بعد رفع آخر تحديث.</p>
-                </form>
+            @if(!$batch->isFinished() && $batch->pendingCount() > 0)
+                <div class="flex flex-wrap items-center gap-3 px-5 pb-5">
+                    <form method="POST" action="{{ route('admin.whatsapp.batches.cancel', $batch) }}"
+                          onsubmit="return confirm('إيقاف الإرسال؟\n\nلن تُرسل الرسائل المتبقية ({{ $batch->pendingCount() }}). الرسائل التي أُرسلت بالفعل تبقى كما هي.');">
+                        @csrf
+                        <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-rose-600 hover:bg-rose-700 text-white">
+                            <i class="fas fa-stop"></i>
+                            إيقاف الإرسال
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ route('admin.whatsapp.batches.retry', $batch) }}">
+                        @csrf
+                        <button type="submit" class="{{ $waBtnPrimary }} !text-sm">
+                            <i class="fas fa-redo"></i>
+                            إعادة تشغيل ({{ $batch->pendingCount() }} معلّقة)
+                        </button>
+                    </form>
+                    <p class="text-[11px] text-slate-500 w-full">إذا بقيت «في الانتظار» أكثر من دقيقة، جرّب إعادة التشغيل — أو أوقف الدفعة.</p>
+                </div>
             @endif
         </div>
     </section>

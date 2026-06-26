@@ -98,6 +98,10 @@
                     <i class="fas fa-external-link-alt"></i>
                     {{ route('public.workshops.show', $workshop->slug) }}
                 </a>
+                <a href="{{ route('public.workshops.confirm.show', $workshop->slug) }}" target="_blank" class="inline-flex items-center gap-1 text-xs text-indigo-600 hover:underline mt-1">
+                    <i class="fas fa-certificate"></i>
+                    صفحة تأكيد الحضور (للشهادات): {{ route('public.workshops.confirm.show', $workshop->slug) }}
+                </a>
             </div>
             <div class="flex flex-wrap gap-2">
                 <a href="{{ route('admin.workshops.index') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">
@@ -108,6 +112,9 @@
                 </a>
                 <a href="{{ route('admin.workshops.export', $workshop) }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold">
                     <i class="fas fa-file-csv"></i> CSV
+                </a>
+                <a href="{{ route('public.workshops.confirm.show', $workshop->slug) }}" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold">
+                    <i class="fas fa-certificate"></i> تأكيد الحضور
                 </a>
                 <button type="button" @click="$dispatch('open-checkin-modal')" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold">
                     <i class="fas fa-qrcode"></i> حضور QR

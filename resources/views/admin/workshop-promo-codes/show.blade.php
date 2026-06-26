@@ -43,6 +43,9 @@
                         <th class="px-4 py-3 text-right">تاريخ التفعيل</th>
                         <th class="px-4 py-3 text-right">الحالة</th>
                         <th class="px-4 py-3 text-right">كوبون مرتبط</th>
+                        <th class="px-4 py-3 text-right">مسند إلى</th>
+                        <th class="px-4 py-3 text-right">متابعة</th>
+                        <th class="px-4 py-3 text-right">المبيعات</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -65,9 +68,10 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3 font-mono text-xs">{{ $act->coupon?->code ?? '—' }}</td>
+                            @include('admin.workshop-promo-codes._activation_sales_cells', ['act' => $act])
                         </tr>
                     @empty
-                        <tr><td colspan="4" class="px-6 py-12 text-center text-slate-500">لم يفعّل أحد هذا الكود بعد</td></tr>
+                        <tr><td colspan="7" class="px-6 py-12 text-center text-slate-500">لم يفعّل أحد هذا الكود بعد</td></tr>
                     @endforelse
                 </tbody>
             </table>

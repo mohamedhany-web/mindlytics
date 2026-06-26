@@ -59,6 +59,10 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
             return false;
         }
 
+        if ($batch->status === 'cancelled' || WhatsAppBatchService::isCancelled($batch->id)) {
+            return false;
+        }
+
         if ($batch->status === 'completed' && $batch->pendingCount() === 0) {
             return false;
         }
@@ -80,6 +84,11 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
             ->get();
 
         foreach ($items as $item) {
+            $batch->refresh();
+            if ($batch->status === 'cancelled' || WhatsAppBatchService::isCancelled($batch->id)) {
+                return false;
+            }
+
             $claimed = WhatsAppBatchItem::query()
                 ->where('id', $item->id)
                 ->where('status', 'pending')

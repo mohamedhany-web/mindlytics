@@ -489,6 +489,10 @@ Route::get('/workshops/{slug}', [\App\Http\Controllers\Public\WorkshopPublicCont
     ->name('public.workshops.show');
 Route::post('/workshops/{slug}/register', [\App\Http\Controllers\Public\WorkshopPublicController::class, 'register'])
     ->name('public.workshops.register');
+Route::get('/workshops/{slug}/confirm', [\App\Http\Controllers\Public\WorkshopPublicController::class, 'showConfirm'])
+    ->name('public.workshops.confirm.show');
+Route::post('/workshops/{slug}/confirm', [\App\Http\Controllers\Public\WorkshopPublicController::class, 'confirmAttendance'])
+    ->name('public.workshops.confirm.store');
 
 // حجز مجموعة كورس أوفلاين (رابط عام — تصميم مشابه لصفحة الدفع)
 Route::get('/offline-groups/{slug}', [\App\Http\Controllers\Public\OfflineGroupPublicBookingController::class, 'show'])
@@ -1593,6 +1597,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/batches/{batch}', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'show'])->name('batches.show');
             Route::get('/batches/{batch}/status', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'statusJson'])->name('batches.status');
             Route::post('/batches/{batch}/retry', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'retry'])->name('batches.retry');
+            Route::post('/batches/{batch}/cancel', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'cancel'])->name('batches.cancel');
         });
 
         // إدارة الرسائل والتقارير
@@ -1803,6 +1808,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::resource('referral-programs', \App\Http\Controllers\Admin\ReferralProgramController::class);
         Route::get('workshop-promo-codes/preview-discount', [\App\Http\Controllers\Admin\WorkshopPromoCodeController::class, 'previewDiscount'])
             ->name('workshop-promo-codes.preview-discount');
+        Route::post('workshop-promo-activations/{activation}/sales-task', [\App\Http\Controllers\Admin\WorkshopPromoCodeController::class, 'storeActivationSalesTask'])
+            ->name('workshop-promo-activations.sales-task');
         Route::resource('workshop-promo-codes', \App\Http\Controllers\Admin\WorkshopPromoCodeController::class);
         
         // إدارة الإحالات

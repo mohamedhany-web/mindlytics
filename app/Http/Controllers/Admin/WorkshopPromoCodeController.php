@@ -7,9 +7,12 @@ use App\Models\AdvancedCourse;
 use App\Models\OfflineCourse;
 use App\Models\User;
 use App\Models\Workshop;
+use App\Models\SalesLeadGroup;
 use App\Models\WorkshopPromoActivation;
 use App\Models\WorkshopPromoCode;
+use App\Services\WorkshopPromoSalesService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -62,15 +65,20 @@ class WorkshopPromoCodeController extends Controller
         if (Schema::hasTable('workshop_promo_activations')) {
             $stats['activations'] = WorkshopPromoActivation::count();
             $stats['used'] = WorkshopPromoActivation::where('status', 'used')->count();
-            $recentActivations = WorkshopPromoActivation::with(['user', 'promoCode.workshop'])
+            $recentActivations = WorkshopPromoActivation::with(['user', 'promoCode.workshop', 'salesLead.assignee'])
                 ->latest('activated_at')
                 ->limit(25)
                 ->get();
+            app(WorkshopPromoSalesService::class)->attachLeads($recentActivations);
         }
 
         $workshops = Workshop::orderByDesc('starts_at')->limit(50)->get(['id', 'title', 'slug']);
+        $salesForm = $this->salesFormData();
 
-        return view('admin.workshop-promo-codes.index', compact('promoCodes', 'stats', 'workshops', 'recentActivations'));
+        return view('admin.workshop-promo-codes.index', array_merge(
+            compact('promoCodes', 'stats', 'workshops', 'recentActivations'),
+            $salesForm
+        ));
     }
 
     public function create()
@@ -98,7 +106,10 @@ class WorkshopPromoCodeController extends Controller
             'creator',
             'activations.user',
             'activations.coupon',
+            'activations.salesLead.assignee',
         ]);
+
+        app(WorkshopPromoSalesService::class)->attachLeads($workshopPromoCode->activations);
 
         $stats = [
             'activations' => $workshopPromoCode->activations()->count(),
@@ -106,7 +117,10 @@ class WorkshopPromoCodeController extends Controller
             'used' => $workshopPromoCode->activations()->where('status', 'used')->count(),
         ];
 
-        return view('admin.workshop-promo-codes.show', compact('workshopPromoCode', 'stats'));
+        return view('admin.workshop-promo-codes.show', array_merge(
+            compact('workshopPromoCode', 'stats'),
+            $this->salesFormData()
+        ));
     }
 
     public function edit(WorkshopPromoCode $workshopPromoCode)
@@ -139,6 +153,33 @@ class WorkshopPromoCodeController extends Controller
 
         return redirect()->route('admin.workshop-promo-codes.index')
             ->with('success', 'تم حذف الكود');
+    }
+
+    public function storeActivationSalesTask(Request $request, WorkshopPromoActivation $activation)
+    {
+        $validated = $request->validate([
+            'assigned_to' => 'required|integer|exists:users,id',
+            'next_follow_up_at' => 'required|date|after_or_equal:today',
+            'sales_lead_group_id' => 'nullable|integer|exists:sales_lead_groups,id',
+            'task_notes' => 'nullable|string|max:2000',
+        ]);
+
+        try {
+            $lead = app(WorkshopPromoSalesService::class)->assignAndScheduleFollowUp(
+                $activation,
+                (int) $validated['assigned_to'],
+                Carbon::parse($validated['next_follow_up_at']),
+                isset($validated['sales_lead_group_id']) ? (int) $validated['sales_lead_group_id'] : null,
+                $validated['task_notes'] ?? null,
+            );
+
+            $repName = $lead->assignee?->name ?? 'موظف المبيعات';
+            $followUp = $lead->next_follow_up_at?->locale('ar')->translatedFormat('j F Y') ?? '';
+
+            return back()->with('success', "تم الإسناد إلى {$repName} مع متابعة يوم {$followUp}.");
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage())->withInput();
+        }
     }
 
     public function previewDiscount(Request $request)
@@ -227,6 +268,19 @@ class WorkshopPromoCodeController extends Controller
             'workshops' => Workshop::orderByDesc('starts_at')->get(['id', 'title', 'slug', 'starts_at']),
             'advancedCourses' => AdvancedCourse::where('is_active', true)->orderBy('title')->get(['id', 'title', 'price']),
             'offlineCourses' => OfflineCourse::where('is_active', true)->orderBy('title')->get(['id', 'title', 'price']),
+        ];
+    }
+
+    private function salesFormData(): array
+    {
+        return [
+            'salesReps' => User::salesEmployees()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name']),
+            'salesLeadGroups' => SalesLeadGroup::query()
+                ->orderBy('name')
+                ->get(['id', 'name']),
         ];
     }
 }
