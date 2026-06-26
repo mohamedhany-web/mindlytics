@@ -17,7 +17,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
@@ -44,17 +43,6 @@
             position: relative;
             overflow: hidden;
         }
-        .hero-section::before {
-            content: '';
-            position: absolute;
-            top: -40%;
-            right: -10%;
-            width: 420px;
-            height: 420px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(59, 130, 246, 0.12), transparent 70%);
-            pointer-events: none;
-        }
         .form-input {
             width: 100%;
             border-radius: 0.75rem;
@@ -80,10 +68,16 @@
             box-shadow: 0 10px 25px rgba(37, 99, 235, 0.35);
         }
         main { flex: 1 0 auto; padding-top: 4.5rem; }
+        @if(request()->boolean('embed'))
+        .navbar-gradient { display: none !important; }
+        main { padding-top: 1rem !important; }
+        @endif
     </style>
 </head>
 <body>
-    @include('components.unified-navbar')
+    @unless(request()->boolean('embed'))
+        @include('components.unified-navbar')
+    @endunless
 
     <main>
         <section class="hero-section pt-10 pb-8 sm:pt-14 sm:pb-10 px-4">
@@ -93,20 +87,13 @@
                 </div>
                 <h1 class="text-3xl sm:text-4xl font-black text-slate-900 mb-3">تأكيد حضور الورشة</h1>
                 <p class="text-slate-600 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
-                    سجّل حضورك باسمك ورقم هاتفك — <strong>لا يشترط الحجز المسبق</strong>. تظهر أسماء المؤكدين في القائمة أدناه.
+                    أدخل اسمك ورقم هاتفك لتأكيد حضورك واستحقاقك لشهادة الورشة.
                 </p>
-                @if(($confirmedCount ?? 0) > 0)
-                    <p class="mt-3 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100 text-emerald-800 text-sm font-bold">
-                        <i class="fas fa-users"></i>
-                        {{ number_format($confirmedCount) }} أكّدوا الحضور
-                    </p>
-                @endif
             </div>
         </section>
 
         <section class="px-4 pb-16 -mt-2">
             <div class="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-6">
-                {{-- معلومات الورشة --}}
                 <div class="lg:col-span-2">
                     <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 h-full">
                         <p class="text-xs font-bold text-blue-600 uppercase tracking-wide mb-2">الورشة</p>
@@ -127,141 +114,91 @@
                             <div class="flex items-start gap-2">
                                 <i class="fas fa-{{ $workshop->mode === 'online' ? 'globe' : ($workshop->mode === 'offline' ? 'building' : 'people-arrows') }} text-emerald-500 mt-0.5"></i>
                                 <span>
-                                    @if($workshop->mode === 'online')
-                                        حضور أونلاين
-                                    @elseif($workshop->mode === 'offline')
-                                        حضور في المكان
-                                    @else
-                                        أونلاين أو في المكان
+                                    @if($workshop->mode === 'online') حضور أونلاين
+                                    @elseif($workshop->mode === 'offline') حضور في المكان
+                                    @else أونلاين أو في المكان
                                     @endif
                                 </span>
                             </div>
                         </div>
-                        <div class="mt-5 pt-4 border-t border-slate-100">
-                            <p class="text-xs text-slate-500 leading-relaxed">
-                                <i class="fas fa-info-circle text-blue-500 ml-1"></i>
-                                حتى لو لم تحجز مسبقاً يمكنك التأكيد الآن. إن حجزت سابقاً، أدخل نفس الاسم والهاتف.
-                            </p>
-                        </div>
                     </div>
                 </div>
 
-                {{-- فورم التأكيد --}}
                 <div class="lg:col-span-3">
                     <div class="rounded-2xl border border-slate-200 bg-white shadow-lg p-6 sm:p-8">
                         @if(session('success'))
-                            <div class="mb-5 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm">
-                                <div class="flex items-start gap-3">
-                                    <i class="fas fa-check-circle text-emerald-600 text-lg mt-0.5"></i>
-                                    <div>
-                                        <p class="font-bold mb-1">تم التأكيد</p>
-                                        <p>{{ session('success') }}</p>
-                                        @if($confirmed)
-                                            <p class="text-xs text-emerald-700 mt-2">الاسم: {{ $confirmed->name }} — {{ $confirmed->checked_in_at?->format('Y-m-d H:i') }}</p>
-                                        @endif
-                                    </div>
+                            <div class="p-5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm text-center">
+                                <i class="fas fa-check-circle text-emerald-600 text-3xl mb-3 block"></i>
+                                <p class="font-bold text-lg mb-2">تم التأكيد</p>
+                                <p>{{ session('success') }}</p>
+                                @if($confirmed)
+                                    <p class="text-xs text-emerald-700 mt-3">{{ $confirmed->name }} — {{ $confirmed->checked_in_at?->format('Y-m-d H:i') }}</p>
+                                @endif
+                                @unless(request()->boolean('embed'))
+                                    <a href="{{ url('/') }}" class="inline-flex items-center gap-2 mt-5 text-sm font-semibold text-blue-600 hover:text-blue-700">
+                                        <i class="fas fa-home"></i> العودة للرئيسية
+                                    </a>
+                                @endunless
+                            </div>
+                        @elseif(session('info'))
+                            <div class="p-5 rounded-xl bg-sky-50 border border-sky-200 text-sky-800 text-sm text-center">
+                                <i class="fas fa-circle-info text-sky-600 text-3xl mb-3 block"></i>
+                                <p class="font-bold text-lg mb-2">سبق التأكيد</p>
+                                <p>{{ session('info') }}</p>
+                                @unless(request()->boolean('embed'))
+                                    <a href="{{ url('/') }}" class="inline-flex items-center gap-2 mt-5 text-sm font-semibold text-blue-600 hover:text-blue-700">
+                                        <i class="fas fa-home"></i> العودة للرئيسية
+                                    </a>
+                                @endunless
+                            </div>
+                        @else
+                            @if(session('error'))
+                                <div class="mb-5 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-start gap-3">
+                                    <i class="fas fa-exclamation-circle text-rose-600 mt-0.5"></i>
+                                    <span>{{ session('error') }}</span>
                                 </div>
-                            </div>
-                        @endif
+                            @endif
 
-                        @if(session('info'))
-                            <div class="mb-5 p-4 rounded-xl bg-sky-50 border border-sky-200 text-sky-800 text-sm">
-                                <div class="flex items-start gap-3">
-                                    <i class="fas fa-circle-info text-sky-600 text-lg mt-0.5"></i>
-                                    <div>
-                                        <p class="font-bold mb-1">سبق التأكيد</p>
-                                        <p>{{ session('info') }}</p>
-                                    </div>
+                            @if($errors->any())
+                                <div class="mb-5 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm">
+                                    <ul class="list-disc list-inside space-y-1">
+                                        @foreach($errors->all() as $error)
+                                            <li>{{ $error }}</li>
+                                        @endforeach
+                                    </ul>
                                 </div>
-                            </div>
-                        @endif
+                            @endif
 
-                        @if(session('error'))
-                            <div class="mb-5 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-start gap-3">
-                                <i class="fas fa-exclamation-circle text-rose-600 mt-0.5"></i>
-                                <span>{{ session('error') }}</span>
-                            </div>
-                        @endif
+                            <form method="POST" action="{{ route('public.workshops.confirm.store', $workshop->slug) }}" class="space-y-5">
+                                @csrf
 
-                        @if($errors->any())
-                            <div class="mb-5 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm">
-                                <ul class="list-disc list-inside space-y-1">
-                                    @foreach($errors->all() as $error)
-                                        <li>{{ $error }}</li>
-                                    @endforeach
-                                </ul>
-                            </div>
-                        @endif
-
-                        <form method="POST" action="{{ route('public.workshops.confirm.store', $workshop->slug) }}" class="space-y-5">
-                            @csrf
-
-                            <div>
-                                <label for="name" class="block text-sm font-bold text-slate-800 mb-2">
-                                    الاسم الكامل <span class="text-rose-500">*</span>
-                                </label>
-                                <input type="text" id="name" name="name" value="{{ old('name') }}"
-                                       class="form-input" placeholder="اسمك كما تريد أن يظهر في الشهادة" required autocomplete="name">
-                            </div>
-
-                            <div>
-                                <label for="phone" class="block text-sm font-bold text-slate-800 mb-2">
-                                    رقم الهاتف / واتساب <span class="text-rose-500">*</span>
-                                </label>
-                                <input type="tel" id="phone" name="phone" value="{{ old('phone') }}"
-                                       class="form-input" placeholder="01xxxxxxxxx أو 201xxxxxxxxx" required autocomplete="tel" dir="ltr">
-                            </div>
-
-                            <button type="submit"
-                                    class="btn-primary w-full inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold text-white shadow-lg">
-                                <i class="fas fa-circle-check"></i>
-                                <span>تأكيد حضوري</span>
-                            </button>
-
-                            <p class="text-[11px] text-slate-500 text-center leading-relaxed">
-                                بالضغط على «تأكيد حضوري» أنت تؤكد مشاركتك في الورشة وتوافق على استخدام بياناتك لإصدار الشهادة.
-                            </p>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            {{-- قائمة من أكّدوا الحضور --}}
-            <div class="max-w-4xl mx-auto mt-8">
-                <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                    <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                            <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
-                                <i class="fas fa-list-check text-emerald-600"></i>
-                                من أكّدوا الحضور
-                            </h2>
-                            <p class="text-xs text-slate-500 mt-0.5">الأسماء تظهر هنا فور التأكيد</p>
-                        </div>
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-sm font-bold">
-                            {{ number_format($confirmedCount ?? 0) }}
-                        </span>
-                    </div>
-                    <div class="max-h-[420px] overflow-y-auto">
-                        @forelse($confirmedAttendees ?? [] as $attendee)
-                            <div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50/80">
-                                <div class="flex items-center gap-3 min-w-0">
-                                    <span class="flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center text-xs font-bold">
-                                        {{ mb_substr($attendee->name, 0, 1) }}
-                                    </span>
-                                    <span class="font-semibold text-slate-800 truncate">{{ $attendee->name }}</span>
+                                <div>
+                                    <label for="name" class="block text-sm font-bold text-slate-800 mb-2">
+                                        الاسم الكامل <span class="text-rose-500">*</span>
+                                    </label>
+                                    <input type="text" id="name" name="name" value="{{ old('name') }}"
+                                           class="form-input" placeholder="اسمك كما تريد أن يظهر في الشهادة" required autocomplete="name">
                                 </div>
-                                <span class="text-[11px] text-slate-400 whitespace-nowrap flex-shrink-0">
-                                    <i class="fas fa-check-circle text-emerald-500 ml-1"></i>
-                                    {{ $attendee->checked_in_at?->format('Y-m-d H:i') }}
-                                </span>
-                            </div>
-                        @empty
-                            <div class="px-6 py-14 text-center text-slate-500">
-                                <i class="fas fa-user-clock text-3xl text-slate-300 mb-3 block"></i>
-                                <p class="text-sm font-medium">لا يوجد مؤكدون بعد</p>
-                                <p class="text-xs mt-1">كن أول من يؤكد حضوره من النموذج أعلاه</p>
-                            </div>
-                        @endforelse
+
+                                <div>
+                                    <label for="phone" class="block text-sm font-bold text-slate-800 mb-2">
+                                        رقم الهاتف / واتساب <span class="text-rose-500">*</span>
+                                    </label>
+                                    <input type="tel" id="phone" name="phone" value="{{ old('phone') }}"
+                                           class="form-input" placeholder="01xxxxxxxxx" required autocomplete="tel" dir="ltr">
+                                </div>
+
+                                <button type="submit"
+                                        class="btn-primary w-full inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold text-white shadow-lg">
+                                    <i class="fas fa-circle-check"></i>
+                                    <span>تأكيد حضوري</span>
+                                </button>
+
+                                <p class="text-[11px] text-slate-500 text-center leading-relaxed">
+                                    بالضغط على «تأكيد حضوري» أنت تؤكد مشاركتك في الورشة وتوافق على استخدام بياناتك لإصدار الشهادة.
+                                </p>
+                            </form>
+                        @endif
                     </div>
                 </div>
             </div>

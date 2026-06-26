@@ -72,11 +72,8 @@ class WorkshopPublicController extends Controller
     public function showConfirm(string $slug)
     {
         $workshop = Workshop::where('slug', $slug)->firstOrFail();
-        $attendanceService = app(WorkshopAttendanceService::class);
-        $confirmedAttendees = $attendanceService->confirmedAttendees($workshop);
-        $confirmedCount = $confirmedAttendees->count();
 
-        return view('public.workshop-confirm', compact('workshop', 'confirmedAttendees', 'confirmedCount'));
+        return view('public.workshop-confirm', compact('workshop'));
     }
 
     public function confirmAttendance(Request $request, string $slug)

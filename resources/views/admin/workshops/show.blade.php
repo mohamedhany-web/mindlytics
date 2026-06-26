@@ -206,6 +206,54 @@
             </aside>
 
             <div class="xl:col-span-9 divide-y divide-slate-100">
+                {{-- تأكيد الحضور --}}
+                @php
+                    $confirmUrl = route('public.workshops.confirm.show', $workshop->slug);
+                @endphp
+                <div class="p-5 sm:p-6 bg-gradient-to-br from-violet-50/80 to-white">
+                    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-4">
+                        <div>
+                            <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                                <i class="fas fa-certificate text-violet-600"></i>
+                                تأكيد الحضور (الشهادات)
+                            </h3>
+                            <p class="text-xs text-slate-600 mt-1 max-w-xl">
+                                الصفحة العامة للمشاركين — يُدخلون الاسم والهاتف ويُؤكَّد حضورهم. القائمة تتحدّث تلقائياً هنا.
+                            </p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <a href="{{ $confirmUrl }}" target="_blank" rel="noopener"
+                               class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold">
+                                <i class="fas fa-external-link-alt"></i> فتح الصفحة
+                            </a>
+                            <button type="button"
+                                    onclick="navigator.clipboard.writeText(@js($confirmUrl)); this.querySelector('span').textContent='تم النسخ'; setTimeout(() => this.querySelector('span').textContent='نسخ الرابط', 2000)"
+                                    class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-violet-200 bg-white text-violet-700 text-xs font-bold hover:bg-violet-50">
+                                <i class="fas fa-copy"></i><span>نسخ الرابط</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div class="rounded-xl border border-violet-200 bg-white overflow-hidden shadow-sm">
+                            <div class="px-3 py-2 border-b border-violet-100 bg-violet-50/60 flex items-center justify-between">
+                                <p class="text-[11px] font-bold text-violet-800">معاينة الصفحة العامة</p>
+                                <a href="{{ $confirmUrl }}" target="_blank" class="text-[10px] text-violet-600 hover:underline">فتح بحجم كامل</a>
+                            </div>
+                            <iframe src="{{ $confirmUrl }}?embed=1" title="تأكيد حضور {{ $workshop->title }}"
+                                    class="w-full h-[480px] border-0 bg-slate-50" loading="lazy"></iframe>
+                        </div>
+
+                        @include('partials.workshop-confirmed-attendees-list', [
+                            'confirmedAttendees' => $confirmedAttendees,
+                            'confirmedCount' => $confirmedCount,
+                            'showPhone' => true,
+                            'maxHeight' => '480px',
+                            'subtitle' => 'يظهر الاسم فور تأكيد الحضور من الصفحة العامة',
+                        ])
+                    </div>
+                </div>
+
                 {{-- ترحيل للمبيعات --}}
                 <div class="p-5 sm:p-6 bg-gradient-to-br from-blue-50/80 to-white">
                     <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-4">
