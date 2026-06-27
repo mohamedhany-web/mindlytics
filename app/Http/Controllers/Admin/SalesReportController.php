@@ -165,13 +165,19 @@ class SalesReportController extends Controller
 
     public function pdfExport(Request $request, SalesEmployeePeriodReportService $employeeReportService, SalesEmployeeReportPdfService $pdf)
     {
+        $request->merge([
+            'user_id' => $request->filled('user_id') ? $request->input('user_id') : null,
+        ]);
+
         $validated = $request->validate([
             'date_from' => ['required', 'date'],
             'date_to' => ['required', 'date', 'after_or_equal:date_from'],
             'user_id' => ['required', 'integer', Rule::exists('users', 'id')],
             'lead_scope' => ['nullable', 'string', Rule::in(['touched', 'new', 'transferred_from_admin'])],
         ], [
-            'user_id.required' => 'اختر موظف مبيعات لتحميل التقرير PDF.',
+            'user_id.required' => 'اختر موظف مبيعات ثم اضغط «تحديث المعاينة» أو «تحميل PDF».',
+            'date_from.required' => 'حدد تاريخ البداية.',
+            'date_to.required' => 'حدد تاريخ النهاية.',
         ]);
 
         $rep = User::query()->findOrFail($validated['user_id']);

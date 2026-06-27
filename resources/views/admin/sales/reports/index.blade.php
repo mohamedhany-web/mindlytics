@@ -150,13 +150,14 @@
                         <i class="fas fa-file-excel"></i>
                         تصدير Excel كامل
                     </a>
-                    <a href="{{ route('admin.sales.reports.pdf', request()->query()) }}"
-                       x-show="userId"
-                       x-cloak
-                       class="inline-flex items-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-700 px-4 py-2 text-sm font-semibold text-white">
+                    <button type="submit"
+                            formaction="{{ route('admin.sales.reports.pdf') }}"
+                            formmethod="get"
+                            :disabled="!userId"
+                            class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 disabled:bg-slate-300 disabled:text-slate-600 disabled:cursor-not-allowed">
                         <i class="fas fa-file-pdf"></i>
                         تحميل PDF
-                    </a>
+                    </button>
                     <button type="submit"
                             formaction="{{ route('admin.sales.reports.daily-export') }}"
                             formmethod="get"
@@ -165,7 +166,7 @@
                         <i class="fas fa-calendar-day"></i>
                         تقرير يومي للموظف
                     </button>
-                    <span class="text-xs text-slate-500" x-show="!userId" x-cloak>اختر موظفاً لتفعيل التقرير اليومي.</span>
+                    <span class="text-xs text-slate-500" x-show="!userId" x-cloak>اختر موظفاً لتفعيل التقرير اليومي و PDF.</span>
                 </div>
             </form>
         </div>

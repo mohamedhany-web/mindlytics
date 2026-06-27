@@ -10,11 +10,16 @@
             <h3 class="text-base font-black text-slate-900">تقرير الموظف — {{ $selectedRep->name }}</h3>
             <p class="text-xs text-slate-600">ملخص واضح لما أنجزه الموظف خلال الفترة، وأيام الدخول، والبيانات التي أدخلها.</p>
         </div>
-        <a href="{{ route('admin.sales.reports.pdf', request()->query()) }}"
-           class="inline-flex items-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-700 px-4 py-2 text-sm font-semibold text-white">
-            <i class="fas fa-file-pdf"></i>
-            تحميل PDF
-        </a>
+        <form method="get" action="{{ route('admin.sales.reports.pdf') }}" class="inline">
+            <input type="hidden" name="date_from" value="{{ $employeeReport['start']->format('Y-m-d') }}">
+            <input type="hidden" name="date_to" value="{{ $employeeReport['end']->format('Y-m-d') }}">
+            <input type="hidden" name="user_id" value="{{ $selectedRep->id }}">
+            <input type="hidden" name="lead_scope" value="{{ $employeeReport['lead_scope'] }}">
+            <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-700 px-4 py-2 text-sm font-semibold text-white">
+                <i class="fas fa-file-pdf"></i>
+                تحميل PDF
+            </button>
+        </form>
     </div>
 
     <div class="p-4 grid grid-cols-2 lg:grid-cols-4 gap-3">
