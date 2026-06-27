@@ -37,7 +37,7 @@
                 </div>
                 <div>
                     <h2 class="text-xl font-black text-slate-900">تقارير المبيعات الشاملة</h2>
-                    <p class="text-xs text-slate-600">KPIs، العملاء المحتملون، أنشطة CRM، وسجل المبيعات — تصدير Excel جاهز للطباعة.</p>
+                    <p class="text-xs text-slate-600">KPIs، الجدول اليومي، Leads، الأنشطة — مع تصدير Excel و PDF منظم.</p>
                 </div>
             </div>
             <div class="flex flex-wrap items-center gap-2">
@@ -150,6 +150,13 @@
                         <i class="fas fa-file-excel"></i>
                         تصدير Excel كامل
                     </a>
+                    <a href="{{ route('admin.sales.reports.pdf', request()->query()) }}"
+                       x-show="userId"
+                       x-cloak
+                       class="inline-flex items-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-700 px-4 py-2 text-sm font-semibold text-white">
+                        <i class="fas fa-file-pdf"></i>
+                        تحميل PDF
+                    </a>
                     <button type="submit"
                             formaction="{{ route('admin.sales.reports.daily-export') }}"
                             formmethod="get"
@@ -176,7 +183,9 @@
             </div>
         @endif
 
-        @if($selectedRep && $periodReport)
+        @if($selectedRep && $periodReport && !empty($employeeReport))
+            @include('admin.sales.reports._employee-detail', ['employeeReport' => $employeeReport, 'selectedRep' => $selectedRep])
+
             <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
                 <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div>
@@ -243,7 +252,8 @@
             </section>
         @endif
 
-        {{-- عينات --}}
+        @if(!$selectedRep)
+        {{-- عينات للفريق فقط --}}
         <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
             <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
                 <h3 class="text-base font-black text-slate-900">معاينة سريعة</h3>
@@ -316,6 +326,7 @@
                 </div>
             </div>
         </section>
+        @endif
     @else
         <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
             <div class="p-10 text-center">

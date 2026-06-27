@@ -223,6 +223,32 @@ class WhatsAppController extends Controller
         ];
     }
 
+    public function resendMessage(WhatsAppMessage $message)
+    {
+        if ($message->status !== 'failed') {
+            return back()->with('error', 'يمكن إعادة إرسال الرسائل الفاشلة فقط.');
+        }
+
+        $result = $this->whatsapp->sendMessage(
+            $message->phone_number,
+            $message->message,
+            $message->type,
+            ['user_id' => $message->user_id]
+        );
+
+        if ($result['success'] ?? false) {
+            $message->update([
+                'status' => 'sent',
+                'sent_at' => now(),
+                'error_message' => null,
+            ]);
+
+            return back()->with('success', 'تم إعادة إرسال الرسالة بنجاح.');
+        }
+
+        return back()->with('error', $this->bridge->translateError($result['error'] ?? 'فشل إعادة الإرسال.'));
+    }
+
     public function messages(Request $request)
     {
         $messages = WhatsAppMessage::with('user')

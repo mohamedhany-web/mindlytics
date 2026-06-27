@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <title>تقرير أداء مبيعات — {{ $report['rep']->name }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'DejaVu Sans', sans-serif;
+            font-size: 10px;
+            color: #1e293b;
+            line-height: 1.45;
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            border-bottom: 3px solid #059669;
+            padding-bottom: 10px;
+            margin-bottom: 14px;
+        }
+        .header-table { width: 100%; border-collapse: collapse; }
+        .header-table td { vertical-align: middle; padding: 0; }
+        .logo { max-height: 52px; max-width: 140px; }
+        .title { font-size: 18px; font-weight: bold; color: #065f46; margin: 0 0 4px; }
+        .subtitle { font-size: 10px; color: #475569; margin: 0; }
+        .meta { font-size: 9px; color: #64748b; text-align: left; direction: ltr; }
+        h2 {
+            font-size: 12px;
+            color: #065f46;
+            border-right: 4px solid #10b981;
+            padding-right: 8px;
+            margin: 16px 0 8px;
+        }
+        .summary-grid {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+        .summary-grid td {
+            width: 25%;
+            border: 1px solid #d1fae5;
+            background: #f0fdf4;
+            padding: 8px;
+            vertical-align: top;
+        }
+        .summary-grid .label { font-size: 8px; color: #64748b; display: block; }
+        .summary-grid .value { font-size: 14px; font-weight: bold; color: #065f46; }
+        table.data {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
+            page-break-inside: auto;
+        }
+        table.data th {
+            background: #065f46;
+            color: #fff;
+            font-size: 8.5px;
+            padding: 6px 4px;
+            border: 1px solid #047857;
+            text-align: center;
+        }
+        table.data td {
+            border: 1px solid #e2e8f0;
+            padding: 5px 4px;
+            font-size: 8.5px;
+            vertical-align: top;
+        }
+        table.data tr:nth-child(even) td { background: #f8fafc; }
+        .text-center { text-align: center; }
+        .text-left { text-align: left; direction: ltr; }
+        .tone-emerald { color: #047857; font-weight: bold; }
+        .tone-amber { color: #b45309; font-weight: bold; }
+        .tone-rose { color: #be123c; font-weight: bold; }
+        .tone-slate { color: #64748b; }
+        .badge {
+            display: inline-block;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-size: 8px;
+            font-weight: bold;
+        }
+        .badge-emerald { background: #d1fae5; color: #065f46; }
+        .badge-amber { background: #fef3c7; color: #92400e; }
+        .badge-rose { background: #ffe4e6; color: #9f1239; }
+        .badge-slate { background: #f1f5f9; color: #475569; }
+        .note-box {
+            border: 1px solid #fcd34d;
+            background: #fffbeb;
+            padding: 8px;
+            margin-bottom: 10px;
+            font-size: 9px;
+        }
+        .footer {
+            margin-top: 16px;
+            padding-top: 8px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 8px;
+            color: #94a3b8;
+            text-align: center;
+        }
+        .page-break { page-break-before: always; }
+    </style>
+</head>
+<body>
+@php
+    $rep = $report['rep'];
+    $summary = $report['summary'];
+    $periodReport = $report['period_report'];
+    $logo = \App\Support\SiteBranding::logoDataUri();
+@endphp
+
+<div class="header">
+    <table class="header-table">
+        <tr>
+            <td style="width: 22%;">
+                @if($logo)
+                    <img src="{{ $logo }}" alt="Logo" class="logo">
+                @endif
+            </td>
+            <td style="width: 53%;">
+                <p class="title">تقرير أداء موظف المبيعات</p>
+                <p class="subtitle">{{ config('app.name', 'Mindlytics') }} — قسم المبيعات</p>
+                <p class="subtitle"><strong>{{ $rep->name }}</strong> · {{ $report['lead_scope_label'] }}</p>
+                <p class="subtitle">الفترة: {{ $report['start']->format('Y-m-d') }} إلى {{ $report['end']->format('Y-m-d') }} ({{ $summary['period_days'] }} يوماً)</p>
+                @if($summary['joined_at'])
+                    <p class="subtitle">تاريخ الانضمام للمنصة: {{ $summary['joined_at']->format('Y-m-d') }}</p>
+                @endif
+            </td>
+            <td class="meta" style="width: 25%;">
+                <div>تاريخ التقرير: {{ $report['generated_at']->format('Y-m-d H:i') }}</div>
+                @if(!empty($report['exported_by']))
+                    <div>أُعد بواسطة: {{ $report['exported_by'] }}</div>
+                @endif
+            </td>
+        </tr>
+    </table>
+</div>
+
+<h2>ملخص تنفيذي</h2>
+<table class="summary-grid">
+    <tr>
+        <td><span class="label">المؤشر المركّب</span><span class="value">{{ $summary['composite_score'] ?? '—' }}</span></td>
+        <td><span class="label">إيرادات الفوز</span><span class="value">{{ number_format($summary['revenue'], 2) }} ج.م</span></td>
+        <td><span class="label">صفقات مكسوبة</span><span class="value">{{ $summary['won_deals'] }}</span></td>
+        <td><span class="label">إجمالي الأنشطة</span><span class="value">{{ $summary['total_activities'] }}</span></td>
+    </tr>
+    <tr>
+        <td><span class="label">أيام عمل في الفترة</span><span class="value">{{ $summary['work_days'] }}</span></td>
+        <td><span class="label">أيام دخول النظام</span><span class="value">{{ $summary['days_with_login'] }}</span></td>
+        <td><span class="label">أيام بدون دخول</span><span class="value tone-rose">{{ $summary['days_without_login'] }}</span></td>
+        <td><span class="label">أيام بنشاط CRM</span><span class="value">{{ $summary['days_with_crm'] }}</span></td>
+    </tr>
+    <tr>
+        <td><span class="label">Leads سجّلها</span><span class="value">{{ $summary['leads_created_by_rep'] }}</span></td>
+        <td><span class="label">Leads من الإدارة</span><span class="value">{{ $summary['leads_from_admin'] }}</span></td>
+        <td><span class="label">تقارير يومية مُسلَّمة</span><span class="value">{{ $summary['daily_reports_submitted'] }}</span></td>
+        <td><span class="label">تقارير يومية ناقصة</span><span class="value tone-amber">{{ $summary['daily_reports_missing'] }}</span></td>
+    </tr>
+</table>
+
+@if(!empty($periodReport['alert_flags']))
+    <div class="note-box">
+        <strong>تنبيهات:</strong>
+        {{ implode(' — ', $periodReport['alert_flags']) }}
+    </div>
+@endif
+
+@if(count($report['absent_work_days']) > 0)
+    <div class="note-box" style="border-color:#fecdd3;background:#fff1f2;">
+        <strong>أيام عمل بدون تسجيل دخول:</strong>
+        {{ implode('، ', $report['absent_work_days']) }}
+    </div>
+@endif
+
+<h2>الجدول اليومي — ماذا فعل الموظف كل يوم؟</h2>
+<table class="data">
+    <thead>
+        <tr>
+            <th>التاريخ</th>
+            <th>اليوم</th>
+            <th>الحالة</th>
+            <th>دخول</th>
+            <th>مكالمات</th>
+            <th>اجتماعات</th>
+            <th>متابعات</th>
+            <th>واتساب</th>
+            <th>Leads جديدة</th>
+            <th>من الإدارة</th>
+            <th>تقرير يومي</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach($report['daily_rows'] as $row)
+            <tr>
+                <td class="text-center">{{ $row['date'] }}</td>
+                <td class="text-center">{{ $row['day_name'] }}</td>
+                <td class="text-center">
+                    <span class="badge badge-{{ $row['status_tone'] }}">{{ $row['status_label'] }}</span>
+                </td>
+                <td class="text-center">{{ $row['logged_in'] ? 'نعم' : 'لا' }}</td>
+                <td class="text-center">{{ $row['calls'] }}</td>
+                <td class="text-center">{{ $row['meetings'] }}</td>
+                <td class="text-center">{{ $row['followups'] }}</td>
+                <td class="text-center">{{ $row['whatsapp'] }}</td>
+                <td class="text-center">{{ $row['leads_created'] }}</td>
+                <td class="text-center">{{ $row['leads_from_admin'] }}</td>
+                <td class="text-center">{{ $row['daily_report_label'] }}</td>
+            </tr>
+        @endforeach
+    </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<h2>مؤشرات الأداء (KPIs)</h2>
+<table class="data">
+    <thead>
+        <tr>
+            <th>المؤشر</th>
+            <th>الفعلي</th>
+            <th>الهدف</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach($periodReport['kpi_lines'] ?? [] as $line)
+            <tr>
+                <td>{{ $line['label'] ?? '' }}</td>
+                <td class="text-center">{{ $line['actual'] ?? '—' }}</td>
+                <td class="text-center">{{ $line['target'] ?? '—' }}</td>
+            </tr>
+        @endforeach
+    </tbody>
+</table>
+
+<h2>تفصيل أنواع الأنشطة</h2>
+<table class="data">
+    <thead>
+        <tr><th>النوع</th><th>العدد</th></tr>
+    </thead>
+    <tbody>
+        @forelse($report['activity_breakdown'] as $item)
+            <tr>
+                <td>{{ $item['label'] }}</td>
+                <td class="text-center">{{ $item['count'] }}</td>
+            </tr>
+        @empty
+            <tr><td colspan="2" class="text-center">لا توجد أنشطة في هذه الفترة.</td></tr>
+        @endforelse
+    </tbody>
+</table>
+
+<h2>العملاء المحتملون (Leads) — {{ $report['leads']->count() }} سجل</h2>
+<table class="data">
+    <thead>
+        <tr>
+            <th>الاسم</th>
+            <th>الهاتف</th>
+            <th>المرحلة</th>
+            <th>المصدر</th>
+            <th>أُنشئ بواسطة</th>
+            <th>تاريخ الإنشاء</th>
+        </tr>
+    </thead>
+    <tbody>
+        @forelse($report['leads'] as $lead)
+            <tr>
+                <td>{{ $lead->name }}</td>
+                <td class="text-left">{{ $lead->phone ?? '—' }}</td>
+                <td class="text-center">{{ \App\Models\SalesLead::stageLabel($lead->stage) }}</td>
+                <td class="text-center">{{ \App\Models\SalesLead::sourceLabel((string) ($lead->source ?? '')) }}</td>
+                <td class="text-center">{{ $lead->creator?->name ?? '—' }}</td>
+                <td class="text-center">{{ $lead->created_at?->format('Y-m-d') }}</td>
+            </tr>
+        @empty
+            <tr><td colspan="6" class="text-center">لا توجد Leads ضمن الفلتر المحدد.</td></tr>
+        @endforelse
+    </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<h2>سجل الأنشطة التفصيلي — {{ $report['activities']->count() }} نشاط</h2>
+<table class="data">
+    <thead>
+        <tr>
+            <th>التاريخ</th>
+            <th>النوع</th>
+            <th>العميل</th>
+            <th>العنوان / الملخص</th>
+        </tr>
+    </thead>
+    <tbody>
+        @forelse($report['activities'] as $activity)
+            <tr>
+                <td class="text-center">{{ $activity->created_at?->format('Y-m-d H:i') }}</td>
+                <td class="text-center">{{ \App\Models\SalesActivity::typeLabel($activity->type) }}</td>
+                <td>{{ $activity->lead?->name ?? '—' }}</td>
+                <td>{{ \Illuminate\Support\Str::limit($activity->title ?: ($activity->body ?? '—'), 120) }}</td>
+            </tr>
+        @empty
+            <tr><td colspan="4" class="text-center">لا توجد أنشطة مسجّلة.</td></tr>
+        @endforelse
+    </tbody>
+</table>
+
+<div class="footer">
+    {{ config('app.name', 'Mindlytics') }} — تقرير مبيعات سري · يُولَّد تلقائياً من بيانات النظام
+</div>
+</body>
+</html>

@@ -63,6 +63,7 @@
                         <th class="px-5 py-3 text-right font-semibold">الرسالة</th>
                         <th class="px-5 py-3 text-right font-semibold">الحالة</th>
                         <th class="px-5 py-3 text-right font-semibold">المرسل</th>
+                        <th class="px-5 py-3 text-right font-semibold">إجراء</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -83,12 +84,28 @@
                                     @else<i class="fas fa-clock"></i>@endif
                                     {{ $msg->status_text }}
                                 </span>
+                                @if($msg->status === 'failed' && $msg->error_message)
+                                    <p class="text-[10px] text-rose-600 mt-1 max-w-xs truncate" title="{{ $msg->error_message }}">{{ Str::limit($msg->error_message, 50) }}</p>
+                                @endif
                             </td>
                             <td class="px-5 py-3.5 text-slate-600">{{ $msg->user?->name ?? '—' }}</td>
+                            <td class="px-5 py-3.5">
+                                @if($msg->status === 'failed')
+                                    <form method="POST" action="{{ route('admin.whatsapp.messages.resend', $msg) }}" class="inline">
+                                        @csrf
+                                        <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-rose-600 hover:bg-rose-700 text-white">
+                                            <i class="fas fa-redo text-[10px]"></i>
+                                            إعادة الإرسال
+                                        </button>
+                                    </form>
+                                @else
+                                    <span class="text-slate-300">—</span>
+                                @endif
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-5 py-16 text-center">
+                            <td colspan="6" class="px-5 py-16 text-center">
                                 <div class="flex flex-col items-center text-slate-400">
                                     <i class="fas fa-inbox text-4xl mb-3"></i>
                                     <p class="font-semibold text-slate-600">لا توجد رسائل بعد</p>

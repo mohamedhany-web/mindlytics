@@ -8,6 +8,8 @@ use App\Models\SalesActivity;
 use App\Models\SalesLead;
 use App\Models\User;
 use App\Services\SalesEmployeeDailyLeadsExcelExportService;
+use App\Services\SalesEmployeePeriodReportService;
+use App\Services\SalesEmployeeReportPdfService;
 use App\Services\SalesFullReportExcelExportService;
 use App\Services\SalesKpiService;
 use Carbon\Carbon;
@@ -32,7 +34,7 @@ class SalesReportController extends Controller
         'sales_activity_created_admin',
     ];
 
-    public function index(Request $request, SalesKpiService $kpi)
+    public function index(Request $request, SalesKpiService $kpi, SalesEmployeePeriodReportService $employeeReportService)
     {
         $salesReps = User::salesEmployees()->where('is_active', true)->orderBy('name')->get(['id', 'name']);
 
@@ -58,6 +60,7 @@ class SalesReportController extends Controller
         $activitiesSample = collect();
         $auditSample = collect();
         $counts = [];
+        $employeeReport = null;
 
         try {
             $validated = $request->validate([
@@ -104,6 +107,13 @@ class SalesReportController extends Controller
                     $leadsSample = (clone $leadsQuery)->limit(30)->get();
                     $activitiesSample = (clone $actQuery)->limit(40)->get();
                     $auditSample = (clone $auditQuery)->limit(25)->get();
+
+                    $employeeReport = $employeeReportService->build(
+                        $selectedRep,
+                        $start,
+                        $end,
+                        (string) ($validated['lead_scope'] ?? 'touched')
+                    );
                 }
             } else {
                 foreach ($salesReps as $rep) {
@@ -148,8 +158,38 @@ class SalesReportController extends Controller
             'leadsSample',
             'activitiesSample',
             'auditSample',
-            'counts'
+            'counts',
+            'employeeReport'
         ));
+    }
+
+    public function pdfExport(Request $request, SalesEmployeePeriodReportService $employeeReportService, SalesEmployeeReportPdfService $pdf)
+    {
+        $validated = $request->validate([
+            'date_from' => ['required', 'date'],
+            'date_to' => ['required', 'date', 'after_or_equal:date_from'],
+            'user_id' => ['required', 'integer', Rule::exists('users', 'id')],
+            'lead_scope' => ['nullable', 'string', Rule::in(['touched', 'new', 'transferred_from_admin'])],
+        ], [
+            'user_id.required' => 'اختر موظف مبيعات لتحميل التقرير PDF.',
+        ]);
+
+        $rep = User::query()->findOrFail($validated['user_id']);
+        if (! $rep->isSalesEmployee()) {
+            abort(422, 'المستخدم ليس موظف مبيعات.');
+        }
+
+        $start = Carbon::parse($validated['date_from'])->startOfDay();
+        $end = Carbon::parse($validated['date_to'])->endOfDay();
+
+        $report = $employeeReportService->build(
+            $rep,
+            $start,
+            $end,
+            (string) ($validated['lead_scope'] ?? 'touched')
+        );
+
+        return $pdf->download($report);
     }
 
     public function export(Request $request, SalesKpiService $kpi, SalesFullReportExcelExportService $excel): StreamedResponse

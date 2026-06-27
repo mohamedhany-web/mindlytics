@@ -1017,6 +1017,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::prefix('sales')->name('sales.')->group(function () {
             Route::get('reports', [\App\Http\Controllers\Admin\SalesReportController::class, 'index'])->name('reports.index');
             Route::get('reports/export', [\App\Http\Controllers\Admin\SalesReportController::class, 'export'])->name('reports.export');
+            Route::get('reports/pdf', [\App\Http\Controllers\Admin\SalesReportController::class, 'pdfExport'])->name('reports.pdf');
             Route::get('reports/daily-export', [\App\Http\Controllers\Admin\SalesReportController::class, 'dailyExport'])->name('reports.daily-export');
             Route::get('daily-reports', [\App\Http\Controllers\Admin\SalesDailyReportController::class, 'index'])->name('daily-reports.index');
             Route::get('daily-reports/export', [\App\Http\Controllers\Admin\SalesDailyReportController::class, 'export'])->name('daily-reports.export');
@@ -1585,6 +1586,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/send', [\App\Http\Controllers\Admin\WhatsAppController::class, 'sendForm'])->name('send');
             Route::post('/send', [\App\Http\Controllers\Admin\WhatsAppController::class, 'sendMessage'])->name('send.post');
             Route::get('/messages', [\App\Http\Controllers\Admin\WhatsAppController::class, 'messages'])->name('messages');
+            Route::post('/messages/{message}/resend', [\App\Http\Controllers\Admin\WhatsAppController::class, 'resendMessage'])->name('messages.resend');
             Route::get('/settings', [\App\Http\Controllers\Admin\WhatsAppController::class, 'settings'])->name('settings');
             Route::post('/settings', [\App\Http\Controllers\Admin\WhatsAppController::class, 'updateSettings'])->name('settings.update');
             Route::get('/status', [\App\Http\Controllers\Admin\WhatsAppController::class, 'statusJson'])->name('status');

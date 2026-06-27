@@ -8,6 +8,7 @@ use App\Models\WhatsAppBatch;
 use App\Models\WhatsAppBatchItem;
 use App\Models\WorkshopRegistration;
 use App\Services\WhatsAppBatchService;
+use App\Services\WhatsAppBridgeService;
 use App\Services\WhatsAppService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -59,10 +60,6 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
                 if (! $batch || $batch->pendingCount() === 0) {
                     $hasMore = false;
                     break;
-                }
-
-                if ($processed < $maxMessages && time() < $deadline) {
-                    sleep(max(1, (int) config('whatsapp.batch_between_messages_seconds', 4)));
                 }
             }
 
@@ -117,6 +114,7 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
         }
 
         $processed = 0;
+        $bridgeReady = null;
 
         foreach ($items as $item) {
             $batch->refresh();
@@ -136,7 +134,16 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
             $item->refresh();
             $processed++;
 
-            $result = $this->sendWithRetries($whatsapp, $item, $batch);
+            if ($bridgeReady === null) {
+                $gate = app(WhatsAppBridgeService::class)->canSendNow();
+                $bridgeReady = (bool) ($gate['success'] ?? false);
+                if (! $bridgeReady) {
+                    $this->handleSendFailure($item, $batch, (string) ($gate['error'] ?? 'الواتساب غير جاهز للإرسال.'));
+                    continue;
+                }
+            }
+
+            $result = $this->sendWithRetries($whatsapp, $item, $batch, skipReadyCheck: true);
 
             if ($result['success'] ?? false) {
                 $item->update([
@@ -154,11 +161,6 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
                 }
 
                 $this->recordSalesLeadActivity($batch, $item);
-
-                $between = max(0, (int) config('whatsapp.batch_between_messages_seconds', 4));
-                if ($between > 0) {
-                    sleep($between);
-                }
             } else {
                 $this->handleSendFailure($item, $batch, (string) ($result['error'] ?? 'فشل الإرسال'));
             }
@@ -247,7 +249,7 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
     /**
      * @return array{success?: bool, message_id?: int, error?: string}
      */
-    private function sendWithRetries(WhatsAppService $whatsapp, WhatsAppBatchItem $item, WhatsAppBatch $batch): array
+    private function sendWithRetries(WhatsAppService $whatsapp, WhatsAppBatchItem $item, WhatsAppBatch $batch, bool $skipReadyCheck = false): array
     {
         $maxAttempts = max(1, (int) config('whatsapp.batch_max_attempts', 3));
         $lastResult = ['success' => false, 'error' => 'فشل الإرسال'];
@@ -260,6 +262,7 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
                 [
                     'user_id' => $item->user_id ?? $batch->created_by,
                     'batch_id' => $batch->id,
+                    'skip_ready_check' => $skipReadyCheck,
                 ]
             );
 

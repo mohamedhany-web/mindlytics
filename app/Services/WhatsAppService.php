@@ -42,6 +42,7 @@ class WhatsAppService
         try {
             $actorId = $options['user_id'] ?? auth()->id();
             $batchId = $options['batch_id'] ?? null;
+            $skipReadyCheck = (bool) ($options['skip_ready_check'] ?? false);
 
             // تنسيق رقم الهاتف (إضافة رمز الدولة إذا لم يكن موجوداً)
             $formattedPhone = $this->formatPhoneNumber($phoneNumber);
@@ -67,7 +68,7 @@ class WhatsAppService
                     'test_mode' => true
                 ];
             } elseif (in_array($serviceType, ['local', 'wwebjs'], true)) {
-                return $this->sendViaBridge($formattedPhone, $message, $type, $actorId, $batchId);
+                return $this->sendViaBridge($formattedPhone, $message, $type, $actorId, $batchId, $skipReadyCheck);
             } elseif ($serviceType === 'custom') {
                 // استخدام API مخصص من المستخدم
                 return $this->sendViaCustomAPI($formattedPhone, $message, $type);
@@ -141,7 +142,7 @@ class WhatsAppService
     /**
      * إرسال عبر whatsapp-web.js Bridge (Node.js خارج Shared Hosting)
      */
-    private function sendViaBridge(string $phoneNumber, string $message, string $type = 'text', ?int $actorId = null, ?int $batchId = null)
+    private function sendViaBridge(string $phoneNumber, string $message, string $type = 'text', ?int $actorId = null, ?int $batchId = null, bool $skipReadyCheck = false)
     {
         try {
             $actorId ??= auth()->id();
@@ -159,20 +160,22 @@ class WhatsAppService
                 return ['success' => false, 'error' => $limitError];
             }
 
-            $ready = $this->bridge->ensureReadyForSend();
-            if (! ($ready['success'] ?? false)) {
-                $blockError = $ready['error'] ?? 'الواتساب غير جاهز للإرسال.';
+            if (! $skipReadyCheck) {
+                $ready = $this->bridge->canSendNow();
+                if (! ($ready['success'] ?? false)) {
+                    $blockError = $ready['error'] ?? 'الواتساب غير جاهز للإرسال.';
 
-                WhatsAppMessage::create([
-                    'user_id' => $actorId,
-                    'phone_number' => $phoneNumber,
-                    'message' => $message,
-                    'type' => $type,
-                    'status' => 'failed',
-                    'error_message' => $blockError,
-                ]);
+                    WhatsAppMessage::create([
+                        'user_id' => $actorId,
+                        'phone_number' => $phoneNumber,
+                        'message' => $message,
+                        'type' => $type,
+                        'status' => 'failed',
+                        'error_message' => $blockError,
+                    ]);
 
-                return ['success' => false, 'error' => $blockError];
+                    return ['success' => false, 'error' => $blockError];
+                }
             }
 
             $this->pacing->waitBeforeSend($batchId);

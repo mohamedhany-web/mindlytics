@@ -270,9 +270,11 @@ class WhatsAppBridgeService
     }
 
     /**
+     * فحص سريع: هل الجسر جاهز للإرسال؟ (نفس منطق لوحة الواتساب — بدون إصلاح تلقائي)
+     *
      * @return array{success: bool, data?: array<string, mixed>, error?: string}
      */
-    public function ensureReadyForSend(): array
+    public function canSendNow(): array
     {
         $status = $this->getStatus();
         if (! ($status['success'] ?? false)) {
@@ -286,7 +288,26 @@ class WhatsAppBridgeService
             return ['success' => true, 'data' => $data];
         }
 
+        return [
+            'success' => false,
+            'error' => $this->formatSendBlockedError($meta),
+            'data' => $data,
+        ];
+    }
+
+    /**
+     * @return array{success: bool, data?: array<string, mixed>, error?: string}
+     */
+    public function ensureReadyForSend(): array
+    {
+        $check = $this->canSendNow();
+        if ($check['success'] ?? false) {
+            return $check;
+        }
+
+        $data = $check['data'] ?? [];
         $bridgeStatus = (string) ($data['status'] ?? '');
+        $meta = $this->connectionMeta($data, true);
         $hasConnectedField = array_key_exists('connected', $data);
         $sendReadyField = array_key_exists('send_ready', $data) ? (bool) $data['send_ready'] : null;
 
