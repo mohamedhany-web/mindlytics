@@ -4,14 +4,16 @@
     <meta charset="utf-8">
     <title>تقرير أداء مبيعات — {{ $report['rep']->name }}</title>
     <style>
-        * { box-sizing: border-box; }
         body {
-            font-family: 'DejaVu Sans', sans-serif;
-            font-size: 10px;
+            font-family: xbriyaz, sans-serif;
+            font-size: 10pt;
             color: #1e293b;
-            line-height: 1.45;
-            margin: 0;
-            padding: 0;
+            line-height: 1.5;
+            direction: rtl;
+            text-align: right;
+        }
+        table, th, td, p, h2, span, div {
+            font-family: xbriyaz, sans-serif;
         }
         .header {
             border-bottom: 3px solid #059669;
@@ -21,15 +23,15 @@
         .header-table { width: 100%; border-collapse: collapse; }
         .header-table td { vertical-align: middle; padding: 0; }
         .logo { max-height: 52px; max-width: 140px; }
-        .title { font-size: 18px; font-weight: bold; color: #065f46; margin: 0 0 4px; }
-        .subtitle { font-size: 10px; color: #475569; margin: 0; }
-        .meta { font-size: 9px; color: #64748b; text-align: left; direction: ltr; }
+        .title { font-size: 16pt; font-weight: bold; color: #065f46; }
+        .subtitle { font-size: 9pt; color: #475569; }
+        .meta { font-size: 8pt; color: #64748b; text-align: left; direction: ltr; }
         h2 {
-            font-size: 12px;
+            font-size: 11pt;
             color: #065f46;
             border-right: 4px solid #10b981;
             padding-right: 8px;
-            margin: 16px 0 8px;
+            margin: 14px 0 8px;
         }
         .summary-grid {
             width: 100%;
@@ -43,8 +45,8 @@
             padding: 8px;
             vertical-align: top;
         }
-        .summary-grid .label { font-size: 8px; color: #64748b; display: block; }
-        .summary-grid .value { font-size: 14px; font-weight: bold; color: #065f46; }
+        .summary-grid .label { font-size: 8pt; color: #64748b; }
+        .summary-grid .value { font-size: 12pt; font-weight: bold; color: #065f46; }
         table.data {
             width: 100%;
             border-collapse: collapse;
@@ -53,8 +55,8 @@
         }
         table.data th {
             background: #065f46;
-            color: #fff;
-            font-size: 8.5px;
+            color: #ffffff;
+            font-size: 8pt;
             padding: 6px 4px;
             border: 1px solid #047857;
             text-align: center;
@@ -62,8 +64,9 @@
         table.data td {
             border: 1px solid #e2e8f0;
             padding: 5px 4px;
-            font-size: 8.5px;
+            font-size: 8pt;
             vertical-align: top;
+            text-align: right;
         }
         table.data tr:nth-child(even) td { background: #f8fafc; }
         .text-center { text-align: center; }
@@ -120,7 +123,7 @@
             <td style="width: 53%;">
                 <p class="title">تقرير أداء موظف المبيعات</p>
                 <p class="subtitle">{{ config('app.name', 'Mindlytics') }} — قسم المبيعات</p>
-                <p class="subtitle"><strong>{{ $rep->name }}</strong> · {{ $report['lead_scope_label'] }}</p>
+                <p class="subtitle"><strong>{{ $rep->name }}</strong> · {{ $report['lead_scope_label'] }} · {{ $report['group_filter_label'] ?? 'كل المجموعات' }}</p>
                 <p class="subtitle">الفترة: {{ $report['start']->format('Y-m-d') }} إلى {{ $report['end']->format('Y-m-d') }} ({{ $summary['period_days'] }} يوماً)</p>
                 @if($summary['joined_at'])
                     <p class="subtitle">تاريخ الانضمام للمنصة: {{ $summary['joined_at']->format('Y-m-d') }}</p>
@@ -255,24 +258,32 @@
         <tr>
             <th>الاسم</th>
             <th>الهاتف</th>
+            <th>المجموعة</th>
             <th>المرحلة</th>
-            <th>المصدر</th>
+            <th>حالة التواصل</th>
+            <th>آخر تواصل</th>
             <th>أُنشئ بواسطة</th>
             <th>تاريخ الإنشاء</th>
         </tr>
     </thead>
     <tbody>
-        @forelse($report['leads'] as $lead)
+        @forelse($report['leads_with_contact'] ?? $report['leads'] as $item)
+            @php
+                $lead = is_array($item) ? $item['lead'] : $item;
+                $contactLabel = is_array($item) ? ($item['contact_label'] ?? '—') : '—';
+            @endphp
             <tr>
                 <td>{{ $lead->name }}</td>
                 <td class="text-left">{{ $lead->phone ?? '—' }}</td>
+                <td class="text-center">{{ $lead->group?->name ?? '—' }}</td>
                 <td class="text-center">{{ \App\Models\SalesLead::stageLabel($lead->stage) }}</td>
-                <td class="text-center">{{ \App\Models\SalesLead::sourceLabel((string) ($lead->source ?? '')) }}</td>
+                <td class="text-center">{{ $contactLabel }}</td>
+                <td class="text-center">{{ $lead->last_contacted_at?->format('Y-m-d') ?? '—' }}</td>
                 <td class="text-center">{{ $lead->creator?->name ?? '—' }}</td>
                 <td class="text-center">{{ $lead->created_at?->format('Y-m-d') }}</td>
             </tr>
         @empty
-            <tr><td colspan="6" class="text-center">لا توجد Leads ضمن الفلتر المحدد.</td></tr>
+            <tr><td colspan="8" class="text-center">لا توجد Leads ضمن الفلتر المحدد.</td></tr>
         @endforelse
     </tbody>
 </table>

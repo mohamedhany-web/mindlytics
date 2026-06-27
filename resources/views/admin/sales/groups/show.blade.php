@@ -19,6 +19,20 @@
         'latestBatchUrl' => isset($latestBatch) ? route('admin.whatsapp.batches.show', $latestBatch) : null,
     ])
 
+    @if($group->members->isNotEmpty() || $group->assigned_to)
+        <div class="bg-sky-50 border border-sky-200 rounded-xl p-4 flex flex-wrap items-center gap-2">
+            <span class="text-sm font-bold text-sky-900"><i class="fas fa-chart-pie ml-1"></i> تقارير أداء الموظفين في هذه المجموعة:</span>
+            @foreach(($group->members->isNotEmpty() ? $group->members : collect([$group->assignee])) as $member)
+                @if($member)
+                    <a href="{{ route('admin.sales.reports.employee', ['user_id' => $member->id, 'group_id' => $group->id, 'lead_scope' => 'in_groups']) }}"
+                       class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-sky-300 text-sm font-semibold text-sky-800 hover:bg-sky-100">
+                        {{ $member->name }}
+                    </a>
+                @endif
+            @endforeach
+        </div>
+    @endif
+
     <form method="post" action="{{ route('admin.sales.groups.update', $group) }}" class="bg-white border rounded-xl p-5 space-y-4">
         @csrf @method('PUT')
         <div>

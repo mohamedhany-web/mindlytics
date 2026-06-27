@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\SalesActivity;
 use App\Models\SalesLead;
+use App\Models\SalesLeadGroup;
 use App\Models\User;
 use App\Services\SalesEmployeeDailyLeadsExcelExportService;
 use App\Services\SalesEmployeePeriodReportService;
@@ -48,6 +49,7 @@ class SalesReportController extends Controller
         $dateTo = (string) $request->get('date_to');
         $userId = $request->get('user_id');
         $leadScope = (string) $request->get('lead_scope', 'touched');
+        $groupId = $request->get('group_id');
 
         $validated = null;
         $error = null;
@@ -61,13 +63,15 @@ class SalesReportController extends Controller
         $auditSample = collect();
         $counts = [];
         $employeeReport = null;
+        $repGroups = collect();
 
         try {
             $validated = $request->validate([
                 'date_from' => ['required', 'date'],
                 'date_to' => ['required', 'date', 'after_or_equal:date_from'],
                 'user_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
-                'lead_scope' => ['nullable', 'string', Rule::in(['touched', 'new', 'transferred_from_admin'])],
+                'lead_scope' => ['nullable', 'string', Rule::in(['touched', 'new', 'transferred_from_admin', 'in_groups'])],
+                'group_id' => ['nullable', 'integer', Rule::exists('sales_lead_groups', 'id')],
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             $error = $e->validator->errors()->first();
@@ -82,8 +86,14 @@ class SalesReportController extends Controller
                 if (! $selectedRep || ! $selectedRep->isSalesEmployee()) {
                     $error = 'المستخدم المحدد ليس موظف مبيعات.';
                 } else {
+                    $repGroups = SalesLeadGroup::forAssignee((int) $selectedRep->id)->orderBy('name')->get(['id', 'name']);
+                    $resolvedGroupId = $this->resolveGroupIdForRep($validated['group_id'] ?? null, (int) $selectedRep->id);
+
                     $periodReport = $kpi->buildPeriodReport($selectedRep, $start, $end);
                     $leadsQuery = $this->leadsScopeQuery((int) $selectedRep->id, $start, $end, (string) ($validated['lead_scope'] ?? 'touched'));
+                    if ($resolvedGroupId) {
+                        $leadsQuery->where('sales_lead_group_id', $resolvedGroupId);
+                    }
                     $actQuery = $this->activitiesInPeriodQuery((int) $selectedRep->id, $start, $end);
                     $auditQuery = $this->auditInPeriodQuery($start, $end, (int) $selectedRep->id);
 
@@ -112,7 +122,8 @@ class SalesReportController extends Controller
                         $selectedRep,
                         $start,
                         $end,
-                        (string) ($validated['lead_scope'] ?? 'touched')
+                        (string) ($validated['lead_scope'] ?? 'touched'),
+                        $resolvedGroupId
                     );
                 }
             } else {
@@ -149,6 +160,8 @@ class SalesReportController extends Controller
             'dateTo',
             'userId',
             'leadScope',
+            'groupId',
+            'repGroups',
             'error',
             'start',
             'end',
@@ -163,6 +176,23 @@ class SalesReportController extends Controller
         ));
     }
 
+    public function employee(Request $request, SalesEmployeePeriodReportService $employeeReportService)
+    {
+        $request->mergeIfMissing([
+            'date_from' => now()->startOfMonth()->toDateString(),
+            'date_to' => now()->toDateString(),
+            'lead_scope' => 'in_groups',
+        ]);
+
+        if (! $request->filled('user_id')) {
+            return redirect()
+                ->route('admin.sales.reports.index', $request->only(['date_from', 'date_to']))
+                ->with('error', 'اختر موظف مبيعات لعرض تقريره.');
+        }
+
+        return $this->index($request, app(SalesKpiService::class), $employeeReportService);
+    }
+
     public function pdfExport(Request $request, SalesEmployeePeriodReportService $employeeReportService, SalesEmployeeReportPdfService $pdf)
     {
         $request->merge([
@@ -173,7 +203,8 @@ class SalesReportController extends Controller
             'date_from' => ['required', 'date'],
             'date_to' => ['required', 'date', 'after_or_equal:date_from'],
             'user_id' => ['required', 'integer', Rule::exists('users', 'id')],
-            'lead_scope' => ['nullable', 'string', Rule::in(['touched', 'new', 'transferred_from_admin'])],
+            'lead_scope' => ['nullable', 'string', Rule::in(['touched', 'new', 'transferred_from_admin', 'in_groups'])],
+            'group_id' => ['nullable', 'integer', Rule::exists('sales_lead_groups', 'id')],
         ], [
             'user_id.required' => 'اختر موظف مبيعات ثم اضغط «تحديث المعاينة» أو «تحميل PDF».',
             'date_from.required' => 'حدد تاريخ البداية.',
@@ -192,7 +223,8 @@ class SalesReportController extends Controller
             $rep,
             $start,
             $end,
-            (string) ($validated['lead_scope'] ?? 'touched')
+            (string) ($validated['lead_scope'] ?? 'touched'),
+            $this->resolveGroupIdForRep($validated['group_id'] ?? null, (int) $rep->id)
         );
 
         return $pdf->download($report);
@@ -304,7 +336,8 @@ class SalesReportController extends Controller
             'date_from' => ['required', 'date'],
             'date_to' => ['required', 'date', 'after_or_equal:date_from'],
             'user_id' => ['required', 'integer', Rule::exists('users', 'id')],
-            'lead_scope' => ['nullable', 'string', Rule::in(['touched', 'new', 'transferred_from_admin'])],
+            'lead_scope' => ['nullable', 'string', Rule::in(['touched', 'new', 'transferred_from_admin', 'in_groups'])],
+            'group_id' => ['nullable', 'integer', Rule::exists('sales_lead_groups', 'id')],
         ], [
             'user_id.required' => 'اختر موظف مبيعات أولاً لاستخراج التقرير اليومي.',
             'user_id.exists' => 'الموظف المحدد غير موجود.',
@@ -325,10 +358,17 @@ class SalesReportController extends Controller
         $scopeLabel = match ($scope) {
             'new' => 'Leads مسجلة جديداً بواسطة الموظف',
             'transferred_from_admin' => 'Leads محوّلة من الإدارة (مسندة للموظف)',
+            'in_groups' => 'Leads داخل مجموعات العملاء المسندة',
             default => 'كل Leads ذات صلة بالفترة (Touched)',
         };
 
-        $leads = $this->leadsScopeQuery((int) $rep->id, $start, $end, $scope)
+        $groupId = $this->resolveGroupIdForRep($validated['group_id'] ?? null, (int) $rep->id);
+        $leadsQuery = $this->leadsScopeQuery((int) $rep->id, $start, $end, $scope);
+        if ($groupId) {
+            $leadsQuery->where('sales_lead_group_id', $groupId);
+        }
+
+        $leads = $leadsQuery
             ->with(['assignee:id,name', 'creator:id,name'])
             ->get();
 
@@ -434,8 +474,28 @@ class SalesReportController extends Controller
                 ->whereBetween('created_at', [$start, $end])
                 ->orderByDesc('created_at'),
 
+            'in_groups' => SalesLead::query()
+                ->forAssignee($userId)
+                ->whereNotNull('sales_lead_group_id')
+                ->whereHas('group', fn ($gq) => $gq->forAssignee($userId))
+                ->orderByDesc('updated_at'),
+
             default => $this->leadsTouchedInPeriodQuery($userId, $start, $end),
         };
+    }
+
+    private function resolveGroupIdForRep(?int $groupId, int $repId): ?int
+    {
+        if (! $groupId) {
+            return null;
+        }
+
+        $group = SalesLeadGroup::query()->find($groupId);
+        if (! $group || ! $group->userHasAccess($repId)) {
+            return null;
+        }
+
+        return $groupId;
     }
 
     /**

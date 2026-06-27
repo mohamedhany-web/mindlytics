@@ -15,7 +15,7 @@
         "laravel/tinker": "^2.10.1",
         "league/flysystem-aws-s3-v3": "^3.25",
         "phpoffice/phpspreadsheet": "^5.4",
-        "dompdf/dompdf": "^3.0",
+        "mpdf/mpdf": "^8.2",
         "pragmarx/google2fa": "*",
         "smalot/pdfparser": "^2.12"
     },

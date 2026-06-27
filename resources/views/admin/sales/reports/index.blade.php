@@ -76,6 +76,9 @@
                     ({{ $periodDays }} يوماً)
                     @if($selectedRep)
                         · الموظف: <strong>{{ $selectedRep->name }}</strong>
+                        @if(!empty($employeeReport) && !empty($employeeReport['group_filter_label']))
+                            · المجموعة: <strong>{{ $employeeReport['group_filter_label'] }}</strong>
+                        @endif
                     @else
                         · النطاق: <strong>جميع موظفي المبيعات</strong>
                     @endif
@@ -93,6 +96,10 @@
     @if($error)
         <div class="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm font-semibold">
             <i class="fas fa-exclamation-circle ml-1"></i>{{ $error }}
+        </div>
+    @elseif(session('error'))
+        <div class="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm font-semibold">
+            <i class="fas fa-exclamation-circle ml-1"></i>{{ session('error') }}
         </div>
     @endif
 
@@ -135,10 +142,22 @@
                     <select name="lead_scope"
                             class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
                         <option value="touched" @selected(($leadScope ?? 'touched') === 'touched')>كل Leads ذات صلة بالفترة (Touched)</option>
+                        <option value="in_groups" @selected(($leadScope ?? 'touched') === 'in_groups')>كل Leads داخل مجموعات العملاء المسندة</option>
                         <option value="new" @selected(($leadScope ?? 'touched') === 'new')>Leads مسجلة جديداً بواسطة الموظف</option>
                         <option value="transferred_from_admin" @selected(($leadScope ?? 'touched') === 'transferred_from_admin')>Leads محوّلة من الإدارة</option>
                     </select>
-                    <p class="text-[11px] text-slate-500 mt-1">يؤثر على التقرير اليومي ومعاينة Leads عند اختيار موظف.</p>
+                    <p class="text-[11px] text-slate-500 mt-1">يؤثر على جدول Leads والتصدير عند اختيار موظف.</p>
+                </div>
+                <div class="lg:col-span-2" x-show="userId" x-cloak>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">مجموعة عملاء (اختياري)</label>
+                    <select name="group_id"
+                            class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                        <option value="">— كل المجموعات —</option>
+                        @foreach($repGroups as $g)
+                            <option value="{{ $g->id }}" @selected((string)($groupId ?? '') === (string)$g->id)>{{ $g->name }}</option>
+                        @endforeach
+                    </select>
+                    <p class="text-[11px] text-slate-500 mt-1">فلترة على مجموعة محددة مدّها للموظف — يظهر ملخص التواصل وحالة كل Lead.</p>
                 </div>
                 <div class="lg:col-span-4 flex flex-wrap items-center gap-2 pt-1">
                     <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-sm font-semibold text-white">
@@ -240,7 +259,12 @@
                             @foreach($repSummaries as $row)
                                 @php $m = $row['report']['metrics'] ?? []; @endphp
                                 <tr class="hover:bg-slate-50">
-                                    <td class="px-4 py-3 font-semibold text-slate-900">{{ $row['user']->name }}</td>
+                                    <td class="px-4 py-3 font-semibold text-slate-900">
+                                        <a href="{{ route('admin.sales.reports.employee', ['user_id' => $row['user']->id, 'date_from' => $start->format('Y-m-d'), 'date_to' => $end->format('Y-m-d'), 'lead_scope' => 'in_groups']) }}"
+                                           class="text-emerald-700 hover:text-emerald-900 hover:underline">
+                                            {{ $row['user']->name }}
+                                        </a>
+                                    </td>
                                     <td class="px-4 py-3 text-center tabular-nums font-bold text-emerald-700">{{ $row['report']['composite'] ?? '—' }}</td>
                                     <td class="px-4 py-3 text-center tabular-nums">{{ number_format((float) ($m['revenue_closed'] ?? 0), 2) }}</td>
                                     <td class="px-4 py-3 text-center tabular-nums">{{ (int) ($m['won_closed'] ?? 0) }}</td>

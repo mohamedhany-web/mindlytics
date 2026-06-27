@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\SalesActivity;
 use App\Models\SalesDailyReport;
 use App\Models\SalesLead;
+use App\Models\SalesLeadGroup;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -34,7 +35,7 @@ class SalesEmployeePeriodReportService
   /**
    * @return array<string, mixed>
    */
-  public function build(User $rep, Carbon $start, Carbon $end, string $leadScope = 'touched'): array
+  public function build(User $rep, Carbon $start, Carbon $end, string $leadScope = 'touched', ?int $groupId = null): array
   {
     $start = $start->copy()->startOfDay();
     $end = $end->copy()->endOfDay();
@@ -44,17 +45,44 @@ class SalesEmployeePeriodReportService
       $effectiveStart = $rep->created_at->copy()->startOfDay();
     }
 
+    $selectedGroup = null;
+    if ($groupId) {
+      $selectedGroup = SalesLeadGroup::query()->find($groupId);
+      if (! $selectedGroup || ! $selectedGroup->userHasAccess((int) $rep->id)) {
+        $groupId = null;
+        $selectedGroup = null;
+      }
+    }
+
     $periodReport = $this->kpi->buildPeriodReport($rep, $start, $end);
-    $leads = $this->leadsScopeQuery((int) $rep->id, $start, $end, $leadScope)
-      ->with(['assignee:id,name', 'creator:id,name'])
+    $leadsQuery = $this->leadsScopeQuery((int) $rep->id, $start, $end, $leadScope);
+    if ($groupId) {
+      $leadsQuery->where('sales_lead_group_id', $groupId);
+    }
+    $leads = $leadsQuery
+      ->with(['assignee:id,name', 'creator:id,name', 'group:id,name'])
       ->get();
 
     $activities = SalesActivity::query()
       ->where('user_id', $rep->id)
       ->whereBetween('created_at', [$start, $end])
-      ->with(['lead:id,name,phone,stage'])
+      ->when($groupId, function ($q) use ($groupId) {
+        $q->whereHas('lead', fn ($lq) => $lq->where('sales_lead_group_id', $groupId));
+      })
+      ->with(['lead:id,name,phone,stage,sales_lead_group_id'])
       ->orderByDesc('created_at')
       ->get();
+
+    $leadIdsWithActivityInPeriod = $activities
+      ->pluck('sales_lead_id')
+      ->filter()
+      ->unique()
+      ->flip();
+
+    $leadsWithContact = $this->enrichLeadsWithContactStats($leads, $start, $end, $leadIdsWithActivityInPeriod);
+
+    $repGroups = SalesLeadGroup::forAssignee((int) $rep->id)->orderBy('name')->get(['id', 'name', 'description', 'is_admin_managed']);
+    $groupBreakdown = $this->buildGroupBreakdown((int) $rep->id, $repGroups, $start, $end);
 
     $loginDays = ActivityLog::query()
       ->where('user_id', $rep->id)
@@ -184,6 +212,11 @@ class SalesEmployeePeriodReportService
       'effective_start' => $effectiveStart,
       'lead_scope' => $leadScope,
       'lead_scope_label' => $this->leadScopeLabel($leadScope),
+      'group_id' => $groupId,
+      'selected_group' => $selectedGroup,
+      'group_filter_label' => $selectedGroup?->name ?? 'كل مجموعات العملاء',
+      'rep_groups' => $repGroups,
+      'group_breakdown' => $groupBreakdown,
       'period_report' => $periodReport,
       'summary' => [
         'period_days' => max(1, (int) $start->diffInDays($end) + 1),
@@ -195,6 +228,8 @@ class SalesEmployeePeriodReportService
         'daily_reports_submitted' => $reportsSubmitted,
         'daily_reports_missing' => $reportsMissing,
         'leads_in_scope' => $leads->count(),
+        'leads_contacted_in_period' => $leadsWithContact->where('contacted_in_period', true)->count(),
+        'leads_never_contacted' => $leadsWithContact->where('contacted_ever', false)->count(),
         'leads_created_by_rep' => (int) ($metrics['new_leads'] ?? SalesLead::query()
           ->where('created_by', $rep->id)
           ->whereBetween('created_at', [$start, $end])
@@ -219,6 +254,7 @@ class SalesEmployeePeriodReportService
       'absent_work_days' => $absentWorkDays,
       'inactive_work_days' => $inactiveWorkDays,
       'leads' => $leads,
+      'leads_with_contact' => $leadsWithContact,
       'activities' => $activities,
       'activity_breakdown' => $this->activityBreakdown($activities),
       'generated_at' => now(),
@@ -254,11 +290,94 @@ class SalesEmployeePeriodReportService
     };
   }
 
+  /**
+   * @param  \Illuminate\Support\Collection<int, SalesLead>  $leads
+   * @param  \Illuminate\Support\Collection<int|string, int>  $leadIdsWithActivityInPeriod
+   * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+   */
+  private function enrichLeadsWithContactStats(Collection $leads, Carbon $start, Carbon $end, Collection $leadIdsWithActivityInPeriod): Collection
+  {
+    return $leads->map(function (SalesLead $lead) use ($start, $end, $leadIdsWithActivityInPeriod) {
+      $contactedEver = $lead->last_contacted_at !== null || $lead->stage !== 'new';
+      $contactedInPeriod = $leadIdsWithActivityInPeriod->has($lead->id)
+        || ($lead->last_contacted_at && $lead->last_contacted_at->betweenIncluded($start, $end));
+
+      return [
+        'lead' => $lead,
+        'contacted_ever' => $contactedEver,
+        'contacted_in_period' => $contactedInPeriod,
+        'contact_label' => $contactedInPeriod ? 'تم التواصل في الفترة' : ($contactedEver ? 'تواصل سابق' : 'لم يُتواصل'),
+        'contact_tone' => $contactedInPeriod ? 'emerald' : ($contactedEver ? 'amber' : 'rose'),
+      ];
+    });
+  }
+
+  /**
+   * @param  \Illuminate\Support\Collection<int, SalesLeadGroup>  $groups
+   * @return list<array<string, mixed>>
+   */
+  private function buildGroupBreakdown(int $repId, Collection $groups, Carbon $start, Carbon $end): array
+  {
+    if ($groups->isEmpty()) {
+      return [];
+    }
+
+    $groupIds = $groups->pluck('id')->all();
+
+    $allGroupLeads = SalesLead::query()
+      ->forAssignee($repId)
+      ->whereIn('sales_lead_group_id', $groupIds)
+      ->get(['id', 'sales_lead_group_id', 'stage', 'last_contacted_at']);
+
+    $activityLeadIdsByGroup = SalesActivity::query()
+      ->where('user_id', $repId)
+      ->whereBetween('created_at', [$start, $end])
+      ->whereHas('lead', fn ($q) => $q->whereIn('sales_lead_group_id', $groupIds))
+      ->with('lead:id,sales_lead_group_id')
+      ->get()
+      ->groupBy(fn ($a) => (int) ($a->lead?->sales_lead_group_id ?? 0));
+
+    $rows = [];
+    foreach ($groups as $group) {
+      $groupLeads = $allGroupLeads->where('sales_lead_group_id', $group->id);
+      $total = $groupLeads->count();
+      $contactedEver = $groupLeads->filter(fn ($l) => $l->last_contacted_at !== null || $l->stage !== 'new')->count();
+      $activityLeadIds = ($activityLeadIdsByGroup->get($group->id) ?? collect())
+        ->pluck('sales_lead_id')
+        ->unique();
+      $contactedInPeriod = $groupLeads->filter(function ($l) use ($start, $end, $activityLeadIds) {
+        return $activityLeadIds->contains($l->id)
+          || ($l->last_contacted_at && $l->last_contacted_at->betweenIncluded($start, $end));
+      })->count();
+
+      $byStage = [];
+      foreach (SalesLead::STAGES as $stageKey => $stageLabel) {
+        $byStage[$stageKey] = [
+          'label' => $stageLabel,
+          'count' => $groupLeads->where('stage', $stageKey)->count(),
+        ];
+      }
+
+      $rows[] = [
+        'group' => $group,
+        'total' => $total,
+        'contacted_ever' => $contactedEver,
+        'not_contacted' => max(0, $total - $contactedEver),
+        'contacted_in_period' => $contactedInPeriod,
+        'not_contacted_in_period' => max(0, $total - $contactedInPeriod),
+        'by_stage' => $byStage,
+      ];
+    }
+
+    return $rows;
+  }
+
   private function leadScopeLabel(string $scope): string
   {
     return match ($scope) {
       'new' => 'Leads سجّلها الموظف بنفسه',
       'transferred_from_admin' => 'Leads محوّلة من الإدارة',
+      'in_groups' => 'كل Leads داخل مجموعات العملاء المسندة',
       default => 'كل Leads ذات صلة بالفترة',
     };
   }
@@ -299,6 +418,12 @@ class SalesEmployeePeriodReportService
         })
         ->whereBetween('created_at', [$start, $end])
         ->orderByDesc('created_at'),
+
+      'in_groups' => SalesLead::query()
+        ->forAssignee($userId)
+        ->whereNotNull('sales_lead_group_id')
+        ->whereHas('group', fn ($gq) => $gq->forAssignee($userId))
+        ->orderByDesc('updated_at'),
 
       default => SalesLead::query()
         ->forAssignee($userId)

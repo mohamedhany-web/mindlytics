@@ -1016,6 +1016,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
 
         Route::prefix('sales')->name('sales.')->group(function () {
             Route::get('reports', [\App\Http\Controllers\Admin\SalesReportController::class, 'index'])->name('reports.index');
+            Route::get('reports/employee', [\App\Http\Controllers\Admin\SalesReportController::class, 'employee'])->name('reports.employee');
             Route::get('reports/export', [\App\Http\Controllers\Admin\SalesReportController::class, 'export'])->name('reports.export');
             Route::get('reports/pdf', [\App\Http\Controllers\Admin\SalesReportController::class, 'pdfExport'])->name('reports.pdf');
             Route::get('reports/daily-export', [\App\Http\Controllers\Admin\SalesReportController::class, 'dailyExport'])->name('reports.daily-export');
