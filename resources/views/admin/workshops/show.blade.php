@@ -262,8 +262,8 @@
                     <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
                         <i class="fas fa-paper-plane text-slate-600"></i> التواصل مع المسجلين
                     </h3>
-                    <div class="grid md:grid-cols-2 gap-4">
-                        <form method="POST" action="{{ route('admin.workshops.send-acceptance', $workshop) }}" class="rounded-xl border border-slate-200 p-4 space-y-3 bg-slate-50/50">
+                    <div class="grid md:grid-cols-2 gap-4 items-start">
+                        <form method="POST" action="{{ route('admin.workshops.send-acceptance', $workshop) }}" class="rounded-xl border border-slate-200 p-4 space-y-3 bg-slate-50/50 h-full">
                             @csrf
                             <p class="text-xs font-bold text-slate-800"><i class="fas fa-envelope-open-text text-blue-600 ml-1"></i> إيميل القبول</p>
                             <div class="flex flex-wrap gap-3 text-xs">
@@ -276,18 +276,26 @@
                                 <button type="submit" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold">إرسال</button>
                             </div>
                         </form>
-                        <form method="POST" action="{{ route('admin.workshops.send-whatsapp', $workshop) }}" class="rounded-xl border border-slate-200 p-4 space-y-3 bg-slate-50/50">
+                        @include('admin.workshops._whatsapp_bulk', ['workshop' => $workshop])
+                    </div>
+
+                    <details class="rounded-xl border border-slate-200 bg-slate-50/50">
+                        <summary class="cursor-pointer px-4 py-3 text-xs font-bold text-slate-700 select-none">
+                            <i class="fab fa-whatsapp text-green-600 ml-1"></i>
+                            فتح روابط واتساب يدوياً (بدون Bridge)
+                        </summary>
+                        <form method="POST" action="{{ route('admin.workshops.send-whatsapp', $workshop) }}" class="p-4 pt-0 space-y-3">
                             @csrf
-                            <p class="text-xs font-bold text-slate-800"><i class="fab fa-whatsapp text-green-600 ml-1"></i> واتساب</p>
+                            <p class="text-[10px] text-amber-700">يفتح تبويبات في المتصفح — مناسب لرقم واحد أو عند عدم تفعيل Bridge. لا يضمن إرسال كل الرسائل تلقائياً.</p>
                             <div class="flex flex-wrap gap-3 text-xs">
                                 <label class="inline-flex items-center gap-1"><input type="radio" name="scope" value="all" checked class="text-green-600"> كل الأرقام</label>
                                 <label class="inline-flex items-center gap-1"><input type="radio" name="scope" value="phone" class="text-green-600"> رقم محدد</label>
                             </div>
                             <input type="text" name="phone" placeholder="2010xxxxxxx" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs">
                             <textarea name="message" rows="2" required class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs" placeholder="نص الرسالة…"></textarea>
-                            <button type="submit" class="w-full px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-bold">فتح واتساب</button>
+                            <button type="submit" class="w-full px-3 py-1.5 rounded-lg bg-slate-700 text-white text-xs font-bold">فتح روابط واتساب</button>
                         </form>
-                    </div>
+                    </details>
                 </div>
 
                 {{-- جدول المسجلين --}}

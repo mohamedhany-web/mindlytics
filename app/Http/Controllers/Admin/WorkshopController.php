@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopRegistration;
 use App\Services\SalesNotificationService;
+use App\Services\WorkshopWhatsAppBatchService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -118,6 +119,12 @@ class WorkshopController extends Controller
             ->values()
             ->all();
 
+        $waBulkService = app(WorkshopWhatsAppBatchService::class);
+        $whatsappPhoneCountAll = $waBulkService->countDistinctPhones($workshop, 'all');
+        $whatsappPhoneCountOnline = $waBulkService->countDistinctPhones($workshop, 'online');
+        $whatsappPhoneCountOffline = $waBulkService->countDistinctPhones($workshop, 'offline');
+        $latestWhatsAppBatch = $waBulkService->latestForWorkshop((int) $workshop->id);
+
         return view('admin.workshops.show', compact(
             'workshop',
             'registrations',
@@ -126,7 +133,11 @@ class WorkshopController extends Controller
             'stats',
             'emailPendingCount',
             'salesReps',
-            'salesLeadGroups'
+            'salesLeadGroups',
+            'whatsappPhoneCountAll',
+            'whatsappPhoneCountOnline',
+            'whatsappPhoneCountOffline',
+            'latestWhatsAppBatch'
         ));
     }
 

@@ -1137,6 +1137,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             ->name('workshops.send-acceptance');
         Route::post('workshops/{workshop}/send-whatsapp', [\App\Http\Controllers\Admin\WorkshopController::class, 'sendWhatsappMessages'])
             ->name('workshops.send-whatsapp');
+        Route::post('workshops/{workshop}/whatsapp-bulk', [\App\Http\Controllers\Admin\WorkshopWhatsAppController::class, 'store'])
+            ->name('workshops.whatsapp-bulk');
         Route::post('workshops/{workshop}/checkin', [\App\Http\Controllers\Admin\WorkshopController::class, 'checkin'])
             ->name('workshops.checkin');
         Route::post('workshops/{workshop}/convert-to-leads', [\App\Http\Controllers\Admin\WorkshopController::class, 'convertRegistrationsToLeads'])
