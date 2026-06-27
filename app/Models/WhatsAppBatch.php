@@ -71,9 +71,15 @@ class WhatsAppBatch extends Model
         return match ($this->status) {
             'pending' => 'في الانتظار',
             'processing' => 'جاري الإرسال',
+            'paused' => 'متوقف — الواتساب غير متصل',
             'completed' => 'اكتمل',
             'cancelled' => 'موقوف',
             default => $this->status,
         };
+    }
+
+    public function isPausedForBridge(): bool
+    {
+        return $this->status === 'paused' || (bool) ($this->meta['bridge_blocked'] ?? false);
     }
 }

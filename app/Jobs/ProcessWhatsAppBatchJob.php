@@ -64,6 +64,10 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
             }
 
             $batch = WhatsAppBatch::find($this->batchId);
+            if ($batch && $batch->status === 'paused') {
+                return;
+            }
+
             if ($batch && ! $batch->isFinished() && $batch->pendingCount() > 0) {
                 WhatsAppBatchService::dispatchBatch($this->batchId);
             }
@@ -113,8 +117,15 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
             return 0;
         }
 
+        $bridgeService = app(WhatsAppBridgeService::class);
+        $gate = $bridgeService->canSendNow();
+        if (! ($gate['success'] ?? false)) {
+            $this->pauseBatchForBridge($batch, (string) ($gate['error'] ?? 'الواتساب غير متصل'));
+
+            return 0;
+        }
+
         $processed = 0;
-        $bridgeReady = null;
 
         foreach ($items as $item) {
             $batch->refresh();
@@ -133,15 +144,6 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
 
             $item->refresh();
             $processed++;
-
-            if ($bridgeReady === null) {
-                $gate = app(WhatsAppBridgeService::class)->canSendNow();
-                $bridgeReady = (bool) ($gate['success'] ?? false);
-                if (! $bridgeReady) {
-                    $this->handleSendFailure($item, $batch, (string) ($gate['error'] ?? 'الواتساب غير جاهز للإرسال.'));
-                    continue;
-                }
-            }
 
             $result = $this->sendWithRetries($whatsapp, $item, $batch, skipReadyCheck: true);
 
@@ -204,6 +206,19 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
 
     private function handleSendFailure(WhatsAppBatchItem $item, WhatsAppBatch $batch, string $error): void
     {
+        $bridgeService = app(WhatsAppBridgeService::class);
+
+        if ($bridgeService->isConnectionBlockedError($error)) {
+            WhatsAppBatchItem::query()
+                ->where('id', $item->id)
+                ->where('status', 'processing')
+                ->update(['status' => 'pending', 'error_message' => null]);
+
+            $this->pauseBatchForBridge($batch, $error);
+
+            return;
+        }
+
         $attempts = (int) ($item->send_attempts ?? 0) + 1;
         $maxItemAttempts = max(1, (int) config('whatsapp.batch_item_max_attempts', 6));
         $transient = $this->isTransientWhatsAppError($error);
@@ -290,13 +305,16 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
 
     private function isTransientWhatsAppError(string $error): bool
     {
+        if (app(WhatsAppBridgeService::class)->isConnectionBlockedError($error)) {
+            return false;
+        }
+
         $error = mb_strtolower($error);
 
         $needles = [
             'not connected',
             'غير متصل',
             'غير جاهز',
-            'لا يمكن الإرسال',
             'bridge',
             'timeout',
             'timed out',
@@ -347,5 +365,28 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
         ]);
 
         $lead->touchLastContactFromActivity('whatsapp');
+    }
+
+    private function pauseBatchForBridge(WhatsAppBatch $batch, string $reason): void
+    {
+        WhatsAppBatchItem::query()
+            ->where('batch_id', $batch->id)
+            ->where('status', 'processing')
+            ->update(['status' => 'pending', 'error_message' => null]);
+
+        $meta = is_array($batch->meta) ? $batch->meta : [];
+        $meta['bridge_blocked'] = true;
+        $meta['bridge_blocked_at'] = now()->toIso8601String();
+        $meta['bridge_blocked_reason'] = $reason;
+
+        $batch->update([
+            'status' => 'paused',
+            'meta' => $meta,
+        ]);
+
+        Log::warning('WhatsApp batch paused — bridge not ready', [
+            'batch_id' => $batch->id,
+            'reason' => $reason,
+        ]);
     }
 }

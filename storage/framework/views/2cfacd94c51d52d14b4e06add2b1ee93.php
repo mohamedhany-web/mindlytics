@@ -7,6 +7,12 @@
     $remainingToday = app(\App\Services\WhatsAppPacingService::class)->remainingDailyQuota();
     $waTemplateVars = ['{{name}}', '{{phone}}', '{{workshop}}', '{{attendance}}', '{{location}}'];
     $messagePlaceholder = "مرحباً {{name}}،\n\nشكراً لتسجيلك في ورشة «{{workshop}}» ({{attendance}}).\n\n...";
+    $waBridgeStatus = app(\App\Services\WhatsAppBridgeService::class)->getStatus();
+    $waBridgeMeta = app(\App\Services\WhatsAppBridgeService::class)->connectionMeta(
+        $waBridgeStatus['data'] ?? [],
+        (bool) ($waBridgeStatus['success'] ?? false)
+    );
+    $waCanSend = (bool) ($waBridgeMeta['can_send'] ?? false);
 ?>
 
 <section class="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-white p-4 sm:p-5 space-y-4 h-full">
@@ -21,7 +27,11 @@
             </p>
         </div>
         <?php if($waConfigured): ?>
-            <span class="text-[10px] px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold">Bridge مفعّل</span>
+            <?php if($waCanSend): ?>
+                <span class="text-[10px] px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold">متصل وجاهز</span>
+            <?php else: ?>
+                <span class="text-[10px] px-2 py-1 rounded-full bg-rose-100 text-rose-800 font-bold"><?php echo e($waBridgeMeta['label'] ?? 'غير متصل'); ?></span>
+            <?php endif; ?>
         <?php else: ?>
             <span class="text-[10px] px-2 py-1 rounded-full bg-rose-100 text-rose-800 font-bold">Bridge غير مفعّل</span>
         <?php endif; ?>
@@ -45,6 +55,19 @@
             <a href="<?php echo e(route('admin.whatsapp.index')); ?>" class="font-bold underline">قسم الواتساب</a>
             أو استخدم «فتح روابط يدوياً» بالأسفل.
         </p>
+    <?php elseif(!$waCanSend): ?>
+        <div class="text-xs text-rose-800 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 space-y-2">
+            <p>
+                <strong>يجب ربط الواتساب أولاً</strong> — الحالة: <?php echo e($waBridgeMeta['label'] ?? 'غير متصل'); ?>
+
+                <?php if(!empty($waBridgeMeta['last_error'])): ?>
+                    (<?php echo e($waBridgeMeta['last_error']); ?>)
+                <?php endif; ?>
+            </p>
+            <a href="<?php echo e(route('admin.whatsapp.index')); ?>" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700">
+                <i class="fas fa-qrcode"></i> ربط الواتساب الآن
+            </a>
+        </div>
     <?php elseif($phoneCountAll === 0): ?>
         <p class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
             لا يوجد مسجلون بأرقام هواتف في هذه الورشة.
@@ -101,7 +124,8 @@ unset($__errorArgs, $__bag); ?>
                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </p>
             </div>
-            <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold">
+            <button type="submit" <?php if(!$waCanSend): echo 'disabled'; endif; ?>
+                    class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold">
                 <i class="fas fa-paper-plane"></i>
                 بدء الإرسال الآمن لكل الأرقام
             </button>

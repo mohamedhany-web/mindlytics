@@ -102,6 +102,10 @@ class WhatsAppBatchService
             throw new \RuntimeException('هذه الدفعة موقوفة — لا يمكن إعادة التشغيل تلقائياً.');
         }
 
+        if ($batch->status === 'paused' || $batch->isPausedForBridge()) {
+            app(\App\Services\WhatsAppBridgeService::class)->assertReadyForBulkSend();
+        }
+
         WhatsAppBatchItem::query()
             ->where('batch_id', $batch->id)
             ->where('status', 'processing')
@@ -122,10 +126,14 @@ class WhatsAppBatchService
             return ['failed_reset' => $failedReset, 'dispatched' => false];
         }
 
+        $meta = is_array($batch->meta) ? $batch->meta : [];
+        unset($meta['bridge_blocked'], $meta['bridge_blocked_at'], $meta['bridge_blocked_reason']);
+
         $batch->update([
             'status' => 'pending',
             'completed_at' => null,
             'failed_count' => $batch->items()->where('status', 'failed')->count(),
+            'meta' => $meta,
         ]);
 
         self::dispatchBatch($batch->id);
@@ -226,6 +234,10 @@ class WhatsAppBatchService
             return false;
         }
 
+        if ($batch->status === 'paused' || $batch->isPausedForBridge()) {
+            return self::resumeIfBridgeReady($batch);
+        }
+
         $pending = $batch->items()->whereIn('status', ['pending', 'processing'])->count();
 
         if ($pending === 0) {
@@ -256,6 +268,39 @@ class WhatsAppBatchService
         if (! $stalled) {
             return false;
         }
+
+        self::dispatchBatch($batch->id);
+
+        return true;
+    }
+
+    public static function resumeIfBridgeReady(WhatsAppBatch $batch): bool
+    {
+        if ($batch->isFinished()) {
+            return false;
+        }
+
+        if ($batch->status !== 'paused' && ! $batch->isPausedForBridge()) {
+            return false;
+        }
+
+        $gate = app(\App\Services\WhatsAppBridgeService::class)->canSendNow();
+        if (! ($gate['success'] ?? false)) {
+            return false;
+        }
+
+        $meta = is_array($batch->meta) ? $batch->meta : [];
+        unset($meta['bridge_blocked'], $meta['bridge_blocked_at'], $meta['bridge_blocked_reason']);
+
+        $batch->update([
+            'status' => 'pending',
+            'meta' => $meta,
+        ]);
+
+        WhatsAppBatchItem::query()
+            ->where('batch_id', $batch->id)
+            ->where('status', 'processing')
+            ->update(['status' => 'pending', 'error_message' => null]);
 
         self::dispatchBatch($batch->id);
 

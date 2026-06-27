@@ -91,6 +91,8 @@ class WorkshopWhatsAppBatchService
             throw new \RuntimeException($limitError);
         }
 
+        app(WhatsAppBridgeService::class)->assertReadyForBulkSend();
+
         $remainingToday = $this->pacing->remainingDailyQuota();
         if ($remainingToday !== null && $items->count() > $remainingToday) {
             throw new \RuntimeException(

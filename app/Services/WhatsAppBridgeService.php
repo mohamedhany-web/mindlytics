@@ -351,6 +351,60 @@ class WhatsAppBridgeService
     }
 
     /**
+     * أخطاء انقطاع الجلسة (LOGOUT / QR) — لا تُعاد المحاولة تلقائياً على كل رقم.
+     */
+    public function isConnectionBlockedError(string $error): bool
+    {
+        $error = mb_strtolower($error);
+
+        $needles = [
+            'logout',
+            'log out',
+            'بانتظار qr',
+            'qr',
+            'pairing',
+            'رمز الربط',
+            'auth_failure',
+            'فشل المصادقة',
+            'غير متصل',
+            'not connected',
+            'scan the qr',
+            'امسح',
+            'لا يمكن الإرسال الآن',
+            'الجسر غير متاح',
+            'إعدادات الجسر',
+        ];
+
+        foreach ($needles as $needle) {
+            if (str_contains($error, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @throws \RuntimeException
+     */
+    public function assertReadyForBulkSend(): void
+    {
+        if (! $this->isConfigured()) {
+            throw new \RuntimeException('إعدادات جسر الواتساب غير مكتملة — راجع قسم الواتساب.');
+        }
+
+        $ready = $this->ensureReadyForSend();
+        if ($ready['success'] ?? false) {
+            return;
+        }
+
+        $error = (string) ($ready['error'] ?? 'الواتساب غير متصل');
+        throw new \RuntimeException(
+            $error . ' — افتح «قسم الواتساب» وامسح QR أو أدخل رمز الربط قبل بدء الإرسال الجماعي.'
+        );
+    }
+
+    /**
      * @return array{success: bool, data?: array<string, mixed>, error?: string}
      */
     public function sendMessage(string $phone, string $message, bool $simulateTyping = true): array

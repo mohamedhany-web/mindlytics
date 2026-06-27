@@ -8,6 +8,7 @@ use App\Models\WhatsAppBatch;
 use App\Models\WhatsAppBatchItem;
 use App\Models\Workshop;
 use App\Services\WhatsAppBatchService;
+use App\Services\WhatsAppBridgeService;
 use Illuminate\Http\Request;
 
 class WhatsAppBatchController extends Controller
@@ -58,7 +59,13 @@ class WhatsAppBatchController extends Controller
             $salesGroup = \App\Models\SalesLeadGroup::find($batch->source_id);
         }
 
-        return view('admin.whatsapp.batches.show', compact('batch', 'items', 'filter', 'workshop', 'salesGroup'));
+        $bridgeStatus = app(WhatsAppBridgeService::class)->getStatus();
+        $bridgeMeta = app(WhatsAppBridgeService::class)->connectionMeta(
+            $bridgeStatus['data'] ?? [],
+            (bool) ($bridgeStatus['success'] ?? false)
+        );
+
+        return view('admin.whatsapp.batches.show', compact('batch', 'items', 'filter', 'workshop', 'salesGroup', 'bridgeMeta'));
     }
 
     public function statusJson(WhatsAppBatch $batch)
@@ -73,6 +80,19 @@ class WhatsAppBatchController extends Controller
     {
         if ($batch->isFinished()) {
             return response()->json($this->batchStatusPayload($batch));
+        }
+
+        if ($batch->status === 'paused' || $batch->isPausedForBridge()) {
+            $ready = app(WhatsAppBridgeService::class)->ensureReadyForSend();
+            if (! ($ready['success'] ?? false)) {
+                return response()->json(array_merge(
+                    ['ok' => false, 'bridge_blocked' => true, 'error' => $ready['error'] ?? 'الواتساب غير متصل'],
+                    $this->batchStatusPayload($batch)
+                ));
+            }
+
+            WhatsAppBatchService::resumeIfBridgeReady($batch->fresh());
+            $batch->refresh();
         }
 
         try {
@@ -102,6 +122,8 @@ class WhatsAppBatchController extends Controller
             ->limit(10)
             ->get(['id', 'recipient_name', 'phone', 'status', 'error_message', 'sent_at', 'updated_at']);
 
+        $bridgePayload = $this->bridgeStatusPayload();
+
         return [
             'id' => $batch->id,
             'status' => $batch->status,
@@ -112,8 +134,11 @@ class WhatsAppBatchController extends Controller
             'pending' => $batch->pendingCount(),
             'progress' => $batch->progressPercent(),
             'finished' => $batch->isFinished(),
+            'paused_for_bridge' => $batch->isPausedForBridge(),
+            'bridge_blocked_reason' => $batch->meta['bridge_blocked_reason'] ?? null,
             'started_at' => optional($batch->started_at)->toIso8601String(),
             'completed_at' => optional($batch->completed_at)->toIso8601String(),
+            'bridge' => $bridgePayload,
             'recent' => $recentItems->map(fn ($item) => [
                 'id' => $item->id,
                 'name' => $item->recipient_name,
@@ -123,6 +148,23 @@ class WhatsAppBatchController extends Controller
                 'error' => $item->error_message,
                 'sent_at' => optional($item->sent_at)->format('Y-m-d H:i'),
             ]),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function bridgeStatusPayload(): array
+    {
+        $bridge = app(WhatsAppBridgeService::class);
+        $status = $bridge->getStatus();
+        $meta = $bridge->connectionMeta($status['data'] ?? [], (bool) ($status['success'] ?? false));
+
+        return [
+            'can_send' => (bool) ($meta['can_send'] ?? false),
+            'label' => (string) ($meta['label'] ?? 'غير معروف'),
+            'last_error' => $meta['last_error'] ?? null,
+            'connect_url' => route('admin.whatsapp.index'),
         ];
     }
 

@@ -32,6 +32,42 @@
         ],
     ])
 
+    @if(($batch->isPausedForBridge() || !($bridgeMeta['can_send'] ?? false)) && !$batch->isFinished())
+        <div id="bridge-blocked-banner" class="rounded-xl border-2 border-rose-300 bg-rose-50 p-4 sm:p-5 space-y-3">
+            <div class="flex flex-wrap items-start gap-3">
+                <div class="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center shrink-0">
+                    <i class="fab fa-whatsapp text-rose-600 text-xl"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="font-bold text-rose-900">الواتساب غير متصل — لن تُرسل أي رسالة حتى تربط الحساب</h3>
+                    <p class="text-sm text-rose-800 mt-1">
+                        الحالة: <strong>{{ $bridgeMeta['label'] ?? 'غير متصل' }}</strong>
+                        @if(!empty($bridgeMeta['last_error']))
+                            — <span class="font-mono text-xs">{{ $bridgeMeta['last_error'] }}</span>
+                        @endif
+                    </p>
+                    @if($batch->meta['bridge_blocked_reason'] ?? null)
+                        <p class="text-xs text-rose-700 mt-1">{{ $batch->meta['bridge_blocked_reason'] }}</p>
+                    @endif
+                    <p class="text-xs text-rose-700 mt-2">بعد مسح QR أو إدخال رمز الربط، ستُستأنف الدفعة تلقائياً من هذه الصفحة.</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('admin.whatsapp.index') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold">
+                    <i class="fas fa-qrcode"></i>
+                    ربط الواتساب الآن
+                </a>
+                <form method="POST" action="{{ route('admin.whatsapp.start') }}" class="inline">
+                    @csrf
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-rose-200 text-rose-800 text-sm font-semibold hover:bg-rose-100">
+                        <i class="fas fa-wrench"></i>
+                        إصلاح الاتصال
+                    </button>
+                </form>
+            </div>
+        </div>
+    @endif
+
     {{-- Progress --}}
     <section class="{{ $waSectionClass }}" id="batch-progress-panel">
         <div class="p-5 space-y-4">
@@ -40,6 +76,7 @@
                     <span id="batch-status-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border
                         @if($batch->status === 'processing') bg-sky-100 text-sky-800 border-sky-200
                         @elseif($batch->status === 'completed') bg-emerald-100 text-emerald-800 border-emerald-200
+                        @elseif($batch->status === 'paused') bg-rose-100 text-rose-800 border-rose-200
                         @elseif($batch->status === 'cancelled') bg-slate-200 text-slate-800 border-slate-300
                         @else bg-amber-100 text-amber-800 border-amber-200 @endif">
                         <i id="batch-status-icon" class="fas {{ $batch->status === 'processing' ? 'fa-spinner fa-spin' : 'fa-info-circle' }}"></i>
@@ -216,6 +253,11 @@
         document.getElementById('batch-progress-text').textContent = data.progress;
         document.getElementById('batch-progress-bar').style.width = data.progress + '%';
         document.getElementById('batch-status-label').textContent = data.status_label;
+
+        const banner = document.getElementById('bridge-blocked-banner');
+        if (banner && data.bridge && data.bridge.can_send && !data.paused_for_bridge) {
+            banner.remove();
+        }
 
         if (data.finished) {
             clearInterval(pollTimer);
