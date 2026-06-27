@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ProcessWhatsAppBatchJob;
 use App\Models\WhatsAppBatch;
+use App\Models\WhatsAppBatchItem;
 use App\Models\Workshop;
 use App\Services\WhatsAppBatchService;
 use Illuminate\Http\Request;
@@ -64,13 +66,43 @@ class WhatsAppBatchController extends Controller
         WhatsAppBatchService::kickstartIfStalled($batch);
         $batch->refresh();
 
+        return response()->json($this->batchStatusPayload($batch));
+    }
+
+    public function process(WhatsAppBatch $batch)
+    {
+        if ($batch->isFinished()) {
+            return response()->json($this->batchStatusPayload($batch));
+        }
+
+        try {
+            ProcessWhatsAppBatchJob::dispatchSync($batch->id);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'ok' => false,
+                'error' => 'تعذّر معالجة الدفعة: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        $batch->refresh();
+
+        return response()->json(array_merge(['ok' => true], $this->batchStatusPayload($batch)));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function batchStatusPayload(WhatsAppBatch $batch): array
+    {
         $recentItems = $batch->items()
             ->whereIn('status', ['sent', 'failed'])
             ->orderByDesc('updated_at')
             ->limit(10)
             ->get(['id', 'recipient_name', 'phone', 'status', 'error_message', 'sent_at', 'updated_at']);
 
-        return response()->json([
+        return [
             'id' => $batch->id,
             'status' => $batch->status,
             'status_label' => $batch->statusLabel(),
@@ -91,7 +123,7 @@ class WhatsAppBatchController extends Controller
                 'error' => $item->error_message,
                 'sent_at' => optional($item->sent_at)->format('Y-m-d H:i'),
             ]),
-        ]);
+        ];
     }
 
     public function retry(WhatsAppBatch $batch)
@@ -100,13 +132,44 @@ class WhatsAppBatchController extends Controller
             return back()->with('error', 'هذه الدفعة موقوفة.');
         }
 
-        if ($batch->pendingCount() === 0 && $batch->isFinished()) {
-            return back()->with('error', 'لا توجد رسائل معلّقة في هذه الدفعة.');
+        $failedCount = (int) $batch->items()->where('status', 'failed')->count();
+        $pendingCount = $batch->pendingCount();
+
+        if ($failedCount === 0 && $pendingCount === 0) {
+            return back()->with('error', 'لا توجد رسائل فاشلة أو معلّقة لإعادة الإرسال.');
         }
 
-        $this->batchService->retryBatch($batch);
+        try {
+            $result = $this->batchService->retryBatch($batch);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
-        return back()->with('success', 'تم إعادة تشغيل الإرسال — انتظر بضع ثوانٍ ثم حدّث الصفحة.');
+        if ($result['failed_reset'] > 0) {
+            return back()->with(
+                'success',
+                'تمت إعادة جدولة ' . $result['failed_reset'] . ' رسالة فاشلة للإرسال — الرسائل المرسلة مسبقاً لن تُعاد.'
+            );
+        }
+
+        return back()->with('success', 'تم إعادة تشغيل الإرسال للرسائل المعلّقة — انتظر بضع ثوانٍ.');
+    }
+
+    public function retryItem(WhatsAppBatch $batch, WhatsAppBatchItem $item)
+    {
+        if ($batch->status === 'cancelled') {
+            return back()->with('error', 'هذه الدفعة موقوفة.');
+        }
+
+        try {
+            $this->batchService->retryItem($batch, $item);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        $label = $item->recipient_name ?: $item->phone;
+
+        return back()->with('success', 'تمت إعادة جدولة رسالة «' . $label . '» للإرسال — باقي الرسائل لم تُمس.');
     }
 
     public function cancel(WhatsAppBatch $batch)

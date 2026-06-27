@@ -9,6 +9,9 @@
     @include('admin.whatsapp._nav', ['active' => 'batches'])
 
     @php
+        $failedItemsCount = (int) $batch->items()->where('status', 'failed')->count();
+        $pendingItemsCount = $batch->pendingCount();
+        $autoDriveBatch = ! $batch->isFinished() || $pendingItemsCount > 0;
         $backUrl = $workshop
             ? route('admin.workshops.show', $workshop)
             : ($salesGroup ?? null
@@ -43,7 +46,7 @@
                         <span id="batch-status-label">{{ $batch->statusLabel() }}</span>
                     </span>
                     @if(!$batch->isFinished())
-                        <span class="text-xs text-slate-500">الإرسال يعمل عبر الطابور — يُعالَج تلقائياً كل دقيقة (cron)</span>
+                        <span class="text-xs text-slate-500">الإرسال يعمل تلقائياً — تُعالَج الدفعة من هذه الصفحة ومن طابور whatsapp كل دقيقة</span>
                     @endif
                 </div>
                 <p class="text-sm font-bold text-slate-700 tabular-nums"><span id="batch-progress-text">{{ $batch->progressPercent() }}</span>%</p>
@@ -65,24 +68,48 @@
                     <p class="text-amber-700/80">متبقي</p>
                 </div>
             </div>
-            @if(!$batch->isFinished() && $batch->pendingCount() > 0)
+            @if(!$batch->isFinished() && $pendingItemsCount > 0)
                 <div class="flex flex-wrap items-center gap-3 px-5 pb-5">
                     <form method="POST" action="{{ route('admin.whatsapp.batches.cancel', $batch) }}"
-                          onsubmit="return confirm('إيقاف الإرسال؟\n\nلن تُرسل الرسائل المتبقية ({{ $batch->pendingCount() }}). الرسائل التي أُرسلت بالفعل تبقى كما هي.');">
+                          onsubmit="return confirm('إيقاف الإرسال؟\n\nلن تُرسل الرسائل المتبقية ({{ $pendingItemsCount }}). الرسائل التي أُرسلت بالفعل تبقى كما هي.');">
                         @csrf
                         <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-rose-600 hover:bg-rose-700 text-white">
                             <i class="fas fa-stop"></i>
                             إيقاف الإرسال
                         </button>
                     </form>
+                    @if($failedItemsCount > 0)
+                        <form method="POST" action="{{ route('admin.whatsapp.batches.retry', $batch) }}">
+                            @csrf
+                            <button type="submit" class="{{ $waBtnPrimary }} !text-sm">
+                                <i class="fas fa-redo"></i>
+                                إعادة إرسال الفاشلة فقط ({{ $failedItemsCount }})
+                            </button>
+                        </form>
+                    @endif
                     <form method="POST" action="{{ route('admin.whatsapp.batches.retry', $batch) }}">
                         @csrf
-                        <button type="submit" class="{{ $waBtnPrimary }} !text-sm">
-                            <i class="fas fa-redo"></i>
-                            إعادة تشغيل ({{ $batch->pendingCount() }} معلّقة)
+                        <button type="submit" class="{{ $waBtnSecondary }} !text-sm">
+                            <i class="fas fa-play"></i>
+                            متابعة المعلّقة ({{ $pendingItemsCount }})
                         </button>
                     </form>
-                    <p class="text-[11px] text-slate-500 w-full">إذا بقيت «في الانتظار» أكثر من دقيقة، جرّب إعادة التشغيل — أو أوقف الدفعة.</p>
+                    <p class="text-[11px] text-slate-500 w-full">الرسائل المرسلة بنجاح لا تُعاد. إذا بقيت «في الانتظار» أكثر من دقيقة، جرّب «متابعة المعلّقة».</p>
+                </div>
+            @elseif($failedItemsCount > 0 && $batch->status !== 'cancelled')
+                <div class="flex flex-wrap items-center gap-3 px-5 pb-5 rounded-xl bg-rose-50 border border-rose-200">
+                    <p class="text-sm text-rose-800 font-semibold w-full sm:w-auto">
+                        <i class="fas fa-exclamation-circle"></i>
+                        {{ $failedItemsCount }} رسالة فشل إرسالها — يمكنك إعادة إرسالها فقط دون المساس بالرسائل الناجحة.
+                    </p>
+                    <form method="POST" action="{{ route('admin.whatsapp.batches.retry', $batch) }}">
+                        @csrf
+                        <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-rose-600 hover:bg-rose-700 text-white">
+                            <i class="fas fa-redo"></i>
+                            إعادة إرسال كل الفاشلة ({{ $failedItemsCount }})
+                        </button>
+                    </form>
+                    <p class="text-[11px] text-rose-700/80 w-full">أو أعد إرسال رسالة واحدة من عمود «إجراء» في الجدول أدناه.</p>
                 </div>
             @endif
         </div>
@@ -113,6 +140,7 @@
                         <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500">الهاتف</th>
                         <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500">الحالة</th>
                         <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500">ملاحظة</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500">إجراء</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 bg-white" id="batch-items-tbody">
@@ -133,10 +161,24 @@
                                     <span class="text-slate-400">—</span>
                                 @endif
                             </td>
+                            <td class="px-4 py-3 text-xs">
+                                @if($item->status === 'failed' && $batch->status !== 'cancelled')
+                                    <form method="POST" action="{{ route('admin.whatsapp.batches.items.retry', [$batch, $item]) }}" class="inline">
+                                        @csrf
+                                        <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-rose-600 hover:bg-rose-700 text-white"
+                                                title="إعادة إرسال هذه الرسالة فقط">
+                                            <i class="fas fa-redo text-[10px]"></i>
+                                            إعادة الإرسال
+                                        </button>
+                                    </form>
+                                @else
+                                    <span class="text-slate-300">—</span>
+                                @endif
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-4 py-8 text-center text-slate-500">لا توجد عناصر.</td>
+                            <td colspan="6" class="px-4 py-8 text-center text-slate-500">لا توجد عناصر.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -148,11 +190,14 @@
     </section>
 </div>
 
-@if(!$batch->isFinished())
+@if($autoDriveBatch)
 <script>
 (function () {
     const statusUrl = @json(route('admin.whatsapp.batches.status', $batch));
+    const processUrl = @json(route('admin.whatsapp.batches.process', $batch));
+    const csrf = @json(csrf_token());
     let pollTimer = null;
+    let processing = false;
 
     function badgeHtml(status, label) {
         const map = {
@@ -164,29 +209,58 @@
         return '<span class="inline-flex px-2.5 py-1 rounded-full text-xs font-bold border ' + cls + '">' + label + '</span>';
     }
 
+    function applyStatus(data) {
+        document.getElementById('stat-sent').textContent = data.sent;
+        document.getElementById('stat-failed').textContent = data.failed;
+        document.getElementById('stat-pending').textContent = data.pending;
+        document.getElementById('batch-progress-text').textContent = data.progress;
+        document.getElementById('batch-progress-bar').style.width = data.progress + '%';
+        document.getElementById('batch-status-label').textContent = data.status_label;
+
+        if (data.finished) {
+            clearInterval(pollTimer);
+            document.getElementById('batch-status-icon').className = 'fas fa-check-circle';
+            location.reload();
+        }
+    }
+
     async function poll() {
         try {
             const res = await fetch(statusUrl, { headers: { 'Accept': 'application/json' } });
             if (!res.ok) return;
-            const data = await res.json();
-
-            document.getElementById('stat-sent').textContent = data.sent;
-            document.getElementById('stat-failed').textContent = data.failed;
-            document.getElementById('stat-pending').textContent = data.pending;
-            document.getElementById('batch-progress-text').textContent = data.progress;
-            document.getElementById('batch-progress-bar').style.width = data.progress + '%';
-            document.getElementById('batch-status-label').textContent = data.status_label;
-
-            if (data.finished) {
-                clearInterval(pollTimer);
-                document.getElementById('batch-status-icon').className = 'fas fa-check-circle';
-                location.reload();
-            }
+            applyStatus(await res.json());
         } catch (e) {}
     }
 
-    pollTimer = setInterval(poll, 3000);
+    async function driveProcess() {
+        if (processing) return;
+        processing = true;
+        try {
+            const res = await fetch(processUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.finished !== undefined) {
+                    applyStatus(data);
+                }
+            }
+        } catch (e) {
+            /* fallback to cron queue */
+        } finally {
+            processing = false;
+        }
+    }
+
+    pollTimer = setInterval(poll, 4000);
+    setInterval(driveProcess, 12000);
     poll();
+    driveProcess();
 })();
 </script>
 @endif

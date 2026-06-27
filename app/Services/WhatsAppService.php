@@ -159,6 +159,22 @@ class WhatsAppService
                 return ['success' => false, 'error' => $limitError];
             }
 
+            $ready = $this->bridge->ensureReadyForSend();
+            if (! ($ready['success'] ?? false)) {
+                $blockError = $ready['error'] ?? 'الواتساب غير جاهز للإرسال.';
+
+                WhatsAppMessage::create([
+                    'user_id' => $actorId,
+                    'phone_number' => $phoneNumber,
+                    'message' => $message,
+                    'type' => $type,
+                    'status' => 'failed',
+                    'error_message' => $blockError,
+                ]);
+
+                return ['success' => false, 'error' => $blockError];
+            }
+
             $this->pacing->waitBeforeSend($batchId);
 
             $result = $this->bridge->sendMessage(

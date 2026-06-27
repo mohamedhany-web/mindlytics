@@ -91,7 +91,12 @@ class WhatsAppBatchService
         return $batch;
     }
 
-    public function retryBatch(WhatsAppBatch $batch): void
+    /**
+     * إعادة جدولة الرسائل الفاشلة فقط (والعالقة في processing) دون المساس بالمرسلة.
+     *
+     * @return array{failed_reset: int, dispatched: bool}
+     */
+    public function retryBatch(WhatsAppBatch $batch): array
     {
         if ($batch->status === 'cancelled') {
             throw new \RuntimeException('هذه الدفعة موقوفة — لا يمكن إعادة التشغيل تلقائياً.');
@@ -102,15 +107,59 @@ class WhatsAppBatchService
             ->where('status', 'processing')
             ->update(['status' => 'pending']);
 
+        $failedReset = WhatsAppBatchItem::query()
+            ->where('batch_id', $batch->id)
+            ->where('status', 'failed')
+            ->update([
+                'status' => 'pending',
+                'send_attempts' => 0,
+                'error_message' => null,
+            ]);
+
         $pendingCount = $batch->items()->whereIn('status', ['pending', 'processing'])->count();
 
         if ($pendingCount === 0) {
-            return;
+            return ['failed_reset' => $failedReset, 'dispatched' => false];
         }
 
         $batch->update([
             'status' => 'pending',
             'completed_at' => null,
+            'failed_count' => $batch->items()->where('status', 'failed')->count(),
+        ]);
+
+        self::dispatchBatch($batch->id);
+
+        return ['failed_reset' => $failedReset, 'dispatched' => true];
+    }
+
+    /**
+     * إعادة إرسال رسالة واحدة فاشلة فقط — لا تُعاد الرسائل المرسلة أو المعلّقة الأخرى.
+     */
+    public function retryItem(WhatsAppBatch $batch, WhatsAppBatchItem $item): void
+    {
+        if ((int) $item->batch_id !== (int) $batch->id) {
+            throw new \RuntimeException('هذا العنصر لا ينتمي إلى هذه الدفعة.');
+        }
+
+        if ($batch->status === 'cancelled') {
+            throw new \RuntimeException('هذه الدفعة موقوفة — لا يمكن إعادة الإرسال.');
+        }
+
+        if ($item->status !== 'failed') {
+            throw new \RuntimeException('يمكن إعادة إرسال الرسائل الفاشلة فقط.');
+        }
+
+        $item->update([
+            'status' => 'pending',
+            'send_attempts' => 0,
+            'error_message' => null,
+        ]);
+
+        $batch->update([
+            'status' => 'pending',
+            'completed_at' => null,
+            'failed_count' => $batch->items()->where('status', 'failed')->count(),
         ]);
 
         self::dispatchBatch($batch->id);

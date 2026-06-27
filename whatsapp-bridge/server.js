@@ -631,6 +631,12 @@ async function sendOneMessage(phone, message, simulateTyping = true) {
             state.lastErrorAt = null;
             state.status = 'ready';
 
+            try {
+                await refreshClientInfo();
+            } catch (_) {
+                /* optional */
+            }
+
             return {
                 success: true,
                 message_id: result?.id?._serialized || null,
@@ -678,7 +684,7 @@ async function runSendQueue() {
         } catch (err) {
             job.reject(err);
         }
-        await sleep(300);
+        await sleep(1800 + Math.floor(Math.random() * 1200));
     }
 
     sendQueueRunning = false;

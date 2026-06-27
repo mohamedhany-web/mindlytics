@@ -1598,7 +1598,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/batches', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'index'])->name('batches.index');
             Route::get('/batches/{batch}', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'show'])->name('batches.show');
             Route::get('/batches/{batch}/status', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'statusJson'])->name('batches.status');
+            Route::post('/batches/{batch}/process', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'process'])->name('batches.process');
             Route::post('/batches/{batch}/retry', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'retry'])->name('batches.retry');
+            Route::post('/batches/{batch}/items/{item}/retry', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'retryItem'])->name('batches.items.retry');
             Route::post('/batches/{batch}/cancel', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'cancel'])->name('batches.cancel');
         });
 

@@ -41,9 +41,33 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
         }
 
         try {
-            $hasMore = $this->processChunk($whatsapp);
+            $deadline = time() + max(30, (int) config('whatsapp.batch_job_max_seconds', 240));
+            $maxMessages = max(1, (int) config('whatsapp.batch_max_messages_per_job', 12));
+            $processed = 0;
+            $hasMore = true;
 
-            if ($hasMore) {
+            while ($hasMore && $processed < $maxMessages && time() < $deadline) {
+                $chunkProcessed = $this->processChunk($whatsapp);
+                $processed += $chunkProcessed;
+
+                if ($chunkProcessed === 0) {
+                    $hasMore = false;
+                    break;
+                }
+
+                $batch = WhatsAppBatch::find($this->batchId);
+                if (! $batch || $batch->pendingCount() === 0) {
+                    $hasMore = false;
+                    break;
+                }
+
+                if ($processed < $maxMessages && time() < $deadline) {
+                    sleep(max(1, (int) config('whatsapp.batch_between_messages_seconds', 4)));
+                }
+            }
+
+            $batch = WhatsAppBatch::find($this->batchId);
+            if ($batch && ! $batch->isFinished() && $batch->pendingCount() > 0) {
                 WhatsAppBatchService::dispatchBatch($this->batchId);
             }
         } finally {
@@ -51,20 +75,23 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
         }
     }
 
-    private function processChunk(WhatsAppService $whatsapp): bool
+    /**
+     * @return int عدد العناصر التي عُولجت في هذا الجزء
+     */
+    private function processChunk(WhatsAppService $whatsapp): int
     {
         $batch = WhatsAppBatch::find($this->batchId);
 
         if (! $batch) {
-            return false;
+            return 0;
         }
 
         if ($batch->status === 'cancelled' || WhatsAppBatchService::isCancelled($batch->id)) {
-            return false;
+            return 0;
         }
 
         if ($batch->status === 'completed' && $batch->pendingCount() === 0) {
-            return false;
+            return 0;
         }
 
         $this->releaseStaleItems($batch);
@@ -75,7 +102,7 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
             'completed_at' => null,
         ]);
 
-        $chunkSize = max(1, (int) config('whatsapp.batch_chunk_size', 1));
+        $chunkSize = max(1, (int) config('whatsapp.batch_chunk_size', 3));
 
         $items = $batch->items()
             ->where('status', 'pending')
@@ -83,10 +110,18 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
             ->limit($chunkSize)
             ->get();
 
+        if ($items->isEmpty()) {
+            $this->finalizeBatchIfDone($batch);
+
+            return 0;
+        }
+
+        $processed = 0;
+
         foreach ($items as $item) {
             $batch->refresh();
             if ($batch->status === 'cancelled' || WhatsAppBatchService::isCancelled($batch->id)) {
-                return false;
+                return $processed;
             }
 
             $claimed = WhatsAppBatchItem::query()
@@ -99,6 +134,7 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
             }
 
             $item->refresh();
+            $processed++;
 
             $result = $this->sendWithRetries($whatsapp, $item, $batch);
 
@@ -108,6 +144,7 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
                     'whatsapp_message_id' => $result['message_id'] ?? null,
                     'sent_at' => now(),
                     'error_message' => null,
+                    'send_attempts' => 0,
                 ]);
                 $batch->increment('sent_count');
 
@@ -117,17 +154,35 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
                 }
 
                 $this->recordSalesLeadActivity($batch, $item);
+
+                $between = max(0, (int) config('whatsapp.batch_between_messages_seconds', 4));
+                if ($between > 0) {
+                    sleep($between);
+                }
             } else {
-                $item->update([
-                    'status' => 'failed',
-                    'error_message' => $result['error'] ?? 'فشل الإرسال',
-                ]);
-                $batch->increment('failed_count');
+                $this->handleSendFailure($item, $batch, (string) ($result['error'] ?? 'فشل الإرسال'));
             }
 
             Cache::put('wa_batch_activity_' . $batch->id, now()->timestamp, now()->addHours(6));
         }
 
+        $batch->refresh();
+        $this->finalizeBatchIfDone($batch);
+
+        if ($batch->pendingCount() > 0) {
+            Log::info('WhatsApp batch chunk done — more pending', [
+                'batch_id' => $batch->id,
+                'sent' => $batch->sent_count,
+                'failed' => $batch->failed_count,
+                'remaining' => $batch->pendingCount(),
+            ]);
+        }
+
+        return $processed;
+    }
+
+    private function finalizeBatchIfDone(WhatsAppBatch $batch): void
+    {
         $batch->refresh();
         $remaining = $batch->items()->whereIn('status', ['pending', 'processing'])->count();
 
@@ -142,18 +197,40 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
                 'sent' => $batch->sent_count,
                 'failed' => $batch->failed_count,
             ]);
+        }
+    }
 
-            return false;
+    private function handleSendFailure(WhatsAppBatchItem $item, WhatsAppBatch $batch, string $error): void
+    {
+        $attempts = (int) ($item->send_attempts ?? 0) + 1;
+        $maxItemAttempts = max(1, (int) config('whatsapp.batch_item_max_attempts', 6));
+        $transient = $this->isTransientWhatsAppError($error);
+
+        if ($transient && $attempts < $maxItemAttempts) {
+            $item->update([
+                'status' => 'pending',
+                'send_attempts' => $attempts,
+                'error_message' => $error,
+            ]);
+
+            Log::warning('WhatsApp batch item deferred (transient)', [
+                'batch_id' => $batch->id,
+                'item_id' => $item->id,
+                'attempt' => $attempts,
+                'error' => $error,
+            ]);
+
+            sleep(min(30, 8 + ($attempts * 3)));
+
+            return;
         }
 
-        Log::info('WhatsApp batch chunk done — more pending', [
-            'batch_id' => $batch->id,
-            'sent' => $batch->sent_count,
-            'failed' => $batch->failed_count,
-            'remaining' => $remaining,
+        $item->update([
+            'status' => 'failed',
+            'send_attempts' => $attempts,
+            'error_message' => $error,
         ]);
-
-        return true;
+        $batch->increment('failed_count');
     }
 
     private function releaseStaleItems(WhatsAppBatch $batch): void
@@ -202,7 +279,7 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
                 'error' => $error,
             ]);
 
-            sleep(min(45, 8 * $attempt));
+            sleep(min(45, 10 * $attempt));
         }
 
         return $lastResult;
@@ -216,10 +293,14 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
             'not connected',
             'غير متصل',
             'غير جاهز',
+            'لا يمكن الإرسال',
             'bridge',
             'timeout',
             'timed out',
             'econnreset',
+            'connection refused',
+            'could not resolve',
+            'curl error',
             '502',
             '503',
             '504',
@@ -229,6 +310,9 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
             'session',
             'try again',
             'انتظر',
+            'execution context',
+            'target closed',
+            'disconnected',
         ];
 
         foreach ($needles as $needle) {

@@ -16,6 +16,7 @@ class WhatsAppBatchItem extends Model
         'message',
         'message_type',
         'status',
+        'send_attempts',
         'error_message',
         'whatsapp_message_id',
         'workshop_registration_id',

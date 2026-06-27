@@ -48,7 +48,19 @@ return [
      * عدد الرسائل في كل تشغيل للـ Job — يمنع timeout على الاستضافة المشتركة.
      * بعد كل دفعة يُعاد جدولة Job تلقائياً إن بقي مستلمون.
      */
-    'batch_chunk_size' => max(1, (int) env('WHATSAPP_BATCH_CHUNK_SIZE', 1)),
+    'batch_chunk_size' => max(1, (int) env('WHATSAPP_BATCH_CHUNK_SIZE', 3)),
+
+    /** أقصى رسائل في تشغيل واحد للـ Job قبل إعادة الجدولة */
+    'batch_max_messages_per_job' => max(1, (int) env('WHATSAPP_BATCH_MAX_MESSAGES_PER_JOB', 12)),
+
+    /** مهلة تشغيل Job الواحد (ثوانٍ) */
+    'batch_job_max_seconds' => max(30, (int) env('WHATSAPP_BATCH_JOB_MAX_SECONDS', 240)),
+
+    /** انتظار بين رسالتين متتاليتين داخل الدفعة */
+    'batch_between_messages_seconds' => max(0, (int) env('WHATSAPP_BATCH_BETWEEN_MESSAGES', 4)),
+
+    /** إعادة محاولة العنصر عبر الطابور قبل اعتباره فاشلاً نهائياً */
+    'batch_item_max_attempts' => max(1, (int) env('WHATSAPP_BATCH_ITEM_MAX_ATTEMPTS', 6)),
 
     /** دقائق قبل اعتبار عنصر «processing» عالقاً وإعادته لـ pending */
     'batch_stale_minutes' => max(1, (int) env('WHATSAPP_BATCH_STALE_MINUTES', 10)),
