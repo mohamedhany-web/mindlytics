@@ -188,13 +188,22 @@ class WhatsAppBridgeService
         }
 
         $status = (string) ($data['status'] ?? 'unknown');
-        $sendReady = $data['send_ready'] ?? null;
-        if ($sendReady === null) {
-            $sendReady = ($status === 'ready' || $status === 'degraded') && (bool) ($data['connected'] ?? false);
+        $legacySnapshot = ! array_key_exists('connected', $data);
+
+        if ($legacySnapshot) {
+            $connected = in_array($status, ['ready', 'degraded'], true)
+                && (bool) ($data['phone'] ?? null);
+            $sendReady = $connected;
         } else {
-            $sendReady = (bool) $sendReady;
+            $connected = (bool) ($data['connected'] ?? false);
+            $sendReady = $data['send_ready'] ?? null;
+            if ($sendReady === null) {
+                $sendReady = in_array($status, ['ready', 'degraded'], true) && $connected;
+            } else {
+                $sendReady = (bool) $sendReady;
+            }
         }
-        $connected = (bool) ($data['connected'] ?? false);
+
         $lastError = $data['last_error'] ?? null;
         $sessionPresent = $connected && in_array($status, ['ready', 'degraded'], true);
 
@@ -209,7 +218,7 @@ class WhatsAppBridgeService
         }
 
         $labels = [
-            'ready' => 'الجلسة غير مكتملة',
+            'ready' => 'الجلسة متصلة لكن غير جاهزة للإرسال',
             'degraded' => 'جلسة غير مستقرة',
             'qr' => 'بانتظار QR',
             'pairing' => 'بانتظار رمز الربط',
@@ -278,8 +287,13 @@ class WhatsAppBridgeService
         }
 
         $bridgeStatus = (string) ($data['status'] ?? '');
-        $shouldRepair = ! ($data['connected'] ?? false)
-            && in_array($bridgeStatus, ['disconnected', 'error', 'auth_failure', 'unknown'], true);
+        $hasConnectedField = array_key_exists('connected', $data);
+        $sendReadyField = array_key_exists('send_ready', $data) ? (bool) $data['send_ready'] : null;
+
+        $shouldRepair = (! $hasConnectedField && in_array($bridgeStatus, ['ready', 'degraded'], true) && ! ($data['phone'] ?? null))
+            || ($hasConnectedField && ! ($data['connected'] ?? false)
+                && in_array($bridgeStatus, ['disconnected', 'error', 'auth_failure', 'unknown'], true))
+            || ($sendReadyField === false && in_array($bridgeStatus, ['ready', 'degraded'], true));
 
         if ($shouldRepair) {
             $repair = $this->start();
