@@ -60,9 +60,10 @@
                       class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs leading-relaxed"
                       placeholder="{{ $defaultMessage }}">{{ old('message', $defaultMessage) }}</textarea>
             <p class="text-[10px] text-slate-500 mt-1">
-                متغيرات: <code class="bg-slate-100 px-1 rounded">{{ '{{name}}' }}</code>
-                <code class="bg-slate-100 px-1 rounded">{{ '{{workshop}}' }}</code>
-                <code class="bg-slate-100 px-1 rounded">{{ '{{attendance}}' }}</code>
+                متغيرات:
+                <code class="bg-slate-100 px-1 rounded">@{{name}}</code>
+                <code class="bg-slate-100 px-1 rounded">@{{workshop}}</code>
+                <code class="bg-slate-100 px-1 rounded">@{{attendance}}</code>
             </p>
         </div>
 

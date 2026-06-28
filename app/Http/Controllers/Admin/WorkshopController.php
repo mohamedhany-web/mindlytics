@@ -125,16 +125,13 @@ class WorkshopController extends Controller
         $whatsappPhoneCountOffline = $waBulkService->countDistinctPhones($workshop, 'offline');
         $latestWhatsAppBatch = $waBulkService->latestForWorkshop((int) $workshop->id);
 
-        $whatsappContactedCount = (int) $workshop->registrations()
-            ->whereNotNull('phone')
-            ->where('phone', '!=', '')
-            ->whereNotNull('whatsapp_link_sent_at')
-            ->count();
-        $whatsappPendingCount = (int) $workshop->registrations()
-            ->whereNotNull('phone')
-            ->where('phone', '!=', '')
-            ->whereNull('whatsapp_link_sent_at')
-            ->count();
+        $hasWaSentColumn = Schema::hasColumn('workshop_registrations', 'whatsapp_link_sent_at');
+        $whatsappContactedCount = $hasWaSentColumn
+            ? (int) $workshop->registrations()->whereNotNull('phone')->where('phone', '!=', '')->whereNotNull('whatsapp_link_sent_at')->count()
+            : 0;
+        $whatsappPendingCount = $hasWaSentColumn
+            ? (int) $workshop->registrations()->whereNotNull('phone')->where('phone', '!=', '')->whereNull('whatsapp_link_sent_at')->count()
+            : (int) $workshop->registrations()->whereNotNull('phone')->where('phone', '!=', '')->count();
 
         return view('admin.workshops.show', compact(
             'workshop',
@@ -679,7 +676,9 @@ class WorkshopController extends Controller
         }
 
         if ($data['scope'] === 'pending') {
-            $query->whereNull('whatsapp_link_sent_at');
+            if (Schema::hasColumn('workshop_registrations', 'whatsapp_link_sent_at')) {
+                $query->whereNull('whatsapp_link_sent_at');
+            }
         }
 
         $registrations = $query->orderBy('name')->get();
@@ -708,7 +707,8 @@ class WorkshopController extends Controller
                 'phone' => $phone,
                 'phone_display' => $reg->phone,
                 'attendance' => $reg->attendance_mode === 'offline' ? 'حضوري' : 'أونلاين',
-                'contacted' => $reg->whatsapp_link_sent_at !== null,
+                'contacted' => Schema::hasColumn('workshop_registrations', 'whatsapp_link_sent_at')
+                    && $reg->whatsapp_link_sent_at !== null,
                 'contacted_at' => $reg->whatsapp_link_sent_at?->format('Y-m-d H:i'),
                 'url' => 'https://web.whatsapp.com/send/?phone=' . $phone . '&text=' . rawurlencode($message) . '&type=phone_number&app_absent=0',
             ];
@@ -733,6 +733,10 @@ class WorkshopController extends Controller
 
         if (! $registration->phone) {
             return response()->json(['success' => false, 'error' => 'لا يوجد رقم لهذا المسجل'], 422);
+        }
+
+        if (! Schema::hasColumn('workshop_registrations', 'whatsapp_link_sent_at')) {
+            return response()->json(['success' => true, 'contacted_at' => now()->format('Y-m-d H:i')]);
         }
 
         $registration->update(['whatsapp_link_sent_at' => now()]);

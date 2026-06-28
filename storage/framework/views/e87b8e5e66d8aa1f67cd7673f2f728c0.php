@@ -364,6 +364,12 @@
                                             <?php if($reg->phone): ?>
                                                 <div><i class="fas fa-phone text-slate-400 ml-1"></i><?php echo e($reg->phone); ?></div>
                                             <?php endif; ?>
+                                            <?php if($reg->whatsapp_link_sent_at): ?>
+                                                <div class="text-[10px] text-green-700 font-semibold">
+                                                    <i class="fab fa-whatsapp"></i> تم التواصل <?php echo e($reg->whatsapp_link_sent_at->format('m-d H:i')); ?>
+
+                                                </div>
+                                            <?php endif; ?>
                                         </td>
                                         <td class="px-3 py-3 text-xs">
                                             <?php

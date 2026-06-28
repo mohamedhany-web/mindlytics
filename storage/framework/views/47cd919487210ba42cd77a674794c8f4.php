@@ -60,9 +60,10 @@
                       class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs leading-relaxed"
                       placeholder="<?php echo e($defaultMessage); ?>"><?php echo e(old('message', $defaultMessage)); ?></textarea>
             <p class="text-[10px] text-slate-500 mt-1">
-                متغيرات: <code class="bg-slate-100 px-1 rounded"><?php echo e('{{name); ?>' }}</code>
-                <code class="bg-slate-100 px-1 rounded"><?php echo e('{{workshop); ?>' }}</code>
-                <code class="bg-slate-100 px-1 rounded"><?php echo e('{{attendance); ?>' }}</code>
+                متغيرات:
+                <code class="bg-slate-100 px-1 rounded">{{name}}</code>
+                <code class="bg-slate-100 px-1 rounded">{{workshop}}</code>
+                <code class="bg-slate-100 px-1 rounded">{{attendance}}</code>
             </p>
         </div>
 
@@ -73,4 +74,4 @@
         </button>
     </form>
 </section>
- ?><?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views\admin\workshops\_whatsapp_manual.blade.php ENDPATH**/ ?>
+<?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views\admin\workshops\_whatsapp_manual.blade.php ENDPATH**/ ?>
