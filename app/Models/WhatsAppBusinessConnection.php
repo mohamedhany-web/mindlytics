@@ -34,6 +34,19 @@ class WhatsAppBusinessConnection extends Model
         'connected_at' => 'datetime',
     ];
 
+    protected function castAttribute($key, $value)
+    {
+        if ($key === 'access_token' && $value !== null && $value !== '') {
+            try {
+                return parent::castAttribute($key, $value);
+            } catch (\Throwable) {
+                return (string) $value;
+            }
+        }
+
+        return parent::castAttribute($key, $value);
+    }
+
     public function connectedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'connected_by');
@@ -41,9 +54,18 @@ class WhatsAppBusinessConnection extends Model
 
     public static function active(): ?self
     {
-        return self::query()
-            ->where('status', self::STATUS_CONNECTED)
-            ->latest('connected_at')
-            ->first();
+        try {
+            $instance = new static;
+            if (! \Illuminate\Support\Facades\Schema::hasTable($instance->getTable())) {
+                return null;
+            }
+
+            return self::query()
+                ->where('status', self::STATUS_CONNECTED)
+                ->latest('connected_at')
+                ->first();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }
