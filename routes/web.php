@@ -1598,7 +1598,6 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/settings', [\App\Http\Controllers\Admin\WhatsAppController::class, 'settings'])->name('settings');
             Route::post('/settings', [\App\Http\Controllers\Admin\WhatsAppCloudController::class, 'saveSettings'])->name('settings.update');
             Route::post('/test-connection', [\App\Http\Controllers\Admin\WhatsAppCloudController::class, 'testConnection'])->name('test-connection');
-            Route::post('/embedded-signup', [\App\Http\Controllers\Admin\WhatsAppCloudController::class, 'completeEmbeddedSignup'])->name('embedded-signup');
             Route::post('/disconnect', [\App\Http\Controllers\Admin\WhatsAppCloudController::class, 'disconnect'])->name('disconnect');
             Route::get('/status', [\App\Http\Controllers\Admin\WhatsAppCloudController::class, 'statusJson'])->name('status');
             Route::get('/batches', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'index'])->name('batches.index');

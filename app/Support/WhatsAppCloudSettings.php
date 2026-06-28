@@ -22,12 +22,13 @@ class WhatsAppCloudSettings
             'enabled' => false,
             'app_id' => '',
             'app_secret' => '',
-            'embedded_signup_config_id' => '',
             'api_url' => 'https://graph.facebook.com/v21.0',
             'webhook_verify_token' => '',
             'access_token' => '',
             'phone_number_id' => '',
             'business_account_id' => '',
+            'display_phone_number' => '',
+            'verified_display_name' => '',
         ];
     }
 
@@ -83,11 +84,12 @@ class WhatsAppCloudSettings
             'service_type' => (string) ($all['service_type'] ?? 'official'),
             'enabled' => (bool) ($all['enabled'] ?? false),
             'app_id' => (string) ($all['app_id'] ?? ''),
-            'embedded_signup_config_id' => (string) ($all['embedded_signup_config_id'] ?? ''),
             'api_url' => (string) ($all['api_url'] ?? self::defaults()['api_url']),
             'webhook_verify_token' => (string) ($all['webhook_verify_token'] ?? ''),
             'phone_number_id' => (string) ($all['phone_number_id'] ?? ''),
             'business_account_id' => (string) ($all['business_account_id'] ?? ''),
+            'display_phone_number' => (string) ($all['display_phone_number'] ?? ''),
+            'verified_display_name' => (string) ($all['verified_display_name'] ?? ''),
             'has_app_secret' => self::hasAppSecret(),
             'has_access_token' => self::hasAccessToken(),
             'webhook_url' => self::webhookUrl(),
@@ -114,6 +116,7 @@ class WhatsAppCloudSettings
         $merged['service_type'] = 'official';
         $merged['enabled'] = filter_var($merged['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $merged['api_url'] = rtrim((string) ($merged['api_url'] ?? self::defaults()['api_url']), '/');
+        unset($merged['embedded_signup_config_id']);
 
         $toStore = $merged;
         foreach (['app_secret', 'access_token'] as $secretKey) {
@@ -188,14 +191,29 @@ class WhatsAppCloudSettings
         return (string) (self::all()['app_secret'] ?? '');
     }
 
-    public static function embeddedSignupConfigId(): string
-    {
-        return (string) (self::all()['embedded_signup_config_id'] ?? '');
-    }
-
     public static function apiUrl(): string
     {
         return rtrim((string) (self::all()['api_url'] ?? self::defaults()['api_url']), '/');
+    }
+
+    public static function displayPhoneNumber(): string
+    {
+        $connection = \App\Models\WhatsAppBusinessConnection::active();
+        if ($connection?->display_phone_number) {
+            return (string) $connection->display_phone_number;
+        }
+
+        return (string) (self::all()['display_phone_number'] ?? '');
+    }
+
+    public static function verifiedDisplayName(): string
+    {
+        $connection = \App\Models\WhatsAppBusinessConnection::active();
+        if ($connection?->verified_display_name) {
+            return (string) $connection->verified_display_name;
+        }
+
+        return (string) (self::all()['verified_display_name'] ?? '');
     }
 
     public static function accessToken(): string

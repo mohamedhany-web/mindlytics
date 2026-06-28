@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\WhatsAppBusinessConnection;
 use App\Services\WhatsAppCloudService;
 use App\Support\WhatsAppCloudSettings;
 use Illuminate\Http\JsonResponse;
@@ -23,7 +22,6 @@ class WhatsAppCloudController extends Controller
         $validated = $request->validate([
             'app_id' => 'required|string|max:100',
             'app_secret' => [$hasSecret ? 'nullable' : 'required', 'string', 'max:500'],
-            'embedded_signup_config_id' => 'nullable|string|max:100',
             'api_url' => 'required|url|max:500',
             'webhook_verify_token' => 'nullable|string|max:200',
             'access_token' => 'nullable|string|max:2000',
@@ -40,7 +38,6 @@ class WhatsAppCloudController extends Controller
             'enabled' => $request->boolean('enable_service'),
             'app_id' => $validated['app_id'],
             'app_secret' => $validated['app_secret'] ?? '',
-            'embedded_signup_config_id' => $validated['embedded_signup_config_id'] ?? '',
             'api_url' => rtrim($validated['api_url'], '/'),
             'webhook_verify_token' => $validated['webhook_verify_token'] ?? '',
             'access_token' => $validated['access_token'] ?? '',
@@ -48,7 +45,9 @@ class WhatsAppCloudController extends Controller
             'business_account_id' => $validated['business_account_id'] ?? '',
         ]);
 
-        return back()->with('success', 'تم حفظ إعدادات WhatsApp — تُخزَّن في المنصة وليس في ملف .env.');
+        $this->syncPhoneMetadataFromApi();
+
+        return back()->with('success', 'تم حفظ إعدادات WhatsApp بنجاح.');
     }
 
     public function testConnection(Request $request): JsonResponse
@@ -61,17 +60,20 @@ class WhatsAppCloudController extends Controller
             'app_id' => 'nullable|string|max:100',
             'app_secret' => 'nullable|string|max:500',
             'api_url' => 'nullable|url|max:500',
+            'enable_service' => 'nullable|boolean',
         ]);
 
-        if (! empty($validated['access_token']) || ! empty($validated['phone_number_id'])
-            || ! empty($validated['app_id']) || ! empty($validated['app_secret']) || ! empty($validated['api_url'])) {
-            WhatsAppCloudSettings::save(array_filter([
-                'access_token' => $validated['access_token'] ?? null,
-                'phone_number_id' => $validated['phone_number_id'] ?? null,
-                'app_id' => $validated['app_id'] ?? null,
-                'app_secret' => $validated['app_secret'] ?? null,
-                'api_url' => isset($validated['api_url']) ? rtrim($validated['api_url'], '/') : null,
-            ], fn ($v) => $v !== null && $v !== ''));
+        $pending = array_filter([
+            'enabled' => $request->has('enable_service') ? $request->boolean('enable_service') : null,
+            'access_token' => $validated['access_token'] ?? null,
+            'phone_number_id' => $validated['phone_number_id'] ?? null,
+            'app_id' => $validated['app_id'] ?? null,
+            'app_secret' => $validated['app_secret'] ?? null,
+            'api_url' => isset($validated['api_url']) ? rtrim($validated['api_url'], '/') : null,
+        ], fn ($v) => $v !== null && $v !== '');
+
+        if ($pending !== []) {
+            WhatsAppCloudSettings::save($pending);
         }
 
         $result = $this->cloud->testConnection(
@@ -79,54 +81,48 @@ class WhatsAppCloudController extends Controller
             $validated['test_message'] ?? null
         );
 
-        return response()->json($result);
-    }
-
-    public function completeEmbeddedSignup(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'code' => 'nullable|string|max:2000',
-            'phone_number_id' => 'required|string|max:100',
-            'waba_id' => 'required|string|max:100',
-            'business_id' => 'nullable|string|max:100',
-        ]);
-
-        $result = $this->cloud->completeEmbeddedSignup($validated, (int) auth()->id());
-
-        if (! ($result['success'] ?? false)) {
-            return response()->json($result, 422);
+        if ($result['success'] ?? false) {
+            $this->syncPhoneMetadataFromApi();
         }
 
-        /** @var WhatsAppBusinessConnection $connection */
-        $connection = $result['connection'];
-
-        WhatsAppCloudSettings::save([
-            'enabled' => true,
-            'phone_number_id' => $connection->phone_number_id,
-            'business_account_id' => (string) ($connection->waba_id ?? ''),
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'تم ربط WhatsApp Business بنجاح.',
-            'connection' => [
-                'display_phone_number' => $connection->display_phone_number,
-                'verified_display_name' => $connection->verified_display_name,
-                'phone_number_id' => $connection->phone_number_id,
-                'waba_id' => $connection->waba_id,
-            ],
-        ]);
+        return response()->json($result);
     }
 
     public function disconnect(): RedirectResponse
     {
         $this->cloud->disconnect();
 
-        return back()->with('success', 'تم فصل حساب WhatsApp Business من المنصة.');
+        WhatsAppCloudSettings::save([
+            'access_token' => '',
+            'phone_number_id' => '',
+            'business_account_id' => '',
+            'display_phone_number' => '',
+            'verified_display_name' => '',
+            'enabled' => false,
+        ]);
+
+        return back()->with('success', 'تم مسح بيانات الربط وتعطيل الإرسال.');
     }
 
     public function statusJson(): JsonResponse
     {
         return response()->json($this->cloud->connectionMeta());
+    }
+
+    private function syncPhoneMetadataFromApi(): void
+    {
+        if (! WhatsAppCloudSettings::isSendConfigured()) {
+            return;
+        }
+
+        $verify = $this->cloud->verifyApiAccess();
+        if (! ($verify['success'] ?? false)) {
+            return;
+        }
+
+        WhatsAppCloudSettings::save([
+            'display_phone_number' => $verify['data']['display_phone_number'] ?? '',
+            'verified_display_name' => $verify['data']['verified_name'] ?? '',
+        ]);
     }
 }

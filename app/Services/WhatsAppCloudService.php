@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\WhatsAppBusinessConnection;
 use App\Support\WhatsAppCloudSettings;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class WhatsAppCloudService
 {
@@ -47,6 +46,10 @@ class WhatsAppCloudService
                 'can_send' => false,
                 'label' => 'إعدادات Meta غير مكتملة',
                 'last_error' => 'أدخل App ID و App Secret في صفحة الربط',
+                'phone_number_id' => WhatsAppCloudSettings::phoneNumberId(),
+                'business_account_id' => WhatsAppCloudSettings::businessAccountId(),
+                'display_phone' => WhatsAppCloudSettings::displayPhoneNumber(),
+                'display_name' => WhatsAppCloudSettings::verifiedDisplayName(),
             ];
         }
 
@@ -55,7 +58,11 @@ class WhatsAppCloudService
                 'success' => false,
                 'can_send' => false,
                 'label' => 'غير مربوط',
-                'last_error' => 'اضغط «ربط WhatsApp Business» أو أدخل Access Token و Phone Number ID',
+                'last_error' => 'أدخل Access Token و Phone Number ID ثم فعّل الإرسال',
+                'phone_number_id' => WhatsAppCloudSettings::phoneNumberId(),
+                'business_account_id' => WhatsAppCloudSettings::businessAccountId(),
+                'display_phone' => WhatsAppCloudSettings::displayPhoneNumber(),
+                'display_name' => WhatsAppCloudSettings::verifiedDisplayName(),
             ];
         }
 
@@ -71,8 +78,12 @@ class WhatsAppCloudService
         }
 
         $connection = WhatsAppBusinessConnection::active();
-        $phone = $connection?->display_phone_number ?? ($test['data']['display_phone_number'] ?? null);
-        $name = $connection?->verified_display_name ?? ($test['data']['verified_name'] ?? null);
+        $phone = $connection?->display_phone_number
+            ?? ($test['data']['display_phone_number'] ?? null)
+            ?? (WhatsAppCloudSettings::displayPhoneNumber() ?: null);
+        $name = $connection?->verified_display_name
+            ?? ($test['data']['verified_name'] ?? null)
+            ?? (WhatsAppCloudSettings::verifiedDisplayName() ?: null);
 
         return [
             'success' => true,
@@ -82,6 +93,8 @@ class WhatsAppCloudService
             'connection' => $connection,
             'display_phone' => $phone,
             'display_name' => $name,
+            'phone_number_id' => WhatsAppCloudSettings::phoneNumberId(),
+            'business_account_id' => WhatsAppCloudSettings::businessAccountId(),
             'phone_data' => $test['data'] ?? [],
         ];
     }
@@ -222,156 +235,6 @@ class WhatsAppCloudService
             'error' => $result['error'] ?? 'فشل إرسال رسالة الاختبار',
             'data' => $verify['data'] ?? [],
         ];
-    }
-
-    /**
-     * @return array{success: bool, access_token?: string, error?: string, data?: array<string, mixed>}
-     */
-    public function exchangeCodeForToken(string $code): array
-    {
-        if (! WhatsAppCloudSettings::isAppConfigured()) {
-            return ['success' => false, 'error' => 'App ID أو App Secret غير مضبوط'];
-        }
-
-        try {
-            $response = Http::timeout(45)->get("{$this->graphUrl()}/oauth/access_token", [
-                'client_id' => WhatsAppCloudSettings::appId(),
-                'client_secret' => WhatsAppCloudSettings::appSecret(),
-                'code' => $code,
-            ]);
-
-            $body = $response->json();
-
-            if ($response->successful() && ! empty($body['access_token'])) {
-                return [
-                    'success' => true,
-                    'access_token' => (string) $body['access_token'],
-                    'data' => is_array($body) ? $body : [],
-                ];
-            }
-
-            return [
-                'success' => false,
-                'error' => $body['error']['message'] ?? 'فشل استبدال رمز OAuth',
-                'data' => is_array($body) ? $body : [],
-            ];
-        } catch (\Throwable $e) {
-            return ['success' => false, 'error' => $e->getMessage()];
-        }
-    }
-
-    /**
-     * @param  array<string, mixed>  $payload
-     */
-    public function saveConnection(array $payload, int $connectedBy): WhatsAppBusinessConnection
-    {
-        WhatsAppBusinessConnection::query()
-            ->where('status', WhatsAppBusinessConnection::STATUS_CONNECTED)
-            ->update(['status' => WhatsAppBusinessConnection::STATUS_DISCONNECTED]);
-
-        $connection = WhatsAppBusinessConnection::create([
-            'business_portfolio_id' => $payload['business_portfolio_id'] ?? null,
-            'waba_id' => $payload['waba_id'] ?? null,
-            'phone_number_id' => (string) $payload['phone_number_id'],
-            'display_phone_number' => $payload['display_phone_number'] ?? null,
-            'verified_display_name' => $payload['verified_display_name'] ?? null,
-            'access_token' => (string) $payload['access_token'],
-            'status' => WhatsAppBusinessConnection::STATUS_CONNECTED,
-            'connected_at' => now(),
-            'connected_by' => $connectedBy,
-            'meta' => $payload['meta'] ?? [],
-        ]);
-
-        $this->subscribeWebhooks($connection);
-
-        return $connection->fresh();
-    }
-
-    /**
-     * @return array{success: bool, error?: string}
-     */
-    public function subscribeWebhooks(?WhatsAppBusinessConnection $connection = null): array
-    {
-        $connection ??= WhatsAppBusinessConnection::active();
-        if (! $connection || ! $connection->waba_id) {
-            return ['success' => false, 'error' => 'WABA ID غير متوفر'];
-        }
-
-        try {
-            $response = Http::withToken((string) $connection->access_token)
-                ->timeout(30)
-                ->post("{$this->graphUrl()}/{$connection->waba_id}/subscribed_apps");
-
-            if ($response->successful()) {
-                $connection->update(['webhook_subscribed_at' => now()]);
-
-                return ['success' => true];
-            }
-
-            $body = $response->json();
-
-            return [
-                'success' => false,
-                'error' => $body['error']['message'] ?? ('HTTP ' . $response->status()),
-            ];
-        } catch (\Throwable $e) {
-            Log::warning('WhatsApp webhook subscribe failed', ['error' => $e->getMessage()]);
-
-            return ['success' => false, 'error' => $e->getMessage()];
-        }
-    }
-
-    /**
-     * @return array{success: bool, connection?: WhatsAppBusinessConnection, error?: string}
-     */
-    public function completeEmbeddedSignup(array $input, int $userId): array
-    {
-        $phoneNumberId = (string) ($input['phone_number_id'] ?? '');
-        $wabaId = (string) ($input['waba_id'] ?? '');
-
-        if ($phoneNumberId === '' || $wabaId === '') {
-            return ['success' => false, 'error' => 'phone_number_id و waba_id مطلوبان'];
-        }
-
-        $accessToken = (string) ($input['access_token'] ?? '');
-        if ($accessToken === '' && ! empty($input['code'])) {
-            $exchange = $this->exchangeCodeForToken((string) $input['code']);
-            if (! ($exchange['success'] ?? false)) {
-                return ['success' => false, 'error' => $exchange['error'] ?? 'فشل OAuth'];
-            }
-            $accessToken = (string) $exchange['access_token'];
-        }
-
-        if ($accessToken === '') {
-            $accessToken = WhatsAppCloudSettings::accessToken();
-        }
-
-        if ($accessToken === '') {
-            return ['success' => false, 'error' => 'لم يتم الحصول على Access Token — أدخله يدوياً في الإعدادات'];
-        }
-
-        $phoneMeta = Http::withToken($accessToken)
-            ->timeout(30)
-            ->get("{$this->graphUrl()}/{$phoneNumberId}", [
-                'fields' => 'display_phone_number,verified_name',
-            ]);
-
-        $phoneData = $phoneMeta->successful() ? ($phoneMeta->json() ?? []) : [];
-
-        $connection = $this->saveConnection([
-            'business_portfolio_id' => $input['business_id'] ?? $input['business_portfolio_id'] ?? null,
-            'waba_id' => $wabaId,
-            'phone_number_id' => $phoneNumberId,
-            'display_phone_number' => $phoneData['display_phone_number'] ?? null,
-            'verified_display_name' => $phoneData['verified_name'] ?? null,
-            'access_token' => $accessToken,
-            'meta' => [
-                'embedded_signup' => true,
-                'raw' => array_diff_key($input, array_flip(['access_token'])),
-            ],
-        ], $userId);
-
-        return ['success' => true, 'connection' => $connection];
     }
 
     public function disconnect(): void

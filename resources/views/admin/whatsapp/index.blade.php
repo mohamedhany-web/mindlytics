@@ -32,7 +32,7 @@
         <div class="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5 flex flex-wrap items-center justify-between gap-4">
             <div>
                 <h3 class="font-bold text-amber-900">WhatsApp Business غير مربوط بعد</h3>
-                <p class="text-sm text-amber-800 mt-1">أكمل إعداد Meta App ID و App Secret ثم اضغط «ربط WhatsApp Business».</p>
+                <p class="text-sm text-amber-800 mt-1">أكمل إعداد Meta من صفحة الإعدادات: App ID و App Secret و Access Token و Phone Number ID.</p>
             </div>
             <a href="{{ route('admin.whatsapp.settings') }}" class="{{ $waBtnPrimary }}">بدء الربط</a>
         </div>
@@ -49,11 +49,11 @@
                 </div>
                 <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
                     <p class="text-xs text-slate-500">Phone Number ID</p>
-                    <p class="font-mono text-xs break-all">{{ $connection?->phone_number_id ?? '—' }}</p>
+                    <p class="font-mono text-xs break-all">{{ $connection?->phone_number_id ?? ($connectionMeta['phone_number_id'] ?? '—') }}</p>
                 </div>
                 <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
                     <p class="text-xs text-slate-500">WABA ID</p>
-                    <p class="font-mono text-xs break-all">{{ $connection?->waba_id ?? '—' }}</p>
+                    <p class="font-mono text-xs break-all">{{ $connection?->waba_id ?? ($connectionMeta['business_account_id'] ?? '—') }}</p>
                 </div>
             </div>
         </section>
