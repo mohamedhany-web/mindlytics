@@ -163,7 +163,11 @@ class SalesTransferController extends Controller
         });
 
         if ($fromRep && $toRep) {
-            app(SalesNotificationService::class)->notifyDataTransferred($fromRep, $toRep, $summary);
+            try {
+                app(SalesNotificationService::class)->notifyDataTransferred($fromRep, $toRep, $summary);
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
 
         return redirect()
