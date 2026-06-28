@@ -280,23 +280,7 @@
                         <?php echo $__env->make('admin.workshops._whatsapp_bulk', ['workshop' => $workshop], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
                     </div>
 
-                    <details class="rounded-xl border border-slate-200 bg-slate-50/50">
-                        <summary class="cursor-pointer px-4 py-3 text-xs font-bold text-slate-700 select-none">
-                            <i class="fab fa-whatsapp text-green-600 ml-1"></i>
-                            فتح روابط واتساب يدوياً (بدون Bridge)
-                        </summary>
-                        <form method="POST" action="<?php echo e(route('admin.workshops.send-whatsapp', $workshop)); ?>" class="p-4 pt-0 space-y-3">
-                            <?php echo csrf_field(); ?>
-                            <p class="text-[10px] text-amber-700">يفتح تبويبات في المتصفح — مناسب لرقم واحد أو عند عدم تفعيل Bridge. لا يضمن إرسال كل الرسائل تلقائياً.</p>
-                            <div class="flex flex-wrap gap-3 text-xs">
-                                <label class="inline-flex items-center gap-1"><input type="radio" name="scope" value="all" checked class="text-green-600"> كل الأرقام</label>
-                                <label class="inline-flex items-center gap-1"><input type="radio" name="scope" value="phone" class="text-green-600"> رقم محدد</label>
-                            </div>
-                            <input type="text" name="phone" placeholder="2010xxxxxxx" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs">
-                            <textarea name="message" rows="2" required class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs" placeholder="نص الرسالة…"></textarea>
-                            <button type="submit" class="w-full px-3 py-1.5 rounded-lg bg-slate-700 text-white text-xs font-bold">فتح روابط واتساب</button>
-                        </form>
-                    </details>
+                    <?php echo $__env->make('admin.workshops._whatsapp_manual', ['workshop' => $workshop], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
                 </div>
 
                 

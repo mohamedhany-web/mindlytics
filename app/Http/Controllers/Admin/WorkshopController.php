@@ -125,6 +125,17 @@ class WorkshopController extends Controller
         $whatsappPhoneCountOffline = $waBulkService->countDistinctPhones($workshop, 'offline');
         $latestWhatsAppBatch = $waBulkService->latestForWorkshop((int) $workshop->id);
 
+        $whatsappContactedCount = (int) $workshop->registrations()
+            ->whereNotNull('phone')
+            ->where('phone', '!=', '')
+            ->whereNotNull('whatsapp_link_sent_at')
+            ->count();
+        $whatsappPendingCount = (int) $workshop->registrations()
+            ->whereNotNull('phone')
+            ->where('phone', '!=', '')
+            ->whereNull('whatsapp_link_sent_at')
+            ->count();
+
         return view('admin.workshops.show', compact(
             'workshop',
             'registrations',
@@ -137,7 +148,9 @@ class WorkshopController extends Controller
             'whatsappPhoneCountAll',
             'whatsappPhoneCountOnline',
             'whatsappPhoneCountOffline',
-            'latestWhatsAppBatch'
+            'latestWhatsAppBatch',
+            'whatsappContactedCount',
+            'whatsappPendingCount'
         ));
     }
 
@@ -648,64 +661,104 @@ class WorkshopController extends Controller
     public function sendWhatsappMessages(Request $request, Workshop $workshop)
     {
         $data = $request->validate([
-            'scope' => 'required|in:all,phone',
+            'scope' => 'required|in:all,phone,pending',
             'phone' => 'nullable|string|max:30',
+            'attendance' => 'nullable|in:all,online,offline',
             'message' => 'required|string|max:2000',
         ]);
 
-        $numbers = [];
-        $targetRegistrations = collect();
+        $query = $workshop->registrations()
+            ->whereNotNull('phone')
+            ->where('phone', '!=', '');
+
+        $attendance = $data['attendance'] ?? 'all';
+        if ($attendance === 'online') {
+            $query->where('attendance_mode', 'online');
+        } elseif ($attendance === 'offline') {
+            $query->where('attendance_mode', 'offline');
+        }
+
+        if ($data['scope'] === 'pending') {
+            $query->whereNull('whatsapp_link_sent_at');
+        }
+
+        $registrations = $query->orderBy('name')->get();
 
         if ($data['scope'] === 'phone') {
             if (empty($data['phone'])) {
                 return back()->with('error', 'يرجى إدخال رقم الهاتف عند اختيار الإرسال لرقم محدد.');
             }
             $normalizedPhone = $this->normalizePhone($data['phone']);
-            $numbers[] = $normalizedPhone;
-
-            $targetRegistrations = $workshop->registrations()
-                ->whereNotNull('phone')
-                ->get()
-                ->filter(fn ($reg) => $this->normalizePhone($reg->phone) === $normalizedPhone)
-                ->values();
-        } else {
-            $targetRegistrations = $workshop->registrations()
-                ->whereNotNull('phone')
-                ->get();
-
-            $numbers = $targetRegistrations
-                ->pluck('phone')
-                ->map(fn ($phone) => $this->normalizePhone($phone))
-                ->filter()
-                ->unique()
-                ->values()
-                ->all();
+            $registrations = $registrations->filter(
+                fn ($reg) => $this->normalizePhone($reg->phone) === $normalizedPhone
+            )->values();
         }
 
-        $numbers = array_values(array_filter($numbers));
+        $recipients = $registrations->map(function ($reg) use ($data, $workshop) {
+            $phone = $this->normalizePhone($reg->phone);
+            if (! $phone) {
+                return null;
+            }
 
-        if (count($numbers) === 0) {
+            $message = $this->personalizeWhatsappMessage($data['message'], $reg, $workshop);
+
+            return [
+                'registration_id' => $reg->id,
+                'name' => $reg->name ?: '—',
+                'phone' => $phone,
+                'phone_display' => $reg->phone,
+                'attendance' => $reg->attendance_mode === 'offline' ? 'حضوري' : 'أونلاين',
+                'contacted' => $reg->whatsapp_link_sent_at !== null,
+                'contacted_at' => $reg->whatsapp_link_sent_at?->format('Y-m-d H:i'),
+                'url' => 'https://web.whatsapp.com/send/?phone=' . $phone . '&text=' . rawurlencode($message) . '&type=phone_number&app_absent=0',
+            ];
+        })->filter()->values();
+
+        if ($recipients->isEmpty()) {
             return back()->with('error', 'لا توجد أرقام واتساب متاحة للإرسال.');
         }
 
-        if ($targetRegistrations->isNotEmpty()) {
-            $now = now();
-            WorkshopRegistration::whereIn('id', $targetRegistrations->pluck('id')->all())
-                ->update(['whatsapp_link_sent_at' => $now]);
-        }
-
-        $links = collect($numbers)->map(function ($phone) use ($data) {
-            return [
-                'phone' => $phone,
-                'url' => 'https://web.whatsapp.com/send/?phone=' . $phone . '&text=' . urlencode($data['message']) . '&type=phone_number&app_absent=0',
-            ];
-        })->all();
-
         return view('admin.workshops.whatsapp-launch', [
             'workshop' => $workshop,
-            'links' => $links,
+            'recipients' => $recipients,
             'message' => $data['message'],
+            'scope' => $data['scope'],
+            'attendance' => $attendance,
         ]);
+    }
+
+    public function markWhatsappContacted(Workshop $workshop, WorkshopRegistration $registration)
+    {
+        abort_unless((int) $registration->workshop_id === (int) $workshop->id, 404);
+
+        if (! $registration->phone) {
+            return response()->json(['success' => false, 'error' => 'لا يوجد رقم لهذا المسجل'], 422);
+        }
+
+        $registration->update(['whatsapp_link_sent_at' => now()]);
+        $registration->refresh();
+
+        return response()->json([
+            'success' => true,
+            'contacted_at' => $registration->whatsapp_link_sent_at?->format('Y-m-d H:i'),
+        ]);
+    }
+
+    private function personalizeWhatsappMessage(string $template, WorkshopRegistration $reg, Workshop $workshop): string
+    {
+        $attendance = $reg->attendance_mode === 'offline' ? 'حضوري' : 'أونلاين';
+
+        return str_replace(
+            ['{{name}}', '{{phone}}', '{{workshop}}', '{{attendance}}', '{{location}}'],
+            [
+                (string) ($reg->name ?: 'المشترك'),
+                (string) ($reg->phone ?: ''),
+                (string) $workshop->title,
+                $attendance,
+                (string) ($workshop->location ?: ''),
+            ],
+            $template
+        );
     }
 
     private function normalizePhone(?string $phone): ?string
