@@ -30,39 +30,27 @@
         ],
     ], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
-    <?php if(($batch->isPausedForBridge() || !($bridgeMeta['can_send'] ?? false)) && !$batch->isFinished()): ?>
-        <div id="bridge-blocked-banner" class="rounded-xl border-2 border-rose-300 bg-rose-50 p-4 sm:p-5 space-y-3">
+    <?php if(($batch->isPausedForBridge() || !($connectionMeta['can_send'] ?? false)) && !$batch->isFinished()): ?>
+        <div id="connection-blocked-banner" class="rounded-xl border-2 border-rose-300 bg-rose-50 p-4 sm:p-5 space-y-3">
             <div class="flex flex-wrap items-start gap-3">
                 <div class="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center shrink-0">
-                    <i class="fab fa-whatsapp text-rose-600 text-xl"></i>
+                    <i class="fab fa-meta text-rose-600 text-xl"></i>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <h3 class="font-bold text-rose-900">الواتساب غير متصل — لن تُرسل أي رسالة حتى تربط الحساب</h3>
+                    <h3 class="font-bold text-rose-900">WhatsApp Business غير جاهز — لن تُرسل أي رسالة</h3>
                     <p class="text-sm text-rose-800 mt-1">
-                        الحالة: <strong><?php echo e($bridgeMeta['label'] ?? 'غير متصل'); ?></strong>
-                        <?php if(!empty($bridgeMeta['last_error'])): ?>
-                            — <span class="font-mono text-xs"><?php echo e($bridgeMeta['last_error']); ?></span>
-                        <?php endif; ?>
+                        الحالة: <strong><?php echo e($connectionMeta['label'] ?? 'غير متصل'); ?></strong>
                     </p>
-                    <?php if($batch->meta['bridge_blocked_reason'] ?? null): ?>
-                        <p class="text-xs text-rose-700 mt-1"><?php echo e($batch->meta['bridge_blocked_reason']); ?></p>
+                    <?php if($batch->meta['connection_blocked_reason'] ?? $batch->meta['bridge_blocked_reason'] ?? null): ?>
+                        <p class="text-xs text-rose-700 mt-1"><?php echo e($batch->meta['connection_blocked_reason'] ?? $batch->meta['bridge_blocked_reason']); ?></p>
                     <?php endif; ?>
-                    <p class="text-xs text-rose-700 mt-2">بعد مسح QR أو إدخال رمز الربط، ستُستأنف الدفعة تلقائياً من هذه الصفحة.</p>
+                    <p class="text-xs text-rose-700 mt-2">بعد إكمال الربط من صفحة الإعدادات، ستُستأنف الدفعة تلقائياً.</p>
                 </div>
             </div>
-            <div class="flex flex-wrap gap-2">
-                <a href="<?php echo e(route('admin.whatsapp.index')); ?>" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold">
-                    <i class="fas fa-qrcode"></i>
-                    ربط الواتساب الآن
-                </a>
-                <form method="POST" action="<?php echo e(route('admin.whatsapp.start')); ?>" class="inline">
-                    <?php echo csrf_field(); ?>
-                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-rose-200 text-rose-800 text-sm font-semibold hover:bg-rose-100">
-                        <i class="fas fa-wrench"></i>
-                        إصلاح الاتصال
-                    </button>
-                </form>
-            </div>
+            <a href="<?php echo e(route('admin.whatsapp.settings')); ?>" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold">
+                <i class="fas fa-plug"></i>
+                إعدادات ربط Meta
+            </a>
         </div>
     <?php endif; ?>
 
@@ -74,6 +62,7 @@
                     <span id="batch-status-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border
                         <?php if($batch->status === 'processing'): ?> bg-sky-100 text-sky-800 border-sky-200
                         <?php elseif($batch->status === 'completed'): ?> bg-emerald-100 text-emerald-800 border-emerald-200
+                        <?php elseif($batch->status === 'paused'): ?> bg-rose-100 text-rose-800 border-rose-200
                         <?php elseif($batch->status === 'cancelled'): ?> bg-slate-200 text-slate-800 border-slate-300
                         <?php else: ?> bg-amber-100 text-amber-800 border-amber-200 <?php endif; ?>">
                         <i id="batch-status-icon" class="fas <?php echo e($batch->status === 'processing' ? 'fa-spinner fa-spin' : 'fa-info-circle'); ?>"></i>
@@ -252,8 +241,8 @@
         document.getElementById('batch-progress-bar').style.width = data.progress + '%';
         document.getElementById('batch-status-label').textContent = data.status_label;
 
-        const banner = document.getElementById('bridge-blocked-banner');
-        if (banner && data.bridge && data.bridge.can_send && !data.paused_for_bridge) {
+        const banner = document.getElementById('connection-blocked-banner');
+        if ($banner && data.bridge && data.bridge.can_send && !data.paused_for_bridge) {
             banner.remove();
         }
 

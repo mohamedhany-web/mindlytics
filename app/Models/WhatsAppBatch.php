@@ -80,6 +80,8 @@ class WhatsAppBatch extends Model
 
     public function isPausedForBridge(): bool
     {
-        return $this->status === 'paused' || (bool) ($this->meta['bridge_blocked'] ?? false);
+        return $this->status === 'paused'
+            || (bool) ($this->meta['bridge_blocked'] ?? false)
+            || (bool) ($this->meta['connection_blocked'] ?? false);
     }
 }

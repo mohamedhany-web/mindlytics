@@ -8,7 +8,7 @@
 
     <?php echo $__env->make('admin.whatsapp._page-header', [
         'title' => 'سجل رسائل الواتساب',
-        'subtitle' => 'جميع الرسائل المرسلة عبر Bridge مع حالة التسليم.',
+        'subtitle' => 'جميع الرسائل المرسلة عبر Meta Cloud API مع حالة التسليم.',
         'icon' => 'fas fa-list',
         'actions' => '<a href="' . route('admin.whatsapp.send') . '" class="' . $waBtnPrimary . '"><i class="fas fa-plus"></i> رسالة جديدة</a>',
     ], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>

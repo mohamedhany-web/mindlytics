@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Workshop;
 use App\Services\WorkshopWhatsAppBatchService;
-use App\Support\WhatsAppBridgeSettings;
+use App\Support\WhatsAppCloudSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -29,8 +29,8 @@ class WorkshopWhatsAppController extends Controller
             return back()->withInput()->with('error', 'يرجى إدخال رقم الهاتف عند اختيار «رقم محدد».');
         }
 
-        if (! WhatsAppBridgeSettings::usesBridge()) {
-            return back()->with('error', 'إرسال الواتساب التلقائي غير مفعّل — راجع إعدادات Bridge في قسم الواتساب، أو استخدم «فتح روابط يدوياً».');
+        if (! WhatsAppCloudSettings::usesOfficial()) {
+            return back()->with('error', 'إرسال الواتساب غير مفعّل — أكمل إعداد Meta Cloud API في قسم الواتساب.');
         }
 
         try {

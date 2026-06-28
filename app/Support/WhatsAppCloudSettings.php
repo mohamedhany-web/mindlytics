@@ -1,0 +1,249 @@
+<?php
+
+namespace App\Support;
+
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Storage;
+
+class WhatsAppCloudSettings
+{
+    private const STORAGE_PATH = 'site/whatsapp_cloud_settings.json';
+
+    /** @var array<string, mixed>|null */
+    private static ?array $cache = null;
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function defaults(): array
+    {
+        return [
+            'service_type' => 'official',
+            'enabled' => false,
+            'app_id' => '',
+            'app_secret' => '',
+            'embedded_signup_config_id' => '',
+            'api_url' => 'https://graph.facebook.com/v21.0',
+            'webhook_verify_token' => '',
+            'access_token' => '',
+            'phone_number_id' => '',
+            'business_account_id' => '',
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function all(): array
+    {
+        if (self::$cache !== null) {
+            return self::$cache;
+        }
+
+        $disk = Storage::disk('local');
+
+        if (! $disk->exists(self::STORAGE_PATH)) {
+            self::$cache = self::defaults();
+
+            return self::$cache;
+        }
+
+        $raw = $disk->get(self::STORAGE_PATH);
+        $data = json_decode($raw, true);
+        $merged = array_merge(self::defaults(), is_array($data) ? $data : []);
+
+        foreach (['app_secret', 'access_token'] as $secretKey) {
+            if (! empty($merged[$secretKey])) {
+                try {
+                    $merged[$secretKey] = Crypt::decryptString((string) $merged[$secretKey]);
+                } catch (\Throwable) {
+                    $merged[$secretKey] = (string) $merged[$secretKey];
+                }
+            }
+        }
+
+        $merged['enabled'] = filter_var($merged['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $merged['api_url'] = rtrim((string) ($merged['api_url'] ?? self::defaults()['api_url']), '/');
+
+        self::$cache = $merged;
+
+        return self::$cache;
+    }
+
+    /**
+     * قيم النموذج — بدون إظهار الأسرار كاملة.
+     *
+     * @return array<string, mixed>
+     */
+    public static function formValues(): array
+    {
+        $all = self::all();
+
+        return [
+            'service_type' => (string) ($all['service_type'] ?? 'official'),
+            'enabled' => (bool) ($all['enabled'] ?? false),
+            'app_id' => (string) ($all['app_id'] ?? ''),
+            'embedded_signup_config_id' => (string) ($all['embedded_signup_config_id'] ?? ''),
+            'api_url' => (string) ($all['api_url'] ?? self::defaults()['api_url']),
+            'webhook_verify_token' => (string) ($all['webhook_verify_token'] ?? ''),
+            'phone_number_id' => (string) ($all['phone_number_id'] ?? ''),
+            'business_account_id' => (string) ($all['business_account_id'] ?? ''),
+            'has_app_secret' => self::hasAppSecret(),
+            'has_access_token' => self::hasAccessToken(),
+            'webhook_url' => self::webhookUrl(),
+            'graph_version' => self::graphVersion(),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public static function save(array $data): void
+    {
+        $current = self::all();
+        $merged = array_merge($current, $data);
+
+        if (array_key_exists('app_secret', $data) && trim((string) $data['app_secret']) === '') {
+            $merged['app_secret'] = $current['app_secret'];
+        }
+
+        if (array_key_exists('access_token', $data) && trim((string) $data['access_token']) === '') {
+            $merged['access_token'] = $current['access_token'];
+        }
+
+        $merged['service_type'] = 'official';
+        $merged['enabled'] = filter_var($merged['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $merged['api_url'] = rtrim((string) ($merged['api_url'] ?? self::defaults()['api_url']), '/');
+
+        $toStore = $merged;
+        foreach (['app_secret', 'access_token'] as $secretKey) {
+            if (! empty($toStore[$secretKey])) {
+                $toStore[$secretKey] = Crypt::encryptString((string) $toStore[$secretKey]);
+            } else {
+                $toStore[$secretKey] = '';
+            }
+        }
+
+        $disk = Storage::disk('local');
+        if (! $disk->exists('site')) {
+            $disk->makeDirectory('site');
+        }
+
+        $disk->put(self::STORAGE_PATH, json_encode($toStore, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+
+        self::$cache = null;
+    }
+
+    public static function hasAppSecret(): bool
+    {
+        return trim((string) (self::all()['app_secret'] ?? '')) !== '';
+    }
+
+    public static function hasAccessToken(): bool
+    {
+        $connection = \App\Models\WhatsAppBusinessConnection::active();
+        if ($connection?->access_token) {
+            return true;
+        }
+
+        return trim((string) (self::all()['access_token'] ?? '')) !== '';
+    }
+
+    public static function isEnabled(): bool
+    {
+        return filter_var(self::all()['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    public static function serviceType(): string
+    {
+        return 'official';
+    }
+
+    public static function usesOfficial(): bool
+    {
+        return self::isEnabled();
+    }
+
+    public static function isAppConfigured(): bool
+    {
+        return self::appId() !== '' && self::hasAppSecret();
+    }
+
+    public static function isSendConfigured(): bool
+    {
+        if (\App\Models\WhatsAppBusinessConnection::active()) {
+            return true;
+        }
+
+        return self::accessToken() !== '' && self::phoneNumberId() !== '';
+    }
+
+    public static function appId(): string
+    {
+        return (string) (self::all()['app_id'] ?? '');
+    }
+
+    public static function appSecret(): string
+    {
+        return (string) (self::all()['app_secret'] ?? '');
+    }
+
+    public static function embeddedSignupConfigId(): string
+    {
+        return (string) (self::all()['embedded_signup_config_id'] ?? '');
+    }
+
+    public static function apiUrl(): string
+    {
+        return rtrim((string) (self::all()['api_url'] ?? self::defaults()['api_url']), '/');
+    }
+
+    public static function accessToken(): string
+    {
+        $connection = \App\Models\WhatsAppBusinessConnection::active();
+        if ($connection?->access_token) {
+            return (string) $connection->access_token;
+        }
+
+        return (string) (self::all()['access_token'] ?? '');
+    }
+
+    public static function phoneNumberId(): string
+    {
+        $connection = \App\Models\WhatsAppBusinessConnection::active();
+        if ($connection?->phone_number_id) {
+            return (string) $connection->phone_number_id;
+        }
+
+        return (string) (self::all()['phone_number_id'] ?? '');
+    }
+
+    public static function businessAccountId(): string
+    {
+        $connection = \App\Models\WhatsAppBusinessConnection::active();
+        if ($connection?->waba_id) {
+            return (string) $connection->waba_id;
+        }
+
+        return (string) (self::all()['business_account_id'] ?? '');
+    }
+
+    public static function webhookVerifyToken(): string
+    {
+        return (string) (self::all()['webhook_verify_token'] ?? '');
+    }
+
+    public static function webhookUrl(): string
+    {
+        return rtrim((string) config('app.url'), '/') . '/webhooks/whatsapp';
+    }
+
+    public static function graphVersion(): string
+    {
+        if (preg_match('#/v(\d+\.\d+)$#', self::apiUrl(), $m)) {
+            return 'v' . $m[1];
+        }
+
+        return 'v21.0';
+    }
+}

@@ -10,6 +10,11 @@ use App\Http\Controllers\DashboardController;
 | يعمل عند عدم وجود symlink public/storage على الاستضافة
 |--------------------------------------------------------------------------
 */
+Route::get('/webhooks/whatsapp', [\App\Http\Controllers\WhatsAppWebhookController::class, 'verify'])
+    ->name('webhooks.whatsapp.verify');
+Route::post('/webhooks/whatsapp', [\App\Http\Controllers\WhatsAppWebhookController::class, 'handle'])
+    ->name('webhooks.whatsapp.handle');
+
 Route::get('/storage/{path}', function ($path) {
     $path = rawurldecode($path);
     $path = str_replace('..', '', $path);
@@ -1583,7 +1588,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/operations', [\App\Http\Controllers\Admin\QualityControlController::class, 'operations'])->name('operations');
         });
 
-        // قسم الواتساب (whatsapp-web.js Bridge)
+        // قسم الواتساب — Meta Cloud API (رسمي)
         Route::prefix('whatsapp')->name('whatsapp.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\WhatsAppController::class, 'index'])->name('index');
             Route::get('/send', [\App\Http\Controllers\Admin\WhatsAppController::class, 'sendForm'])->name('send');
@@ -1591,15 +1596,11 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/messages', [\App\Http\Controllers\Admin\WhatsAppController::class, 'messages'])->name('messages');
             Route::post('/messages/{message}/resend', [\App\Http\Controllers\Admin\WhatsAppController::class, 'resendMessage'])->name('messages.resend');
             Route::get('/settings', [\App\Http\Controllers\Admin\WhatsAppController::class, 'settings'])->name('settings');
-            Route::post('/settings', [\App\Http\Controllers\Admin\WhatsAppController::class, 'updateSettings'])->name('settings.update');
-            Route::get('/status', [\App\Http\Controllers\Admin\WhatsAppController::class, 'statusJson'])->name('status');
-            Route::get('/qr', [\App\Http\Controllers\Admin\WhatsAppController::class, 'qrJson'])->name('qr');
-            Route::get('/pairing-code', [\App\Http\Controllers\Admin\WhatsAppController::class, 'pairingCodeJson'])->name('pairing');
-            Route::post('/pairing-code', [\App\Http\Controllers\Admin\WhatsAppController::class, 'requestPairingCode'])->name('pairing.request');
-            Route::post('/qr-mode', [\App\Http\Controllers\Admin\WhatsAppController::class, 'switchToQrMode'])->name('qr-mode');
-            Route::get('/docs', [\App\Http\Controllers\Admin\WhatsAppController::class, 'docs'])->name('docs');
-            Route::post('/start', [\App\Http\Controllers\Admin\WhatsAppController::class, 'startBridge'])->name('start');
-            Route::post('/logout', [\App\Http\Controllers\Admin\WhatsAppController::class, 'logoutBridge'])->name('logout');
+            Route::post('/settings', [\App\Http\Controllers\Admin\WhatsAppCloudController::class, 'saveSettings'])->name('settings.update');
+            Route::post('/test-connection', [\App\Http\Controllers\Admin\WhatsAppCloudController::class, 'testConnection'])->name('test-connection');
+            Route::post('/embedded-signup', [\App\Http\Controllers\Admin\WhatsAppCloudController::class, 'completeEmbeddedSignup'])->name('embedded-signup');
+            Route::post('/disconnect', [\App\Http\Controllers\Admin\WhatsAppCloudController::class, 'disconnect'])->name('disconnect');
+            Route::get('/status', [\App\Http\Controllers\Admin\WhatsAppCloudController::class, 'statusJson'])->name('status');
             Route::get('/batches', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'index'])->name('batches.index');
             Route::get('/batches/{batch}', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'show'])->name('batches.show');
             Route::get('/batches/{batch}/status', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'statusJson'])->name('batches.status');

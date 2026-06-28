@@ -2,17 +2,13 @@
     $phoneCountAll = $whatsappPhoneCountAll ?? 0;
     $phoneCountOnline = $whatsappPhoneCountOnline ?? 0;
     $phoneCountOffline = $whatsappPhoneCountOffline ?? 0;
-    $waConfigured = \App\Support\WhatsAppBridgeSettings::usesBridge();
     $pacing = app(\App\Services\WhatsAppPacingService::class)->usageStats();
     $remainingToday = app(\App\Services\WhatsAppPacingService::class)->remainingDailyQuota();
     $waTemplateVars = ['{{name}}', '{{phone}}', '{{workshop}}', '{{attendance}}', '{{location}}'];
     $messagePlaceholder = "مرحباً {{name}}،\n\nشكراً لتسجيلك في ورشة «{{workshop}}» ({{attendance}}).\n\n...";
-    $waBridgeStatus = app(\App\Services\WhatsAppBridgeService::class)->getStatus();
-    $waBridgeMeta = app(\App\Services\WhatsAppBridgeService::class)->connectionMeta(
-        $waBridgeStatus['data'] ?? [],
-        (bool) ($waBridgeStatus['success'] ?? false)
-    );
-    $waCanSend = (bool) ($waBridgeMeta['can_send'] ?? false);
+    $waConfigured = \App\Support\WhatsAppCloudSettings::isAppConfigured();
+    $waConnectionMeta = app(\App\Services\WhatsAppCloudService::class)->connectionMeta();
+    $waCanSend = (bool) ($waConnectionMeta['can_send'] ?? false);
 @endphp
 
 <section class="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-white p-4 sm:p-5 space-y-4 h-full">
@@ -23,17 +19,17 @@
                 إرسال واتساب لكل المسجلين
             </h3>
             <p class="text-xs text-slate-600 mt-1">
-                يُرسل عبر Bridge مع تأخير آمن بين الرسائل، إعادة محاولة تلقائية، ومتابعة حية لكل رقم.
+                يُرسل عبر Meta Cloud API مع تأخير آمن بين الرسائل، إعادة محاولة تلقائية، ومتابعة حية لكل رقم.
             </p>
         </div>
         @if($waConfigured)
             @if($waCanSend)
-                <span class="text-[10px] px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold">متصل وجاهز</span>
+                <span class="text-[10px] px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold">Meta متصل</span>
             @else
-                <span class="text-[10px] px-2 py-1 rounded-full bg-rose-100 text-rose-800 font-bold">{{ $waBridgeMeta['label'] ?? 'غير متصل' }}</span>
+                <span class="text-[10px] px-2 py-1 rounded-full bg-rose-100 text-rose-800 font-bold">{{ $waConnectionMeta['label'] ?? 'غير متصل' }}</span>
             @endif
         @else
-            <span class="text-[10px] px-2 py-1 rounded-full bg-rose-100 text-rose-800 font-bold">Bridge غير مفعّل</span>
+            <span class="text-[10px] px-2 py-1 rounded-full bg-rose-100 text-rose-800 font-bold">Meta غير مضبوط</span>
         @endif
     </div>
 
@@ -51,17 +47,14 @@
 
     @if(!$waConfigured)
         <p class="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
-            الإرسال التلقائي غير متاح — فعّل Bridge من
-            <a href="{{ route('admin.whatsapp.index') }}" class="font-bold underline">قسم الواتساب</a>
+            الإرسال التلقائي غير متاح — أكمل
+            <a href="{{ route('admin.whatsapp.settings') }}" class="font-bold underline">ربط Meta WhatsApp</a>
             أو استخدم «فتح روابط يدوياً» بالأسفل.
         </p>
     @elseif(!$waCanSend)
         <div class="text-xs text-rose-800 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 space-y-2">
             <p>
-                <strong>يجب ربط الواتساب أولاً</strong> — الحالة: {{ $waBridgeMeta['label'] ?? 'غير متصل' }}
-                @if(!empty($waBridgeMeta['last_error']))
-                    ({{ $waBridgeMeta['last_error'] }})
-                @endif
+                <strong>يجب ربط WhatsApp Business أولاً</strong> — {{ $waConnectionMeta['label'] ?? 'غير متصل' }}
             </p>
             <a href="{{ route('admin.whatsapp.index') }}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700">
                 <i class="fas fa-qrcode"></i> ربط الواتساب الآن

@@ -103,7 +103,7 @@ class WhatsAppBatchService
         }
 
         if ($batch->status === 'paused' || $batch->isPausedForBridge()) {
-            app(\App\Services\WhatsAppBridgeService::class)->assertReadyForBulkSend();
+            app(\App\Services\WhatsAppCloudService::class)->assertReadyForBulkSend();
         }
 
         WhatsAppBatchItem::query()
@@ -127,6 +127,7 @@ class WhatsAppBatchService
         }
 
         $meta = is_array($batch->meta) ? $batch->meta : [];
+        unset($meta['connection_blocked'], $meta['connection_blocked_at'], $meta['connection_blocked_reason']);
         unset($meta['bridge_blocked'], $meta['bridge_blocked_at'], $meta['bridge_blocked_reason']);
 
         $batch->update([
@@ -235,7 +236,7 @@ class WhatsAppBatchService
         }
 
         if ($batch->status === 'paused' || $batch->isPausedForBridge()) {
-            return self::resumeIfBridgeReady($batch);
+            return self::resumeIfConnectionReady($batch);
         }
 
         $pending = $batch->items()->whereIn('status', ['pending', 'processing'])->count();
@@ -274,7 +275,7 @@ class WhatsAppBatchService
         return true;
     }
 
-    public static function resumeIfBridgeReady(WhatsAppBatch $batch): bool
+    public static function resumeIfConnectionReady(WhatsAppBatch $batch): bool
     {
         if ($batch->isFinished()) {
             return false;
@@ -284,12 +285,13 @@ class WhatsAppBatchService
             return false;
         }
 
-        $gate = app(\App\Services\WhatsAppBridgeService::class)->canSendNow();
+        $gate = app(\App\Services\WhatsAppCloudService::class)->canSendNow();
         if (! ($gate['success'] ?? false)) {
             return false;
         }
 
         $meta = is_array($batch->meta) ? $batch->meta : [];
+        unset($meta['connection_blocked'], $meta['connection_blocked_at'], $meta['connection_blocked_reason']);
         unset($meta['bridge_blocked'], $meta['bridge_blocked_at'], $meta['bridge_blocked_reason']);
 
         $batch->update([

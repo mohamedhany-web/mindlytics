@@ -51,16 +51,18 @@ return [
     |
     */
     'whatsapp' => [
-        'type' => env('WHATSAPP_TYPE', 'disabled'), // disabled, wwebjs, local, official, custom
-        'api_url' => env('WHATSAPP_API_URL', 'https://graph.facebook.com/v18.0'),
+        'type' => env('WHATSAPP_TYPE', 'official'),
+        'enabled' => env('WHATSAPP_ENABLED', false),
+        'app_id' => env('WHATSAPP_APP_ID'),
+        'app_secret' => env('WHATSAPP_APP_SECRET'),
+        'embedded_signup_config_id' => env('WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID'),
+        'api_url' => env('WHATSAPP_API_URL', 'https://graph.facebook.com/v21.0'),
         'api_token' => env('WHATSAPP_API_TOKEN'),
         'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+        'business_account_id' => env('WHATSAPP_BUSINESS_ACCOUNT_ID'),
         'webhook_verify_token' => env('WHATSAPP_WEBHOOK_VERIFY_TOKEN'),
         'app_secret' => env('WHATSAPP_APP_SECRET'),
-        'enabled' => env('WHATSAPP_ENABLED', false),
-        'local_api_url' => env('WHATSAPP_LOCAL_API_URL', 'http://localhost:3001'),
-        'bridge_token' => env('WHATSAPP_BRIDGE_TOKEN', ''),
-        // إعدادات API مخصص
+        // legacy custom API (deprecated)
         'request_method' => env('WHATSAPP_REQUEST_METHOD', 'POST'),
         'phone_param' => env('WHATSAPP_PHONE_PARAM', 'phone'),
         'message_param' => env('WHATSAPP_MESSAGE_PARAM', 'message'),

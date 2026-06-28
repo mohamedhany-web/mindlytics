@@ -6,29 +6,27 @@ use App\Http\Controllers\Controller;
 use App\Models\AdvancedCourse;
 use App\Models\MessageTemplate;
 use App\Models\User;
+use App\Models\WhatsAppBusinessConnection;
 use App\Models\WhatsAppMessage;
 use App\Services\WhatsAppBatchService;
-use App\Services\WhatsAppBridgeService;
+use App\Services\WhatsAppCloudService;
 use App\Services\WhatsAppPacingService;
 use App\Services\WhatsAppService;
-use App\Support\WhatsAppBridgeSettings;
+use App\Support\WhatsAppCloudSettings;
 use Illuminate\Http\Request;
 
 class WhatsAppController extends Controller
 {
     public function __construct(
-        private WhatsAppBridgeService $bridge,
+        private WhatsAppCloudService $cloud,
         private WhatsAppService $whatsapp,
         private WhatsAppBatchService $whatsappBatch
     ) {}
 
     public function index()
     {
-        $settings = WhatsAppBridgeSettings::all();
-        $statusResult = $this->bridge->getStatus();
-        $status = $statusResult['success'] ? ($statusResult['data'] ?? []) : [];
-        $bridgeError = $statusResult['success'] ? null : ($statusResult['error'] ?? null);
-        $connectionMeta = $this->bridge->connectionMeta($status, $statusResult['success'] ?? false);
+        $connectionMeta = $this->cloud->connectionMeta();
+        $connection = WhatsAppBusinessConnection::active();
 
         $stats = [
             'total' => WhatsAppMessage::count(),
@@ -38,7 +36,7 @@ class WhatsAppController extends Controller
 
         $pacingStats = app(WhatsAppPacingService::class)->usageStats();
 
-        return view('admin.whatsapp.index', compact('settings', 'status', 'bridgeError', 'connectionMeta', 'stats', 'pacingStats'));
+        return view('admin.whatsapp.index', compact('connectionMeta', 'connection', 'stats', 'pacingStats'));
     }
 
     public function sendForm()
@@ -52,10 +50,7 @@ class WhatsAppController extends Controller
 
         $templates = MessageTemplate::active()->get(['id', 'title', 'content', 'type']);
         $courses = AdvancedCourse::active()->select('id', 'title')->orderBy('title')->get();
-
-        $statusResult = $this->bridge->getStatus();
-        $bridgeStatus = $statusResult['success'] ? ($statusResult['data'] ?? []) : [];
-        $connectionMeta = $this->bridge->connectionMeta($bridgeStatus, $statusResult['success'] ?? false);
+        $connectionMeta = $this->cloud->connectionMeta();
 
         $recentMessages = WhatsAppMessage::with('user')
             ->latest()
@@ -66,7 +61,6 @@ class WhatsAppController extends Controller
             'students',
             'templates',
             'courses',
-            'bridgeStatus',
             'connectionMeta',
             'recentMessages'
         ));
@@ -105,7 +99,7 @@ class WhatsAppController extends Controller
 
         return back()
             ->withInput()
-            ->with('error', $this->bridge->translateError($result['error'] ?? 'فشل إرسال الرسالة.'));
+            ->with('error', $result['error'] ?? 'فشل إرسال الرسالة.');
     }
 
     protected function sendBulkMessages(Request $request)
@@ -121,6 +115,12 @@ class WhatsAppController extends Controller
             'course_id.required_if' => 'يجب اختيار الكورس',
             'message.required' => 'نص الرسالة مطلوب',
         ]);
+
+        try {
+            $this->cloud->assertReadyForBulkSend();
+        } catch (\RuntimeException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
 
         $students = $this->resolveRecipients($request);
 
@@ -246,7 +246,7 @@ class WhatsAppController extends Controller
             return back()->with('success', 'تم إعادة إرسال الرسالة بنجاح.');
         }
 
-        return back()->with('error', $this->bridge->translateError($result['error'] ?? 'فشل إعادة الإرسال.'));
+        return back()->with('error', $result['error'] ?? 'فشل إعادة الإرسال.');
     }
 
     public function messages(Request $request)
@@ -269,122 +269,9 @@ class WhatsAppController extends Controller
     public function settings()
     {
         return view('admin.whatsapp.settings', [
-            'settings' => WhatsAppBridgeSettings::all(),
+            'config' => WhatsAppCloudSettings::formValues(),
+            'connection' => WhatsAppBusinessConnection::active(),
+            'connectionMeta' => $this->cloud->connectionMeta(),
         ]);
-    }
-
-    public function updateSettings(Request $request)
-    {
-        $request->validate([
-            'service_type' => 'required|in:disabled,wwebjs,local,official,custom',
-            'bridge_url' => 'nullable|url|max:500',
-            'bridge_token' => 'nullable|string|max:500',
-        ], [
-            'bridge_url.url' => 'رابط الجسر غير صالح',
-        ]);
-
-        if (in_array($request->service_type, ['wwebjs', 'local'], true)) {
-            $request->validate([
-                'bridge_url' => 'required|url',
-                'bridge_token' => 'required|string|min:8',
-            ], [
-                'bridge_url.required' => 'رابط سيرفر Node.js Bridge مطلوب',
-                'bridge_token.required' => 'توكن الأمان مطلوب',
-                'bridge_token.min' => 'التوكن يجب أن يكون 8 أحرف على الأقل',
-            ]);
-        }
-
-        WhatsAppBridgeSettings::save([
-            'service_type' => $request->service_type,
-            'bridge_url' => $request->bridge_url ?? '',
-            'bridge_token' => $request->bridge_token ?? '',
-        ]);
-
-        return back()->with('success', 'تم حفظ إعدادات الواتساب.');
-    }
-
-    public function statusJson()
-    {
-        return response()->json($this->bridge->getStatus());
-    }
-
-    public function qrJson()
-    {
-        return response()->json($this->bridge->getQr());
-    }
-
-    public function pairingCodeJson()
-    {
-        return response()->json($this->bridge->getPairingCode());
-    }
-
-    public function requestPairingCode(Request $request)
-    {
-        $request->validate([
-            'phone' => 'required|string|max:30',
-        ], [
-            'phone.required' => 'رقم الهاتف مطلوب لرمز الربط',
-        ]);
-
-        $result = $this->bridge->requestPairingCode($request->phone);
-
-        if ($request->expectsJson()) {
-            return response()->json($result);
-        }
-
-        if ($result['success'] ?? false) {
-            return back()->with('success', 'تم طلب رمز الربط — انتظر ظهور الرمز في اللوحة.');
-        }
-
-        return back()->with('error', $result['error'] ?? 'فشل طلب رمز الربط.');
-    }
-
-    public function switchToQrMode()
-    {
-        $result = $this->bridge->switchToQrMode();
-
-        if (request()->expectsJson()) {
-            return response()->json($result);
-        }
-
-        if ($result['success'] ?? false) {
-            return back()->with('success', 'تم التحويل لوضع QR.');
-        }
-
-        return back()->with('error', $result['error'] ?? 'فشل التحويل لوضع QR.');
-    }
-
-    public function docs()
-    {
-        $settings = WhatsAppBridgeSettings::all();
-        $pacing = config('whatsapp.pacing', []);
-
-        return view('admin.whatsapp.docs', compact('settings', 'pacing'));
-    }
-
-    public function startBridge()
-    {
-        $result = $this->bridge->start();
-
-        if ($result['success'] ?? false) {
-            $message = ! empty($result['restarting'])
-                ? 'تم قتل Chrome العالق وإعادة تشغيل Bridge على VPS — انتظر 15 ثانية ثم حدّث الصفحة.'
-                : 'تم إصلاح الاتصال — انتظر 10 ثوانٍ ثم حدّث الصفحة. الربط السابق محفوظ.';
-
-            return back()->with('success', $message);
-        }
-
-        return back()->with('error', $result['error'] ?? 'فشل بدء الجسر.');
-    }
-
-    public function logoutBridge()
-    {
-        $result = $this->bridge->logout();
-
-        if ($result['success'] ?? false) {
-            return back()->with('success', 'تم قطع اتصال الواتساب.');
-        }
-
-        return back()->with('error', $result['error'] ?? 'فشل قطع الاتصال.');
     }
 }

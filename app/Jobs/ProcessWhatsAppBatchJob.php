@@ -8,7 +8,7 @@ use App\Models\WhatsAppBatch;
 use App\Models\WhatsAppBatchItem;
 use App\Models\WorkshopRegistration;
 use App\Services\WhatsAppBatchService;
-use App\Services\WhatsAppBridgeService;
+use App\Services\WhatsAppCloudService;
 use App\Services\WhatsAppService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -117,10 +117,10 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
             return 0;
         }
 
-        $bridgeService = app(WhatsAppBridgeService::class);
-        $gate = $bridgeService->canSendNow();
+        $cloudService = app(WhatsAppCloudService::class);
+        $gate = $cloudService->canSendNow();
         if (! ($gate['success'] ?? false)) {
-            $this->pauseBatchForBridge($batch, (string) ($gate['error'] ?? 'الواتساب غير متصل'));
+            $this->pauseBatchForConnection($batch, (string) ($gate['error'] ?? 'الواتساب غير متصل'));
 
             return 0;
         }
@@ -206,15 +206,15 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
 
     private function handleSendFailure(WhatsAppBatchItem $item, WhatsAppBatch $batch, string $error): void
     {
-        $bridgeService = app(WhatsAppBridgeService::class);
+        $cloudService = app(WhatsAppCloudService::class);
 
-        if ($bridgeService->isConnectionBlockedError($error)) {
+        if ($cloudService->isConnectionBlockedError($error)) {
             WhatsAppBatchItem::query()
                 ->where('id', $item->id)
                 ->where('status', 'processing')
                 ->update(['status' => 'pending', 'error_message' => null]);
 
-            $this->pauseBatchForBridge($batch, $error);
+            $this->pauseBatchForConnection($batch, $error);
 
             return;
         }
@@ -305,7 +305,7 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
 
     private function isTransientWhatsAppError(string $error): bool
     {
-        if (app(WhatsAppBridgeService::class)->isConnectionBlockedError($error)) {
+        if (app(WhatsAppCloudService::class)->isConnectionBlockedError($error)) {
             return false;
         }
 
@@ -367,7 +367,7 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
         $lead->touchLastContactFromActivity('whatsapp');
     }
 
-    private function pauseBatchForBridge(WhatsAppBatch $batch, string $reason): void
+    private function pauseBatchForConnection(WhatsAppBatch $batch, string $reason): void
     {
         WhatsAppBatchItem::query()
             ->where('batch_id', $batch->id)
@@ -375,16 +375,16 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
             ->update(['status' => 'pending', 'error_message' => null]);
 
         $meta = is_array($batch->meta) ? $batch->meta : [];
-        $meta['bridge_blocked'] = true;
-        $meta['bridge_blocked_at'] = now()->toIso8601String();
-        $meta['bridge_blocked_reason'] = $reason;
+        $meta['connection_blocked'] = true;
+        $meta['connection_blocked_at'] = now()->toIso8601String();
+        $meta['connection_blocked_reason'] = $reason;
 
         $batch->update([
             'status' => 'paused',
             'meta' => $meta,
         ]);
 
-        Log::warning('WhatsApp batch paused — bridge not ready', [
+        Log::warning('WhatsApp batch paused — Cloud API not ready', [
             'batch_id' => $batch->id,
             'reason' => $reason,
         ]);

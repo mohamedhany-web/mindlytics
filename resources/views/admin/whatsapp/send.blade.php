@@ -181,7 +181,7 @@ function whatsappSendForm() {
                         @if(!empty($connectionMeta['last_error']))
                             — {{ $connectionMeta['last_error'] }}
                         @else
-                            — تأكد من Bridge على VPS وامسح QR أو أدخل رمز الربط قبل الإرسال.
+                            — أكمل ربط Meta من صفحة الإعدادات قبل الإرسال.
                         @endif
                     </p>
                 </div>

@@ -8,7 +8,7 @@ use App\Models\WhatsAppBatch;
 use App\Models\WhatsAppBatchItem;
 use App\Models\Workshop;
 use App\Services\WhatsAppBatchService;
-use App\Services\WhatsAppBridgeService;
+use App\Services\WhatsAppCloudService;
 use Illuminate\Http\Request;
 
 class WhatsAppBatchController extends Controller
@@ -59,13 +59,9 @@ class WhatsAppBatchController extends Controller
             $salesGroup = \App\Models\SalesLeadGroup::find($batch->source_id);
         }
 
-        $bridgeStatus = app(WhatsAppBridgeService::class)->getStatus();
-        $bridgeMeta = app(WhatsAppBridgeService::class)->connectionMeta(
-            $bridgeStatus['data'] ?? [],
-            (bool) ($bridgeStatus['success'] ?? false)
-        );
+        $connectionMeta = app(WhatsAppCloudService::class)->connectionMeta();
 
-        return view('admin.whatsapp.batches.show', compact('batch', 'items', 'filter', 'workshop', 'salesGroup', 'bridgeMeta'));
+        return view('admin.whatsapp.batches.show', compact('batch', 'items', 'filter', 'workshop', 'salesGroup', 'connectionMeta'));
     }
 
     public function statusJson(WhatsAppBatch $batch)
@@ -83,15 +79,15 @@ class WhatsAppBatchController extends Controller
         }
 
         if ($batch->status === 'paused' || $batch->isPausedForBridge()) {
-            $ready = app(WhatsAppBridgeService::class)->ensureReadyForSend();
-            if (! ($ready['success'] ?? false)) {
+            $ready = app(WhatsAppCloudService::class)->connectionMeta();
+            if (! ($ready['can_send'] ?? false)) {
                 return response()->json(array_merge(
-                    ['ok' => false, 'bridge_blocked' => true, 'error' => $ready['error'] ?? 'الواتساب غير متصل'],
+                    ['ok' => false, 'connection_blocked' => true, 'error' => $ready['last_error'] ?? 'الواتساب غير متصل'],
                     $this->batchStatusPayload($batch)
                 ));
             }
 
-            WhatsAppBatchService::resumeIfBridgeReady($batch->fresh());
+            WhatsAppBatchService::resumeIfConnectionReady($batch->fresh());
             $batch->refresh();
         }
 
@@ -156,15 +152,14 @@ class WhatsAppBatchController extends Controller
      */
     private function bridgeStatusPayload(): array
     {
-        $bridge = app(WhatsAppBridgeService::class);
-        $status = $bridge->getStatus();
-        $meta = $bridge->connectionMeta($status['data'] ?? [], (bool) ($status['success'] ?? false));
+        $cloud = app(WhatsAppCloudService::class);
+        $meta = $cloud->connectionMeta();
 
         return [
             'can_send' => (bool) ($meta['can_send'] ?? false),
             'label' => (string) ($meta['label'] ?? 'غير معروف'),
             'last_error' => $meta['last_error'] ?? null,
-            'connect_url' => route('admin.whatsapp.index'),
+            'connect_url' => route('admin.whatsapp.settings'),
         ];
     }
 

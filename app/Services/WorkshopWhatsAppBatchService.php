@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\Workshop;
 use App\Models\WorkshopRegistration;
 use App\Models\WhatsAppBatch;
-use App\Support\WhatsAppBridgeSettings;
+use App\Support\WhatsAppCloudSettings;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
@@ -67,8 +67,8 @@ class WorkshopWhatsAppBatchService
         string $scope = 'all',
         ?string $phone = null
     ): WhatsAppBatch {
-        if (! WhatsAppBridgeSettings::usesBridge()) {
-            throw new \RuntimeException('إرسال الواتساب غير مفعّل — راجع إعدادات Bridge في قسم الواتساب.');
+        if (! WhatsAppCloudSettings::usesOfficial()) {
+            throw new \RuntimeException('إرسال الواتساب غير مفعّل — أكمل إعداد Meta Cloud API في قسم الواتساب.');
         }
 
         if (! WhatsAppBatchService::isReady()) {
@@ -91,7 +91,7 @@ class WorkshopWhatsAppBatchService
             throw new \RuntimeException($limitError);
         }
 
-        app(WhatsAppBridgeService::class)->assertReadyForBulkSend();
+        app(WhatsAppCloudService::class)->assertReadyForBulkSend();
 
         $remainingToday = $this->pacing->remainingDailyQuota();
         if ($remainingToday !== null && $items->count() > $remainingToday) {

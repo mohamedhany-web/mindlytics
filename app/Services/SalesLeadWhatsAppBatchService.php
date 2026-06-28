@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\SalesLead;
 use App\Models\SalesLeadGroup;
 use App\Models\WhatsAppBatch;
-use App\Support\WhatsAppBridgeSettings;
+use App\Support\WhatsAppCloudSettings;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
@@ -55,9 +55,11 @@ class SalesLeadWhatsAppBatchService
         int $createdBy,
         ?int $assigneeId = null
     ): WhatsAppBatch {
-        if (! WhatsAppBridgeSettings::usesBridge()) {
-            throw new \RuntimeException('إرسال الواتساب غير مفعّل — راجع إعدادات Bridge في قسم الواتساب.');
+        if (! WhatsAppCloudSettings::usesOfficial()) {
+            throw new \RuntimeException('إرسال الواتساب غير مفعّل — أكمل إعداد Meta Cloud API في قسم الواتساب.');
         }
+
+        app(WhatsAppCloudService::class)->assertReadyForBulkSend();
 
         if (! WhatsAppBatchService::isReady()) {
             throw new \RuntimeException('جداول دفعات الواتساب غير موجودة. نفّذ php artisan migrate على السيرفر.');
@@ -78,8 +80,6 @@ class SalesLeadWhatsAppBatchService
         if ($limitError = $this->pacing->assertCanSend()) {
             throw new \RuntimeException($limitError);
         }
-
-        app(WhatsAppBridgeService::class)->assertReadyForBulkSend();
 
         $remainingToday = $this->pacing->remainingDailyQuota();
         if ($remainingToday !== null && $items->count() > $remainingToday) {

@@ -7,7 +7,7 @@ use App\Models\SalesLeadGroup;
 use App\Models\WhatsAppBatch;
 use App\Services\SalesLeadWhatsAppBatchService;
 use App\Services\WhatsAppBatchService;
-use App\Support\WhatsAppBridgeSettings;
+use App\Support\WhatsAppCloudSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -29,8 +29,8 @@ class SalesGroupWhatsAppController extends Controller
             'message.required' => 'نص الرسالة مطلوب',
         ]);
 
-        if (! WhatsAppBridgeSettings::usesBridge()) {
-            return back()->with('error', 'إرسال الواتساب غير مفعّل — تواصل مع الإدارة لتفعيل Bridge.');
+        if (! WhatsAppCloudSettings::usesOfficial()) {
+            return back()->with('error', 'إرسال الواتساب غير مفعّل — تواصل مع الإدارة لإكمال إعداد Meta Cloud API.');
         }
 
         try {
