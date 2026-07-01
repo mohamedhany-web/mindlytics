@@ -276,6 +276,10 @@ class WhatsAppCloudService
             return 'معلمات قالب Meta غير صحيحة — راجع اسم القالب واللغة والمتغيرات.';
         }
 
+        if ($code === 132001 || $subcode === 132001 || str_contains(mb_strtolower($message), 'does not exist in the translation')) {
+            return 'القالب أو اللغة غير موجودين في حسابك — اختر قالباً بحالة Approved من القائمة في صفحة المحادثات، أو أنشئ قالباً في WhatsApp Manager بنفس الاسم واللغة.';
+        }
+
         if ($code === 130472 || str_contains(mb_strtolower($message), 'experiment')) {
             return 'الرقم في تجربة Meta ولا يستقبل رسائل تجارية حالياً — جرّب رقماً آخر أو انتظر.';
         }
@@ -329,5 +333,82 @@ class WhatsAppCloudService
         WhatsAppBusinessConnection::query()
             ->where('status', WhatsAppBusinessConnection::STATUS_CONNECTED)
             ->update(['status' => WhatsAppBusinessConnection::STATUS_DISCONNECTED]);
+    }
+
+    /**
+     * @return array{success: bool, templates: array<int, array<string, string>>, error?: string}
+     */
+    public function listApprovedTemplates(): array
+    {
+        $wabaId = WhatsAppCloudSettings::businessAccountId();
+        if ($wabaId === '') {
+            return [
+                'success' => false,
+                'templates' => [],
+                'error' => 'أدخل WhatsApp Business Account ID (WABA) في إعدادات الربط لجلب القوالب.',
+            ];
+        }
+
+        $creds = $this->resolveCredentials();
+        if ($creds['access_token'] === '') {
+            return ['success' => false, 'templates' => [], 'error' => 'Access Token غير موجود'];
+        }
+
+        try {
+            $response = Http::withToken($creds['access_token'])
+                ->timeout(30)
+                ->get("{$this->graphUrl()}/{$wabaId}/message_templates", [
+                    'fields' => 'name,language,status,category',
+                    'limit' => 100,
+                ]);
+
+            $body = $response->json();
+
+            if (! $response->successful()) {
+                $error = is_array($body['error'] ?? null) ? $body['error'] : [];
+
+                return [
+                    'success' => false,
+                    'templates' => [],
+                    'error' => $this->humanizeSendError($error, 'تعذّر جلب القوالب من Meta'),
+                ];
+            }
+
+            $templates = [];
+            foreach ($body['data'] ?? [] as $row) {
+                if (! is_array($row)) {
+                    continue;
+                }
+
+                $status = strtoupper((string) ($row['status'] ?? ''));
+                if ($status !== '' && $status !== 'APPROVED') {
+                    continue;
+                }
+
+                $name = (string) ($row['name'] ?? '');
+                $language = (string) ($row['language'] ?? '');
+                if ($name === '' || $language === '') {
+                    continue;
+                }
+
+                $category = (string) ($row['category'] ?? '');
+                $templates[] = [
+                    'name' => $name,
+                    'language' => $language,
+                    'category' => $category,
+                    'label' => $name . ' · ' . $language . ($category !== '' ? ' (' . $category . ')' : ''),
+                ];
+            }
+
+            usort($templates, fn ($a, $b) => strcmp($a['name'] . $a['language'], $b['name'] . $b['language']));
+
+            return ['success' => true, 'templates' => $templates];
+        } catch (\Throwable $e) {
+            return [
+                'success' => false,
+                'templates' => [],
+                'error' => $this->humanizeMetaError($e->getMessage()),
+            ];
+        }
     }
 }

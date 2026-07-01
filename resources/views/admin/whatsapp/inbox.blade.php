@@ -14,10 +14,13 @@
         'replyUrl' => $activeId ? route('admin.whatsapp.inbox.reply', $activeConversation) : null,
         'templateUrl' => $activeId ? route('admin.whatsapp.inbox.template', $activeConversation) : null,
         'startUrl' => route('admin.whatsapp.inbox.start'),
+        'templatesUrl' => route('admin.whatsapp.inbox.templates'),
         'csrf' => csrf_token(),
         'withinWindow' => $withinWindow,
         'lastMessageId' => $messages->last()?->id ?? 0,
+        'metaTemplates' => $metaTemplates ?? [],
     ];
+    $firstTemplate = ($metaTemplates ?? [])[0] ?? null;
 @endphp
 
 <script>window.__waInboxConfig = @json($inboxConfig);</script>
@@ -155,22 +158,32 @@
                     <div x-show="!withinWindow" x-cloak class="rounded-xl border border-amber-200 bg-amber-50 p-3 space-y-2">
                         <p class="text-xs text-amber-900 font-semibold">خارج نافذة 24 ساعة — أرسل قالب Meta معتمد:</p>
                         <div class="flex flex-wrap gap-2">
-                            <input type="text" x-model="templateName" placeholder="اسم القالب (مثل hello_world)"
-                                   class="{{ $waInputClass }} text-sm dir-ltr flex-1 min-w-[140px]">
-                            <input type="text" x-model="templateLang" placeholder="en_US"
-                                   class="{{ $waInputClass }} text-sm dir-ltr w-24">
-                            <button type="button" @click="sendTemplate()" :disabled="sending"
+                            <select x-model="selectedTemplateKey" @change="applySelectedTemplate()" class="{{ $waSelectClass }} text-sm flex-1 min-w-[180px]">
+                                <option value="">اختر قالباً معتمداً...</option>
+                                <template x-for="t in metaTemplates" :key="t.name + '|' + t.language">
+                                    <option :value="t.name + '|' + t.language" x-text="t.label"></option>
+                                </template>
+                            </select>
+                            <button type="button" @click="sendTemplate()" :disabled="sending || !templateName"
                                     class="{{ $waBtnPrimary }} text-sm disabled:opacity-50">
                                 <i class="fas fa-file-alt"></i> إرسال قالب
                             </button>
                         </div>
+                        <p x-show="metaTemplates.length === 0" class="text-[11px] text-amber-800">
+                            لا توجد قوالب معتمدة — أنشئ قالباً في
+                            <a href="https://business.facebook.com/wa/manage/message-templates/" target="_blank" rel="noopener" class="underline font-semibold">WhatsApp Manager</a>
+                        </p>
                     </div>
 
                     <div x-show="withinWindow" class="flex flex-wrap gap-2 pt-1 border-t border-slate-100">
-                        <span class="text-[10px] text-slate-500 w-full">أو أرسل قالب (للتأكيد):</span>
-                        <input type="text" x-model="templateName" placeholder="hello_world"
-                               class="{{ $waInputClass }} text-xs dir-ltr w-36 py-1.5">
-                        <button type="button" @click="sendTemplate()" :disabled="sending"
+                        <span class="text-[10px] text-slate-500 w-full">أو أرسل قالب معتمد:</span>
+                        <select x-model="selectedTemplateKey" @change="applySelectedTemplate()" class="{{ $waSelectClass }} text-xs flex-1 min-w-[140px] py-1.5">
+                            <option value="">قالب...</option>
+                            <template x-for="t in metaTemplates" :key="'r-' + t.name + t.language">
+                                <option :value="t.name + '|' + t.language" x-text="t.label"></option>
+                            </template>
+                        </select>
+                        <button type="button" @click="sendTemplate()" :disabled="sending || !templateName"
                                 class="{{ $waBtnSecondary }} text-xs !py-1.5">قالب</button>
                     </div>
                 </div>
@@ -188,20 +201,29 @@
     <div x-show="showStartModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" @keydown.escape.window="showStartModal = false">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4" @click.outside="showStartModal = false">
             <h3 class="font-bold text-lg text-slate-900">بدء محادثة جديدة</h3>
-            <p class="text-xs text-slate-600">أول رسالة يجب أن تكون قالب Meta معتمد (مثل <code>hello_world</code>).</p>
+            <p class="text-xs text-slate-600">أول رسالة يجب أن تكون <strong>قالب Meta معتمد (Approved)</strong> من حسابكم — ليس بالضرورة <code>hello_world</code>.</p>
+            @if(!empty($metaTemplatesError))
+                <p class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">{{ $metaTemplatesError }}</p>
+            @endif
             <div>
                 <label class="{{ $waLabelClass }}">رقم الواتساب</label>
                 <input type="text" x-model="startPhone" placeholder="2010xxxxxxx" class="{{ $waInputClass }} dir-ltr text-sm">
             </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="{{ $waLabelClass }}">اسم القالب</label>
-                    <input type="text" x-model="startTemplate" value="hello_world" class="{{ $waInputClass }} dir-ltr text-sm">
-                </div>
-                <div>
-                    <label class="{{ $waLabelClass }}">اللغة</label>
-                    <input type="text" x-model="startLang" value="en_US" class="{{ $waInputClass }} dir-ltr text-sm">
-                </div>
+            <div>
+                <label class="{{ $waLabelClass }}">قالب Meta المعتمد</label>
+                @if(count($metaTemplates ?? []) > 0)
+                    <select x-model="selectedTemplateKey" @change="applySelectedTemplate(true)" class="{{ $waSelectClass }} text-sm dir-ltr">
+                        @foreach($metaTemplates as $tpl)
+                            <option value="{{ $tpl['name'] }}|{{ $tpl['language'] }}">{{ $tpl['label'] }}</option>
+                        @endforeach
+                    </select>
+                @else
+                    <p class="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+                        لا توجد قوالب معتمدة في حسابك.
+                        <a href="https://business.facebook.com/wa/manage/message-templates/" target="_blank" rel="noopener" class="underline font-semibold">أنشئ قالباً في WhatsApp Manager</a>
+                        ثم حدّث الصفحة.
+                    </p>
+                @endif
             </div>
             <p x-show="startError" class="text-xs text-rose-600" x-text="startError"></p>
             <div class="flex gap-2 justify-end">
@@ -222,16 +244,19 @@ function whatsappInbox() {
         replyUrl: cfg.replyUrl,
         templateUrl: cfg.templateUrl,
         startUrl: cfg.startUrl,
+        templatesUrl: cfg.templatesUrl,
         csrf: cfg.csrf,
         withinWindow: !!cfg.withinWindow,
         lastMessageId: cfg.lastMessageId || 0,
         unreadTotal: {{ (int) $unreadTotal }},
+        metaTemplates: cfg.metaTemplates || [],
         replyBody: '',
-        templateName: 'hello_world',
-        templateLang: 'en_US',
+        templateName: '',
+        templateLang: '',
+        selectedTemplateKey: '',
         startPhone: '',
-        startTemplate: 'hello_world',
-        startLang: 'en_US',
+        startTemplate: '',
+        startLang: '',
         newMessages: [],
         replyError: '',
         startError: '',
@@ -240,9 +265,45 @@ function whatsappInbox() {
         pollTimer: null,
 
         init() {
+            this.bootstrapTemplates();
             this.scrollChat();
             if (this.conversationId) {
                 this.pollTimer = setInterval(() => this.poll(), 8000);
+            }
+        },
+
+        bootstrapTemplates() {
+            if (this.metaTemplates.length > 0) {
+                const first = this.metaTemplates[0];
+                this.selectedTemplateKey = first.name + '|' + first.language;
+                this.applySelectedTemplate(true);
+                return;
+            }
+            if (this.templatesUrl) {
+                fetch(this.templatesUrl, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (Array.isArray(data.templates) && data.templates.length) {
+                            this.metaTemplates = data.templates;
+                            const first = data.templates[0];
+                            this.selectedTemplateKey = first.name + '|' + first.language;
+                            this.applySelectedTemplate(true);
+                        }
+                    })
+                    .catch(() => {});
+            }
+        },
+
+        applySelectedTemplate(forStart = false) {
+            if (!this.selectedTemplateKey) return;
+            const parts = this.selectedTemplateKey.split('|');
+            const name = parts[0] || '';
+            const lang = parts[1] || 'en_US';
+            this.templateName = name;
+            this.templateLang = lang;
+            if (forStart) {
+                this.startTemplate = name;
+                this.startLang = lang;
             }
         },
 
@@ -346,8 +407,9 @@ function whatsappInbox() {
         },
 
         async startConversation() {
+            this.applySelectedTemplate(true);
             if (!this.startUrl || !this.startPhone.trim() || !this.startTemplate.trim()) {
-                this.startError = 'أدخل الرقم واسم القالب';
+                this.startError = 'أدخل الرقم واختر قالباً معتمداً من القائمة';
                 return;
             }
             this.sending = true;

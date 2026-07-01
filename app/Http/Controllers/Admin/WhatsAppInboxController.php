@@ -7,6 +7,7 @@ use App\Models\WhatsAppConversation;
 use App\Models\WhatsAppConversationMessage;
 use App\Services\WhatsAppCloudService;
 use App\Services\WhatsAppInboxService;
+use App\Support\WhatsAppCloudSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -76,6 +77,14 @@ class WhatsAppInboxController extends Controller
             ? (int) WhatsAppConversation::query()->sum('unread_count')
             : 0;
 
+        $metaTemplates = [];
+        $metaTemplatesError = null;
+        if (WhatsAppCloudSettings::isSendConfigured()) {
+            $tplResult = $this->cloud->listApprovedTemplates();
+            $metaTemplates = $tplResult['templates'] ?? [];
+            $metaTemplatesError = ($tplResult['success'] ?? false) ? null : ($tplResult['error'] ?? null);
+        }
+
         return view('admin.whatsapp.inbox', compact(
             'connectionMeta',
             'conversations',
@@ -84,7 +93,16 @@ class WhatsAppInboxController extends Controller
             'tablesReady',
             'unreadTotal',
             'withinWindow',
+            'metaTemplates',
+            'metaTemplatesError',
         ));
+    }
+
+    public function templates(): JsonResponse
+    {
+        $result = $this->cloud->listApprovedTemplates();
+
+        return response()->json($result);
     }
 
     public function poll(Request $request): JsonResponse
