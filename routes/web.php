@@ -11,9 +11,23 @@ use App\Http\Controllers\DashboardController;
 |--------------------------------------------------------------------------
 */
 Route::get('/webhooks/whatsapp', [\App\Http\Controllers\WhatsAppWebhookController::class, 'verify'])
-    ->name('webhooks.whatsapp.verify');
+    ->name('webhooks.whatsapp.verify')
+    ->withoutMiddleware([
+        \App\Http\Middleware\SetLocale::class,
+        \App\Http\Middleware\InputSanitizationMiddleware::class,
+        \App\Http\Middleware\FileUploadSecurityMiddleware::class,
+        \App\Http\Middleware\EnsureTwoFactorEnabled::class,
+        \App\Http\Middleware\CheckActiveStatus::class,
+    ]);
 Route::post('/webhooks/whatsapp', [\App\Http\Controllers\WhatsAppWebhookController::class, 'handle'])
-    ->name('webhooks.whatsapp.handle');
+    ->name('webhooks.whatsapp.handle')
+    ->withoutMiddleware([
+        \App\Http\Middleware\SetLocale::class,
+        \App\Http\Middleware\InputSanitizationMiddleware::class,
+        \App\Http\Middleware\FileUploadSecurityMiddleware::class,
+        \App\Http\Middleware\EnsureTwoFactorEnabled::class,
+        \App\Http\Middleware\CheckActiveStatus::class,
+    ]);
 
 Route::get('/storage/{path}', function ($path) {
     $path = rawurldecode($path);

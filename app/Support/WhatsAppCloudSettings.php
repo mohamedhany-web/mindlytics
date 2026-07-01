@@ -261,7 +261,12 @@ class WhatsAppCloudSettings
 
     public static function webhookVerifyToken(): string
     {
-        return (string) (self::all()['webhook_verify_token'] ?? '');
+        $fromSettings = trim((string) (self::all()['webhook_verify_token'] ?? ''));
+        if ($fromSettings !== '') {
+            return $fromSettings;
+        }
+
+        return trim((string) config('whatsapp.webhook_verify_token', ''));
     }
 
     public static function webhookUrl(): string

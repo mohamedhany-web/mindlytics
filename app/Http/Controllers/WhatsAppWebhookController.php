@@ -7,31 +7,39 @@ use App\Services\WhatsAppCloudService;
 use App\Services\WhatsAppInboxService;
 use App\Support\WhatsAppCloudSettings;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 
 class WhatsAppWebhookController extends Controller
 {
-    public function __construct(
-        private WhatsAppInboxService $inbox,
-    ) {}
-
-    public function verify(Request $request)
+    public function verify(Request $request): Response
     {
-        $mode = (string) $request->query('hub_mode', '');
-        $token = (string) $request->query('hub_verify_token', '');
-        $challenge = (string) $request->query('hub_challenge', '');
-
+        $mode = $this->hubParam($request, 'mode');
+        $token = $this->hubParam($request, 'verify_token');
+        $challenge = $this->hubParam($request, 'challenge');
         $expected = WhatsAppCloudSettings::webhookVerifyToken();
 
+        Log::info('WhatsApp webhook verify', [
+            'mode' => $mode,
+            'configured' => $expected !== '',
+            'token_ok' => $expected !== '' && $token !== '' && hash_equals($expected, $token),
+            'has_challenge' => $challenge !== '',
+        ]);
+
         if ($mode === 'subscribe' && $expected !== '' && hash_equals($expected, $token)) {
-            return response($challenge, 200)->header('Content-Type', 'text/plain');
+            return response($challenge, 200, [
+                'Content-Type' => 'text/plain; charset=UTF-8',
+            ]);
         }
 
-        abort(403, 'Webhook verification failed');
+        return response('Forbidden', 403, [
+            'Content-Type' => 'text/plain; charset=UTF-8',
+        ]);
     }
 
-    public function handle(Request $request)
+    public function handle(Request $request): Response
     {
+        $inbox = app(WhatsAppInboxService::class);
         $payload = $request->all();
 
         Log::info('WhatsApp webhook received', [
@@ -46,11 +54,26 @@ class WhatsAppWebhookController extends Controller
             foreach ($entry['changes'] ?? [] as $change) {
                 $value = $change['value'] ?? [];
                 $this->processStatuses($value['statuses'] ?? []);
-                $this->processInboundMessages($value['messages'] ?? [], $value['metadata'] ?? [], $value['contacts'] ?? []);
+                $this->processInboundMessages(
+                    $inbox,
+                    $value['messages'] ?? [],
+                    $value['metadata'] ?? [],
+                    $value['contacts'] ?? []
+                );
             }
         }
 
         return response()->json(['status' => 'ok']);
+    }
+
+    private function hubParam(Request $request, string $suffix): string
+    {
+        $underscored = 'hub_' . $suffix;
+        $dotted = 'hub.' . $suffix;
+
+        $value = $request->query($underscored, $request->query($dotted));
+
+        return is_scalar($value) ? trim((string) $value) : '';
     }
 
     /**
@@ -64,7 +87,7 @@ class WhatsAppWebhookController extends Controller
                 continue;
             }
 
-            $this->inbox->applyDeliveryStatus($waId, $status);
+            app(WhatsAppInboxService::class)->applyDeliveryStatus($waId, $status);
 
             $message = WhatsAppMessage::query()
                 ->where('whatsapp_message_id', $waId)
@@ -106,8 +129,12 @@ class WhatsAppWebhookController extends Controller
      * @param  array<string, mixed>  $metadata
      * @param  array<int, array<string, mixed>>  $contacts
      */
-    private function processInboundMessages(array $messages, array $metadata, array $contacts = []): void
-    {
+    private function processInboundMessages(
+        WhatsAppInboxService $inbox,
+        array $messages,
+        array $metadata,
+        array $contacts = []
+    ): void {
         $contactNames = [];
         foreach ($contacts as $contact) {
             $waId = (string) ($contact['wa_id'] ?? '');
@@ -123,7 +150,7 @@ class WhatsAppWebhookController extends Controller
                 $msg['profile'] = ['name' => $contactNames[$from]];
             }
 
-            $stored = $this->inbox->recordInbound($msg, $metadata);
+            $stored = $inbox->recordInbound($msg, $metadata);
 
             Log::info('WhatsApp inbound message', [
                 'from' => $msg['from'] ?? null,

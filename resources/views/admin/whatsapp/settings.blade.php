@@ -195,7 +195,7 @@
                             <label class="{{ $waLabelClass }}">Webhook Verify Token</label>
                             <input type="text" name="webhook_verify_token" value="{{ $savedWebhookToken }}"
                                    class="{{ $waInputClass }} dir-ltr font-mono text-sm" placeholder="مثال: mindlytics_wh_2026">
-                            <p class="text-[10px] text-slate-500 mt-1">اختر أي نص — انسخه نفسه في Meta عند الربط</p>
+                            <p class="text-[10px] text-slate-500 mt-1">اختر أي نص — <strong>احفظ الإعدادات أولاً</strong> ثم انسخه نفسه في Meta</p>
                         </div>
                         <div>
                             <label class="{{ $waLabelClass }}">Webhook URL (انسخه إلى Meta)</label>
@@ -206,11 +206,11 @@
                     <div class="mt-4 rounded-xl bg-slate-50 border border-slate-200 p-4 text-xs text-slate-700 leading-relaxed space-y-2">
                         <p class="font-bold text-slate-800">خطوات الربط في Meta Developers:</p>
                         <ol class="list-decimal list-inside space-y-1">
-                            <li>احفظ الإعدادات هنا أولاً (مع Verify Token).</li>
+                            <li>اكتب Verify Token أعلاه واضغط <strong>حفظ الإعدادات</strong> — لا تربط في Meta قبل الحفظ.</li>
                             <li>افتح <strong>developers.facebook.com</strong> → تطبيقك → <strong>WhatsApp → Configuration</strong>.</li>
-                            <li>في Webhook اضغط <strong>Edit</strong> → Callback URL: الرابط أعلاه → Verify Token: نفس القيمة المحفوظة → <strong>Verify and save</strong>.</li>
-                            <li>اشترك في الحقول: <code>messages</code> و <code>message_status</code> (أو Manage → اشترك في WABA).</li>
-                            <li>جرّب إرسالاً — إن فشل التسليم ستظهر «فشل» مع السبب في سجل الرسائل.</li>
+                            <li>Callback URL: <code class="dir-ltr">{{ $config['webhook_url'] }}</code> (حرفياً — ليس WhatsappWebhook)</li>
+                            <li>Verify Token: نفس القيمة المحفوظة → <strong>Verify and save</strong></li>
+                            <li>اشترك في: <code>messages</code> و <code>message_status</code></li>
                         </ol>
                     </div>
                 </div>

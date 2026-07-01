@@ -71,4 +71,7 @@ return [
     /** طابور Laravel المنفصل — لا يختلط مع تسجيل الطلاب أو أي jobs أخرى */
     'queue' => env('WHATSAPP_QUEUE', 'whatsapp'),
 
+    /** يُستخدم للتحقق من Webhook إن لم يُحفظ في إعدادات الربط */
+    'webhook_verify_token' => env('WHATSAPP_VERIFY_TOKEN', env('WHATSAPP_WEBHOOK_VERIFY_TOKEN', '')),
+
 ];

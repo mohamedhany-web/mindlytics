@@ -48,6 +48,7 @@ class ResolveBranchFromHost
             'telescope',
             'community',
             'employee',
+            'webhooks',
         ];
 
         foreach ($prefixes as $prefix) {
