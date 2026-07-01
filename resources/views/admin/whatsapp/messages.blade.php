@@ -36,7 +36,7 @@
                     <label class="{{ $waLabelClass }}">الحالة</label>
                     <select name="status" class="{{ $waSelectClass }}">
                         <option value="">كل الحالات</option>
-                        @foreach(['sent' => 'مرسلة', 'failed' => 'فاشلة', 'pending' => 'في الانتظار'] as $val => $label)
+                        @foreach(['sent' => 'مقبولة من Meta', 'delivered' => 'تم التسليم', 'read' => 'تم القراءة', 'failed' => 'فاشلة', 'pending' => 'في الانتظار'] as $val => $label)
                             <option value="{{ $val }}" @selected(request('status') === $val)>{{ $label }}</option>
                         @endforeach
                     </select>
@@ -76,14 +76,17 @@
                             </td>
                             <td class="px-5 py-3.5">
                                 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border
-                                    @if($msg->status === 'sent') bg-emerald-100 text-emerald-800 border-emerald-200
+                                    @if(in_array($msg->status, ['sent', 'delivered', 'read'], true)) bg-emerald-100 text-emerald-800 border-emerald-200
                                     @elseif($msg->status === 'failed') bg-rose-100 text-rose-800 border-rose-200
                                     @else bg-amber-100 text-amber-800 border-amber-200 @endif">
-                                    @if($msg->status === 'sent')<i class="fas fa-check"></i>
+                                    @if(in_array($msg->status, ['sent', 'delivered', 'read'], true))<i class="fas fa-check"></i>
                                     @elseif($msg->status === 'failed')<i class="fas fa-times"></i>
                                     @else<i class="fas fa-clock"></i>@endif
                                     {{ $msg->status_text }}
                                 </span>
+                                @if($msg->status === 'sent' && $msg->whatsapp_message_id)
+                                    <p class="text-[10px] text-slate-500 mt-1">قُبلت من Meta — انتظر التسليم أو راجع Webhook</p>
+                                @endif
                                 @if($msg->status === 'failed' && $msg->error_message)
                                     <p class="text-[10px] text-rose-600 mt-1 max-w-xs truncate" title="{{ $msg->error_message }}">{{ Str::limit($msg->error_message, 50) }}</p>
                                 @endif

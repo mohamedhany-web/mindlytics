@@ -77,8 +77,16 @@ class WhatsAppWebhookController extends Controller
                 $updates['status'] = 'read';
                 $updates['read_at'] = now();
             } elseif ($state === 'failed') {
+                $errorDetail = $status['errors'][0] ?? [];
+                $errorMessage = is_array($errorDetail)
+                    ? app(\App\Services\WhatsAppCloudService::class)->humanizeSendError(
+                        $errorDetail,
+                        (string) ($errorDetail['title'] ?? $errorDetail['message'] ?? 'فشل التسليم')
+                    )
+                    : 'فشل التسليم';
+
                 $updates['status'] = 'failed';
-                $updates['error_message'] = $status['errors'][0]['title'] ?? 'فشل التسليم';
+                $updates['error_message'] = $errorMessage;
             }
 
             $message->update($updates);

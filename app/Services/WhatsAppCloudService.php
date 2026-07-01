@@ -18,8 +18,19 @@ class WhatsAppCloudService
      */
     public function resolveCredentials(): array
     {
-        $connection = WhatsAppBusinessConnection::active();
+        $token = WhatsAppCloudSettings::accessToken();
+        $phoneId = WhatsAppCloudSettings::phoneNumberId();
+        $wabaId = WhatsAppCloudSettings::businessAccountId();
 
+        if ($token !== '' && $phoneId !== '') {
+            return [
+                'access_token' => $token,
+                'phone_number_id' => $phoneId,
+                'waba_id' => $wabaId,
+            ];
+        }
+
+        $connection = WhatsAppBusinessConnection::active();
         if ($connection) {
             return [
                 'access_token' => (string) $connection->access_token,
@@ -29,9 +40,9 @@ class WhatsAppCloudService
         }
 
         return [
-            'access_token' => WhatsAppCloudSettings::accessToken(),
-            'phone_number_id' => WhatsAppCloudSettings::phoneNumberId(),
-            'waba_id' => WhatsAppCloudSettings::businessAccountId(),
+            'access_token' => $token,
+            'phone_number_id' => $phoneId,
+            'waba_id' => $wabaId,
         ];
     }
 
@@ -85,6 +96,18 @@ class WhatsAppCloudService
             ?? ($test['data']['verified_name'] ?? null)
             ?? (WhatsAppCloudSettings::verifiedDisplayName() ?: null);
 
+        $phoneData = $test['data'] ?? [];
+        $accountMode = strtoupper((string) ($phoneData['account_mode'] ?? ''));
+        $warnings = [];
+
+        if ($accountMode === 'SANDBOX') {
+            $warnings[] = 'الحساب في وضع الاختبار (Sandbox) — الرسائل تصل فقط للأرقام المضافة كمستلمين تجريبيين في Meta Developer.';
+        }
+
+        if (! WhatsAppCloudSettings::webhookVerifyToken()) {
+            $warnings[] = 'Webhook غير مضبوط — لن تُحدَّث حالة التسليم (فشل/وصل) في سجل الرسائل.';
+        }
+
         return [
             'success' => true,
             'can_send' => true,
@@ -95,7 +118,9 @@ class WhatsAppCloudService
             'display_name' => $name,
             'phone_number_id' => WhatsAppCloudSettings::phoneNumberId(),
             'business_account_id' => WhatsAppCloudSettings::businessAccountId(),
-            'phone_data' => $test['data'] ?? [],
+            'phone_data' => $phoneData,
+            'account_mode' => $accountMode,
+            'send_warnings' => $warnings,
         ];
     }
 
@@ -216,6 +241,46 @@ class WhatsAppCloudService
         }
 
         return $error;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $errorPayload
+     */
+    public function humanizeSendError(?array $errorPayload, string $fallback = 'فشل إرسال الرسالة'): string
+    {
+        if (! is_array($errorPayload)) {
+            return $this->humanizeMetaError($fallback);
+        }
+
+        $message = (string) ($errorPayload['message'] ?? $fallback);
+        $code = (int) ($errorPayload['code'] ?? 0);
+        $subcode = (int) ($errorPayload['error_subcode'] ?? 0);
+
+        if ($code === 131030 || $subcode === 131030) {
+            return 'رقم المستلم غير مسموح — في وضع الاختبار (Sandbox) أضف الرقم في Meta Developer → WhatsApp → API Setup → أرقام الاختبار، أو أكمل توثيق الأعمال للوضع Live.';
+        }
+
+        if ($code === 131047 || $subcode === 131047) {
+            return 'لا يمكن إرسال رسالة نصية حرة — مرّ أكثر من 24 ساعة منذ آخر رسالة من العميل. استخدم قالباً معتمداً من Meta (Message Template) أو اطلب من العميل مراسلة رقم الواتساب أولاً.';
+        }
+
+        if ($code === 131026 || $subcode === 131026) {
+            return 'تعذّر تسليم الرسالة — الرقم قد لا يملك واتساب، أو حظر الرقم، أو الرقم غير صحيح.';
+        }
+
+        if ($code === 131051 || $subcode === 131051) {
+            return 'نوع الرسالة غير مدعوم — للرسائل التسويقية أو خارج نافذة 24 ساعة استخدم قالب Meta المعتمد.';
+        }
+
+        if ($code === 132000 || $subcode === 132000) {
+            return 'معلمات قالب Meta غير صحيحة — راجع اسم القالب واللغة والمتغيرات.';
+        }
+
+        if ($code === 130472 || str_contains(mb_strtolower($message), 'experiment')) {
+            return 'الرقم في تجربة Meta ولا يستقبل رسائل تجارية حالياً — جرّب رقماً آخر أو انتظر.';
+        }
+
+        return $this->humanizeMetaError($message);
     }
 
     /**

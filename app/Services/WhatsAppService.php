@@ -108,30 +108,43 @@ class WhatsAppService
                     ],
                 ]);
 
-            $responseData = $response->json();
+            $responseData = $response->json() ?? [];
+            $metaError = is_array($responseData['error'] ?? null) ? $responseData['error'] : null;
+            $waMessageId = $responseData['messages'][0]['id'] ?? null;
+            $accepted = $response->successful() && is_string($waMessageId) && $waMessageId !== '';
+
+            $errorText = $accepted
+                ? null
+                : $this->cloud->humanizeSendError(
+                    $metaError,
+                    (string) ($metaError['message'] ?? 'فشل إرسال الرسالة')
+                );
 
             $whatsappMessage = WhatsAppMessage::create([
                 'user_id' => $actorId,
                 'phone_number' => $formattedPhone,
                 'message' => $message,
                 'type' => $type,
-                'status' => $response->successful() ? 'sent' : 'failed',
+                'status' => $accepted ? 'sent' : 'failed',
                 'response_data' => $responseData,
-                'whatsapp_message_id' => $responseData['messages'][0]['id'] ?? null,
-                'sent_at' => $response->successful() ? now() : null,
-                'error_message' => $response->successful() ? null : ($responseData['error']['message'] ?? 'خطأ غير معروف'),
+                'whatsapp_message_id' => $waMessageId,
+                'sent_at' => $accepted ? now() : null,
+                'error_message' => $errorText,
             ]);
 
-            if ($response->successful()) {
-                Log::info('WhatsApp Cloud message sent', [
+            if ($accepted) {
+                Log::info('WhatsApp Cloud message accepted by Meta', [
                     'phone' => $formattedPhone,
                     'message_id' => $whatsappMessage->id,
+                    'whatsapp_id' => $waMessageId,
                 ]);
 
                 return [
                     'success' => true,
+                    'accepted_by_meta' => true,
                     'message_id' => $whatsappMessage->id,
-                    'whatsapp_id' => $responseData['messages'][0]['id'] ?? null,
+                    'whatsapp_id' => $waMessageId,
+                    'notice' => 'قُبلت الرسالة من Meta. إن لم تصل للمستلم خلال دقائق، راجع سجل الرسائل — الرسائل النصية الحرة تعمل فقط خلال 24 ساعة من آخر رسالة من العميل.',
                 ];
             }
 
@@ -142,7 +155,7 @@ class WhatsAppService
 
             return [
                 'success' => false,
-                'error' => $responseData['error']['message'] ?? 'فشل إرسال الرسالة',
+                'error' => $errorText ?? 'فشل إرسال الرسالة',
             ];
         } catch (\Exception $e) {
             Log::error('WhatsApp service error', [

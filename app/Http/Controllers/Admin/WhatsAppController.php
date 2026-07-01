@@ -92,9 +92,11 @@ class WhatsAppController extends Controller
         $result = $this->whatsapp->sendMessage($request->phone, $message);
 
         if ($result['success'] ?? false) {
+            $flash = $result['notice'] ?? 'تم قبول الرسالة من Meta — تحقق من وصولها للمستلم في سجل الرسائل.';
+
             return redirect()
                 ->route('admin.whatsapp.messages')
-                ->with('success', 'تم إرسال الرسالة بنجاح.');
+                ->with('success', $flash);
         }
 
         return back()

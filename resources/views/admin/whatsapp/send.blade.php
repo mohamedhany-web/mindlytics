@@ -190,6 +190,23 @@ function whatsappSendForm() {
         </div>
     @endif
 
+    @if($canSend && !empty($connectionMeta['send_warnings']))
+        <div class="rounded-2xl border-2 border-sky-200 bg-sky-50 px-5 py-4 text-sm text-sky-950 space-y-2">
+            <p class="font-bold flex items-center gap-2">
+                <i class="fas fa-info-circle text-sky-600"></i>
+                مهم قبل الإرسال
+            </p>
+            <ul class="list-disc list-inside space-y-1 text-sky-900/90">
+                @foreach($connectionMeta['send_warnings'] as $warning)
+                    <li>{{ $warning }}</li>
+                @endforeach
+                <li>الرسائل النصية الحرة (بدون قالب Meta) تُرسل فقط خلال <strong>24 ساعة</strong> من آخر رسالة من العميل لرقمكم.</li>
+                <li>للتسويق أو أول تواصل: أنشئ <strong>قالب رسالة معتمد</strong> في Meta Business ثم أرسله عبر API (قريباً في المنصة).</li>
+                <li>بعد الإرسال راجع <a href="{{ route('admin.whatsapp.messages') }}" class="underline font-semibold">سجل الرسائل</a> — إن فشل التسليم ستظهر الحالة «فشل» مع السبب.</li>
+            </ul>
+        </div>
+    @endif
+
     <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6"
          x-data="whatsappSendForm()">
 
