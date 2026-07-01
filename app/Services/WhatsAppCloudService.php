@@ -72,7 +72,7 @@ class WhatsAppCloudService
                 'success' => false,
                 'can_send' => false,
                 'label' => 'فشل التحقق من الربط',
-                'last_error' => $test['error'] ?? 'تعذّر التحقق',
+                'last_error' => $this->humanizeMetaError($test['error'] ?? 'تعذّر التحقق'),
                 'connection' => WhatsAppBusinessConnection::active(),
             ];
         }
@@ -188,12 +188,34 @@ class WhatsAppCloudService
 
             return [
                 'success' => false,
-                'error' => $body['error']['message'] ?? ('HTTP ' . $response->status()),
+                'error' => $this->humanizeMetaError($body['error']['message'] ?? ('HTTP ' . $response->status())),
                 'data' => is_array($body) ? $body : [],
             ];
         } catch (\Throwable $e) {
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => $this->humanizeMetaError($e->getMessage())];
         }
+    }
+
+    public function humanizeMetaError(string $error): string
+    {
+        $lower = mb_strtolower($error);
+
+        if (str_contains($lower, 'session is invalid')
+            || str_contains($lower, 'user logged out')
+            || str_contains($lower, 'session has expired')
+            || str_contains($lower, 'error validating access token')) {
+            return 'انتهت صلاحية Access Token أو أُلغي من Meta. أنشئ System User Token جديداً (دائم) من Business Settings → System Users، ثم الصقه في حقل Access Token هنا — لا تتركه فارغاً عند الحفظ.';
+        }
+
+        if (str_contains($lower, 'malformed access token')) {
+            return 'Access Token غير صالح أو ناقص — انسخه كاملاً من Meta (يبدأ عادة بـ EAA). تأكد أنك لم تلصق App Secret بالخطأ.';
+        }
+
+        if (str_contains($lower, 'oauth') || str_contains($lower, 'permission')) {
+            return 'التوكن لا يملك الصلاحيات المطلوبة: whatsapp_business_messaging و whatsapp_business_management.';
+        }
+
+        return $error;
     }
 
     /**

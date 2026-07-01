@@ -113,6 +113,12 @@ class WhatsAppCloudSettings
             $merged['access_token'] = $current['access_token'];
         }
 
+        foreach (['app_secret', 'access_token', 'app_id', 'phone_number_id', 'business_account_id', 'webhook_verify_token'] as $trimKey) {
+            if (isset($merged[$trimKey]) && is_string($merged[$trimKey])) {
+                $merged[$trimKey] = trim($merged[$trimKey]);
+            }
+        }
+
         $merged['service_type'] = 'official';
         $merged['enabled'] = filter_var($merged['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $merged['api_url'] = rtrim((string) ($merged['api_url'] ?? self::defaults()['api_url']), '/');
@@ -144,12 +150,13 @@ class WhatsAppCloudSettings
 
     public static function hasAccessToken(): bool
     {
-        $connection = \App\Models\WhatsAppBusinessConnection::active();
-        if ($connection?->access_token) {
+        if (trim((string) (self::all()['access_token'] ?? '')) !== '') {
             return true;
         }
 
-        return trim((string) (self::all()['access_token'] ?? '')) !== '';
+        $connection = \App\Models\WhatsAppBusinessConnection::active();
+
+        return (bool) $connection?->access_token;
     }
 
     public static function isEnabled(): bool
@@ -218,32 +225,38 @@ class WhatsAppCloudSettings
 
     public static function accessToken(): string
     {
-        $connection = \App\Models\WhatsAppBusinessConnection::active();
-        if ($connection?->access_token) {
-            return (string) $connection->access_token;
+        $fromSettings = trim((string) (self::all()['access_token'] ?? ''));
+        if ($fromSettings !== '') {
+            return $fromSettings;
         }
 
-        return (string) (self::all()['access_token'] ?? '');
+        $connection = \App\Models\WhatsAppBusinessConnection::active();
+
+        return (string) ($connection?->access_token ?? '');
     }
 
     public static function phoneNumberId(): string
     {
-        $connection = \App\Models\WhatsAppBusinessConnection::active();
-        if ($connection?->phone_number_id) {
-            return (string) $connection->phone_number_id;
+        $fromSettings = trim((string) (self::all()['phone_number_id'] ?? ''));
+        if ($fromSettings !== '') {
+            return $fromSettings;
         }
 
-        return (string) (self::all()['phone_number_id'] ?? '');
+        $connection = \App\Models\WhatsAppBusinessConnection::active();
+
+        return (string) ($connection?->phone_number_id ?? '');
     }
 
     public static function businessAccountId(): string
     {
-        $connection = \App\Models\WhatsAppBusinessConnection::active();
-        if ($connection?->waba_id) {
-            return (string) $connection->waba_id;
+        $fromSettings = trim((string) (self::all()['business_account_id'] ?? ''));
+        if ($fromSettings !== '') {
+            return $fromSettings;
         }
 
-        return (string) (self::all()['business_account_id'] ?? '');
+        $connection = \App\Models\WhatsAppBusinessConnection::active();
+
+        return (string) ($connection?->waba_id ?? '');
     }
 
     public static function webhookVerifyToken(): string

@@ -24,7 +24,7 @@ class WhatsAppCloudController extends Controller
             'app_secret' => [$hasSecret ? 'nullable' : 'required', 'string', 'max:500'],
             'api_url' => 'required|url|max:500',
             'webhook_verify_token' => 'nullable|string|max:200',
-            'access_token' => 'nullable|string|max:2000',
+            'access_token' => 'nullable|string|max:4096',
             'phone_number_id' => 'nullable|string|max:100',
             'business_account_id' => 'nullable|string|max:100',
             'enable_service' => 'nullable|boolean',
@@ -33,6 +33,8 @@ class WhatsAppCloudController extends Controller
             'app_secret.required' => 'Meta App Secret مطلوب',
             'api_url.required' => 'Graph API URL مطلوب',
         ]);
+
+        $newToken = trim((string) ($validated['access_token'] ?? ''));
 
         WhatsAppCloudSettings::save([
             'enabled' => $request->boolean('enable_service'),
@@ -45,6 +47,10 @@ class WhatsAppCloudController extends Controller
             'business_account_id' => $validated['business_account_id'] ?? '',
         ]);
 
+        if ($newToken !== '') {
+            $this->cloud->disconnect();
+        }
+
         $this->syncPhoneMetadataFromApi();
 
         return back()->with('success', 'تم حفظ إعدادات WhatsApp بنجاح.');
@@ -55,7 +61,7 @@ class WhatsAppCloudController extends Controller
         $validated = $request->validate([
             'test_phone' => 'nullable|string|max:30',
             'test_message' => 'nullable|string|max:500',
-            'access_token' => 'nullable|string|max:2000',
+            'access_token' => 'nullable|string|max:4096',
             'phone_number_id' => 'nullable|string|max:100',
             'app_id' => 'nullable|string|max:100',
             'app_secret' => 'nullable|string|max:500',

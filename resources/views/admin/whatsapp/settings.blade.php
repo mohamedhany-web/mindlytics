@@ -70,9 +70,21 @@
             </div>
 
             @if(!empty($connectionMeta['last_error']) && !$isConnected)
-                <div class="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-                    <i class="fas fa-exclamation-triangle ml-1"></i>
-                    {{ $connectionMeta['last_error'] }}
+                <div class="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 space-y-2">
+                    <p><i class="fas fa-exclamation-triangle ml-1"></i> {{ $connectionMeta['last_error'] }}</p>
+                    @if(str_contains(mb_strtolower($connectionMeta['last_error'] ?? ''), 'token') || str_contains(mb_strtolower($connectionMeta['last_error'] ?? ''), 'صلاحية'))
+                        <div class="text-xs text-rose-900/90 leading-relaxed border-t border-rose-200 pt-2">
+                            <p class="font-bold mb-1">كيف تحصل على Token صحيح؟</p>
+                            <ol class="list-decimal list-inside space-y-1">
+                                <li>افتح <a href="https://business.facebook.com/settings/system-users" target="_blank" rel="noopener" class="underline font-semibold">Meta Business → System Users</a></li>
+                                <li>أنشئ System User أو اختر موجوداً → Generate Token</li>
+                                <li>اختر تطبيقك وفعّل: <code>whatsapp_business_messaging</code> و <code>whatsapp_business_management</code></li>
+                                <li>اختر «Never» للصلاحية (توكن دائم) — لا تستخدم توكن مؤقت من API Setup</li>
+                                <li>اضغط «مسح بيانات الربط» ثم الصق التوكن الجديد في Access Token واحفظ</li>
+                                <li>فعّل «تفعيل إرسال الواتساب» ثم اضغط «اختبار الربط»</li>
+                            </ol>
+                        </div>
+                    @endif
                 </div>
             @endif
 
