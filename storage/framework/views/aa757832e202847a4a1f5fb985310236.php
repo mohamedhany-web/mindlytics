@@ -34,7 +34,7 @@
                     <label class="<?php echo e($waLabelClass); ?>">الحالة</label>
                     <select name="status" class="<?php echo e($waSelectClass); ?>">
                         <option value="">كل الحالات</option>
-                        <?php $__currentLoopData = ['sent' => 'مرسلة', 'failed' => 'فاشلة', 'pending' => 'في الانتظار']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $val => $label): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <?php $__currentLoopData = ['sent' => 'مقبولة من Meta', 'delivered' => 'تم التسليم', 'read' => 'تم القراءة', 'failed' => 'فاشلة', 'pending' => 'في الانتظار']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $val => $label): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <option value="<?php echo e($val); ?>" <?php if(request('status') === $val): echo 'selected'; endif; ?>><?php echo e($label); ?></option>
                         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </select>
@@ -74,15 +74,18 @@
                             </td>
                             <td class="px-5 py-3.5">
                                 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border
-                                    <?php if($msg->status === 'sent'): ?> bg-emerald-100 text-emerald-800 border-emerald-200
+                                    <?php if(in_array($msg->status, ['sent', 'delivered', 'read'], true)): ?> bg-emerald-100 text-emerald-800 border-emerald-200
                                     <?php elseif($msg->status === 'failed'): ?> bg-rose-100 text-rose-800 border-rose-200
                                     <?php else: ?> bg-amber-100 text-amber-800 border-amber-200 <?php endif; ?>">
-                                    <?php if($msg->status === 'sent'): ?><i class="fas fa-check"></i>
+                                    <?php if(in_array($msg->status, ['sent', 'delivered', 'read'], true)): ?><i class="fas fa-check"></i>
                                     <?php elseif($msg->status === 'failed'): ?><i class="fas fa-times"></i>
                                     <?php else: ?><i class="fas fa-clock"></i><?php endif; ?>
                                     <?php echo e($msg->status_text); ?>
 
                                 </span>
+                                <?php if($msg->status === 'sent' && $msg->whatsapp_message_id): ?>
+                                    <p class="text-[10px] text-slate-500 mt-1">قُبلت من Meta — انتظر التسليم أو راجع Webhook</p>
+                                <?php endif; ?>
                                 <?php if($msg->status === 'failed' && $msg->error_message): ?>
                                     <p class="text-[10px] text-rose-600 mt-1 max-w-xs truncate" title="<?php echo e($msg->error_message); ?>"><?php echo e(Str::limit($msg->error_message, 50)); ?></p>
                                 <?php endif; ?>

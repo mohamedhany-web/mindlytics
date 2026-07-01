@@ -1,13 +1,13 @@
-@extends('layouts.admin')
 
-@section('title', 'محادثات الواتساب - Mindlytics')
-@section('header', 'قسم الواتساب')
 
-@section('content')
-@php
+<?php $__env->startSection('title', 'محادثات الواتساب - Mindlytics'); ?>
+<?php $__env->startSection('header', 'قسم الواتساب'); ?>
+
+<?php $__env->startSection('content'); ?>
+<?php
     $canSend = (bool) ($connectionMeta['can_send'] ?? false);
     $activeId = $activeConversation?->id;
-    $withinWindow = (bool) ($withinWindow ?? false);
+    $withinWindow = $activeConversation ? app(\App\Services\WhatsAppInboxService::class)->isWithinServiceWindow($activeConversation) : false;
     $inboxConfig = [
         'conversationId' => $activeId,
         'pollUrl' => route('admin.whatsapp.inbox.poll'),
@@ -18,15 +18,15 @@
         'withinWindow' => $withinWindow,
         'lastMessageId' => $messages->last()?->id ?? 0,
     ];
-@endphp
+?>
 
-<script>window.__waInboxConfig = @json($inboxConfig);</script>
+<script>window.__waInboxConfig = <?php echo json_encode($inboxConfig, 15, 512) ?>;</script>
 
 <div class="p-3 sm:p-4 md:p-6 space-y-4" style="background:#f8fafc; min-height:100vh;" x-data="whatsappInbox()">
-    @include('admin.whatsapp._alerts')
-    @include('admin.whatsapp._nav', ['active' => 'inbox'])
+    <?php echo $__env->make('admin.whatsapp._alerts', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+    <?php echo $__env->make('admin.whatsapp._nav', ['active' => 'inbox'], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
-    @include('admin.whatsapp._page-header', [
+    <?php echo $__env->make('admin.whatsapp._page-header', [
         'title' => 'المحادثات الواردة',
         'subtitle' => 'استقبال رسائل العملاء والرد من النظام — مع دعم قوالب Meta لبدء المحادثة.',
         'icon' => 'fas fa-inbox',
@@ -36,99 +36,101 @@
             </span>
             <button type="button" @click="showStartModal = true" class="' . $waBtnPrimary . ' text-sm"><i class="fas fa-plus"></i> محادثة جديدة</button>
         ',
-    ])
+    ], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
-    @if(! $tablesReady)
+    <?php if(! $tablesReady): ?>
         <div class="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5 text-sm text-amber-900">
             <p class="font-bold">تشغيل الترحيل مطلوب</p>
             <p class="mt-1">نفّذ على السيرفر: <code class="bg-white px-2 py-0.5 rounded">php artisan migrate --force</code></p>
         </div>
-    @elseif(! $canSend)
+    <?php elseif(! $canSend): ?>
         <div class="rounded-2xl border-2 border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            الربط غير مكتمل — <a href="{{ route('admin.whatsapp.settings') }}" class="font-bold underline">أكمل إعداد Meta</a> وفعّل Webhook لاستقبال الرسائل.
+            الربط غير مكتمل — <a href="<?php echo e(route('admin.whatsapp.settings')); ?>" class="font-bold underline">أكمل إعداد Meta</a> وفعّل Webhook لاستقبال الرسائل.
         </div>
-    @else
+    <?php else: ?>
         <div class="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs text-sky-900">
-            <strong>Webhook مطلوب للرسائل الواردة:</strong> Callback URL <code class="dir-ltr">{{ \App\Support\WhatsAppCloudSettings::webhookUrl() }}</code>
+            <strong>Webhook مطلوب للرسائل الواردة:</strong> Callback URL <code class="dir-ltr"><?php echo e(\App\Support\WhatsAppCloudSettings::webhookUrl()); ?></code>
             — اشترك في <code>messages</code> و <code>message_status</code> في Meta Developers.
         </div>
-    @endif
+    <?php endif; ?>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-[70vh]">
-        {{-- قائمة المحادثات --}}
-        <aside class="lg:col-span-4 xl:col-span-3 {{ $waSectionClass }} flex flex-col overflow-hidden">
+        
+        <aside class="lg:col-span-4 xl:col-span-3 <?php echo e($waSectionClass); ?> flex flex-col overflow-hidden">
             <div class="p-4 border-b border-slate-200">
-                <form method="GET" action="{{ route('admin.whatsapp.inbox') }}" class="flex gap-2">
-                    @if($activeId)
-                        <input type="hidden" name="conversation" value="{{ $activeId }}">
-                    @endif
-                    <input type="search" name="search" value="{{ request('search') }}" placeholder="بحث بالاسم أو الرقم..."
-                           class="{{ $waInputClass }} text-sm flex-1">
-                    <button type="submit" class="{{ $waBtnDark }} !px-3"><i class="fas fa-search"></i></button>
+                <form method="GET" action="<?php echo e(route('admin.whatsapp.inbox')); ?>" class="flex gap-2">
+                    <?php if($activeId): ?>
+                        <input type="hidden" name="conversation" value="<?php echo e($activeId); ?>">
+                    <?php endif; ?>
+                    <input type="search" name="search" value="<?php echo e(request('search')); ?>" placeholder="بحث بالاسم أو الرقم..."
+                           class="<?php echo e($waInputClass); ?> text-sm flex-1">
+                    <button type="submit" class="<?php echo e($waBtnDark); ?> !px-3"><i class="fas fa-search"></i></button>
                 </form>
             </div>
             <div class="flex-1 overflow-y-auto divide-y divide-slate-100">
-                @forelse($conversations as $conv)
-                    <a href="{{ route('admin.whatsapp.inbox', ['conversation' => $conv->id, 'search' => request('search')]) }}"
-                       class="block px-4 py-3 hover:bg-emerald-50/60 transition-colors {{ $activeId === $conv->id ? 'bg-emerald-50 border-r-4 border-emerald-500' : '' }}">
+                <?php $__empty_1 = true; $__currentLoopData = $conversations; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $conv): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                    <a href="<?php echo e(route('admin.whatsapp.inbox', ['conversation' => $conv->id, 'search' => request('search')])); ?>"
+                       class="block px-4 py-3 hover:bg-emerald-50/60 transition-colors <?php echo e($activeId === $conv->id ? 'bg-emerald-50 border-r-4 border-emerald-500' : ''); ?>">
                         <div class="flex items-start justify-between gap-2">
                             <div class="min-w-0 flex-1">
-                                <p class="font-bold text-slate-900 truncate">{{ $conv->displayName() }}</p>
-                                <p class="text-[11px] text-slate-500 dir-ltr text-right font-mono">{{ $conv->formattedPhone() }}</p>
-                                @if($conv->last_message_preview)
-                                    <p class="text-xs text-slate-600 mt-1 truncate">{{ $conv->last_message_preview }}</p>
-                                @endif
+                                <p class="font-bold text-slate-900 truncate"><?php echo e($conv->displayName()); ?></p>
+                                <p class="text-[11px] text-slate-500 dir-ltr text-right font-mono"><?php echo e($conv->formattedPhone()); ?></p>
+                                <?php if($conv->last_message_preview): ?>
+                                    <p class="text-xs text-slate-600 mt-1 truncate"><?php echo e($conv->last_message_preview); ?></p>
+                                <?php endif; ?>
                             </div>
                             <div class="text-left shrink-0">
-                                @if($conv->unread_count > 0)
-                                    <span class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-emerald-600 text-white text-[10px] font-bold">{{ $conv->unread_count }}</span>
-                                @endif
-                                <p class="text-[10px] text-slate-400 mt-1 whitespace-nowrap">{{ $conv->last_message_at?->diffForHumans() }}</p>
+                                <?php if($conv->unread_count > 0): ?>
+                                    <span class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-emerald-600 text-white text-[10px] font-bold"><?php echo e($conv->unread_count); ?></span>
+                                <?php endif; ?>
+                                <p class="text-[10px] text-slate-400 mt-1 whitespace-nowrap"><?php echo e($conv->last_message_at?->diffForHumans()); ?></p>
                             </div>
                         </div>
                     </a>
-                @empty
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                     <div class="p-8 text-center text-slate-500 text-sm">
                         <i class="fas fa-inbox text-3xl mb-2 text-slate-300"></i>
                         <p>لا توجد محادثات بعد</p>
                         <p class="text-xs mt-2">عند وصول رسالة عبر Webhook ستظهر هنا</p>
                     </div>
-                @endforelse
+                <?php endif; ?>
             </div>
-            @if($conversations->hasPages())
-                <div class="p-3 border-t border-slate-200">{{ $conversations->links() }}</div>
-            @endif
+            <?php if($conversations->hasPages()): ?>
+                <div class="p-3 border-t border-slate-200"><?php echo e($conversations->links()); ?></div>
+            <?php endif; ?>
         </aside>
 
-        {{-- نافذة المحادثة --}}
-        <section class="lg:col-span-8 xl:col-span-9 {{ $waSectionClass }} flex flex-col overflow-hidden min-h-[60vh]">
-            @if($activeConversation)
+        
+        <section class="lg:col-span-8 xl:col-span-9 <?php echo e($waSectionClass); ?> flex flex-col overflow-hidden min-h-[60vh]">
+            <?php if($activeConversation): ?>
                 <div class="px-5 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-white">
                     <div>
-                        <h3 class="font-bold text-slate-900">{{ $activeConversation->displayName() }}</h3>
-                        <p class="text-xs text-slate-500 dir-ltr">{{ $activeConversation->formattedPhone() }}
-                            @if($activeConversation->user)
-                                · {{ $activeConversation->user->name }}
-                            @endif
+                        <h3 class="font-bold text-slate-900"><?php echo e($activeConversation->displayName()); ?></h3>
+                        <p class="text-xs text-slate-500 dir-ltr"><?php echo e($activeConversation->formattedPhone()); ?>
+
+                            <?php if($activeConversation->user): ?>
+                                · <?php echo e($activeConversation->user->name); ?>
+
+                            <?php endif; ?>
                         </p>
                     </div>
                     <div class="flex items-center gap-2">
-                        @if($withinWindow)
+                        <?php if($withinWindow): ?>
                             <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
                                 <i class="fas fa-clock"></i> نافذة 24 ساعة مفتوحة
                             </span>
-                        @else
+                        <?php else: ?>
                             <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
                                 <i class="fas fa-file-alt"></i> استخدم قالب Meta للرد
                             </span>
-                        @endif
+                        <?php endif; ?>
                     </div>
                 </div>
 
                 <div id="chat-messages" class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3 bg-[#e5ddd5]/30" style="background-image:url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23d4cdc4\' fill-opacity=\'0.25\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');">
-                    @foreach($messages as $msg)
-                        @include('admin.whatsapp._inbox_message', ['msg' => $msg])
-                    @endforeach
+                    <?php $__currentLoopData = $messages; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $msg): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <?php echo $__env->make('admin.whatsapp._inbox_message', ['msg' => $msg], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     <template x-for="msg in newMessages" :key="'n-' + msg.id">
                         <div class="flex" :class="msg.is_inbound ? 'justify-start' : 'justify-end'">
                             <div class="max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm text-sm whitespace-pre-wrap break-words"
@@ -145,9 +147,9 @@
 
                     <div x-show="withinWindow" class="flex gap-2 items-end">
                         <textarea x-model="replyBody" rows="2" placeholder="اكتب ردك..."
-                                  class="{{ $waInputClass }} text-sm flex-1 resize-none" @keydown.ctrl.enter="sendReply()"></textarea>
+                                  class="<?php echo e($waInputClass); ?> text-sm flex-1 resize-none" @keydown.ctrl.enter="sendReply()"></textarea>
                         <button type="button" @click="sendReply()" :disabled="sending || !replyBody.trim()"
-                                class="{{ $waBtnPrimary }} !px-4 shrink-0 disabled:opacity-50">
+                                class="<?php echo e($waBtnPrimary); ?> !px-4 shrink-0 disabled:opacity-50">
                             <i class="fas fa-paper-plane"></i>
                         </button>
                     </div>
@@ -156,11 +158,11 @@
                         <p class="text-xs text-amber-900 font-semibold">خارج نافذة 24 ساعة — أرسل قالب Meta معتمد:</p>
                         <div class="flex flex-wrap gap-2">
                             <input type="text" x-model="templateName" placeholder="اسم القالب (مثل hello_world)"
-                                   class="{{ $waInputClass }} text-sm dir-ltr flex-1 min-w-[140px]">
+                                   class="<?php echo e($waInputClass); ?> text-sm dir-ltr flex-1 min-w-[140px]">
                             <input type="text" x-model="templateLang" placeholder="en_US"
-                                   class="{{ $waInputClass }} text-sm dir-ltr w-24">
+                                   class="<?php echo e($waInputClass); ?> text-sm dir-ltr w-24">
                             <button type="button" @click="sendTemplate()" :disabled="sending"
-                                    class="{{ $waBtnPrimary }} text-sm disabled:opacity-50">
+                                    class="<?php echo e($waBtnPrimary); ?> text-sm disabled:opacity-50">
                                 <i class="fas fa-file-alt"></i> إرسال قالب
                             </button>
                         </div>
@@ -169,50 +171,50 @@
                     <div x-show="withinWindow" class="flex flex-wrap gap-2 pt-1 border-t border-slate-100">
                         <span class="text-[10px] text-slate-500 w-full">أو أرسل قالب (للتأكيد):</span>
                         <input type="text" x-model="templateName" placeholder="hello_world"
-                               class="{{ $waInputClass }} text-xs dir-ltr w-36 py-1.5">
+                               class="<?php echo e($waInputClass); ?> text-xs dir-ltr w-36 py-1.5">
                         <button type="button" @click="sendTemplate()" :disabled="sending"
-                                class="{{ $waBtnSecondary }} text-xs !py-1.5">قالب</button>
+                                class="<?php echo e($waBtnSecondary); ?> text-xs !py-1.5">قالب</button>
                     </div>
                 </div>
-            @else
+            <?php else: ?>
                 <div class="flex-1 flex flex-col items-center justify-center text-slate-500 p-8">
                     <i class="fab fa-whatsapp text-5xl text-emerald-300 mb-4"></i>
                     <p class="font-semibold text-slate-700">اختر محادثة أو ابدأ محادثة جديدة</p>
-                    <button type="button" @click="showStartModal = true" class="{{ $waBtnPrimary }} mt-4 text-sm">محادثة جديدة بقالب</button>
+                    <button type="button" @click="showStartModal = true" class="<?php echo e($waBtnPrimary); ?> mt-4 text-sm">محادثة جديدة بقالب</button>
                 </div>
-            @endif
+            <?php endif; ?>
         </section>
     </div>
 
-    {{-- modal محادثة جديدة --}}
+    
     <div x-show="showStartModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" @keydown.escape.window="showStartModal = false">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4" @click.outside="showStartModal = false">
             <h3 class="font-bold text-lg text-slate-900">بدء محادثة جديدة</h3>
             <p class="text-xs text-slate-600">أول رسالة يجب أن تكون قالب Meta معتمد (مثل <code>hello_world</code>).</p>
             <div>
-                <label class="{{ $waLabelClass }}">رقم الواتساب</label>
-                <input type="text" x-model="startPhone" placeholder="2010xxxxxxx" class="{{ $waInputClass }} dir-ltr text-sm">
+                <label class="<?php echo e($waLabelClass); ?>">رقم الواتساب</label>
+                <input type="text" x-model="startPhone" placeholder="2010xxxxxxx" class="<?php echo e($waInputClass); ?> dir-ltr text-sm">
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="{{ $waLabelClass }}">اسم القالب</label>
-                    <input type="text" x-model="startTemplate" value="hello_world" class="{{ $waInputClass }} dir-ltr text-sm">
+                    <label class="<?php echo e($waLabelClass); ?>">اسم القالب</label>
+                    <input type="text" x-model="startTemplate" value="hello_world" class="<?php echo e($waInputClass); ?> dir-ltr text-sm">
                 </div>
                 <div>
-                    <label class="{{ $waLabelClass }}">اللغة</label>
-                    <input type="text" x-model="startLang" value="en_US" class="{{ $waInputClass }} dir-ltr text-sm">
+                    <label class="<?php echo e($waLabelClass); ?>">اللغة</label>
+                    <input type="text" x-model="startLang" value="en_US" class="<?php echo e($waInputClass); ?> dir-ltr text-sm">
                 </div>
             </div>
             <p x-show="startError" class="text-xs text-rose-600" x-text="startError"></p>
             <div class="flex gap-2 justify-end">
-                <button type="button" @click="showStartModal = false" class="{{ $waBtnSecondary }} text-sm">إلغاء</button>
-                <button type="button" @click="startConversation()" :disabled="sending" class="{{ $waBtnPrimary }} text-sm">بدء</button>
+                <button type="button" @click="showStartModal = false" class="<?php echo e($waBtnSecondary); ?> text-sm">إلغاء</button>
+                <button type="button" @click="startConversation()" :disabled="sending" class="<?php echo e($waBtnPrimary); ?> text-sm">بدء</button>
             </div>
         </div>
     </div>
 </div>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 function whatsappInbox() {
     const cfg = window.__waInboxConfig || {};
@@ -225,7 +227,7 @@ function whatsappInbox() {
         csrf: cfg.csrf,
         withinWindow: !!cfg.withinWindow,
         lastMessageId: cfg.lastMessageId || 0,
-        unreadTotal: {{ (int) $unreadTotal }},
+        unreadTotal: <?php echo e((int) $unreadTotal); ?>,
         replyBody: '',
         templateName: 'hello_world',
         templateLang: 'en_US',
@@ -382,5 +384,7 @@ function whatsappInbox() {
     };
 }
 </script>
-@endpush
-@endsection
+<?php $__env->stopPush(); ?>
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.admin', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views\admin\whatsapp\inbox.blade.php ENDPATH**/ ?>

@@ -68,10 +68,21 @@
             </div>
 
             <?php if(!empty($connectionMeta['last_error']) && !$isConnected): ?>
-                <div class="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-                    <i class="fas fa-exclamation-triangle ml-1"></i>
-                    <?php echo e($connectionMeta['last_error']); ?>
-
+                <div class="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 space-y-2">
+                    <p><i class="fas fa-exclamation-triangle ml-1"></i> <?php echo e($connectionMeta['last_error']); ?></p>
+                    <?php if(str_contains(mb_strtolower($connectionMeta['last_error'] ?? ''), 'token') || str_contains(mb_strtolower($connectionMeta['last_error'] ?? ''), 'صلاحية')): ?>
+                        <div class="text-xs text-rose-900/90 leading-relaxed border-t border-rose-200 pt-2">
+                            <p class="font-bold mb-1">كيف تحصل على Token صحيح؟</p>
+                            <ol class="list-decimal list-inside space-y-1">
+                                <li>افتح <a href="https://business.facebook.com/settings/system-users" target="_blank" rel="noopener" class="underline font-semibold">Meta Business → System Users</a></li>
+                                <li>أنشئ System User أو اختر موجوداً → Generate Token</li>
+                                <li>اختر تطبيقك وفعّل: <code>whatsapp_business_messaging</code> و <code>whatsapp_business_management</code></li>
+                                <li>اختر «Never» للصلاحية (توكن دائم) — لا تستخدم توكن مؤقت من API Setup</li>
+                                <li>اضغط «مسح بيانات الربط» ثم الصق التوكن الجديد في Access Token واحفظ</li>
+                                <li>فعّل «تفعيل إرسال الواتساب» ثم اضغط «اختبار الربط»</li>
+                            </ol>
+                        </div>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
 
@@ -172,13 +183,18 @@
                 <div class="border-t border-slate-100 pt-5">
                     <p class="text-xs font-bold text-slate-700 mb-3 flex items-center gap-2">
                         <span class="w-6 h-6 rounded-lg bg-violet-100 text-violet-700 flex items-center justify-center text-[11px] font-black">3</span>
-                        Webhook (اختياري — لتتبع التسليم)
+                        Webhook — لتتبع التسليم (لا يُطلَب لإرسال الرسائل)
                     </p>
+                    <div class="rounded-xl bg-amber-50 border border-amber-200 p-4 text-xs text-amber-950 leading-relaxed mb-4 space-y-2">
+                        <p class="font-bold">مهم: غياب Webhook لا يمنع وصول الرسالة</p>
+                        <p>بدون Webhook تبقى الحالة «مقبولة من Meta» حتى لو فشل التسليم لاحقاً. السبب الأشهر لعدم الوصول: <strong>المستلم لم يراسل رقمكم خلال 24 ساعة</strong> — والرسائل النصية الحرة لا تصل لمن لم يبدأ المحادثة.</p>
+                    </div>
                     <div class="grid md:grid-cols-2 gap-4">
                         <div>
                             <label class="<?php echo e($waLabelClass); ?>">Webhook Verify Token</label>
                             <input type="text" name="webhook_verify_token" value="<?php echo e($savedWebhookToken); ?>"
-                                   class="<?php echo e($waInputClass); ?> dir-ltr font-mono text-sm" placeholder="سلسلة عشوائية للتحقق">
+                                   class="<?php echo e($waInputClass); ?> dir-ltr font-mono text-sm" placeholder="مثال: mindlytics_wh_2026">
+                            <p class="text-[10px] text-slate-500 mt-1">اختر أي نص — انسخه نفسه في Meta عند الربط</p>
                         </div>
                         <div>
                             <label class="<?php echo e($waLabelClass); ?>">Webhook URL (انسخه إلى Meta)</label>
@@ -186,12 +202,22 @@
                                    class="<?php echo e($waInputClass); ?> dir-ltr font-mono text-sm bg-slate-50" onclick="this.select()">
                         </div>
                     </div>
+                    <div class="mt-4 rounded-xl bg-slate-50 border border-slate-200 p-4 text-xs text-slate-700 leading-relaxed space-y-2">
+                        <p class="font-bold text-slate-800">خطوات الربط في Meta Developers:</p>
+                        <ol class="list-decimal list-inside space-y-1">
+                            <li>احفظ الإعدادات هنا أولاً (مع Verify Token).</li>
+                            <li>افتح <strong>developers.facebook.com</strong> → تطبيقك → <strong>WhatsApp → Configuration</strong>.</li>
+                            <li>في Webhook اضغط <strong>Edit</strong> → Callback URL: الرابط أعلاه → Verify Token: نفس القيمة المحفوظة → <strong>Verify and save</strong>.</li>
+                            <li>اشترك في الحقول: <code>messages</code> و <code>message_status</code> (أو Manage → اشترك في WABA).</li>
+                            <li>جرّب إرسالاً — إن فشل التسليم ستظهر «فشل» مع السبب في سجل الرسائل.</li>
+                        </ol>
+                    </div>
                 </div>
 
                 <div class="rounded-xl bg-sky-50 border border-sky-200 p-4 text-xs text-sky-900 leading-relaxed space-y-2">
                     <p class="font-bold">صلاحيات Meta المطلوبة:</p>
                     <p><code>whatsapp_business_management</code> · <code>whatsapp_business_messaging</code> · <code>business_management</code></p>
-                    <p>بعد الحفظ: أضف Webhook URL في Meta Developers → WhatsApp → Configuration، واستخدم نفس Verify Token.</p>
+                    <p>بعد الحفظ: أضف Webhook URL في Meta Developers → WhatsApp → Configuration. للرسائل النصية الحرة: المستلم يجب أن يراسل <strong>+<?php echo e(ltrim($config['display_phone_number'] ?? '', '+') ?: 'رقم الواتساب'); ?></strong> أولاً خلال 24 ساعة.</p>
                 </div>
 
                 <button type="submit" class="<?php echo e($waBtnPrimary); ?>">

@@ -7,9 +7,9 @@ use App\Models\WhatsAppConversation;
 use App\Models\WhatsAppConversationMessage;
 use App\Services\WhatsAppCloudService;
 use App\Services\WhatsAppInboxService;
-use App\Services\WhatsAppService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
@@ -18,7 +18,6 @@ class WhatsAppInboxController extends Controller
     public function __construct(
         private WhatsAppInboxService $inbox,
         private WhatsAppCloudService $cloud,
-        private WhatsAppService $whatsapp,
     ) {}
 
     public function index(Request $request): View
@@ -26,9 +25,9 @@ class WhatsAppInboxController extends Controller
         $connectionMeta = $this->cloud->connectionMeta();
         $tablesReady = Schema::hasTable('whatsapp_conversations');
 
-        $conversations = collect();
         $activeConversation = null;
         $messages = collect();
+        $withinWindow = false;
 
         if ($tablesReady) {
             $query = WhatsAppConversation::query()
@@ -59,12 +58,18 @@ class WhatsAppInboxController extends Controller
 
             if ($activeConversation) {
                 $this->inbox->markConversationRead($activeConversation);
+                $withinWindow = $this->inbox->isWithinServiceWindow($activeConversation);
                 $messages = $activeConversation->messages()
                     ->with('sentBy:id,name')
                     ->orderBy('created_at')
                     ->orderBy('id')
                     ->get();
             }
+        } else {
+            $conversations = new LengthAwarePaginator([], 0, 30, 1, [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]);
         }
 
         $unreadTotal = $tablesReady
@@ -78,6 +83,7 @@ class WhatsAppInboxController extends Controller
             'messages',
             'tablesReady',
             'unreadTotal',
+            'withinWindow',
         ));
     }
 

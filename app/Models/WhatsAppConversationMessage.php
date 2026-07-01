@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WhatsAppConversationMessage extends Model
 {
+    protected $table = 'whatsapp_conversation_messages';
+
     public const DIRECTION_INBOUND = 'inbound';
 
     public const DIRECTION_OUTBOUND = 'outbound';

@@ -15,7 +15,8 @@
         'subtitle' => 'إرسال رسمي وموثق عبر Meta — بدون Bridge أو QR.',
         'icon' => 'fab fa-whatsapp',
         'actions' => '
-            <a href="' . route('admin.whatsapp.settings') . '" class="' . $waBtnPrimary . '"><i class="fas fa-plug"></i> إعدادات الربط</a>
+            <a href="' . route('admin.whatsapp.inbox') . '" class="' . $waBtnPrimary . '"><i class="fas fa-inbox"></i> المحادثات</a>
+            <a href="' . route('admin.whatsapp.settings') . '" class="' . $waBtnSecondary . '"><i class="fas fa-plug"></i> إعدادات الربط</a>
             <a href="' . route('admin.whatsapp.send') . '" class="' . $waBtnSecondary . '"><i class="fas fa-paper-plane"></i> إرسال</a>
         ',
         'statCards' => [

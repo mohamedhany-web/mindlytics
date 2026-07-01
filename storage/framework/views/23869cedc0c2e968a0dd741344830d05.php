@@ -18,4 +18,4 @@
         </a>
     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
 </nav>
-<?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views\admin\whatsapp\_nav.blade.php ENDPATH**/ ?>
+<?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/admin/whatsapp/_nav.blade.php ENDPATH**/ ?>
