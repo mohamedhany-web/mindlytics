@@ -22,6 +22,10 @@ class InputSanitizationMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
+        if ($request->is('webhooks/whatsapp')) {
+            return $next($request);
+        }
+
         // حقول نصية طويلة (خبرات، نبذة، مهارات) نستثنيها من فحص SQL/XSS لتجنب إنذارات خاطئة عند كتابة نصوص كثيرة
         $longTextFields = ['experience', 'bio', 'skills', 'rejection_reason', 'bio_ar', 'bio_en'];
 
