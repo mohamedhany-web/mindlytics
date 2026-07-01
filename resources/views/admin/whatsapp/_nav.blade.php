@@ -4,6 +4,7 @@
         'settings' => ['route' => 'admin.whatsapp.settings', 'icon' => 'fas fa-plug', 'label' => 'ربط Meta'],
         'send' => ['route' => 'admin.whatsapp.send', 'icon' => 'fas fa-paper-plane', 'label' => 'إرسال رسالة'],
         'messages' => ['route' => 'admin.whatsapp.messages', 'icon' => 'fas fa-list', 'label' => 'سجل الرسائل'],
+        'inbox' => ['route' => 'admin.whatsapp.inbox', 'icon' => 'fas fa-inbox', 'label' => 'المحادثات'],
         'batches' => ['route' => 'admin.whatsapp.batches.index', 'icon' => 'fas fa-layer-group', 'label' => 'دفعات الإرسال'],
     ];
 @endphp

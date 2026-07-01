@@ -171,6 +171,181 @@ class WhatsAppService
     }
 
     /**
+     * إرسال قالب Meta معتمد (لبدء المحادثة أو خارج نافذة 24 ساعة)
+     *
+     * @param  array<int, array<string, mixed>>  $components
+     */
+    public function sendTemplate(
+        string $phoneNumber,
+        string $templateName,
+        string $languageCode = 'en_US',
+        array $components = [],
+        array $options = []
+    ): array {
+        try {
+            $actorId = $options['user_id'] ?? auth()->id();
+            $skipReadyCheck = (bool) ($options['skip_ready_check'] ?? false);
+            $skipPacing = (bool) ($options['skip_pacing'] ?? false);
+            $skipLog = (bool) ($options['skip_log'] ?? false);
+
+            $formattedPhone = $this->formatPhoneNumber($phoneNumber);
+
+            if (! $skipReadyCheck) {
+                $ready = $this->cloud->canSendNow();
+                if (! ($ready['success'] ?? false)) {
+                    return ['success' => false, 'error' => $ready['error'] ?? 'الواتساب غير جاهز'];
+                }
+            }
+
+            if (! $skipPacing && ($limitError = $this->pacing->assertCanSend())) {
+                return ['success' => false, 'error' => $limitError];
+            }
+
+            if (! $skipPacing) {
+                $this->pacing->waitBeforeSend($options['batch_id'] ?? null);
+            }
+
+            $creds = $this->cloud->resolveCredentials();
+            $apiUrl = WhatsAppCloudSettings::apiUrl();
+            $apiToken = $creds['access_token'];
+            $phoneNumberId = $creds['phone_number_id'];
+
+            if ($apiToken === '' || $phoneNumberId === '') {
+                throw new \Exception('إعدادات WhatsApp Cloud API غير مكتملة');
+            }
+
+            $template = [
+                'name' => $templateName,
+                'language' => ['code' => $languageCode],
+            ];
+
+            if ($components !== []) {
+                $template['components'] = $components;
+            }
+
+            $response = Http::withToken($apiToken)
+                ->timeout(60)
+                ->post("{$apiUrl}/{$phoneNumberId}/messages", [
+                    'messaging_product' => 'whatsapp',
+                    'to' => $formattedPhone,
+                    'type' => 'template',
+                    'template' => $template,
+                ]);
+
+            $responseData = $response->json() ?? [];
+            $metaError = is_array($responseData['error'] ?? null) ? $responseData['error'] : null;
+            $waMessageId = $responseData['messages'][0]['id'] ?? null;
+            $accepted = $response->successful() && is_string($waMessageId) && $waMessageId !== '';
+
+            $errorText = $accepted
+                ? null
+                : $this->cloud->humanizeSendError(
+                    $metaError,
+                    (string) ($metaError['message'] ?? 'فشل إرسال القالب')
+                );
+
+            if (! $skipLog) {
+                WhatsAppMessage::create([
+                    'user_id' => $actorId,
+                    'phone_number' => $formattedPhone,
+                    'message' => '[قالب: ' . $templateName . ']',
+                    'type' => 'template',
+                    'status' => $accepted ? 'sent' : 'failed',
+                    'response_data' => $responseData,
+                    'whatsapp_message_id' => $waMessageId,
+                    'sent_at' => $accepted ? now() : null,
+                    'template_name' => $templateName,
+                    'template_params' => ['language' => $languageCode, 'components' => $components],
+                    'error_message' => $errorText,
+                ]);
+            }
+
+            if ($accepted) {
+                return [
+                    'success' => true,
+                    'accepted_by_meta' => true,
+                    'whatsapp_id' => $waMessageId,
+                    'phone' => $formattedPhone,
+                ];
+            }
+
+            return ['success' => false, 'error' => $errorText ?? 'فشل إرسال القالب'];
+        } catch (\Exception $e) {
+            Log::error('WhatsApp template send error', [
+                'phone' => $phoneNumber,
+                'template' => $templateName,
+                'error' => $e->getMessage(),
+            ]);
+
+            return ['success' => false, 'error' => 'خطأ في إرسال القالب'];
+        }
+    }
+
+    /**
+     * إرسال رسالة نصية عبر Cloud API (للردود من صندوق الوارد)
+     *
+     * @return array{success: bool, whatsapp_id?: string, phone?: string, error?: string}
+     */
+    public function sendTextReply(string $phoneNumber, string $message, array $options = []): array
+    {
+        $options['skip_log'] = true;
+        $options['skip_pacing'] = $options['skip_pacing'] ?? true;
+
+        try {
+            $formattedPhone = $this->formatPhoneNumber($phoneNumber);
+            $skipReadyCheck = (bool) ($options['skip_ready_check'] ?? false);
+
+            if (! $skipReadyCheck) {
+                $ready = $this->cloud->canSendNow();
+                if (! ($ready['success'] ?? false)) {
+                    return ['success' => false, 'error' => $ready['error'] ?? 'الواتساب غير جاهز'];
+                }
+            }
+
+            $creds = $this->cloud->resolveCredentials();
+            $apiUrl = WhatsAppCloudSettings::apiUrl();
+            $apiToken = $creds['access_token'];
+            $phoneNumberId = $creds['phone_number_id'];
+
+            if ($apiToken === '' || $phoneNumberId === '') {
+                return ['success' => false, 'error' => 'إعدادات WhatsApp غير مكتملة'];
+            }
+
+            $response = Http::withToken($apiToken)
+                ->timeout(60)
+                ->post("{$apiUrl}/{$phoneNumberId}/messages", [
+                    'messaging_product' => 'whatsapp',
+                    'to' => $formattedPhone,
+                    'type' => 'text',
+                    'text' => ['body' => $message],
+                ]);
+
+            $responseData = $response->json() ?? [];
+            $metaError = is_array($responseData['error'] ?? null) ? $responseData['error'] : null;
+            $waMessageId = $responseData['messages'][0]['id'] ?? null;
+            $accepted = $response->successful() && is_string($waMessageId) && $waMessageId !== '';
+
+            if ($accepted) {
+                return [
+                    'success' => true,
+                    'whatsapp_id' => $waMessageId,
+                    'phone' => $formattedPhone,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'error' => $this->cloud->humanizeSendError(
+                    $metaError,
+                    (string) ($metaError['message'] ?? 'فشل إرسال الرد')
+                ),
+            ];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => 'خطأ في إرسال الرد'];
+        }
+    }
+
+    /**
      * إرسال تقرير شهري لولي الأمر
      */
     public function sendMonthlyReport(User $parent, User $student, array $reportData)
@@ -228,9 +403,9 @@ class WhatsAppService
     }
 
     /**
-     * تنسيق رقم الهاتف
+     * تنسيق رقم الهاتف (بدون +)
      */
-    private function formatPhoneNumber(string $phoneNumber): string
+    public function formatPhoneNumber(string $phoneNumber): string
     {
         // إزالة المسافات والرموز
         $phone = preg_replace('/[^0-9+]/', '', $phoneNumber);

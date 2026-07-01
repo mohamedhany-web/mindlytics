@@ -184,13 +184,18 @@
                 <div class="border-t border-slate-100 pt-5">
                     <p class="text-xs font-bold text-slate-700 mb-3 flex items-center gap-2">
                         <span class="w-6 h-6 rounded-lg bg-violet-100 text-violet-700 flex items-center justify-center text-[11px] font-black">3</span>
-                        Webhook (اختياري — لتتبع التسليم)
+                        Webhook — لتتبع التسليم (لا يُطلَب لإرسال الرسائل)
                     </p>
+                    <div class="rounded-xl bg-amber-50 border border-amber-200 p-4 text-xs text-amber-950 leading-relaxed mb-4 space-y-2">
+                        <p class="font-bold">مهم: غياب Webhook لا يمنع وصول الرسالة</p>
+                        <p>بدون Webhook تبقى الحالة «مقبولة من Meta» حتى لو فشل التسليم لاحقاً. السبب الأشهر لعدم الوصول: <strong>المستلم لم يراسل رقمكم خلال 24 ساعة</strong> — والرسائل النصية الحرة لا تصل لمن لم يبدأ المحادثة.</p>
+                    </div>
                     <div class="grid md:grid-cols-2 gap-4">
                         <div>
                             <label class="{{ $waLabelClass }}">Webhook Verify Token</label>
                             <input type="text" name="webhook_verify_token" value="{{ $savedWebhookToken }}"
-                                   class="{{ $waInputClass }} dir-ltr font-mono text-sm" placeholder="سلسلة عشوائية للتحقق">
+                                   class="{{ $waInputClass }} dir-ltr font-mono text-sm" placeholder="مثال: mindlytics_wh_2026">
+                            <p class="text-[10px] text-slate-500 mt-1">اختر أي نص — انسخه نفسه في Meta عند الربط</p>
                         </div>
                         <div>
                             <label class="{{ $waLabelClass }}">Webhook URL (انسخه إلى Meta)</label>
@@ -198,12 +203,22 @@
                                    class="{{ $waInputClass }} dir-ltr font-mono text-sm bg-slate-50" onclick="this.select()">
                         </div>
                     </div>
+                    <div class="mt-4 rounded-xl bg-slate-50 border border-slate-200 p-4 text-xs text-slate-700 leading-relaxed space-y-2">
+                        <p class="font-bold text-slate-800">خطوات الربط في Meta Developers:</p>
+                        <ol class="list-decimal list-inside space-y-1">
+                            <li>احفظ الإعدادات هنا أولاً (مع Verify Token).</li>
+                            <li>افتح <strong>developers.facebook.com</strong> → تطبيقك → <strong>WhatsApp → Configuration</strong>.</li>
+                            <li>في Webhook اضغط <strong>Edit</strong> → Callback URL: الرابط أعلاه → Verify Token: نفس القيمة المحفوظة → <strong>Verify and save</strong>.</li>
+                            <li>اشترك في الحقول: <code>messages</code> و <code>message_status</code> (أو Manage → اشترك في WABA).</li>
+                            <li>جرّب إرسالاً — إن فشل التسليم ستظهر «فشل» مع السبب في سجل الرسائل.</li>
+                        </ol>
+                    </div>
                 </div>
 
                 <div class="rounded-xl bg-sky-50 border border-sky-200 p-4 text-xs text-sky-900 leading-relaxed space-y-2">
                     <p class="font-bold">صلاحيات Meta المطلوبة:</p>
                     <p><code>whatsapp_business_management</code> · <code>whatsapp_business_messaging</code> · <code>business_management</code></p>
-                    <p>بعد الحفظ: أضف Webhook URL في Meta Developers → WhatsApp → Configuration، واستخدم نفس Verify Token.</p>
+                    <p>بعد الحفظ: أضف Webhook URL في Meta Developers → WhatsApp → Configuration. للرسائل النصية الحرة: المستلم يجب أن يراسل <strong>+{{ ltrim($config['display_phone_number'] ?? '', '+') ?: 'رقم الواتساب' }}</strong> أولاً خلال 24 ساعة.</p>
                 </div>
 
                 <button type="submit" class="{{ $waBtnPrimary }}">

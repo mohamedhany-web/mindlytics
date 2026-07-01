@@ -3,12 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\WhatsAppMessage;
+use App\Services\WhatsAppCloudService;
+use App\Services\WhatsAppInboxService;
 use App\Support\WhatsAppCloudSettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class WhatsAppWebhookController extends Controller
 {
+    public function __construct(
+        private WhatsAppInboxService $inbox,
+    ) {}
+
     public function verify(Request $request)
     {
         $mode = (string) $request->query('hub_mode', '');
@@ -40,7 +46,7 @@ class WhatsAppWebhookController extends Controller
             foreach ($entry['changes'] ?? [] as $change) {
                 $value = $change['value'] ?? [];
                 $this->processStatuses($value['statuses'] ?? []);
-                $this->processInboundMessages($value['messages'] ?? [], $value['metadata'] ?? []);
+                $this->processInboundMessages($value['messages'] ?? [], $value['metadata'] ?? [], $value['contacts'] ?? []);
             }
         }
 
@@ -57,6 +63,8 @@ class WhatsAppWebhookController extends Controller
             if ($waId === '') {
                 continue;
             }
+
+            $this->inbox->applyDeliveryStatus($waId, $status);
 
             $message = WhatsAppMessage::query()
                 ->where('whatsapp_message_id', $waId)
@@ -79,7 +87,7 @@ class WhatsAppWebhookController extends Controller
             } elseif ($state === 'failed') {
                 $errorDetail = $status['errors'][0] ?? [];
                 $errorMessage = is_array($errorDetail)
-                    ? app(\App\Services\WhatsAppCloudService::class)->humanizeSendError(
+                    ? app(WhatsAppCloudService::class)->humanizeSendError(
                         $errorDetail,
                         (string) ($errorDetail['title'] ?? $errorDetail['message'] ?? 'فشل التسليم')
                     )
@@ -96,13 +104,31 @@ class WhatsAppWebhookController extends Controller
     /**
      * @param  array<int, array<string, mixed>>  $messages
      * @param  array<string, mixed>  $metadata
+     * @param  array<int, array<string, mixed>>  $contacts
      */
-    private function processInboundMessages(array $messages, array $metadata): void
+    private function processInboundMessages(array $messages, array $metadata, array $contacts = []): void
     {
+        $contactNames = [];
+        foreach ($contacts as $contact) {
+            $waId = (string) ($contact['wa_id'] ?? '');
+            $name = (string) ($contact['profile']['name'] ?? '');
+            if ($waId !== '' && $name !== '') {
+                $contactNames[$waId] = $name;
+            }
+        }
+
         foreach ($messages as $msg) {
+            $from = (string) ($msg['from'] ?? '');
+            if ($from !== '' && isset($contactNames[$from])) {
+                $msg['profile'] = ['name' => $contactNames[$from]];
+            }
+
+            $stored = $this->inbox->recordInbound($msg, $metadata);
+
             Log::info('WhatsApp inbound message', [
                 'from' => $msg['from'] ?? null,
                 'type' => $msg['type'] ?? null,
+                'stored' => (bool) $stored,
                 'phone_number_id' => $metadata['phone_number_id'] ?? null,
             ]);
         }

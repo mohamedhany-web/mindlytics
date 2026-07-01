@@ -1597,6 +1597,12 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('/send', [\App\Http\Controllers\Admin\WhatsAppController::class, 'sendMessage'])->name('send.post');
             Route::get('/messages', [\App\Http\Controllers\Admin\WhatsAppController::class, 'messages'])->name('messages');
             Route::post('/messages/{message}/resend', [\App\Http\Controllers\Admin\WhatsAppController::class, 'resendMessage'])->name('messages.resend');
+            Route::get('/inbox', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'index'])->name('inbox');
+            Route::get('/inbox/poll', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'poll'])->name('inbox.poll');
+            Route::post('/inbox/start', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'start'])->name('inbox.start');
+            Route::post('/inbox/{conversation}/reply', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'reply'])->name('inbox.reply');
+            Route::post('/inbox/{conversation}/template', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'sendTemplate'])->name('inbox.template');
+            Route::post('/inbox/{conversation}/read', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'markRead'])->name('inbox.read');
             Route::get('/settings', [\App\Http\Controllers\Admin\WhatsAppController::class, 'settings'])->name('settings');
             Route::post('/settings', [\App\Http\Controllers\Admin\WhatsAppCloudController::class, 'saveSettings'])->name('settings.update');
             Route::post('/test-connection', [\App\Http\Controllers\Admin\WhatsAppCloudController::class, 'testConnection'])->name('test-connection');
