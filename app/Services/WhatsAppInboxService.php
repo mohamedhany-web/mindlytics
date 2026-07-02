@@ -254,20 +254,18 @@ class WhatsAppInboxService
             return ['success' => false, 'error' => 'نص الرد فارغ'];
         }
 
-        if (! $this->isWithinServiceWindow($conversation)) {
-            return [
-                'success' => false,
-                'error' => 'انتهت نافذة الـ 24 ساعة — استخدم قالب Meta معتمد لبدء المحادثة (مثل hello_world).',
-                'requires_template' => true,
-            ];
-        }
-
         $result = $this->whatsapp->sendTextReply($conversation->phone_number, $body, [
             'user_id' => $userId,
         ]);
 
         if (! ($result['success'] ?? false)) {
-            return ['success' => false, 'error' => $result['error'] ?? 'فشل الإرسال'];
+            $error = $result['error'] ?? 'فشل الإرسال';
+
+            return [
+                'success' => false,
+                'error' => $error,
+                'requires_template' => $this->errorRequiresTemplate($error),
+            ];
         }
 
         return [
@@ -344,6 +342,46 @@ class WhatsAppInboxService
         }
 
         return array_merge($result, ['conversation' => $conversation->fresh()]);
+    }
+
+    /**
+     * @return array{success: bool, conversation?: WhatsAppConversation, message?: WhatsAppConversationMessage, error?: string, requires_template?: bool}
+     */
+    public function startConversationWithMessage(
+        string $phone,
+        string $body,
+        ?int $userId = null
+    ): array {
+        $normalized = $this->whatsapp->formatPhoneNumber($phone);
+
+        $conversation = WhatsAppConversation::query()->firstOrCreate(
+            ['phone_number' => $normalized],
+            ['unread_count' => 0]
+        );
+
+        if (! $conversation->user_id) {
+            $conversation->user_id = $this->guessUserId($normalized);
+            $conversation->save();
+        }
+
+        $result = $this->sendTextReply($conversation, $body, $userId);
+
+        if (! ($result['success'] ?? false)) {
+            return $result;
+        }
+
+        return array_merge($result, ['conversation' => $conversation->fresh(['user:id,name'])]);
+    }
+
+    private function errorRequiresTemplate(string $error): bool
+    {
+        $lower = mb_strtolower($error);
+
+        return str_contains($lower, 'template')
+            || str_contains($lower, '24 hour')
+            || str_contains($lower, '24 ساعة')
+            || str_contains($lower, 're-engagement')
+            || str_contains($lower, 'قالب');
     }
 
     /**

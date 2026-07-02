@@ -248,29 +248,53 @@ class WhatsAppInboxController extends Controller
     {
         $validated = $request->validate([
             'phone' => 'required|string|max:30',
-            'template_name' => 'required|string|max:200',
+            'body' => 'nullable|string|max:4096',
+            'template_name' => 'nullable|string|max:200',
             'language_code' => 'nullable|string|max:20',
         ]);
 
-        $result = $this->inbox->startConversationWithTemplate(
-            $validated['phone'],
-            $validated['template_name'],
-            $validated['language_code'] ?? 'en_US',
-            auth()->id()
-        );
+        $body = trim((string) ($validated['body'] ?? ''));
+        $templateName = trim((string) ($validated['template_name'] ?? ''));
+
+        if ($body !== '') {
+            $result = $this->inbox->startConversationWithMessage(
+                $validated['phone'],
+                $body,
+                auth()->id()
+            );
+        } elseif ($templateName !== '') {
+            $result = $this->inbox->startConversationWithTemplate(
+                $validated['phone'],
+                $templateName,
+                $validated['language_code'] ?? 'en_US',
+                auth()->id()
+            );
+        } else {
+            return response()->json(['success' => false, 'error' => 'اكتب رسالة للإرسال'], 422);
+        }
 
         if (! ($result['success'] ?? false)) {
-            return response()->json(['success' => false, 'error' => $result['error'] ?? 'فشل البدء'], 422);
+            return response()->json([
+                'success' => false,
+                'error' => $result['error'] ?? 'فشل البدء',
+                'requires_template' => $result['requires_template'] ?? false,
+            ], 422);
         }
 
         /** @var WhatsAppConversation $conversation */
         $conversation = $result['conversation'];
 
-        return response()->json([
+        $payload = [
             'success' => true,
             'redirect' => route('admin.whatsapp.inbox', ['conversation' => $conversation->id]),
             'conversation' => $this->inbox->serializeConversation($conversation),
-        ]);
+        ];
+
+        if (isset($result['message'])) {
+            $payload['message'] = $this->inbox->serializeMessage($result['message']->load('sentBy:id,name'));
+        }
+
+        return response()->json($payload);
     }
 
     public function markRead(WhatsAppConversation $conversation): JsonResponse

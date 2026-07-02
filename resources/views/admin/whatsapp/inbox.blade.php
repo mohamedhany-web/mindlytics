@@ -125,7 +125,7 @@
                     </div>
                     <p class="font-semibold text-slate-700 text-lg">محادثات الواتساب</p>
                     <p class="text-sm text-slate-500 mt-1 text-center max-w-sm">اختر محادثة من القائمة أو ابدأ محادثة جديدة بقالب Meta</p>
-                    <button type="button" @click="showStartModal = true" class="{{ $waBtnPrimary }} mt-5 text-sm">محادثة جديدة</button>
+                    <button type="button" @click="showStartModal = true" class="{{ $waBtnPrimary }} mt-5 text-sm">اكتب رسالة جديدة</button>
                 </div>
             </template>
 
@@ -160,9 +160,6 @@
                         </div>
                         <span x-show="withinWindow" class="hidden sm:inline-flex text-[10px] font-semibold px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
                             <i class="fas fa-clock ml-1"></i> 24 ساعة
-                        </span>
-                        <span x-show="!withinWindow" class="hidden sm:inline-flex text-[10px] font-semibold px-2 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-                            <i class="fas fa-file-alt ml-1"></i> قالب
                         </span>
                     </div>
 
@@ -203,9 +200,11 @@
                     {{-- شريط الإرسال — مثل واتساب --}}
                     <div class="shrink-0 bg-[#f0f2f5] px-3 py-2 sm:px-4 sm:py-3 border-t border-slate-200">
                         <div x-show="replyError" x-cloak class="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 mb-2" x-text="replyError"></div>
+                        <p x-show="!withinWindow" x-cloak class="text-[10px] text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-1.5 mb-2">
+                            إذا لم يرد العميل خلال 24 ساعة، قد يرفض Meta الرسالة النصية — جرّب الإرسال أو استخدم قالباً من الأسفل.
+                        </p>
 
-                        {{-- إرسال نصي داخل نافذة 24 ساعة --}}
-                        <div x-show="withinWindow" class="flex items-end gap-2">
+                        <div class="flex items-end gap-2">
                             <div class="flex-1 flex items-end gap-2 bg-white rounded-3xl px-3 py-1.5 shadow-sm border border-slate-100 min-h-[48px]">
                                 <textarea x-ref="composer" x-model="replyBody" rows="1" placeholder="اكتب رسالة..."
                                           @input="autoGrowComposer()"
@@ -219,26 +218,7 @@
                             </button>
                         </div>
 
-                        {{-- خارج نافذة 24 ساعة — قالب --}}
-                        <div x-show="!withinWindow" x-cloak class="space-y-2">
-                            <p class="text-[11px] text-amber-900 font-semibold px-1">خارج نافذة 24 ساعة — أرسل قالب Meta:</p>
-                            <div class="flex items-center gap-2">
-                                <select x-model="selectedTemplateKey" @change="applySelectedTemplate()"
-                                        class="flex-1 rounded-full border-0 bg-white px-4 py-2.5 text-sm shadow-sm">
-                                    <option value="">اختر قالباً...</option>
-                                    <template x-for="t in metaTemplates" :key="t.name + t.language">
-                                        <option :value="t.name + '|' + t.language" x-text="t.label"></option>
-                                    </template>
-                                </select>
-                                <button type="button" @click="sendTemplate()" :disabled="sending || !templateName"
-                                        class="w-12 h-12 rounded-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 text-white flex items-center justify-center shrink-0 shadow-md">
-                                    <i class="fas fa-paper-plane"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        {{-- قالب اختياري داخل النافذة --}}
-                        <div x-show="withinWindow && showTemplatePicker" x-cloak class="mt-2 flex gap-2">
+                        <div x-show="showTemplatePicker" x-cloak class="mt-2 flex gap-2">
                             <select x-model="selectedTemplateKey" @change="applySelectedTemplate()"
                                     class="flex-1 rounded-full bg-white px-3 py-1.5 text-xs shadow-sm border-0">
                                 <option value="">قالب Meta...</option>
@@ -247,11 +227,11 @@
                                 </template>
                             </select>
                             <button type="button" @click="sendTemplate()" :disabled="sending || !templateName"
-                                    class="text-xs px-3 py-1.5 rounded-full bg-white text-emerald-700 font-semibold shadow-sm">إرسال</button>
+                                    class="text-xs px-3 py-1.5 rounded-full bg-white text-emerald-700 font-semibold shadow-sm">إرسال قالب</button>
                         </div>
-                        <button x-show="withinWindow" type="button" @click="showTemplatePicker = !showTemplatePicker"
+                        <button type="button" @click="showTemplatePicker = !showTemplatePicker"
                                 class="mt-1.5 text-[10px] text-slate-500 hover:text-emerald-600 px-1">
-                            <i class="fas fa-file-alt"></i> <span x-text="showTemplatePicker ? 'إخفاء القوالب' : 'إرسال قالب'"></span>
+                            <i class="fas fa-file-alt"></i> <span x-text="showTemplatePicker ? 'إخفاء القوالب' : 'إرسال بقالب Meta (اختياري)'"></span>
                         </button>
                     </div>
                 </div>
@@ -262,17 +242,19 @@
     {{-- modal محادثة جديدة --}}
     <div x-show="showStartModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" @keydown.escape.window="showStartModal = false">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4" @click.outside="showStartModal = false">
-            <h3 class="font-bold text-lg text-slate-900">بدء محادثة جديدة</h3>
-            <p class="text-xs text-slate-600">أول رسالة يجب أن تكون <strong>قالب Meta معتمد</strong>.</p>
-            @if(!empty($metaTemplatesError))
-                <p class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">{{ $metaTemplatesError }}</p>
-            @endif
+            <h3 class="font-bold text-lg text-slate-900">محادثة جديدة</h3>
+            <p class="text-xs text-slate-600">أدخل رقم الواتساب واكتب رسالتك ثم اضغط إرسال.</p>
             <div>
                 <label class="{{ $waLabelClass }}">رقم الواتساب</label>
                 <input type="text" x-model="startPhone" placeholder="2010xxxxxxx" class="{{ $waInputClass }} dir-ltr text-sm">
             </div>
             <div>
-                <label class="{{ $waLabelClass }}">قالب Meta</label>
+                <label class="{{ $waLabelClass }}">الرسالة</label>
+                <textarea x-model="startBody" rows="3" placeholder="اكتب رسالتك هنا..."
+                          class="{{ $waInputClass }} text-sm resize-none"></textarea>
+            </div>
+            <div x-show="showStartTemplatePicker" x-cloak class="space-y-2 pt-1 border-t border-slate-100">
+                <label class="{{ $waLabelClass }}">أو أرسل بقالب Meta</label>
                 @if(count($metaTemplates ?? []) > 0)
                     <select x-model="selectedTemplateKey" @change="applySelectedTemplate(true)" class="{{ $waSelectClass }} text-sm dir-ltr">
                         @foreach($metaTemplates as $tpl)
@@ -280,13 +262,19 @@
                         @endforeach
                     </select>
                 @else
-                    <p class="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">لا توجد قوالب معتمدة.</p>
+                    <p class="text-xs text-slate-500">لا توجد قوالب معتمدة.</p>
                 @endif
             </div>
+            <button type="button" @click="showStartTemplatePicker = !showStartTemplatePicker"
+                    class="text-[11px] text-slate-500 hover:text-emerald-600">
+                <i class="fas fa-file-alt"></i> <span x-text="showStartTemplatePicker ? 'إخفاء القوالب' : 'إرسال بقالب بدلاً من ذلك'"></span>
+            </button>
             <p x-show="startError" class="text-xs text-rose-600" x-text="startError"></p>
             <div class="flex gap-2 justify-end">
                 <button type="button" @click="showStartModal = false" class="{{ $waBtnSecondary }} text-sm">إلغاء</button>
-                <button type="button" @click="startConversation()" :disabled="sending" class="{{ $waBtnPrimary }} text-sm">بدء</button>
+                <button type="button" @click="startConversation()" :disabled="sending" class="{{ $waBtnPrimary }} text-sm">
+                    <i class="fas fa-paper-plane ml-1"></i> إرسال
+                </button>
             </div>
         </div>
     </div>
@@ -330,6 +318,7 @@ function whatsappInbox() {
         templateLang: '',
         selectedTemplateKey: '',
         startPhone: '',
+        startBody: '',
         startTemplate: '',
         startLang: '',
         replyError: '',
@@ -338,6 +327,7 @@ function whatsappInbox() {
         loadingConversation: false,
         loadingList: false,
         showStartModal: false,
+        showStartTemplatePicker: false,
         showSidebarMobile: false,
         showTemplatePicker: false,
         pollTimer: null,
@@ -582,7 +572,7 @@ function whatsappInbox() {
                 if (!data.success) {
                     this.replyBody = body;
                     this.replyError = data.error || 'فشل الإرسال';
-                    if (data.requires_template) this.withinWindow = false;
+                    if (data.requires_template) this.showTemplatePicker = true;
                     return;
                 }
                 this.chatMessages.push(data.message);
@@ -633,14 +623,34 @@ function whatsappInbox() {
         },
 
         async startConversation() {
-            this.applySelectedTemplate(true);
-            if (!this.startUrl || !this.startPhone.trim() || !this.startTemplate.trim()) {
-                this.startError = 'أدخل الرقم واختر قالباً';
+            if (!this.startUrl || !this.startPhone.trim()) {
+                this.startError = 'أدخل رقم الواتساب';
                 return;
             }
+
+            const body = this.startBody.trim();
+            const useTemplate = this.showStartTemplatePicker && this.startTemplate.trim();
+
+            if (!body && !useTemplate) {
+                this.startError = 'اكتب رسالة أو اختر قالباً';
+                return;
+            }
+
+            if (useTemplate && !body) {
+                this.applySelectedTemplate(true);
+            }
+
             this.sending = true;
             this.startError = '';
             try {
+                const payload = { phone: this.startPhone };
+                if (body) {
+                    payload.body = body;
+                } else if (useTemplate) {
+                    payload.template_name = this.startTemplate;
+                    payload.language_code = this.startLang || 'en_US';
+                }
+
                 const res = await fetch(this.startUrl, {
                     method: 'POST',
                     headers: {
@@ -649,19 +659,17 @@ function whatsappInbox() {
                         'X-CSRF-TOKEN': this.csrf,
                         'X-Requested-With': 'XMLHttpRequest',
                     },
-                    body: JSON.stringify({
-                        phone: this.startPhone,
-                        template_name: this.startTemplate,
-                        language_code: this.startLang || 'en_US',
-                    }),
+                    body: JSON.stringify(payload),
                 });
                 const data = await res.json();
                 if (!data.success) {
-                    this.startError = data.error || 'فشل البدء';
+                    this.startError = data.error || 'فشل الإرسال';
+                    if (data.requires_template) this.showStartTemplatePicker = true;
                     return;
                 }
                 this.showStartModal = false;
                 this.startPhone = '';
+                this.startBody = '';
                 if (data.conversation?.id) {
                     this.upsertConversation(data.conversation);
                     await this.selectConversation(data.conversation.id);
