@@ -93,7 +93,7 @@ class OnlineEnrollmentProvisioner
             $invoice = Invoice::create([
                 'invoice_number' => $invoiceNumber,
                 'user_id' => $student->id,
-                'type' => 'online_course',
+                'type' => 'course',
                 'description' => 'تفعيل كورس أونلاين: ' . $course->title,
                 'subtotal' => $original,
                 'tax_amount' => 0,
