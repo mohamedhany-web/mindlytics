@@ -81,10 +81,17 @@ class SyncInstructorAgreementPaymentsCommand extends Command
 
             foreach ($missing as $enrollment) {
                 try {
-                    $payment = InstructorCoursePercentageService::processEnrollmentActivation($enrollment, $agreement);
+                    $payment = InstructorCoursePercentageService::processEnrollmentActivation(
+                        $enrollment,
+                        $agreement,
+                        rethrowOnFailure: true,
+                    );
                     if ($payment) {
                         $payment->loadMissing(['enrollment.student']);
                         $created[] = $payment;
+                    } else {
+                        $errors[] = ($enrollment->student?->name ?? '#' . $enrollment->id)
+                            . ': لم يُنشأ السجل (تحقق من شروط الاتفاقية أو السجل المكرر).';
                     }
                 } catch (\Throwable $e) {
                     $errors[] = ($enrollment->student?->name ?? '#' . $enrollment->id) . ': ' . $e->getMessage();
@@ -233,16 +240,27 @@ class SyncInstructorAgreementPaymentsCommand extends Command
 
     private function ensureAgreementPaymentsSchema(): void
     {
-        try {
-            DB::statement("ALTER TABLE agreement_payments MODIFY COLUMN type ENUM(
-                'course_completion', 'hourly_teaching', 'monthly_salary', 'bonus', 'other', 'course_activation'
-            ) DEFAULT 'course_completion'");
-        } catch (\Throwable $e) {
-            $this->warn('تعذر تحديث ENUM لجدول agreement_payments — تأكد من تشغيل migrations.');
-        }
+        $issues = [];
 
         if (! \Illuminate\Support\Facades\Schema::hasColumn('agreement_payments', 'student_course_enrollment_id')) {
-            $this->error('عمود student_course_enrollment_id غير موجود في agreement_payments — شغّل: php artisan migrate --force');
+            $issues[] = 'العمود student_course_enrollment_id غير موجود — شغّل: php artisan migrate --force';
+        }
+
+        try {
+            $column = DB::selectOne("SHOW COLUMNS FROM agreement_payments WHERE Field = 'type'");
+            $typeDefinition = (string) ($column->Type ?? '');
+            if ($typeDefinition !== '' && ! str_contains($typeDefinition, 'course_activation')) {
+                DB::statement("ALTER TABLE agreement_payments MODIFY COLUMN type ENUM(
+                    'course_completion', 'hourly_teaching', 'monthly_salary', 'bonus', 'other', 'course_activation'
+                ) DEFAULT 'course_completion'");
+                $this->info('تم تحديث ENUM لجدول agreement_payments وإضافة course_activation.');
+            }
+        } catch (\Throwable $e) {
+            $issues[] = 'تعذر التحقق/تحديث ENUM لجدول agreement_payments: ' . $e->getMessage();
+        }
+
+        foreach ($issues as $issue) {
+            $this->error($issue);
         }
     }
 }

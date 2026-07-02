@@ -55,9 +55,25 @@ class AgreementPayment extends Model
     {
         static::creating(function (AgreementPayment $payment) {
             if (empty($payment->payment_number)) {
-                $payment->payment_number = 'AGP-' . date('Y') . '-' . str_pad(AgreementPayment::count() + 1, 6, '0', STR_PAD_LEFT);
+                $payment->payment_number = self::generatePaymentNumber();
             }
         });
+    }
+
+    public static function generatePaymentNumber(): string
+    {
+        $prefix = 'AGP-' . date('Y') . '-';
+        $lastNumber = static::query()
+            ->where('payment_number', 'like', $prefix . '%')
+            ->orderByDesc('id')
+            ->value('payment_number');
+
+        $next = 1;
+        if (is_string($lastNumber) && preg_match('/-(\d+)$/', $lastNumber, $matches)) {
+            $next = ((int) $matches[1]) + 1;
+        }
+
+        return $prefix . str_pad((string) $next, 6, '0', STR_PAD_LEFT);
     }
 
     public function agreement(): BelongsTo

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AgreementPayment;
 use App\Models\InstructorAgreement;
 use App\Models\StudentCourseEnrollment;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -79,6 +80,11 @@ class InstructorCoursePercentageService
 
         try {
             return DB::transaction(function () use ($agreement, $enrollment, $instructorAmount, $discountNote) {
+                $createdBy = $enrollment->activated_by;
+                if ($createdBy && ! User::query()->whereKey($createdBy)->exists()) {
+                    $createdBy = null;
+                }
+
                 $payment = AgreementPayment::create([
                     'agreement_id' => $agreement->id,
                     'instructor_id' => $agreement->instructor_id,
@@ -89,7 +95,7 @@ class InstructorCoursePercentageService
                     'related_course_id' => $enrollment->advanced_course_id,
                     'student_course_enrollment_id' => $enrollment->id,
                     'payment_date' => $enrollment->activated_at ?? now(),
-                    'created_by' => $enrollment->activated_by,
+                    'created_by' => $createdBy,
                 ]);
                 Log::info('Instructor course percentage payment created', [
                     'agreement_id' => $agreement->id,
