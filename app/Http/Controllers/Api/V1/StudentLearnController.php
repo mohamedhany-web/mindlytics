@@ -139,7 +139,7 @@ class StudentLearnController extends Controller
 
         $cacheKey = sprintf('api_lecture_playback:%d:%d:%d', $course->id, $lectureModel->id, $user->id);
 
-        $payload = Cache::remember($cacheKey, now()->addMinutes(18), function () use ($lectureModel, $course, $user) {
+        $payload = Cache::remember($cacheKey, now()->addMinutes(55), function () use ($lectureModel, $course, $user) {
             $resolved = LectureRecordingResolver::resolve(
                 $lectureModel->recording_url,
                 $lectureModel->video_platform

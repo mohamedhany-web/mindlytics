@@ -116,7 +116,7 @@ class CheckoutController extends Controller
                 ->with('info', 'أنت مسجل بالفعل في هذا الكورس');
         }
 
-        $amount = (float) ($course->price ?? 0);
+        $amount = $course->effectivePrice();
         if ($amount <= 0) {
             if ($request->expectsJson()) {
                 return response()->json(['message' => 'هذا الكورس مجاني يمكنك التسجيل مباشرة.'], 422);
@@ -160,24 +160,25 @@ class CheckoutController extends Controller
         }
 
         $orderCreatedThisRequest = false;
+        $pricing = $course->paymentBreakdown();
         DB::beginTransaction();
         try {
             if ($existingOrder && $existingOrder->payment_method === 'online' && $existingOrder->payment_proof === null) {
                 $order = $existingOrder;
                 if ((float) $order->amount !== $amount) {
                     $order->update([
-                        'original_amount' => $amount,
-                        'discount_amount' => 0,
-                        'amount' => $amount,
+                        'original_amount' => $pricing['original_amount'],
+                        'discount_amount' => $pricing['discount_amount'],
+                        'amount' => $pricing['amount'],
                     ]);
                 }
             } else {
                 $order = Order::create([
                     'user_id' => Auth::id(),
                     'advanced_course_id' => $course->id,
-                    'original_amount' => $amount,
-                    'discount_amount' => 0,
-                    'amount' => $amount,
+                    'original_amount' => $pricing['original_amount'],
+                    'discount_amount' => $pricing['discount_amount'],
+                    'amount' => $pricing['amount'],
                     'payment_method' => 'online',
                     'payment_proof' => null,
                     'wallet_id' => null,
@@ -533,11 +534,12 @@ class CheckoutController extends Controller
             return response()->json(['message' => 'أنت مسجل بالفعل في هذا الكورس'], 422);
         }
 
-        $amount = (float) ($course->price ?? 0);
+        $amount = $course->effectivePrice();
         if ($amount <= 0) {
             return response()->json(['message' => 'هذا الكورس مجاني يمكنك التسجيل مباشرة.'], 422);
         }
 
+        $pricing = $course->paymentBreakdown();
         $user = Auth::user();
         $email = trim((string) ($user->email ?? ''));
         if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -601,9 +603,9 @@ class CheckoutController extends Controller
                 $order = $existingOrder;
                 if ((float) $order->amount !== $amount) {
                     $order->update([
-                        'original_amount' => $amount,
-                        'discount_amount' => 0,
-                        'amount' => $amount,
+                        'original_amount' => $pricing['original_amount'],
+                        'discount_amount' => $pricing['discount_amount'],
+                        'amount' => $pricing['amount'],
                         'notes' => 'دفع عبر فواتيرك (iframe)',
                     ]);
                 }
@@ -611,9 +613,9 @@ class CheckoutController extends Controller
                 $order = Order::create([
                     'user_id' => Auth::id(),
                     'advanced_course_id' => $course->id,
-                    'original_amount' => $amount,
-                    'discount_amount' => 0,
-                    'amount' => $amount,
+                    'original_amount' => $pricing['original_amount'],
+                    'discount_amount' => $pricing['discount_amount'],
+                    'amount' => $pricing['amount'],
                     'payment_method' => 'online',
                     'payment_proof' => null,
                     'wallet_id' => null,
@@ -1124,9 +1126,10 @@ class CheckoutController extends Controller
         DB::beginTransaction();
         try {
             // حساب السعر النهائي
-            $originalAmount = $course->price ?? 0;
-            $finalAmount = $originalAmount;
-            $discountAmount = 0;
+            $pricing = $course->paymentBreakdown();
+            $originalAmount = $pricing['original_amount'];
+            $finalAmount = $pricing['amount'];
+            $discountAmount = $pricing['discount_amount'];
 
             // رفع صورة الإيصال
             $paymentProofPath = $request->file('payment_proof')->store('payment-proofs', 'public');
@@ -1180,7 +1183,7 @@ class CheckoutController extends Controller
             ->firstOrFail();
 
         // التحقق من أن الكورس مجاني
-        if (($course->price ?? 0) > 0 && !($course->is_free ?? false)) {
+        if ($course->effectivePrice() > 0 && !($course->is_free ?? false)) {
             return redirect()->route('public.course.show', $course->id)
                 ->with('error', 'هذا الكورس ليس مجانياً');
         }

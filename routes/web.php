@@ -312,7 +312,9 @@ Route::get('/courses', function () {
             'title' => $course->localized('title') ?: 'بدون عنوان',
             'description' => $course->localized('description') ?? '',
             'level' => $course->level ?? 'beginner',
-            'price' => (float)($course->price ?? 0),
+            'price' => $course->effectivePrice(),
+            'original_price' => $course->originalPrice(),
+            'discount_amount' => $course->courseDiscountAmount(),
             'duration_hours' => (int)($course->duration_hours ?? 0),
             'is_featured' => (bool)($course->is_featured ?? false),
             'lectures_count' => (int)($course->lectures_count ?? 0),
@@ -769,14 +771,26 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         }
         
         $progress = $lesson->progress()->where('user_id', $user->id)->first();
-        
+
+        $videoUrl = $lesson->video_url ? trim($lesson->video_url) : null;
+        $videoPlatform = null;
+        if ($videoUrl) {
+            $resolved = \App\Support\LectureRecordingResolver::resolve(
+                $videoUrl,
+                \App\Helpers\VideoHelper::getVideoSource($videoUrl)
+            );
+            $videoUrl = $resolved['recording_url'] ?: $videoUrl;
+            $videoPlatform = $resolved['video_platform'];
+        }
+
         return response()->json([
             'id' => $lesson->id,
             'title' => $lesson->title,
             'description' => $lesson->description,
             'content' => $lesson->content,
             'type' => $lesson->type,
-            'video_url' => $lesson->video_url ? trim($lesson->video_url) : null,
+            'video_url' => $videoUrl,
+            'video_platform' => $videoPlatform,
             'duration_minutes' => $lesson->duration_minutes,
             'attachments' => $lesson->attachments ? json_decode($lesson->attachments, true) : null,
             'progress' => $progress ? [
@@ -1778,6 +1792,10 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('/', [\App\Http\Controllers\Admin\InstructorAgreementController::class, 'store'])
                 ->middleware('throttle:20,5')
                 ->name('store');
+            Route::put('/payments/{payment}', [\App\Http\Controllers\Admin\InstructorAgreementController::class, 'updatePayment'])
+                ->name('payments.update');
+            Route::delete('/payments/{payment}', [\App\Http\Controllers\Admin\InstructorAgreementController::class, 'destroyPayment'])
+                ->name('payments.destroy');
             Route::get('/{agreement}', [\App\Http\Controllers\Admin\InstructorAgreementController::class, 'show'])->name('show');
             Route::get('/{agreement}/edit', [\App\Http\Controllers\Admin\InstructorAgreementController::class, 'edit'])->name('edit');
             Route::put('/{agreement}', [\App\Http\Controllers\Admin\InstructorAgreementController::class, 'update'])

@@ -5,8 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CourseLesson;
 use App\Models\AdvancedCourse;
 use App\Helpers\VideoHelper;
-use App\Models\VideoProvider;
-use App\Support\BunnyStreamSigner;
+use App\Support\LectureRecordingResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Http\RedirectResponse;
@@ -66,12 +65,8 @@ class ProtectedVideoController extends Controller
         }
 
         if ($source === 'bunny') {
-            $signed = $embedUrl;
-            $provider = VideoProvider::where('platform', 'bunny')->where('is_active', true)->orderByDesc('id')->first();
-            $key = $provider?->token_auth_key ? trim((string) $provider->token_auth_key) : '';
-            if ($key !== '') {
-                $signed = BunnyStreamSigner::signEmbedUrl($embedUrl, $key, now()->addMinutes(20)->timestamp);
-            }
+            $resolved = LectureRecordingResolver::resolve($videoUrl, 'bunny');
+            $signed = $resolved['recording_url'] ?: $embedUrl;
 
             return response()
                 ->view('video.protected-embed', [

@@ -183,9 +183,33 @@
 
                                 <div class="space-y-2">
                                     <label class="block text-sm font-semibold text-gray-700">سعر الكورس (جنيه)</label>
-                                    <input type="number" name="price" value="{{ old('price', $advancedCourse->price ?? 0) }}" min="0" step="0.01"
+                                    <input type="number" name="price" id="course_price" value="{{ old('price', $advancedCourse->price ?? 0) }}" min="0" step="0.01"
                                            class="w-full rounded-2xl border border-gray-200 bg-white/70 px-4 py-3 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition"
                                            placeholder="0 للمواد المجانية">
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-semibold text-gray-700">خصم الكورس (جنيه)</label>
+                                    <input type="number" name="discount_amount" id="course_discount" value="{{ old('discount_amount', $advancedCourse->discount_amount ?? 0) }}" min="0" step="0.01"
+                                           class="w-full rounded-2xl border border-gray-200 bg-white/70 px-4 py-3 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition"
+                                           placeholder="0 بدون خصم">
+                                    @error('discount_amount') <p class="text-xs text-rose-500 mt-1">{{ $message }}</p> @enderror
+                                </div>
+
+                                <div class="md:col-span-2 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4" id="course_price_preview">
+                                    <p class="text-xs font-bold text-emerald-800 mb-2">معاينة السعر على الكارد</p>
+                                    <div class="flex flex-wrap items-end gap-3">
+                                        <div>
+                                            <span class="text-xs text-gray-500 block">قبل الخصم</span>
+                                            <span id="preview_original" class="text-lg font-bold text-gray-400 line-through">0</span>
+                                            <span class="text-xs text-gray-500">ج.م</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-xs text-gray-500 block">بعد الخصم</span>
+                                            <span id="preview_final" class="text-2xl font-black text-blue-600">0</span>
+                                            <span class="text-xs text-gray-500">ج.م</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -491,6 +515,38 @@ function courseBuilder({tracks, selectedTrack, selectedSubject, selectedSkills})
         }
     }
 }
+
+(function () {
+    const priceInput = document.getElementById('course_price');
+    const discountInput = document.getElementById('course_discount');
+    const previewOriginal = document.getElementById('preview_original');
+    const previewFinal = document.getElementById('preview_final');
+    const previewBox = document.getElementById('course_price_preview');
+
+    if (!priceInput || !discountInput || !previewOriginal || !previewFinal) {
+        return;
+    }
+
+    function updatePricePreview() {
+        const price = Math.max(0, parseFloat(priceInput.value) || 0);
+        const discount = Math.max(0, Math.min(price, parseFloat(discountInput.value) || 0));
+        const finalPrice = Math.max(0, price - discount);
+
+        previewOriginal.textContent = price.toLocaleString('en-US', { maximumFractionDigits: 2 });
+        previewFinal.textContent = finalPrice.toLocaleString('en-US', { maximumFractionDigits: 2 });
+
+        if (previewBox) {
+            previewBox.style.display = price > 0 ? '' : 'none';
+        }
+
+        previewOriginal.classList.toggle('line-through', discount > 0);
+        previewOriginal.parentElement.style.display = discount > 0 ? '' : 'none';
+    }
+
+    priceInput.addEventListener('input', updatePricePreview);
+    discountInput.addEventListener('input', updatePricePreview);
+    updatePricePreview();
+})();
 </script>
 @endpush
 @endsection

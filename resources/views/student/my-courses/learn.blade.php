@@ -35,11 +35,7 @@
         $videoPlatform = \DB::table('lectures')->where('id', $lecture->id)->value('video_platform');
         $recordingUrlFinal = $recordingUrl ? trim($recordingUrl) : ($lecture->recording_url ? trim($lecture->recording_url) : null);
         $videoPlatformFinal = $videoPlatform ? trim(strtolower($videoPlatform)) : ($lecture->video_platform ? trim(strtolower($lecture->video_platform)) : null);
-        if ($recordingUrlFinal) {
-            $resolvedRecording = \App\Support\LectureRecordingResolver::resolve($recordingUrlFinal, $videoPlatformFinal);
-            $recordingUrlFinal = $resolvedRecording['recording_url'] ?: $recordingUrlFinal;
-            $videoPlatformFinal = $resolvedRecording['video_platform'] ?: $videoPlatformFinal;
-        }
+        // لا نوقّع روابط Bunny هنا — التوقيع يتم عند فتح المحاضرة (مع كاش سيرفر 55 دقيقة) لتقليل التكلفة
         $materials = $lecture->materials()->where('is_visible_to_student', true)->orderBy('sort_order')->get()->map(function($m) use ($course, $lecture) {
             return [
                 'id' => $m->id,
@@ -260,20 +256,28 @@ function courseFocusMode() {
             this.lessonContent = '<div class="text-center p-8"><i class="fas fa-spinner fa-spin text-4xl text-sky-500 mb-4"></i><p class="text-gray-600">جاري تحميل الدرس...</p></div>';
             
             try {
-                // جلب بيانات الدرس من API
-                const response = await fetch(`/api/lessons/${lessonId}`, {
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
+                window.__learnLessonCache = window.__learnLessonCache || {};
+                const cacheTtlMs = 50 * 60 * 1000;
+                const cached = window.__learnLessonCache[lessonId];
+                let lesson;
+                if (cached && (Date.now() - cached.at) < cacheTtlMs) {
+                    lesson = cached.data;
+                } else {
+                    const response = await fetch(`/api/lessons/${lessonId}`, {
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.error || 'فشل تحميل الدرس');
                     }
-                });
-                
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error || 'فشل تحميل الدرس');
+
+                    lesson = await response.json();
+                    window.__learnLessonCache[lessonId] = { at: Date.now(), data: lesson };
                 }
-                
-                const lesson = await response.json();
                 this.currentLessonTitle = lesson.title || '';
                 this.currentLessonDuration = lesson.duration_minutes || null;
                 const videoSrc = lesson.video_url || null;
@@ -289,11 +293,14 @@ function courseFocusMode() {
                 if (videoSrc) {
                     this.showVideoPlayer = true;
                     this.currentLessonVideoUrl = videoSrc;
-                    let platform = null;
-                    if (videoSrc.includes('youtube.com') || videoSrc.includes('youtu.be')) platform = 'youtube';
-                    else if (videoSrc.includes('vimeo.com')) platform = 'vimeo';
-                    else if (videoSrc.includes('drive.google.com')) platform = 'google_drive';
-                    else if (videoSrc.match(/\.(mp4|webm|ogg|avi|mov)(\?.*)?$/i)) platform = 'direct';
+                    let platform = lesson.video_platform ? String(lesson.video_platform).toLowerCase() : null;
+                    if (!platform) {
+                        if (videoSrc.includes('youtube.com') || videoSrc.includes('youtu.be')) platform = 'youtube';
+                        else if (videoSrc.includes('vimeo.com')) platform = 'vimeo';
+                        else if (videoSrc.includes('drive.google.com')) platform = 'google_drive';
+                        else if (videoSrc.includes('mediadelivery.net')) platform = 'bunny';
+                        else if (videoSrc.match(/\.(mp4|webm|ogg|avi|mov)(\?.*)?$/i)) platform = 'direct';
+                    }
                     [100, 250, 500].forEach(delay => {
                         setTimeout(() => {
                             const videoContainer = document.querySelector('#video-container');
@@ -645,6 +652,10 @@ function courseFocusMode() {
                 return;
             }
 
+            if (courseId) {
+                lecture = await this.ensureLectureRecordingReady(lecture, lectureId, courseId);
+            }
+
             this.lectureMaterials = lecture.materials || [];
             const isAlreadyCompleted = this.isLectureCompleted(lecture);
             this.startLectureFromBeginning = options.autoAdvance === true || (isAlreadyCompleted && options.autoAdvance !== true);
@@ -685,10 +696,18 @@ function courseFocusMode() {
                 const canControl = (platform === 'youtube' || platform === 'vimeo' || platform === 'bunny');
                 if (canControl && courseId) {
                     let lecturePlayerInitDone = false;
+                    const playbackKey = String(lectureId) + '|' + url;
                     const initLecturePlayer = () => {
                         if (lecturePlayerInitDone) return true;
                         const container = document.getElementById('learn-video-embed');
                         if (!container || typeof window.initLectureVideoWithQuestions !== 'function') return false;
+                        const replayRequested = this.startLectureFromBeginning === true;
+                        const existingIframe = document.getElementById('lecture-yt-player-box')?.querySelector('iframe');
+                        if (!replayRequested && this._activeLecturePlaybackKey === playbackKey && existingIframe) {
+                            lecturePlayerInitDone = true;
+                            return true;
+                        }
+                        this._activeLecturePlaybackKey = playbackKey;
                         lecturePlayerInitDone = true;
                         container.innerHTML = '';
                         window.initLectureVideoWithQuestions(container, lecture, platform, url, courseId, lectureId);
@@ -909,6 +928,41 @@ function courseFocusMode() {
             div.textContent = text;
             return div.innerHTML;
         },
+        bunnySignedUrlIsFresh(url) {
+            try {
+                const u = new URL(String(url), window.location.origin);
+                const exp = parseInt(u.searchParams.get('expires') || '0', 10);
+                return exp > Math.floor(Date.now() / 1000) + 120;
+            } catch (e) {
+                return false;
+            }
+        },
+        async ensureLectureRecordingReady(lecture, lectureId, courseId) {
+            if (!lecture) return lecture;
+            const url = (lecture.recording_url || '').trim();
+            if (!url) return lecture;
+            const isBunny = String(lecture.video_platform || '').toLowerCase() === 'bunny' || url.includes('mediadelivery.net');
+            if (!isBunny) return lecture;
+            if (url.includes('token=') && this.bunnySignedUrlIsFresh(url)) return lecture;
+            const lecturesUrlTemplate = this.$el.closest('[data-lectures-url]')?.dataset?.lecturesUrl;
+            if (!courseId || !lecturesUrlTemplate) return lecture;
+            try {
+                const res = await fetch(lecturesUrlTemplate.replace('_LID_', lectureId), {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!res.ok) return lecture;
+                const fromApi = await res.json();
+                if (!fromApi || !fromApi.recording_url) return lecture;
+                if (!this.lecturesData) this.lecturesData = {};
+                const sid = String(lectureId);
+                this.lecturesData[sid] = fromApi;
+                this.lecturesData[parseInt(lectureId, 10)] = fromApi;
+                return fromApi;
+            } catch (e) {
+                console.warn('ensureLectureRecordingReady failed', e);
+                return lecture;
+            }
+        },
         /** نفس أسلوب معاينة الفيديو في بوب أب إضافة المحاضرة بالمنهج — بناء HTML الـ iframe/video حسب المنصة */
         buildLectureVideoEmbedHtml(url, platform) {
             if (!url || !platform) return '';
@@ -932,11 +986,12 @@ function courseFocusMode() {
                     html = '<video controls width="100%" height="100%" style="max-height: 100%; border-radius: 0.75rem;" class="w-full h-full"><source src="' + esc + '" type="video/mp4">متصفحك لا يدعم تشغيل الفيديو.</video>';
                 }
             } else if (platform === 'bunny') {
-                const m = u.match(/mediadelivery\.net\/embed\/(\d+)\/([a-zA-Z0-9_-]+)/);
+                const m = u.match(/mediadelivery\.net\/(?:play|embed)\/(\d+)\/([a-zA-Z0-9_-]+)/);
                 if (m && m[1] && m[2]) {
-                    const embedUrl = u.split('?')[0];
-                    const src = embedUrl.startsWith('http') ? embedUrl : ('https://' + embedUrl.replace(/^\/+/, ''));
-                    html = '<iframe src="' + src.replace(/"/g, '&quot;') + '" width="100%" height="100%" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture" allowfullscreen style="border-radius: 0.75rem;"></iframe>';
+                    const qIdx = u.indexOf('?');
+                    const q = qIdx >= 0 ? u.substring(qIdx) : '';
+                    const src = ('https://iframe.mediadelivery.net/embed/' + m[1] + '/' + m[2] + q).replace(/"/g, '&quot;');
+                    html = '<iframe src="' + src + '" width="100%" height="100%" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture" allowfullscreen style="border-radius: 0.75rem;"></iframe>';
                 }
             }
             return html;
@@ -1209,18 +1264,28 @@ function videoPlayer() {
             if (this.ytProgressInterval) { clearInterval(this.ytProgressInterval); this.ytProgressInterval = null; }
             if (this.vimeoProgressInterval) { clearInterval(this.vimeoProgressInterval); this.vimeoProgressInterval = null; }
             if (this.bunnyProgressInterval) { clearInterval(this.bunnyProgressInterval); this.bunnyProgressInterval = null; }
+            if (!videoUrl) {
+                this.currentLessonVideoUrl = null;
+                this._loadedPlaybackKey = null;
+                return;
+            }
+            platform = platform || this.detectPlatform(videoUrl);
+            const normalizedUrl = platform === 'bunny' ? (this.getBunnyEmbedUrl(videoUrl) || videoUrl) : videoUrl;
+            const playbackKey = (platform || 'unknown') + '|' + normalizedUrl;
+            const surfaceEarly = this.getSurface();
+            if (this._loadedPlaybackKey === playbackKey && surfaceEarly && surfaceEarly.querySelector('iframe, video')) {
+                this.currentLessonVideoUrl = videoUrl;
+                return;
+            }
+            this._loadedPlaybackKey = playbackKey;
             this.vimeoPlayer = null;
             this.bunnyPlayer = null;
             if (this.bunnyMessageHandler) {
                 try { window.removeEventListener('message', this.bunnyMessageHandler); } catch (e) {}
                 this.bunnyMessageHandler = null;
             }
-            if (!videoUrl) {
-                this.currentLessonVideoUrl = null;
-                return;
-            }
             this.currentLessonVideoUrl = videoUrl;
-            const surface = this.getSurface();
+            const surface = surfaceEarly || this.getSurface();
             if (!surface) {
                 this.$nextTick && this.$nextTick(() => this.loadVideo(videoUrl, platform));
                 setTimeout(() => this.loadVideo(videoUrl, platform), 200);

@@ -21,7 +21,7 @@ class CouponController extends Controller
 
         $couponCode = strtoupper(trim($request->coupon_code));
         $course = AdvancedCourse::findOrFail($request->course_id);
-        $coursePrice = $course->price ?? 0;
+        $coursePrice = $course->effectivePrice();
 
         // البحث عن الكوبون
         $coupon = Coupon::where('code', $couponCode)->first();

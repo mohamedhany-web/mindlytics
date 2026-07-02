@@ -7,11 +7,15 @@ use App\Models\VideoProvider;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * توحيد روابط تسجيل المحاضرات مع تخزين مؤقت لتقليل توقيع Bunny المتكرر.
+ * توحيد روابط تسجيل المحاضرات/الدروس مع تخزين مؤقت لتقليل توقيع Bunny المتكرر.
  */
 final class LectureRecordingResolver
 {
-    private const CACHE_MINUTES = 18;
+    /** مدة الكاش — أقل قليلاً من صلاحية توكن Bunny */
+    private const CACHE_MINUTES = 55;
+
+    /** صلاحية توكن Bunny بالدقائق */
+    private const TOKEN_MINUTES = 60;
 
     /**
      * @return array{recording_url: string, video_platform: ?string}
@@ -28,7 +32,7 @@ final class LectureRecordingResolver
             $platform = VideoHelper::getVideoSource($url);
         }
 
-        $cacheKey = 'lecture_recording_v1:'.md5($url.'|'.$platform);
+        $cacheKey = 'lecture_recording_v2:'.md5($url.'|'.$platform);
 
         return Cache::remember($cacheKey, now()->addMinutes(self::CACHE_MINUTES), function () use ($url, $platform) {
             $embed = VideoHelper::getEmbedUrl($url) ?? $url;
@@ -36,16 +40,12 @@ final class LectureRecordingResolver
 
             if ($resolvedPlatform === 'bunny' || VideoHelper::getVideoSource($url) === 'bunny') {
                 $resolvedPlatform = 'bunny';
-                $provider = VideoProvider::where('platform', 'bunny')
-                    ->where('is_active', true)
-                    ->orderByDesc('id')
-                    ->first();
-                $key = $provider?->token_auth_key ? trim((string) $provider->token_auth_key) : '';
+                $key = self::bunnySecurityKey();
                 if ($key !== '') {
                     $embed = BunnyStreamSigner::signEmbedUrl(
                         $embed,
                         $key,
-                        now()->addMinutes(20)->timestamp
+                        now()->addMinutes(self::TOKEN_MINUTES)->timestamp
                     );
                 }
             }
@@ -58,6 +58,18 @@ final class LectureRecordingResolver
                 'recording_url' => $embed,
                 'video_platform' => $resolvedPlatform,
             ];
+        });
+    }
+
+    public static function bunnySecurityKey(): string
+    {
+        return (string) Cache::remember('bunny_active_token_key_v1', now()->addHour(), function () {
+            $provider = VideoProvider::where('platform', 'bunny')
+                ->where('is_active', true)
+                ->orderByDesc('id')
+                ->first();
+
+            return $provider?->token_auth_key ? trim((string) $provider->token_auth_key) : '';
         });
     }
 }

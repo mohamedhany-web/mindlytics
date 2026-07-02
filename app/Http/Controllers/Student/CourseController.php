@@ -44,16 +44,17 @@ class CourseController extends Controller
 
         $workshopPromoCoupon = null;
         $workshopPromoPreview = null;
-        if (auth()->check() && $advancedCourse->price > 0) {
+        if (auth()->check() && $advancedCourse->effectivePrice() > 0) {
             $workshopPromoCoupon = app(\App\Services\WorkshopPromoService::class)
                 ->getCouponForAdvancedCourse(auth()->user(), $advancedCourse);
             if ($workshopPromoCoupon) {
-                $discount = $workshopPromoCoupon->calculateDiscount((float) $advancedCourse->price);
+                $basePrice = (float) $advancedCourse->effectivePrice();
+                $discount = $workshopPromoCoupon->calculateDiscount($basePrice);
                 $workshopPromoPreview = [
                     'code' => $workshopPromoCoupon->code,
                     'title' => $workshopPromoCoupon->title ?? $workshopPromoCoupon->name,
                     'discount_amount' => $discount,
-                    'final_amount' => max(0, (float) $advancedCourse->price - $discount),
+                    'final_amount' => max(0, $basePrice - $discount),
                 ];
             }
         }

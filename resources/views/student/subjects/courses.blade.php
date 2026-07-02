@@ -80,9 +80,12 @@
                             </span>
                         </div>
                         <div class="absolute top-4 right-4 space-y-2 text-right">
-                            @if(!empty($course->price) && !$course->is_free)
-                                <span class="inline-flex items-center px-3 py-1 rounded-lg bg-emerald-500 text-white text-sm font-bold shadow-lg">
-                                    {{ number_format($course->price, 0) }} ج.م
+                            @if($course->effectivePrice() > 0 && !$course->is_free)
+                                <span class="inline-flex flex-col items-end px-3 py-1 rounded-lg bg-emerald-500 text-white text-sm font-bold shadow-lg">
+                                    @if($course->hasCourseDiscount())
+                                        <span class="text-[11px] line-through opacity-80">{{ number_format($course->originalPrice(), 0) }} ج.م</span>
+                                    @endif
+                                    <span>{{ number_format($course->effectivePrice(), 0) }} ج.م</span>
                                 </span>
                             @else
                                 <span class="inline-flex items-center px-3 py-1 rounded-lg bg-white/90 text-emerald-600 text-sm font-bold shadow-lg">

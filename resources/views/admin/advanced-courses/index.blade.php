@@ -117,10 +117,15 @@
                             <span class="text-gray-900 font-medium">{{ optional($course->academicSubject)->name ?? '—' }}</span>
                         </div>
                         <div class="flex items-center text-sm text-gray-600">
-                            @if($course->price)
+                            @if($course->effectivePrice() > 0)
                                 <i class="fas fa-money-bill text-gray-400 w-5 ml-2 flex-shrink-0"></i>
                                 <span class="mr-1">السعر:</span>
-                                <span class="text-gray-900 font-medium">{{ number_format($course->price) }} ج.م</span>
+                                @if($course->hasCourseDiscount())
+                                    <span class="text-gray-400 line-through font-medium ml-1">{{ number_format($course->originalPrice()) }}</span>
+                                    <span class="text-gray-900 font-medium">{{ number_format($course->effectivePrice()) }} ج.م</span>
+                                @else
+                                    <span class="text-gray-900 font-medium">{{ number_format($course->effectivePrice()) }} ج.م</span>
+                                @endif
                             @else
                                 <i class="fas fa-gift text-green-500 w-5 ml-2 flex-shrink-0"></i>
                                 <span class="text-green-600 font-semibold">مجاني</span>

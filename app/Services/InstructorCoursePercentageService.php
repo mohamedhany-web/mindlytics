@@ -52,23 +52,27 @@ class InstructorCoursePercentageService
             return null;
         }
 
-        // مبلغ التفعيل: من التسجيل أو سعر الكورس كبديل عند التفعيل اليدوي من الأدمن
-        $finalPrice = (float) ($enrollment->final_price ?? 0);
-        if ($finalPrice <= 0 && $course->price) {
-            $finalPrice = (float) $course->price;
-        }
+        // مبلغ التفعيل بعد الخصم — يُستخدم لحساب نسبة المدرب
+        $finalPrice = self::resolveActivationBaseAmount($enrollment, $course);
         $percentage = (float) $agreement->course_percentage;
         $instructorAmount = round($finalPrice * ($percentage / 100), 2);
 
+        $discountNote = '';
+        $original = (float) ($enrollment->original_price ?? 0);
+        $discount = (float) ($enrollment->discount_amount ?? 0);
+        if ($discount > 0 && $original > 0) {
+            $discountNote = sprintf(' (بعد خصم %.2f من %.2f ج.م)', $discount, $original);
+        }
+
         try {
-            return DB::transaction(function () use ($agreement, $enrollment, $instructorAmount) {
+            return DB::transaction(function () use ($agreement, $enrollment, $instructorAmount, $discountNote) {
                 $payment = AgreementPayment::create([
                     'agreement_id' => $agreement->id,
                     'instructor_id' => $agreement->instructor_id,
                     'type' => AgreementPayment::TYPE_COURSE_ACTIVATION,
                     'amount' => $instructorAmount,
                     'status' => AgreementPayment::STATUS_APPROVED,
-                    'description' => 'نسبة من تفعيل الطالب للكورس: ' . ($enrollment->course->title ?? ''),
+                    'description' => 'نسبة من تفعيل الطالب للكورس: ' . ($enrollment->course->title ?? '') . $discountNote,
                     'related_course_id' => $enrollment->advanced_course_id,
                     'student_course_enrollment_id' => $enrollment->id,
                     'payment_date' => now(),
@@ -88,5 +92,30 @@ class InstructorCoursePercentageService
             ]);
             return null;
         }
+    }
+
+    /**
+     * المبلغ الذي تُحسب عليه نسبة المدرب (بعد الخصم إن وُجد).
+     */
+    public static function resolveActivationBaseAmount(StudentCourseEnrollment $enrollment, ?\App\Models\AdvancedCourse $course = null): float
+    {
+        $course ??= $enrollment->course;
+
+        $final = (float) ($enrollment->final_price ?? 0);
+        if ($final > 0) {
+            return round($final, 2);
+        }
+
+        $original = (float) ($enrollment->original_price ?? 0);
+        $discount = (float) ($enrollment->discount_amount ?? 0);
+        if ($original > 0) {
+            return round(max(0, $original - $discount), 2);
+        }
+
+        if ($course) {
+            return round($course->effectivePrice(), 2);
+        }
+
+        return 0;
     }
 }

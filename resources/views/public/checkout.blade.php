@@ -470,18 +470,32 @@
                             </div>
 
                             <!-- Price -->
+                            @php
+                                $checkoutOriginal = isset($course) ? $course->originalPrice() : ($learningPath->price ?? 0);
+                                $checkoutFinal = isset($course) ? $course->effectivePrice() : ($learningPath->price ?? 0);
+                                $checkoutHasDiscount = isset($course) && $course->hasCourseDiscount();
+                            @endphp
                             <div class="mb-6 space-y-4">
                                 <div class="flex items-center justify-between">
                                     <span class="text-gray-600 text-sm">السعر:</span>
-                                    <span class="text-xl font-black text-blue-600">
-                                        {{ number_format((isset($course) ? $course->price : $learningPath->price) ?? 0, 2) }} 
+                                    <span class="text-xl font-black text-blue-600 text-left">
+                                        @if($checkoutHasDiscount)
+                                            <span class="block text-sm text-gray-400 line-through font-semibold">{{ number_format($checkoutOriginal, 2) }} ج.م</span>
+                                        @endif
+                                        <span>{{ number_format($checkoutFinal, 2) }}</span>
                                         <span class="text-sm text-gray-600">ج.م</span>
                                     </span>
                                 </div>
+                                @if($checkoutHasDiscount)
+                                    <div class="flex items-center justify-between text-sm">
+                                        <span class="text-gray-600">خصم الكورس:</span>
+                                        <span class="font-bold text-rose-600">- {{ number_format($course->courseDiscountAmount(), 2) }} ج.م</span>
+                                    </div>
+                                @endif
                                 <div class="flex items-center justify-between pt-4 border-t-2 border-gray-300">
                                     <span class="text-gray-900 font-bold text-lg">الإجمالي:</span>
                                     <span class="text-2xl font-black text-green-600">
-                                        {{ number_format((isset($course) ? $course->price : $learningPath->price) ?? 0, 2) }} 
+                                        {{ number_format($checkoutFinal, 2) }} 
                                         <span class="text-base text-gray-600">ج.م</span>
                                     </span>
                                 </div>

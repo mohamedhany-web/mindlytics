@@ -84,8 +84,15 @@
             </p>
         </div>
 
-        <form method="POST" action="{{ route('admin.online-enrollments.quick-activate') }}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <form method="POST" action="{{ route('admin.online-enrollments.quick-activate') }}" class="space-y-4"
+              x-data="quickActivateForm(@js($courses->map(fn($c) => [
+                  'id' => $c->id,
+                  'price' => $c->originalPrice(),
+                  'effective_price' => $c->effectivePrice(),
+                  'course_discount' => $c->courseDiscountAmount(),
+              ])))">
             @csrf
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
                 <label for="quick_email" class="block text-sm font-medium text-gray-700 mb-2">بريد الطالب</label>
                 <input type="email" name="email" id="quick_email"
@@ -102,12 +109,12 @@
 
             <div>
                 <label for="quick_course" class="block text-sm font-medium text-gray-700 mb-2">الكورس</label>
-                <select name="advanced_course_id" id="quick_course"
+                <select name="advanced_course_id" id="quick_course" x-model="courseId" @change="onCourseChange()"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="">اختر الكورس</option>
                     @foreach($courses as $course)
                         <option value="{{ $course->id }}" {{ old('advanced_course_id') == $course->id ? 'selected' : '' }}>
-                            {{ $course->title }}
+                            {{ $course->title }} ({{ number_format($course->effectivePrice(), 0) }} ج.م@if($course->hasCourseDiscount()) — كان {{ number_format($course->originalPrice(), 0) }}@endif)
                         </option>
                     @endforeach
                 </select>
@@ -116,14 +123,76 @@
                 @enderror
             </div>
 
-            <div class="flex items-end">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">سعر الكورس</label>
+                <input type="text" readonly :value="listPrice.toFixed(2) + ' ج.م'"
+                       class="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
+            </div>
+
+            <div>
+                <label for="quick_discount" class="block text-sm font-medium text-gray-700 mb-2">الخصم (ج.م)</label>
+                <input type="number" name="discount_amount" id="quick_discount" step="0.01" min="0"
+                       x-model.number="discount" @input="updateFinal()"
+                       value="{{ old('discount_amount', 0) }}"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <div>
+                <label for="quick_final" class="block text-sm font-medium text-gray-700 mb-2">المبلغ المدفوع (بعد الخصم)</label>
+                <input type="number" name="final_price" id="quick_final" step="0.01" min="0"
+                       x-model.number="finalPrice" @input="discount = Math.max(0, listPrice - finalPrice)"
+                       value="{{ old('final_price') }}"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+                <p class="text-[11px] text-gray-500 mt-1">يُستخدم لحساب نسبة المدرب + إنشاء فاتورة</p>
+            </div>
+
+            <div>
+                <label for="quick_payment_method" class="block text-sm font-medium text-gray-700 mb-2">طريقة الدفع</label>
+                <select name="payment_method" id="quick_payment_method"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    <option value="cash">نقدي</option>
+                    <option value="bank_transfer">تحويل بنكي</option>
+                    <option value="online">أونلاين</option>
+                    <option value="wallet">محفظة</option>
+                    <option value="other">أخرى</option>
+                </select>
+            </div>
+
+            <div class="flex items-end lg:col-span-2">
                 <button type="submit"
                         class="w-full inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-emerald-600 to-green-500 text-white rounded-lg hover:from-emerald-700 hover:to-green-600 shadow-md hover:shadow-lg transition-all duration-200">
                     <i class="fas fa-check-circle mr-2"></i>
-                    تفعيل الآن
+                    تفعيل + فاتورة
                 </button>
             </div>
+            </div>
         </form>
+        <script>
+        function quickActivateForm(courses) {
+            const map = Object.fromEntries((courses || []).map(c => [String(c.id), c]));
+            return {
+                courseId: '{{ old('advanced_course_id', '') }}',
+                listPrice: 0,
+                discount: Number('{{ old('discount_amount', 0) }}') || 0,
+                finalPrice: Number('{{ old('final_price', '') }}') || 0,
+                init() { this.onCourseChange(); },
+                onCourseChange() {
+                    const course = map[String(this.courseId)] || null;
+                    this.listPrice = course ? (Number(course.price) || 0) : 0;
+                    if (course) {
+                        this.discount = Number(course.course_discount) || 0;
+                        this.finalPrice = Number(course.effective_price) || this.listPrice;
+                    } else {
+                        this.discount = 0;
+                        this.finalPrice = 0;
+                    }
+                },
+                updateFinal() {
+                    this.finalPrice = Math.max(0, this.listPrice - (Number(this.discount) || 0));
+                },
+            };
+        }
+        </script>
     </div>
 
     <!-- البحث والفلترة -->

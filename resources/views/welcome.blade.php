@@ -2611,10 +2611,7 @@
                                                 <span>{{ __('public.free_price') }}</span>
                                             </span>
                                         @else
-                                            <span class="text-lg font-black text-blue-600 flex items-center gap-1 group-hover:scale-110 transition-transform duration-300">
-                                                <span>{{ number_format($course->price ?? 0) }}</span>
-                                                <span class="text-[10px] text-gray-500 font-normal">{{ __('public.currency_egp') }}</span>
-                                            </span>
+                                            <x-course-price-display :course="$course" size="sm" />
                                         @endif
                                     </div>
                                     <a href="{{ route('public.course.show', $course->id) }}" class="relative bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 flex items-center gap-1.5 overflow-hidden group/btn">

@@ -14,8 +14,7 @@ use App\Models\OfflineCurriculumNote;
 use App\Models\OfflineLecture;
 use App\Models\OfflineCourseBooking;
 use App\Models\AdvancedExam;
-use App\Models\VideoProvider;
-use App\Support\BunnyStreamSigner;
+use App\Support\LectureRecordingResolver;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -540,11 +539,8 @@ class OfflineCourseController extends Controller
         $embed = VideoHelper::getEmbedUrl($raw) ?: $raw;
 
         if ($source === 'bunny') {
-            $provider = VideoProvider::where('platform', 'bunny')->where('is_active', true)->orderByDesc('id')->first();
-            $key = $provider?->token_auth_key ? trim((string) $provider->token_auth_key) : '';
-            if ($key !== '') {
-                $embed = BunnyStreamSigner::signEmbedUrl($embed, $key, now()->addMinutes(20)->timestamp);
-            }
+            $resolved = LectureRecordingResolver::resolve($raw, 'bunny');
+            $embed = $resolved['recording_url'] ?: $embed;
 
             return response()
                 ->view('video.protected-embed', [

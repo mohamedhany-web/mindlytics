@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\AdvancedCourse;
 use App\Models\StudentCourseEnrollment;
 use App\Services\InstructorCoursePercentageService;
+use App\Support\OnlineEnrollmentProvisioner;
 use App\Mail\CourseEnrollmentActivatedMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -89,6 +90,9 @@ class StudentEnrollmentController extends Controller
             'advanced_course_id' => 'required|exists:advanced_courses,id',
             'status' => 'required|in:pending,active',
             'final_price' => 'nullable|numeric|min:0',
+            'original_price' => 'nullable|numeric|min:0',
+            'discount_amount' => 'nullable|numeric|min:0',
+            'payment_method' => 'nullable|string|max:50',
             'notes' => 'nullable|string|max:1000',
         ], [
             'user_id.required' => 'الطالب مطلوب',
@@ -126,15 +130,46 @@ class StudentEnrollmentController extends Controller
         }
 
         // مبلغ التفعيل (اختياري) — يُستخدم لحساب نسبة المدرب عند وجود اتفاقية "نسبة من الكورس"
-        if ($request->filled('final_price') && is_numeric($request->final_price)) {
+        if ($request->status === 'active') {
+            $course = AdvancedCourse::findOrFail($request->advanced_course_id);
+            $student = User::findOrFail($request->user_id);
+            $pricing = OnlineEnrollmentProvisioner::resolvePricing(
+                $course,
+                $request->filled('final_price') ? (float) $request->final_price : null,
+                $request->filled('discount_amount') ? (float) $request->discount_amount : null,
+                $request->filled('original_price') ? (float) $request->original_price : null,
+            );
+            $enrollmentData['original_price'] = $pricing['original_price'];
+            $enrollmentData['discount_amount'] = $pricing['discount_amount'];
+            $enrollmentData['final_price'] = $pricing['final_price'];
+            $enrollmentData['payment_method'] = $request->payment_method;
+        } elseif ($request->filled('final_price') && is_numeric($request->final_price)) {
             $enrollmentData['final_price'] = (float) $request->final_price;
         }
 
         $enrollment = StudentCourseEnrollment::create($enrollmentData);
 
-        // عند التفعيل: إنشاء مدفوعة نسبة المدرب إن وُجدت اتفاقية "نسبة من الكورس"
+        // عند التفعيل: فاتورة + مدفوعة نسبة المدرب
         if ($enrollment->status === 'active') {
-            $freshEnrollment = $enrollment->fresh();
+            $freshEnrollment = $enrollment->fresh(['student', 'course']);
+            $course = $freshEnrollment->course;
+            $student = $freshEnrollment->student;
+            if ($course && $student) {
+                $pricing = OnlineEnrollmentProvisioner::resolvePricing(
+                    $course,
+                    (float) ($freshEnrollment->final_price ?? 0),
+                    (float) ($freshEnrollment->discount_amount ?? 0),
+                    (float) ($freshEnrollment->original_price ?? 0),
+                );
+                OnlineEnrollmentProvisioner::attachFinancialRecords(
+                    $freshEnrollment,
+                    $course,
+                    $student,
+                    $pricing,
+                    ['payment_method' => $request->payment_method ?? 'cash'],
+                );
+                $freshEnrollment = $freshEnrollment->fresh();
+            }
             InstructorCoursePercentageService::processEnrollmentActivation($freshEnrollment);
 
             // إرسال بريد تفعيل الكورس للطالب
@@ -171,6 +206,9 @@ class StudentEnrollmentController extends Controller
         $validated = $request->validate([
             'email' => 'required|email',
             'advanced_course_id' => 'required|exists:advanced_courses,id',
+            'final_price' => 'nullable|numeric|min:0',
+            'discount_amount' => 'nullable|numeric|min:0',
+            'payment_method' => 'nullable|string|in:cash,bank_transfer,online,wallet,other',
         ], [
             'email.required' => 'البريد الإلكتروني مطلوب',
             'email.email' => 'صيغة البريد الإلكتروني غير صحيحة',
@@ -188,6 +226,13 @@ class StudentEnrollmentController extends Controller
             ])->withInput();
         }
 
+        $course = AdvancedCourse::findOrFail($validated['advanced_course_id']);
+        $pricing = OnlineEnrollmentProvisioner::resolvePricing(
+            $course,
+            isset($validated['final_price']) ? (float) $validated['final_price'] : null,
+            isset($validated['discount_amount']) ? (float) $validated['discount_amount'] : null,
+        );
+
         // مسح كاش الإحصائيات
         app(\App\Services\StatisticsCacheService::class)->clearStats('enrollment_stats');
 
@@ -200,11 +245,26 @@ class StudentEnrollmentController extends Controller
         $enrollment->enrolled_at = $enrollment->enrolled_at ?? now();
         $enrollment->activated_at = now();
         $enrollment->activated_by = Auth::id();
+        $enrollment->original_price = $pricing['original_price'];
+        $enrollment->discount_amount = $pricing['discount_amount'];
+        $enrollment->final_price = $pricing['final_price'];
+        $enrollment->payment_method = $validated['payment_method'] ?? 'cash';
         $enrollment->save();
 
-        $freshEnrollment = $enrollment->fresh();
+        $freshEnrollment = $enrollment->fresh(['student', 'course']);
 
-        // معالجة نسبة المدرب عند التفعيل
+        OnlineEnrollmentProvisioner::attachFinancialRecords(
+            $freshEnrollment,
+            $course,
+            $student,
+            $pricing,
+            ['payment_method' => $validated['payment_method'] ?? 'cash'],
+            replaceExisting: true,
+        );
+
+        $freshEnrollment = $freshEnrollment->fresh();
+
+        // معالجة نسبة المدرب عند التفعيل (بعد حفظ السعر بعد الخصم)
         InstructorCoursePercentageService::processEnrollmentActivation($freshEnrollment);
 
         // إرسال بريد التفعيل للطالب
@@ -219,7 +279,7 @@ class StudentEnrollmentController extends Controller
         }
 
         return redirect()->route('admin.online-enrollments.index')
-            ->with('success', 'تم تفعيل الكورس للطالب وإرسال بريد التفعيل بنجاح.');
+            ->with('success', 'تم تفعيل الكورس وإنشاء الفاتورة وحساب نسبة المدرب على المبلغ بعد الخصم.');
     }
 
     /**

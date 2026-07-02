@@ -67,25 +67,27 @@ class OrderController extends Controller
         // رفع صورة الإيصال
         $paymentProofPath = $request->file('payment_proof')->store('payment-proofs', 'public');
 
-        // حساب السعر النهائي (بعد خصم الإحالة إذا كان موجوداً)
-        $originalAmount = $advancedCourse->price ?? 0;
-        $finalAmount = $originalAmount;
-        $discountAmount = 0;
+        // حساب السعر النهائي (بعد خصم الكورس ثم خصم الإحالة إن وُجد)
+        $pricing = $advancedCourse->paymentBreakdown();
+        $originalAmount = $pricing['original_amount'];
+        $finalAmount = $pricing['amount'];
+        $discountAmount = $pricing['discount_amount'];
         $referralCoupon = null;
 
         // تطبيق خصم الإحالة تلقائياً
         $referralService = app(ReferralService::class);
-        $referralCoupon = $referralService->applyReferralDiscount(auth()->user(), $originalAmount);
+        $referralCoupon = $referralService->applyReferralDiscount(auth()->user(), $finalAmount);
 
         if ($referralCoupon) {
-            $discountAmount = $referralCoupon->calculateDiscount($originalAmount);
-            $finalAmount = $originalAmount - $discountAmount;
-            
+            $referralDiscount = $referralCoupon->calculateDiscount($finalAmount);
+            $discountAmount += $referralDiscount;
+            $finalAmount -= $referralDiscount;
+
             // زيادة عدد مرات استخدام الخصم
             $referral = \App\Models\Referral::where('auto_coupon_id', $referralCoupon->id)->first();
             if ($referral) {
                 $referral->incrementDiscountUsage();
-                $referral->update(['discount_amount' => $discountAmount]);
+                $referral->update(['discount_amount' => $referralDiscount]);
             }
         }
 

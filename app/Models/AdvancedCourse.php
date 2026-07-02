@@ -94,6 +94,7 @@ class AdvancedCourse extends Model
         'duration_hours',
         'duration_minutes',
         'price',
+        'discount_amount',
         'thumbnail',
         'requirements',
         'prerequisites',
@@ -120,6 +121,7 @@ class AdvancedCourse extends Model
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
         'price' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
         'rating' => 'decimal:2',
         'skills' => 'array',
         'mind_map_steps' => 'array',
@@ -330,5 +332,45 @@ class AdvancedCourse extends Model
         ];
 
         return $badges[$this->level] ?? $badges['beginner'];
+    }
+
+    public function originalPrice(): float
+    {
+        return max(0, (float) ($this->price ?? 0));
+    }
+
+    public function courseDiscountAmount(): float
+    {
+        if ($this->is_free ?? false) {
+            return 0;
+        }
+
+        return max(0, min($this->originalPrice(), (float) ($this->discount_amount ?? 0)));
+    }
+
+    public function effectivePrice(): float
+    {
+        if ($this->is_free ?? false) {
+            return 0;
+        }
+
+        return max(0, round($this->originalPrice() - $this->courseDiscountAmount(), 2));
+    }
+
+    public function hasCourseDiscount(): bool
+    {
+        return $this->courseDiscountAmount() > 0 && $this->effectivePrice() < $this->originalPrice();
+    }
+
+    /**
+     * @return array{original_amount: float, discount_amount: float, amount: float}
+     */
+    public function paymentBreakdown(): array
+    {
+        return [
+            'original_amount' => $this->originalPrice(),
+            'discount_amount' => $this->courseDiscountAmount(),
+            'amount' => $this->effectivePrice(),
+        ];
     }
 }

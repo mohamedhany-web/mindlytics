@@ -163,6 +163,48 @@ class InstructorAgreementController extends Controller
         return view('admin.agreements.show', compact('agreement', 'stats'));
     }
 
+    public function updatePayment(Request $request, AgreementPayment $payment)
+    {
+        if (! Auth::check() || ! Auth::user()->isSuperAdmin()) {
+            abort(403);
+        }
+
+        if ($payment->status === AgreementPayment::STATUS_PAID && $payment->transfer_receipt_path) {
+            return back()->with('error', 'لا يمكن تعديل مدفوعة تم تحويلها ورفع إيصال لها.');
+        }
+
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0',
+            'description' => 'nullable|string|max:500',
+            'notes' => 'nullable|string|max:1000',
+            'status' => 'nullable|in:pending,approved,rejected,cancelled',
+        ]);
+
+        $payment->update([
+            'amount' => $validated['amount'],
+            'description' => $validated['description'] ?? $payment->description,
+            'notes' => $validated['notes'] ?? $payment->notes,
+            'status' => $validated['status'] ?? $payment->status,
+        ]);
+
+        return back()->with('success', 'تم تحديث المدفوعة بنجاح.');
+    }
+
+    public function destroyPayment(AgreementPayment $payment)
+    {
+        if (! Auth::check() || ! Auth::user()->isSuperAdmin()) {
+            abort(403);
+        }
+
+        if ($payment->status === AgreementPayment::STATUS_PAID) {
+            return back()->with('error', 'لا يمكن حذف مدفوعة تم دفعها للمدرب — يمكنك تعديل المبلغ إن لم يُرفع إيصال بعد.');
+        }
+
+        $payment->delete();
+
+        return back()->with('success', 'تم حذف المدفوعة من سجل الاتفاقية.');
+    }
+
     public function edit(InstructorAgreement $agreement)
     {
         $instructorIdsWithCourses = AdvancedCourse::where('is_active', true)

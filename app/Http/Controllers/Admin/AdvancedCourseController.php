@@ -211,6 +211,7 @@ class AdvancedCourseController extends Controller
             'duration_hours' => 'nullable|numeric|min:0',
             'duration_minutes' => 'nullable|integer|min:0|max:59',
             'price' => 'nullable|numeric|min:0',
+            'discount_amount' => 'nullable|numeric|min:0',
             'requirements' => 'nullable|string',
             'prerequisites' => 'nullable|string',
             'what_you_learn' => 'nullable|string',
@@ -236,6 +237,8 @@ class AdvancedCourseController extends Controller
             'duration_minutes.max' => 'الدقائق يجب ألا تتجاوز 59 دقيقة',
             'price.numeric' => 'السعر يجب أن يكون رقم',
             'price.min' => 'السعر لا يمكن أن يكون أقل من صفر',
+            'discount_amount.numeric' => 'قيمة الخصم يجب أن تكون رقم',
+            'discount_amount.min' => 'قيمة الخصم لا يمكن أن تكون أقل من صفر',
             'thumbnail.image' => 'يجب أن تكون صورة صحيحة',
             'thumbnail.mimes' => 'يجب أن تكون الصورة بصيغة jpeg, png أو jpg',
             'thumbnail.max' => 'حجم صورة الكورس يجب ألا يتجاوز 10 ميجابايت',
@@ -260,6 +263,7 @@ class AdvancedCourseController extends Controller
                 'duration_hours',
                 'duration_minutes',
                 'price',
+                'discount_amount',
                 'requirements',
                 'prerequisites',
                 'what_you_learn',
@@ -280,7 +284,7 @@ class AdvancedCourseController extends Controller
         $data['instructor_id'] = isset($data['instructor_id']) && $data['instructor_id'] !== '' ? (int) $data['instructor_id'] : null;
 
         $data['level'] = $data['level'] ?? 'beginner';
-        $data['price'] = $data['price'] ?? 0;
+        $data = $this->normalizeCoursePricing($data);
         $data['duration_hours'] = $data['duration_hours'] ?? 0;
         $data['duration_minutes'] = $data['duration_minutes'] ?? 0;
         $data['language'] = $data['language'] ?? 'ar';
@@ -443,6 +447,7 @@ class AdvancedCourseController extends Controller
             'duration_hours' => 'nullable|numeric|min:0',
             'duration_minutes' => 'nullable|integer|min:0|max:59',
             'price' => 'nullable|numeric|min:0',
+            'discount_amount' => 'nullable|numeric|min:0',
             'requirements' => 'nullable|string',
             'prerequisites' => 'nullable|string',
             'what_you_learn' => 'nullable|string',
@@ -483,6 +488,7 @@ class AdvancedCourseController extends Controller
             'duration_hours',
             'duration_minutes',
             'price',
+            'discount_amount',
             'requirements',
             'prerequisites',
             'what_you_learn',
@@ -492,7 +498,7 @@ class AdvancedCourseController extends Controller
         ]);
 
         $data['level'] = $data['level'] ?? 'beginner';
-        $data['price'] = $data['price'] ?? 0;
+        $data = $this->normalizeCoursePricing($data);
         $data['duration_hours'] = $data['duration_hours'] ?? 0;
         $data['duration_minutes'] = $data['duration_minutes'] ?? 0;
         $data['language'] = $data['language'] ?? 'ar';
@@ -713,5 +719,16 @@ class AdvancedCourseController extends Controller
 
         return redirect()->route('admin.advanced-courses.edit', $newCourse)
             ->with('success', 'تم نسخ الكورس بنجاح. يمكنك الآن تعديل البيانات حسب الحاجة.');
+    }
+
+    private function normalizeCoursePricing(array $data): array
+    {
+        $price = max(0, (float) ($data['price'] ?? 0));
+        $discount = max(0, min($price, (float) ($data['discount_amount'] ?? 0)));
+
+        $data['price'] = $price;
+        $data['discount_amount'] = $discount;
+
+        return $data;
     }
 }

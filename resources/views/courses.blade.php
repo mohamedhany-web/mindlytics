@@ -1255,11 +1255,24 @@
                         </p>
                         <div class="flex items-center justify-between pt-3 border-t border-gray-100 group-hover:border-blue-100 transition-colors duration-300 relative z-10">
                             <div>
-                                @if(isset($course['price']) && $course['price'] > 0)
-                                    <span class="text-lg font-black text-blue-600 flex items-center gap-1 group-hover:scale-110 transition-transform duration-300">
-                                        <span>{{ number_format($course['price'], 0) }}</span>
-                                        <span class="text-[10px] text-gray-500 font-normal">{{ __('public.currency_egp') }}</span>
-                                    </span>
+                                @if(isset($course['price']) && ($course['price'] > 0 || ($course['original_price'] ?? 0) > 0))
+                                    @if(($course['discount_amount'] ?? 0) > 0)
+                                        <span class="inline-flex flex-col items-start gap-0.5">
+                                            <span class="text-sm text-gray-400 line-through font-semibold">
+                                                {{ number_format($course['original_price'] ?? $course['price'], 0) }}
+                                                <span class="text-[10px] font-normal">{{ __('public.currency_egp') }}</span>
+                                            </span>
+                                            <span class="text-lg font-black text-blue-600 flex items-center gap-1 group-hover:scale-110 transition-transform duration-300">
+                                                <span>{{ number_format($course['price'], 0) }}</span>
+                                                <span class="text-[10px] text-gray-500 font-normal">{{ __('public.currency_egp') }}</span>
+                                            </span>
+                                        </span>
+                                    @else
+                                        <span class="text-lg font-black text-blue-600 flex items-center gap-1 group-hover:scale-110 transition-transform duration-300">
+                                            <span>{{ number_format($course['price'], 0) }}</span>
+                                            <span class="text-[10px] text-gray-500 font-normal">{{ __('public.currency_egp') }}</span>
+                                        </span>
+                                    @endif
                                 @else
                                     <span class="text-lg font-black text-green-600 flex items-center gap-1.5 group-hover:scale-110 transition-transform duration-300">
                                         <div class="w-5 h-5 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-md">
