@@ -121,23 +121,25 @@ class InstructorCoursePercentageService
 
     /**
      * إنشاء مدفوعات نسبة المدرب الناقصة لتفعيلات كورس مرتبطة باتفاقية محددة.
+     *
+     * @return AgreementPayment[]
      */
-    public static function syncMissingPaymentsForAgreement(InstructorAgreement $agreement): int
+    public static function syncMissingPaymentsForAgreementDetailed(InstructorAgreement $agreement): array
     {
         if ($agreement->billing_type !== InstructorAgreement::BILLING_COURSE_PERCENTAGE
             || $agreement->status !== InstructorAgreement::STATUS_ACTIVE
             || ! $agreement->advanced_course_id
             || $agreement->course_percentage === null) {
-            return 0;
+            return [];
         }
 
-        $created = 0;
+        $created = [];
 
         StudentCourseEnrollment::query()
             ->where('advanced_course_id', $agreement->advanced_course_id)
             ->where('status', 'active')
             ->visibleToInstructor()
-            ->with('course')
+            ->with(['course', 'student'])
             ->orderBy('id')
             ->chunkById(100, function ($enrollments) use ($agreement, &$created) {
                 foreach ($enrollments as $enrollment) {
@@ -151,8 +153,9 @@ class InstructorCoursePercentageService
                     }
 
                     try {
-                        if (self::processEnrollmentActivation($enrollment, $agreement)) {
-                            $created++;
+                        $payment = self::processEnrollmentActivation($enrollment, $agreement);
+                        if ($payment) {
+                            $created[] = $payment->loadMissing(['enrollment.student', 'enrollment.course']);
                         }
                     } catch (\Throwable $e) {
                         Log::warning('InstructorCoursePercentageService: sync skipped enrollment', [
@@ -165,6 +168,11 @@ class InstructorCoursePercentageService
             });
 
         return $created;
+    }
+
+    public static function syncMissingPaymentsForAgreement(InstructorAgreement $agreement): int
+    {
+        return count(self::syncMissingPaymentsForAgreementDetailed($agreement));
     }
 
     /**
