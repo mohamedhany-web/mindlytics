@@ -73,6 +73,7 @@
             <div class="flex-1 overflow-y-auto divide-y divide-slate-100">
                 @forelse($conversations as $conv)
                     <a href="{{ route('admin.whatsapp.inbox', ['conversation' => $conv->id, 'search' => request('search')]) }}"
+                       data-wa-conv-link
                        class="block px-4 py-3 hover:bg-emerald-50/60 transition-colors {{ $activeId === $conv->id ? 'bg-emerald-50 border-r-4 border-emerald-500' : '' }}">
                         <div class="flex items-start justify-between gap-2">
                             <div class="min-w-0 flex-1">
@@ -94,7 +95,7 @@
                     <div class="p-8 text-center text-slate-500 text-sm">
                         <i class="fas fa-inbox text-3xl mb-2 text-slate-300"></i>
                         <p>لا توجد محادثات بعد</p>
-                        <p class="text-xs mt-2">عند وصول رسالة عبر Webhook ستظهر هنا</p>
+                        <p class="text-xs mt-2">ستظهر هنا الرسائل المرسلة من النظام، ورسائل العملاء الواردة عبر Webhook</p>
                     </div>
                 @endforelse
             </div>
@@ -267,9 +268,7 @@ function whatsappInbox() {
         init() {
             this.bootstrapTemplates();
             this.scrollChat();
-            if (this.conversationId) {
-                this.pollTimer = setInterval(() => this.poll(), 8000);
-            }
+            this.pollTimer = setInterval(() => this.poll(), 8000);
         },
 
         bootstrapTemplates() {
@@ -328,6 +327,10 @@ function whatsappInbox() {
                 const data = await res.json();
                 if (!data.success) return;
                 this.unreadTotal = data.unread_total ?? this.unreadTotal;
+                if (Array.isArray(data.conversations) && data.conversations.length && !this.conversationId && !document.querySelector('[data-wa-conv-link]')) {
+                    window.location.reload();
+                    return;
+                }
                 if (data.within_service_window !== undefined) {
                     this.withinWindow = !!data.within_service_window;
                 }

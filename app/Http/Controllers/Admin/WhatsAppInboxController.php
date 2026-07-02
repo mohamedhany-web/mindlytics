@@ -31,6 +31,8 @@ class WhatsAppInboxController extends Controller
         $withinWindow = false;
 
         if ($tablesReady) {
+            $this->inbox->syncRecentOutboundLogs();
+
             $query = WhatsAppConversation::query()
                 ->with('user:id,name')
                 ->orderByDesc('last_message_at')

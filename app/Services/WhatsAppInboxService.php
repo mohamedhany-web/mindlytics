@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\WhatsAppConversation;
 use App\Models\WhatsAppConversationMessage;
+use App\Models\WhatsAppMessage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -152,6 +153,83 @@ class WhatsAppInboxService
         return $user?->id;
     }
 
+    public function mirrorOutboundWhatsAppMessage(WhatsAppMessage $log): ?WhatsAppConversationMessage
+    {
+        if (! Schema::hasTable('whatsapp_conversations')) {
+            return null;
+        }
+
+        if (! in_array($log->status, ['sent', 'delivered', 'read'], true)) {
+            return null;
+        }
+
+        $phone = $this->whatsapp->formatPhoneNumber((string) $log->phone_number);
+        if ($phone === '') {
+            return null;
+        }
+
+        $waMessageId = $log->whatsapp_message_id;
+        if ($waMessageId && WhatsAppConversationMessage::query()->where('whatsapp_message_id', $waMessageId)->exists()) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($log, $phone, $waMessageId) {
+            $conversation = WhatsAppConversation::query()->firstOrCreate(
+                ['phone_number' => $phone],
+                ['unread_count' => 0]
+            );
+
+            if (! $conversation->user_id) {
+                $conversation->user_id = $log->user_id ?: $this->guessUserId($phone);
+            }
+
+            $sentAt = $log->sent_at ?? $log->created_at ?? now();
+
+            $message = WhatsAppConversationMessage::create([
+                'conversation_id' => $conversation->id,
+                'direction' => WhatsAppConversationMessage::DIRECTION_OUTBOUND,
+                'body' => $log->message,
+                'message_type' => $log->type ?: 'text',
+                'whatsapp_message_id' => $waMessageId,
+                'status' => in_array($log->status, ['delivered', 'read'], true) ? $log->status : 'sent',
+                'sent_by_user_id' => $log->user_id,
+                'template_name' => $log->template_name,
+                'template_params' => $log->template_params,
+                'sent_at' => $sentAt,
+                'delivered_at' => $log->delivered_at,
+                'read_at' => $log->read_at,
+            ]);
+
+            $this->touchConversationAfterMessage($conversation, $message, $sentAt);
+
+            return $message;
+        });
+    }
+
+    public function syncRecentOutboundLogs(int $limit = 500): int
+    {
+        if (! Schema::hasTable('whatsapp_conversations') || ! Schema::hasTable('whatsapp_messages')) {
+            return 0;
+        }
+
+        $synced = 0;
+
+        WhatsAppMessage::query()
+            ->whereIn('status', ['sent', 'delivered', 'read'])
+            ->whereNotNull('phone_number')
+            ->where('phone_number', '!=', '')
+            ->orderBy('id')
+            ->limit($limit)
+            ->get()
+            ->each(function (WhatsAppMessage $log) use (&$synced) {
+                if ($this->mirrorOutboundWhatsAppMessage($log)) {
+                    $synced++;
+                }
+            });
+
+        return $synced;
+    }
+
     public function isWithinServiceWindow(WhatsAppConversation $conversation): bool
     {
         $lastInbound = $conversation->messages()
@@ -273,6 +351,16 @@ class WhatsAppInboxService
      */
     public function recordOutbound(WhatsAppConversation $conversation, array $data): WhatsAppConversationMessage
     {
+        $waMessageId = $data['whatsapp_message_id'] ?? null;
+        if ($waMessageId) {
+            $existing = WhatsAppConversationMessage::query()
+                ->where('whatsapp_message_id', $waMessageId)
+                ->first();
+            if ($existing) {
+                return $existing;
+            }
+        }
+
         $message = WhatsAppConversationMessage::create([
             'conversation_id' => $conversation->id,
             'direction' => WhatsAppConversationMessage::DIRECTION_OUTBOUND,
@@ -287,15 +375,29 @@ class WhatsAppInboxService
             'payload' => $data['payload'] ?? null,
         ]);
 
-        $preview = mb_substr($message->displayBody(), 0, 200);
-
-        $conversation->update([
-            'last_message_at' => now(),
-            'last_message_preview' => $preview,
-            'last_message_direction' => WhatsAppConversationMessage::DIRECTION_OUTBOUND,
-        ]);
+        $this->touchConversationAfterMessage($conversation, $message, $data['sent_at'] ?? now());
 
         return $message;
+    }
+
+    private function touchConversationAfterMessage(
+        WhatsAppConversation $conversation,
+        WhatsAppConversationMessage $message,
+        \DateTimeInterface $sentAt
+    ): void {
+        $preview = mb_substr($message->displayBody(), 0, 200);
+        $sentAtCarbon = $sentAt instanceof \Carbon\Carbon ? $sentAt : \Carbon\Carbon::parse($sentAt);
+
+        if ($conversation->last_message_at && $conversation->last_message_at->greaterThan($sentAtCarbon)) {
+            return;
+        }
+
+        $conversation->update([
+            'last_message_at' => $sentAtCarbon,
+            'last_message_preview' => $preview,
+            'last_message_direction' => WhatsAppConversationMessage::DIRECTION_OUTBOUND,
+            'user_id' => $conversation->user_id,
+        ]);
     }
 
     public function markConversationRead(WhatsAppConversation $conversation): void

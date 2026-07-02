@@ -133,6 +133,10 @@ class WhatsAppService
             ]);
 
             if ($accepted) {
+                app(WhatsAppInboxService::class)->mirrorOutboundWhatsAppMessage($whatsappMessage);
+            }
+
+            if ($accepted) {
                 Log::info('WhatsApp Cloud message accepted by Meta', [
                     'phone' => $formattedPhone,
                     'message_id' => $whatsappMessage->id,
@@ -245,7 +249,7 @@ class WhatsAppService
                 );
 
             if (! $skipLog) {
-                WhatsAppMessage::create([
+                $whatsappMessage = WhatsAppMessage::create([
                     'user_id' => $actorId,
                     'phone_number' => $formattedPhone,
                     'message' => '[قالب: ' . $templateName . ']',
@@ -258,6 +262,10 @@ class WhatsAppService
                     'template_params' => ['language' => $languageCode, 'components' => $components],
                     'error_message' => $errorText,
                 ]);
+
+                if ($accepted) {
+                    app(WhatsAppInboxService::class)->mirrorOutboundWhatsAppMessage($whatsappMessage);
+                }
             }
 
             if ($accepted) {
