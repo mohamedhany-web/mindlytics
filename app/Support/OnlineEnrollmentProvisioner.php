@@ -6,8 +6,13 @@ use App\Models\AdvancedCourse;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\StudentCourseEnrollment;
+use App\Models\Transaction;
 use App\Models\User;
+use App\Models\Wallet;
+use App\Models\WalletTransaction;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class OnlineEnrollmentProvisioner
 {
@@ -49,7 +54,7 @@ class OnlineEnrollmentProvisioner
     }
 
     /**
-     * @param  array{payment_method?: string, payment_notes?: string}  $paymentMeta
+     * @param  array{payment_method?: string, payment_notes?: string, wallet_id?: int|null, deposit_notes?: string|null}  $paymentMeta
      */
     public static function attachFinancialRecords(
         StudentCourseEnrollment $enrollment,
@@ -70,64 +75,135 @@ class OnlineEnrollmentProvisioner
             return null;
         }
 
-        if ($replaceExisting && $enrollment->invoice_id) {
-            $existing = Invoice::query()->find($enrollment->invoice_id);
-            if ($existing) {
-                Payment::query()->where('invoice_id', $existing->id)->delete();
-                $existing->delete();
+        return DB::transaction(function () use ($enrollment, $course, $student, $pricing, $paymentMeta, $replaceExisting) {
+            if ($replaceExisting && $enrollment->invoice_id) {
+                $existing = Invoice::query()->find($enrollment->invoice_id);
+                if ($existing) {
+                    Payment::query()->where('invoice_id', $existing->id)->delete();
+                    $existing->delete();
+                }
             }
-        }
 
-        $invoiceNumber = 'ONL-INV-' . str_pad((string) $enrollment->id, 6, '0', STR_PAD_LEFT);
-        $discount = $pricing['discount_amount'];
-        $original = $pricing['original_price'];
-        $final = $pricing['final_price'];
+            $invoiceNumber = 'ONL-INV-' . str_pad((string) $enrollment->id, 6, '0', STR_PAD_LEFT);
+            $discount = $pricing['discount_amount'];
+            $original = $pricing['original_price'];
+            $final = $pricing['final_price'];
+            $paymentMethod = $paymentMeta['payment_method'] ?? 'cash';
 
-        $invoice = Invoice::create([
-            'invoice_number' => $invoiceNumber,
-            'user_id' => $student->id,
-            'type' => 'online_course',
-            'description' => 'تفعيل كورس أونلاين: ' . $course->title,
-            'subtotal' => $original,
-            'tax_amount' => 0,
-            'discount_amount' => $discount,
-            'total_amount' => $final,
-            'status' => 'paid',
-            'due_date' => now(),
-            'paid_at' => now(),
-            'notes' => $paymentMeta['payment_notes'] ?? 'تفعيل من لوحة التحكم',
-            'items' => [[
-                'description' => $course->title,
-                'quantity' => 1,
-                'unit_price' => $original,
-                'discount' => $discount,
-                'total' => $final,
-            ]],
-        ]);
+            $invoice = Invoice::create([
+                'invoice_number' => $invoiceNumber,
+                'user_id' => $student->id,
+                'type' => 'online_course',
+                'description' => 'تفعيل كورس أونلاين: ' . $course->title,
+                'subtotal' => $original,
+                'tax_amount' => 0,
+                'discount_amount' => $discount,
+                'total_amount' => $final,
+                'status' => 'paid',
+                'due_date' => now(),
+                'paid_at' => now(),
+                'notes' => $paymentMeta['payment_notes'] ?? 'تفعيل من لوحة التحكم',
+                'items' => [[
+                    'description' => $course->title,
+                    'quantity' => 1,
+                    'unit_price' => $original,
+                    'discount' => $discount,
+                    'total' => $final,
+                ]],
+            ]);
 
-        $paymentNumber = 'ONL-PAY-' . str_pad((string) ($enrollment->id), 6, '0', STR_PAD_LEFT);
-        $payment = Payment::create([
-            'payment_number' => $paymentNumber,
-            'invoice_id' => $invoice->id,
-            'user_id' => $student->id,
-            'payment_method' => $paymentMeta['payment_method'] ?? 'cash',
-            'amount' => $final,
-            'currency' => 'EGP',
-            'status' => 'completed',
-            'paid_at' => now(),
-            'processed_by' => Auth::id(),
-            'notes' => $paymentMeta['payment_notes'] ?? 'دفعة تفعيل كورس أونلاين',
-        ]);
+            $walletId = isset($paymentMeta['wallet_id']) ? (int) $paymentMeta['wallet_id'] : null;
+            if ($walletId <= 0) {
+                $walletId = null;
+            }
 
-        $enrollment->update([
-            'invoice_id' => $invoice->id,
-            'payment_id' => $payment->id,
-            'original_price' => $original,
-            'discount_amount' => $discount,
-            'final_price' => $final,
-            'payment_method' => $paymentMeta['payment_method'] ?? null,
-        ]);
+            $paymentNumber = 'ONL-PAY-' . str_pad((string) $enrollment->id, 6, '0', STR_PAD_LEFT);
+            $paymentAttrs = [
+                'payment_number' => $paymentNumber,
+                'invoice_id' => $invoice->id,
+                'user_id' => $student->id,
+                'payment_method' => $paymentMethod,
+                'amount' => $final,
+                'currency' => 'EGP',
+                'status' => 'completed',
+                'paid_at' => now(),
+                'processed_by' => Auth::id(),
+                'notes' => $paymentMeta['payment_notes'] ?? 'دفعة تفعيل كورس أونلاين',
+            ];
+            if ($walletId !== null) {
+                $paymentAttrs['wallet_id'] = $walletId;
+            }
 
-        return $invoice;
+            $payment = Payment::create($paymentAttrs);
+
+            $wallet = null;
+            if ($paymentMethod === 'wallet' && $walletId !== null && $final > 0) {
+                $wallet = Wallet::academyWallets()->where('is_active', true)->find($walletId);
+                if ($wallet) {
+                    $depositDescription = $paymentMeta['deposit_notes'] ?? $paymentMeta['payment_notes'] ?? '';
+                    if ($depositDescription === '') {
+                        $depositDescription = 'إيداع كورس أونلاين — فاتورة: ' . $invoice->invoice_number;
+                    } else {
+                        $depositDescription .= ' — فاتورة: ' . $invoice->invoice_number;
+                    }
+                    $wallet->deposit($final, $payment->id, null, $depositDescription);
+                }
+            }
+
+            $txDescription = 'دفعة كورس أونلاين: ' . ($course->title ?? '');
+            if ($wallet) {
+                $txDescription .= ' — محفظة: ' . ($wallet->name ?? Wallet::typeLabel($wallet->type));
+            }
+
+            $metadata = [
+                'advanced_course_id' => $course->id,
+                'enrollment_id' => $enrollment->id,
+                'payment_method' => $paymentMethod,
+            ];
+            if ($walletId !== null) {
+                $metadata['wallet_id'] = $walletId;
+            }
+
+            $transaction = Transaction::create([
+                'transaction_number' => 'ONL-TXN-' . str_pad((string) (Transaction::count() + 1), 6, '0', STR_PAD_LEFT),
+                'user_id' => $student->id,
+                'payment_id' => $payment->id,
+                'invoice_id' => $invoice->id,
+                'type' => 'credit',
+                'category' => 'course_payment',
+                'amount' => $final,
+                'currency' => 'EGP',
+                'description' => $txDescription,
+                'status' => 'completed',
+                'metadata' => $metadata,
+                'created_by' => Auth::id(),
+            ]);
+
+            if ($wallet) {
+                $walletTransaction = WalletTransaction::where('wallet_id', $wallet->id)
+                    ->where('payment_id', $payment->id)
+                    ->where('type', 'deposit')
+                    ->latest()
+                    ->first();
+                if ($walletTransaction) {
+                    $walletTransaction->update(['transaction_id' => $transaction->id]);
+                }
+            }
+
+            if (! $invoice->isPaid()) {
+                $invoice->markAsPaid();
+            }
+
+            $enrollment->update([
+                'invoice_id' => $invoice->id,
+                'payment_id' => $payment->id,
+                'original_price' => $original,
+                'discount_amount' => $discount,
+                'final_price' => $final,
+                'payment_method' => $paymentMethod,
+            ]);
+
+            return $invoice;
+        });
     }
 }

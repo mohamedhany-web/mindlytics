@@ -160,7 +160,7 @@
 
             <div x-show="!activateAsFree" x-cloak>
                 <label for="quick_payment_method" class="block text-sm font-medium text-gray-700 mb-2">طريقة الدفع</label>
-                <select name="payment_method" id="quick_payment_method"
+                <select name="payment_method" id="quick_payment_method" x-model="paymentMethod"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg">
                     <option value="cash">نقدي</option>
                     <option value="bank_transfer">تحويل بنكي</option>
@@ -168,6 +168,23 @@
                     <option value="wallet">محفظة</option>
                     <option value="other">أخرى</option>
                 </select>
+            </div>
+
+            <div x-show="!activateAsFree && paymentMethod === 'wallet'" x-cloak>
+                <label for="quick_wallet_id" class="block text-sm font-medium text-gray-700 mb-2">المحفظة</label>
+                <select name="wallet_id" id="quick_wallet_id" x-bind:required="!activateAsFree && paymentMethod === 'wallet'"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="">اختر المحفظة</option>
+                    @foreach($wallets as $wallet)
+                        <option value="{{ $wallet->id }}" @selected((string) old('wallet_id') === (string) $wallet->id)>
+                            {{ $wallet->name ?: \App\Models\Wallet::typeLabel($wallet->type) }}
+                            ({{ number_format((float) $wallet->balance, 2) }} ج.م)
+                        </option>
+                    @endforeach
+                </select>
+                @error('wallet_id')
+                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                @enderror
             </div>
 
             <div class="flex items-end lg:col-span-2">
@@ -188,6 +205,7 @@
                 discount: Number('{{ old('discount_amount', 0) }}') || 0,
                 finalPrice: Number('{{ old('final_price', '') }}') || 0,
                 activateAsFree: {{ old('activate_as_free') ? 'true' : 'false' }},
+                paymentMethod: '{{ old('payment_method', 'cash') }}',
                 init() { this.onCourseChange(); },
                 onFreeToggle() {
                     if (this.activateAsFree) {

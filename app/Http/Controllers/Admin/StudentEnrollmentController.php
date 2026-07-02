@@ -6,12 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\AdvancedCourse;
 use App\Models\StudentCourseEnrollment;
+use App\Models\Wallet;
 use App\Services\InstructorCoursePercentageService;
 use App\Support\OnlineEnrollmentProvisioner;
 use App\Mail\CourseEnrollmentActivatedMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
 class StudentEnrollmentController extends Controller
@@ -54,7 +56,12 @@ class StudentEnrollmentController extends Controller
         $statsService = app(\App\Services\StatisticsCacheService::class);
         $stats = $statsService->getEnrollmentStats();
 
-        return view('admin.online-enrollments.index', compact('enrollments', 'courses', 'stats'));
+        $wallets = Wallet::academyWallets()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'type', 'balance']);
+
+        return view('admin.online-enrollments.index', compact('enrollments', 'courses', 'stats', 'wallets'));
     }
 
     /**
@@ -77,7 +84,12 @@ class StudentEnrollmentController extends Controller
                 ->get();
         });
 
-        return view('admin.online-enrollments.create', compact('students', 'courses'));
+        $wallets = Wallet::academyWallets()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'type', 'balance']);
+
+        return view('admin.online-enrollments.create', compact('students', 'courses', 'wallets'));
     }
 
     /**
@@ -92,7 +104,8 @@ class StudentEnrollmentController extends Controller
             'final_price' => 'nullable|numeric|min:0',
             'original_price' => 'nullable|numeric|min:0',
             'discount_amount' => 'nullable|numeric|min:0',
-            'payment_method' => 'nullable|string|max:50',
+            'payment_method' => 'nullable|string|in:cash,bank_transfer,online,wallet,other,free',
+            'wallet_id' => 'nullable|required_if:payment_method,wallet|exists:wallets,id',
             'activate_as_free' => 'nullable|boolean',
             'notes' => 'nullable|string|max:1000',
         ], [
@@ -116,25 +129,16 @@ class StudentEnrollmentController extends Controller
         // مسح الكاش بعد إضافة تسجيل جديد
         app(\App\Services\StatisticsCacheService::class)->clearStats('enrollment_stats');
 
-        $enrollmentData = [
-            'user_id' => $request->user_id,
-            'advanced_course_id' => $request->advanced_course_id,
-            'status' => $request->status,
-            'notes' => $request->notes,
-            'enrolled_at' => now(),
-        ];
+        $isComplimentary = $request->boolean('activate_as_free');
+        $paymentMethod = 'cash';
+        $wallet = null;
+        $pricing = null;
+        $course = null;
+        $student = null;
 
-        // إذا كان التسجيل نشط، إضافة بيانات التفعيل
-        if ($request->status === 'active') {
-            $enrollmentData['activated_at'] = now();
-            $enrollmentData['activated_by'] = Auth::id();
-        }
-
-        // مبلغ التفعيل (اختياري) — يُستخدم لحساب نسبة المدرب عند وجود اتفاقية "نسبة من الكورس"
         if ($request->status === 'active') {
             $course = AdvancedCourse::findOrFail($request->advanced_course_id);
             $student = User::findOrFail($request->user_id);
-            $isComplimentary = $request->boolean('activate_as_free');
             $pricing = OnlineEnrollmentProvisioner::resolvePricing(
                 $course,
                 $isComplimentary ? 0 : ($request->filled('final_price') ? (float) $request->final_price : null),
@@ -149,49 +153,81 @@ class StudentEnrollmentController extends Controller
                     'final_price' => 0,
                 ];
             }
+            $paymentMethod = $isComplimentary ? 'free' : ($request->payment_method ?? 'cash');
+            if (! $isComplimentary && $paymentMethod === 'wallet') {
+                $wallet = $this->resolveAcademyWallet($request->filled('wallet_id') ? (int) $request->wallet_id : null);
+                if (! $wallet) {
+                    return back()->withErrors(['wallet_id' => 'اختر محفظة أكاديمية نشطة وصحيحة'])->withInput();
+                }
+            }
+        }
+
+        $enrollmentData = [
+            'user_id' => $request->user_id,
+            'advanced_course_id' => $request->advanced_course_id,
+            'status' => $request->status,
+            'notes' => $request->notes,
+            'enrolled_at' => now(),
+        ];
+
+        if ($request->status === 'active') {
+            $enrollmentData['activated_at'] = now();
+            $enrollmentData['activated_by'] = Auth::id();
             $enrollmentData['original_price'] = $pricing['original_price'];
             $enrollmentData['discount_amount'] = $pricing['discount_amount'];
             $enrollmentData['final_price'] = $pricing['final_price'];
-            $enrollmentData['payment_method'] = $isComplimentary ? 'free' : $request->payment_method;
+            $enrollmentData['payment_method'] = $paymentMethod;
             $enrollmentData['enrollment_type'] = $isComplimentary ? 'gift' : 'purchase';
             $enrollmentData['hide_from_instructor'] = $isComplimentary;
         } elseif ($request->filled('final_price') && is_numeric($request->final_price)) {
             $enrollmentData['final_price'] = (float) $request->final_price;
         }
 
+        DB::beginTransaction();
+        try {
         $enrollment = StudentCourseEnrollment::create($enrollmentData);
 
-        // عند التفعيل: فاتورة + مدفوعة نسبة المدرب
-        if ($enrollment->status === 'active') {
+        if ($enrollment->status === 'active' && $course && $student && $pricing) {
             $freshEnrollment = $enrollment->fresh(['student', 'course']);
-            $course = $freshEnrollment->course;
-            $student = $freshEnrollment->student;
-            if ($course && $student) {
-                $pricing = OnlineEnrollmentProvisioner::resolvePricing(
-                    $course,
-                    (float) ($freshEnrollment->final_price ?? 0),
-                    (float) ($freshEnrollment->discount_amount ?? 0),
-                    (float) ($freshEnrollment->original_price ?? 0),
-                );
-                OnlineEnrollmentProvisioner::attachFinancialRecords(
-                    $freshEnrollment,
-                    $course,
-                    $student,
-                    $pricing,
-                    [
-                        'payment_method' => ($freshEnrollment->hide_from_instructor ?? false) ? 'free' : ($request->payment_method ?? 'cash'),
-                        'payment_notes' => ($freshEnrollment->hide_from_instructor ?? false) ? 'تفعيل مجاني — مخفي عن المدرب' : null,
-                    ],
-                );
-                $freshEnrollment = $freshEnrollment->fresh();
-            }
-            if (! ($freshEnrollment->hide_from_instructor ?? false)) {
+
+            OnlineEnrollmentProvisioner::attachFinancialRecords(
+                $freshEnrollment,
+                $course,
+                $student,
+                $pricing,
+                [
+                    'payment_method' => $paymentMethod,
+                    'wallet_id' => $wallet?->id,
+                    'payment_notes' => $isComplimentary
+                        ? 'تفعيل مجاني — مخفي عن المدرب'
+                        : 'تسجيل من لوحة التحكم',
+                    'deposit_notes' => $wallet
+                        ? 'إيداع تفعيل كورس أونلاين — ' . $course->title
+                        : null,
+                ],
+            );
+
+            $freshEnrollment = $freshEnrollment->fresh();
+
+            if (! $isComplimentary) {
                 InstructorCoursePercentageService::processEnrollmentActivation($freshEnrollment);
             }
 
+            DB::commit();
+        } else {
+            DB::commit();
+        }
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            report($e);
+
+            return back()->withErrors(['error' => 'تعذر إتمام التسجيل: ' . $e->getMessage()])->withInput();
+        }
+
+        if ($enrollment->status === 'active') {
+            $freshEnrollment = $enrollment->fresh(['student', 'course']);
             // إرسال بريد تفعيل الكورس للطالب
             try {
-                $freshEnrollment->loadMissing(['student', 'course']);
                 if ($freshEnrollment->student && $freshEnrollment->student->email) {
                     Mail::to($freshEnrollment->student->email)
                         ->send(new CourseEnrollmentActivatedMail($freshEnrollment));
@@ -201,8 +237,16 @@ class StudentEnrollmentController extends Controller
             }
         }
 
+        $successMessage = 'تم تسجيل الطالب في الكورس بنجاح';
+        if ($request->status === 'active' && ! $isComplimentary && $paymentMethod === 'wallet' && $wallet) {
+            $successMessage = 'تم التسجيل وإنشاء الفاتورة والدفعة وإيداع المبلغ في محفظة '
+                . ($wallet->name ?: Wallet::typeLabel($wallet->type)) . ' وحساب نسبة المدرب.';
+        } elseif ($request->status === 'active' && $isComplimentary) {
+            $successMessage = 'تم تسجيل الطالب وتفعيل الكورس مجاناً ولن تظهر بياناته عند المدرب.';
+        }
+
         return redirect()->route('admin.online-enrollments.index')
-                        ->with('success', 'تم تسجيل الطالب في الكورس بنجاح');
+                        ->with('success', $successMessage);
     }
 
     /**
@@ -226,6 +270,7 @@ class StudentEnrollmentController extends Controller
             'final_price' => 'nullable|numeric|min:0',
             'discount_amount' => 'nullable|numeric|min:0',
             'payment_method' => 'nullable|string|in:cash,bank_transfer,online,wallet,other,free',
+            'wallet_id' => 'nullable|required_if:payment_method,wallet|exists:wallets,id',
             'activate_as_free' => 'nullable|boolean',
         ], [
             'email.required' => 'البريد الإلكتروني مطلوب',
@@ -261,9 +306,20 @@ class StudentEnrollmentController extends Controller
             ];
         }
 
+        $paymentMethod = $isComplimentary ? 'free' : ($validated['payment_method'] ?? 'cash');
+        $wallet = null;
+        if (! $isComplimentary && $paymentMethod === 'wallet') {
+            $wallet = $this->resolveAcademyWallet(isset($validated['wallet_id']) ? (int) $validated['wallet_id'] : null);
+            if (! $wallet) {
+                return back()->withErrors(['wallet_id' => 'اختر محفظة أكاديمية نشطة وصحيحة'])->withInput();
+            }
+        }
+
         // مسح كاش الإحصائيات
         app(\App\Services\StatisticsCacheService::class)->clearStats('enrollment_stats');
 
+        DB::beginTransaction();
+        try {
         $enrollment = StudentCourseEnrollment::firstOrNew([
             'user_id' => $student->id,
             'advanced_course_id' => $validated['advanced_course_id'],
@@ -276,7 +332,7 @@ class StudentEnrollmentController extends Controller
         $enrollment->original_price = $pricing['original_price'];
         $enrollment->discount_amount = $pricing['discount_amount'];
         $enrollment->final_price = $pricing['final_price'];
-        $enrollment->payment_method = $isComplimentary ? 'free' : ($validated['payment_method'] ?? 'cash');
+        $enrollment->payment_method = $paymentMethod;
         $enrollment->enrollment_type = $isComplimentary ? 'gift' : ($enrollment->enrollment_type ?? 'purchase');
         $enrollment->hide_from_instructor = $isComplimentary;
         $enrollment->save();
@@ -289,8 +345,14 @@ class StudentEnrollmentController extends Controller
             $student,
             $pricing,
             [
-                'payment_method' => $isComplimentary ? 'free' : ($validated['payment_method'] ?? 'cash'),
-                'payment_notes' => $isComplimentary ? 'تفعيل مجاني — مخفي عن المدرب' : null,
+                'payment_method' => $paymentMethod,
+                'wallet_id' => $wallet?->id,
+                'payment_notes' => $isComplimentary
+                    ? 'تفعيل مجاني — مخفي عن المدرب'
+                    : 'تفعيل سريع من لوحة التحكم',
+                'deposit_notes' => $wallet
+                    ? 'إيداع تفعيل كورس أونلاين — ' . $course->title
+                    : null,
             ],
             replaceExisting: true,
         );
@@ -299,6 +361,16 @@ class StudentEnrollmentController extends Controller
 
         if (! $isComplimentary) {
             InstructorCoursePercentageService::processEnrollmentActivation($freshEnrollment);
+        }
+
+        DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            report($e);
+
+            return back()->withErrors([
+                'quick_activate_email' => 'تعذر إتمام التفعيل: ' . $e->getMessage(),
+            ])->withInput();
         }
 
         // إرسال بريد التفعيل للطالب
@@ -315,7 +387,9 @@ class StudentEnrollmentController extends Controller
         return redirect()->route('admin.online-enrollments.index')
             ->with('success', $isComplimentary
                 ? 'تم تفعيل الكورس مجاناً للطالب ولن تظهر بياناته عند المدرب.'
-                : 'تم تفعيل الكورس وإنشاء الفاتورة وحساب نسبة المدرب على المبلغ بعد الخصم.');
+                : ($paymentMethod === 'wallet' && $wallet
+                    ? 'تم التفعيل وإنشاء الفاتورة والدفعة وإيداع المبلغ في محفظة ' . ($wallet->name ?: Wallet::typeLabel($wallet->type)) . ' وحساب نسبة المدرب.'
+                    : 'تم تفعيل الكورس وإنشاء الفاتورة وحساب نسبة المدرب على المبلغ بعد الخصم.'));
     }
 
     /**
@@ -459,5 +533,17 @@ class StudentEnrollmentController extends Controller
                 'parent_phone' => $student->parent_phone,
             ]
         ]);
+    }
+
+    private function resolveAcademyWallet(?int $walletId): ?Wallet
+    {
+        if (! $walletId) {
+            return null;
+        }
+
+        return Wallet::academyWallets()
+            ->where('is_active', true)
+            ->whereKey($walletId)
+            ->first();
     }
 }
