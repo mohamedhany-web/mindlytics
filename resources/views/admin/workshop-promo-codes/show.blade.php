@@ -32,14 +32,20 @@
     </section>
 
     <div class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100">
+        <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
             <h2 class="font-black text-slate-900"><i class="fas fa-user-check text-violet-600 ml-2"></i>من فعّل الكود</h2>
+            <a href="{{ route('admin.workshop-promo-codes.export-activations', $workshopPromoCode) }}"
+               class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors">
+                <i class="fas fa-file-excel"></i>
+                <span>تصدير Excel</span>
+            </a>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full text-sm">
                 <thead class="bg-slate-50">
                     <tr>
                         <th class="px-4 py-3 text-right">الطالب</th>
+                        <th class="px-4 py-3 text-right">رقم الهاتف</th>
                         <th class="px-4 py-3 text-right">تاريخ التفعيل</th>
                         <th class="px-4 py-3 text-right">الحالة</th>
                         <th class="px-4 py-3 text-right">كوبون مرتبط</th>
@@ -55,6 +61,7 @@
                                 <div class="font-semibold">{{ $act->user->name ?? '—' }}</div>
                                 <div class="text-xs text-slate-500">{{ $act->user->email ?? '' }}</div>
                             </td>
+                            <td class="px-4 py-3 font-mono text-slate-700 whitespace-nowrap" dir="ltr">{{ $act->user->phone ?? '—' }}</td>
                             <td class="px-4 py-3">{{ $act->activated_at?->format('Y-m-d H:i') }}</td>
                             <td class="px-4 py-3">
                                 @if($act->status === 'active')
@@ -71,7 +78,7 @@
                             @include('admin.workshop-promo-codes._activation_sales_cells', ['act' => $act])
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="px-6 py-12 text-center text-slate-500">لم يفعّل أحد هذا الكود بعد</td></tr>
+                        <tr><td colspan="8" class="px-6 py-12 text-center text-slate-500">لم يفعّل أحد هذا الكود بعد</td></tr>
                     @endforelse
                 </tbody>
             </table>

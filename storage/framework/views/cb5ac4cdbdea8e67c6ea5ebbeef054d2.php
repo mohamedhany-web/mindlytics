@@ -1,5 +1,3 @@
-
-
 <?php $__env->startSection('title', 'طلاب المنح - Mindlytics'); ?>
 <?php $__env->startSection('header', 'قسم المنح'); ?>
 

@@ -1891,6 +1891,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             ->name('workshop-promo-codes.preview-discount');
         Route::post('workshop-promo-activations/{activation}/sales-task', [\App\Http\Controllers\Admin\WorkshopPromoCodeController::class, 'storeActivationSalesTask'])
             ->name('workshop-promo-activations.sales-task');
+        Route::get('workshop-promo-codes/{workshop_promo_code}/export-activations', [\App\Http\Controllers\Admin\WorkshopPromoCodeController::class, 'exportActivations'])
+            ->name('workshop-promo-codes.export-activations');
         Route::resource('workshop-promo-codes', \App\Http\Controllers\Admin\WorkshopPromoCodeController::class);
         
         // إدارة الإحالات

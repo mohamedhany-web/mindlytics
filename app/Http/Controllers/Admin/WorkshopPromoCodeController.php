@@ -15,6 +15,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class WorkshopPromoCodeController extends Controller
 {
@@ -121,6 +124,69 @@ class WorkshopPromoCodeController extends Controller
             compact('workshopPromoCode', 'stats'),
             $this->salesFormData()
         ));
+    }
+
+    public function exportActivations(WorkshopPromoCode $workshopPromoCode): StreamedResponse
+    {
+        $workshopPromoCode->load([
+            'activations.user',
+            'activations.coupon',
+            'activations.salesLead.assignee',
+        ]);
+
+        app(WorkshopPromoSalesService::class)->attachLeads($workshopPromoCode->activations);
+
+        $activations = $workshopPromoCode->activations->sortByDesc('activated_at')->values();
+        $safeCode = preg_replace('/[^\p{L}\p{N}\-_]+/u', '-', $workshopPromoCode->code) ?: 'promo';
+        $filename = 'تفعيلات-كود-' . $safeCode . '-' . now()->format('Y-m-d') . '.xlsx';
+
+        return response()->streamDownload(function () use ($activations, $workshopPromoCode) {
+            $spreadsheet = new Spreadsheet;
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('تفعيلات الكود');
+            $sheet->setRightToLeft(true);
+
+            $rows = [
+                ['كود الورشة', $workshopPromoCode->code],
+                ['عنوان الكود', $workshopPromoCode->title],
+                ['تاريخ التصدير', now()->format('Y-m-d H:i')],
+                [],
+                ['الاسم', 'البريد الإلكتروني', 'رقم الهاتف', 'تاريخ التفعيل', 'الحالة', 'كوبون مرتبط', 'مسند إلى', 'متابعة'],
+            ];
+
+            foreach ($activations as $act) {
+                $lead = $act->resolvedLead ?? $act->salesLead;
+                $rows[] = [
+                    $act->user?->name ?? '—',
+                    $act->user?->email ?? '—',
+                    $act->user?->phone ?? '—',
+                    $act->activated_at?->format('Y-m-d H:i') ?? '—',
+                    $this->activationStatusLabel($act->status),
+                    $act->coupon?->code ?? '—',
+                    $lead?->assignee?->name ?? '—',
+                    $lead?->next_follow_up_at?->format('Y-m-d H:i') ?? '—',
+                ];
+            }
+
+            $sheet->fromArray($rows);
+
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+            $spreadsheet->disconnectWorksheets();
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    private function activationStatusLabel(string $status): string
+    {
+        return match ($status) {
+            WorkshopPromoActivation::STATUS_ACTIVE => 'مفعّل',
+            WorkshopPromoActivation::STATUS_USED => 'استُخدم',
+            WorkshopPromoActivation::STATUS_EXPIRED => 'منتهي',
+            WorkshopPromoActivation::STATUS_CANCELLED => 'ملغي',
+            default => $status,
+        };
     }
 
     public function edit(WorkshopPromoCode $workshopPromoCode)

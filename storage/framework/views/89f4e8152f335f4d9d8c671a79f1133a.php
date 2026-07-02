@@ -18,6 +18,12 @@
                     <i class="fas fa-ban text-sm"></i>
                 </button>
             </form>
+        <?php elseif($registration->status === \App\Models\ScholarshipRegistration::STATUS_DEACTIVATED): ?>
+            <form method="POST" action="<?php echo e(route('admin.scholarships.registrations.activate', $registration)); ?>"><?php echo csrf_field(); ?>
+                <button type="submit" class="w-9 h-9 flex items-center justify-center bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg font-semibold transition-colors shadow-sm hover:shadow-md" title="إعادة التفعيل">
+                    <i class="fas fa-redo text-sm"></i>
+                </button>
+            </form>
         <?php endif; ?>
     </div>
 <?php endif; ?>
