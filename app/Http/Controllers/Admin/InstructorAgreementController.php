@@ -152,7 +152,7 @@ class InstructorAgreementController extends Controller
 
     public function show(InstructorAgreement $agreement)
     {
-        if (($agreement->billing_type ?? '') === InstructorAgreement::BILLING_COURSE_PERCENTAGE
+        if ($agreement->isCoursePercentageType()
             && $agreement->status === InstructorAgreement::STATUS_ACTIVE
             && $agreement->advanced_course_id) {
             InstructorCoursePercentageService::syncMissingPaymentsForAgreement($agreement);

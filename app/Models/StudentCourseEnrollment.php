@@ -75,6 +75,16 @@ class StudentCourseEnrollment extends Model
         return $this->belongsTo(User::class, 'activated_by');
     }
 
+    public function invoice(): BelongsTo
+    {
+        return $this->belongsTo(Invoice::class);
+    }
+
+    public function payment(): BelongsTo
+    {
+        return $this->belongsTo(Payment::class);
+    }
+
     public function installmentAgreements()
     {
         return $this->hasMany(InstallmentAgreement::class, 'student_course_enrollment_id');

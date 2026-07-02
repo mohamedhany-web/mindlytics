@@ -30,25 +30,18 @@ class InstructorCoursePercentageService
         }
 
         $course = $enrollment->course;
-        if (!$course || !$course->instructor_id) {
+        if (! $course) {
             return null;
         }
 
         if ($agreement) {
-            if ((int) $agreement->advanced_course_id !== (int) $enrollment->advanced_course_id
-                || (int) $agreement->instructor_id !== (int) $course->instructor_id
-                || $agreement->billing_type !== InstructorAgreement::BILLING_COURSE_PERCENTAGE
-                || $agreement->status !== InstructorAgreement::STATUS_ACTIVE
-                || $agreement->course_percentage === null) {
+            if (! $agreement->isCoursePercentageType()
+                || (int) $agreement->advanced_course_id !== (int) $enrollment->advanced_course_id
+                || $agreement->status !== InstructorAgreement::STATUS_ACTIVE) {
                 return null;
             }
         } else {
-            $agreement = InstructorAgreement::where('instructor_id', $course->instructor_id)
-                ->where('advanced_course_id', $enrollment->advanced_course_id)
-                ->where('billing_type', InstructorAgreement::BILLING_COURSE_PERCENTAGE)
-                ->where('status', InstructorAgreement::STATUS_ACTIVE)
-                ->whereNotNull('course_percentage')
-                ->first();
+            $agreement = self::findAgreementForEnrollment($enrollment, $course);
         }
 
         if (!$agreement) {
@@ -126,10 +119,7 @@ class InstructorCoursePercentageService
      */
     public static function syncMissingPaymentsForAgreementDetailed(InstructorAgreement $agreement): array
     {
-        if ($agreement->billing_type !== InstructorAgreement::BILLING_COURSE_PERCENTAGE
-            || $agreement->status !== InstructorAgreement::STATUS_ACTIVE
-            || ! $agreement->advanced_course_id
-            || $agreement->course_percentage === null) {
+        if (! $agreement->isCoursePercentageType() || $agreement->status !== InstructorAgreement::STATUS_ACTIVE) {
             return [];
         }
 
@@ -139,16 +129,11 @@ class InstructorCoursePercentageService
             ->where('advanced_course_id', $agreement->advanced_course_id)
             ->where('status', 'active')
             ->visibleToInstructor()
-            ->with(['course', 'student'])
+            ->with(['course', 'student', 'invoice', 'payment'])
             ->orderBy('id')
             ->chunkById(100, function ($enrollments) use ($agreement, &$created) {
                 foreach ($enrollments as $enrollment) {
-                    $course = $enrollment->course;
-                    if (! $course || (int) $course->instructor_id !== (int) $agreement->instructor_id) {
-                        continue;
-                    }
-
-                    if (self::resolveActivationBaseAmount($enrollment, $course) <= 0) {
+                    if (self::resolveActivationBaseAmount($enrollment, $enrollment->course) <= 0) {
                         continue;
                     }
 
@@ -183,16 +168,76 @@ class InstructorCoursePercentageService
         $total = 0;
 
         InstructorAgreement::query()
-            ->where('billing_type', InstructorAgreement::BILLING_COURSE_PERCENTAGE)
-            ->where('status', InstructorAgreement::STATUS_ACTIVE)
-            ->whereNotNull('advanced_course_id')
-            ->whereNotNull('course_percentage')
+            ->coursePercentageActive()
             ->orderBy('id')
             ->each(function (InstructorAgreement $agreement) use (&$total) {
                 $total += self::syncMissingPaymentsForAgreement($agreement);
             });
 
         return $total;
+    }
+
+    public static function findAgreementForEnrollment(
+        StudentCourseEnrollment $enrollment,
+        ?\App\Models\AdvancedCourse $course = null,
+    ): ?InstructorAgreement {
+        $course ??= $enrollment->course;
+        if (! $course) {
+            return null;
+        }
+
+        $baseQuery = InstructorAgreement::query()
+            ->coursePercentageActive()
+            ->where('advanced_course_id', $enrollment->advanced_course_id);
+
+        if ($course->instructor_id) {
+            $matched = (clone $baseQuery)
+                ->where('instructor_id', $course->instructor_id)
+                ->orderByDesc('id')
+                ->first();
+            if ($matched) {
+                return $matched;
+            }
+        }
+
+        return $baseQuery->orderByDesc('id')->first();
+    }
+
+    /**
+     * @return array{eligible: bool, reason: string, amount: float}
+     */
+    public static function diagnoseEnrollmentForAgreement(
+        StudentCourseEnrollment $enrollment,
+        InstructorAgreement $agreement,
+    ): array {
+        if ($enrollment->status !== 'active') {
+            return ['eligible' => false, 'reason' => 'التسجيل غير نشط', 'amount' => 0];
+        }
+
+        if ((int) $enrollment->advanced_course_id !== (int) $agreement->advanced_course_id) {
+            return ['eligible' => false, 'reason' => 'كورس مختلف عن الاتفاقية', 'amount' => 0];
+        }
+
+        if ($enrollment->isHiddenFromInstructor()) {
+            return ['eligible' => false, 'reason' => 'تفعيل مجاني / مخفي عن المدرب', 'amount' => 0];
+        }
+
+        $amount = self::resolveActivationBaseAmount($enrollment, $enrollment->course);
+        if ($amount <= 0) {
+            return ['eligible' => false, 'reason' => 'لا يوجد مبلغ مدفوع مسجل', 'amount' => 0];
+        }
+
+        $exists = AgreementPayment::query()
+            ->where('agreement_id', $agreement->id)
+            ->where('student_course_enrollment_id', $enrollment->id)
+            ->where('type', AgreementPayment::TYPE_COURSE_ACTIVATION)
+            ->exists();
+
+        if ($exists) {
+            return ['eligible' => false, 'reason' => 'موجود بالفعل في الاتفاقية', 'amount' => $amount];
+        }
+
+        return ['eligible' => true, 'reason' => 'يحتاج مزامنة', 'amount' => $amount];
     }
 
     /**
@@ -210,7 +255,28 @@ class InstructorCoursePercentageService
         $original = (float) ($enrollment->original_price ?? 0);
         $discount = (float) ($enrollment->discount_amount ?? 0);
         if ($original > 0) {
-            return round(max(0, $original - $discount), 2);
+            $computed = round(max(0, $original - $discount), 2);
+            if ($computed > 0) {
+                return $computed;
+            }
+        }
+
+        if ($enrollment->invoice_id) {
+            $invoice = $enrollment->relationLoaded('invoice')
+                ? $enrollment->invoice
+                : \App\Models\Invoice::query()->find($enrollment->invoice_id);
+            if ($invoice && (float) $invoice->total_amount > 0) {
+                return round((float) $invoice->total_amount, 2);
+            }
+        }
+
+        if ($enrollment->payment_id) {
+            $payment = $enrollment->relationLoaded('payment')
+                ? $enrollment->payment
+                : \App\Models\Payment::query()->find($enrollment->payment_id);
+            if ($payment && (float) $payment->amount > 0) {
+                return round((float) $payment->amount, 2);
+            }
         }
 
         if ($course) {

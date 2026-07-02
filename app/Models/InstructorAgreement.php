@@ -173,4 +173,35 @@ class InstructorAgreement extends Model
         ];
         return $labels[$this->status] ?? $this->status;
     }
+
+    public function isCoursePercentageType(): bool
+    {
+        if (($this->billing_type ?? '') === self::BILLING_COURSE_PERCENTAGE) {
+            return true;
+        }
+
+        return $this->advanced_course_id
+            && $this->course_percentage !== null
+            && (float) $this->course_percentage > 0;
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<static>
+     */
+    public function scopeCoursePercentageActive($query)
+    {
+        return $query
+            ->where('status', self::STATUS_ACTIVE)
+            ->whereNotNull('advanced_course_id')
+            ->whereNotNull('course_percentage')
+            ->where('course_percentage', '>', 0)
+            ->where(function ($q) {
+                $q->where('billing_type', self::BILLING_COURSE_PERCENTAGE)
+                    ->orWhere(function ($inner) {
+                        $inner->whereNotNull('advanced_course_id')
+                            ->where('course_percentage', '>', 0);
+                    });
+            });
+    }
 }
