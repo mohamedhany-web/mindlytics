@@ -150,6 +150,7 @@ class GroupController extends Controller
         // جلب الطلاب المسجلين في الكورس (غير أعضاء في المجموعة)
         $enrollments = \App\Models\StudentCourseEnrollment::where('advanced_course_id', $group->course_id)
             ->where('status', 'active')
+            ->visibleToInstructor()
             ->with('user')
             ->whereDoesntHave('user.groupMembers', function($q) use ($group) {
                 $q->where('group_id', $group->id);

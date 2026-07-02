@@ -110,6 +110,18 @@
                     <p class="mt-1 text-xs text-gray-500">إن وُجدت اتفاقية "نسبة من الكورس" للمدرب، تُحسب حصته من هذا المبلغ (أو سعر الكورس إن تركت الحقل فارغاً).</p>
                     @error('final_price')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
+
+                <div id="activate_free_wrap" class="{{ old('status', 'active') !== 'active' ? 'hidden' : '' }} md:col-span-2">
+                    <label class="inline-flex items-start gap-3 cursor-pointer rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 w-full">
+                        <input type="checkbox" name="activate_as_free" value="1" id="activate_as_free"
+                               {{ old('activate_as_free') ? 'checked' : '' }}
+                               class="mt-1 rounded border-emerald-400 text-emerald-600 focus:ring-emerald-500">
+                        <span>
+                            <span class="block text-sm font-bold text-emerald-900">تفعيل مجاني (مخفي عن المدرب)</span>
+                            <span class="block text-xs text-emerald-800/80 mt-1">بدون فاتورة أو نسبة مدرب — ولن تظهر بيانات الطالب في لوحة المدرب.</span>
+                        </span>
+                    </label>
+                </div>
             </div>
 
             <!-- الملاحظات -->
@@ -176,7 +188,10 @@
 // إظهار/إخفاء حقل مبلغ التفعيل حسب حالة التسجيل
 document.getElementById('status').addEventListener('change', function() {
     var wrap = document.getElementById('final_price_wrap');
-    wrap.classList.toggle('hidden', this.value !== 'active');
+    var freeWrap = document.getElementById('activate_free_wrap');
+    var isActive = this.value === 'active';
+    wrap.classList.toggle('hidden', !isActive);
+    if (freeWrap) freeWrap.classList.toggle('hidden', !isActive);
 });
 
 // عرض معلومات الطالب عند الاختيار

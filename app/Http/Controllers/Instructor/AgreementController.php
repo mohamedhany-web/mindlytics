@@ -21,7 +21,7 @@ class AgreementController extends Controller
         $instructor = auth()->user();
         
         $agreements = InstructorAgreement::where('instructor_id', $instructor->id)
-            ->with(['payments.course', 'payments.lecture'])
+            ->with(['payments' => fn ($q) => $q->visibleToInstructor()->with(['course', 'lecture'])])
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -29,12 +29,14 @@ class AgreementController extends Controller
         
         $stats = [
             'total_earned' => AgreementPayment::where('instructor_id', $instructor->id)
+                ->visibleToInstructor()
                 ->where('status', AgreementPayment::STATUS_PAID)
                 ->sum('amount'),
             'pending_amount' => AgreementPayment::where('instructor_id', $instructor->id)
+                ->visibleToInstructor()
                 ->where('status', AgreementPayment::STATUS_APPROVED)
                 ->sum('amount'),
-            'total_payments' => AgreementPayment::where('instructor_id', $instructor->id)->count(),
+            'total_payments' => AgreementPayment::where('instructor_id', $instructor->id)->visibleToInstructor()->count(),
         ];
 
         return view('instructor.agreements.index', compact('agreements', 'activeAgreement', 'stats'));
@@ -46,13 +48,17 @@ class AgreementController extends Controller
             abort(403);
         }
 
-        $agreement->load(['payments.course', 'payments.lecture', 'payments.enrollment.student', 'advancedCourse', 'instructor']);
+        $agreement->load([
+            'payments' => fn ($q) => $q->visibleToInstructor()->with(['course', 'lecture', 'enrollment.student']),
+            'advancedCourse',
+            'instructor',
+        ]);
         
         $stats = [
-            'total_earned' => $agreement->paidPayments()->sum('amount'),
-            'pending_amount' => $agreement->approvedPayments()->sum('amount'),
-            'total_payments' => $agreement->payments()->count(),
-            'paid_payments' => $agreement->paidPayments()->count(),
+            'total_earned' => $agreement->paidPayments()->visibleToInstructor()->sum('amount'),
+            'pending_amount' => $agreement->approvedPayments()->visibleToInstructor()->sum('amount'),
+            'total_payments' => $agreement->payments()->visibleToInstructor()->count(),
+            'paid_payments' => $agreement->paidPayments()->visibleToInstructor()->count(),
         ];
 
         return view('instructor.agreements.show', compact('agreement', 'stats'));
@@ -71,8 +77,13 @@ class AgreementController extends Controller
             abort(404, 'هذه الاتفاقية ليست من نوع نسبة من الكورس.');
         }
 
-        $agreement->load(['payments' => fn ($q) => $q->where('type', 'course_activation')->orderBy('created_at')]);
-        $agreement->load(['payments.enrollment.student', 'advancedCourse']);
+        $agreement->load([
+            'payments' => fn ($q) => $q->visibleToInstructor()
+                ->where('type', 'course_activation')
+                ->orderBy('created_at')
+                ->with(['enrollment.student']),
+            'advancedCourse',
+        ]);
 
         $activationPayments = $agreement->payments->where('type', 'course_activation');
         $percentage = (float) ($agreement->course_percentage ?? 0);

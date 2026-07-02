@@ -58,7 +58,7 @@ class LectureController extends Controller
             'scheduled_lectures' => Lecture::where('instructor_id', $instructor->id)->where('status', 'scheduled')->count(),
             'total_students' => \App\Models\StudentCourseEnrollment::whereHas('course', function($q) use ($instructor) {
                 $q->where('instructor_id', $instructor->id);
-            })->where('status', 'active')->count(),
+            })->where('status', 'active')->visibleToInstructor()->count(),
         ];
         
         return view('instructor.lectures.index', compact('courses', 'stats'));
@@ -279,6 +279,7 @@ class LectureController extends Controller
         // جلب الطلاب المسجلين في الكورس
         $enrollments = \App\Models\StudentCourseEnrollment::where('advanced_course_id', $lecture->course_id)
             ->where('status', 'active')
+            ->visibleToInstructor()
             ->with('user')
             ->get();
         

@@ -222,6 +222,7 @@ class ExamController extends Controller
         } else {
             $enrollments = \App\Models\StudentCourseEnrollment::where('advanced_course_id', $exam->advanced_course_id)
                 ->where('status', 'active')
+                ->visibleToInstructor()
                 ->with('user')
                 ->get();
         }

@@ -48,7 +48,7 @@ class CourseController extends Controller
             'inactive' => AdvancedCourse::where('instructor_id', $instructor->id)->where('is_active', false)->count(),
             'total_students' => \App\Models\StudentCourseEnrollment::whereHas('course', function($q) use ($instructor) {
                 $q->where('instructor_id', $instructor->id);
-            })->where('status', 'active')->count(),
+            })->where('status', 'active')->visibleToInstructor()->count(),
         ];
 
         return view('instructor.courses.index', compact('courses', 'stats'));
@@ -63,7 +63,10 @@ class CourseController extends Controller
         
         $course = AdvancedCourse::where('instructor_id', $instructor->id)
             ->with(['academicYear', 'academicSubject', 'instructor'])
-            ->withCount(['lectures', 'enrollments'])
+            ->withCount([
+                'lectures',
+                'enrollments as enrollments_count' => fn ($q) => $q->where('status', 'active')->visibleToInstructor(),
+            ])
             ->findOrFail($id);
 
         // المحاضرات
@@ -93,6 +96,7 @@ class CourseController extends Controller
         $enrollments = \App\Models\StudentCourseEnrollment::where('advanced_course_id', $course->id)
             ->with('user')
             ->where('status', 'active')
+            ->visibleToInstructor()
             ->latest()
             ->paginate(20, ['*'], 'students_page');
 

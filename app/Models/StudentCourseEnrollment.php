@@ -28,12 +28,14 @@ class StudentCourseEnrollment extends Model
         'original_price',
         'discount_amount',
         'coupon_id',
+        'hide_from_instructor',
     ];
 
     protected $casts = [
         'enrolled_at' => 'datetime',
         'activated_at' => 'datetime',
         'progress' => 'decimal:2',
+        'hide_from_instructor' => 'boolean',
     ];
 
     /**
@@ -84,6 +86,18 @@ class StudentCourseEnrollment extends Model
     public function isActive(): bool
     {
         return $this->status === 'active';
+    }
+
+    public function isHiddenFromInstructor(): bool
+    {
+        return (bool) ($this->hide_from_instructor ?? false);
+    }
+
+    public function scopeVisibleToInstructor($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('hide_from_instructor', false)->orWhereNull('hide_from_instructor');
+        });
     }
 
     /**

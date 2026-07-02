@@ -171,6 +171,7 @@ class AssignmentController extends Controller
         // جلب الطلاب المسجلين في الكورس
         $enrollments = \App\Models\StudentCourseEnrollment::where('advanced_course_id', $courseId)
             ->where('status', 'active')
+            ->visibleToInstructor()
             ->with('user')
             ->get();
         

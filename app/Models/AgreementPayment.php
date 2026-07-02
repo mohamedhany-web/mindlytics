@@ -142,4 +142,12 @@ class AgreementPayment extends Model
     {
         return $query->where('status', self::STATUS_PAID);
     }
+
+    public function scopeVisibleToInstructor($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('student_course_enrollment_id')
+                ->orWhereHas('enrollment', fn ($enrollment) => $enrollment->visibleToInstructor());
+        });
+    }
 }

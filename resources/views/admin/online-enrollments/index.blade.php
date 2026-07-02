@@ -129,7 +129,19 @@
                        class="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
             </div>
 
-            <div>
+            <div class="md:col-span-2 lg:col-span-4 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
+                <label class="inline-flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" name="activate_as_free" value="1"
+                           x-model="activateAsFree" @change="onFreeToggle()"
+                           class="mt-1 rounded border-emerald-400 text-emerald-600 focus:ring-emerald-500">
+                    <span>
+                        <span class="block text-sm font-bold text-emerald-900">تفعيل مجاني (مخفي عن المدرب)</span>
+                        <span class="block text-xs text-emerald-800/80 mt-1">يفتح الكورس للطالب بدون فاتورة وبدون نسبة للمدرب، ولن يظهر اسمه أو بياناته في لوحة المدرب.</span>
+                    </span>
+                </label>
+            </div>
+
+            <div x-show="!activateAsFree" x-cloak>
                 <label for="quick_discount" class="block text-sm font-medium text-gray-700 mb-2">الخصم (ج.م)</label>
                 <input type="number" name="discount_amount" id="quick_discount" step="0.01" min="0"
                        x-model.number="discount" @input="updateFinal()"
@@ -137,7 +149,7 @@
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
             </div>
 
-            <div>
+            <div x-show="!activateAsFree" x-cloak>
                 <label for="quick_final" class="block text-sm font-medium text-gray-700 mb-2">المبلغ المدفوع (بعد الخصم)</label>
                 <input type="number" name="final_price" id="quick_final" step="0.01" min="0"
                        x-model.number="finalPrice" @input="discount = Math.max(0, listPrice - finalPrice)"
@@ -146,7 +158,7 @@
                 <p class="text-[11px] text-gray-500 mt-1">يُستخدم لحساب نسبة المدرب + إنشاء فاتورة</p>
             </div>
 
-            <div>
+            <div x-show="!activateAsFree" x-cloak>
                 <label for="quick_payment_method" class="block text-sm font-medium text-gray-700 mb-2">طريقة الدفع</label>
                 <select name="payment_method" id="quick_payment_method"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg">
@@ -162,7 +174,7 @@
                 <button type="submit"
                         class="w-full inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-emerald-600 to-green-500 text-white rounded-lg hover:from-emerald-700 hover:to-green-600 shadow-md hover:shadow-lg transition-all duration-200">
                     <i class="fas fa-check-circle mr-2"></i>
-                    تفعيل + فاتورة
+                    <span x-text="activateAsFree ? 'تفعيل مجاني' : 'تفعيل + فاتورة'"></span>
                 </button>
             </div>
             </div>
@@ -175,7 +187,16 @@
                 listPrice: 0,
                 discount: Number('{{ old('discount_amount', 0) }}') || 0,
                 finalPrice: Number('{{ old('final_price', '') }}') || 0,
+                activateAsFree: {{ old('activate_as_free') ? 'true' : 'false' }},
                 init() { this.onCourseChange(); },
+                onFreeToggle() {
+                    if (this.activateAsFree) {
+                        this.discount = this.listPrice;
+                        this.finalPrice = 0;
+                    } else {
+                        this.updateFinal();
+                    }
+                },
                 onCourseChange() {
                     const course = map[String(this.courseId)] || null;
                     this.listPrice = course ? (Number(course.price) || 0) : 0;
@@ -186,8 +207,17 @@
                         this.discount = 0;
                         this.finalPrice = 0;
                     }
+                    if (this.activateAsFree) {
+                        this.discount = this.listPrice;
+                        this.finalPrice = 0;
+                    }
                 },
                 updateFinal() {
+                    if (this.activateAsFree) {
+                        this.discount = this.listPrice;
+                        this.finalPrice = 0;
+                        return;
+                    }
                     this.finalPrice = Math.max(0, this.listPrice - (Number(this.discount) || 0));
                 },
             };
@@ -293,6 +323,9 @@
                                     </div>
                                     <div class="mr-4">
                                         <div class="text-sm font-medium text-gray-900">{{ $enrollment->student->name }}</div>
+                                        @if($enrollment->hide_from_instructor)
+                                            <span class="inline-flex mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">تفعيل مجاني — مخفي عن المدرب</span>
+                                        @endif
                                         <div class="text-sm text-gray-500">{{ $enrollment->student->phone }}</div>
                                         @if($enrollment->student->parent_phone)
                                             <div class="text-xs text-gray-400">ولي الأمر: {{ $enrollment->student->parent_phone }}</div>

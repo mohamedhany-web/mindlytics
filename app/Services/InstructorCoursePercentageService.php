@@ -22,6 +22,10 @@ class InstructorCoursePercentageService
             return null;
         }
 
+        if ($enrollment->isHiddenFromInstructor()) {
+            return null;
+        }
+
         $course = $enrollment->course;
         if (!$course || !$course->instructor_id) {
             return null;
@@ -54,6 +58,9 @@ class InstructorCoursePercentageService
 
         // مبلغ التفعيل بعد الخصم — يُستخدم لحساب نسبة المدرب
         $finalPrice = self::resolveActivationBaseAmount($enrollment, $course);
+        if ($finalPrice <= 0) {
+            return null;
+        }
         $percentage = (float) $agreement->course_percentage;
         $instructorAmount = round($finalPrice * ($percentage / 100), 2);
 

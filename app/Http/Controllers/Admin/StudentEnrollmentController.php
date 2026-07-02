@@ -93,6 +93,7 @@ class StudentEnrollmentController extends Controller
             'original_price' => 'nullable|numeric|min:0',
             'discount_amount' => 'nullable|numeric|min:0',
             'payment_method' => 'nullable|string|max:50',
+            'activate_as_free' => 'nullable|boolean',
             'notes' => 'nullable|string|max:1000',
         ], [
             'user_id.required' => 'الطالب مطلوب',
@@ -133,16 +134,27 @@ class StudentEnrollmentController extends Controller
         if ($request->status === 'active') {
             $course = AdvancedCourse::findOrFail($request->advanced_course_id);
             $student = User::findOrFail($request->user_id);
+            $isComplimentary = $request->boolean('activate_as_free');
             $pricing = OnlineEnrollmentProvisioner::resolvePricing(
                 $course,
-                $request->filled('final_price') ? (float) $request->final_price : null,
-                $request->filled('discount_amount') ? (float) $request->discount_amount : null,
+                $isComplimentary ? 0 : ($request->filled('final_price') ? (float) $request->final_price : null),
+                $isComplimentary ? null : ($request->filled('discount_amount') ? (float) $request->discount_amount : null),
                 $request->filled('original_price') ? (float) $request->original_price : null,
             );
+            if ($isComplimentary) {
+                $original = $pricing['original_price'] > 0 ? $pricing['original_price'] : $course->originalPrice();
+                $pricing = [
+                    'original_price' => round($original, 2),
+                    'discount_amount' => round($original, 2),
+                    'final_price' => 0,
+                ];
+            }
             $enrollmentData['original_price'] = $pricing['original_price'];
             $enrollmentData['discount_amount'] = $pricing['discount_amount'];
             $enrollmentData['final_price'] = $pricing['final_price'];
-            $enrollmentData['payment_method'] = $request->payment_method;
+            $enrollmentData['payment_method'] = $isComplimentary ? 'free' : $request->payment_method;
+            $enrollmentData['enrollment_type'] = $isComplimentary ? 'gift' : 'purchase';
+            $enrollmentData['hide_from_instructor'] = $isComplimentary;
         } elseif ($request->filled('final_price') && is_numeric($request->final_price)) {
             $enrollmentData['final_price'] = (float) $request->final_price;
         }
@@ -166,11 +178,16 @@ class StudentEnrollmentController extends Controller
                     $course,
                     $student,
                     $pricing,
-                    ['payment_method' => $request->payment_method ?? 'cash'],
+                    [
+                        'payment_method' => ($freshEnrollment->hide_from_instructor ?? false) ? 'free' : ($request->payment_method ?? 'cash'),
+                        'payment_notes' => ($freshEnrollment->hide_from_instructor ?? false) ? 'تفعيل مجاني — مخفي عن المدرب' : null,
+                    ],
                 );
                 $freshEnrollment = $freshEnrollment->fresh();
             }
-            InstructorCoursePercentageService::processEnrollmentActivation($freshEnrollment);
+            if (! ($freshEnrollment->hide_from_instructor ?? false)) {
+                InstructorCoursePercentageService::processEnrollmentActivation($freshEnrollment);
+            }
 
             // إرسال بريد تفعيل الكورس للطالب
             try {
@@ -208,7 +225,8 @@ class StudentEnrollmentController extends Controller
             'advanced_course_id' => 'required|exists:advanced_courses,id',
             'final_price' => 'nullable|numeric|min:0',
             'discount_amount' => 'nullable|numeric|min:0',
-            'payment_method' => 'nullable|string|in:cash,bank_transfer,online,wallet,other',
+            'payment_method' => 'nullable|string|in:cash,bank_transfer,online,wallet,other,free',
+            'activate_as_free' => 'nullable|boolean',
         ], [
             'email.required' => 'البريد الإلكتروني مطلوب',
             'email.email' => 'صيغة البريد الإلكتروني غير صحيحة',
@@ -227,11 +245,21 @@ class StudentEnrollmentController extends Controller
         }
 
         $course = AdvancedCourse::findOrFail($validated['advanced_course_id']);
+        $isComplimentary = $request->boolean('activate_as_free');
         $pricing = OnlineEnrollmentProvisioner::resolvePricing(
             $course,
-            isset($validated['final_price']) ? (float) $validated['final_price'] : null,
-            isset($validated['discount_amount']) ? (float) $validated['discount_amount'] : null,
+            $isComplimentary ? 0 : (isset($validated['final_price']) ? (float) $validated['final_price'] : null),
+            $isComplimentary ? null : (isset($validated['discount_amount']) ? (float) $validated['discount_amount'] : null),
         );
+
+        if ($isComplimentary) {
+            $original = $pricing['original_price'] > 0 ? $pricing['original_price'] : $course->originalPrice();
+            $pricing = [
+                'original_price' => round($original, 2),
+                'discount_amount' => round($original, 2),
+                'final_price' => 0,
+            ];
+        }
 
         // مسح كاش الإحصائيات
         app(\App\Services\StatisticsCacheService::class)->clearStats('enrollment_stats');
@@ -248,7 +276,9 @@ class StudentEnrollmentController extends Controller
         $enrollment->original_price = $pricing['original_price'];
         $enrollment->discount_amount = $pricing['discount_amount'];
         $enrollment->final_price = $pricing['final_price'];
-        $enrollment->payment_method = $validated['payment_method'] ?? 'cash';
+        $enrollment->payment_method = $isComplimentary ? 'free' : ($validated['payment_method'] ?? 'cash');
+        $enrollment->enrollment_type = $isComplimentary ? 'gift' : ($enrollment->enrollment_type ?? 'purchase');
+        $enrollment->hide_from_instructor = $isComplimentary;
         $enrollment->save();
 
         $freshEnrollment = $enrollment->fresh(['student', 'course']);
@@ -258,14 +288,18 @@ class StudentEnrollmentController extends Controller
             $course,
             $student,
             $pricing,
-            ['payment_method' => $validated['payment_method'] ?? 'cash'],
+            [
+                'payment_method' => $isComplimentary ? 'free' : ($validated['payment_method'] ?? 'cash'),
+                'payment_notes' => $isComplimentary ? 'تفعيل مجاني — مخفي عن المدرب' : null,
+            ],
             replaceExisting: true,
         );
 
         $freshEnrollment = $freshEnrollment->fresh();
 
-        // معالجة نسبة المدرب عند التفعيل (بعد حفظ السعر بعد الخصم)
-        InstructorCoursePercentageService::processEnrollmentActivation($freshEnrollment);
+        if (! $isComplimentary) {
+            InstructorCoursePercentageService::processEnrollmentActivation($freshEnrollment);
+        }
 
         // إرسال بريد التفعيل للطالب
         try {
@@ -279,7 +313,9 @@ class StudentEnrollmentController extends Controller
         }
 
         return redirect()->route('admin.online-enrollments.index')
-            ->with('success', 'تم تفعيل الكورس وإنشاء الفاتورة وحساب نسبة المدرب على المبلغ بعد الخصم.');
+            ->with('success', $isComplimentary
+                ? 'تم تفعيل الكورس مجاناً للطالب ولن تظهر بياناته عند المدرب.'
+                : 'تم تفعيل الكورس وإنشاء الفاتورة وحساب نسبة المدرب على المبلغ بعد الخصم.');
     }
 
     /**

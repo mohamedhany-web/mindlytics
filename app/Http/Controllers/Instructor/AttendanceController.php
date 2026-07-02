@@ -84,6 +84,7 @@ class AttendanceController extends Controller
         // جلب الطلاب المسجلين في الكورس
         $enrollments = \App\Models\StudentCourseEnrollment::where('advanced_course_id', $lecture->course_id)
             ->where('status', 'active')
+            ->visibleToInstructor()
             ->with('user')
             ->get();
         
