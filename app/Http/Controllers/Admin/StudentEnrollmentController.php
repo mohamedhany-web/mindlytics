@@ -210,7 +210,7 @@ class StudentEnrollmentController extends Controller
             $freshEnrollment = $freshEnrollment->fresh();
 
             if (! $isComplimentary) {
-                InstructorCoursePercentageService::processEnrollmentActivation($freshEnrollment);
+                InstructorCoursePercentageService::processEnrollmentActivation($freshEnrollment, rethrowOnFailure: true);
             }
 
             DB::commit();
@@ -360,7 +360,7 @@ class StudentEnrollmentController extends Controller
         $freshEnrollment = $freshEnrollment->fresh();
 
         if (! $isComplimentary) {
-            InstructorCoursePercentageService::processEnrollmentActivation($freshEnrollment);
+            InstructorCoursePercentageService::processEnrollmentActivation($freshEnrollment, rethrowOnFailure: true);
         }
 
         DB::commit();
@@ -410,7 +410,7 @@ class StudentEnrollmentController extends Controller
         ]);
 
         $freshEnrollment = $enrollment->fresh();
-        InstructorCoursePercentageService::processEnrollmentActivation($freshEnrollment);
+        InstructorCoursePercentageService::processEnrollmentActivation($freshEnrollment, rethrowOnFailure: true);
 
         // إرسال بريد تفعيل الكورس عند التفعيل اليدوي
         try {

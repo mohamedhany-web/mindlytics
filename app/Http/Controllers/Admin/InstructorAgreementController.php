@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\InstructorAgreement;
+use App\Services\InstructorCoursePercentageService;
 use App\Models\AgreementPayment;
 use App\Models\User;
 use App\Models\AdvancedCourse;
@@ -151,6 +152,12 @@ class InstructorAgreementController extends Controller
 
     public function show(InstructorAgreement $agreement)
     {
+        if (($agreement->billing_type ?? '') === InstructorAgreement::BILLING_COURSE_PERCENTAGE
+            && $agreement->status === InstructorAgreement::STATUS_ACTIVE
+            && $agreement->advanced_course_id) {
+            InstructorCoursePercentageService::syncMissingPaymentsForAgreement($agreement);
+        }
+
         $agreement->load(['instructor', 'createdBy', 'advancedCourse', 'payments.course', 'payments.lecture', 'payments.enrollment.student']);
         
         $stats = [

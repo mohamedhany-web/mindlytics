@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Instructor;
 use App\Http\Controllers\Controller;
 use App\Models\InstructorAgreement;
 use App\Models\AgreementPayment;
+use App\Services\InstructorCoursePercentageService;
 use Illuminate\Http\Request;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -46,6 +47,12 @@ class AgreementController extends Controller
     {
         if ($agreement->instructor_id !== auth()->id()) {
             abort(403);
+        }
+
+        if (($agreement->billing_type ?? '') === InstructorAgreement::BILLING_COURSE_PERCENTAGE
+            && $agreement->status === InstructorAgreement::STATUS_ACTIVE
+            && $agreement->advanced_course_id) {
+            InstructorCoursePercentageService::syncMissingPaymentsForAgreement($agreement);
         }
 
         $agreement->load([

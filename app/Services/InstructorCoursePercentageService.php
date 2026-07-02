@@ -16,8 +16,11 @@ class InstructorCoursePercentageService
     /**
      * معالجة تفعيل تسجيل طالب: إنشاء مدفوعة نسبة من الكورس للمدرب إن وُجدت اتفاقية نشطة.
      */
-    public static function processEnrollmentActivation(StudentCourseEnrollment $enrollment): ?AgreementPayment
-    {
+    public static function processEnrollmentActivation(
+        StudentCourseEnrollment $enrollment,
+        ?InstructorAgreement $agreement = null,
+        bool $rethrowOnFailure = false,
+    ): ?AgreementPayment {
         if ($enrollment->status !== 'active' || !$enrollment->advanced_course_id) {
             return null;
         }
@@ -31,12 +34,22 @@ class InstructorCoursePercentageService
             return null;
         }
 
-        $agreement = InstructorAgreement::where('instructor_id', $course->instructor_id)
-            ->where('advanced_course_id', $enrollment->advanced_course_id)
-            ->where('billing_type', InstructorAgreement::BILLING_COURSE_PERCENTAGE)
-            ->where('status', InstructorAgreement::STATUS_ACTIVE)
-            ->whereNotNull('course_percentage')
-            ->first();
+        if ($agreement) {
+            if ((int) $agreement->advanced_course_id !== (int) $enrollment->advanced_course_id
+                || (int) $agreement->instructor_id !== (int) $course->instructor_id
+                || $agreement->billing_type !== InstructorAgreement::BILLING_COURSE_PERCENTAGE
+                || $agreement->status !== InstructorAgreement::STATUS_ACTIVE
+                || $agreement->course_percentage === null) {
+                return null;
+            }
+        } else {
+            $agreement = InstructorAgreement::where('instructor_id', $course->instructor_id)
+                ->where('advanced_course_id', $enrollment->advanced_course_id)
+                ->where('billing_type', InstructorAgreement::BILLING_COURSE_PERCENTAGE)
+                ->where('status', InstructorAgreement::STATUS_ACTIVE)
+                ->whereNotNull('course_percentage')
+                ->first();
+        }
 
         if (!$agreement) {
             Log::debug('InstructorCoursePercentageService: no active agreement for course', [
@@ -82,7 +95,7 @@ class InstructorCoursePercentageService
                     'description' => 'نسبة من تفعيل الطالب للكورس: ' . ($enrollment->course->title ?? '') . $discountNote,
                     'related_course_id' => $enrollment->advanced_course_id,
                     'student_course_enrollment_id' => $enrollment->id,
-                    'payment_date' => now(),
+                    'payment_date' => $enrollment->activated_at ?? now(),
                     'created_by' => $enrollment->activated_by,
                 ]);
                 Log::info('Instructor course percentage payment created', [
@@ -95,10 +108,83 @@ class InstructorCoursePercentageService
         } catch (\Throwable $e) {
             Log::error('InstructorCoursePercentageService::processEnrollmentActivation failed', [
                 'enrollment_id' => $enrollment->id,
+                'agreement_id' => $agreement->id,
                 'message' => $e->getMessage(),
             ]);
+            if ($rethrowOnFailure) {
+                throw $e;
+            }
+
             return null;
         }
+    }
+
+    /**
+     * إنشاء مدفوعات نسبة المدرب الناقصة لتفعيلات كورس مرتبطة باتفاقية محددة.
+     */
+    public static function syncMissingPaymentsForAgreement(InstructorAgreement $agreement): int
+    {
+        if ($agreement->billing_type !== InstructorAgreement::BILLING_COURSE_PERCENTAGE
+            || $agreement->status !== InstructorAgreement::STATUS_ACTIVE
+            || ! $agreement->advanced_course_id
+            || $agreement->course_percentage === null) {
+            return 0;
+        }
+
+        $created = 0;
+
+        StudentCourseEnrollment::query()
+            ->where('advanced_course_id', $agreement->advanced_course_id)
+            ->where('status', 'active')
+            ->visibleToInstructor()
+            ->with('course')
+            ->orderBy('id')
+            ->chunkById(100, function ($enrollments) use ($agreement, &$created) {
+                foreach ($enrollments as $enrollment) {
+                    $course = $enrollment->course;
+                    if (! $course || (int) $course->instructor_id !== (int) $agreement->instructor_id) {
+                        continue;
+                    }
+
+                    if (self::resolveActivationBaseAmount($enrollment, $course) <= 0) {
+                        continue;
+                    }
+
+                    try {
+                        if (self::processEnrollmentActivation($enrollment, $agreement)) {
+                            $created++;
+                        }
+                    } catch (\Throwable $e) {
+                        Log::warning('InstructorCoursePercentageService: sync skipped enrollment', [
+                            'agreement_id' => $agreement->id,
+                            'enrollment_id' => $enrollment->id,
+                            'message' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            });
+
+        return $created;
+    }
+
+    /**
+     * مزامنة كل مدفوعات نسبة المدرب الناقصة لكل الاتفاقيات النشطة من نوع نسبة من الكورس.
+     */
+    public static function syncAllMissingPayments(): int
+    {
+        $total = 0;
+
+        InstructorAgreement::query()
+            ->where('billing_type', InstructorAgreement::BILLING_COURSE_PERCENTAGE)
+            ->where('status', InstructorAgreement::STATUS_ACTIVE)
+            ->whereNotNull('advanced_course_id')
+            ->whereNotNull('course_percentage')
+            ->orderBy('id')
+            ->each(function (InstructorAgreement $agreement) use (&$total) {
+                $total += self::syncMissingPaymentsForAgreement($agreement);
+            });
+
+        return $total;
     }
 
     /**
