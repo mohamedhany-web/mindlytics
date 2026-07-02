@@ -16,9 +16,9 @@ class CourseController extends Controller
     {
         $instructor = Auth::user();
         
-        // جلب الكورسات التي تم تعيينها لهذا المدرس
+        // جلب كل الكورسات المعيّنة للمدرب (بما فيها كورسات المنح)
         $query = AdvancedCourse::where('instructor_id', $instructor->id)
-            ->with(['academicYear', 'academicSubject'])
+            ->with(['academicYear', 'academicSubject', 'scholarshipProgram'])
             ->withCount(['lectures', 'enrollments']);
 
         // فلترة حسب الحالة
@@ -41,12 +41,12 @@ class CourseController extends Controller
 
         $courses = $query->orderBy('created_at', 'desc')->paginate(15);
 
-        // إحصائيات
+        // إحصائيات (تشمل كورسات المنح)
         $stats = [
             'total' => AdvancedCourse::where('instructor_id', $instructor->id)->count(),
             'active' => AdvancedCourse::where('instructor_id', $instructor->id)->where('is_active', true)->count(),
             'inactive' => AdvancedCourse::where('instructor_id', $instructor->id)->where('is_active', false)->count(),
-            'total_students' => \App\Models\StudentCourseEnrollment::whereHas('course', function($q) use ($instructor) {
+            'total_students' => \App\Models\StudentCourseEnrollment::whereHas('course', function ($q) use ($instructor) {
                 $q->where('instructor_id', $instructor->id);
             })->where('status', 'active')->visibleToInstructor()->count(),
         ];
@@ -62,7 +62,7 @@ class CourseController extends Controller
         $instructor = Auth::user();
         
         $course = AdvancedCourse::where('instructor_id', $instructor->id)
-            ->with(['academicYear', 'academicSubject', 'instructor'])
+            ->with(['academicYear', 'academicSubject', 'instructor', 'scholarshipProgram'])
             ->withCount([
                 'lectures',
                 'enrollments as enrollments_count' => fn ($q) => $q->where('status', 'active')->visibleToInstructor(),

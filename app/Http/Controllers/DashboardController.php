@@ -17,6 +17,7 @@ use App\Models\Certificate;
 use App\Models\LectureVideoQuestionAnswer;
 use App\Models\OfflineCourseEnrollment;
 use App\Models\OfflineCourseBooking;
+use App\Models\ScholarshipRegistration;
 
 class DashboardController extends Controller
 {
@@ -342,6 +343,13 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
+        $pendingScholarshipRegistrations = ScholarshipRegistration::query()
+            ->where('user_id', $user->id)
+            ->where('status', ScholarshipRegistration::STATUS_REGISTERED)
+            ->with('program')
+            ->orderByDesc('registered_at')
+            ->get();
+
         return view(
             'dashboard.student',
             compact(
@@ -355,7 +363,8 @@ class DashboardController extends Controller
                 'offlineActiveEnrollments',
                 'onlineActiveEnrollments',
                 'visibleOfflineBookingsCount',
-                'visibleOnlineBookingsCount'
+                'visibleOnlineBookingsCount',
+                'pendingScholarshipRegistrations'
             )
         );
     }

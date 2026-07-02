@@ -23,7 +23,8 @@ class StudentEnrollmentController extends Controller
      */
     public function index(Request $request)
     {
-        $query = StudentCourseEnrollment::with(['student', 'course.academicYear', 'course.academicSubject', 'activatedBy']);
+        $query = StudentCourseEnrollment::with(['student', 'course.academicYear', 'course.academicSubject', 'activatedBy'])
+            ->nonScholarship();
 
         // البحث بالاسم أو رقم الهاتف
         if ($request->filled('search')) {
@@ -49,7 +50,10 @@ class StudentEnrollmentController extends Controller
 
         // البيانات المساعدة للفلاتر - استخدام الكاش
         $courses = Cache::remember('active_courses_list', now()->addHours(1), function () {
-            return AdvancedCourse::active()->with(['academicYear', 'academicSubject'])->get();
+            return AdvancedCourse::active()
+                ->publicCatalog()
+                ->with(['academicYear', 'academicSubject'])
+                ->get();
         });
         
         // استخدام خدمة الكاش للإحصائيات
@@ -79,6 +83,7 @@ class StudentEnrollmentController extends Controller
         // استخدام الكاش للكورسات
         $courses = Cache::remember('active_courses_list', now()->addHours(1), function () {
             return AdvancedCourse::active()
+                ->publicCatalog()
                 ->with(['academicYear', 'academicSubject'])
                 ->orderBy('title')
                 ->get();

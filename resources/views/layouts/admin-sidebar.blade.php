@@ -320,6 +320,62 @@
             </li>
 
             @php
+                $scholarshipsMenuOpen = request()->routeIs('admin.scholarships.*');
+            @endphp
+            <li x-data="{ open: {{ $scholarshipsMenuOpen ? 'true' : 'false' }} }">
+                <button type="button" @click="open = !open" :aria-expanded="open"
+                        class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-graduation-cap w-5 text-violet-400 group-hover:text-white"></i>
+                        <span class="font-medium">قسم المنح</span>
+                    </div>
+                    <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
+                </button>
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
+                    <li>
+                        <a href="{{ route('admin.scholarships.dashboard') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.scholarships.dashboard') ? 'bg-violet-600/30 text-white font-semibold border-r-2 border-violet-400' : '' }}">
+                            <i class="fas fa-tachometer-alt w-4"></i>
+                            <span>لوحة المنح</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.scholarships.programs.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.scholarships.programs.*') ? 'bg-violet-600/30 text-white font-semibold border-r-2 border-violet-400' : '' }}">
+                            <i class="fas fa-award w-4"></i>
+                            <span>المنح الدراسية</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.scholarships.courses.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.scholarships.courses.*') ? 'bg-violet-600/30 text-white font-semibold border-r-2 border-violet-400' : '' }}">
+                            <i class="fas fa-book w-4"></i>
+                            <span>كورسات المنح</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.scholarships.instructors.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.scholarships.instructors.*') ? 'bg-violet-600/30 text-white font-semibold border-r-2 border-violet-400' : '' }}">
+                            <i class="fas fa-chalkboard-teacher w-4"></i>
+                            <span>مدربو المنح</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.scholarships.students.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.scholarships.students.*') ? 'bg-violet-600/30 text-white font-semibold border-r-2 border-violet-400' : '' }}">
+                            <i class="fas fa-user-graduate w-4"></i>
+                            <span>طلاب المنح</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @php
                 $whatsappMenuOpen = request()->routeIs('admin.whatsapp.*');
             @endphp
             <li x-data="{ open: {{ $whatsappMenuOpen ? 'true' : 'false' }} }">

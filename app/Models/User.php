@@ -500,6 +500,56 @@ class User extends Authenticatable
                     ->orderByDesc('student_course_enrollments.created_at');
     }
 
+    public function scholarshipRegistrations()
+    {
+        return $this->hasMany(ScholarshipRegistration::class);
+    }
+
+    public function hasScholarshipRegistration(): bool
+    {
+        return $this->scholarshipRegistrations()->exists();
+    }
+
+    /**
+     * هل لدى الطالب وصول أكاديمي خارج منحته (أونلاين/أوفلاين/مسار/طلبات شراء).
+     */
+    public function hasNonScholarshipAcademyAccess(): bool
+    {
+        if ($this->courseEnrollments()->nonScholarship()
+            ->whereIn('status', ['active', 'pending', 'completed', 'suspended'])
+            ->exists()) {
+            return true;
+        }
+
+        if ($this->offlineEnrollments()
+            ->whereIn('status', ['active', 'pending'])
+            ->exists()) {
+            return true;
+        }
+
+        if ($this->learningPathEnrollments()
+            ->whereIn('status', ['active', 'pending'])
+            ->exists()) {
+            return true;
+        }
+
+        return Order::where('user_id', $this->id)
+            ->whereIn('status', [Order::STATUS_PENDING, Order::STATUS_APPROVED])
+            ->exists();
+    }
+
+    /**
+     * طالب مسجّل في منحة فقط — واجهة محدودة بدون كتالوج/أوفلاين/أونلاين الأكاديمية.
+     */
+    public function usesScholarshipOnlyPortal(): bool
+    {
+        if (! $this->hasScholarshipRegistration()) {
+            return false;
+        }
+
+        return ! $this->hasNonScholarshipAcademyAccess();
+    }
+
     /**
      * التحقق من التسجيل في كورس أونلاين
      */

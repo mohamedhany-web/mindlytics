@@ -61,10 +61,10 @@ class StatisticsCacheService
     {
         return Cache::remember('enrollment_stats', now()->addMinutes(10), function () {
             return [
-                'total' => StudentCourseEnrollment::count(),
-                'pending' => StudentCourseEnrollment::where('status', 'pending')->count(),
-                'active' => StudentCourseEnrollment::where('status', 'active')->count(),
-                'completed' => StudentCourseEnrollment::where('status', 'completed')->count(),
+                'total' => StudentCourseEnrollment::nonScholarship()->count(),
+                'pending' => StudentCourseEnrollment::nonScholarship()->where('status', 'pending')->count(),
+                'active' => StudentCourseEnrollment::nonScholarship()->where('status', 'active')->count(),
+                'completed' => StudentCourseEnrollment::nonScholarship()->where('status', 'completed')->count(),
             ];
         });
     }

@@ -295,7 +295,9 @@ Route::get('/media/{media}', [\App\Http\Controllers\Public\MediaController::clas
 
 // صفحة الكورسات العامة
 Route::get('/courses', function () {
-    $coursesQuery = \App\Models\AdvancedCourse::where('is_active', true)->visibleOnCurrentHost();
+    $coursesQuery = \App\Models\AdvancedCourse::where('is_active', true)
+        ->visibleOnCurrentHost()
+        ->publicCatalog();
     
     // جلب الكورسات مع العلاقات
     $coursesCollection = $coursesQuery
@@ -329,14 +331,18 @@ Route::get('/courses', function () {
     $packages = \App\Models\Package::active()
         ->visibleOnCurrentHost()
         ->whereHas('courses', function ($q) {
-            $q->where('advanced_courses.is_active', true)->visibleOnCurrentHost();
+            $q->where('advanced_courses.is_active', true)
+                ->visibleOnCurrentHost()
+                ->publicCatalog();
         })
         ->with(['courses' => function($query) {
-            $query->where('is_active', true)->visibleOnCurrentHost();
+            $query->where('is_active', true)->visibleOnCurrentHost()->publicCatalog();
         }])
         ->withCount([
             'courses' => function ($q) {
-                $q->where('advanced_courses.is_active', true)->visibleOnCurrentHost();
+                $q->where('advanced_courses.is_active', true)
+                    ->visibleOnCurrentHost()
+                    ->publicCatalog();
             },
         ])
         ->orderBy('is_featured', 'desc')
@@ -362,6 +368,7 @@ Route::get('/course/{courseId}/preview-watch-url/{lessonId}', [\App\Http\Control
 Route::get('/course/{id}', function ($id) {
     $course = \App\Models\AdvancedCourse::where('id', $id)
         ->where('is_active', true)
+        ->publicCatalog()
         ->visibleOnCurrentHost()
         ->with(['academicSubject', 'academicYear', 'instructor'])
         ->withCount('lessons')
@@ -394,6 +401,7 @@ Route::get('/course/{id}', function ($id) {
     // كورسات ذات صلة
     $relatedCourses = \App\Models\AdvancedCourse::where('is_active', true)
         ->visibleOnCurrentHost()
+        ->publicCatalog()
         ->where('id', '!=', $course->id)
         ->where(function($query) use ($course) {
             $query->where('level', $course->level)
@@ -592,6 +600,15 @@ Route::middleware(['guest', 'guest-only'])->group(function () {
     Route::post('/forgot-password', [\App\Http\Controllers\Auth\ForgotPasswordController::class, 'sendResetLinkEmail'])->middleware('throttle:password-reset')->name('password.email');
     Route::get('/reset-password/{token}', [\App\Http\Controllers\Auth\ResetPasswordController::class, 'showResetForm'])->name('password.reset');
     Route::post('/reset-password', [\App\Http\Controllers\Auth\ResetPasswordController::class, 'reset'])->middleware('throttle:password-reset')->name('password.update');
+});
+
+// المنح الدراسية — تسجيل عام برابط خاص
+Route::prefix('scholarships')->name('scholarships.')->group(function () {
+    Route::get('{slug}', [\App\Http\Controllers\Public\ScholarshipRegistrationController::class, 'landing'])->name('show');
+    Route::get('{slug}/register', [\App\Http\Controllers\Public\ScholarshipRegistrationController::class, 'show'])->name('register');
+    Route::post('{slug}/register', [\App\Http\Controllers\Public\ScholarshipRegistrationController::class, 'register'])
+        ->middleware('throttle:register')
+        ->name('register.post');
 });
 
 // المصادقة الثنائية (2FA) - بعد إدخال البريد وكلمة المرور للمدربين/الإدمن/الموظفين
@@ -1093,6 +1110,20 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('applications/{application}/rescore', [\App\Http\Controllers\Admin\Hr\ApplicationController::class, 'rescore'])->name('applications.rescore');
             Route::delete('applications/{application}', [\App\Http\Controllers\Admin\Hr\ApplicationController::class, 'destroy'])->name('applications.destroy');
             Route::resource('rubrics', \App\Http\Controllers\Admin\Hr\RubricController::class)->except(['show']);
+        });
+
+        // قسم المنح الدراسية
+        Route::prefix('scholarships')->name('scholarships.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\Scholarship\DashboardController::class, 'index'])->name('dashboard');
+            Route::resource('programs', \App\Http\Controllers\Admin\Scholarship\ProgramController::class);
+            Route::get('courses', [\App\Http\Controllers\Admin\Scholarship\CourseController::class, 'index'])->name('courses.index');
+            Route::get('courses/{course}', [\App\Http\Controllers\Admin\Scholarship\CourseController::class, 'show'])->name('courses.show');
+            Route::get('instructors', [\App\Http\Controllers\Admin\Scholarship\InstructorController::class, 'index'])->name('instructors.index');
+            Route::get('instructors/{instructor}', [\App\Http\Controllers\Admin\Scholarship\InstructorController::class, 'show'])->name('instructors.show');
+            Route::get('students', [\App\Http\Controllers\Admin\Scholarship\RegistrationController::class, 'index'])->name('students.index');
+            Route::post('registrations/{registration}/activate', [\App\Http\Controllers\Admin\Scholarship\RegistrationController::class, 'activate'])->name('registrations.activate');
+            Route::post('registrations/{registration}/deactivate', [\App\Http\Controllers\Admin\Scholarship\RegistrationController::class, 'deactivate'])->name('registrations.deactivate');
+            Route::post('registrations/{registration}/reject', [\App\Http\Controllers\Admin\Scholarship\RegistrationController::class, 'reject'])->name('registrations.reject');
         });
 
         // بروفايل الأدمن
@@ -1954,6 +1985,12 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::post('/personal-branding/submit', [\App\Http\Controllers\Instructor\PersonalBrandingController::class, 'submit'])->name('personal-branding.submit');
 
         Route::resource('courses', \App\Http\Controllers\Instructor\CourseController::class)->only(['index', 'show']);
+        Route::get('scholarships', [\App\Http\Controllers\Instructor\ScholarshipController::class, 'index'])->name('scholarships.index');
+        Route::get('scholarships/students', [\App\Http\Controllers\Instructor\ScholarshipController::class, 'students'])->name('scholarships.students.index');
+        Route::post('scholarships/registrations/{registration}/activate', [\App\Http\Controllers\Instructor\Scholarship\RegistrationController::class, 'activate'])->name('scholarships.registrations.activate');
+        Route::post('scholarships/registrations/{registration}/deactivate', [\App\Http\Controllers\Instructor\Scholarship\RegistrationController::class, 'deactivate'])->name('scholarships.registrations.deactivate');
+        Route::post('scholarships/registrations/{registration}/reject', [\App\Http\Controllers\Instructor\Scholarship\RegistrationController::class, 'reject'])->name('scholarships.registrations.reject');
+        Route::get('scholarships/{program}', [\App\Http\Controllers\Instructor\ScholarshipController::class, 'show'])->name('scholarships.show');
         Route::get('courses/{course}/mind-map', [\App\Http\Controllers\Instructor\CourseMindMapController::class, 'edit'])->name('courses.mind-map.edit');
         Route::put('courses/{course}/mind-map', [\App\Http\Controllers\Instructor\CourseMindMapController::class, 'update'])->name('courses.mind-map.update');
         Route::get('online-group-courses', [\App\Http\Controllers\Instructor\OfflineCourseController::class, 'onlineIndex'])->name('online-group-courses.index');

@@ -39,6 +39,7 @@ class CheckoutController extends Controller
 
         $course = AdvancedCourse::where('id', $courseId)
             ->where('is_active', true)
+            ->publicCatalog()
             ->with(['academicSubject', 'academicYear'])
             ->firstOrFail();
 
@@ -101,6 +102,7 @@ class CheckoutController extends Controller
 
         $course = AdvancedCourse::where('id', $courseId)
             ->where('is_active', true)
+            ->publicCatalog()
             ->firstOrFail();
 
         $isEnrolled = StudentCourseEnrollment::where('user_id', Auth::id())
@@ -524,6 +526,7 @@ class CheckoutController extends Controller
 
         $course = AdvancedCourse::where('id', $courseId)
             ->where('is_active', true)
+            ->publicCatalog()
             ->firstOrFail();
 
         $isEnrolled = StudentCourseEnrollment::where('user_id', Auth::id())
@@ -1078,6 +1081,7 @@ class CheckoutController extends Controller
 
         $course = AdvancedCourse::where('id', $courseId)
             ->where('is_active', true)
+            ->publicCatalog()
             ->firstOrFail();
 
         // التحقق من التسجيل السابق
@@ -1180,6 +1184,7 @@ class CheckoutController extends Controller
 
         $course = AdvancedCourse::where('id', $courseId)
             ->where('is_active', true)
+            ->publicCatalog()
             ->firstOrFail();
 
         // التحقق من أن الكورس مجاني

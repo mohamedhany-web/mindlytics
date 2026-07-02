@@ -331,6 +331,31 @@
         </div>
     </div>
 
+    @if(!empty($pendingScholarshipRegistrations) && $pendingScholarshipRegistrations->isNotEmpty())
+        <div class="rounded-2xl border border-amber-200 bg-amber-50 p-5 space-y-3">
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-hourglass-half"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h2 class="text-lg font-bold text-amber-900">منح دراسية بانتظار التفعيل</h2>
+                    <p class="text-sm text-amber-800 mt-1">تم تسجيلك في المنح التالية. سيظهر الكورس في مسارك التعليمي بعد موافقة الإدارة.</p>
+                    <ul class="mt-3 space-y-2">
+                        @foreach($pendingScholarshipRegistrations as $scholarshipRegistration)
+                            <li class="rounded-xl bg-white border border-amber-100 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <div>
+                                    <p class="font-semibold text-slate-900">{{ $scholarshipRegistration->program?->name }}</p>
+                                    <p class="text-xs text-slate-500 mt-0.5">تاريخ التسجيل: {{ $scholarshipRegistration->registered_at?->format('Y-m-d H:i') }}</p>
+                                </div>
+                                <span class="inline-flex items-center px-3 py-1 rounded-lg bg-amber-100 text-amber-800 text-xs font-semibold">بانتظار التفعيل</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- Stats Grid -->
     <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         <!-- Active Courses -->

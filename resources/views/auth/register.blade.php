@@ -673,16 +673,25 @@
                 <p class="section-subtitle">{{ __('auth.register_subtitle') }}</p>
 
                 <div class="register-mobile-form-card">
-                    <form action="{{ route('register') }}" method="POST">
+                    @if(!empty($scholarshipProgram))
+                        <div class="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-amber-900">
+                            <p class="text-xs font-bold">تسجيل في منحة: {{ $scholarshipProgram->name }}</p>
+                            <p class="text-[11px] mt-1 opacity-80">بعد التسجيل ستنتظر تفعيل الأكاديمية لفتح الكورس.</p>
+                        </div>
+                    @endif
+                    <form action="{{ $registerFormAction ?? route('register') }}" method="POST">
                         @csrf
                         @php
                             $phoneCountries = $phoneCountries ?? config('phone_countries.countries', []);
                             $defaultCountry = $defaultCountry ?? collect($phoneCountries)->firstWhere('code', config('phone_countries.default_country', 'SA'));
                         @endphp
 
+                        @if(!empty($scholarshipProgram))
+                        @else
                         <div class="bg-[var(--color-primary-light)] border border-[var(--input-border)] rounded-xl p-2.5 mb-3">
                             <p class="text-xs font-bold text-[var(--text-dark)]">{{ __('auth.students_only_note') }}</p>
                         </div>
+                        @endif
 
                         <div class="input-wrap">
                             <label for="name_m">{{ __('auth.full_name') }}</label>
@@ -734,12 +743,14 @@
                             </div>
                         </div>
 
+                        @if(empty($scholarshipProgram))
                         <div class="input-wrap">
                             <label for="promo_code_m">كود خصم الورشة (اختياري)</label>
                             <input type="text" name="promo_code" id="promo_code_m" value="{{ old('promo_code', request('promo', request('code'))) }}"
                                    class="form-input w-full font-mono uppercase @error('promo_code') border-red-500 @enderror" placeholder="WS-XXXXXX">
                             @error('promo_code')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
                         </div>
+                        @endif
 
                         <div class="flex items-start gap-2 mb-4">
                             <input type="checkbox" id="terms_m" required class="mt-0.5 h-4 w-4 rounded border-[var(--input-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]">
@@ -803,13 +814,20 @@
                     </h2>
 
                     <!-- Register Form -->
-                    <form action="{{ route('register') }}" method="POST" class="space-y-2.5 md:space-y-3">
+                    <form action="{{ $registerFormAction ?? route('register') }}" method="POST" class="space-y-2.5 md:space-y-3">
                         @csrf
                         
                         <!-- Student Notice -->
+                        @if(!empty($scholarshipProgram))
+                            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4">
+                                <p class="text-sm font-bold text-amber-900">تسجيل في منحة: {{ $scholarshipProgram->name }}</p>
+                                <p class="text-xs text-amber-800/80 mt-1">بعد إنشاء الحساب ستُسجَّل في المنحة وتنتظر تفعيل الأكاديمية لفتح الكورس.</p>
+                            </div>
+                        @else
                         <div class="bg-[var(--color-primary-light)] border border-[var(--input-border)] rounded-xl p-3 mb-4">
                             <p class="text-sm font-bold text-[var(--text-dark)]">{{ __('auth.students_only_note') }} — {{ __('auth.register_subtitle') }}</p>
                         </div>
+                        @endif
 
                         <!-- Form Grid -->
                         @php
@@ -931,6 +949,7 @@
                             </div>
                         </div>
 
+                        @if(empty($scholarshipProgram))
                         @php
                             $defaultPromo = old('promo_code', request('promo', request('code')));
                             $defaultRef = old('referral_code', request('ref'));
@@ -953,6 +972,7 @@
                             @enderror
                             <p class="text-xs text-[var(--text-muted)] mt-1">إن حضرت ورشة وحصلت على كود خصم، أدخله هنا لتفعيله على حسابك</p>
                         </div>
+                        @endif
 
                         <!-- موافقة على الشروط -->
                         <div class="flex items-start pt-1">

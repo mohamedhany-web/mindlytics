@@ -45,6 +45,11 @@
                         <i class="fas {{ $course->is_active ? 'fa-check-circle' : 'fa-ban' }}"></i>
                         {{ $course->is_active ? __('instructor.active_status') : __('instructor.inactive_status') }}
                     </span>
+                    @if($course->is_scholarship_only)
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-violet-100 text-violet-700">
+                            <i class="fas fa-graduation-cap"></i> كورس منحة
+                        </span>
+                    @endif
                     @if($course->is_featured)
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-100 text-amber-800">
                             <i class="fas fa-star"></i> {{ __('instructor.featured') }}
@@ -63,6 +68,12 @@
                 </div>
             </div>
             <div class="flex flex-wrap items-center gap-2 shrink-0">
+                @if($course->is_scholarship_only && $course->scholarshipProgram)
+                    <a href="{{ route('instructor.scholarships.show', $course->scholarshipProgram) }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-semibold transition-colors">
+                        <i class="fas fa-user-graduate"></i>
+                        <span>طلاب المنحة</span>
+                    </a>
+                @endif
                 <a href="{{ route('instructor.courses.mind-map.edit', $course) }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-50 to-sky-50 border border-emerald-200 text-emerald-800 hover:border-emerald-300 rounded-xl font-semibold transition-colors">
                     <i class="fas fa-route"></i>
                     <span>{{ __('instructor.mind_map_short') }}</span>

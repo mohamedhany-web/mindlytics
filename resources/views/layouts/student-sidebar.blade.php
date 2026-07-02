@@ -16,6 +16,19 @@
         </div>
     </div>
 
+    @php
+        $user = auth()->user();
+        $isStudent = $user->role === 'student' || strtolower($user->role) === 'student';
+        $scholarshipOnlyPortal = $isStudent && $user->usesScholarshipOnlyPortal();
+        $activeCoursesCount = $scholarshipOnlyPortal
+            ? $user->courseEnrollments()->scholarshipOnly()->where('status', 'active')->count()
+            : $user->activeCourses()->count();
+        $progressEnrollments = $scholarshipOnlyPortal
+            ? $user->courseEnrollments()->scholarshipOnly()->whereIn('status', ['active', 'completed'])->get()
+            : $user->courseEnrollments()->whereIn('status', ['active', 'completed'])->get();
+        $totalProgress = $progressEnrollments->isEmpty() ? 0 : round($progressEnrollments->avg('progress') ?? 0, 0);
+    @endphp
+
     <!-- Quick Stats -->
     <div class="p-2.5 md:p-3 border-b border-gray-100 bg-white">
         <div class="grid grid-cols-2 gap-2">
@@ -24,7 +37,7 @@
                     <i class="fas fa-book text-sky-500 text-xs"></i>
                     <span class="text-xs text-gray-600 font-medium">{{ __('student.courses') }}</span>
                 </div>
-                <div class="text-base md:text-lg font-bold text-sky-600 leading-none">{{ auth()->user()->activeCourses()->count() }}</div>
+                <div class="text-base md:text-lg font-bold text-sky-600 leading-none">{{ $activeCoursesCount }}</div>
             </div>
             <div class="stats-card bg-amber-50 rounded-lg p-2 md:p-2.5 border border-amber-100 cursor-pointer transition-all duration-200">
                 <div class="flex items-center gap-1 mb-0.5">
@@ -32,10 +45,6 @@
                     <span class="text-xs text-gray-600 font-medium">{{ __('student.progress') }}</span>
                 </div>
                 <div class="text-base md:text-lg font-bold text-amber-600 leading-none">
-                    @php
-                        $enrollments = auth()->user()->courseEnrollments()->whereIn('status', ['active', 'completed'])->get();
-                        $totalProgress = $enrollments->isEmpty() ? 0 : round($enrollments->avg('progress') ?? 0, 0);
-                    @endphp
                     {{ $totalProgress }}%
                 </div>
             </div>
@@ -44,10 +53,6 @@
 
     <!-- Navigation -->
     <nav class="flex-1 overflow-y-auto sidebar-scroll p-2 md:p-2.5 space-y-0.5">
-        @php
-            $user = auth()->user();
-            $isStudent = $user->role === 'student' || strtolower($user->role) === 'student';
-        @endphp
         @if($isStudent || $user->hasAnyPermission('student.view.courses', 'student.view.my-courses', 'student.view.orders', 'student.view.invoices', 'student.view.wallet', 'student.view.certificates', 'student.view.achievements', 'student.view.exams', 'student.view.calendar', 'student.view.notifications', 'student.view.profile', 'student.view.settings'))
             <!-- Dashboard -->
             <a href="{{ route('dashboard') }}" 
@@ -66,6 +71,7 @@
             </a>
 
             <!-- Browse Courses -->
+            @unless($scholarshipOnlyPortal)
             @hasPermission('student.view.courses')
             @php
                 $catalogActive = request()->routeIs('academic-years*') || request()->routeIs('subjects.*') || request()->routeIs('courses.*');
@@ -85,6 +91,7 @@
                 </div>
             </a>
             @endif
+            @endunless
 
             <!-- My Courses -->
             @if($isStudent || $user->hasPermission('student.view.my-courses'))
@@ -97,7 +104,7 @@
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.my_courses') }}</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ auth()->user()->activeCourses()->count() }} {{ __('student.active_course') }}</div>
+                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ $activeCoursesCount }} {{ __('student.active_course') }}</div>
                     </div>
                     <i class="fas fa-chevron-left text-gray-400 text-xs flex-shrink-0"></i>
                 </div>
@@ -105,6 +112,7 @@
             @endif
 
             <!-- مجموعاتي -->
+            @unless($scholarshipOnlyPortal)
             @if($isStudent || $user->hasPermission('student.view.my-courses'))
             @php
                 $myGroupsCount = auth()->user()->groups()->where('groups.status', 'active')->count();
@@ -124,8 +132,10 @@
                 </div>
             </a>
             @endif
+            @endunless
 
             <!-- Learning Path -->
+            @unless($scholarshipOnlyPortal)
             @php
                 $activeEnrollment = auth()->user()->learningPathEnrollments()->where('status', 'active')->with('learningPath')->first();
             @endphp
@@ -145,8 +155,10 @@
                 </div>
             </a>
             @endif
+            @endunless
 
             <!-- كورساتي الأوفلاين (منفصلة عن الأونلاين) -->
+            @unless($scholarshipOnlyPortal)
             @if($isStudent || $user->hasPermission('student.view.my-courses'))
             @php
                 $offlineStudentNavOpen = request()->routeIs('student.offline-courses.*');
@@ -211,8 +223,10 @@
                 </div>
             </div>
             @endif
+            @endunless
 
             <!-- مجتمع الذكاء الاصطناعي -->
+            @unless($scholarshipOnlyPortal)
             <a href="{{ route('community.dashboard') }}" 
                @click="if (window.innerWidth < 1024) sidebarOpen = false"
                class="nav-card block {{ request()->routeIs('community.*') ? 'active' : '' }}">
@@ -227,8 +241,10 @@
                     <i class="fas fa-chevron-left text-gray-400 text-xs flex-shrink-0"></i>
                 </div>
             </a>
+            @endunless
 
             <!-- Orders -->
+            @unless($scholarshipOnlyPortal)
             @if($isStudent || $user->hasPermission('student.view.orders'))
             <a href="{{ route('orders.index') }}" 
                @click="if (window.innerWidth < 1024) sidebarOpen = false"
@@ -245,6 +261,7 @@
                 </div>
             </a>
             @endif
+            @endunless
 
             <!-- Assignments -->
             @if($isStudent || $user->hasPermission('student.view.my-courses'))
@@ -301,6 +318,7 @@
             @endif
 
             <!-- Wallet -->
+            @unless($scholarshipOnlyPortal)
             @if($isStudent || $user->hasPermission('student.view.wallet'))
             <a href="{{ route('student.wallet.index') }}" 
                @click="if (window.innerWidth < 1024) sidebarOpen = false"
@@ -317,6 +335,7 @@
                 </div>
             </a>
             @endif
+            @endunless
 
             <!-- Calendar -->
             @if($isStudent || $user->hasPermission('student.view.calendar'))
@@ -405,6 +424,7 @@
             @endif
 
             <!-- البورتفوليو - مشاريعي -->
+            @unless($scholarshipOnlyPortal)
             @if($isStudent || $user->hasPermission('student.view.profile'))
             <a href="{{ route('student.portfolio.index') }}" 
                @click="if (window.innerWidth < 1024) sidebarOpen = false"
@@ -421,6 +441,7 @@
                 </div>
             </a>
             @endif
+            @endunless
 
             <!-- Profile -->
             @if($isStudent || $user->hasPermission('student.view.profile'))

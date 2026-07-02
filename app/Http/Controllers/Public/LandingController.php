@@ -46,7 +46,9 @@ class LandingController extends Controller
         }
         $statsLearners = $statsLearnersQuery->count();
 
-        $statsCoursesAdvanced = AdvancedCourse::query()->where('is_active', true);
+        $statsCoursesAdvanced = AdvancedCourse::query()
+            ->where('is_active', true)
+            ->publicCatalog();
         if ($branch) {
             $statsCoursesAdvanced->where('branch_id', $branch->id);
         }
@@ -67,6 +69,7 @@ class LandingController extends Controller
         $featuredCourses = AdvancedCourse::query()
             ->where('is_active', true)
             ->where('is_featured', true)
+            ->publicCatalog()
             ->visibleOnCurrentHost()
             ->with(['academicSubject', 'instructor'])
             ->withCount('lessons')
@@ -94,13 +97,13 @@ class LandingController extends Controller
         $query = AcademicYear::where('is_active', true)
             ->visibleOnCurrentHost()
             ->with(['linkedCourses' => function ($q) {
-                $q->where('is_active', true)->visibleOnCurrentHost();
+                $q->where('is_active', true)->visibleOnCurrentHost()->publicCatalog();
             }, 'academicSubjects' => function ($q) {
                 $q->where('is_active', true);
             }])
             ->withCount([
                 'linkedCourses' => function ($q) {
-                    $q->where('is_active', true)->visibleOnCurrentHost();
+                    $q->where('is_active', true)->visibleOnCurrentHost()->publicCatalog();
                 },
                 'academicSubjects',
             ])
@@ -119,6 +122,7 @@ class LandingController extends Controller
                 $subjectIds = $year->academicSubjects->pluck('id')->toArray();
                 if (!empty($subjectIds)) {
                     $subjectCourses = AdvancedCourse::where('is_active', true)
+                        ->publicCatalog()
                         ->whereIn('academic_subject_id', $subjectIds)
                         ->visibleOnCurrentHost()
                         ->get();

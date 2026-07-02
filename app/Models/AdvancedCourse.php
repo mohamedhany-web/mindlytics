@@ -110,6 +110,8 @@ class AdvancedCourse extends Model
         'is_active',
         'is_featured',
         'is_free',
+        'is_scholarship_only',
+        'scholarship_program_id',
         'starts_at',
         'ends_at',
     ];
@@ -118,6 +120,7 @@ class AdvancedCourse extends Model
         'is_active' => 'boolean',
         'is_featured' => 'boolean',
         'is_free' => 'boolean',
+        'is_scholarship_only' => 'boolean',
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
         'price' => 'decimal:2',
@@ -246,6 +249,18 @@ class AdvancedCourse extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopePublicCatalog($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('is_scholarship_only', false)->orWhereNull('is_scholarship_only');
+        });
+    }
+
+    public function scholarshipProgram(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(ScholarshipProgram::class, 'scholarship_program_id');
     }
 
     public function scopeFeatured($query)

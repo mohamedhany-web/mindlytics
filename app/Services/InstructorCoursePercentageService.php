@@ -30,6 +30,10 @@ class InstructorCoursePercentageService
             return null;
         }
 
+        if ($enrollment->isScholarshipEnrollment()) {
+            return null;
+        }
+
         $course = $enrollment->course;
         if (! $course) {
             return null;

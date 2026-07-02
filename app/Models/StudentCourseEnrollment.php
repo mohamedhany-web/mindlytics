@@ -29,6 +29,8 @@ class StudentCourseEnrollment extends Model
         'discount_amount',
         'coupon_id',
         'hide_from_instructor',
+        'scholarship_registration_id',
+        'enrollment_type',
     ];
 
     protected $casts = [
@@ -107,6 +109,35 @@ class StudentCourseEnrollment extends Model
     {
         return $query->where(function ($q) {
             $q->where('hide_from_instructor', false)->orWhereNull('hide_from_instructor');
+        });
+    }
+
+    public function scholarshipRegistration(): BelongsTo
+    {
+        return $this->belongsTo(ScholarshipRegistration::class, 'scholarship_registration_id');
+    }
+
+    public function isScholarshipEnrollment(): bool
+    {
+        return ($this->enrollment_type ?? '') === 'scholarship'
+            || $this->scholarship_registration_id !== null;
+    }
+
+    public function scopeNonScholarship($query)
+    {
+        return $query->where(function ($q) {
+            $q->where(function ($inner) {
+                $inner->whereNull('enrollment_type')
+                    ->orWhere('enrollment_type', '!=', 'scholarship');
+            })->whereNull('scholarship_registration_id');
+        });
+    }
+
+    public function scopeScholarshipOnly($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('enrollment_type', 'scholarship')
+                ->orWhereNotNull('scholarship_registration_id');
         });
     }
 

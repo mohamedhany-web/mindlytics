@@ -203,6 +203,13 @@
             </a>
             @endif
 
+            <a href="{{ route('instructor.scholarships.students.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('instructor.scholarships.*') ? 'bg-violet-50 border border-violet-200' : 'hover:bg-slate-50 border border-transparent' }}">
+                <div class="w-9 h-9 rounded-lg bg-violet-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-graduation-cap text-sm"></i></div>
+                <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm">منحي الدراسية</div><div class="text-xs text-slate-500 mt-0.5">الطلاب والتفعيل</div></div>
+                <i class="fas fa-chevron-left text-slate-400 text-xs"></i>
+            </a>
+
             <a href="{{ route('instructor.agreements.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
                class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors {{ request()->routeIs('instructor.agreements.*') ? 'bg-sky-50 border border-sky-200' : 'hover:bg-slate-50 border border-transparent' }}">
                 <div class="w-9 h-9 rounded-lg bg-teal-500 text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-handshake text-sm"></i></div>

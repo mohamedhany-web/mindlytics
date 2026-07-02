@@ -16,7 +16,7 @@ class PageController extends Controller
     {
         $branch = app(BranchContext::class)->branch;
 
-        $coursesQuery = AdvancedCourse::query()->where('is_active', true);
+        $coursesQuery = AdvancedCourse::query()->where('is_active', true)->publicCatalog();
         $studentsQuery = User::query()->where('role', 'student')->where('is_active', true);
         $instructorsQuery = User::query()->where('role', 'instructor')->where('is_active', true);
         if ($branch) {

@@ -80,7 +80,7 @@ class InstallmentAgreementController extends Controller
     public function createManualBooking(Request $request): View
     {
         $plans = InstallmentPlan::active()->with('course')->orderBy('name')->get();
-        $onlineCourses = AdvancedCourse::active()->orderBy('title')->get(['id', 'title', 'price']);
+        $onlineCourses = AdvancedCourse::active()->publicCatalog()->orderBy('title')->get(['id', 'title', 'price']);
         $offlineCourses = OfflineCourse::active()->with(['groups' => fn ($q) => $q->where('is_active', true)->where('status', 'active')->orderBy('name')])->orderBy('title')->get(['id', 'title', 'price']);
         $statuses = $this->statusOptions();
         $selectedPlanId = $request->integer('plan_id');

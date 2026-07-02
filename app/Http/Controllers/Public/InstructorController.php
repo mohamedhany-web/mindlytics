@@ -24,7 +24,11 @@ class InstructorController extends Controller
             abort(404);
         }
         $profile = InstructorProfile::where('user_id', $instructor->id)->approved()->with('user')->firstOrFail();
-        $courses = \App\Models\AdvancedCourse::where('instructor_id', $instructor->id)->where('is_active', true)->orderBy('is_featured', 'desc')->get();
+        $courses = \App\Models\AdvancedCourse::where('instructor_id', $instructor->id)
+            ->where('is_active', true)
+            ->publicCatalog()
+            ->orderBy('is_featured', 'desc')
+            ->get();
         return view('instructors.show', compact('profile', 'courses'));
     }
 }

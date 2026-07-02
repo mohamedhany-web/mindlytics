@@ -16,6 +16,7 @@ class BranchOnlineCoursesController extends Controller
 
         $q = AdvancedCourse::query()
             ->where('branch_id', $branch->id)
+            ->publicCatalog()
             ->with(['instructor', 'academicSubject', 'academicYear'])
             ->orderByDesc('id');
 

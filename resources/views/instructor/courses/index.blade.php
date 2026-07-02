@@ -90,10 +90,17 @@
                 <div class="px-5 py-4 border-b border-slate-200">
                     <div class="flex items-center justify-between gap-2">
                         <h3 class="text-lg font-bold text-slate-800 truncate flex-1">{{ $course->title }}</h3>
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold shrink-0 {{ $course->is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700' }}">
-                            <i class="fas {{ $course->is_active ? 'fa-check-circle' : 'fa-ban' }}"></i>
-                            {{ $course->is_active ? __('instructor.active_status') : __('instructor.inactive_status') }}
-                        </span>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            @if($course->is_scholarship_only)
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-violet-100 text-violet-700">
+                                    <i class="fas fa-graduation-cap"></i> منحة
+                                </span>
+                            @endif
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold {{ $course->is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700' }}">
+                                <i class="fas {{ $course->is_active ? 'fa-check-circle' : 'fa-ban' }}"></i>
+                                {{ $course->is_active ? __('instructor.active_status') : __('instructor.inactive_status') }}
+                            </span>
+                        </div>
                     </div>
                 </div>
 

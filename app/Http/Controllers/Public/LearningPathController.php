@@ -28,6 +28,7 @@ class LearningPathController extends Controller
             ->with(['linkedCourses' => function($query) {
                 $query->where('is_active', true)
                       ->visibleOnCurrentHost()
+                      ->publicCatalog()
                       ->with(['academicSubject', 'academicYear', 'instructor'])
                       ->withCount('lessons');
             }, 'academicSubjects' => function($query) {
@@ -35,7 +36,7 @@ class LearningPathController extends Controller
             }])
             ->withCount([
                 'linkedCourses' => function ($q) {
-                    $q->where('is_active', true)->visibleOnCurrentHost();
+                    $q->where('is_active', true)->visibleOnCurrentHost()->publicCatalog();
                 },
                 'academicSubjects',
             ])
@@ -56,6 +57,7 @@ class LearningPathController extends Controller
                     $subjectCourses = AdvancedCourse::where('is_active', true)
                         ->whereIn('academic_subject_id', $subjectIds)
                         ->visibleOnCurrentHost()
+                        ->publicCatalog()
                         ->with(['academicSubject', 'academicYear', 'instructor'])
                         ->withCount('lessons')
                         ->get();
@@ -93,6 +95,7 @@ class LearningPathController extends Controller
         $featuredCourses = AdvancedCourse::where('is_active', true)
             ->where('is_featured', true)
             ->visibleOnCurrentHost()
+            ->publicCatalog()
             ->with(['academicSubject', 'academicYear'])
             ->withCount('lessons')
             ->limit(6)
@@ -142,6 +145,7 @@ class LearningPathController extends Controller
             ->with(['linkedCourses' => function($query) {
                 $query->where('is_active', true)
                       ->visibleOnCurrentHost()
+                      ->publicCatalog()
                       ->with(['academicSubject', 'academicYear', 'instructor'])
                       ->withCount('lessons');
             }, 'academicSubjects'])
@@ -161,13 +165,18 @@ class LearningPathController extends Controller
             $courses = AdvancedCourse::where('is_active', true)
                 ->whereIn('academic_subject_id', $subjectIds)
                 ->visibleOnCurrentHost()
+                ->publicCatalog()
                 ->with(['academicSubject', 'academicYear', 'instructor'])
                 ->withCount('lessons')
                 ->get();
         }
         
         // دمج الكورسات المرتبطة مباشرة مع الكورسات من المواد الدراسية
-        $linkedCourses = $academicYear->linkedCourses()->where('is_active', true)->visibleOnCurrentHost()->get();
+        $linkedCourses = $academicYear->linkedCourses()
+            ->where('is_active', true)
+            ->visibleOnCurrentHost()
+            ->publicCatalog()
+            ->get();
         $allCourses = $linkedCourses->merge($courses)->unique('id');
         
         // سعر المسار مستقل عن أسعار الكورسات (يُحدد من لوحة الإدارة)
