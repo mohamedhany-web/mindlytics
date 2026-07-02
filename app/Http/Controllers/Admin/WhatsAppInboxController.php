@@ -107,6 +107,33 @@ class WhatsAppInboxController extends Controller
         return response()->json($result);
     }
 
+    public function showConversation(WhatsAppConversation $conversation): JsonResponse
+    {
+        if (! Schema::hasTable('whatsapp_conversations')) {
+            return response()->json(['success' => false, 'error' => 'الجداول غير جاهزة — نفّذ migrate'], 503);
+        }
+
+        $this->inbox->markConversationRead($conversation);
+        $conversation->load('user:id,name,phone');
+
+        $messages = $conversation->messages()
+            ->with('sentBy:id,name')
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get()
+            ->map(fn ($m) => $this->inbox->serializeMessage($m));
+
+        return response()->json([
+            'success' => true,
+            'conversation' => $this->inbox->serializeConversation($conversation),
+            'messages' => $messages,
+            'within_service_window' => $this->inbox->isWithinServiceWindow($conversation),
+            'reply_url' => route('admin.whatsapp.inbox.reply', $conversation),
+            'template_url' => route('admin.whatsapp.inbox.template', $conversation),
+            'unread_total' => (int) WhatsAppConversation::query()->sum('unread_count'),
+        ]);
+    }
+
     public function poll(Request $request): JsonResponse
     {
         if (! Schema::hasTable('whatsapp_conversations')) {
@@ -116,9 +143,22 @@ class WhatsAppInboxController extends Controller
         $conversationId = (int) $request->query('conversation_id');
         $afterId = (int) $request->query('after_id', 0);
 
-        $conversations = WhatsAppConversation::query()
+        $conversationsQuery = WhatsAppConversation::query()
             ->with('user:id,name')
             ->orderByDesc('last_message_at')
+            ->orderByDesc('updated_at');
+
+        if ($search = trim((string) $request->query('search'))) {
+            $digits = preg_replace('/[^0-9]/', '', $search);
+            $conversationsQuery->where(function ($q) use ($search, $digits) {
+                $q->where('contact_name', 'like', '%' . $search . '%');
+                if ($digits !== '') {
+                    $q->orWhere('phone_number', 'like', '%' . $digits . '%');
+                }
+            });
+        }
+
+        $conversations = $conversationsQuery
             ->limit(50)
             ->get()
             ->map(fn ($c) => $this->inbox->serializeConversation($c));

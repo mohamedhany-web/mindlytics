@@ -489,6 +489,7 @@ class WhatsAppInboxService
             'unread_count' => $conversation->unread_count,
             'within_service_window' => $this->isWithinServiceWindow($conversation),
             'user_name' => $conversation->user?->name,
+            'user_phone' => $conversation->user?->phone,
         ];
     }
 }

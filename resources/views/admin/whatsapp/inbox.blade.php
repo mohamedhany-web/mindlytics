@@ -7,31 +7,37 @@
 @php
     $canSend = (bool) ($connectionMeta['can_send'] ?? false);
     $activeId = $activeConversation?->id;
-    $withinWindow = (bool) ($withinWindow ?? false);
+    $inboxService = app(\App\Services\WhatsAppInboxService::class);
+    $initialConversations = $conversations->getCollection()->map(fn ($c) => $inboxService->serializeConversation($c))->values();
+    $initialMessages = $messages->map(fn ($m) => $inboxService->serializeMessage($m))->values();
     $inboxConfig = [
         'conversationId' => $activeId,
+        'activeConversation' => $activeConversation ? $inboxService->serializeConversation($activeConversation) : null,
+        'conversations' => $initialConversations,
+        'messages' => $initialMessages,
         'pollUrl' => route('admin.whatsapp.inbox.poll'),
+        'conversationUrlTemplate' => route('admin.whatsapp.inbox.conversation', ['conversation' => '__ID__']),
         'replyUrl' => $activeId ? route('admin.whatsapp.inbox.reply', $activeConversation) : null,
         'templateUrl' => $activeId ? route('admin.whatsapp.inbox.template', $activeConversation) : null,
         'startUrl' => route('admin.whatsapp.inbox.start'),
         'templatesUrl' => route('admin.whatsapp.inbox.templates'),
+        'inboxUrl' => route('admin.whatsapp.inbox'),
         'csrf' => csrf_token(),
-        'withinWindow' => $withinWindow,
+        'withinWindow' => (bool) ($withinWindow ?? false),
         'lastMessageId' => $messages->last()?->id ?? 0,
         'metaTemplates' => $metaTemplates ?? [],
     ];
-    $firstTemplate = ($metaTemplates ?? [])[0] ?? null;
 @endphp
 
 <script>window.__waInboxConfig = @json($inboxConfig);</script>
 
-<div class="p-3 sm:p-4 md:p-6 space-y-4" style="background:#f8fafc; min-height:100vh;" x-data="whatsappInbox()">
+<div class="p-3 sm:p-4 md:p-6 space-y-4" style="background:#f8fafc; min-height:100vh;" x-data="whatsappInbox()" x-cloak>
     @include('admin.whatsapp._alerts')
     @include('admin.whatsapp._nav', ['active' => 'inbox'])
 
     @include('admin.whatsapp._page-header', [
         'title' => 'المحادثات الواردة',
-        'subtitle' => 'استقبال رسائل العملاء والرد من النظام — مع دعم قوالب Meta لبدء المحادثة.',
+        'subtitle' => 'تنقّل بين المحادثات وردّ على العملاء مباشرة — بدون إعادة تحميل الصفحة.',
         'icon' => 'fas fa-inbox',
         'actions' => '
             <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-white border border-slate-200 text-slate-700">
@@ -51,150 +57,205 @@
             الربط غير مكتمل — <a href="{{ route('admin.whatsapp.settings') }}" class="font-bold underline">أكمل إعداد Meta</a> وفعّل Webhook لاستقبال الرسائل.
         </div>
     @else
-        <div class="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs text-sky-900">
-            <strong>Webhook مطلوب للرسائل الواردة:</strong> Callback URL <code class="dir-ltr">{{ \App\Support\WhatsAppCloudSettings::webhookUrl() }}</code>
-            — اشترك في <code>messages</code> و <code>message_status</code> في Meta Developers.
+        <div class="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs text-sky-900 hidden lg:block">
+            <strong>Webhook للرسائل الواردة:</strong> Callback URL <code class="dir-ltr">{{ \App\Support\WhatsAppCloudSettings::webhookUrl() }}</code>
         </div>
     @endif
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-[70vh]">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-4 rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-white"
+         style="height: calc(100vh - 13rem); min-height: 520px; max-height: 900px;">
+
         {{-- قائمة المحادثات --}}
-        <aside class="lg:col-span-4 xl:col-span-3 {{ $waSectionClass }} flex flex-col overflow-hidden">
-            <div class="p-4 border-b border-slate-200">
-                <form method="GET" action="{{ route('admin.whatsapp.inbox') }}" class="flex gap-2">
-                    @if($activeId)
-                        <input type="hidden" name="conversation" value="{{ $activeId }}">
-                    @endif
-                    <input type="search" name="search" value="{{ request('search') }}" placeholder="بحث بالاسم أو الرقم..."
-                           class="{{ $waInputClass }} text-sm flex-1">
-                    <button type="submit" class="{{ $waBtnDark }} !px-3"><i class="fas fa-search"></i></button>
-                </form>
+        <aside class="lg:col-span-4 xl:col-span-3 flex flex-col border-l border-slate-200 bg-white h-full"
+               :class="{ 'hidden lg:flex': conversationId && !showSidebarMobile, 'flex': !conversationId || showSidebarMobile }">
+            <div class="p-3 border-b border-slate-200 bg-[#f0f2f5] shrink-0">
+                <div class="flex gap-2">
+                    <input type="search" x-model="searchQuery" @input.debounce.350ms="searchConversations()"
+                           placeholder="بحث بالاسم أو الرقم..."
+                           class="flex-1 rounded-full border-0 bg-white px-4 py-2.5 text-sm shadow-sm focus:ring-2 focus:ring-emerald-400">
+                    <button type="button" @click="searchConversations()" class="w-10 h-10 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 flex items-center justify-center">
+                        <i class="fas fa-search text-sm"></i>
+                    </button>
+                </div>
             </div>
-            <div class="flex-1 overflow-y-auto divide-y divide-slate-100">
-                @forelse($conversations as $conv)
-                    <a href="{{ route('admin.whatsapp.inbox', ['conversation' => $conv->id, 'search' => request('search')]) }}"
-                       data-wa-conv-link
-                       class="block px-4 py-3 hover:bg-emerald-50/60 transition-colors {{ $activeId === $conv->id ? 'bg-emerald-50 border-r-4 border-emerald-500' : '' }}">
-                        <div class="flex items-start justify-between gap-2">
-                            <div class="min-w-0 flex-1">
-                                <p class="font-bold text-slate-900 truncate">{{ $conv->displayName() }}</p>
-                                <p class="text-[11px] text-slate-500 dir-ltr text-right font-mono">{{ $conv->formattedPhone() }}</p>
-                                @if($conv->last_message_preview)
-                                    <p class="text-xs text-slate-600 mt-1 truncate">{{ $conv->last_message_preview }}</p>
-                                @endif
-                            </div>
-                            <div class="text-left shrink-0">
-                                @if($conv->unread_count > 0)
-                                    <span class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-emerald-600 text-white text-[10px] font-bold">{{ $conv->unread_count }}</span>
-                                @endif
-                                <p class="text-[10px] text-slate-400 mt-1 whitespace-nowrap">{{ $conv->last_message_at?->diffForHumans() }}</p>
-                            </div>
-                        </div>
-                    </a>
-                @empty
+
+            <div class="flex-1 overflow-y-auto overscroll-contain divide-y divide-slate-100 wa-conv-scroll">
+                <template x-if="loadingList">
+                    <div class="p-8 text-center text-slate-400 text-sm"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</div>
+                </template>
+                <template x-if="!loadingList && conversations.length === 0">
                     <div class="p-8 text-center text-slate-500 text-sm">
                         <i class="fas fa-inbox text-3xl mb-2 text-slate-300"></i>
-                        <p>لا توجد محادثات بعد</p>
-                        <p class="text-xs mt-2">ستظهر هنا الرسائل المرسلة من النظام، ورسائل العملاء الواردة عبر Webhook</p>
+                        <p>لا توجد محادثات</p>
                     </div>
-                @endforelse
+                </template>
+                <template x-for="conv in conversations" :key="'c-' + conv.id">
+                    <button type="button" @click="selectConversation(conv.id)"
+                            class="w-full text-right px-4 py-3 hover:bg-emerald-50/70 transition-colors flex gap-3 items-start"
+                            :class="conversationId === conv.id ? 'bg-emerald-50 border-r-4 border-emerald-500' : ''">
+                        <div class="w-11 h-11 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 font-bold text-sm"
+                             x-text="(conv.display_name || '?').charAt(0).toUpperCase()"></div>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center justify-between gap-2">
+                                <p class="font-bold text-slate-900 truncate text-sm" x-text="conv.display_name"></p>
+                                <span class="text-[10px] text-slate-400 shrink-0 whitespace-nowrap" x-text="conv.last_message_at_human || ''"></span>
+                            </div>
+                            <p class="text-[11px] text-slate-500 dir-ltr text-right font-mono truncate" x-text="conv.formatted_phone"></p>
+                            <div class="flex items-center justify-between gap-2 mt-0.5">
+                                <p class="text-xs text-slate-600 truncate" x-text="conv.last_message_preview || '—'"></p>
+                                <span x-show="conv.unread_count > 0"
+                                      class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-emerald-600 text-white text-[10px] font-bold shrink-0"
+                                      x-text="conv.unread_count"></span>
+                            </div>
+                        </div>
+                    </button>
+                </template>
             </div>
-            @if($conversations->hasPages())
-                <div class="p-3 border-t border-slate-200">{{ $conversations->links() }}</div>
-            @endif
         </aside>
 
         {{-- نافذة المحادثة --}}
-        <section class="lg:col-span-8 xl:col-span-9 {{ $waSectionClass }} flex flex-col overflow-hidden min-h-[60vh]">
-            @if($activeConversation)
-                <div class="px-5 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-white">
-                    <div>
-                        <h3 class="font-bold text-slate-900">{{ $activeConversation->displayName() }}</h3>
-                        <p class="text-xs text-slate-500 dir-ltr">{{ $activeConversation->formattedPhone() }}
-                            @if($activeConversation->user)
-                                · {{ $activeConversation->user->name }}
-                            @endif
-                        </p>
+        <section class="lg:col-span-8 xl:col-span-9 flex flex-col h-full bg-[#efeae2] min-h-0"
+                 :class="{ 'flex': conversationId, 'hidden lg:flex': !conversationId }">
+
+            {{-- حالة: لا محادثة مختارة --}}
+            <template x-if="!conversationId && !loadingConversation">
+                <div class="flex-1 flex flex-col items-center justify-center text-slate-500 p-8 bg-[#f0f2f5]">
+                    <div class="w-24 h-24 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
+                        <i class="fab fa-whatsapp text-5xl text-emerald-500"></i>
                     </div>
-                    <div class="flex items-center gap-2">
-                        @if($withinWindow)
-                            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                <i class="fas fa-clock"></i> نافذة 24 ساعة مفتوحة
-                            </span>
-                        @else
-                            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-                                <i class="fas fa-file-alt"></i> استخدم قالب Meta للرد
-                            </span>
-                        @endif
+                    <p class="font-semibold text-slate-700 text-lg">محادثات الواتساب</p>
+                    <p class="text-sm text-slate-500 mt-1 text-center max-w-sm">اختر محادثة من القائمة أو ابدأ محادثة جديدة بقالب Meta</p>
+                    <button type="button" @click="showStartModal = true" class="{{ $waBtnPrimary }} mt-5 text-sm">محادثة جديدة</button>
+                </div>
+            </template>
+
+            {{-- حالة: تحميل محادثة --}}
+            <template x-if="loadingConversation">
+                <div class="flex-1 flex items-center justify-center bg-[#efeae2]">
+                    <div class="text-center text-slate-500">
+                        <i class="fas fa-spinner fa-spin text-2xl text-emerald-600 mb-2"></i>
+                        <p class="text-sm">جاري تحميل المحادثة...</p>
                     </div>
                 </div>
+            </template>
 
-                <div id="chat-messages" class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3 bg-[#e5ddd5]/30" style="background-image:url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23d4cdc4\' fill-opacity=\'0.25\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');">
-                    @foreach($messages as $msg)
-                        @include('admin.whatsapp._inbox_message', ['msg' => $msg])
-                    @endforeach
-                    <template x-for="msg in newMessages" :key="'n-' + msg.id">
-                        <div class="flex" :class="msg.is_inbound ? 'justify-start' : 'justify-end'">
-                            <div class="max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm text-sm whitespace-pre-wrap break-words"
-                                 :class="msg.is_inbound ? 'bg-white text-slate-800 rounded-tl-sm' : 'bg-emerald-100 text-emerald-950 rounded-tr-sm border border-emerald-200'">
-                                <p x-text="msg.body"></p>
-                                <p class="text-[10px] mt-1 opacity-60" x-text="msg.created_at_human"></p>
+            {{-- المحادثة النشطة --}}
+            <template x-if="conversationId && activeConversation && !loadingConversation">
+                <div class="flex flex-col h-full min-h-0">
+                    {{-- رأس المحادثة --}}
+                    <div class="px-4 py-3 border-b border-slate-200 flex items-center gap-3 bg-[#f0f2f5] shrink-0">
+                        <button type="button" @click="backToList()" class="lg:hidden w-9 h-9 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-600">
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                        <div class="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold shrink-0"
+                             x-text="(activeConversation.display_name || '?').charAt(0).toUpperCase()"></div>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="font-bold text-slate-900 truncate text-sm" x-text="activeConversation.display_name"></h3>
+                            <p class="text-xs text-slate-500 dir-ltr truncate">
+                                <span x-text="activeConversation.formatted_phone"></span>
+                                <template x-if="activeConversation.user_name">
+                                    <span> · <span x-text="activeConversation.user_name"></span></span>
+                                </template>
+                            </p>
+                        </div>
+                        <span x-show="withinWindow" class="hidden sm:inline-flex text-[10px] font-semibold px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            <i class="fas fa-clock ml-1"></i> 24 ساعة
+                        </span>
+                        <span x-show="!withinWindow" class="hidden sm:inline-flex text-[10px] font-semibold px-2 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                            <i class="fas fa-file-alt ml-1"></i> قالب
+                        </span>
+                    </div>
+
+                    {{-- الرسائل --}}
+                    <div id="chat-messages" class="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 space-y-2 min-h-0 wa-chat-scroll"
+                         style="background-image:url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23d4cdc4\' fill-opacity=\'0.2\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');">
+                        <template x-for="msg in chatMessages" :key="'m-' + msg.id">
+                            <div class="flex" :class="msg.is_inbound ? 'justify-start' : 'justify-end'">
+                                <div class="max-w-[88%] sm:max-w-[72%] rounded-lg px-3 py-2 shadow-sm text-sm whitespace-pre-wrap break-words relative"
+                                     :class="msg.is_inbound
+                                        ? 'bg-white text-slate-800 rounded-tl-none'
+                                        : 'bg-[#d9fdd3] text-slate-900 rounded-tr-none'">
+                                    <p x-text="msg.body"></p>
+                                    <template x-if="msg.template_name">
+                                        <p class="text-[10px] opacity-70 mt-1" x-text="'قالب: ' + msg.template_name"></p>
+                                    </template>
+                                    <template x-if="msg.error_message && msg.status === 'failed'">
+                                        <p class="text-[10px] text-rose-600 mt-1" x-text="msg.error_message"></p>
+                                    </template>
+                                    <div class="flex items-center justify-end gap-1 mt-0.5 text-[10px] opacity-60">
+                                        <span x-show="msg.sent_by && !msg.is_inbound" x-text="msg.sent_by"></span>
+                                        <span x-text="msg.created_at_human"></span>
+                                        <template x-if="!msg.is_inbound && msg.status === 'read'">
+                                            <i class="fas fa-check-double text-sky-500"></i>
+                                        </template>
+                                        <template x-if="!msg.is_inbound && msg.status === 'delivered'">
+                                            <i class="fas fa-check-double text-slate-400"></i>
+                                        </template>
+                                        <template x-if="!msg.is_inbound && msg.status === 'sent'">
+                                            <i class="fas fa-check text-slate-400"></i>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    {{-- شريط الإرسال — مثل واتساب --}}
+                    <div class="shrink-0 bg-[#f0f2f5] px-3 py-2 sm:px-4 sm:py-3 border-t border-slate-200">
+                        <div x-show="replyError" x-cloak class="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 mb-2" x-text="replyError"></div>
+
+                        {{-- إرسال نصي داخل نافذة 24 ساعة --}}
+                        <div x-show="withinWindow" class="flex items-end gap-2">
+                            <div class="flex-1 flex items-end gap-2 bg-white rounded-3xl px-3 py-1.5 shadow-sm border border-slate-100 min-h-[48px]">
+                                <textarea x-ref="composer" x-model="replyBody" rows="1" placeholder="اكتب رسالة..."
+                                          @input="autoGrowComposer()"
+                                          @keydown.enter="if(!$event.shiftKey){ $event.preventDefault(); sendReply(); }"
+                                          class="flex-1 border-0 bg-transparent text-sm resize-none py-2 px-1 max-h-32 focus:ring-0 focus:outline-none placeholder:text-slate-400"></textarea>
+                            </div>
+                            <button type="button" @click="sendReply()"
+                                    :disabled="sending || !replyBody.trim()"
+                                    class="w-12 h-12 rounded-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed text-white flex items-center justify-center shrink-0 shadow-md transition-all active:scale-95">
+                                <i class="fas text-lg" :class="sending ? 'fa-spinner fa-spin' : 'fa-paper-plane'"></i>
+                            </button>
+                        </div>
+
+                        {{-- خارج نافذة 24 ساعة — قالب --}}
+                        <div x-show="!withinWindow" x-cloak class="space-y-2">
+                            <p class="text-[11px] text-amber-900 font-semibold px-1">خارج نافذة 24 ساعة — أرسل قالب Meta:</p>
+                            <div class="flex items-center gap-2">
+                                <select x-model="selectedTemplateKey" @change="applySelectedTemplate()"
+                                        class="flex-1 rounded-full border-0 bg-white px-4 py-2.5 text-sm shadow-sm">
+                                    <option value="">اختر قالباً...</option>
+                                    <template x-for="t in metaTemplates" :key="t.name + t.language">
+                                        <option :value="t.name + '|' + t.language" x-text="t.label"></option>
+                                    </template>
+                                </select>
+                                <button type="button" @click="sendTemplate()" :disabled="sending || !templateName"
+                                        class="w-12 h-12 rounded-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 text-white flex items-center justify-center shrink-0 shadow-md">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
                             </div>
                         </div>
-                    </template>
-                </div>
 
-                <div class="border-t border-slate-200 bg-white p-4 space-y-3">
-                    <div x-show="replyError" x-cloak class="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2" x-text="replyError"></div>
-
-                    <div x-show="withinWindow" class="flex gap-2 items-end">
-                        <textarea x-model="replyBody" rows="2" placeholder="اكتب ردك..."
-                                  class="{{ $waInputClass }} text-sm flex-1 resize-none" @keydown.ctrl.enter="sendReply()"></textarea>
-                        <button type="button" @click="sendReply()" :disabled="sending || !replyBody.trim()"
-                                class="{{ $waBtnPrimary }} !px-4 shrink-0 disabled:opacity-50">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
-                    </div>
-
-                    <div x-show="!withinWindow" x-cloak class="rounded-xl border border-amber-200 bg-amber-50 p-3 space-y-2">
-                        <p class="text-xs text-amber-900 font-semibold">خارج نافذة 24 ساعة — أرسل قالب Meta معتمد:</p>
-                        <div class="flex flex-wrap gap-2">
-                            <select x-model="selectedTemplateKey" @change="applySelectedTemplate()" class="{{ $waSelectClass }} text-sm flex-1 min-w-[180px]">
-                                <option value="">اختر قالباً معتمداً...</option>
-                                <template x-for="t in metaTemplates" :key="t.name + '|' + t.language">
+                        {{-- قالب اختياري داخل النافذة --}}
+                        <div x-show="withinWindow && showTemplatePicker" x-cloak class="mt-2 flex gap-2">
+                            <select x-model="selectedTemplateKey" @change="applySelectedTemplate()"
+                                    class="flex-1 rounded-full bg-white px-3 py-1.5 text-xs shadow-sm border-0">
+                                <option value="">قالب Meta...</option>
+                                <template x-for="t in metaTemplates" :key="'tp-' + t.name + t.language">
                                     <option :value="t.name + '|' + t.language" x-text="t.label"></option>
                                 </template>
                             </select>
                             <button type="button" @click="sendTemplate()" :disabled="sending || !templateName"
-                                    class="{{ $waBtnPrimary }} text-sm disabled:opacity-50">
-                                <i class="fas fa-file-alt"></i> إرسال قالب
-                            </button>
+                                    class="text-xs px-3 py-1.5 rounded-full bg-white text-emerald-700 font-semibold shadow-sm">إرسال</button>
                         </div>
-                        <p x-show="metaTemplates.length === 0" class="text-[11px] text-amber-800">
-                            لا توجد قوالب معتمدة — أنشئ قالباً في
-                            <a href="https://business.facebook.com/wa/manage/message-templates/" target="_blank" rel="noopener" class="underline font-semibold">WhatsApp Manager</a>
-                        </p>
-                    </div>
-
-                    <div x-show="withinWindow" class="flex flex-wrap gap-2 pt-1 border-t border-slate-100">
-                        <span class="text-[10px] text-slate-500 w-full">أو أرسل قالب معتمد:</span>
-                        <select x-model="selectedTemplateKey" @change="applySelectedTemplate()" class="{{ $waSelectClass }} text-xs flex-1 min-w-[140px] py-1.5">
-                            <option value="">قالب...</option>
-                            <template x-for="t in metaTemplates" :key="'r-' + t.name + t.language">
-                                <option :value="t.name + '|' + t.language" x-text="t.label"></option>
-                            </template>
-                        </select>
-                        <button type="button" @click="sendTemplate()" :disabled="sending || !templateName"
-                                class="{{ $waBtnSecondary }} text-xs !py-1.5">قالب</button>
+                        <button x-show="withinWindow" type="button" @click="showTemplatePicker = !showTemplatePicker"
+                                class="mt-1.5 text-[10px] text-slate-500 hover:text-emerald-600 px-1">
+                            <i class="fas fa-file-alt"></i> <span x-text="showTemplatePicker ? 'إخفاء القوالب' : 'إرسال قالب'"></span>
+                        </button>
                     </div>
                 </div>
-            @else
-                <div class="flex-1 flex flex-col items-center justify-center text-slate-500 p-8">
-                    <i class="fab fa-whatsapp text-5xl text-emerald-300 mb-4"></i>
-                    <p class="font-semibold text-slate-700">اختر محادثة أو ابدأ محادثة جديدة</p>
-                    <button type="button" @click="showStartModal = true" class="{{ $waBtnPrimary }} mt-4 text-sm">محادثة جديدة بقالب</button>
-                </div>
-            @endif
+            </template>
         </section>
     </div>
 
@@ -202,7 +263,7 @@
     <div x-show="showStartModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" @keydown.escape.window="showStartModal = false">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4" @click.outside="showStartModal = false">
             <h3 class="font-bold text-lg text-slate-900">بدء محادثة جديدة</h3>
-            <p class="text-xs text-slate-600">أول رسالة يجب أن تكون <strong>قالب Meta معتمد (Approved)</strong> من حسابكم — ليس بالضرورة <code>hello_world</code>.</p>
+            <p class="text-xs text-slate-600">أول رسالة يجب أن تكون <strong>قالب Meta معتمد</strong>.</p>
             @if(!empty($metaTemplatesError))
                 <p class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">{{ $metaTemplatesError }}</p>
             @endif
@@ -211,7 +272,7 @@
                 <input type="text" x-model="startPhone" placeholder="2010xxxxxxx" class="{{ $waInputClass }} dir-ltr text-sm">
             </div>
             <div>
-                <label class="{{ $waLabelClass }}">قالب Meta المعتمد</label>
+                <label class="{{ $waLabelClass }}">قالب Meta</label>
                 @if(count($metaTemplates ?? []) > 0)
                     <select x-model="selectedTemplateKey" @change="applySelectedTemplate(true)" class="{{ $waSelectClass }} text-sm dir-ltr">
                         @foreach($metaTemplates as $tpl)
@@ -219,11 +280,7 @@
                         @endforeach
                     </select>
                 @else
-                    <p class="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
-                        لا توجد قوالب معتمدة في حسابك.
-                        <a href="https://business.facebook.com/wa/manage/message-templates/" target="_blank" rel="noopener" class="underline font-semibold">أنشئ قالباً في WhatsApp Manager</a>
-                        ثم حدّث الصفحة.
-                    </p>
+                    <p class="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">لا توجد قوالب معتمدة.</p>
                 @endif
             </div>
             <p x-show="startError" class="text-xs text-rose-600" x-text="startError"></p>
@@ -235,22 +292,39 @@
     </div>
 </div>
 
+@push('styles')
+<style>
+    .wa-conv-scroll::-webkit-scrollbar,
+    .wa-chat-scroll::-webkit-scrollbar { width: 6px; }
+    .wa-conv-scroll::-webkit-scrollbar-thumb,
+    .wa-chat-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+    [x-cloak] { display: none !important; }
+</style>
+@endpush
+
 @push('scripts')
 <script>
 function whatsappInbox() {
     const cfg = window.__waInboxConfig || {};
+
     return {
         conversationId: cfg.conversationId || null,
+        activeConversation: cfg.activeConversation || null,
+        conversations: cfg.conversations || [],
+        chatMessages: cfg.messages || [],
         pollUrl: cfg.pollUrl,
+        conversationUrlTemplate: cfg.conversationUrlTemplate,
         replyUrl: cfg.replyUrl,
         templateUrl: cfg.templateUrl,
         startUrl: cfg.startUrl,
         templatesUrl: cfg.templatesUrl,
+        inboxUrl: cfg.inboxUrl,
         csrf: cfg.csrf,
         withinWindow: !!cfg.withinWindow,
         lastMessageId: cfg.lastMessageId || 0,
         unreadTotal: {{ (int) $unreadTotal }},
         metaTemplates: cfg.metaTemplates || [],
+        searchQuery: new URLSearchParams(window.location.search).get('search') || '',
         replyBody: '',
         templateName: '',
         templateLang: '',
@@ -258,17 +332,61 @@ function whatsappInbox() {
         startPhone: '',
         startTemplate: '',
         startLang: '',
-        newMessages: [],
         replyError: '',
         startError: '',
         sending: false,
+        loadingConversation: false,
+        loadingList: false,
         showStartModal: false,
+        showSidebarMobile: false,
+        showTemplatePicker: false,
         pollTimer: null,
+        searchTimer: null,
 
         init() {
             this.bootstrapTemplates();
-            this.scrollChat();
-            this.pollTimer = setInterval(() => this.poll(), 8000);
+            this.scrollChat(false);
+            this.pollTimer = setInterval(() => this.poll(), 6000);
+
+            const urlConv = new URLSearchParams(window.location.search).get('conversation');
+            if (urlConv && parseInt(urlConv, 10) !== this.conversationId) {
+                this.selectConversation(parseInt(urlConv, 10), false);
+            } else if (this.conversationId) {
+                this.pushUrl(this.conversationId);
+            }
+
+            window.addEventListener('popstate', (e) => {
+                const id = e.state?.conversationId || null;
+                if (id) {
+                    this.selectConversation(id, false);
+                } else {
+                    this.conversationId = null;
+                    this.activeConversation = null;
+                    this.chatMessages = [];
+                    this.showSidebarMobile = true;
+                }
+            });
+        },
+
+        conversationUrl(id) {
+            return (this.conversationUrlTemplate || '').replace('__ID__', id);
+        },
+
+        pushUrl(id) {
+            const params = new URLSearchParams();
+            if (id) params.set('conversation', id);
+            if (this.searchQuery) params.set('search', this.searchQuery);
+            const qs = params.toString();
+            const url = this.inboxUrl + (qs ? '?' + qs : '');
+            window.history.pushState({ conversationId: id }, '', url);
+        },
+
+        backToList() {
+            this.conversationId = null;
+            this.activeConversation = null;
+            this.chatMessages = [];
+            this.showSidebarMobile = true;
+            this.pushUrl(null);
         },
 
         bootstrapTemplates() {
@@ -296,27 +414,118 @@ function whatsappInbox() {
         applySelectedTemplate(forStart = false) {
             if (!this.selectedTemplateKey) return;
             const parts = this.selectedTemplateKey.split('|');
-            const name = parts[0] || '';
-            const lang = parts[1] || 'en_US';
-            this.templateName = name;
-            this.templateLang = lang;
+            this.templateName = parts[0] || '';
+            this.templateLang = parts[1] || 'en_US';
             if (forStart) {
-                this.startTemplate = name;
-                this.startLang = lang;
+                this.startTemplate = this.templateName;
+                this.startLang = this.templateLang;
             }
         },
 
-        scrollChat() {
+        autoGrowComposer() {
+            const el = this.$refs.composer;
+            if (!el) return;
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 128) + 'px';
+        },
+
+        scrollChat(smooth = true) {
             this.$nextTick(() => {
                 const el = document.getElementById('chat-messages');
-                if (el) el.scrollTop = el.scrollHeight;
+                if (!el) return;
+                el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
             });
+        },
+
+        upsertConversation(conv) {
+            if (!conv?.id) return;
+            const idx = this.conversations.findIndex(c => c.id === conv.id);
+            if (idx >= 0) {
+                this.conversations[idx] = { ...this.conversations[idx], ...conv };
+                this.conversations.sort((a, b) => {
+                    const ta = a.last_message_at || '';
+                    const tb = b.last_message_at || '';
+                    return tb.localeCompare(ta);
+                });
+            } else {
+                this.conversations.unshift(conv);
+            }
+        },
+
+        async searchConversations() {
+            this.loadingList = true;
+            try {
+                const params = new URLSearchParams();
+                if (this.searchQuery) params.set('search', this.searchQuery);
+                const res = await fetch(this.pollUrl + '?' + params.toString(), {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                });
+                const data = await res.json();
+                if (data.success && Array.isArray(data.conversations)) {
+                    this.conversations = data.conversations;
+                    this.unreadTotal = data.unread_total ?? this.unreadTotal;
+                }
+            } catch (_) {}
+            finally { this.loadingList = false; }
+        },
+
+        async selectConversation(id, updateUrl = true) {
+            if (!id || this.loadingConversation) return;
+            if (id === this.conversationId && this.chatMessages.length > 0) {
+                this.showSidebarMobile = false;
+                return;
+            }
+
+            const isSwitch = id !== this.conversationId;
+            this.loadingConversation = true;
+            this.replyError = '';
+            this.replyBody = '';
+            this.showSidebarMobile = false;
+            if (isSwitch) {
+                this.conversationId = id;
+                this.chatMessages = [];
+                this.activeConversation = null;
+            }
+
+            try {
+                const res = await fetch(this.conversationUrl(id), {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    this.replyError = data.error || 'تعذّر تحميل المحادثة';
+                    return;
+                }
+
+                this.conversationId = id;
+                this.activeConversation = data.conversation;
+                this.chatMessages = data.messages || [];
+                this.withinWindow = !!data.within_service_window;
+                this.replyUrl = data.reply_url;
+                this.templateUrl = data.template_url;
+                this.lastMessageId = this.chatMessages.length ? this.chatMessages[this.chatMessages.length - 1].id : 0;
+                this.unreadTotal = data.unread_total ?? this.unreadTotal;
+
+                if (data.conversation) {
+                    data.conversation.unread_count = 0;
+                    this.upsertConversation(data.conversation);
+                }
+
+                if (updateUrl) this.pushUrl(id);
+                this.scrollChat(false);
+                this.$nextTick(() => this.autoGrowComposer());
+            } catch (_) {
+                this.replyError = 'خطأ في تحميل المحادثة';
+            } finally {
+                this.loadingConversation = false;
+            }
         },
 
         async poll() {
             if (!this.pollUrl) return;
             try {
                 const params = new URLSearchParams();
+                if (this.searchQuery) params.set('search', this.searchQuery);
                 if (this.conversationId) {
                     params.set('conversation_id', this.conversationId);
                     params.set('after_id', this.lastMessageId);
@@ -326,18 +535,24 @@ function whatsappInbox() {
                 });
                 const data = await res.json();
                 if (!data.success) return;
+
                 this.unreadTotal = data.unread_total ?? this.unreadTotal;
-                if (Array.isArray(data.conversations) && data.conversations.length && !this.conversationId && !document.querySelector('[data-wa-conv-link]')) {
-                    window.location.reload();
-                    return;
+
+                if (Array.isArray(data.conversations)) {
+                    data.conversations.forEach(c => this.upsertConversation(c));
                 }
+
                 if (data.within_service_window !== undefined) {
                     this.withinWindow = !!data.within_service_window;
                 }
+
                 if (Array.isArray(data.messages) && data.messages.length) {
+                    const existingIds = new Set(this.chatMessages.map(m => m.id));
                     data.messages.forEach(m => {
-                        this.newMessages.push(m);
-                        this.lastMessageId = Math.max(this.lastMessageId, m.id);
+                        if (!existingIds.has(m.id)) {
+                            this.chatMessages.push(m);
+                            this.lastMessageId = Math.max(this.lastMessageId, m.id);
+                        }
                     });
                     this.scrollChat();
                 }
@@ -345,9 +560,13 @@ function whatsappInbox() {
         },
 
         async sendReply() {
-            if (!this.replyUrl || !this.replyBody.trim()) return;
+            if (!this.replyUrl || !this.replyBody.trim() || this.sending) return;
             this.sending = true;
             this.replyError = '';
+            const body = this.replyBody.trim();
+            this.replyBody = '';
+            this.$nextTick(() => this.autoGrowComposer());
+
             try {
                 const res = await fetch(this.replyUrl, {
                     method: 'POST',
@@ -357,19 +576,21 @@ function whatsappInbox() {
                         'X-CSRF-TOKEN': this.csrf,
                         'X-Requested-With': 'XMLHttpRequest',
                     },
-                    body: JSON.stringify({ body: this.replyBody }),
+                    body: JSON.stringify({ body }),
                 });
                 const data = await res.json();
                 if (!data.success) {
+                    this.replyBody = body;
                     this.replyError = data.error || 'فشل الإرسال';
                     if (data.requires_template) this.withinWindow = false;
                     return;
                 }
-                this.newMessages.push(data.message);
+                this.chatMessages.push(data.message);
                 this.lastMessageId = data.message.id;
-                this.replyBody = '';
+                if (data.conversation) this.upsertConversation(data.conversation);
                 this.scrollChat();
-            } catch (e) {
+            } catch (_) {
+                this.replyBody = body;
                 this.replyError = 'خطأ في الاتصال';
             } finally {
                 this.sending = false;
@@ -377,7 +598,7 @@ function whatsappInbox() {
         },
 
         async sendTemplate() {
-            if (!this.templateUrl || !this.templateName.trim()) return;
+            if (!this.templateUrl || !this.templateName.trim() || this.sending) return;
             this.sending = true;
             this.replyError = '';
             try {
@@ -399,10 +620,12 @@ function whatsappInbox() {
                     this.replyError = data.error || 'فشل إرسال القالب';
                     return;
                 }
-                this.newMessages.push(data.message);
+                this.chatMessages.push(data.message);
                 this.lastMessageId = data.message.id;
+                if (data.conversation) this.upsertConversation(data.conversation);
+                this.withinWindow = true;
                 this.scrollChat();
-            } catch (e) {
+            } catch (_) {
                 this.replyError = 'خطأ في الاتصال';
             } finally {
                 this.sending = false;
@@ -412,7 +635,7 @@ function whatsappInbox() {
         async startConversation() {
             this.applySelectedTemplate(true);
             if (!this.startUrl || !this.startPhone.trim() || !this.startTemplate.trim()) {
-                this.startError = 'أدخل الرقم واختر قالباً معتمداً من القائمة';
+                this.startError = 'أدخل الرقم واختر قالباً';
                 return;
             }
             this.sending = true;
@@ -437,8 +660,13 @@ function whatsappInbox() {
                     this.startError = data.error || 'فشل البدء';
                     return;
                 }
-                window.location.href = data.redirect;
-            } catch (e) {
+                this.showStartModal = false;
+                this.startPhone = '';
+                if (data.conversation?.id) {
+                    this.upsertConversation(data.conversation);
+                    await this.selectConversation(data.conversation.id);
+                }
+            } catch (_) {
                 this.startError = 'خطأ في الاتصال';
             } finally {
                 this.sending = false;

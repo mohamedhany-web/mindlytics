@@ -1659,6 +1659,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/inbox', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'index'])->name('inbox');
             Route::get('/inbox/templates', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'templates'])->name('inbox.templates');
             Route::get('/inbox/poll', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'poll'])->name('inbox.poll');
+            Route::get('/inbox/{conversation}', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'showConversation'])->name('inbox.conversation');
             Route::post('/inbox/start', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'start'])->name('inbox.start');
             Route::post('/inbox/{conversation}/reply', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'reply'])->name('inbox.reply');
             Route::post('/inbox/{conversation}/template', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'sendTemplate'])->name('inbox.template');
