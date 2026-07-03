@@ -1073,13 +1073,26 @@ class WhatsAppInboxService
             $candidates[] = $envPath;
         }
 
+        $bundledLinux = base_path('bin/ffmpeg/linux-amd64/ffmpeg');
+        if (is_file($bundledLinux)) {
+            $candidates[] = $bundledLinux;
+        }
+
         if (PHP_OS_FAMILY === 'Windows') {
+            $bundledWin = base_path('bin/ffmpeg/win-amd64/ffmpeg.exe');
+            if (is_file($bundledWin)) {
+                $candidates[] = $bundledWin;
+            }
             $candidates[] = 'C:\\ffmpeg\\bin\\ffmpeg.exe';
             $candidates[] = 'C:\\xampp\\ffmpeg\\bin\\ffmpeg.exe';
         }
 
         foreach ($candidates as $candidate) {
             if (is_file($candidate)) {
+                if (! is_executable($candidate) && PHP_OS_FAMILY !== 'Windows') {
+                    @chmod($candidate, 0755);
+                }
+
                 return $candidate;
             }
         }
