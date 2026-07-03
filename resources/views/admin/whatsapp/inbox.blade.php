@@ -452,6 +452,9 @@
                         <p x-show="recording" x-cloak class="mt-1.5 text-[10px] text-rose-700 flex items-center gap-1">
                             <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span> جاري التسجيل… اضغط إيقاف لإرسال الرسالة الصوتية
                         </p>
+                        <p x-show="!recording && mediaUrl" class="mt-1.5 text-[10px] text-slate-500">
+                            <i class="fas fa-microphone ml-1"></i> عند أول تسجيل سيطلب المتصفح الإذن للوصول إلى الميكروفون
+                        </p>
                         <button type="button" @click="showTemplatePicker = !showTemplatePicker"
                                 class="mt-1.5 text-[10px] text-slate-500 hover:text-emerald-600 px-1">
                             <i class="fas fa-file-alt"></i> <span x-text="showTemplatePicker ? 'إخفاء القوالب' : 'إرسال بقالب Meta (اختياري)'"></span>
@@ -1319,29 +1322,85 @@ function whatsappInbox() {
                 this.stopRecording();
                 return;
             }
-            if (!navigator.mediaDevices?.getUserMedia) {
-                this.replyError = 'المتصفح لا يدعم تسجيل الصوت';
+
+            this.replyError = '';
+
+            if (!window.isSecureContext) {
+                this.replyError = 'التسجيل الصوتي يتطلب فتح الموقع عبر HTTPS.';
                 return;
             }
-            try {
-                this.recordStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const types = ['audio/ogg;codecs=opus', 'audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
-                this.recorderMime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
-                this.mediaRecorder = new MediaRecorder(
-                    this.recordStream,
-                    this.recorderMime ? { mimeType: this.recorderMime } : undefined
-                );
-                this.recordChunks = [];
-                this.mediaRecorder.ondataavailable = (e) => {
-                    if (e.data?.size) this.recordChunks.push(e.data);
-                };
-                this.mediaRecorder.onstop = () => this.finishRecording();
-                this.mediaRecorder.start();
-                this.recording = true;
-                this.replyError = '';
-            } catch (_) {
-                this.replyError = 'تعذّر الوصول للميكروفون — تحقق من صلاحيات المتصفح';
+
+            const getUserMedia = navigator.mediaDevices?.getUserMedia?.bind(navigator.mediaDevices);
+            if (!getUserMedia) {
+                this.replyError = 'المتصفح لا يدعم تسجيل الصوت.';
+                return;
             }
+
+            try {
+                // يُظهر نافذة إذن المتصفح تلقائياً إذا لم تُمنح صلاحية الميكروفون بعد
+                this.recordStream = await getUserMedia({ audio: true });
+                this.startMediaRecorder();
+            } catch (err) {
+                await this.handleMicPermissionError(err);
+            }
+        },
+
+        startMediaRecorder() {
+            const types = ['audio/ogg;codecs=opus', 'audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+            this.recorderMime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+            this.mediaRecorder = new MediaRecorder(
+                this.recordStream,
+                this.recorderMime ? { mimeType: this.recorderMime } : undefined
+            );
+            this.recordChunks = [];
+            this.mediaRecorder.ondataavailable = (e) => {
+                if (e.data?.size) this.recordChunks.push(e.data);
+            };
+            this.mediaRecorder.onstop = () => this.finishRecording();
+            this.mediaRecorder.start();
+            this.recording = true;
+            this.replyError = '';
+        },
+
+        async handleMicPermissionError(err) {
+            this.cleanupMicStream();
+            const name = err?.name || '';
+
+            if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+                let permanentlyDenied = false;
+                try {
+                    if (navigator.permissions?.query) {
+                        const status = await navigator.permissions.query({ name: 'microphone' });
+                        permanentlyDenied = status.state === 'denied';
+                    }
+                } catch (_) {}
+
+                this.replyError = permanentlyDenied
+                    ? 'تم رفض الميكروفون. من أيقونة القفل بجانب عنوان الموقع فعّل «الميكروفون» ثم أعد المحاولة.'
+                    : 'لم تتم الموافقة على الميكروفون. اضغط زر الميكروفون مرة أخرى واختر «السماح» في رسالة المتصفح.';
+                return;
+            }
+
+            if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+                this.replyError = 'لم يُعثر على ميكروفون على هذا الجهاز.';
+                return;
+            }
+
+            if (name === 'NotReadableError' || name === 'TrackStartError') {
+                this.replyError = 'الميكروفون مستخدم من تطبيق آخر. أغلقه ثم حاول مرة أخرى.';
+                return;
+            }
+
+            this.replyError = 'تعذّر الوصول للميكروفون — تحقق من صلاحيات المتصفح.';
+        },
+
+        cleanupMicStream() {
+            if (this.recordStream) {
+                this.recordStream.getTracks().forEach(t => t.stop());
+                this.recordStream = null;
+            }
+            this.mediaRecorder = null;
+            this.recording = false;
         },
 
         stopRecording() {
@@ -1352,10 +1411,7 @@ function whatsappInbox() {
         },
 
         finishRecording() {
-            if (this.recordStream) {
-                this.recordStream.getTracks().forEach(t => t.stop());
-                this.recordStream = null;
-            }
+            this.cleanupMicStream();
             if (!this.recordChunks.length) return;
             const mime = this.recorderMime || 'audio/webm';
             const blob = new Blob(this.recordChunks, { type: mime });
