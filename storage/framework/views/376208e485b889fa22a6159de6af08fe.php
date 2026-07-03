@@ -1,1 +1,0 @@
- <?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views\admin\subjects\index.blade.php ENDPATH**/ ?>

@@ -452,9 +452,6 @@
                         <p x-show="recording" x-cloak class="mt-1.5 text-[10px] text-rose-700 flex items-center gap-1">
                             <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span> جاري التسجيل… اضغط إيقاف لإرسال الرسالة الصوتية
                         </p>
-                        <p x-show="!recording && mediaUrl" class="mt-1.5 text-[10px] text-slate-500">
-                            <i class="fas fa-microphone ml-1"></i> عند أول تسجيل سيطلب المتصفح الإذن للوصول إلى الميكروفون
-                        </p>
                         <button type="button" @click="showTemplatePicker = !showTemplatePicker"
                                 class="mt-1.5 text-[10px] text-slate-500 hover:text-emerald-600 px-1">
                             <i class="fas fa-file-alt"></i> <span x-text="showTemplatePicker ? 'إخفاء القوالب' : 'إرسال بقالب Meta (اختياري)'"></span>
@@ -510,6 +507,75 @@
                 <button type="button" @click="showStartModal = false" class="{{ $waBtnSecondary }} text-sm">إلغاء</button>
                 <button type="button" @click="startConversation()" :disabled="sending" class="{{ $waBtnPrimary }} text-sm">
                     <i class="fas fa-paper-plane ml-1"></i> إرسال
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {{-- نافذة إذن الميكروفون --}}
+    <div x-show="showMicModal" x-cloak
+         class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50"
+         @keydown.escape.window="closeMicModal()">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" @click.outside="closeMicModal()">
+            <div class="px-6 pt-6 pb-4 border-b border-slate-100">
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
+                         :class="micModalMode === 'denied' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'">
+                        <i class="fas text-xl" :class="micModalMode === 'requesting' ? 'fa-spinner fa-spin' : (micModalMode === 'denied' ? 'fa-microphone-slash' : 'fa-microphone')"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h3 class="font-bold text-lg text-slate-900" x-text="micModalTitle()"></h3>
+                        <p class="text-sm text-slate-600 mt-1" x-text="micModalSubtitle()"></p>
+                    </div>
+                    <button type="button" @click="closeMicModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="px-6 py-4 space-y-3">
+                <template x-if="micModalMode === 'prompt'">
+                    <div class="rounded-xl bg-sky-50 border border-sky-100 px-4 py-3 text-sm text-sky-900 leading-relaxed">
+                        <p class="font-semibold mb-1">ماذا سيحدث؟</p>
+                        <p>بعد الضغط على «السماح» ستظهر <strong>رسالة من المتصفح</strong> أعلى الصفحة. اختر <strong>السماح / Allow</strong> لتفعيل التسجيل الصوتي.</p>
+                    </div>
+                </template>
+
+                <template x-if="micModalMode === 'denied'">
+                    <div class="space-y-2 text-sm text-slate-700">
+                        <p class="font-semibold text-slate-900">فعّل الميكروفون من المتصفح:</p>
+                        <ol class="list-decimal list-inside space-y-1.5 leading-relaxed">
+                            <li>اضغط أيقونة <strong>القفل 🔒</strong> أو <strong>الكاميرا/الميكروفون</strong> بجانب عنوان الموقع في شريط العنوان.</li>
+                            <li>ابحث عن <strong>الميكروفون</strong> واختر <strong>السماح</strong>.</li>
+                            <li>أعد تحميل الصفحة إن لزم، ثم اضغط «حاول مجدداً».</li>
+                        </ol>
+                        <p class="text-xs text-slate-500 pt-1">Chrome / Edge: Site settings → Microphone → Allow<br>Firefox: Permissions → Use the Microphone → Allow</p>
+                    </div>
+                </template>
+
+                <template x-if="micModalMode === 'error'">
+                    <div class="rounded-xl bg-rose-50 border border-rose-100 px-4 py-3 text-sm text-rose-800" x-text="micModalMessage"></div>
+                </template>
+
+                <template x-if="micModalMode === 'requesting'">
+                    <div class="flex items-center justify-center gap-2 py-4 text-sm text-slate-600">
+                        <i class="fas fa-spinner fa-spin text-emerald-600"></i>
+                        <span>انتظر موافقة المتصفح على الميكروفون…</span>
+                    </div>
+                </template>
+
+                <p x-show="micModalMessage && micModalMode !== 'error'" class="text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2" x-text="micModalMessage"></p>
+            </div>
+
+            <div class="px-6 pb-6 flex flex-wrap gap-2 justify-end">
+                <button type="button" @click="closeMicModal()" class="{{ $waBtnSecondary }} text-sm">إلغاء</button>
+                <button type="button"
+                        x-show="micModalMode === 'prompt' || micModalMode === 'denied'"
+                        @click="requestMicAccess()"
+                        :disabled="micModalMode === 'requesting'"
+                        class="{{ $waBtnPrimary }} text-sm min-w-[10rem]">
+                    <i class="fas fa-microphone ml-1"></i>
+                    <span x-text="micModalMode === 'denied' ? 'حاول مجدداً' : 'السماح والبدء'"></span>
                 </button>
             </div>
         </div>
@@ -783,6 +849,10 @@ function whatsappInbox() {
         recordChunks: [],
         recorderMime: '',
         recordStream: null,
+        showMicModal: false,
+        micModalMode: 'prompt',
+        micModalMessage: '',
+        micPermissionState: 'unknown',
         loadingConversation: false,
         loadingList: false,
         showStartModal: false,
@@ -1322,26 +1392,100 @@ function whatsappInbox() {
                 this.stopRecording();
                 return;
             }
+            await this.beginRecordingFlow();
+        },
 
+        micModalTitle() {
+            if (this.micModalMode === 'denied') return 'الميكروفون محظور';
+            if (this.micModalMode === 'error') return 'تعذّر التسجيل';
+            if (this.micModalMode === 'requesting') return 'بانتظار الإذن…';
+            return 'السماح بالميكروفون';
+        },
+
+        micModalSubtitle() {
+            if (this.micModalMode === 'denied') return 'المتصفح يمنع الوصول — فعّله من إعدادات الموقع ثم أعد المحاولة.';
+            if (this.micModalMode === 'error') return 'تحقق من المتصفح أو الاتصال ثم حاول مرة أخرى.';
+            if (this.micModalMode === 'requesting') return 'ستظهر رسالة المتصفح — اختر «السماح».';
+            return 'نحتاج إذنك لتسجيل رسالة صوتية وإرسالها عبر واتساب.';
+        },
+
+        openMicModal(mode, message = '') {
+            this.micModalMode = mode;
+            this.micModalMessage = message;
+            this.showMicModal = true;
+            this.replyError = '';
+        },
+
+        closeMicModal() {
+            if (this.micModalMode === 'requesting') return;
+            this.showMicModal = false;
+            this.micModalMode = 'prompt';
+            this.micModalMessage = '';
+        },
+
+        async queryMicPermissionState() {
+            try {
+                if (navigator.permissions?.query) {
+                    const status = await navigator.permissions.query({ name: 'microphone' });
+                    this.micPermissionState = status.state;
+                    status.onchange = () => {
+                        this.micPermissionState = status.state;
+                        if (status.state === 'granted' && this.showMicModal) {
+                            this.requestMicAccess();
+                        }
+                    };
+                    return status.state;
+                }
+            } catch (_) {}
+            this.micPermissionState = 'unknown';
+            return 'unknown';
+        },
+
+        async beginRecordingFlow() {
             this.replyError = '';
 
             if (!window.isSecureContext) {
-                this.replyError = 'التسجيل الصوتي يتطلب فتح الموقع عبر HTTPS.';
+                this.openMicModal('error', 'التسجيل الصوتي يتطلب فتح الموقع عبر HTTPS.');
                 return;
             }
 
+            if (!navigator.mediaDevices?.getUserMedia) {
+                this.openMicModal('error', 'المتصفح لا يدعم تسجيل الصوت.');
+                return;
+            }
+
+            const state = await this.queryMicPermissionState();
+            if (state === 'granted') {
+                await this.requestMicAccess();
+                return;
+            }
+            if (state === 'denied') {
+                this.openMicModal('denied');
+                return;
+            }
+
+            this.openMicModal('prompt');
+        },
+
+        async requestMicAccess() {
             const getUserMedia = navigator.mediaDevices?.getUserMedia?.bind(navigator.mediaDevices);
             if (!getUserMedia) {
-                this.replyError = 'المتصفح لا يدعم تسجيل الصوت.';
+                this.openMicModal('error', 'المتصفح لا يدعم تسجيل الصوت.');
                 return;
             }
 
+            this.micModalMode = 'requesting';
+            this.micModalMessage = '';
+            this.showMicModal = true;
+            this.replyError = '';
+
             try {
-                // يُظهر نافذة إذن المتصفح تلقائياً إذا لم تُمنح صلاحية الميكروفون بعد
                 this.recordStream = await getUserMedia({ audio: true });
+                this.showMicModal = false;
+                this.micPermissionState = 'granted';
                 this.startMediaRecorder();
             } catch (err) {
-                await this.handleMicPermissionError(err);
+                await this.handleMicPermissionError(err, true);
             }
         },
 
@@ -1362,7 +1506,7 @@ function whatsappInbox() {
             this.replyError = '';
         },
 
-        async handleMicPermissionError(err) {
+        async handleMicPermissionError(err, fromModal = false) {
             this.cleanupMicStream();
             const name = err?.name || '';
 
@@ -1372,26 +1516,32 @@ function whatsappInbox() {
                     if (navigator.permissions?.query) {
                         const status = await navigator.permissions.query({ name: 'microphone' });
                         permanentlyDenied = status.state === 'denied';
+                        this.micPermissionState = status.state;
                     }
                 } catch (_) {}
 
-                this.replyError = permanentlyDenied
-                    ? 'تم رفض الميكروفون. من أيقونة القفل بجانب عنوان الموقع فعّل «الميكروفون» ثم أعد المحاولة.'
-                    : 'لم تتم الموافقة على الميكروفون. اضغط زر الميكروفون مرة أخرى واختر «السماح» في رسالة المتصفح.';
+                if (permanentlyDenied || fromModal) {
+                    this.openMicModal('denied', permanentlyDenied
+                        ? 'ما زال الميكروفون مرفوضاً — فعّله من إعدادات الموقع ثم اضغط «حاول مجدداً».'
+                        : 'لم تتم الموافقة. اضغط «حاول مجدداً» واختر «السماح» في رسالة المتصفح.');
+                    return;
+                }
+
+                this.openMicModal('prompt', 'لم تتم الموافقة — اضغط «السماح والبدء» ووافق في رسالة المتصفح.');
                 return;
             }
 
             if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
-                this.replyError = 'لم يُعثر على ميكروفون على هذا الجهاز.';
+                this.openMicModal('error', 'لم يُعثر على ميكروفون على هذا الجهاز.');
                 return;
             }
 
             if (name === 'NotReadableError' || name === 'TrackStartError') {
-                this.replyError = 'الميكروفون مستخدم من تطبيق آخر. أغلقه ثم حاول مرة أخرى.';
+                this.openMicModal('error', 'الميكروفون مستخدم من تطبيق آخر. أغلقه ثم حاول مرة أخرى.');
                 return;
             }
 
-            this.replyError = 'تعذّر الوصول للميكروفون — تحقق من صلاحيات المتصفح.';
+            this.openMicModal('error', 'تعذّر الوصول للميكروفون — تحقق من صلاحيات المتصفح.');
         },
 
         cleanupMicStream() {
