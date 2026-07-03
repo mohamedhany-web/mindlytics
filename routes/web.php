@@ -958,6 +958,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
                 Route::post('/start', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'start'])->name('start');
                 Route::post('/{conversation}/reply', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'reply'])->name('reply');
                 Route::post('/{conversation}/react', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'react'])->name('react');
+                Route::post('/{conversation}/media', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'sendMedia'])->name('media-send');
+                Route::get('/{conversation}/messages/{message}/media', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'messageMedia'])->name('media');
                 Route::post('/{conversation}/template', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'sendTemplate'])->name('template');
                 Route::post('/{conversation}/read', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'markRead'])->name('read');
                 Route::post('/{conversation}/status', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'updateStatus'])->name('status');
@@ -1732,6 +1734,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('/inbox/start', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'start'])->name('inbox.start');
             Route::post('/inbox/{conversation}/reply', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'reply'])->name('inbox.reply');
             Route::post('/inbox/{conversation}/react', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'react'])->name('inbox.react');
+            Route::post('/inbox/{conversation}/media', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'sendMedia'])->name('inbox.media-send');
+            Route::get('/inbox/{conversation}/messages/{message}/media', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'messageMedia'])->name('inbox.media');
             Route::post('/inbox/{conversation}/template', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'sendTemplate'])->name('inbox.template');
             Route::post('/inbox/{conversation}/read', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'markRead'])->name('inbox.read');
             Route::post('/inbox/{conversation}/status', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'updateStatus'])->name('inbox.status');

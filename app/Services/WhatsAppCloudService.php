@@ -1096,4 +1096,131 @@ class WhatsAppCloudService
             return ['success' => false, 'error' => $this->humanizeMetaError($e->getMessage())];
         }
     }
+
+    /**
+     * @return array{success: bool, id?: string, url?: string, mime_type?: string, sha256?: string, file_size?: int, error?: string}
+     */
+    public function getMediaMetadata(string $mediaId): array
+    {
+        $mediaId = trim($mediaId);
+        if ($mediaId === '') {
+            return ['success' => false, 'error' => 'معرّف الوسائط فارغ'];
+        }
+
+        $creds = $this->resolveCredentials();
+        if ($creds['access_token'] === '') {
+            return ['success' => false, 'error' => 'Access Token غير موجود'];
+        }
+
+        try {
+            $response = Http::withToken($creds['access_token'])
+                ->timeout(30)
+                ->get("{$this->graphUrl()}/{$mediaId}", [
+                    'fields' => 'url,mime_type,sha256,file_size',
+                ]);
+
+            $body = $response->json() ?? [];
+            if (! $response->successful()) {
+                $error = is_array($body['error'] ?? null) ? $body['error'] : [];
+
+                return [
+                    'success' => false,
+                    'error' => $this->humanizeSendError($error, 'تعذّر جلب بيانات الوسائط من Meta'),
+                ];
+            }
+
+            return [
+                'success' => true,
+                'id' => $mediaId,
+                'url' => (string) ($body['url'] ?? ''),
+                'mime_type' => (string) ($body['mime_type'] ?? ''),
+                'sha256' => (string) ($body['sha256'] ?? ''),
+                'file_size' => isset($body['file_size']) ? (int) $body['file_size'] : null,
+            ];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => $this->humanizeMetaError($e->getMessage())];
+        }
+    }
+
+    /**
+     * @return array{success: bool, content?: string, mime_type?: string, error?: string}
+     */
+    public function downloadMediaContent(string $mediaId): array
+    {
+        $meta = $this->getMediaMetadata($mediaId);
+        if (! ($meta['success'] ?? false)) {
+            return $meta;
+        }
+
+        $url = (string) ($meta['url'] ?? '');
+        if ($url === '') {
+            return ['success' => false, 'error' => 'رابط الوسائط غير متاح'];
+        }
+
+        $creds = $this->resolveCredentials();
+
+        try {
+            $response = Http::withToken($creds['access_token'])
+                ->timeout(120)
+                ->get($url);
+
+            if (! $response->successful()) {
+                return ['success' => false, 'error' => 'تعذّر تنزيل الوسائط من Meta'];
+            }
+
+            return [
+                'success' => true,
+                'content' => $response->body(),
+                'mime_type' => (string) ($meta['mime_type'] ?? $response->header('Content-Type') ?? 'application/octet-stream'),
+            ];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => $this->humanizeMetaError($e->getMessage())];
+        }
+    }
+
+    /**
+     * @return array{success: bool, media_id?: string, error?: string}
+     */
+    public function uploadMediaFile(string $absolutePath, string $mimeType, string $waType): array
+    {
+        $waType = trim($waType);
+        if (! in_array($waType, ['audio', 'image', 'video', 'document'], true)) {
+            return ['success' => false, 'error' => 'نوع الوسائط غير مدعوم'];
+        }
+
+        if (! is_file($absolutePath)) {
+            return ['success' => false, 'error' => 'الملف غير موجود'];
+        }
+
+        $creds = $this->resolveCredentials();
+        if ($creds['access_token'] === '' || $creds['phone_number_id'] === '') {
+            return ['success' => false, 'error' => 'إعدادات Meta غير مكتملة'];
+        }
+
+        try {
+            $response = Http::withToken($creds['access_token'])
+                ->timeout(120)
+                ->attach('file', file_get_contents($absolutePath), basename($absolutePath))
+                ->post("{$this->graphUrl()}/{$creds['phone_number_id']}/media", [
+                    'messaging_product' => 'whatsapp',
+                    'type' => $waType,
+                ]);
+
+            $body = $response->json() ?? [];
+            $mediaId = (string) ($body['id'] ?? '');
+
+            if ($response->successful() && $mediaId !== '') {
+                return ['success' => true, 'media_id' => $mediaId];
+            }
+
+            $error = is_array($body['error'] ?? null) ? $body['error'] : [];
+
+            return [
+                'success' => false,
+                'error' => $this->humanizeSendError($error, 'فشل رفع الوسائط إلى Meta'),
+            ];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => $this->humanizeMetaError($e->getMessage())];
+        }
+    }
 }

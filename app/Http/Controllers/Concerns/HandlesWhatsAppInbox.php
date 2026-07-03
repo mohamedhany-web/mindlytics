@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 trait HandlesWhatsAppInbox
 {
@@ -198,7 +199,7 @@ trait HandlesWhatsAppInbox
             ->orderBy('created_at')
             ->orderBy('id')
             ->get()
-            ->map(fn ($m) => $inbox->serializeMessage($m));
+            ->map(fn ($m) => $this->serializeInboxMessage($m));
 
         $notes = [];
         $timeline = [];
@@ -285,7 +286,7 @@ trait HandlesWhatsAppInbox
                 if ($afterId > 0) {
                     $query->where('id', '>', $afterId);
                 }
-                $payload['messages'] = $query->get()->map(fn ($m) => $inbox->serializeMessage($m));
+                $payload['messages'] = $query->get()->map(fn ($m) => $this->serializeInboxMessage($m));
                 $payload['within_service_window'] = $inbox->isWithinServiceWindow($conversation);
             }
         }
@@ -345,9 +346,69 @@ trait HandlesWhatsAppInbox
 
         return response()->json([
             'success' => true,
-            'message' => $inbox->serializeMessage($message->load('sentBy:id,name')),
+            'message' => $this->serializeInboxMessage($message->load('sentBy:id,name')),
             'conversation' => $inbox->serializeConversation($conversation, $this->inboxAudience()),
         ]);
+    }
+
+    public function inboxSendMedia(Request $request, WhatsAppConversation $conversation): JsonResponse
+    {
+        [$inbox] = $this->inboxServices();
+        $this->authorizeInboxConversation($conversation);
+
+        $validated = $request->validate([
+            'file' => 'required|file|max:16384',
+            'caption' => 'nullable|string|max:1024',
+        ]);
+
+        $result = $inbox->sendMediaReply(
+            $conversation,
+            $request->file('file'),
+            auth()->id(),
+            $validated['caption'] ?? null,
+        );
+
+        if (! ($result['success'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'error' => $result['error'] ?? 'فشل إرسال الوسائط',
+                'requires_template' => $result['requires_template'] ?? false,
+            ], 422);
+        }
+
+        /** @var WhatsAppConversationMessage $message */
+        $message = $result['message'];
+        $conversation->refresh();
+        $conversation->load(['user:id,name', 'assignee:id,name', 'tags', 'contact', 'salesLead']);
+
+        if ($this->inboxAudience() === 'employee' && ! $conversation->assigned_to) {
+            app(WhatsAppCrmService::class)->assign($conversation, (int) auth()->id(), auth()->id());
+            $conversation->refresh();
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $this->serializeInboxMessage($message->load('sentBy:id,name')),
+            'conversation' => $inbox->serializeConversation($conversation, $this->inboxAudience()),
+        ]);
+    }
+
+    public function inboxMessageMedia(
+        WhatsAppConversation $conversation,
+        WhatsAppConversationMessage $message,
+    ): StreamedResponse {
+        [$inbox] = $this->inboxServices();
+        $this->authorizeInboxConversation($conversation);
+
+        if ((int) $message->conversation_id !== (int) $conversation->id) {
+            abort(404);
+        }
+
+        if (! $inbox->messageHasMedia($message)) {
+            abort(404);
+        }
+
+        return $inbox->streamMessageMedia($message);
     }
 
     public function inboxReact(Request $request, WhatsAppConversation $conversation): JsonResponse
@@ -376,7 +437,7 @@ trait HandlesWhatsAppInbox
 
         return response()->json([
             'success' => true,
-            'message' => $inbox->serializeMessage($message->load('sentBy:id,name')),
+            'message' => $this->serializeInboxMessage($message->load('sentBy:id,name')),
         ]);
     }
 
@@ -409,7 +470,7 @@ trait HandlesWhatsAppInbox
 
         return response()->json([
             'success' => true,
-            'message' => $inbox->serializeMessage($message->load('sentBy:id,name')),
+            'message' => $this->serializeInboxMessage($message->load('sentBy:id,name')),
             'conversation' => $inbox->serializeConversation($conversation, $this->inboxAudience()),
         ]);
     }
@@ -473,7 +534,7 @@ trait HandlesWhatsAppInbox
         ];
 
         if (isset($result['message'])) {
-            $payload['message'] = $inbox->serializeMessage($result['message']->load('sentBy:id,name'));
+            $payload['message'] = $this->serializeInboxMessage($result['message']->load('sentBy:id,name'));
         }
 
         return response()->json($payload);
@@ -657,6 +718,7 @@ trait HandlesWhatsAppInbox
             'conversationUrlTemplate' => $this->inboxRoute('conversation', ['conversation' => '__ID__']),
             'reply' => $active ? $this->inboxRoute('reply', $active) : null,
             'react' => $active ? $this->inboxRoute('react', $active) : null,
+            'media' => $active ? $this->inboxRoute('media-send', $active) : null,
             'template' => $active ? $this->inboxRoute('template', $active) : null,
             'start' => $this->inboxRoute('start'),
             'templates' => $this->inboxRoute('templates'),
@@ -681,5 +743,15 @@ trait HandlesWhatsAppInbox
         }
 
         return $urls;
+    }
+
+    protected function serializeInboxMessage(WhatsAppConversationMessage $message): array
+    {
+        [$inbox] = $this->inboxServices();
+        $mediaUrl = $inbox->messageHasMedia($message)
+            ? $this->inboxRoute('media', ['conversation' => $message->conversation_id, 'message' => $message->id])
+            : null;
+
+        return $inbox->serializeMessage($message, $mediaUrl);
     }
 }

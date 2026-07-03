@@ -9,6 +9,9 @@ use App\Models\WhatsAppMessage;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class WhatsAppInboxService
 {
@@ -74,6 +77,7 @@ class WhatsAppInboxService
                 'payload' => [
                     'raw' => $msg,
                     'metadata' => $metadata,
+                    'media' => $this->extractMediaMeta($msg),
                 ],
             ]);
 
@@ -472,6 +476,137 @@ class WhatsAppInboxService
         return array_merge($result, ['conversation' => $conversation->fresh(['user:id,name'])]);
     }
 
+    /**
+     * @return array{success: bool, message?: WhatsAppConversationMessage, error?: string, requires_template?: bool}
+     */
+    public function sendMediaReply(
+        WhatsAppConversation $conversation,
+        UploadedFile $file,
+        ?int $userId = null,
+        ?string $caption = null,
+    ): array {
+        $mime = (string) $file->getMimeType();
+        $waType = $this->resolveWaMediaType($mime, $file->getClientOriginalExtension());
+        if ($waType === null) {
+            return ['success' => false, 'error' => 'نوع الملف غير مدعوم. استخدم صورة (jpg/png) أو صوت (ogg/mp3/m4a/aac).'];
+        }
+
+        $tempPath = $file->getRealPath();
+        if (! $tempPath) {
+            return ['success' => false, 'error' => 'تعذّر قراءة الملف'];
+        }
+
+        $uploadPath = $tempPath;
+        $uploadMime = $mime;
+        $cleanup = null;
+
+        if ($waType === 'audio' && str_contains(strtolower($mime), 'webm')) {
+            $converted = $this->convertWebmToOgg($tempPath);
+            if (isset($converted['error'])) {
+                return ['success' => false, 'error' => $converted['error']];
+            }
+            $uploadPath = $converted['path'];
+            $uploadMime = 'audio/ogg';
+            $cleanup = $uploadPath;
+        }
+
+        $upload = $this->cloud->uploadMediaFile($uploadPath, $uploadMime, $waType);
+        if ($cleanup && is_file($cleanup) && $uploadPath !== $cleanup) {
+            @unlink($cleanup);
+        }
+
+        if (! ($upload['success'] ?? false)) {
+            return ['success' => false, 'error' => $upload['error'] ?? 'فشل رفع الوسائط'];
+        }
+
+        $mediaId = (string) ($upload['media_id'] ?? '');
+        $cacheContent = @file_get_contents($uploadPath) ?: '';
+        if ($cleanup && is_file($cleanup)) {
+            @unlink($cleanup);
+        }
+
+        $result = $this->whatsapp->sendMediaReply(
+            $conversation->phone_number,
+            $waType,
+            $mediaId,
+            ['user_id' => $userId],
+            $caption,
+        );
+
+        if (! ($result['success'] ?? false)) {
+            $error = $result['error'] ?? 'فشل الإرسال';
+
+            return [
+                'success' => false,
+                'error' => $error,
+                'requires_template' => $this->errorRequiresTemplate($error),
+            ];
+        }
+
+        return [
+            'success' => true,
+            'message' => tap($this->recordOutbound($conversation, [
+                'body' => $caption,
+                'message_type' => $waType,
+                'whatsapp_message_id' => $result['whatsapp_id'] ?? null,
+                'sent_by_user_id' => $userId,
+                'payload' => [
+                    'media' => [
+                        'id' => $mediaId,
+                        'mime_type' => $uploadMime,
+                        'filename' => $file->getClientOriginalName(),
+                        'local' => true,
+                    ],
+                ],
+            ]), function (WhatsAppConversationMessage $message) use ($cacheContent, $uploadMime) {
+                if ($cacheContent !== '') {
+                    $cacheKey = 'whatsapp/media/' . $message->id . $this->mediaCacheExtension(['mime_type' => $uploadMime]);
+                    Storage::disk('local')->put($cacheKey, $cacheContent);
+                }
+            }),
+        ];
+    }
+
+    public function streamMessageMedia(WhatsAppConversationMessage $message): StreamedResponse
+    {
+        $media = $this->mediaMetaForMessage($message);
+        if ($media === null) {
+            abort(404);
+        }
+
+        $disk = Storage::disk('local');
+        $cacheKey = 'whatsapp/media/' . $message->id . $this->mediaCacheExtension($media);
+        if ($disk->exists($cacheKey)) {
+            return response()->stream(function () use ($disk, $cacheKey) {
+                echo $disk->get($cacheKey);
+            }, 200, [
+                'Content-Type' => $media['mime_type'] ?? 'application/octet-stream',
+                'Cache-Control' => 'private, max-age=86400',
+            ]);
+        }
+
+        $mediaId = (string) ($media['id'] ?? '');
+        if ($mediaId === '') {
+            abort(404);
+        }
+
+        $download = $this->cloud->downloadMediaContent($mediaId);
+        if (! ($download['success'] ?? false)) {
+            abort(404, $download['error'] ?? 'تعذّر تحميل الوسائط');
+        }
+
+        $mime = (string) ($download['mime_type'] ?? $media['mime_type'] ?? 'application/octet-stream');
+        $content = (string) ($download['content'] ?? '');
+        $disk->put($cacheKey, $content);
+
+        return response()->stream(function () use ($content) {
+            echo $content;
+        }, 200, [
+            'Content-Type' => $mime,
+            'Cache-Control' => 'private, max-age=86400',
+        ]);
+    }
+
     private function errorRequiresTemplate(string $error): bool
     {
         $lower = mb_strtolower($error);
@@ -589,11 +724,12 @@ class WhatsAppInboxService
     }
 
     /**
-     * @return array<int, array<string, mixed>>
+     * @return array<string, mixed>
      */
-    public function serializeMessage(WhatsAppConversationMessage $message): array
+    public function serializeMessage(WhatsAppConversationMessage $message, ?string $mediaUrl = null): array
     {
         $at = $message->created_at;
+        $media = $this->mediaMetaForMessage($message);
 
         return [
             'id' => $message->id,
@@ -608,12 +744,183 @@ class WhatsAppInboxService
             'context_wa_message_id' => $message->context_wa_message_id,
             'context_preview' => $message->context_preview,
             'reaction_emoji' => $message->reaction_emoji,
+            'media' => $media ? [
+                'url' => $mediaUrl,
+                'mime_type' => $media['mime_type'] ?? null,
+                'filename' => $media['filename'] ?? null,
+                'kind' => $this->mediaKindForType($message->message_type),
+            ] : null,
             'created_at' => $at?->toIso8601String(),
             'created_at_human' => $at
                 ? ($at->isToday() ? $at->format('H:i') : $at->format('d/m H:i'))
                 : '',
             'is_inbound' => $message->isInbound(),
         ];
+    }
+
+    public function messageHasMedia(WhatsAppConversationMessage $message): bool
+    {
+        return $this->mediaMetaForMessage($message) !== null;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function mediaMetaForMessage(WhatsAppConversationMessage $message): ?array
+    {
+        $payload = is_array($message->payload) ? $message->payload : [];
+        if (is_array($payload['media'] ?? null) && ! empty($payload['media']['id'])) {
+            return $payload['media'];
+        }
+
+        return $this->extractMediaMeta(is_array($payload['raw'] ?? null) ? $payload['raw'] : []);
+    }
+
+    /**
+     * @param  array<string, mixed>  $msg
+     * @return array<string, mixed>|null
+     */
+    private function extractMediaMeta(array $msg): ?array
+    {
+        $type = (string) ($msg['type'] ?? '');
+        $key = match ($type) {
+            'image', 'audio', 'video', 'document', 'sticker' => $type,
+            default => null,
+        };
+
+        if ($key === null || ! is_array($msg[$key] ?? null)) {
+            return null;
+        }
+
+        $block = $msg[$key];
+        $id = (string) ($block['id'] ?? '');
+        if ($id === '') {
+            return null;
+        }
+
+        return [
+            'id' => $id,
+            'mime_type' => $block['mime_type'] ?? null,
+            'filename' => $block['filename'] ?? null,
+            'sha256' => $block['sha256'] ?? null,
+        ];
+    }
+
+    private function mediaKindForType(?string $messageType): string
+    {
+        return match ($messageType) {
+            'image', 'sticker' => 'image',
+            'audio' => 'audio',
+            'video' => 'video',
+            'document' => 'document',
+            default => 'file',
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $media
+     */
+    private function mediaCacheExtension(array $media): string
+    {
+        $mime = strtolower((string) ($media['mime_type'] ?? ''));
+        if (str_contains($mime, 'jpeg') || str_contains($mime, 'jpg')) {
+            return '.jpg';
+        }
+        if (str_contains($mime, 'png')) {
+            return '.png';
+        }
+        if (str_contains($mime, 'ogg')) {
+            return '.ogg';
+        }
+        if (str_contains($mime, 'mpeg') || str_contains($mime, 'mp3')) {
+            return '.mp3';
+        }
+        if (str_contains($mime, 'mp4')) {
+            return '.m4a';
+        }
+        if (str_contains($mime, 'webp')) {
+            return '.webp';
+        }
+
+        return '.bin';
+    }
+
+    private function resolveWaMediaType(string $mime, ?string $extension = null): ?string
+    {
+        $mime = strtolower($mime);
+        $extension = strtolower((string) $extension);
+
+        if (str_starts_with($mime, 'image/') || in_array($extension, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+            return 'image';
+        }
+
+        if (
+            str_starts_with($mime, 'audio/')
+            || in_array($extension, ['ogg', 'opus', 'mp3', 'm4a', 'aac', 'amr', 'webm'], true)
+        ) {
+            return 'audio';
+        }
+
+        if (str_starts_with($mime, 'video/') || in_array($extension, ['mp4', '3gp'], true)) {
+            return 'video';
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{path: string}|array{error: string}
+     */
+    private function convertWebmToOgg(string $webmPath): array
+    {
+        $ffmpeg = $this->findFfmpegBinary();
+        if ($ffmpeg === null) {
+            return [
+                'error' => 'تسجيل الصوت بصيغة WebM — ثبّت ffmpeg على السيرفر أو أرفق ملف ogg/mp3/m4a.',
+            ];
+        }
+
+        $out = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'wa_voice_' . uniqid('', true) . '.ogg';
+        $cmd = escapeshellarg($ffmpeg)
+            . ' -y -i ' . escapeshellarg($webmPath)
+            . ' -c:a libopus ' . escapeshellarg($out) . ' 2>&1';
+
+        exec($cmd, $output, $code);
+        if ($code !== 0 || ! is_file($out)) {
+            return ['error' => 'تعذّر تحويل التسجيل الصوتي. جرّب إرفاق ملف صوتي بدلاً من ذلك.'];
+        }
+
+        return ['path' => $out];
+    }
+
+    private function findFfmpegBinary(): ?string
+    {
+        $candidates = ['ffmpeg'];
+        if (PHP_OS_FAMILY === 'Windows') {
+            $candidates[] = 'C:\\ffmpeg\\bin\\ffmpeg.exe';
+        }
+
+        foreach ($candidates as $candidate) {
+            if (str_contains($candidate, '\\') || str_contains($candidate, '/')) {
+                if (is_file($candidate)) {
+                    return $candidate;
+                }
+
+                continue;
+            }
+
+            $which = PHP_OS_FAMILY === 'Windows'
+                ? trim((string) shell_exec('where ' . $candidate . ' 2>NUL'))
+                : trim((string) shell_exec('which ' . $candidate . ' 2>/dev/null'));
+
+            if ($which !== '') {
+                $line = trim(explode("\n", $which)[0]);
+
+                return $line !== '' ? $line : $candidate;
+            }
+        }
+
+        return null;
     }
 
     /**

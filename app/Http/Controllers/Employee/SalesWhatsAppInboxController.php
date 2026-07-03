@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Employee;
 use App\Http\Controllers\Concerns\HandlesWhatsAppInbox;
 use App\Http\Controllers\Controller;
 use App\Models\WhatsAppConversation;
+use App\Models\WhatsAppConversationMessage;
 use App\Models\WhatsAppTag;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -48,6 +49,11 @@ class SalesWhatsAppInboxController extends Controller
             'conversation' => route('employee.sales.whatsapp.inbox.conversation', is_array($params[0] ?? null) ? $params[0] : ['conversation' => $params[0]]),
             'reply' => route('employee.sales.whatsapp.inbox.reply', $params[0]),
             'react' => route('employee.sales.whatsapp.inbox.react', $params[0]),
+            'media-send' => route('employee.sales.whatsapp.inbox.media-send', $params[0]),
+            'media' => route('employee.sales.whatsapp.inbox.media', is_array($params[0] ?? null) ? $params[0] : [
+                'conversation' => $params[0],
+                'message' => $params[1] ?? 0,
+            ]),
             'template' => route('employee.sales.whatsapp.inbox.template', $params[0]),
             'status' => route('employee.sales.whatsapp.inbox.status', $params[0]),
             'notes' => route('employee.sales.whatsapp.inbox.notes', $params[0]),
@@ -96,6 +102,16 @@ class SalesWhatsAppInboxController extends Controller
     public function react(Request $request, WhatsAppConversation $conversation): JsonResponse
     {
         return $this->inboxReact($request, $conversation);
+    }
+
+    public function sendMedia(Request $request, WhatsAppConversation $conversation): JsonResponse
+    {
+        return $this->inboxSendMedia($request, $conversation);
+    }
+
+    public function messageMedia(WhatsAppConversation $conversation, WhatsAppConversationMessage $message): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        return $this->inboxMessageMedia($conversation, $message);
     }
 
     public function sendTemplate(Request $request, WhatsAppConversation $conversation): JsonResponse

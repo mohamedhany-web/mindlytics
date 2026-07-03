@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Concerns\HandlesWhatsAppInbox;
 use App\Http\Controllers\Controller;
 use App\Models\WhatsAppConversation;
+use App\Models\WhatsAppConversationMessage;
 use App\Models\WhatsAppTag;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -34,6 +35,11 @@ class WhatsAppInboxController extends Controller
             'conversation' => route('admin.whatsapp.inbox.conversation', is_array($params[0] ?? null) ? $params[0] : ['conversation' => $params[0]]),
             'reply' => route('admin.whatsapp.inbox.reply', $params[0]),
             'react' => route('admin.whatsapp.inbox.react', $params[0]),
+            'media-send' => route('admin.whatsapp.inbox.media-send', $params[0]),
+            'media' => route('admin.whatsapp.inbox.media', is_array($params[0] ?? null) ? $params[0] : [
+                'conversation' => $params[0],
+                'message' => $params[1] ?? 0,
+            ]),
             'template' => route('admin.whatsapp.inbox.template', $params[0]),
             'status' => route('admin.whatsapp.inbox.status', $params[0]),
             'transfer' => route('admin.whatsapp.inbox.transfer', $params[0]),
@@ -85,6 +91,16 @@ class WhatsAppInboxController extends Controller
     public function react(Request $request, WhatsAppConversation $conversation): JsonResponse
     {
         return $this->inboxReact($request, $conversation);
+    }
+
+    public function sendMedia(Request $request, WhatsAppConversation $conversation): JsonResponse
+    {
+        return $this->inboxSendMedia($request, $conversation);
+    }
+
+    public function messageMedia(WhatsAppConversation $conversation, WhatsAppConversationMessage $message): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        return $this->inboxMessageMedia($conversation, $message);
     }
 
     public function sendTemplate(Request $request, WhatsAppConversation $conversation): JsonResponse

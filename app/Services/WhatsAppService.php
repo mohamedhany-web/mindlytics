@@ -439,6 +439,97 @@ class WhatsAppService
     }
 
     /**
+     * إرسال وسائط (صورة / صوت / فيديو / مستند) عبر Cloud API
+     *
+     * @return array{success: bool, whatsapp_id?: string, phone?: string, error?: string}
+     */
+    public function sendMediaReply(
+        string $phoneNumber,
+        string $waType,
+        string $mediaId,
+        array $options = [],
+        ?string $caption = null,
+    ): array {
+        $options['skip_log'] = true;
+        $options['skip_pacing'] = $options['skip_pacing'] ?? true;
+
+        $waType = trim($waType);
+        if (! in_array($waType, ['audio', 'image', 'video', 'document'], true)) {
+            return ['success' => false, 'error' => 'نوع الوسائط غير مدعوم'];
+        }
+
+        $mediaId = trim($mediaId);
+        if ($mediaId === '') {
+            return ['success' => false, 'error' => 'معرّف الوسائط مطلوب'];
+        }
+
+        try {
+            $formattedPhone = $this->formatPhoneNumber($phoneNumber);
+
+            if (! (bool) ($options['skip_ready_check'] ?? false)) {
+                $ready = $this->cloud->canSendNow();
+                if (! ($ready['success'] ?? false)) {
+                    return ['success' => false, 'error' => $ready['error'] ?? 'الواتساب غير جاهز'];
+                }
+            }
+
+            $creds = $this->cloud->resolveCredentials();
+            $apiUrl = WhatsAppCloudSettings::apiUrl();
+            $apiToken = $creds['access_token'];
+            $phoneNumberId = $creds['phone_number_id'];
+
+            if ($apiToken === '' || $phoneNumberId === '') {
+                return ['success' => false, 'error' => 'إعدادات WhatsApp غير مكتملة'];
+            }
+
+            $mediaBlock = ['id' => $mediaId];
+            if ($caption !== null && trim($caption) !== '' && in_array($waType, ['image', 'video', 'document'], true)) {
+                $mediaBlock['caption'] = trim($caption);
+            }
+
+            $payload = [
+                'messaging_product' => 'whatsapp',
+                'recipient_type' => 'individual',
+                'to' => $formattedPhone,
+                'type' => $waType,
+                $waType => $mediaBlock,
+            ];
+
+            $contextId = trim((string) ($options['context_message_id'] ?? ''));
+            if ($contextId !== '') {
+                $payload['context'] = ['message_id' => $contextId];
+            }
+
+            $response = Http::withToken($apiToken)
+                ->timeout(120)
+                ->post("{$apiUrl}/{$phoneNumberId}/messages", $payload);
+
+            $responseData = $response->json() ?? [];
+            $metaError = is_array($responseData['error'] ?? null) ? $responseData['error'] : null;
+            $waMessageId = $responseData['messages'][0]['id'] ?? null;
+            $accepted = $response->successful() && is_string($waMessageId) && $waMessageId !== '';
+
+            if ($accepted) {
+                return [
+                    'success' => true,
+                    'whatsapp_id' => $waMessageId,
+                    'phone' => $formattedPhone,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'error' => $this->cloud->humanizeSendError(
+                    $metaError,
+                    (string) ($metaError['message'] ?? 'فشل إرسال الوسائط')
+                ),
+            ];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => 'خطأ في إرسال الوسائط'];
+        }
+    }
+
+    /**
      * إرسال تقرير شهري لولي الأمر
      */
     public function sendMonthlyReport(User $parent, User $student, array $reportData)

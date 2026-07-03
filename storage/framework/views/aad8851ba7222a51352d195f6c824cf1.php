@@ -17,7 +17,16 @@
     $inboxService = app(\App\Services\WhatsAppInboxService::class);
     $routes = $inboxRoutes ?? [];
     $initialConversations = $conversations->getCollection()->map(fn ($c) => $inboxService->serializeConversation($c, $audience))->values();
-    $initialMessages = $messages->map(fn ($m) => $inboxService->serializeMessage($m))->values();
+    $mediaRouteName = ($audience ?? 'admin') === 'employee'
+        ? 'employee.sales.whatsapp.inbox.media'
+        : 'admin.whatsapp.inbox.media';
+    $initialMessages = $messages->map(function ($m) use ($inboxService, $mediaRouteName) {
+        $mediaUrl = $inboxService->messageHasMedia($m)
+            ? route($mediaRouteName, ['conversation' => $m->conversation_id, 'message' => $m->id])
+            : null;
+
+        return $inboxService->serializeMessage($m, $mediaUrl);
+    })->values();
     $crmNotesInitial = [];
     $crmTimelineInitial = [];
     $crmUrlsInitial = $routes['crm'] ?? [];
@@ -45,6 +54,7 @@
         'conversationUrlTemplate' => $routes['conversationUrlTemplate'] ?? '',
         'replyUrl' => $routes['reply'] ?? null,
         'reactUrl' => $routes['react'] ?? null,
+        'mediaUrl' => $routes['media'] ?? null,
         'templateUrl' => $routes['template'] ?? null,
         'startUrl' => $routes['start'] ?? '',
         'templatesUrl' => $routes['templates'] ?? '',
@@ -321,7 +331,25 @@
                                             <template x-if="msg.context_preview">
                                                 <div class="wa-msg-quote" x-text="msg.context_preview"></div>
                                             </template>
-                                            <p class="wa-msg-text" x-text="msg.body || '[رسالة]'"></p>
+                                            <template x-if="msg.media?.url && (msg.media.kind === 'image' || msg.message_type === 'sticker')">
+                                                <a :href="msg.media.url" target="_blank" rel="noopener" class="block mb-1">
+                                                    <img :src="msg.media.url" class="rounded-lg max-w-full max-h-52 object-cover" alt="صورة">
+                                                </a>
+                                            </template>
+                                            <template x-if="msg.media?.url && msg.media.kind === 'audio'">
+                                                <audio :src="msg.media.url" controls preload="metadata" class="wa-msg-audio w-full min-w-[11rem] max-w-full mb-1"></audio>
+                                            </template>
+                                            <template x-if="msg.media?.url && msg.media.kind === 'video'">
+                                                <video :src="msg.media.url" controls class="rounded-lg max-w-full max-h-52 mb-1"></video>
+                                            </template>
+                                            <template x-if="msg.media?.url && msg.media.kind === 'document'">
+                                                <a :href="msg.media.url" target="_blank" rel="noopener"
+                                                   class="flex items-center gap-2 text-xs text-sky-700 hover:underline mb-1">
+                                                    <i class="fas fa-file-alt"></i>
+                                                    <span x-text="msg.media.filename || 'تحميل المستند'"></span>
+                                                </a>
+                                            </template>
+                                            <p class="wa-msg-text" x-show="shouldShowBody(msg)" x-text="msg.body"></p>
                                             <template x-if="msg.template_name">
                                                 <p class="wa-msg-meta-extra" x-text="'قالب: ' + msg.template_name"></p>
                                             </template>
@@ -384,6 +412,20 @@
                         </p>
 
                         <div class="flex items-end gap-2">
+                            <input type="file" x-ref="mediaInput" class="hidden" accept="image/jpeg,image/png,image/webp,audio/ogg,audio/mpeg,audio/mp4,audio/aac,audio/amr,audio/webm" @change="onMediaPicked($event)">
+                            <div class="flex flex-col gap-1 shrink-0">
+                                <button type="button" @click="$refs.mediaInput.click()" :disabled="sending || !mediaUrl"
+                                        title="إرفاق صورة أو صوت"
+                                        class="w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-600 hover:text-emerald-600 hover:border-emerald-300 flex items-center justify-center shadow-sm disabled:opacity-40">
+                                    <i class="fas fa-paperclip"></i>
+                                </button>
+                                <button type="button" @click="toggleRecording()" :disabled="sending || !mediaUrl"
+                                        :title="recording ? 'إيقاف التسجيل' : 'تسجيل صوت'"
+                                        class="w-10 h-10 rounded-full border flex items-center justify-center shadow-sm disabled:opacity-40"
+                                        :class="recording ? 'bg-rose-500 border-rose-500 text-white animate-pulse' : 'bg-white border-slate-200 text-slate-600 hover:text-rose-600 hover:border-rose-300'">
+                                    <i class="fas" :class="recording ? 'fa-stop' : 'fa-microphone'"></i>
+                                </button>
+                            </div>
                             <div class="flex-1 flex items-end gap-2 bg-white rounded-3xl px-3 py-1.5 shadow-sm border border-slate-100 min-h-[48px]">
                                 <textarea x-ref="composer" x-model="replyBody" rows="1" placeholder="اكتب رسالة..."
                                           @input="autoGrowComposer()"
@@ -408,6 +450,9 @@
                             <button type="button" @click="sendTemplate()" :disabled="sending || !templateName"
                                     class="text-xs px-3 py-1.5 rounded-full bg-white text-emerald-700 font-semibold shadow-sm">إرسال قالب</button>
                         </div>
+                        <p x-show="recording" x-cloak class="mt-1.5 text-[10px] text-rose-700 flex items-center gap-1">
+                            <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span> جاري التسجيل… اضغط إيقاف لإرسال الرسالة الصوتية
+                        </p>
                         <button type="button" @click="showTemplatePicker = !showTemplatePicker"
                                 class="mt-1.5 text-[10px] text-slate-500 hover:text-emerald-600 px-1">
                             <i class="fas fa-file-alt"></i> <span x-text="showTemplatePicker ? 'إخفاء القوالب' : 'إرسال بقالب Meta (اختياري)'"></span>
@@ -687,6 +732,7 @@
         line-height: 1.4;
         box-shadow: 0 1px 2px rgba(0,0,0,0.08);
     }
+    .wa-msg-audio { height: 36px; }
     .group\/msg { position: relative; }
 </style>
 <?php $__env->stopPush(); ?>
@@ -705,6 +751,7 @@ function whatsappInbox() {
         conversationUrlTemplate: cfg.conversationUrlTemplate,
         replyUrl: cfg.replyUrl,
         reactUrl: cfg.reactUrl,
+        mediaUrl: cfg.mediaUrl,
         templateUrl: cfg.templateUrl,
         startUrl: cfg.startUrl,
         templatesUrl: cfg.templatesUrl,
@@ -729,6 +776,11 @@ function whatsappInbox() {
         replyError: '',
         startError: '',
         sending: false,
+        recording: false,
+        mediaRecorder: null,
+        recordChunks: [],
+        recorderMime: '',
+        recordStream: null,
         loadingConversation: false,
         loadingList: false,
         showStartModal: false,
@@ -1242,6 +1294,130 @@ function whatsappInbox() {
                     }
                 }
             } catch (_) {
+                this.replyError = 'خطأ في الاتصال';
+            } finally {
+                this.sending = false;
+            }
+        },
+
+        shouldShowBody(msg) {
+            if (!msg?.body) return false;
+            if (msg.media?.url) {
+                const placeholders = ['[صورة]', '[رسالة صوتية]', '[فيديو]', '[مستند]', '[ملصق]'];
+                if (placeholders.includes(msg.body)) return false;
+            }
+            return true;
+        },
+
+        onMediaPicked(event) {
+            const file = event.target.files?.[0];
+            event.target.value = '';
+            if (file) this.uploadMediaFile(file);
+        },
+
+        async toggleRecording() {
+            if (this.recording) {
+                this.stopRecording();
+                return;
+            }
+            if (!navigator.mediaDevices?.getUserMedia) {
+                this.replyError = 'المتصفح لا يدعم تسجيل الصوت';
+                return;
+            }
+            try {
+                this.recordStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const types = ['audio/ogg;codecs=opus', 'audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+                this.recorderMime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+                this.mediaRecorder = new MediaRecorder(
+                    this.recordStream,
+                    this.recorderMime ? { mimeType: this.recorderMime } : undefined
+                );
+                this.recordChunks = [];
+                this.mediaRecorder.ondataavailable = (e) => {
+                    if (e.data?.size) this.recordChunks.push(e.data);
+                };
+                this.mediaRecorder.onstop = () => this.finishRecording();
+                this.mediaRecorder.start();
+                this.recording = true;
+                this.replyError = '';
+            } catch (_) {
+                this.replyError = 'تعذّر الوصول للميكروفون — تحقق من صلاحيات المتصفح';
+            }
+        },
+
+        stopRecording() {
+            if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+                this.mediaRecorder.stop();
+            }
+            this.recording = false;
+        },
+
+        finishRecording() {
+            if (this.recordStream) {
+                this.recordStream.getTracks().forEach(t => t.stop());
+                this.recordStream = null;
+            }
+            if (!this.recordChunks.length) return;
+            const mime = this.recorderMime || 'audio/webm';
+            const blob = new Blob(this.recordChunks, { type: mime });
+            const ext = mime.includes('ogg') ? 'ogg' : (mime.includes('mp4') ? 'm4a' : 'webm');
+            const file = new File([blob], `voice-${Date.now()}.${ext}`, { type: mime });
+            this.uploadMediaFile(file);
+            this.recordChunks = [];
+        },
+
+        async uploadMediaFile(file) {
+            if (!this.mediaUrl || this.sending) return;
+            this.sending = true;
+            this.replyError = '';
+            const isAudio = (file.type || '').startsWith('audio/');
+            const label = isAudio ? '[رسالة صوتية]' : '[صورة]';
+            const tmpId = 'tmp-media-' + Date.now();
+            this.appendChatMessage({
+                _tmp: tmpId,
+                _pending: true,
+                id: null,
+                direction: 'outbound',
+                body: label,
+                message_type: isAudio ? 'audio' : 'image',
+                is_inbound: false,
+                status: 'pending',
+                created_at_human: 'الآن',
+            });
+            this.scrollChat();
+
+            try {
+                const form = new FormData();
+                form.append('file', file);
+                const res = await fetch(this.mediaUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': this.csrf,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: form,
+                });
+                const data = await this.parseJsonResponse(res);
+                if (!data.success) {
+                    this.removePendingMessage(tmpId);
+                    this.replyError = data.error || 'فشل إرسال الوسائط';
+                    if (data.requires_template) this.showTemplatePicker = true;
+                    return;
+                }
+                if (data.message) {
+                    this.replacePendingMessage(tmpId, data.message);
+                } else {
+                    this.removePendingMessage(tmpId);
+                    await this.reloadCurrentConversation();
+                }
+                if (data.conversation) {
+                    this.activeConversation = data.conversation;
+                    this.upsertConversation(data.conversation);
+                }
+                this.scrollChat();
+            } catch (_) {
+                this.removePendingMessage(tmpId);
                 this.replyError = 'خطأ في الاتصال';
             } finally {
                 this.sending = false;
