@@ -496,18 +496,25 @@ class WhatsAppInboxService
             return ['success' => false, 'error' => 'تعذّر قراءة الملف'];
         }
 
+        if ((int) $file->getSize() <= 0) {
+            return ['success' => false, 'error' => 'الملف فارغ — سجّل لثانية على الأقل ثم أعد المحاولة.'];
+        }
+
         $uploadPath = $tempPath;
         $uploadMime = $mime;
         $cleanup = null;
 
         if ($waType === 'audio' && str_contains(strtolower($mime), 'webm')) {
             $converted = $this->convertWebmToOgg($tempPath);
-            if (isset($converted['error'])) {
-                return ['success' => false, 'error' => $converted['error']];
+            if (isset($converted['path'])) {
+                $uploadPath = $converted['path'];
+                $uploadMime = 'audio/ogg';
+                $cleanup = $uploadPath;
+            } else {
+                // بدون ffmpeg أو فشل التحويل: أرسل WebM كمستند بدل تعطيل الإرسال
+                $waType = 'document';
+                $uploadMime = 'audio/webm';
             }
-            $uploadPath = $converted['path'];
-            $uploadMime = 'audio/ogg';
-            $cleanup = $uploadPath;
         }
 
         $upload = $this->cloud->uploadMediaFile($uploadPath, $uploadMime, $waType);
@@ -875,22 +882,89 @@ class WhatsAppInboxService
     {
         $ffmpeg = $this->findFfmpegBinary();
         if ($ffmpeg === null) {
-            return [
-                'error' => 'تسجيل الصوت بصيغة WebM — ثبّت ffmpeg على السيرفر أو أرفق ملف ogg/mp3/m4a.',
-            ];
+            return ['error' => 'ffmpeg_missing'];
         }
 
         $out = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'wa_voice_' . uniqid('', true) . '.ogg';
-        $cmd = escapeshellarg($ffmpeg)
-            . ' -y -i ' . escapeshellarg($webmPath)
-            . ' -c:a libopus ' . escapeshellarg($out) . ' 2>&1';
+        $command = [
+            $ffmpeg,
+            '-y',
+            '-i',
+            $webmPath,
+            '-c:a',
+            'libopus',
+            '-t',
+            '300',
+            $out,
+        ];
 
-        exec($cmd, $output, $code);
-        if ($code !== 0 || ! is_file($out)) {
-            return ['error' => 'تعذّر تحويل التسجيل الصوتي. جرّب إرفاق ملف صوتي بدلاً من ذلك.'];
+        if (! $this->runProcessWithTimeout($command, 45)) {
+            if (is_file($out)) {
+                @unlink($out);
+            }
+
+            return ['error' => 'conversion_failed'];
+        }
+
+        if (! is_file($out) || filesize($out) === 0) {
+            if (is_file($out)) {
+                @unlink($out);
+            }
+
+            return ['error' => 'conversion_failed'];
         }
 
         return ['path' => $out];
+    }
+
+    /**
+     * @param  list<string>  $command
+     */
+    private function runProcessWithTimeout(array $command, int $timeoutSeconds): bool
+    {
+        if ($command === []) {
+            return false;
+        }
+
+        $descriptors = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+
+        $process = @proc_open($command, $descriptors, $pipes);
+        if (! is_resource($process)) {
+            return false;
+        }
+
+        fclose($pipes[0]);
+        stream_set_blocking($pipes[1], false);
+        stream_set_blocking($pipes[2], false);
+
+        $deadline = time() + max(1, $timeoutSeconds);
+        $status = proc_get_status($process);
+
+        while ($status['running']) {
+            if (time() >= $deadline) {
+                proc_terminate($process);
+                break;
+            }
+            usleep(100_000);
+            $status = proc_get_status($process);
+        }
+
+        foreach ([$pipes[1], $pipes[2]] as $pipe) {
+            while (is_resource($pipe) && ! feof($pipe)) {
+                fread($pipe, 8192);
+            }
+            if (is_resource($pipe)) {
+                fclose($pipe);
+            }
+        }
+
+        $exitCode = proc_close($process);
+
+        return $exitCode === 0;
     }
 
     private function findFfmpegBinary(): ?string

@@ -227,6 +227,7 @@ trait HandlesWhatsAppInbox
             'within_service_window' => $inbox->isWithinServiceWindow($conversation),
             'reply_url' => $this->inboxRoute('reply', $conversation),
             'react_url' => $this->inboxRoute('react', $conversation),
+            'media_url' => $this->inboxRoute('media-send', $conversation),
             'template_url' => $this->inboxRoute('template', $conversation),
             'crm_urls' => $this->inboxCrmUrls($conversation),
             'unread_total' => $this->inboxUnreadTotal(),
@@ -353,44 +354,57 @@ trait HandlesWhatsAppInbox
 
     public function inboxSendMedia(Request $request, WhatsAppConversation $conversation): JsonResponse
     {
-        [$inbox] = $this->inboxServices();
-        $this->authorizeInboxConversation($conversation);
+        try {
+            [$inbox] = $this->inboxServices();
+            $this->authorizeInboxConversation($conversation);
 
-        $validated = $request->validate([
-            'file' => 'required|file|max:16384',
-            'caption' => 'nullable|string|max:1024',
-        ]);
+            $validated = $request->validate([
+                'file' => 'required|file|max:16384',
+                'caption' => 'nullable|string|max:1024',
+            ]);
 
-        $result = $inbox->sendMediaReply(
-            $conversation,
-            $request->file('file'),
-            auth()->id(),
-            $validated['caption'] ?? null,
-        );
+            $result = $inbox->sendMediaReply(
+                $conversation,
+                $request->file('file'),
+                auth()->id(),
+                $validated['caption'] ?? null,
+            );
 
-        if (! ($result['success'] ?? false)) {
+            if (! ($result['success'] ?? false)) {
+                return response()->json([
+                    'success' => false,
+                    'error' => $result['error'] ?? 'فشل إرسال الوسائط',
+                    'requires_template' => $result['requires_template'] ?? false,
+                ], 422);
+            }
+
+            /** @var WhatsAppConversationMessage $message */
+            $message = $result['message'];
+            $conversation->refresh();
+            $conversation->load(['user:id,name', 'assignee:id,name', 'tags', 'contact', 'salesLead']);
+
+            if ($this->inboxAudience() === 'employee' && ! $conversation->assigned_to) {
+                app(WhatsAppCrmService::class)->assign($conversation, (int) auth()->id(), auth()->id());
+                $conversation->refresh();
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $this->serializeInboxMessage($message->load('sentBy:id,name')),
+                'conversation' => $inbox->serializeConversation($conversation, $this->inboxAudience()),
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            report($e);
+
             return response()->json([
                 'success' => false,
-                'error' => $result['error'] ?? 'فشل إرسال الوسائط',
-                'requires_template' => $result['requires_template'] ?? false,
-            ], 422);
+                'error' => config('app.debug')
+                    ? mb_substr($e->getMessage(), 0, 300)
+                    : 'تعذّر إرسال الوسائط — حاول مرة أخرى أو أرفق ملفاً صوتياً.',
+            ], 500);
         }
-
-        /** @var WhatsAppConversationMessage $message */
-        $message = $result['message'];
-        $conversation->refresh();
-        $conversation->load(['user:id,name', 'assignee:id,name', 'tags', 'contact', 'salesLead']);
-
-        if ($this->inboxAudience() === 'employee' && ! $conversation->assigned_to) {
-            app(WhatsAppCrmService::class)->assign($conversation, (int) auth()->id(), auth()->id());
-            $conversation->refresh();
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => $this->serializeInboxMessage($message->load('sentBy:id,name')),
-            'conversation' => $inbox->serializeConversation($conversation, $this->inboxAudience()),
-        ]);
     }
 
     public function inboxMessageMedia(

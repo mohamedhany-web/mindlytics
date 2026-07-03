@@ -1155,6 +1155,7 @@ function whatsappInbox() {
                 this.replyUrl = data.reply_url || this.replyUrl;
                 this.reactUrl = data.react_url || this.reactUrl;
                 this.templateUrl = data.template_url || this.templateUrl;
+                this.mediaUrl = data.media_url || this.mediaUrl;
                 this.crmUrls = data.crm_urls || this.crmUrls;
                 this.crmNotes = data.notes || this.crmNotes;
                 this.crmTimeline = data.timeline || this.crmTimeline;
@@ -1178,9 +1179,34 @@ function whatsappInbox() {
         async parseJsonResponse(res) {
             const text = await res.text();
             try {
-                return JSON.parse(text);
+                const data = JSON.parse(text);
+                if (data.success === undefined) {
+                    if (data.message || data.errors) {
+                        data.success = false;
+                        const fileErr = data.errors?.file;
+                        data.error = data.error || data.message || (Array.isArray(fileErr) ? fileErr[0] : fileErr) || 'فشل الطلب';
+                    }
+                }
+                if (!res.ok && data.success !== true && !data.error) {
+                    data.success = false;
+                    data.error = data.message || `خطأ من الخادم (${res.status})`;
+                }
+                return data;
             } catch (_) {
-                return { success: false, error: 'استجابة غير متوقعة من الخادم' };
+                if (res.status === 419) {
+                    return { success: false, error: 'انتهت الجلسة. حدّث الصفحة وحاول مرة أخرى.' };
+                }
+                if (res.status === 413) {
+                    return { success: false, error: 'حجم الملف كبير جداً.' };
+                }
+                if (res.status === 404) {
+                    return { success: false, error: 'مسار إرسال الوسائط غير موجود — تأكد من رفع آخر تحديث للسيرفر.' };
+                }
+                const snippet = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100);
+                return {
+                    success: false,
+                    error: `استجابة غير متوقعة من الخادم (${res.status})${snippet ? ': ' + snippet : ''}`,
+                };
             }
         },
 
@@ -1247,6 +1273,7 @@ function whatsappInbox() {
                 this.withinWindow = !!data.within_service_window;
                 this.replyUrl = data.reply_url;
                 this.reactUrl = data.react_url || this.reactUrl;
+                this.mediaUrl = data.media_url || this.mediaUrl;
                 this.templateUrl = data.template_url;
                 this.crmUrls = data.crm_urls || {};
                 this.crmNotes = data.notes || [];
@@ -1501,7 +1528,7 @@ function whatsappInbox() {
                 if (e.data?.size) this.recordChunks.push(e.data);
             };
             this.mediaRecorder.onstop = () => this.finishRecording();
-            this.mediaRecorder.start();
+            this.mediaRecorder.start(250);
             this.recording = true;
             this.replyError = '';
         },
@@ -1594,6 +1621,7 @@ function whatsappInbox() {
             try {
                 const form = new FormData();
                 form.append('file', file);
+                form.append('_token', this.csrf);
                 const res = await fetch(this.mediaUrl, {
                     method: 'POST',
                     headers: {
