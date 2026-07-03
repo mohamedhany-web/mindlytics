@@ -1395,7 +1395,21 @@ function whatsappInbox() {
                 this.stopRecording();
                 return;
             }
-            await this.beginRecordingFlow();
+
+            this.replyError = '';
+            this.micWaiting = false;
+
+            if (!window.isSecureContext) {
+                this.openMicModal('error', 'التسجيل الصوتي يتطلب فتح الموقع عبر HTTPS.');
+                return;
+            }
+
+            if (!navigator.mediaDevices?.getUserMedia) {
+                this.openMicModal('error', 'المتصفح لا يدعم تسجيل الصوت — استخدم «إرفاق ملف صوتي».');
+                return;
+            }
+
+            await this.requestMicAccess();
         },
 
         micModalTitle() {
@@ -1452,30 +1466,6 @@ function whatsappInbox() {
             return 'unknown';
         },
 
-        async beginRecordingFlow() {
-            this.replyError = '';
-            this.micWaiting = false;
-
-            if (!window.isSecureContext) {
-                this.openMicModal('error', 'التسجيل الصوتي يتطلب فتح الموقع عبر HTTPS.');
-                return;
-            }
-
-            if (!navigator.mediaDevices?.getUserMedia) {
-                this.openMicModal('error', 'المتصفح لا يدعم تسجيل الصوت — استخدم «إرفاق ملف صوتي».');
-                return;
-            }
-
-            const state = await this.queryMicPermissionState();
-            if (state === 'denied') {
-                this.openMicModal('denied');
-                return;
-            }
-
-            // prompt / granted / unknown — نطلب الإذن مباشرة من المتصفح (بدون بوب أب وسيط)
-            await this.requestMicAccess();
-        },
-
         async requestMicAccess() {
             const getUserMedia = navigator.mediaDevices?.getUserMedia?.bind(navigator.mediaDevices);
             if (!getUserMedia) {
@@ -1530,9 +1520,14 @@ function whatsappInbox() {
                     }
                 } catch (_) {}
 
+                const policyBlocked = !window.isSecureContext
+                    || (err?.message && /policy|permission/i.test(err.message));
+
                 this.openMicModal('denied', permanentlyDenied
-                    ? 'اضغط «إرفاق ملف صوتي» للإرسال فوراً، أو فعّل الميكروفون من القفل 🔒 ثم أعد التحميل.'
-                    : 'اضغط زر الميكروفون مرة أخرى واختر «السماح» في رسالة المتصفح.');
+                    ? 'إذا كان الميكروفون مفعّلاً في المتصفح، أعد تحميل الصفحة بعد رفع آخر تحديث للسيرفر.'
+                    : (policyBlocked
+                        ? 'تأكد أن الموقع يعمل عبر HTTPS ثم أعد المحاولة.'
+                        : 'اضغط زر الميكروفون مرة أخرى واختر «السماح» في رسالة المتصفح.'));
                 return;
             }
 

@@ -21,7 +21,8 @@ class SecurityHeadersMiddleware
         $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
         $response->headers->set('X-XSS-Protection', '1; mode=block');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
-        $response->headers->set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+        // microphone/camera=(self) مطلوب لصندوق واتساب والامتحانات — () كانت تمنع getUserMedia حتى مع موافقة المتصفح
+        $response->headers->set('Permissions-Policy', 'geolocation=(), microphone=(self), camera=(self)');
         
         // Content Security Policy - محسّن للواجهة الأمامية
         // تعطيل CSP مؤقتاً في بيئة التطوير لتجنب مشاكل الواجهة
