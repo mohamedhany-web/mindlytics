@@ -78,6 +78,8 @@ class WhatsAppInboxService
                 'contact_name' => $conversation->contact_name,
             ]);
 
+            $this->afterInboundMessage($conversation, $message);
+
             return $message;
         });
     }
@@ -208,7 +210,7 @@ class WhatsAppInboxService
 
     public function syncRecentOutboundLogs(int $limit = 500): int
     {
-        if (! Schema::hasTable('whatsapp_conversations') || ! Schema::hasTable('whatsapp_messages')) {
+        if (! Schema::hasTable('whatsapp_conversations') || ! Schema::hasTable('whats_app_messages')) {
             return 0;
         }
 
@@ -414,6 +416,7 @@ class WhatsAppInboxService
         ]);
 
         $this->touchConversationAfterMessage($conversation, $message, $data['sent_at'] ?? now());
+        $this->afterOutboundMessage($conversation, $message);
 
         return $message;
     }
@@ -515,7 +518,9 @@ class WhatsAppInboxService
      */
     public function serializeConversation(WhatsAppConversation $conversation): array
     {
-        return [
+        $conversation->loadMissing(['user:id,name,phone', 'assignee:id,name', 'tags', 'contact', 'salesLead']);
+
+        $payload = [
             'id' => $conversation->id,
             'phone_number' => $conversation->phone_number,
             'display_name' => $conversation->displayName(),
@@ -529,5 +534,66 @@ class WhatsAppInboxService
             'user_name' => $conversation->user?->name,
             'user_phone' => $conversation->user?->phone,
         ];
+
+        if (app(WhatsAppCrmService::class)->crmTablesReady()) {
+            $payload['crm'] = app(WhatsAppCrmService::class)->serializeCrm($conversation);
+        }
+
+        return $payload;
+    }
+
+    public function applyConversationFilters($query, array $filters = []): void
+    {
+        if (! empty($filters)) {
+            $query->filterCrm($filters);
+        }
+
+        if (auth()->check()) {
+            $query->visibleTo(auth()->user());
+        }
+    }
+
+    private function afterInboundMessage(WhatsAppConversation $conversation, WhatsAppConversationMessage $message): void
+    {
+        $crm = app(WhatsAppCrmService::class);
+        if (! $crm->crmTablesReady()) {
+            return;
+        }
+
+        $conversation = $conversation->fresh();
+        $crm->ensureContactForConversation($conversation);
+        $crm->logEvent(
+            $conversation->fresh(),
+            \App\Models\WhatsAppConversationEvent::TYPE_MESSAGE_INBOUND,
+            'رسالة واردة',
+            mb_substr($message->displayBody(), 0, 200)
+        );
+        $crm->touchContactActivity($conversation->fresh());
+    }
+
+    private function afterOutboundMessage(WhatsAppConversation $conversation, WhatsAppConversationMessage $message): void
+    {
+        $crm = app(WhatsAppCrmService::class);
+        if (! $crm->crmTablesReady()) {
+            return;
+        }
+
+        $conversation = $conversation->fresh();
+        $crm->ensureContactForConversation($conversation);
+
+        $type = $message->template_name
+            ? \App\Models\WhatsAppConversationEvent::TYPE_TEMPLATE_SENT
+            : \App\Models\WhatsAppConversationEvent::TYPE_MESSAGE_OUTBOUND;
+
+        $crm->logEvent(
+            $conversation,
+            $type,
+            $message->template_name ? 'قالب Meta' : 'رد صادر',
+            mb_substr($message->displayBody(), 0, 200),
+            ['template_name' => $message->template_name]
+        );
+
+        $crm->touchContactActivity($conversation);
+        $crm->logOutboundToSalesLead($conversation, $message->displayBody(), $message->sent_by_user_id);
     }
 }

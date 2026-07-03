@@ -74,4 +74,15 @@ return [
     /** يُستخدم للتحقق من Webhook إن لم يُحفظ في إعدادات الربط */
     'webhook_verify_token' => env('WHATSAPP_VERIFY_TOKEN', env('WHATSAPP_WEBHOOK_VERIFY_TOKEN', '')),
 
+    /*
+    |--------------------------------------------------------------------------
+    | توزيع المحادثات (Inbox CRM)
+    |--------------------------------------------------------------------------
+    | lead_owner_then_round_robin = مالك العميل في CRM ثم Round Robin
+    | round_robin = توزيع دائري فقط
+    */
+    'assignment' => [
+        'strategy' => env('WHATSAPP_ASSIGNMENT_STRATEGY', 'lead_owner_then_round_robin'),
+    ],
+
 ];

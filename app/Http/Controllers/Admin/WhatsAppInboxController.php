@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\WhatsAppConversation;
 use App\Models\WhatsAppConversationMessage;
+use App\Models\WhatsAppTag;
+use App\Services\WhatsAppAssignmentService;
 use App\Services\WhatsAppCloudService;
+use App\Services\WhatsAppCrmService;
 use App\Services\WhatsAppInboxService;
 use App\Support\WhatsAppCloudSettings;
 use Illuminate\Http\JsonResponse;
@@ -19,6 +22,8 @@ class WhatsAppInboxController extends Controller
     public function __construct(
         private WhatsAppInboxService $inbox,
         private WhatsAppCloudService $cloud,
+        private WhatsAppCrmService $crm,
+        private WhatsAppAssignmentService $assignment,
     ) {}
 
     public function index(Request $request): View
@@ -34,9 +39,11 @@ class WhatsAppInboxController extends Controller
             $this->inbox->syncRecentOutboundLogs();
 
             $query = WhatsAppConversation::query()
-                ->with('user:id,name')
+                ->with(['user:id,name', 'assignee:id,name', 'tags'])
                 ->orderByDesc('last_message_at')
                 ->orderByDesc('updated_at');
+
+            $this->inbox->applyConversationFilters($query, $this->crmFilters($request));
 
             if ($search = trim((string) $request->query('search'))) {
                 $digits = preg_replace('/[^0-9]/', '', $search);
@@ -97,7 +104,7 @@ class WhatsAppInboxController extends Controller
             'withinWindow',
             'metaTemplates',
             'metaTemplatesError',
-        ));
+        ) + $this->crmViewData());
     }
 
     public function templates(): JsonResponse
@@ -123,13 +130,33 @@ class WhatsAppInboxController extends Controller
             ->get()
             ->map(fn ($m) => $this->inbox->serializeMessage($m));
 
+        $notes = [];
+        $timeline = [];
+        if ($this->crm->crmTablesReady()) {
+            $notes = $conversation->notes()
+                ->with('author:id,name')
+                ->latest()
+                ->limit(30)
+                ->get()
+                ->map(fn ($n) => [
+                    'id' => $n->id,
+                    'body' => $n->body,
+                    'author' => $n->author?->name,
+                    'created_at_human' => $n->created_at?->diffForHumans(),
+                ]);
+            $timeline = $this->crm->timeline($conversation);
+        }
+
         return response()->json([
             'success' => true,
             'conversation' => $this->inbox->serializeConversation($conversation),
             'messages' => $messages,
+            'notes' => $notes,
+            'timeline' => $timeline,
             'within_service_window' => $this->inbox->isWithinServiceWindow($conversation),
             'reply_url' => route('admin.whatsapp.inbox.reply', $conversation),
             'template_url' => route('admin.whatsapp.inbox.template', $conversation),
+            'crm_urls' => $this->crmUrls($conversation),
             'unread_total' => (int) WhatsAppConversation::query()->sum('unread_count'),
         ]);
     }
@@ -144,9 +171,11 @@ class WhatsAppInboxController extends Controller
         $afterId = (int) $request->query('after_id', 0);
 
         $conversationsQuery = WhatsAppConversation::query()
-            ->with('user:id,name')
+            ->with(['user:id,name', 'assignee:id,name', 'tags'])
             ->orderByDesc('last_message_at')
             ->orderByDesc('updated_at');
+
+        $this->inbox->applyConversationFilters($conversationsQuery, $this->crmFilters($request));
 
         if ($search = trim((string) $request->query('search'))) {
             $digits = preg_replace('/[^0-9]/', '', $search);
@@ -305,5 +334,141 @@ class WhatsAppInboxController extends Controller
             'success' => true,
             'unread_total' => (int) WhatsAppConversation::query()->sum('unread_count'),
         ]);
+    }
+
+    public function updateStatus(Request $request, WhatsAppConversation $conversation): JsonResponse
+    {
+        $validated = $request->validate([
+            'status' => 'required|in:' . implode(',', array_keys(WhatsAppConversation::STATUSES)),
+        ]);
+
+        $this->crm->updateStatus($conversation, $validated['status'], auth()->id());
+
+        return response()->json([
+            'success' => true,
+            'conversation' => $this->inbox->serializeConversation($conversation->fresh(['assignee', 'tags', 'contact', 'salesLead'])),
+            'timeline' => $this->crm->timeline($conversation->fresh()),
+        ]);
+    }
+
+    public function transfer(Request $request, WhatsAppConversation $conversation): JsonResponse
+    {
+        $validated = $request->validate([
+            'assigned_to' => 'required|exists:users,id',
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        $this->crm->transfer($conversation, (int) $validated['assigned_to'], $validated['reason'] ?? null);
+
+        return response()->json([
+            'success' => true,
+            'conversation' => $this->inbox->serializeConversation($conversation->fresh(['assignee', 'tags', 'contact', 'salesLead'])),
+            'timeline' => $this->crm->timeline($conversation->fresh()),
+        ]);
+    }
+
+    public function assign(Request $request, WhatsAppConversation $conversation): JsonResponse
+    {
+        $validated = $request->validate([
+            'assigned_to' => 'required|exists:users,id',
+        ]);
+
+        $this->crm->assign($conversation, (int) $validated['assigned_to'], auth()->id());
+
+        return response()->json([
+            'success' => true,
+            'conversation' => $this->inbox->serializeConversation($conversation->fresh(['assignee', 'tags', 'contact', 'salesLead'])),
+            'timeline' => $this->crm->timeline($conversation->fresh()),
+        ]);
+    }
+
+    public function storeNote(Request $request, WhatsAppConversation $conversation): JsonResponse
+    {
+        $validated = $request->validate([
+            'body' => 'required|string|max:5000',
+        ]);
+
+        $note = $this->crm->addNote($conversation, $validated['body'], auth()->id());
+
+        return response()->json([
+            'success' => true,
+            'note' => [
+                'id' => $note->id,
+                'body' => $note->body,
+                'author' => $note->author?->name,
+                'created_at_human' => $note->created_at?->diffForHumans(),
+            ],
+            'timeline' => $this->crm->timeline($conversation->fresh()),
+        ]);
+    }
+
+    public function syncTag(Request $request, WhatsAppConversation $conversation, WhatsAppTag $tag): JsonResponse
+    {
+        $validated = $request->validate([
+            'attach' => 'required|boolean',
+        ]);
+
+        $this->crm->syncTag($conversation, $tag->id, (bool) $validated['attach'], auth()->id());
+
+        return response()->json([
+            'success' => true,
+            'conversation' => $this->inbox->serializeConversation($conversation->fresh(['assignee', 'tags', 'contact', 'salesLead'])),
+            'timeline' => $this->crm->timeline($conversation->fresh()),
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function crmFilters(Request $request): array
+    {
+        return array_filter([
+            'status' => $request->query('status'),
+            'department' => $request->query('department'),
+            'assigned_to' => $request->query('assigned_to'),
+            'mine' => $request->boolean('mine'),
+            'tag_id' => $request->query('tag_id'),
+        ], fn ($v) => $v !== null && $v !== '');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function crmViewData(): array
+    {
+        if (! $this->crm->crmTablesReady()) {
+            return [
+                'crmReady' => false,
+                'crmAgents' => [],
+                'crmTags' => [],
+                'crmStatuses' => [],
+                'crmDepartments' => [],
+            ];
+        }
+
+        return [
+            'crmReady' => true,
+            'crmAgents' => collect($this->assignment->eligibleAgents())->map(fn ($u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+            ])->values()->all(),
+            'crmTags' => WhatsAppTag::query()->orderBy('name')->get(['id', 'name', 'slug', 'color']),
+            'crmStatuses' => WhatsAppConversation::STATUSES,
+            'crmDepartments' => WhatsAppConversation::DEPARTMENTS,
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function crmUrls(WhatsAppConversation $conversation): array
+    {
+        return [
+            'status' => route('admin.whatsapp.inbox.status', $conversation),
+            'transfer' => route('admin.whatsapp.inbox.transfer', $conversation),
+            'assign' => route('admin.whatsapp.inbox.assign', $conversation),
+            'notes' => route('admin.whatsapp.inbox.notes', $conversation),
+            'tag' => rtrim(route('admin.whatsapp.inbox.tag', ['conversation' => $conversation->id, 'tag' => 0]), '/0'),
+        ];
     }
 }

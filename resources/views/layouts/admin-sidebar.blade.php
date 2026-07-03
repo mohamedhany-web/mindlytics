@@ -288,6 +288,78 @@
             </li>
 
             @php
+                $whatsappMenuOpen = request()->routeIs('admin.whatsapp.*');
+            @endphp
+            <li x-data="{ open: {{ $whatsappMenuOpen ? 'true' : 'false' }} }">
+                <button type="button" @click="open = !open" :aria-expanded="open"
+                        class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
+                    <div class="flex items-center gap-3">
+                        <i class="fab fa-whatsapp w-5 text-emerald-400 group-hover:text-white"></i>
+                        <span class="font-medium">قسم الواتساب</span>
+                    </div>
+                    <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
+                </button>
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
+                    <li>
+                        <a href="{{ route('admin.whatsapp.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.whatsapp.index') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-tachometer-alt w-4"></i>
+                            <span>لوحة الواتساب</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.whatsapp.settings') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.whatsapp.settings') || request()->routeIs('admin.whatsapp.test-connection') || request()->routeIs('admin.whatsapp.disconnect') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-plug w-4"></i>
+                            <span>ربط Meta</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.whatsapp.send') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.whatsapp.send*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-paper-plane w-4"></i>
+                            <span>إرسال رسالة</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.whatsapp.messages') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.whatsapp.messages*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-list w-4"></i>
+                            <span>سجل الرسائل</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.whatsapp.templates.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.whatsapp.templates.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-file-alt w-4"></i>
+                            <span>قوالب Meta</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.whatsapp.inbox') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.whatsapp.inbox*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-inbox w-4"></i>
+                            <span>المحادثات</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.whatsapp.batches.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.whatsapp.batches.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-layer-group w-4"></i>
+                            <span>دفعات الإرسال</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @php
                 $hrMenuOpen = request()->routeIs('admin.hr.*');
             @endphp
             <li x-data="{ open: {{ $hrMenuOpen ? 'true' : 'false' }} }">
@@ -418,54 +490,6 @@
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.investment.policies.*') ? 'bg-amber-600/30 text-white font-semibold border-r-2 border-amber-400' : '' }}">
                             <i class="fas fa-gavel w-4"></i>
                             <span>الإطار القانوني</span>
-                        </a>
-                    </li>
-                </ul>
-            </li>
-
-            @php
-                $whatsappMenuOpen = request()->routeIs('admin.whatsapp.*');
-            @endphp
-            <li x-data="{ open: {{ $whatsappMenuOpen ? 'true' : 'false' }} }">
-                <button type="button" @click="open = !open" :aria-expanded="open"
-                        class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
-                    <div class="flex items-center gap-3">
-                        <i class="fab fa-whatsapp w-5 text-emerald-400 group-hover:text-white"></i>
-                        <span class="font-medium">قسم الواتساب</span>
-                    </div>
-                    <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
-                </button>
-                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
-                    <li>
-                        <a href="{{ route('admin.whatsapp.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.whatsapp.index') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-tachometer-alt w-4"></i>
-                            <span>لوحة الواتساب</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.whatsapp.send') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.whatsapp.send*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-paper-plane w-4"></i>
-                            <span>إرسال رسالة</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.whatsapp.messages') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.whatsapp.messages') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-list w-4"></i>
-                            <span>سجل الرسائل</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.whatsapp.settings') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.whatsapp.settings*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-plug w-4"></i>
-                            <span>إعدادات الربط</span>
                         </a>
                     </li>
                 </ul>

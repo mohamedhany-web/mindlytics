@@ -340,6 +340,26 @@ class WhatsAppCloudService
      */
     public function listApprovedTemplates(): array
     {
+        $fromDb = [];
+        if (\Illuminate\Support\Facades\Schema::hasTable('whatsapp_meta_templates')) {
+            $fromDb = \App\Models\WhatsAppMetaTemplate::query()
+                ->where('status', \App\Models\WhatsAppMetaTemplate::STATUS_APPROVED)
+                ->orderBy('name')
+                ->get()
+                ->map(fn ($t) => [
+                    'name' => $t->name,
+                    'language' => $t->language,
+                    'category' => $t->category,
+                    'label' => $t->displayLabel() . ' (' . $t->categoryLabel() . ')',
+                    'source' => 'database',
+                ])
+                ->all();
+        }
+
+        if ($fromDb !== []) {
+            return ['success' => true, 'templates' => $fromDb];
+        }
+
         $wabaId = WhatsAppCloudSettings::businessAccountId();
         if ($wabaId === '') {
             return [
@@ -409,6 +429,166 @@ class WhatsAppCloudService
                 'templates' => [],
                 'error' => $this->humanizeMetaError($e->getMessage()),
             ];
+        }
+    }
+
+    /**
+     * @return array{success: bool, templates: array<int, array<string, mixed>>, error?: string}
+     */
+    public function fetchAllMessageTemplates(): array
+    {
+        $wabaId = WhatsAppCloudSettings::businessAccountId();
+        if ($wabaId === '') {
+            return [
+                'success' => false,
+                'templates' => [],
+                'error' => 'أدخل WhatsApp Business Account ID (WABA) في إعدادات الربط.',
+            ];
+        }
+
+        $creds = $this->resolveCredentials();
+        if ($creds['access_token'] === '') {
+            return ['success' => false, 'templates' => [], 'error' => 'Access Token غير موجود'];
+        }
+
+        $all = [];
+        $url = "{$this->graphUrl()}/{$wabaId}/message_templates";
+        $params = [
+            'fields' => 'id,name,language,status,category,components,rejected_reason,quality_score',
+            'limit' => 100,
+        ];
+
+        try {
+            for ($page = 0; $page < 20; $page++) {
+                $response = Http::withToken($creds['access_token'])
+                    ->timeout(45)
+                    ->get($url, $params);
+
+                $body = $response->json();
+
+                if (! $response->successful()) {
+                    $error = is_array($body['error'] ?? null) ? $body['error'] : [];
+
+                    return [
+                        'success' => false,
+                        'templates' => [],
+                        'error' => $this->humanizeSendError($error, 'تعذّر جلب القوالب من Meta'),
+                    ];
+                }
+
+                foreach ($body['data'] ?? [] as $row) {
+                    if (is_array($row)) {
+                        $all[] = $row;
+                    }
+                }
+
+                $next = $body['paging']['next'] ?? null;
+                if (! is_string($next) || $next === '') {
+                    break;
+                }
+
+                $url = $next;
+                $params = [];
+            }
+
+            return ['success' => true, 'templates' => $all];
+        } catch (\Throwable $e) {
+            return [
+                'success' => false,
+                'templates' => [],
+                'error' => $this->humanizeMetaError($e->getMessage()),
+            ];
+        }
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $components
+     * @return array{success: bool, id?: string, error?: string}
+     */
+    public function createMessageTemplate(
+        string $name,
+        string $language,
+        string $category,
+        array $components
+    ): array {
+        $wabaId = WhatsAppCloudSettings::businessAccountId();
+        if ($wabaId === '') {
+            return ['success' => false, 'error' => 'WABA ID غير مضبوط في الإعدادات.'];
+        }
+
+        $creds = $this->resolveCredentials();
+        if ($creds['access_token'] === '') {
+            return ['success' => false, 'error' => 'Access Token غير موجود'];
+        }
+
+        try {
+            $response = Http::withToken($creds['access_token'])
+                ->timeout(60)
+                ->post("{$this->graphUrl()}/{$wabaId}/message_templates", [
+                    'name' => $name,
+                    'language' => $language,
+                    'category' => strtoupper($category),
+                    'components' => $components,
+                ]);
+
+            $body = $response->json() ?? [];
+
+            if ($response->successful()) {
+                return [
+                    'success' => true,
+                    'id' => (string) ($body['id'] ?? ''),
+                ];
+            }
+
+            $error = is_array($body['error'] ?? null) ? $body['error'] : [];
+
+            return [
+                'success' => false,
+                'error' => $this->humanizeSendError($error, (string) ($error['message'] ?? 'فشل إنشاء القالب في Meta')),
+            ];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => $this->humanizeMetaError($e->getMessage())];
+        }
+    }
+
+    /**
+     * @return array{success: bool, error?: string}
+     */
+    public function deleteMessageTemplate(string $name, ?string $language = null): array
+    {
+        $wabaId = WhatsAppCloudSettings::businessAccountId();
+        if ($wabaId === '') {
+            return ['success' => false, 'error' => 'WABA ID غير مضبوط.'];
+        }
+
+        $creds = $this->resolveCredentials();
+        if ($creds['access_token'] === '') {
+            return ['success' => false, 'error' => 'Access Token غير موجود'];
+        }
+
+        try {
+            $query = ['name' => $name];
+            if ($language) {
+                $query['language'] = $language;
+            }
+
+            $response = Http::withToken($creds['access_token'])
+                ->timeout(30)
+                ->delete("{$this->graphUrl()}/{$wabaId}/message_templates", $query);
+
+            if ($response->successful()) {
+                return ['success' => true];
+            }
+
+            $body = $response->json() ?? [];
+            $error = is_array($body['error'] ?? null) ? $body['error'] : [];
+
+            return [
+                'success' => false,
+                'error' => $this->humanizeSendError($error, 'فشل حذف القالب من Meta'),
+            ];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => $this->humanizeMetaError($e->getMessage())];
         }
     }
 }

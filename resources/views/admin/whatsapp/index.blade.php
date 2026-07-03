@@ -10,14 +10,14 @@
 
 <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" style="background: #f8fafc; min-height: 100vh;">
     @include('admin.whatsapp._alerts')
-    @include('admin.whatsapp._nav', ['active' => 'dashboard'])
 
     @include('admin.whatsapp._page-header', [
         'title' => 'WhatsApp Business — Meta Cloud API',
         'subtitle' => 'إرسال رسمي وموثق عبر Meta — بدون Bridge أو QR.',
         'icon' => 'fab fa-whatsapp',
         'actions' => '
-            <a href="' . route('admin.whatsapp.inbox') . '" class="' . $waBtnPrimary . '"><i class="fas fa-inbox"></i> المحادثات</a>
+            <a href="' . route('admin.whatsapp.templates.index') . '" class="' . $waBtnPrimary . '"><i class="fas fa-file-alt"></i> قوالب Meta</a>
+            <a href="' . route('admin.whatsapp.inbox') . '" class="' . $waBtnSecondary . '"><i class="fas fa-inbox"></i> المحادثات</a>
             <a href="' . route('admin.whatsapp.settings') . '" class="' . $waBtnSecondary . '"><i class="fas fa-plug"></i> إعدادات الربط</a>
             <a href="' . route('admin.whatsapp.send') . '" class="' . $waBtnSecondary . '"><i class="fas fa-paper-plane"></i> إرسال</a>
         ',

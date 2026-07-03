@@ -26,6 +26,7 @@
         'withinWindow' => (bool) ($withinWindow ?? false),
         'lastMessageId' => $messages->last()?->id ?? 0,
         'metaTemplates' => $metaTemplates ?? [],
+        'crmReady' => (bool) ($crmReady ?? false),
     ];
 @endphp
 
@@ -33,7 +34,6 @@
 
 <div class="p-3 sm:p-4 md:p-6 space-y-4" style="background:#f8fafc; min-height:100vh;" x-data="whatsappInbox()" x-cloak>
     @include('admin.whatsapp._alerts')
-    @include('admin.whatsapp._nav', ['active' => 'inbox'])
 
     @include('admin.whatsapp._page-header', [
         'title' => 'المحادثات الواردة',
@@ -77,6 +77,27 @@
                         <i class="fas fa-search text-sm"></i>
                     </button>
                 </div>
+                @if($crmReady ?? false)
+                <div class="mt-2 flex flex-wrap gap-1.5">
+                    <select x-model="filterStatus" @change="applyFilters()" class="text-[10px] rounded-full border-0 bg-white px-2 py-1 shadow-sm">
+                        <option value="">كل الحالات</option>
+                        @foreach($crmStatuses as $key => $label)
+                            <option value="{{ $key }}">{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <select x-model="filterAssigned" @change="applyFilters()" class="text-[10px] rounded-full border-0 bg-white px-2 py-1 shadow-sm">
+                        <option value="">كل الموظفين</option>
+                        <option value="unassigned">غير معيّنة</option>
+                        @foreach($crmAgents as $agent)
+                            <option value="{{ $agent['id'] }}">{{ $agent['name'] }}</option>
+                        @endforeach
+                    </select>
+                    <label class="inline-flex items-center gap-1 text-[10px] bg-white rounded-full px-2 py-1 shadow-sm cursor-pointer">
+                        <input type="checkbox" x-model="filterMine" @change="applyFilters()" class="rounded border-slate-300 text-emerald-600">
+                        محادثاتي
+                    </label>
+                </div>
+                @endif
             </div>
 
             <div class="flex-1 overflow-y-auto overscroll-contain divide-y divide-slate-100 wa-conv-scroll">
@@ -101,6 +122,10 @@
                                 <span class="text-[10px] text-slate-400 shrink-0 whitespace-nowrap" x-text="conv.last_message_at_human || ''"></span>
                             </div>
                             <p class="text-[11px] text-slate-500 dir-ltr text-right font-mono truncate" x-text="conv.formatted_phone"></p>
+                            <div class="flex items-center gap-1 mt-0.5 flex-wrap" x-show="conv.crm">
+                                <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600" x-text="conv.crm?.status_label"></span>
+                                <span class="text-[9px] text-emerald-700" x-show="conv.crm?.assignee_name" x-text="conv.crm?.assignee_name"></span>
+                            </div>
                             <div class="flex items-center justify-between gap-2 mt-0.5">
                                 <p class="text-xs text-slate-600 truncate" x-text="conv.last_message_preview || '—'"></p>
                                 <span x-show="conv.unread_count > 0"
@@ -114,7 +139,7 @@
         </aside>
 
         {{-- نافذة المحادثة --}}
-        <section class="lg:col-span-8 xl:col-span-9 flex flex-col h-full bg-[#efeae2] min-h-0"
+        <section class="lg:col-span-8 xl:col-span-6 flex flex-col h-full bg-[#efeae2] min-h-0"
                  :class="{ 'flex': conversationId, 'hidden lg:flex': !conversationId }">
 
             {{-- حالة: لا محادثة مختارة --}}
@@ -237,6 +262,8 @@
                 </div>
             </template>
         </section>
+
+        @include('admin.whatsapp._crm_panel')
     </div>
 
     {{-- modal محادثة جديدة --}}
@@ -332,6 +359,21 @@ function whatsappInbox() {
         showTemplatePicker: false,
         pollTimer: null,
         searchTimer: null,
+        crmReady: !!cfg.crmReady,
+        crmUrls: {},
+        crmNotes: [],
+        crmTimeline: [],
+        crmStatus: '',
+        crmAssignee: '',
+        crmAssigneePending: '',
+        transferReason: '',
+        transferReasonOpen: false,
+        noteBody: '',
+        crmSaving: false,
+        crmError: '',
+        filterStatus: new URLSearchParams(window.location.search).get('status') || '',
+        filterAssigned: new URLSearchParams(window.location.search).get('assigned_to') || '',
+        filterMine: new URLSearchParams(window.location.search).get('mine') === '1',
 
         init() {
             this.bootstrapTemplates();
@@ -366,9 +408,114 @@ function whatsappInbox() {
             const params = new URLSearchParams();
             if (id) params.set('conversation', id);
             if (this.searchQuery) params.set('search', this.searchQuery);
+            if (this.filterStatus) params.set('status', this.filterStatus);
+            if (this.filterAssigned) params.set('assigned_to', this.filterAssigned);
+            if (this.filterMine) params.set('mine', '1');
             const qs = params.toString();
             const url = this.inboxUrl + (qs ? '?' + qs : '');
             window.history.pushState({ conversationId: id }, '', url);
+        },
+
+        filterParams() {
+            const params = new URLSearchParams();
+            if (this.searchQuery) params.set('search', this.searchQuery);
+            if (this.filterStatus) params.set('status', this.filterStatus);
+            if (this.filterAssigned) params.set('assigned_to', this.filterAssigned);
+            if (this.filterMine) params.set('mine', '1');
+            return params;
+        },
+
+        applyFilters() {
+            this.pushUrl(this.conversationId);
+            this.searchConversations();
+        },
+
+        syncCrmFromConversation(conv) {
+            if (!conv?.crm) return;
+            this.crmStatus = conv.crm.status || 'open';
+            this.crmAssignee = conv.crm.assigned_to ? String(conv.crm.assigned_to) : '';
+            this.crmAssigneePending = this.crmAssignee;
+            this.transferReasonOpen = false;
+            this.transferReason = '';
+        },
+
+        hasTag(tagId) {
+            const tags = this.activeConversation?.crm?.tags || [];
+            return tags.some(t => t.id === tagId);
+        },
+
+        async crmPost(url, body = {}) {
+            this.crmSaving = true;
+            this.crmError = '';
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': this.csrf,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify(body),
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    this.crmError = data.error || data.message || 'فشلت العملية';
+                    return null;
+                }
+                if (data.conversation) {
+                    this.activeConversation = data.conversation;
+                    this.syncCrmFromConversation(data.conversation);
+                    this.upsertConversation(data.conversation);
+                }
+                if (Array.isArray(data.timeline)) this.crmTimeline = data.timeline;
+                return data;
+            } catch (_) {
+                this.crmError = 'خطأ في الاتصال';
+                return null;
+            } finally {
+                this.crmSaving = false;
+            }
+        },
+
+        async updateCrmStatus() {
+            if (!this.crmUrls.status || !this.crmStatus) return;
+            await this.crmPost(this.crmUrls.status, { status: this.crmStatus });
+        },
+
+        transferConversation() {
+            if (!this.crmUrls.transfer) return;
+            if (String(this.crmAssignee) === String(this.crmAssigneePending)) return;
+            this.transferReasonOpen = true;
+        },
+
+        async confirmTransfer() {
+            if (!this.crmUrls.transfer) return;
+            const data = await this.crmPost(this.crmUrls.transfer, {
+                assigned_to: parseInt(this.crmAssignee, 10),
+                reason: this.transferReason || null,
+            });
+            if (data) {
+                this.crmAssigneePending = this.crmAssignee;
+                this.transferReasonOpen = false;
+                this.transferReason = '';
+            }
+        },
+
+        async toggleTag(tagId) {
+            if (!this.crmUrls.tag) return;
+            const attach = !this.hasTag(tagId);
+            const url = this.crmUrls.tag + '/' + tagId;
+            await this.crmPost(url, { attach });
+        },
+
+        async addNote() {
+            if (!this.crmUrls.notes || !this.noteBody.trim()) return;
+            const data = await this.crmPost(this.crmUrls.notes, { body: this.noteBody.trim() });
+            if (data?.note) {
+                this.crmNotes.unshift(data.note);
+                this.noteBody = '';
+            }
         },
 
         backToList() {
@@ -445,8 +592,7 @@ function whatsappInbox() {
         async searchConversations() {
             this.loadingList = true;
             try {
-                const params = new URLSearchParams();
-                if (this.searchQuery) params.set('search', this.searchQuery);
+                const params = this.filterParams();
                 const res = await fetch(this.pollUrl + '?' + params.toString(), {
                     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                 });
@@ -493,6 +639,10 @@ function whatsappInbox() {
                 this.withinWindow = !!data.within_service_window;
                 this.replyUrl = data.reply_url;
                 this.templateUrl = data.template_url;
+                this.crmUrls = data.crm_urls || {};
+                this.crmNotes = data.notes || [];
+                this.crmTimeline = data.timeline || [];
+                this.syncCrmFromConversation(data.conversation);
                 this.lastMessageId = this.chatMessages.length ? this.chatMessages[this.chatMessages.length - 1].id : 0;
                 this.unreadTotal = data.unread_total ?? this.unreadTotal;
 
@@ -514,8 +664,7 @@ function whatsappInbox() {
         async poll() {
             if (!this.pollUrl) return;
             try {
-                const params = new URLSearchParams();
-                if (this.searchQuery) params.set('search', this.searchQuery);
+                const params = this.filterParams();
                 if (this.conversationId) {
                     params.set('conversation_id', this.conversationId);
                     params.set('after_id', this.lastMessageId);

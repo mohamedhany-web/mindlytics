@@ -6,7 +6,6 @@
 @section('content')
 <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" style="background: #f8fafc; min-height: 100vh;">
     @include('admin.whatsapp._alerts')
-    @include('admin.whatsapp._nav', ['active' => 'batches'])
 
     @include('admin.whatsapp._page-header', [
         'title' => 'دفعات الإرسال',
