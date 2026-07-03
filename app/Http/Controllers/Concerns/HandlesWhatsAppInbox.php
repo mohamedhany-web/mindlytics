@@ -13,6 +13,7 @@ use App\Services\WhatsAppInboxService;
 use App\Support\WhatsAppCloudSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
@@ -375,18 +376,48 @@ trait HandlesWhatsAppInbox
             [$inbox] = $this->inboxServices();
             $this->authorizeInboxConversation($conversation);
 
-            $validated = $request->validate([
-                'file' => 'required|file|max:16384',
-                'caption' => 'nullable|string|max:1024',
-                'voice_note' => 'nullable|boolean',
-            ]);
+            $voiceNote = (bool) $request->boolean('voice_note');
+            $caption = null;
+            $uploadedFile = null;
+
+            if ($request->filled('audio_base64')) {
+                $validated = $request->validate([
+                    'audio_base64' => 'required|string|max:25000000',
+                    'audio_mime' => 'nullable|string|max:128',
+                    'audio_name' => 'nullable|string|max:255',
+                    'caption' => 'nullable|string|max:1024',
+                    'voice_note' => 'nullable|boolean',
+                ]);
+                $voiceNote = (bool) $request->boolean('voice_note');
+                $caption = $validated['caption'] ?? null;
+                $uploadedFile = $this->inboxUploadedFileFromBase64(
+                    (string) $validated['audio_base64'],
+                    (string) ($validated['audio_mime'] ?? 'application/octet-stream'),
+                    (string) ($validated['audio_name'] ?? 'voice.webm'),
+                );
+                if ($uploadedFile === null) {
+                    return response()->json([
+                        'success' => false,
+                        'error' => 'تعذّر قراءة الملف الصوتي',
+                    ], 422);
+                }
+            } else {
+                $validated = $request->validate([
+                    'file' => 'required|file|max:16384',
+                    'caption' => 'nullable|string|max:1024',
+                    'voice_note' => 'nullable|boolean',
+                ]);
+                $voiceNote = (bool) $request->boolean('voice_note');
+                $caption = $validated['caption'] ?? null;
+                $uploadedFile = $request->file('file');
+            }
 
             $result = $inbox->sendMediaReply(
                 $conversation,
-                $request->file('file'),
+                $uploadedFile,
                 auth()->id(),
-                $validated['caption'] ?? null,
-                (bool) $request->boolean('voice_note'),
+                $caption,
+                $voiceNote,
             );
 
             if (! ($result['success'] ?? false)) {
@@ -783,6 +814,33 @@ trait HandlesWhatsAppInbox
 
             return [];
         }
+    }
+
+    protected function inboxUploadedFileFromBase64(string $payload, string $mime, string $name): ?UploadedFile
+    {
+        if (str_contains($payload, ',')) {
+            $payload = explode(',', $payload, 2)[1];
+        }
+
+        $binary = base64_decode($payload, true);
+        if ($binary === false || $binary === '') {
+            return null;
+        }
+
+        $tmp = tempnam(sys_get_temp_dir(), 'wa_audio_');
+        if ($tmp === false) {
+            return null;
+        }
+
+        if (file_put_contents($tmp, $binary) === false) {
+            @unlink($tmp);
+
+            return null;
+        }
+
+        $safeName = preg_replace('/[^\w.\-]+/u', '_', $name) ?: 'voice.webm';
+
+        return new UploadedFile($tmp, $safeName, $mime, null, true);
     }
 
     /** @return array<string, string> */

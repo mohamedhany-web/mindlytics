@@ -977,31 +977,64 @@ function whatsappInbox() {
             return (this.conversationUrlTemplate || '').replace('__ID__', id);
         },
 
-        /** مسار إرسال الوسائط — دائماً من المحادثة الحالية ونفس نطاق الصفحة لتجنب redirect → HTML */
+        /** مسار إرسال الوسائط — مسار نسبي على نفس الصفحة (يتجنب redirect على الاستضافة المشتركة) */
         mediaSendUrl(id) {
             const cid = id || this.conversationId;
             if (!cid) return null;
 
-            const conv = this.conversationUrl(cid);
-            if (conv) {
+            if (this.mediaUrl) {
                 try {
-                    const path = (conv.startsWith('http') ? new URL(conv).pathname : conv)
-                        .replace(/\/+$/, '') + '/media';
-                    return window.location.origin + path;
+                    const u = new URL(this.mediaUrl, window.location.origin);
+                    return u.pathname;
                 } catch (_) {}
             }
 
-            if (!this.mediaUrl) return null;
+            const conv = this.conversationUrl(cid);
+            if (!conv) return null;
+
             try {
-                const u = new URL(this.mediaUrl, window.location.origin);
-                return window.location.origin + u.pathname;
+                const path = (conv.startsWith('http') ? new URL(conv).pathname : conv)
+                    .replace(/\/+$/, '') + '/media';
+                return path.startsWith('/') ? path : '/' + path;
             } catch (_) {
-                return this.mediaUrl;
+                return null;
             }
         },
 
         csrfToken() {
             return document.querySelector('meta[name="csrf-token"]')?.content || this.csrf || '';
+        },
+
+        xsrfToken() {
+            const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
+            return match ? decodeURIComponent(match[1]) : '';
+        },
+
+        fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(new Error('read failed'));
+                reader.readAsDataURL(file);
+            });
+        },
+
+        async postMediaRequest(uploadUrl, token, body, isJson = false) {
+            const headers = {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': token,
+                'X-Requested-With': 'XMLHttpRequest',
+            };
+            const xsrf = this.xsrfToken();
+            if (xsrf) headers['X-XSRF-TOKEN'] = xsrf;
+            if (isJson) headers['Content-Type'] = 'application/json';
+
+            return fetch(uploadUrl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers,
+                body: isJson ? JSON.stringify(body) : body,
+            });
         },
 
         pushUrl(id) {
@@ -1767,26 +1800,23 @@ function whatsappInbox() {
             this.scrollChat();
 
             try {
-                const form = new FormData();
-                form.append('file', file);
-                form.append('_token', token);
-                if (voiceNote) form.append('voice_note', '1');
-                const res = await fetch(uploadUrl, {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    redirect: 'manual',
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': token,
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                    body: form,
-                });
-                if (res.type === 'opaqueredirect' || (res.status >= 300 && res.status < 400)) {
-                    this.removePendingMessage(tmpId);
-                    this.replyError = 'تم إعادة توجيه الطلب — حدّث الصفحة (Ctrl+Shift+R) وحاول مرة أخرى.';
-                    return;
+                let res;
+                // Voice Note / صوت: JSON+base64 — يتجنب حظر multipart على Hostinger/ModSecurity
+                if (voiceNote || isAudio) {
+                    const base64 = await this.fileToBase64(file);
+                    res = await this.postMediaRequest(uploadUrl, token, {
+                        audio_base64: base64,
+                        audio_mime: file.type || 'application/octet-stream',
+                        audio_name: file.name || 'voice.webm',
+                        voice_note: voiceNote,
+                    }, true);
+                } else {
+                    const form = new FormData();
+                    form.append('file', file);
+                    form.append('_token', token);
+                    res = await this.postMediaRequest(uploadUrl, token, form, false);
                 }
+
                 const data = await this.parseJsonResponse(res);
                 if (!data.success) {
                     this.removePendingMessage(tmpId);
