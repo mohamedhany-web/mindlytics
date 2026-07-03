@@ -361,6 +361,7 @@ trait HandlesWhatsAppInbox
             $validated = $request->validate([
                 'file' => 'required|file|max:16384',
                 'caption' => 'nullable|string|max:1024',
+                'voice_note' => 'nullable|boolean',
             ]);
 
             $result = $inbox->sendMediaReply(
@@ -368,6 +369,7 @@ trait HandlesWhatsAppInbox
                 $request->file('file'),
                 auth()->id(),
                 $validated['caption'] ?? null,
+                (bool) $request->boolean('voice_note'),
             );
 
             if (! ($result['success'] ?? false)) {

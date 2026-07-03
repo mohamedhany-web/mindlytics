@@ -1181,8 +1181,12 @@ class WhatsAppCloudService
     /**
      * @return array{success: bool, media_id?: string, error?: string}
      */
-    public function uploadMediaFile(string $absolutePath, string $mimeType, string $waType): array
-    {
+    public function uploadMediaFile(
+        string $absolutePath,
+        string $mimeType,
+        string $waType,
+        ?string $filename = null,
+    ): array {
         $waType = trim($waType);
         if (! in_array($waType, ['audio', 'image', 'video', 'document'], true)) {
             return ['success' => false, 'error' => 'نوع الوسائط غير مدعوم'];
@@ -1197,10 +1201,13 @@ class WhatsAppCloudService
             return ['success' => false, 'error' => 'إعدادات Meta غير مكتملة'];
         }
 
+        $uploadName = $filename ?: basename($absolutePath);
+        $mimeType = trim($mimeType) ?: 'application/octet-stream';
+
         try {
             $response = Http::withToken($creds['access_token'])
                 ->timeout(120)
-                ->attach('file', file_get_contents($absolutePath), basename($absolutePath))
+                ->attach('file', file_get_contents($absolutePath), $uploadName, ['Content-Type' => $mimeType])
                 ->post("{$this->graphUrl()}/{$creds['phone_number_id']}/media", [
                     'messaging_product' => 'whatsapp',
                     'type' => $waType,

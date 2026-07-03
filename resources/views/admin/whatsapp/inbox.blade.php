@@ -71,6 +71,7 @@
         'startLeadId' => $startLead->id ?? null,
         'startLeadPhone' => $startLead->phone ?? null,
         'startLeadName' => $startLead->name ?? null,
+        'voiceNoteConversionReady' => $inboxService->voiceNoteConversionReady(),
     ];
 @endphp
 
@@ -410,7 +411,33 @@
                             إذا لم يرد العميل خلال 24 ساعة، قد يرفض Meta الرسالة النصية — جرّب الإرسال أو استخدم قالباً من الأسفل.
                         </p>
 
-                        <div class="flex items-end gap-2">
+                        {{-- معاينة رسالة صوتية قبل الإرسال --}}
+                        <div x-show="showVoicePreview" x-cloak
+                             class="mb-2 bg-white border border-emerald-200 rounded-2xl px-3 py-3 shadow-sm">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                                    <i class="fas fa-microphone text-sm"></i>
+                                </span>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-xs font-semibold text-emerald-800">معاينة الرسالة الصوتية</p>
+                                    <p class="text-[10px] text-slate-500">ستُرسل كـ Voice Note في واتساب (OGG/Opus)</p>
+                                </div>
+                            </div>
+                            <audio :src="voicePreviewUrl" controls preload="metadata" class="wa-msg-audio w-full mb-2"></audio>
+                            <div class="flex gap-2 justify-end">
+                                <button type="button" @click="cancelVoicePreview()"
+                                        class="text-xs px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200">
+                                    <i class="fas fa-trash-alt ml-1"></i> حذف
+                                </button>
+                                <button type="button" @click="sendVoicePreview()" :disabled="sending"
+                                        class="text-xs px-4 py-1.5 rounded-full bg-emerald-500 text-white font-semibold hover:bg-emerald-600 disabled:opacity-40">
+                                    <i class="fas" :class="sending ? 'fa-spinner fa-spin' : 'fa-paper-plane'"></i>
+                                    <span class="mr-1">إرسال</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-end gap-2" :class="showVoicePreview ? 'opacity-50 pointer-events-none' : ''">
                             <input type="file" x-ref="mediaInput" class="hidden" accept="image/jpeg,image/png,image/webp,audio/ogg,audio/mpeg,audio/mp4,audio/aac,audio/amr,audio/webm" @change="onMediaPicked($event)">
                             <input type="file" x-ref="audioInput" class="hidden" accept="audio/ogg,audio/mpeg,audio/mp4,audio/aac,audio/amr,audio/webm,.ogg,.mp3,.m4a,.aac,.amr,.webm" @change="onMediaPicked($event)">
                             <div class="flex flex-col gap-1 shrink-0">
@@ -454,7 +481,14 @@
                             <i class="fas fa-spinner fa-spin"></i> اختر <strong>السماح</strong> في رسالة المتصفح التي ظهرت أعلى الصفحة
                         </p>
                         <p x-show="recording" x-cloak class="mt-1.5 text-[10px] text-rose-700 flex items-center gap-1">
-                            <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span> جاري التسجيل… اضغط إيقاف لإرسال الرسالة الصوتية
+                            <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                            <span>جاري التسجيل</span>
+                            <span class="font-mono font-semibold" x-text="'(' + recordSeconds + 's)'"></span>
+                            <span>— اضغط إيقاف للمعاينة ثم الإرسال</span>
+                        </p>
+                        <p x-show="!voiceNoteConversionReady && !recording && !showVoicePreview" x-cloak
+                           class="mt-1.5 text-[10px] text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-1.5">
+                            لتسجيل رسائل صوتية (Voice Note) من Chrome/Edge، ثبّت <strong>ffmpeg</strong> على السيرفر أو عيّن <code class="text-[9px]">FFMPEG_PATH</code> في .env
                         </p>
                         <button type="button" @click="showTemplatePicker = !showTemplatePicker"
                                 class="mt-1.5 text-[10px] text-slate-500 hover:text-emerald-600 px-1">
@@ -846,6 +880,11 @@ function whatsappInbox() {
         recordChunks: [],
         recorderMime: '',
         recordStream: null,
+        recordSeconds: 0,
+        recordTimer: null,
+        showVoicePreview: false,
+        voicePreviewUrl: null,
+        voicePreviewFile: null,
         showMicModal: false,
         micModalMode: 'denied',
         micModalMessage: '',
@@ -879,6 +918,7 @@ function whatsappInbox() {
         startLeadId: cfg.startLeadId || null,
         startLeadPhone: cfg.startLeadPhone || '',
         startLeadName: cfg.startLeadName || '',
+        voiceNoteConversionReady: !!cfg.voiceNoteConversionReady,
 
         init() {
             this.bootstrapTemplates();
@@ -1450,7 +1490,17 @@ function whatsappInbox() {
         onMediaPicked(event) {
             const file = event.target.files?.[0];
             event.target.value = '';
-            if (file) this.uploadMediaFile(file);
+            if (!file) return;
+            const name = (file.name || '').toLowerCase();
+            const type = (file.type || '').toLowerCase();
+            const isImage = type.startsWith('image/');
+            const isVoiceNote = !isImage && (
+                type.includes('ogg') || name.endsWith('.ogg')
+                || type.includes('webm') || name.endsWith('.webm')
+                || type.includes('mp4') || name.endsWith('.m4a')
+            );
+            this.cancelVoicePreview();
+            this.uploadMediaFile(file, { voiceNote: isVoiceNote });
         },
 
         pickAudioFile() {
@@ -1459,6 +1509,8 @@ function whatsappInbox() {
         },
 
         async toggleRecording() {
+            if (this.showVoicePreview) return;
+
             if (this.recording) {
                 this.stopRecording();
                 return;
@@ -1466,6 +1518,7 @@ function whatsappInbox() {
 
             this.replyError = '';
             this.micWaiting = false;
+            this.cancelVoicePreview();
 
             if (!window.isSecureContext) {
                 this.openMicModal('error', 'التسجيل الصوتي يتطلب فتح الموقع عبر HTTPS.');
@@ -1565,6 +1618,9 @@ function whatsappInbox() {
                 this.recorderMime ? { mimeType: this.recorderMime } : undefined
             );
             this.recordChunks = [];
+            this.recordSeconds = 0;
+            this.clearRecordTimer();
+            this.recordTimer = setInterval(() => { this.recordSeconds += 1; }, 1000);
             this.mediaRecorder.ondataavailable = (e) => {
                 if (e.data?.size) this.recordChunks.push(e.data);
             };
@@ -1572,6 +1628,13 @@ function whatsappInbox() {
             this.mediaRecorder.start(250);
             this.recording = true;
             this.replyError = '';
+        },
+
+        clearRecordTimer() {
+            if (this.recordTimer) {
+                clearInterval(this.recordTimer);
+                this.recordTimer = null;
+            }
         },
 
         async handleMicPermissionError(err) {
@@ -1613,6 +1676,7 @@ function whatsappInbox() {
         },
 
         cleanupMicStream() {
+            this.clearRecordTimer();
             if (this.recordStream) {
                 this.recordStream.getTracks().forEach(t => t.stop());
                 this.recordStream = null;
@@ -1630,23 +1694,51 @@ function whatsappInbox() {
 
         finishRecording() {
             this.cleanupMicStream();
-            if (!this.recordChunks.length) return;
+            if (!this.recordChunks.length) {
+                this.replyError = 'التسجيل فارغ — حاول مرة أخرى.';
+                return;
+            }
             const mime = this.recorderMime || 'audio/webm';
             const blob = new Blob(this.recordChunks, { type: mime });
+            if (blob.size < 500) {
+                this.replyError = 'التسجيل قصير جداً — سجّل لثانية على الأقل.';
+                this.recordChunks = [];
+                return;
+            }
             const ext = mime.includes('ogg') ? 'ogg' : (mime.includes('mp4') ? 'm4a' : 'webm');
-            const file = new File([blob], `voice-${Date.now()}.${ext}`, { type: mime });
-            this.uploadMediaFile(file);
+            this.cancelVoicePreview();
+            this.voicePreviewFile = new File([blob], `voice-${Date.now()}.${ext}`, { type: mime });
+            this.voicePreviewUrl = URL.createObjectURL(blob);
+            this.showVoicePreview = true;
             this.recordChunks = [];
+            this.replyError = '';
         },
 
-        async uploadMediaFile(file) {
+        cancelVoicePreview() {
+            if (this.voicePreviewUrl) {
+                URL.revokeObjectURL(this.voicePreviewUrl);
+            }
+            this.voicePreviewUrl = null;
+            this.voicePreviewFile = null;
+            this.showVoicePreview = false;
+        },
+
+        sendVoicePreview() {
+            if (!this.voicePreviewFile || this.sending) return;
+            const file = this.voicePreviewFile;
+            this.cancelVoicePreview();
+            this.uploadMediaFile(file, { voiceNote: true });
+        },
+
+        async uploadMediaFile(file, options = {}) {
+            const voiceNote = !!options.voiceNote;
             const uploadUrl = this.mediaSendUrl();
             if (!uploadUrl || this.sending) return;
             this.sending = true;
             this.replyError = '';
             const token = this.csrfToken();
             const isAudio = (file.type || '').startsWith('audio/');
-            const label = isAudio ? '[رسالة صوتية]' : '[صورة]';
+            const label = voiceNote ? '[رسالة صوتية]' : (isAudio ? '[صوت]' : '[صورة]');
             const tmpId = 'tmp-media-' + Date.now();
             this.appendChatMessage({
                 _tmp: tmpId,
@@ -1654,7 +1746,7 @@ function whatsappInbox() {
                 id: null,
                 direction: 'outbound',
                 body: label,
-                message_type: isAudio ? 'audio' : 'image',
+                message_type: voiceNote || isAudio ? 'audio' : 'image',
                 is_inbound: false,
                 status: 'pending',
                 created_at_human: 'الآن',
@@ -1665,6 +1757,7 @@ function whatsappInbox() {
                 const form = new FormData();
                 form.append('file', file);
                 form.append('_token', token);
+                if (voiceNote) form.append('voice_note', '1');
                 const res = await fetch(uploadUrl, {
                     method: 'POST',
                     credentials: 'same-origin',

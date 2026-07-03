@@ -484,9 +484,11 @@ class WhatsAppInboxService
         UploadedFile $file,
         ?int $userId = null,
         ?string $caption = null,
+        bool $voiceNote = false,
     ): array {
         $mime = (string) $file->getMimeType();
-        $waType = $this->resolveWaMediaType($mime, $file->getClientOriginalExtension());
+        $extension = strtolower((string) $file->getClientOriginalExtension());
+        $waType = $this->resolveWaMediaType($mime, $extension);
         if ($waType === null) {
             return ['success' => false, 'error' => 'نوع الملف غير مدعوم. استخدم صورة (jpg/png) أو صوت (ogg/mp3/m4a/aac).'];
         }
@@ -502,22 +504,22 @@ class WhatsAppInboxService
 
         $uploadPath = $tempPath;
         $uploadMime = $mime;
+        $uploadFilename = $file->getClientOriginalName();
         $cleanup = null;
 
-        if ($waType === 'audio' && str_contains(strtolower($mime), 'webm')) {
-            $converted = $this->convertWebmToOgg($tempPath);
-            if (isset($converted['path'])) {
-                $uploadPath = $converted['path'];
-                $uploadMime = 'audio/ogg';
-                $cleanup = $uploadPath;
-            } else {
-                // بدون ffmpeg أو فشل التحويل: أرسل WebM كمستند بدل تعطيل الإرسال
-                $waType = 'document';
-                $uploadMime = 'audio/webm';
+        if ($voiceNote || ($waType === 'audio' && $this->shouldConvertToOggOpus($mime, $extension))) {
+            $prepared = $this->prepareOggOpusVoiceNote($tempPath, $mime, $extension, $voiceNote);
+            if (isset($prepared['error'])) {
+                return ['success' => false, 'error' => $prepared['error']];
             }
+            $uploadPath = $prepared['path'];
+            $uploadMime = $prepared['mime'];
+            $uploadFilename = $prepared['filename'];
+            $cleanup = $prepared['cleanup'] ?? null;
+            $waType = 'audio';
         }
 
-        $upload = $this->cloud->uploadMediaFile($uploadPath, $uploadMime, $waType);
+        $upload = $this->cloud->uploadMediaFile($uploadPath, $uploadMime, $waType, $uploadFilename);
         if ($cleanup && is_file($cleanup) && $uploadPath !== $cleanup) {
             @unlink($cleanup);
         }
@@ -561,7 +563,7 @@ class WhatsAppInboxService
                     'media' => [
                         'id' => $mediaId,
                         'mime_type' => $uploadMime,
-                        'filename' => $file->getClientOriginalName(),
+                        'filename' => $uploadFilename,
                         'local' => true,
                     ],
                 ],
@@ -875,10 +877,67 @@ class WhatsAppInboxService
         return null;
     }
 
+    private function shouldConvertToOggOpus(string $mime, string $extension): bool
+    {
+        $mime = strtolower($mime);
+        $extension = strtolower($extension);
+
+        if (str_contains($mime, 'ogg') || $extension === 'ogg') {
+            return false;
+        }
+
+        // تنسيقات تسجيل المتصفح (WebM / MP4) — تحتاج تحويل لرسالة صوتية
+        return str_contains($mime, 'webm')
+            || str_contains($mime, 'mp4')
+            || in_array($extension, ['webm', 'm4a', 'mp4'], true);
+    }
+
+    /**
+     * تحضير ملف OGG/Opus لرسالة صوتية (Voice Note) في واتساب.
+     *
+     * @return array{path: string, mime: string, filename: string, cleanup?: string}|array{error: string}
+     */
+    private function prepareOggOpusVoiceNote(
+        string $inputPath,
+        string $mime,
+        string $extension,
+        bool $required,
+    ): array {
+        $mime = strtolower($mime);
+        $extension = strtolower($extension);
+
+        if (str_contains($mime, 'ogg') || $extension === 'ogg') {
+            return [
+                'path' => $inputPath,
+                'mime' => 'audio/ogg',
+                'filename' => 'voice-' . time() . '.ogg',
+                'cleanup' => null,
+            ];
+        }
+
+        $converted = $this->convertToOggOpus($inputPath);
+        if (isset($converted['path'])) {
+            return [
+                'path' => $converted['path'],
+                'mime' => 'audio/ogg',
+                'filename' => 'voice-' . time() . '.ogg',
+                'cleanup' => $converted['path'],
+            ];
+        }
+
+        if ($required) {
+            return [
+                'error' => 'لإرسال رسالة صوتية (Voice Note) يجب تحويل التسجيل إلى OGG/Opus — ثبّت ffmpeg على السيرفر أو عيّن FFMPEG_PATH في .env',
+            ];
+        }
+
+        return ['error' => 'تعذّر تحويل الملف الصوتي. جرّب ملف OGG أو ثبّت ffmpeg.'];
+    }
+
     /**
      * @return array{path: string}|array{error: string}
      */
-    private function convertWebmToOgg(string $webmPath): array
+    private function convertToOggOpus(string $inputPath): array
     {
         $ffmpeg = $this->findFfmpegBinary();
         if ($ffmpeg === null) {
@@ -890,9 +949,17 @@ class WhatsAppInboxService
             $ffmpeg,
             '-y',
             '-i',
-            $webmPath,
+            $inputPath,
             '-c:a',
             'libopus',
+            '-b:a',
+            '24k',
+            '-ar',
+            '48000',
+            '-ac',
+            '1',
+            '-application',
+            'voip',
             '-t',
             '300',
             $out,
@@ -915,6 +982,14 @@ class WhatsAppInboxService
         }
 
         return ['path' => $out];
+    }
+
+    /**
+     * @return array{path: string}|array{error: string}
+     */
+    private function convertWebmToOgg(string $webmPath): array
+    {
+        return $this->convertToOggOpus($webmPath);
     }
 
     /**
@@ -967,11 +1042,23 @@ class WhatsAppInboxService
         return $exitCode === 0;
     }
 
+    public function voiceNoteConversionReady(): bool
+    {
+        return $this->findFfmpegBinary() !== null;
+    }
+
     private function findFfmpegBinary(): ?string
     {
-        $candidates = ['ffmpeg'];
+        $candidates = [];
+        $envPath = trim((string) env('FFMPEG_PATH', ''));
+        if ($envPath !== '') {
+            $candidates[] = $envPath;
+        }
+
+        $candidates[] = 'ffmpeg';
         if (PHP_OS_FAMILY === 'Windows') {
             $candidates[] = 'C:\\ffmpeg\\bin\\ffmpeg.exe';
+            $candidates[] = 'C:\\xampp\\ffmpeg\\bin\\ffmpeg.exe';
         }
 
         foreach ($candidates as $candidate) {
