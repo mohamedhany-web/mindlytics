@@ -1,4 +1,8 @@
-@php $empLocale = app()->getLocale(); $empRtl = $empLocale === 'ar'; @endphp
+@php
+    $empLocale = app()->getLocale();
+    $empRtl = $empLocale === 'ar';
+    $waImmersive = (bool) ($waImmersiveInbox ?? false);
+@endphp
 <!DOCTYPE html>
 <html lang="{{ $empLocale }}" dir="{{ $empRtl ? 'rtl' : 'ltr' }}">
 <head>
@@ -33,11 +37,52 @@
         .employee-sidebar-nav::-webkit-scrollbar {
             display: none;
         }
+        .emp-sidebar-compact .emp-sidebar-label,
+        .emp-sidebar-compact .emp-sidebar-logo-text,
+        .emp-sidebar-compact .emp-sidebar-user-meta,
+        .emp-sidebar-compact .emp-sidebar-logout-text,
+        .emp-sidebar-compact .employee-sidebar-nav a > span,
+        .emp-sidebar-compact .employee-sidebar-nav p {
+            display: none !important;
+        }
+        .emp-sidebar-compact .emp-sidebar-logo-wrap {
+            padding: 0.75rem;
+            justify-content: center;
+        }
+        .emp-sidebar-compact .emp-sidebar-logo-wrap .w-16 {
+            width: 2.5rem;
+            height: 2.5rem;
+        }
+        .emp-sidebar-compact .emp-sidebar-link {
+            justify-content: center;
+            padding-left: 0.625rem;
+            padding-right: 0.625rem;
+            gap: 0;
+        }
+        .emp-sidebar-compact .employee-sidebar-nav a {
+            justify-content: center;
+            padding-left: 0.625rem;
+            padding-right: 0.625rem;
+            gap: 0;
+        }
+        .emp-sidebar-compact .employee-sidebar-nav {
+            padding-left: 0.375rem;
+            padding-right: 0.375rem;
+        }
+        .emp-sidebar-compact .emp-sidebar-user-row {
+            justify-content: center;
+        }
+        .emp-sidebar-compact .emp-sidebar-footer {
+            padding: 0.5rem;
+        }
+        body.employee-wa-immersive {
+            overflow: hidden;
+        }
     </style>
     
     @stack('styles')
 </head>
-<body class="bg-gray-50">
+<body class="bg-gray-50 {{ $waImmersive ? 'employee-wa-immersive' : '' }}">
     <div x-data="{ sidebarOpen: window.innerWidth >= 1024 }" 
          x-init="
           // إغلاق السايدبار عند النقر على الروابط
@@ -56,10 +101,11 @@
               }, 150);
           });
       "
-      @close-sidebar.window="sidebarOpen = false">
+      @close-sidebar.window="sidebarOpen = false"
+      @open-sidebar.window="sidebarOpen = true">
     <div class="flex min-h-screen lg:h-screen overflow-x-hidden">
         <!-- Sidebar - Fixed -->
-        <aside class="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:right-0 lg:z-20 flex-shrink-0 inset-y-0">
+        <aside class="hidden lg:flex {{ $waImmersive ? 'lg:w-[4.25rem] emp-sidebar-compact' : 'lg:w-64' }} lg:flex-col lg:fixed lg:right-0 lg:z-20 flex-shrink-0 inset-y-0">
             @include('layouts.employee-sidebar')
         </aside>
 
@@ -88,9 +134,9 @@
         </div>
 
         <!-- Main content area -->
-        <div class="flex flex-col flex-1 min-w-0 lg:pr-64 w-full lg:h-screen">
+        <div class="flex flex-col flex-1 min-w-0 {{ $waImmersive ? 'lg:pr-[4.25rem]' : 'lg:pr-64' }} w-full lg:h-screen">
             <!-- Top navigation -->
-            <header class="sticky top-0 z-30 flex-shrink-0 flex h-14 sm:h-16 bg-gradient-to-r from-slate-50 via-blue-50 to-slate-100 shadow-lg border-b border-slate-200/50 backdrop-blur-sm">
+            <header class="sticky top-0 z-30 flex-shrink-0 flex h-14 sm:h-16 bg-gradient-to-r from-slate-50 via-blue-50 to-slate-100 shadow-lg border-b border-slate-200/50 backdrop-blur-sm {{ $waImmersive ? 'lg:hidden' : '' }}">
                 <button @click="sidebarOpen = true" class="px-3 sm:px-4 border-l border-slate-200/50 text-slate-700 hover:bg-slate-100/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-400 lg:hidden transition-colors">
                     <i class="fas fa-bars text-base sm:text-lg"></i>
                 </button>
@@ -148,8 +194,9 @@
             </header>
 
             <!-- Page Content -->
-            <main class="flex-1 overflow-y-auto bg-gray-50">
-                <div class="p-3 sm:p-4 md:p-6">
+            <main class="flex-1 overflow-y-auto {{ $waImmersive ? 'overflow-hidden bg-slate-50' : 'bg-gray-50' }}">
+                <div class="{{ $waImmersive ? 'p-0 h-full flex flex-col min-h-0 overflow-hidden' : 'p-3 sm:p-4 md:p-6' }}">
+                    @if(! $waImmersive)
                     @if(session('success'))
                         <div class="mb-4 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
                             <i class="fas fa-check-circle mr-2"></i>{{ session('success') }}
@@ -170,6 +217,7 @@
                                 @endforeach
                             </ul>
                         </div>
+                    @endif
                     @endif
 
                     @yield('content')

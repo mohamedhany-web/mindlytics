@@ -44,18 +44,7 @@ trait HandlesWhatsAppInbox
 
         $userId = (int) auth()->id();
 
-        if ((int) $conversation->assigned_to === $userId) {
-            return;
-        }
-
-        if ($conversation->sales_lead_id) {
-            $conversation->loadMissing('salesLead');
-            if ((int) $conversation->salesLead?->assigned_to === $userId) {
-                return;
-            }
-        }
-
-        if ($conversation->assigned_to === null && $conversation->sales_lead_id === null) {
+        if ($conversation->isOwnedBySalesAgent($userId)) {
             return;
         }
 

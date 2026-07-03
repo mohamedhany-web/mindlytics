@@ -15,6 +15,11 @@ class SalesWhatsAppInboxController extends Controller
 {
     use HandlesWhatsAppInbox;
 
+    public function __construct()
+    {
+        $this->middleware('sales.employee');
+    }
+
     protected function inboxView(): string
     {
         return 'admin.whatsapp.inbox';
@@ -31,6 +36,11 @@ class SalesWhatsAppInboxController extends Controller
             'waInboxSubtitle' => 'ردّ على عملائك وتابع مراحل الـ Pipeline من نفس الشاشة.',
             'waHideWebhookBanner' => true,
             'waHideAdminFilters' => true,
+            'waImmersiveInbox' => true,
+            'waEmployeeLeadsUrl' => route('employee.sales.leads.index'),
+            'waEmployeeSalesUrl' => route('employee.sales.dashboard'),
+            'waBtnPrimary' => 'inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors shadow-sm',
+            'waBtnSecondary' => 'inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors',
         ];
     }
 
@@ -69,8 +79,7 @@ class SalesWhatsAppInboxController extends Controller
         return array_filter([
             'status' => $request->query('status'),
             'tag_id' => $request->query('tag_id'),
-            'mine' => true,
-            'assigned_to' => (string) auth()->id(),
+            'sales_owned' => true,
         ], fn ($v) => $v !== null && $v !== '');
     }
 

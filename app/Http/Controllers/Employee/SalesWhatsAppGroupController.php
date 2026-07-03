@@ -10,6 +10,11 @@ class SalesWhatsAppGroupController extends Controller
 {
     use HandlesSalesWhatsAppGroups;
 
+    public function __construct()
+    {
+        $this->middleware('sales.employee');
+    }
+
     protected function waGroupsAudience(): string
     {
         return 'employee';

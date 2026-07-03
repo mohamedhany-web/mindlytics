@@ -103,6 +103,27 @@ class WhatsAppConversation extends Model
             ->withPivot('tagged_by', 'created_at');
     }
 
+    public function scopeOwnedBySalesAgent(Builder $query, User|int $user): Builder
+    {
+        $userId = $user instanceof User ? (int) $user->id : (int) $user;
+
+        return $query->where(function (Builder $q) use ($userId) {
+            $q->where('assigned_to', $userId)
+                ->orWhereHas('salesLead', fn (Builder $lq) => $lq->where('assigned_to', $userId));
+        });
+    }
+
+    public function isOwnedBySalesAgent(int $userId): bool
+    {
+        if ((int) $this->assigned_to === $userId) {
+            return true;
+        }
+
+        $this->loadMissing('salesLead');
+
+        return $this->sales_lead_id && (int) $this->salesLead?->assigned_to === $userId;
+    }
+
     public function scopeVisibleTo(Builder $query, ?User $user): Builder
     {
         if (! $user) {
@@ -111,6 +132,10 @@ class WhatsAppConversation extends Model
 
         if (in_array($user->role, ['admin', 'super_admin'], true)) {
             return $query;
+        }
+
+        if ($user->isSalesEmployee()) {
+            return $query->ownedBySalesAgent($user);
         }
 
         return $query->where(function (Builder $q) use ($user) {
@@ -135,6 +160,10 @@ class WhatsAppConversation extends Model
             } else {
                 $query->where('assigned_to', (int) $filters['assigned_to']);
             }
+        }
+
+        if (! empty($filters['sales_owned']) && auth()->check()) {
+            $query->ownedBySalesAgent(auth()->user());
         }
 
         if (! empty($filters['mine']) && auth()->check()) {

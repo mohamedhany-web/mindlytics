@@ -1,7 +1,7 @@
 <div class="flex flex-col h-full bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl border-l border-slate-700/50 text-white">
     <!-- شعار المنصة -->
-    <div class="p-6 border-b-2 border-slate-700/50 bg-slate-900/90 flex-shrink-0">
-        <a href="{{ route('employee.dashboard') }}" class="flex items-center gap-4">
+    <div class="p-6 border-b-2 border-slate-700/50 bg-slate-900/90 flex-shrink-0 emp-sidebar-logo-wrap">
+        <a href="{{ route('employee.dashboard') }}" class="flex items-center gap-4" title="Mindlytics">
             <div class="relative">
                 <div class="w-16 h-16 rounded-full flex items-center justify-center shadow-xl overflow-hidden p-1">
                     <img src="{{ $platformLogoUrl ?? asset('logo-fallback.svg') }}"
@@ -10,9 +10,9 @@
                          onerror="this.onerror=null;this.src='{{ asset('logo-fallback.svg') }}';">
                 </div>
             </div>
-            <div>
+            <div class="emp-sidebar-logo-text">
                 <h2 class="text-xl font-black bg-gradient-to-r from-blue-300 via-blue-200 to-blue-100 bg-clip-text text-transparent tracking-tight">Mindlytics</h2>
-                <p class="text-xs text-slate-300/80 font-bold">لوحة الموظف</p>
+                <p class="text-xs text-slate-300/80 font-bold emp-sidebar-label">لوحة الموظف</p>
             </div>
         </a>
     </div>
@@ -20,6 +20,7 @@
     <!-- Navigation (التمرير يعمل لكن شريط التمرير مخفي) -->
     <nav class="flex-1 overflow-y-auto overflow-x-hidden px-4 py-6 space-y-2 employee-sidebar-nav">
         <a href="{{ route('employee.dashboard') }}" 
+           title="لوحة التحكم"
            class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.dashboard') ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
             <i class="fas fa-home text-base"></i>
@@ -91,18 +92,21 @@
             <span>تقارير الأداء</span>
             </a>
             <a href="{{ route('employee.sales.leads.index') }}"
+               title="العملاء المحتملون"
                class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.leads.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
                @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
                 <i class="fas fa-user-plus text-base"></i>
                 <span>العملاء المحتملون</span>
             </a>
             <a href="{{ route('employee.sales.whatsapp.inbox.index') }}"
+               title="محادثات الواتساب"
                class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.whatsapp.inbox.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
                @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
                 <i class="fab fa-whatsapp text-base"></i>
                 <span>محادثات الواتساب</span>
             </a>
             <a href="{{ route('employee.sales.whatsapp-groups.index') }}"
+               title="مجموعات واتساب"
                class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.whatsapp-groups.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
                @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
                 <i class="fas fa-users text-base"></i>
@@ -221,8 +225,8 @@
     </nav>
 
     <!-- User Info -->
-    <div class="border-t border-slate-700/50 p-4">
-        <div class="flex items-center gap-3 mb-3">
+    <div class="border-t border-slate-700/50 p-4 emp-sidebar-footer">
+        <div class="flex items-center gap-3 mb-3 emp-sidebar-user-row">
             @php
                 $user = auth()->user();
                 $profileImage = $user->profile_image_url;
@@ -234,16 +238,16 @@
                     {{ mb_substr($user->name, 0, 1, 'UTF-8') }}
                 </div>
             @endif
-            <div class="flex-1 min-w-0">
+            <div class="flex-1 min-w-0 emp-sidebar-user-meta">
                 <p class="text-sm font-semibold text-white truncate">{{ $user->name }}</p>
                 <p class="text-xs text-slate-400 truncate">موظف</p>
             </div>
         </div>
         <form method="POST" action="{{ route('logout') }}" class="w-full">
             @csrf
-            <button type="submit" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition-colors">
+            <button type="submit" title="تسجيل الخروج" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition-colors">
                 <i class="fas fa-sign-out-alt"></i>
-                <span>تسجيل الخروج</span>
+                <span class="emp-sidebar-logout-text">تسجيل الخروج</span>
             </button>
         </form>
     </div>

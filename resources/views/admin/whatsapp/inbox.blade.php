@@ -90,10 +90,10 @@
 
 <script>window.__waInboxConfig = @json($inboxConfig);</script>
 
-<div class="wa-inbox-page flex flex-col min-h-0 overflow-hidden gap-2" x-data="whatsappInbox()" x-cloak>
+<div class="wa-inbox-page flex flex-col min-h-0 overflow-hidden gap-2 {{ ($waImmersiveInbox ?? false) ? 'wa-inbox-employee-immersive sales-wa-inbox' : '' }}" x-data="whatsappInbox()" x-cloak>
     @include('admin.whatsapp._alerts')
 
-    @if(!empty($webhookIssues) || !empty($webhookTips))
+    @if(empty($waHideWebhookBanner) && (!empty($webhookIssues) || !empty($webhookTips)))
         <div class="shrink-0 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 space-y-2">
             @if(!empty($webhookIssues))
                 <p class="font-bold flex items-center gap-2">
@@ -134,17 +134,34 @@
     @endif
 
     {{-- شريط علوي مدمج --}}
-    <div class="shrink-0 flex flex-wrap items-center justify-between gap-2 px-1">
+    <div class="shrink-0 flex flex-wrap items-center justify-between gap-2 px-1 {{ ($waImmersiveInbox ?? false) ? 'px-2 sm:px-3 pt-2' : '' }}">
         <div class="flex items-center gap-3 min-w-0">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-white shadow-md shrink-0">
-                <i class="fas fa-inbox text-sm"></i>
+            @if($waImmersiveInbox ?? false)
+            <button type="button" @click="$dispatch('open-sidebar')" class="lg:hidden w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-600 flex items-center justify-center shrink-0">
+                <i class="fas fa-bars text-sm"></i>
+            </button>
+            @endif
+            <div class="w-10 h-10 rounded-xl {{ ($inboxAudience ?? '') === 'employee' ? 'bg-slate-100 border border-slate-200' : 'bg-gradient-to-br from-emerald-500 to-green-600 shadow-md' }} flex items-center justify-center {{ ($inboxAudience ?? '') === 'employee' ? 'text-emerald-600' : 'text-white' }} shrink-0">
+                <i class="{{ ($inboxAudience ?? '') === 'employee' ? 'fab fa-whatsapp' : 'fas fa-inbox' }} text-sm"></i>
             </div>
             <div class="min-w-0">
                 <h2 class="text-base sm:text-lg font-black text-slate-900 truncate">{{ $waInboxTitle ?? 'المحادثات الواردة' }}</h2>
                 <p class="text-[11px] text-slate-500 truncate hidden sm:block">{{ $waInboxSubtitle ?? 'ردّ على العملاء وتابع الـ Pipeline' }}</p>
             </div>
         </div>
-        <div class="flex items-center gap-2 shrink-0">
+        <div class="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+            @if(($inboxAudience ?? '') === 'employee')
+            <a href="{{ $waEmployeeLeadsUrl ?? route('employee.sales.leads.index') }}"
+               class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-800 hover:bg-slate-900 text-white transition-colors">
+                <i class="fas fa-user-plus"></i>
+                <span class="hidden sm:inline">العملاء</span>
+            </a>
+            <a href="{{ $waEmployeeSalesUrl ?? route('employee.sales.dashboard') }}"
+               class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors hidden md:inline-flex">
+                <i class="fas fa-chart-line text-slate-500"></i>
+                <span>مركز المبيعات</span>
+            </a>
+            @endif
             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-white border border-slate-200 text-slate-700">
                 غير مقروء: <span x-text="unreadTotal">{{ (int) $unreadTotal }}</span>
             </span>
@@ -652,6 +669,35 @@
             height: calc(100dvh - 4.75rem);
             max-height: calc(100dvh - 4.75rem);
         }
+    }
+    body.employee-wa-immersive .wa-inbox-page.wa-inbox-employee-immersive {
+        height: 100dvh;
+        max-height: 100dvh;
+        gap: 0.375rem;
+        padding: 0.25rem 0.375rem 0.375rem;
+    }
+    @media (min-width: 1024px) {
+        body.employee-wa-immersive .wa-inbox-page.wa-inbox-employee-immersive {
+            padding: 0.375rem 0.5rem 0.5rem;
+        }
+    }
+    body.employee-wa-immersive main:has(.wa-inbox-page) > div:last-child {
+        padding-bottom: 0 !important;
+    }
+    body.employee-wa-immersive .wa-inbox-shell {
+        border-radius: 1rem;
+        border-color: #e2e8f0;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    }
+    .sales-wa-inbox .wa-inbox-shell {
+        border-color: #e2e8f0;
+    }
+    .sales-wa-inbox .wa-conv-sidebar {
+        background: #f8fafc;
+    }
+    .sales-wa-inbox .wa-conv-header {
+        background: #f8fafc;
+        border-color: #e2e8f0;
     }
     .wa-inbox-shell {
         display: grid;

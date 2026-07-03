@@ -1,0 +1,243 @@
+<?php $__env->startSection('title', 'إدارة المهام'); ?>
+<?php $__env->startSection('header', 'إدارة المهام'); ?>
+
+<?php $__env->startSection('content'); ?>
+<div class="space-y-6">
+    <!-- الهيدر -->
+    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">إدارة المهام</h1>
+                <p class="text-gray-600 mt-1">إدارة وتنظيم مهام الموظفين</p>
+            </div>
+            <a href="<?php echo e(route('admin.employee-tasks.create')); ?>" 
+               class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                <i class="fas fa-plus mr-2"></i>
+                إضافة مهمة جديدة
+            </a>
+        </div>
+
+        <!-- الفلاتر -->
+        <div class="mt-6 pt-6 border-t border-gray-200">
+            <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                <div>
+                    <label for="search" class="block text-sm font-medium text-gray-700 mb-1">البحث</label>
+                    <input type="text" name="search" id="search" value="<?php echo e(request('search')); ?>" 
+                           placeholder="البحث في المهام..."
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div>
+                    <label for="employee_id" class="block text-sm font-medium text-gray-700 mb-1">الموظف</label>
+                    <select name="employee_id" id="employee_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">جميع الموظفين</option>
+                        <?php $__currentLoopData = $employees; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $emp): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($emp->id); ?>" <?php echo e(request('employee_id') == $emp->id ? 'selected' : ''); ?>><?php echo e($emp->name); ?></option>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">الحالة</label>
+                    <select name="status" id="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">جميع الحالات</option>
+                        <option value="pending" <?php echo e(request('status') == 'pending' ? 'selected' : ''); ?>>معلقة</option>
+                        <option value="in_progress" <?php echo e(request('status') == 'in_progress' ? 'selected' : ''); ?>>قيد التنفيذ</option>
+                        <option value="completed" <?php echo e(request('status') == 'completed' ? 'selected' : ''); ?>>مكتملة</option>
+                        <option value="cancelled" <?php echo e(request('status') == 'cancelled' ? 'selected' : ''); ?>>ملغاة</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="task_type" class="block text-sm font-medium text-gray-700 mb-1">نوع المهمة</label>
+                    <select name="task_type" id="task_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">الكل</option>
+                        <option value="general" <?php echo e(request('task_type') == 'general' ? 'selected' : ''); ?>>عامة</option>
+                        <option value="video_editing" <?php echo e(request('task_type') == 'video_editing' ? 'selected' : ''); ?>>مونتاج فيديو</option>
+                        <option value="sales" <?php echo e(request('task_type') == 'sales' ? 'selected' : ''); ?>>مبيعات</option>
+                        <option value="design" <?php echo e(request('task_type') == 'design' ? 'selected' : ''); ?>>تصميم</option>
+                        <option value="design_moderator_delivery" <?php echo e(request('task_type') == 'design_moderator_delivery' ? 'selected' : ''); ?>>تسليم مشرف</option>
+                    </select>
+                </div>
+
+                <div class="flex items-end gap-2 lg:col-span-2">
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                        <i class="fas fa-search mr-2"></i>بحث
+                    </button>
+                    <?php if(request()->hasAny(['search', 'employee_id', 'status', 'priority', 'task_type'])): ?>
+                        <a href="<?php echo e(route('admin.employee-tasks.index')); ?>" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    <?php endif; ?>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- الإحصائيات -->
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
+        <div class="dashboard-card rounded-2xl p-5 sm:p-6 card-hover-effect relative overflow-hidden group border-2 border-blue-200/50 hover:border-blue-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 249, 255, 0.95) 50%, rgba(224, 242, 254, 0.9) 100%);">
+            <div class="relative z-10">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-600 mb-1">إجمالي</p>
+                        <p class="text-3xl font-black text-gray-900"><?php echo e($stats['total']); ?></p>
+                    </div>
+                    <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
+                        <i class="fas fa-tasks text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card rounded-2xl p-5 sm:p-6 card-hover-effect relative overflow-hidden group border-2 border-yellow-200/50 hover:border-yellow-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 251, 235, 0.95) 50%, rgba(254, 243, 199, 0.9) 100%);">
+            <div class="relative z-10">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-600 mb-1">معلقة</p>
+                        <p class="text-3xl font-black text-yellow-700"><?php echo e($stats['pending']); ?></p>
+                    </div>
+                    <div class="w-16 h-16 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
+                        <i class="fas fa-clock text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card rounded-2xl p-5 sm:p-6 card-hover-effect relative overflow-hidden group border-2 border-blue-200/50 hover:border-blue-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 249, 255, 0.95) 50%, rgba(224, 242, 254, 0.9) 100%);">
+            <div class="relative z-10">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-600 mb-1">قيد التنفيذ</p>
+                        <p class="text-3xl font-black text-blue-700"><?php echo e($stats['in_progress']); ?></p>
+                    </div>
+                    <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
+                        <i class="fas fa-spinner text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card rounded-2xl p-5 sm:p-6 card-hover-effect relative overflow-hidden group border-2 border-green-200/50 hover:border-green-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 253, 250, 0.95) 50%, rgba(209, 250, 229, 0.9) 100%);">
+            <div class="relative z-10">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-600 mb-1">مكتملة</p>
+                        <p class="text-3xl font-black text-green-700"><?php echo e($stats['completed']); ?></p>
+                    </div>
+                    <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
+                        <i class="fas fa-check-circle text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card rounded-2xl p-5 sm:p-6 card-hover-effect relative overflow-hidden group border-2 border-red-200/50 hover:border-red-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(254, 242, 242, 0.95) 50%, rgba(254, 226, 226, 0.9) 100%);">
+            <div class="relative z-10">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-600 mb-1">متأخرة</p>
+                        <p class="text-3xl font-black text-red-700"><?php echo e($stats['overdue']); ?></p>
+                    </div>
+                    <div class="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
+                        <i class="fas fa-exclamation-triangle text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- قائمة المهام -->
+    <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        <?php if($tasks->count() > 0): ?>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">المهمة</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الموظف</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الأولوية</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الموعد</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الحالة</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <?php $__currentLoopData = $tasks; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $task): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4">
+                                <div class="text-sm font-medium text-gray-900"><?php echo e($task->title); ?></div>
+                                <span class="inline-flex mt-1 px-2 py-0.5 text-xs font-semibold rounded-full
+                                    <?php if($task->task_type === 'video_editing'): ?> bg-violet-100 text-violet-800
+                                    <?php elseif($task->task_type === 'sales'): ?> bg-emerald-100 text-emerald-800
+                                    <?php elseif($task->task_type === 'design'): ?> bg-fuchsia-100 text-fuchsia-800
+                                    <?php elseif($task->task_type === 'design_moderator_delivery'): ?> bg-indigo-100 text-indigo-800
+                                    <?php else: ?> bg-slate-100 text-slate-700
+                                    <?php endif; ?>"><?php echo e(\App\Models\EmployeeTask::taskTypeLabel($task->task_type)); ?></span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900"><?php echo e($task->employee->name); ?></div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full
+                                    <?php if($task->priority === 'urgent'): ?> bg-red-100 text-red-800
+                                    <?php elseif($task->priority === 'high'): ?> bg-orange-100 text-orange-800
+                                    <?php elseif($task->priority === 'medium'): ?> bg-yellow-100 text-yellow-800
+                                    <?php else: ?> bg-gray-100 text-gray-800
+                                    <?php endif; ?>">
+                                    <?php if($task->priority === 'urgent'): ?> عاجل
+                                    <?php elseif($task->priority === 'high'): ?> عالي
+                                    <?php elseif($task->priority === 'medium'): ?> متوسط
+                                    <?php else: ?> منخفض
+                                    <?php endif; ?>
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <?php if($task->deadline): ?>
+                                    <div class="text-sm <?php echo e($task->deadline < now() && !in_array($task->status, ['completed', 'cancelled']) ? 'text-red-600 font-semibold' : 'text-gray-900'); ?>">
+                                        <?php echo e($task->deadline->format('Y-m-d')); ?>
+
+                                    </div>
+                                <?php else: ?>
+                                    <span class="text-sm text-gray-400">غير محدد</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full
+                                    <?php if($task->status === 'completed'): ?> bg-green-100 text-green-800
+                                    <?php elseif($task->status === 'in_progress'): ?> bg-blue-100 text-blue-800
+                                    <?php elseif($task->status === 'pending'): ?> bg-yellow-100 text-yellow-800
+                                    <?php else: ?> bg-gray-100 text-gray-800
+                                    <?php endif; ?>">
+                                    <?php if($task->status === 'completed'): ?> مكتملة
+                                    <?php elseif($task->status === 'in_progress'): ?> قيد التنفيذ
+                                    <?php elseif($task->status === 'pending'): ?> معلقة
+                                    <?php else: ?> <?php echo e($task->status); ?>
+
+                                    <?php endif; ?>
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <a href="<?php echo e(route('admin.employee-tasks.show', $task)); ?>" class="text-blue-600 hover:text-blue-900">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                    </tbody>
+                </table>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200">
+                <?php echo e($tasks->links()); ?>
+
+            </div>
+        <?php else: ?>
+            <div class="p-12 text-center">
+                <p class="text-gray-600">لا توجد مهام</p>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.admin', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views\admin\employee-tasks\index.blade.php ENDPATH**/ ?>
