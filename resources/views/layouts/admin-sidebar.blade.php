@@ -376,6 +376,54 @@
             </li>
 
             @php
+                $investmentMenuOpen = request()->routeIs('admin.investment.*');
+            @endphp
+            <li x-data="{ open: {{ $investmentMenuOpen ? 'true' : 'false' }} }">
+                <button type="button" @click="open = !open" :aria-expanded="open"
+                        class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-chart-pie w-5 text-amber-400 group-hover:text-white"></i>
+                        <span class="font-medium">قسم الاستثمار</span>
+                    </div>
+                    <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
+                </button>
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
+                    <li>
+                        <a href="{{ route('admin.investment.dashboard') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.investment.dashboard') ? 'bg-amber-600/30 text-white font-semibold border-r-2 border-amber-400' : '' }}">
+                            <i class="fas fa-tachometer-alt w-4"></i>
+                            <span>لوحة الاستثمار</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.investment.plans.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.investment.plans.*') ? 'bg-amber-600/30 text-white font-semibold border-r-2 border-amber-400' : '' }}">
+                            <i class="fas fa-layer-group w-4"></i>
+                            <span>الخطط الاستثمارية</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.investment.inquiries.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.investment.inquiries.*') ? 'bg-amber-600/30 text-white font-semibold border-r-2 border-amber-400' : '' }}">
+                            <i class="fas fa-handshake w-4"></i>
+                            <span>طلبات المستثمرين</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.investment.policies.edit') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.investment.policies.*') ? 'bg-amber-600/30 text-white font-semibold border-r-2 border-amber-400' : '' }}">
+                            <i class="fas fa-gavel w-4"></i>
+                            <span>الإطار القانوني</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @php
                 $whatsappMenuOpen = request()->routeIs('admin.whatsapp.*');
             @endphp
             <li x-data="{ open: {{ $whatsappMenuOpen ? 'true' : 'false' }} }">

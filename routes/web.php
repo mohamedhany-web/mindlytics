@@ -222,6 +222,11 @@ Route::get('/refund', [\App\Http\Controllers\Public\PageController::class, 'refu
 Route::get('/testimonials', [\App\Http\Controllers\Public\PageController::class, 'testimonials'])->name('public.testimonials');
 Route::get('/events', [\App\Http\Controllers\Public\PageController::class, 'events'])->name('public.events');
 Route::get('/partners', [\App\Http\Controllers\Public\PageController::class, 'partners'])->name('public.partners');
+Route::prefix('investment')->name('investment.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Public\InvestmentController::class, 'index'])->name('index');
+    Route::get('/{slug}', [\App\Http\Controllers\Public\InvestmentController::class, 'show'])->name('show');
+    Route::post('/{slug}/apply', [\App\Http\Controllers\Public\InvestmentController::class, 'apply'])->name('apply');
+});
 Route::get('/groups', [\App\Http\Controllers\Public\PageController::class, 'groups'])->name('public.groups');
 Route::get('/bookings', [\App\Http\Controllers\Public\PageController::class, 'bookings'])->middleware('auth')->name('public.bookings');
 
@@ -1124,6 +1129,18 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('registrations/{registration}/activate', [\App\Http\Controllers\Admin\Scholarship\RegistrationController::class, 'activate'])->name('registrations.activate');
             Route::post('registrations/{registration}/deactivate', [\App\Http\Controllers\Admin\Scholarship\RegistrationController::class, 'deactivate'])->name('registrations.deactivate');
             Route::post('registrations/{registration}/reject', [\App\Http\Controllers\Admin\Scholarship\RegistrationController::class, 'reject'])->name('registrations.reject');
+        });
+
+        // قسم الاستثمار
+        Route::prefix('investment')->name('investment.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\Investment\DashboardController::class, 'index'])->name('dashboard');
+            Route::resource('plans', \App\Http\Controllers\Admin\Investment\PlanController::class);
+            Route::get('inquiries', [\App\Http\Controllers\Admin\Investment\InquiryController::class, 'index'])->name('inquiries.index');
+            Route::get('inquiries/{inquiry}', [\App\Http\Controllers\Admin\Investment\InquiryController::class, 'show'])->name('inquiries.show');
+            Route::put('inquiries/{inquiry}', [\App\Http\Controllers\Admin\Investment\InquiryController::class, 'update'])->name('inquiries.update');
+            Route::delete('inquiries/{inquiry}', [\App\Http\Controllers\Admin\Investment\InquiryController::class, 'destroy'])->name('inquiries.destroy');
+            Route::get('policies', [\App\Http\Controllers\Admin\Investment\PolicyController::class, 'edit'])->name('policies.edit');
+            Route::put('policies', [\App\Http\Controllers\Admin\Investment\PolicyController::class, 'update'])->name('policies.update');
         });
 
         // بروفايل الأدمن

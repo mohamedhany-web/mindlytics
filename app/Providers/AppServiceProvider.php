@@ -140,6 +140,19 @@ class AppServiceProvider extends ServiceProvider
             ]);
         });
 
+        View::composer(['admin.investment.*'], function ($view) {
+            $view->with([
+                'invInputClass' => 'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all',
+                'invSelectClass' => 'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all',
+                'invTextareaClass' => 'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 resize-y min-h-[100px] transition-all',
+                'invLabelClass' => 'block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2',
+                'invBtnPrimary' => 'inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-700 hover:to-orange-600 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-200 text-sm',
+                'invBtnSecondary' => 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-all',
+                'invBtnDark' => 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold transition-all',
+                'invSectionClass' => 'rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden',
+            ]);
+        });
+
         View::composer(['admin.whatsapp.*'], function ($view) {
             $view->with([
                 'waInputClass' => 'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500',
