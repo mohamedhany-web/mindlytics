@@ -53,7 +53,19 @@ class WhatsAppCloudController extends Controller
 
         $this->syncPhoneMetadataFromApi();
 
-        return back()->with('success', 'تم حفظ إعدادات WhatsApp بنجاح.');
+        $flash = 'تم حفظ إعدادات WhatsApp بنجاح.';
+        if (WhatsAppCloudSettings::isSendConfigured() && WhatsAppCloudSettings::webhookVerifyToken() !== '') {
+            $sub = $this->cloud->ensureWebhookSubscription();
+            if ($sub['success'] ?? false) {
+                $flash .= ' تم طلب اشتراك Webhook من Meta.';
+            } elseif (! empty($sub['error'])) {
+                return back()
+                    ->with('success', $flash)
+                    ->with('warning', 'تعذّر اشتراك Webhook تلقائياً: ' . $sub['error'] . ' — أكمل الربط يدوياً من Meta Developers → WhatsApp → Configuration.');
+            }
+        }
+
+        return back()->with('success', $flash);
     }
 
     public function testConnection(Request $request): JsonResponse
@@ -112,7 +124,10 @@ class WhatsAppCloudController extends Controller
 
     public function statusJson(): JsonResponse
     {
-        return response()->json($this->cloud->connectionMeta());
+        $meta = $this->cloud->connectionMeta();
+        $meta['webhook'] = $this->cloud->webhookDiagnostics();
+
+        return response()->json($meta);
     }
 
     private function syncPhoneMetadataFromApi(): void

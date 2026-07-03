@@ -450,6 +450,7 @@ class WhatsAppController extends Controller
             'config' => WhatsAppCloudSettings::formValues(),
             'connection' => WhatsAppBusinessConnection::active(),
             'connectionMeta' => $this->cloud->connectionMeta(),
+            'webhookDiagnostics' => $this->cloud->webhookDiagnostics(),
         ]);
     }
 }

@@ -3,8 +3,11 @@
 namespace App\Services;
 
 use App\Models\WhatsAppBusinessConnection;
+use App\Models\WhatsAppConversationMessage;
 use App\Support\WhatsAppCloudSettings;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 
 class WhatsAppCloudService
 {
@@ -105,7 +108,12 @@ class WhatsAppCloudService
         }
 
         if (! WhatsAppCloudSettings::webhookVerifyToken()) {
-            $warnings[] = 'Webhook غير مضبوط — لن تُحدَّث حالة التسليم (فشل/وصل) في سجل الرسائل.';
+            $warnings[] = 'Webhook غير مضبوط — لن تظهر ردود العملاء في المحادثات ولن تُحدَّث حالة التسليم.';
+        }
+
+        $webhook = $this->webhookDiagnostics();
+        foreach ($webhook['issues'] as $issue) {
+            $warnings[] = $issue;
         }
 
         return [
@@ -121,7 +129,104 @@ class WhatsAppCloudService
             'phone_data' => $phoneData,
             'account_mode' => $accountMode,
             'send_warnings' => $warnings,
+            'webhook' => $webhook,
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function webhookDiagnostics(): array
+    {
+        $webhookUrl = WhatsAppCloudSettings::webhookUrl();
+        $hasVerifyToken = WhatsAppCloudSettings::webhookVerifyToken() !== '';
+        $isLocalUrl = (bool) preg_match('#^https?://(localhost|127\\.0\\.0\\.1)([:/]|$)#i', $webhookUrl);
+
+        $inboundCount = 0;
+        if (Schema::hasTable('whatsapp_conversation_messages')) {
+            $inboundCount = (int) WhatsAppConversationMessage::query()
+                ->where('direction', WhatsAppConversationMessage::DIRECTION_INBOUND)
+                ->count();
+        }
+
+        $lastWebhook = Cache::get('whatsapp:webhook:last_received_at');
+        $lastInbound = Cache::get('whatsapp:webhook:last_inbound_at');
+
+        $issues = [];
+        if ($isLocalUrl) {
+            $issues[] = 'رابط Webhook يشير إلى localhost — Meta لا يستطيع الوصول إليه. اضبط APP_URL أو WHATSAPP_WEBHOOK_BASE_URL على نطاق عام (HTTPS).';
+        }
+        if (! $hasVerifyToken) {
+            $issues[] = 'Verify Token غير مضبوط — لن يقبل Meta التحقق من Webhook.';
+        }
+        if (! $lastWebhook && $inboundCount === 0) {
+            $issues[] = 'لم يصل أي Webhook من Meta بعد — ردود العملاء لن تظهر في المحادثات حتى تربط Webhook وتشترك في حقل messages.';
+        } elseif ($lastWebhook && $inboundCount === 0 && ! $lastInbound) {
+            $issues[] = 'وصل Webhook من Meta لكن لا توجد رسائل واردة — تأكد من اشتراك حقل messages في Meta Developers.';
+        }
+
+        return [
+            'webhook_url' => $webhookUrl,
+            'is_local_url' => $isLocalUrl,
+            'has_verify_token' => $hasVerifyToken,
+            'last_webhook_at' => $lastWebhook,
+            'last_inbound_at' => $lastInbound,
+            'inbound_message_count' => $inboundCount,
+            'receiving_replies' => $inboundCount > 0 || $lastInbound !== null,
+            'issues' => $issues,
+            'ok' => $issues === [],
+        ];
+    }
+
+    /**
+     * اشتراك تطبيق Meta في أحداث WABA (رسائل واردة + حالة التسليم).
+     *
+     * @return array{success: bool, error?: string}
+     */
+    public function ensureWebhookSubscription(): array
+    {
+        $wabaId = WhatsAppCloudSettings::businessAccountId();
+        if ($wabaId === '') {
+            return ['success' => false, 'error' => 'WABA ID غير مضبوط.'];
+        }
+
+        $creds = $this->resolveCredentials();
+        if ($creds['access_token'] === '') {
+            return ['success' => false, 'error' => 'Access Token غير موجود.'];
+        }
+
+        $payload = [];
+        $webhookUrl = WhatsAppCloudSettings::webhookUrl();
+        $verifyToken = WhatsAppCloudSettings::webhookVerifyToken();
+        if ($verifyToken !== '' && ! preg_match('#^https?://(localhost|127\\.0\\.0\\.1)#i', $webhookUrl)) {
+            $payload['override_callback_uri'] = $webhookUrl;
+            $payload['verify_token'] = $verifyToken;
+        }
+
+        try {
+            $response = Http::withToken($creds['access_token'])
+                ->timeout(30)
+                ->post("{$this->graphUrl()}/{$wabaId}/subscribed_apps", $payload);
+
+            if ($response->successful()) {
+                $connection = WhatsAppBusinessConnection::active();
+                if ($connection) {
+                    $connection->update(['webhook_subscribed_at' => now()]);
+                }
+
+                return ['success' => true];
+            }
+
+            $body = $response->json() ?? [];
+            $error = is_array($body['error'] ?? null) ? $body['error'] : [];
+
+            return [
+                'success' => false,
+                'error' => $this->humanizeMetaError((string) ($error['message'] ?? 'فشل اشتراك Webhook')),
+            ];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => $this->humanizeMetaError($e->getMessage())];
+        }
     }
 
     /**

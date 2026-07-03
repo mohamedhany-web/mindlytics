@@ -74,6 +74,12 @@ return [
     /** يُستخدم للتحقق من Webhook إن لم يُحفظ في إعدادات الربط */
     'webhook_verify_token' => env('WHATSAPP_VERIFY_TOKEN', env('WHATSAPP_WEBHOOK_VERIFY_TOKEN', '')),
 
+    /**
+     | عنوان عام لـ Webhook (HTTPS) — إن وُجد يُستخدم بدل APP_URL.
+     | مهم عند التطوير المحلي: Meta لا يصل إلى localhost — استخدم نطاق السيرفر الحقيقي أو ngrok.
+     */
+    'webhook_base_url' => env('WHATSAPP_WEBHOOK_BASE_URL', ''),
+
     /*
     |--------------------------------------------------------------------------
     | توزيع المحادثات (Inbox CRM)

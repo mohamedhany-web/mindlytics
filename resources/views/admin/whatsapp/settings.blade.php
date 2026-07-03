@@ -183,11 +183,12 @@
                 <div class="border-t border-slate-100 pt-5">
                     <p class="text-xs font-bold text-slate-700 mb-3 flex items-center gap-2">
                         <span class="w-6 h-6 rounded-lg bg-violet-100 text-violet-700 flex items-center justify-center text-[11px] font-black">3</span>
-                        Webhook — لتتبع التسليم (لا يُطلَب لإرسال الرسائل)
+                        Webhook — لاستقبال ردود العملاء وتتبع التسليم
                     </p>
                     <div class="rounded-xl bg-amber-50 border border-amber-200 p-4 text-xs text-amber-950 leading-relaxed mb-4 space-y-2">
-                        <p class="font-bold">مهم: غياب Webhook لا يمنع وصول الرسالة</p>
-                        <p>بدون Webhook تبقى الحالة «مقبولة من Meta» حتى لو فشل التسليم لاحقاً. السبب الأشهر لعدم الوصول: <strong>المستلم لم يراسل رقمكم خلال 24 ساعة</strong> — والرسائل النصية الحرة لا تصل لمن لم يبدأ المحادثة.</p>
+                        <p class="font-bold">مهم: بدون Webhook لن تظهر رسائل العملاء في المحادثات</p>
+                        <p>الرسائل الصادرة من النظام تُسجَّل تلقائياً، لكن <strong>ردود العملاء</strong> تصل فقط عبر Webhook من Meta. بدون ربط Webhook ستشاهد رسائلك فقط وليس رد العميل.</p>
+                        <p>يجب أن يكون Callback URL على نطاق <strong>HTTPS عام</strong> (ليس localhost) — Meta لا يرسل أحداثاً إلى جهازك المحلي مباشرة.</p>
                     </div>
                     <div class="grid md:grid-cols-2 gap-4">
                         <div>
@@ -209,8 +210,20 @@
                             <li>افتح <strong>developers.facebook.com</strong> → تطبيقك → <strong>WhatsApp → Configuration</strong>.</li>
                             <li>Callback URL: <code class="dir-ltr">{{ $config['webhook_url'] }}</code> (حرفياً — ليس WhatsappWebhook)</li>
                             <li>Verify Token: نفس القيمة المحفوظة → <strong>Verify and save</strong></li>
-                            <li>اشترك في: <code>messages</code> و <code>message_status</code></li>
+                            <li>اشترك في: <code>messages</code> (لردود العملاء) و <code>message_status</code> (لحالة التسليم)</li>
                         </ol>
+                        @if(!empty($webhookDiagnostics['issues'] ?? []))
+                            <div class="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-rose-900">
+                                <p class="font-bold mb-1">تشخيص Webhook الحالي:</p>
+                                <ul class="list-disc list-inside space-y-1">
+                                    @foreach($webhookDiagnostics['issues'] as $issue)
+                                        <li>{{ $issue }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @elseif(($webhookDiagnostics['receiving_replies'] ?? false))
+                            <p class="mt-3 text-emerald-800 font-semibold"><i class="fas fa-check-circle ml-1"></i> يستقبل النظام رسائل واردة من Meta.</p>
+                        @endif
                     </div>
                 </div>
 

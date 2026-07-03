@@ -75,6 +75,7 @@ trait HandlesWhatsAppInbox
         [$inbox, $cloud, $crm] = $this->inboxServices();
 
         $connectionMeta = $cloud->connectionMeta();
+        $connectionMeta['webhook'] = $cloud->webhookDiagnostics();
         $tablesReady = Schema::hasTable('whatsapp_conversations');
 
         $activeConversation = null;

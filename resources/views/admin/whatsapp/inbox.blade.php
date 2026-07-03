@@ -7,6 +7,8 @@
 @php
     $audience = $inboxAudience ?? 'admin';
     $canSend = (bool) ($connectionMeta['can_send'] ?? false);
+    $webhookDiag = $connectionMeta['webhook'] ?? [];
+    $webhookIssues = $webhookDiag['issues'] ?? [];
     $activeId = $activeConversation?->id;
     $inboxService = app(\App\Services\WhatsAppInboxService::class);
     $routes = $inboxRoutes ?? [];
@@ -61,6 +63,30 @@
 
 <div class="wa-inbox-page flex flex-col min-h-0 overflow-hidden gap-2" x-data="whatsappInbox()" x-cloak>
     @include('admin.whatsapp._alerts')
+
+    @if(!empty($webhookIssues))
+        <div class="shrink-0 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 space-y-2">
+            <p class="font-bold flex items-center gap-2">
+                <i class="fas fa-exclamation-triangle text-amber-600"></i>
+                ردود العملاء لا تصل للنظام — Webhook غير مفعّل بالكامل
+            </p>
+            <ul class="list-disc list-inside text-xs space-y-1 leading-relaxed">
+                @foreach($webhookIssues as $issue)
+                    <li>{{ $issue }}</li>
+                @endforeach
+            </ul>
+            <p class="text-xs leading-relaxed border-t border-amber-200 pt-2">
+                <strong>الحل:</strong> من
+                <a href="{{ route('admin.whatsapp.settings') }}" class="underline font-semibold">إعدادات الربط</a>
+                احفظ Verify Token ثم في Meta Developers → WhatsApp → Configuration:
+                Callback URL = <code class="dir-ltr text-[11px]">{{ $webhookDiag['webhook_url'] ?? '' }}</code>
+                واشترك في <code>messages</code>.
+                @if($audience === 'admin')
+                    على السيرفر الحقيقي اضبط <code>APP_URL</code> أو <code>WHATSAPP_WEBHOOK_BASE_URL</code> على نطاق HTTPS عام.
+                @endif
+            </p>
+        </div>
+    @endif
 
     {{-- شريط علوي مدمج --}}
     <div class="shrink-0 flex flex-wrap items-center justify-between gap-2 px-1">

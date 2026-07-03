@@ -7,7 +7,8 @@ use App\Services\WhatsAppCloudService;
 use App\Services\WhatsAppInboxService;
 use App\Support\WhatsAppCloudSettings;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
+use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class WhatsAppWebhookController extends Controller
@@ -45,6 +46,8 @@ class WhatsAppWebhookController extends Controller
         Log::info('WhatsApp webhook received', [
             'object' => $payload['object'] ?? null,
         ]);
+
+        Cache::put('whatsapp:webhook:last_received_at', now()->toIso8601String(), now()->addDays(90));
 
         if (($payload['object'] ?? '') !== 'whatsapp_business_account') {
             return response()->json(['status' => 'ignored']);

@@ -271,7 +271,12 @@ class WhatsAppCloudSettings
 
     public static function webhookUrl(): string
     {
-        return rtrim((string) config('app.url'), '/') . '/webhooks/whatsapp';
+        $base = trim((string) config('whatsapp.webhook_base_url', ''));
+        if ($base === '') {
+            $base = (string) config('app.url');
+        }
+
+        return rtrim($base, '/') . '/webhooks/whatsapp';
     }
 
     public static function graphVersion(): string

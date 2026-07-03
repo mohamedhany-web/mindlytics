@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\WhatsAppConversation;
 use App\Models\WhatsAppConversationMessage;
 use App\Models\WhatsAppMessage;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -79,6 +80,8 @@ class WhatsAppInboxService
             ]);
 
             $this->afterInboundMessage($conversation, $message);
+
+            Cache::put('whatsapp:webhook:last_inbound_at', now()->toIso8601String(), now()->addDays(90));
 
             return $message;
         });
