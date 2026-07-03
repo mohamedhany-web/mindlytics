@@ -1718,6 +1718,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('/disconnect', [\App\Http\Controllers\Admin\WhatsAppCloudController::class, 'disconnect'])->name('disconnect');
             Route::get('/status', [\App\Http\Controllers\Admin\WhatsAppCloudController::class, 'statusJson'])->name('status');
             Route::post('/webhook/resubscribe', [\App\Http\Controllers\Admin\WhatsAppCloudController::class, 'resubscribeWebhook'])->name('webhook.resubscribe');
+            Route::post('/webhook/refresh', [\App\Http\Controllers\Admin\WhatsAppCloudController::class, 'refreshWebhook'])->name('webhook.refresh');
             Route::get('/batches', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'index'])->name('batches.index');
             Route::get('/batches/{batch}', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'show'])->name('batches.show');
             Route::get('/batches/{batch}/status', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'statusJson'])->name('batches.status');

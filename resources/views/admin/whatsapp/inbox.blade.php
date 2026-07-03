@@ -98,9 +98,9 @@
                 </ul>
             @endif
             @if($audience === 'admin')
-                <p class="text-xs leading-relaxed border-t border-amber-200 pt-2">
-                    <a href="{{ route('admin.whatsapp.settings') }}" class="underline font-semibold">إعدادات الربط</a>
-                    — تأكد من تفعيل اشتراك <code>messages</code> في جدول Webhook fields (ليس فقط حفظ الرابط).
+                <p class="text-xs leading-relaxed border-t border-amber-200 pt-2 flex flex-wrap items-center gap-2">
+                    <a href="{{ route('admin.whatsapp.settings') }}#webhook-status-panel" class="underline font-semibold">إعدادات الربط</a>
+                    <span>— استخدم «تحديث الحالة» أو «مزامنة الاشتراك مع Meta» لعرض حقول Webhook مباشرة من Meta.</span>
                 </p>
             @endif
         </div>

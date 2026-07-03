@@ -214,34 +214,36 @@
                             <li>في نفس الصفحة: <strong>عطّل</strong> خيار «Attach a client certificate» إلا إذا ضبطت mTLS على السيرفر.</li>
                             <li>بعد الحفظ: انزل لجدول <strong>Webhook fields</strong> وفعّل Subscribe أمام <code>messages</code> (زر أزرق).</li>
                         </ol>
-                        @php $metaStatus = $webhookDiagnostics['meta'] ?? []; @endphp
-                        @if(!empty($metaStatus) && ($metaStatus['messages_subscribed'] !== null || !empty($metaStatus['callback_url'])))
-                            <div class="mt-3 rounded-lg border border-slate-200 bg-white p-3 text-slate-800 space-y-1">
-                                <p class="font-bold">حالة الاشتراك من Meta API:</p>
-                                <p>حقل messages: <strong>{{ ($metaStatus['messages_subscribed'] ?? false) ? 'مشترك' : 'غير مشترك' }}</strong></p>
-                                <p>حقل message_status: <strong>{{ ($metaStatus['message_status_subscribed'] ?? false) ? 'مشترك' : 'غير مشترك' }}</strong></p>
-                                <p>اشتراك WABA: <strong>{{ ($metaStatus['waba_app_subscribed'] ?? false) ? 'نعم' : 'لا' }}</strong></p>
-                                @if(!empty($metaStatus['callback_url']))
-                                    <p class="dir-ltr break-all text-[11px]">Callback في Meta: {{ $metaStatus['callback_url'] }}</p>
-                                @endif
-                                <button type="button" id="btn-resubscribe-webhook" class="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-violet-600 hover:bg-violet-700 text-white">
-                                    <i class="fas fa-sync-alt"></i> إعادة اشتراك Webhook من Meta
-                                </button>
-                                <p id="resubscribe-webhook-result" class="hidden text-xs mt-1"></p>
+
+                        <div id="webhook-status-panel" class="mt-4 rounded-xl border border-slate-200 bg-white p-4 text-slate-800 space-y-3">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <p class="font-bold text-sm">حالة Webhook من Meta</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <button type="button" id="btn-refresh-webhook" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white">
+                                        <i class="fas fa-sync-alt"></i> تحديث الحالة
+                                    </button>
+                                    <button type="button" id="btn-sync-webhook" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-violet-600 hover:bg-violet-700 text-white">
+                                        <i class="fas fa-link"></i> مزامنة الاشتراك مع Meta
+                                    </button>
+                                </div>
                             </div>
-                        @endif
-                        @if(!empty($webhookDiagnostics['issues'] ?? []))
-                            <div class="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-rose-900">
-                                <p class="font-bold mb-1">تشخيص Webhook الحالي:</p>
-                                <ul class="list-disc list-inside space-y-1">
-                                    @foreach($webhookDiagnostics['issues'] as $issue)
-                                        <li>{{ $issue }}</li>
-                                    @endforeach
-                                </ul>
+                            <p class="text-[11px] text-slate-500">المزامنة تربط Callback URL وحقول messages و message_status تلقائياً (يتطلب App Secret محفوظاً).</p>
+                            <div id="webhook-status-summary" class="grid sm:grid-cols-2 gap-2 text-xs"></div>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full text-xs border border-slate-200 rounded-lg overflow-hidden">
+                                    <thead class="bg-slate-50 text-slate-600">
+                                        <tr>
+                                            <th class="text-right px-3 py-2">الحقل</th>
+                                            <th class="text-right px-3 py-2">الوصف</th>
+                                            <th class="text-right px-3 py-2">الاشتراك في Meta</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="webhook-fields-body"></tbody>
+                                </table>
                             </div>
-                        @elseif(($webhookDiagnostics['receiving_replies'] ?? false))
-                            <p class="mt-3 text-emerald-800 font-semibold"><i class="fas fa-check-circle ml-1"></i> يستقبل النظام رسائل واردة من Meta.</p>
-                        @endif
+                            <div id="webhook-issues-box" class="hidden rounded-lg border border-rose-200 bg-rose-50 p-3 text-rose-900 text-xs"></div>
+                            <p id="webhook-action-result" class="hidden text-xs"></p>
+                        </div>
                     </div>
                 </div>
 
@@ -288,31 +290,96 @@
 (function () {
     const csrf = @json(csrf_token());
     const testUrl = @json(route('admin.whatsapp.test-connection'));
-    const resubscribeUrl = @json(route('admin.whatsapp.webhook.resubscribe'));
+    const webhookRefreshUrl = @json(route('admin.whatsapp.webhook.refresh'));
+    const initialWebhook = @json($webhookDiagnostics ?? []);
 
-    document.getElementById('btn-resubscribe-webhook')?.addEventListener('click', async function () {
-        const box = document.getElementById('resubscribe-webhook-result');
-        if (!box) return;
-        box.classList.remove('hidden', 'text-emerald-700', 'text-rose-700');
-        box.textContent = 'جاري طلب الاشتراك من Meta…';
+    function badge(ok, yes = 'مشترك', no = 'غير مشترك') {
+        return ok
+            ? '<span class="inline-flex px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">' + yes + '</span>'
+            : '<span class="inline-flex px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold">' + no + '</span>';
+    }
+
+    function renderWebhookPanel(webhook) {
+        const meta = webhook?.meta || {};
+        const summary = document.getElementById('webhook-status-summary');
+        const tbody = document.getElementById('webhook-fields-body');
+        const issuesBox = document.getElementById('webhook-issues-box');
+        if (!summary || !tbody) return;
+
+        summary.innerHTML = [
+            '<div class="rounded-lg border border-slate-200 bg-slate-50 p-2"><span class="text-slate-500">Callback في Meta</span><p class="dir-ltr break-all font-mono text-[11px] mt-1">' + (meta.callback_url || '—') + '</p></div>',
+            '<div class="rounded-lg border border-slate-200 bg-slate-50 p-2"><span class="text-slate-500">رابط النظام</span><p class="dir-ltr break-all font-mono text-[11px] mt-1">' + (webhook.webhook_url || '—') + '</p></div>',
+            '<div class="rounded-lg border border-slate-200 bg-slate-50 p-2"><span class="text-slate-500">تطابق الرابط</span><p class="mt-1">' + badge(meta.callback_matches === true, 'متطابق', 'غير متطابق') + '</p></div>',
+            '<div class="rounded-lg border border-slate-200 bg-slate-50 p-2"><span class="text-slate-500">اشتراك WABA</span><p class="mt-1">' + badge(meta.waba_app_subscribed === true, 'نعم', 'لا') + '</p></div>',
+            '<div class="rounded-lg border border-slate-200 bg-slate-50 p-2"><span class="text-slate-500">آخر Webhook وصل</span><p class="mt-1 text-[11px]">' + (webhook.last_webhook_at || 'لم يصل بعد') + '</p></div>',
+            '<div class="rounded-lg border border-slate-200 bg-slate-50 p-2"><span class="text-slate-500">رسائل واردة مسجّلة</span><p class="mt-1 font-bold">' + (webhook.inbound_message_count ?? 0) + '</p></div>',
+        ].join('');
+
+        const rows = webhook.field_rows?.length ? webhook.field_rows : (meta.field_rows || []);
+        tbody.innerHTML = rows.map(row => (
+            '<tr class="border-t border-slate-100">'
+            + '<td class="px-3 py-2 font-mono dir-ltr">' + row.field + (row.required ? ' *' : '') + '</td>'
+            + '<td class="px-3 py-2">' + (row.label || row.field) + '</td>'
+            + '<td class="px-3 py-2">' + badge(!!row.subscribed) + '</td>'
+            + '</tr>'
+        )).join('') || '<tr><td colspan="3" class="px-3 py-3 text-slate-500">اضغط «تحديث الحالة» لقراءة الحقول من Meta</td></tr>';
+
+        const issues = webhook.issues || [];
+        if (issuesBox) {
+            if (issues.length) {
+                issuesBox.className = 'rounded-lg border border-rose-200 bg-rose-50 p-3 text-rose-900 text-xs';
+                issuesBox.classList.remove('hidden');
+                issuesBox.innerHTML = '<p class="font-bold mb-1">ملاحظات:</p><ul class="list-disc list-inside space-y-1">' + issues.map(i => '<li>' + i + '</li>').join('') + '</ul>';
+            } else if (webhook.receiving_replies) {
+                issuesBox.classList.remove('hidden');
+                issuesBox.className = 'rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-900 text-xs';
+                issuesBox.innerHTML = '<i class="fas fa-check-circle ml-1"></i> Webhook يعمل ويستقبل رسائل واردة.';
+            } else {
+                issuesBox.classList.add('hidden');
+                issuesBox.innerHTML = '';
+            }
+        }
+    }
+
+    async function callWebhookRefresh(sync) {
+        const box = document.getElementById('webhook-action-result');
+        if (box) {
+            box.classList.remove('hidden', 'text-emerald-700', 'text-rose-700');
+            box.textContent = sync ? 'جاري المزامنة مع Meta…' : 'جاري تحديث الحالة…';
+        }
         try {
-            const res = await fetch(resubscribeUrl, {
+            const res = await fetch(webhookRefreshUrl, {
                 method: 'POST',
-                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({ sync: !!sync }),
             });
             const data = await res.json();
-            if (data.success) {
-                box.classList.add('text-emerald-700');
-                box.textContent = 'تم طلب الاشتراك — حدّث الصفحة ثم تأكد أن messages مشترك في Meta.';
-            } else {
-                box.classList.add('text-rose-700');
-                box.textContent = data.error || 'فشل الاشتراك';
+            if (data.webhook) renderWebhookPanel(data.webhook);
+            if (box) {
+                if (data.success || (data.webhook?.meta?.messages_subscribed)) {
+                    box.classList.add('text-emerald-700');
+                    box.textContent = sync ? 'تمت المزامنة — راجع جدول الحقول أعلاه.' : 'تم تحديث الحالة من Meta.';
+                } else {
+                    box.classList.add('text-rose-700');
+                    box.textContent = data.sync?.app?.error || data.sync?.waba?.error || 'تعذّر التحقق — راجع الملاحظات.';
+                }
             }
         } catch (_) {
-            box.classList.add('text-rose-700');
-            box.textContent = 'خطأ في الاتصال';
+            if (box) {
+                box.classList.add('text-rose-700');
+                box.textContent = 'خطأ في الاتصال بالسيرفر';
+            }
         }
-    });
+    }
+
+    renderWebhookPanel(initialWebhook);
+    document.getElementById('btn-refresh-webhook')?.addEventListener('click', () => callWebhookRefresh(false));
+    document.getElementById('btn-sync-webhook')?.addEventListener('click', () => callWebhookRefresh(true));
 
     document.getElementById('btn-test-connection')?.addEventListener('click', async function () {
         const box = document.getElementById('test-result');

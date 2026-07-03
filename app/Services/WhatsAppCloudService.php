@@ -181,10 +181,14 @@ class WhatsAppCloudService
         }
 
         foreach ($meta['errors'] ?? [] as $apiError) {
-            $tips[] = $apiError;
+            if (! str_contains($apiError, 'Application Secret required')) {
+                $issues[] = $apiError;
+            }
         }
 
-        $tips[] = 'إذا كان خيار «Attach a client certificate to Webhook requests» مفعّلاً في Meta — عطّله إلا إذا ضبطت mTLS على السيرفر.';
+        if (! WhatsAppCloudSettings::hasAppSecret() && WhatsAppCloudSettings::appId() !== '') {
+            $issues[] = 'App Secret مطلوب لقراءة ومزامنة اشتراكات Webhook من Meta — احفظه في إعدادات الربط.';
+        }
 
         if ($inboundCount === 0 && ! $lastInbound) {
             if (($meta['messages_subscribed'] ?? null) === true && ($meta['waba_app_subscribed'] ?? null) === true) {
@@ -207,10 +211,138 @@ class WhatsAppCloudService
             'inbound_message_count' => $inboundCount,
             'receiving_replies' => $receiving,
             'meta' => $meta,
+            'field_rows' => $meta['field_rows'] ?? [],
             'issues' => array_values(array_unique($issues)),
             'tips' => array_values(array_unique($tips)),
             'ok' => $receiving && $issues === [],
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function refreshWebhookStatus(bool $sync = false): array
+    {
+        $syncResults = null;
+
+        if ($sync) {
+            $syncResults = [
+                'app' => $this->syncAppWebhookSubscription(),
+                'waba' => $this->ensureWebhookSubscription(),
+            ];
+        }
+
+        return [
+            'sync' => $syncResults,
+            'webhook' => $this->webhookDiagnostics(),
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function webhookFieldLabels(): array
+    {
+        return [
+            'messages' => 'رسائل العملاء (وارد)',
+            'message_status' => 'حالة التسليم',
+            'message_template_status_update' => 'تحديث حالة القوالب',
+        ];
+    }
+
+    private function resolveAppAccessToken(): ?string
+    {
+        $appId = WhatsAppCloudSettings::appId();
+        $secret = WhatsAppCloudSettings::appSecret();
+
+        if ($appId === '' || $secret === '') {
+            return null;
+        }
+
+        return $appId . '|' . $secret;
+    }
+
+    /**
+     * @param  array<int, string>  $fields
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildWebhookFieldRows(array $fields): array
+    {
+        $rows = [];
+        foreach ($this->webhookFieldLabels() as $field => $label) {
+            $rows[] = [
+                'field' => $field,
+                'label' => $label,
+                'subscribed' => in_array($field, $fields, true),
+                'required' => $field === 'messages',
+            ];
+        }
+
+        foreach ($fields as $field) {
+            if (! isset($this->webhookFieldLabels()[$field])) {
+                $rows[] = [
+                    'field' => $field,
+                    'label' => $field,
+                    'subscribed' => true,
+                    'required' => false,
+                ];
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * اشتراك/تحديث حقول Webhook على مستوى التطبيق (يتطلب App Secret).
+     *
+     * @return array{success: bool, error?: string, fields?: array<int, string>}
+     */
+    public function syncAppWebhookSubscription(): array
+    {
+        $appToken = $this->resolveAppAccessToken();
+        $appId = WhatsAppCloudSettings::appId();
+        $callbackUrl = WhatsAppCloudSettings::webhookUrl();
+        $verifyToken = WhatsAppCloudSettings::webhookVerifyToken();
+
+        if ($appToken === null || $appId === '') {
+            return ['success' => false, 'error' => 'App ID و App Secret مطلوبان لمزامنة Webhook مع Meta.'];
+        }
+
+        if ($verifyToken === '') {
+            return ['success' => false, 'error' => 'Webhook Verify Token مطلوب قبل المزامنة.'];
+        }
+
+        if (preg_match('#^https?://(localhost|127\\.0\\.0\\.1)#i', $callbackUrl)) {
+            return ['success' => false, 'error' => 'Callback URL يشير إلى localhost — اضبط APP_URL على النطاق العام أولاً.'];
+        }
+
+        $fields = ['messages', 'message_status'];
+
+        try {
+            $response = Http::asForm()
+                ->timeout(30)
+                ->post("{$this->graphUrl()}/{$appId}/subscriptions", [
+                    'access_token' => $appToken,
+                    'object' => 'whatsapp_business_account',
+                    'callback_url' => $callbackUrl,
+                    'verify_token' => $verifyToken,
+                    'fields' => implode(',', $fields),
+                ]);
+
+            if ($response->successful()) {
+                return ['success' => true, 'fields' => $fields];
+            }
+
+            $body = $response->json() ?? [];
+            $error = is_array($body['error'] ?? null) ? $body['error'] : [];
+
+            return [
+                'success' => false,
+                'error' => $this->humanizeMetaError((string) ($error['message'] ?? 'فشل مزامنة Webhook')),
+            ];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => $this->humanizeMetaError($e->getMessage())];
+        }
     }
 
     /**
@@ -231,44 +363,58 @@ class WhatsAppCloudService
             'message_status_subscribed' => null,
             'active' => null,
             'subscribed_fields' => [],
+            'field_rows' => [],
             'waba_app_subscribed' => null,
             'waba_subscribed_app_ids' => [],
             'errors' => [],
         ];
 
-        if ($creds['access_token'] === '') {
-            $result['errors'][] = 'Access Token غير موجود';
+        if ($creds['access_token'] === '' && $this->resolveAppAccessToken() === null) {
+            $result['errors'][] = 'Access Token أو App Secret مطلوب';
 
             return $result;
         }
 
         if ($appId !== '') {
-            try {
-                $response = Http::withToken($creds['access_token'])
-                    ->timeout(25)
-                    ->get("{$this->graphUrl()}/{$appId}/subscriptions");
+            $appToken = $this->resolveAppAccessToken();
+            if ($appToken === null) {
+                $result['errors'][] = 'App Secret مطلوب لقراءة اشتراكات Webhook من Meta';
+            } else {
+                try {
+                    $response = Http::timeout(25)
+                        ->get("{$this->graphUrl()}/{$appId}/subscriptions", [
+                            'access_token' => $appToken,
+                        ]);
 
-                if ($response->successful()) {
-                    foreach ($response->json('data') ?? [] as $row) {
-                        if (! is_array($row) || ($row['object'] ?? '') !== 'whatsapp_business_account') {
-                            continue;
+                    if ($response->successful()) {
+                        foreach ($response->json('data') ?? [] as $row) {
+                            if (! is_array($row) || ($row['object'] ?? '') !== 'whatsapp_business_account') {
+                                continue;
+                            }
+
+                            $fields = is_array($row['fields'] ?? null) ? $row['fields'] : [];
+                            $result['subscribed_fields'] = $fields;
+                            $result['field_rows'] = $this->buildWebhookFieldRows($fields);
+                            $result['messages_subscribed'] = in_array('messages', $fields, true);
+                            $result['message_status_subscribed'] = in_array('message_status', $fields, true);
+                            $result['callback_url'] = (string) ($row['callback_url'] ?? '');
+                            $result['active'] = (bool) ($row['active'] ?? false);
+                            $result['callback_matches'] = rtrim($result['callback_url'], '/') === rtrim($expectedUrl, '/');
                         }
 
-                        $fields = is_array($row['fields'] ?? null) ? $row['fields'] : [];
-                        $result['subscribed_fields'] = $fields;
-                        $result['messages_subscribed'] = in_array('messages', $fields, true);
-                        $result['message_status_subscribed'] = in_array('message_status', $fields, true);
-                        $result['callback_url'] = (string) ($row['callback_url'] ?? '');
-                        $result['active'] = (bool) ($row['active'] ?? false);
-                        $result['callback_matches'] = rtrim($result['callback_url'], '/') === rtrim($expectedUrl, '/');
+                        if ($result['field_rows'] === []) {
+                            $result['field_rows'] = $this->buildWebhookFieldRows([]);
+                        }
+                    } else {
+                        $body = $response->json() ?? [];
+                        $error = is_array($body['error'] ?? null) ? $body['error'] : [];
+                        $result['errors'][] = 'تعذّر قراءة اشتراكات التطبيق: ' . $this->humanizeMetaError((string) ($error['message'] ?? 'HTTP ' . $response->status()));
+                        $result['field_rows'] = $this->buildWebhookFieldRows([]);
                     }
-                } else {
-                    $body = $response->json() ?? [];
-                    $error = is_array($body['error'] ?? null) ? $body['error'] : [];
-                    $result['errors'][] = 'تعذّر قراءة اشتراكات التطبيق: ' . $this->humanizeMetaError((string) ($error['message'] ?? 'HTTP ' . $response->status()));
+                } catch (\Throwable $e) {
+                    $result['errors'][] = 'تعذّر الاتصال بـ Meta للتحقق من Webhook: ' . $e->getMessage();
+                    $result['field_rows'] = $this->buildWebhookFieldRows([]);
                 }
-            } catch (\Throwable $e) {
-                $result['errors'][] = 'تعذّر الاتصال بـ Meta للتحقق من Webhook: ' . $e->getMessage();
             }
         }
 

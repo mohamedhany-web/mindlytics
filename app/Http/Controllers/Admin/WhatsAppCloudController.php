@@ -132,13 +132,26 @@ class WhatsAppCloudController extends Controller
 
     public function resubscribeWebhook(): JsonResponse
     {
-        $result = $this->cloud->ensureWebhookSubscription();
-        $diagnostics = $this->cloud->webhookDiagnostics();
+        $payload = $this->cloud->refreshWebhookStatus(sync: true);
+        $webhook = $payload['webhook'];
 
         return response()->json([
-            'success' => (bool) ($result['success'] ?? false),
-            'error' => $result['error'] ?? null,
-            'webhook' => $diagnostics,
+            'success' => (bool) (($payload['sync']['app']['success'] ?? false) || ($payload['sync']['waba']['success'] ?? false)),
+            'error' => $payload['sync']['app']['error'] ?? $payload['sync']['waba']['error'] ?? null,
+            'webhook' => $webhook,
+            'sync' => $payload['sync'],
+        ]);
+    }
+
+    public function refreshWebhook(Request $request): JsonResponse
+    {
+        $payload = $this->cloud->refreshWebhookStatus($request->boolean('sync'));
+        $webhook = $payload['webhook'];
+
+        return response()->json([
+            'success' => (bool) ($webhook['ok'] ?? false) || (bool) ($webhook['meta']['messages_subscribed'] ?? false),
+            'webhook' => $webhook,
+            'sync' => $payload['sync'],
         ]);
     }
 
