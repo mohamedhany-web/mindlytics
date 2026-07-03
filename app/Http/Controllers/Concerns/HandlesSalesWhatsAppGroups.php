@@ -7,6 +7,7 @@ use App\Models\SalesLeadGroup;
 use App\Models\WhatsAppGroup;
 use App\Models\WhatsAppGroupParticipant;
 use App\Services\WhatsAppGroupService;
+use App\Services\WhatsAppService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -59,7 +60,7 @@ trait HandlesSalesWhatsAppGroups
     {
         $cloud = $this->waGroupService()->cloudStatus();
         $crmGroups = $this->crmGroupsForSelect();
-        $inviteTemplates = $this->waGroupService()->inviteTemplates()['templates'] ?? [];
+        $inviteTemplates = $this->safeInviteTemplates();
         $prefillCrmGroupId = (int) $request->query('crm_group');
         $prefillParticipants = collect();
 
@@ -138,7 +139,7 @@ trait HandlesSalesWhatsAppGroups
         $cloud = $this->waGroupService()->cloudStatus();
         $crmGroups = $this->crmGroupsForSelect();
         $availableLeads = $this->availableLeadsForAdd($whatsappGroup);
-        $inviteTemplates = $this->waGroupService()->inviteTemplates()['templates'] ?? [];
+        $inviteTemplates = $this->safeInviteTemplates();
 
         return view($this->waGroupsView('show'), compact('whatsappGroup', 'cloud', 'crmGroups', 'availableLeads', 'inviteTemplates'));
     }
@@ -308,6 +309,16 @@ trait HandlesSalesWhatsAppGroups
         }
 
         return $group->userHasAccess((int) Auth::id());
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    protected function safeInviteTemplates(): array
+    {
+        try {
+            return $this->waGroupService()->inviteTemplates()['templates'] ?? [];
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     /** @return \Illuminate\Support\Collection<int, SalesLeadGroup> */
