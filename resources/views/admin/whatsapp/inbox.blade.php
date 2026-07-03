@@ -8,7 +8,9 @@
     $audience = $inboxAudience ?? 'admin';
     $canSend = (bool) ($connectionMeta['can_send'] ?? false);
     $webhookDiag = $connectionMeta['webhook'] ?? [];
-    $webhookIssues = $webhookDiag['issues'] ?? [];
+    $webhookIssues = ($webhookDiag['receiving_replies'] ?? false) ? [] : ($webhookDiag['issues'] ?? []);
+    $webhookTips = $webhookDiag['tips'] ?? [];
+    $webhookMeta = $webhookDiag['meta'] ?? [];
     $activeId = $activeConversation?->id;
     $inboxService = app(\App\Services\WhatsAppInboxService::class);
     $routes = $inboxRoutes ?? [];
@@ -64,27 +66,43 @@
 <div class="wa-inbox-page flex flex-col min-h-0 overflow-hidden gap-2" x-data="whatsappInbox()" x-cloak>
     @include('admin.whatsapp._alerts')
 
-    @if(!empty($webhookIssues))
+    @if(!empty($webhookIssues) || !empty($webhookTips))
         <div class="shrink-0 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 space-y-2">
-            <p class="font-bold flex items-center gap-2">
-                <i class="fas fa-exclamation-triangle text-amber-600"></i>
-                ردود العملاء لا تصل للنظام — Webhook غير مفعّل بالكامل
-            </p>
-            <ul class="list-disc list-inside text-xs space-y-1 leading-relaxed">
-                @foreach($webhookIssues as $issue)
-                    <li>{{ $issue }}</li>
-                @endforeach
-            </ul>
-            <p class="text-xs leading-relaxed border-t border-amber-200 pt-2">
-                <strong>الحل:</strong> من
-                <a href="{{ route('admin.whatsapp.settings') }}" class="underline font-semibold">إعدادات الربط</a>
-                احفظ Verify Token ثم في Meta Developers → WhatsApp → Configuration:
-                Callback URL = <code class="dir-ltr text-[11px]">{{ $webhookDiag['webhook_url'] ?? '' }}</code>
-                واشترك في <code>messages</code>.
-                @if($audience === 'admin')
-                    على السيرفر الحقيقي اضبط <code>APP_URL</code> أو <code>WHATSAPP_WEBHOOK_BASE_URL</code> على نطاق HTTPS عام.
-                @endif
-            </p>
+            @if(!empty($webhookIssues))
+                <p class="font-bold flex items-center gap-2">
+                    <i class="fas fa-exclamation-triangle text-amber-600"></i>
+                    ردود العملاء لا تظهر بعد في المحادثات
+                </p>
+                <ul class="list-disc list-inside text-xs space-y-1 leading-relaxed">
+                    @foreach($webhookIssues as $issue)
+                        <li>{{ $issue }}</li>
+                    @endforeach
+                </ul>
+            @endif
+            @if(!empty($webhookMeta) && ($webhookMeta['messages_subscribed'] !== null || $webhookMeta['callback_url']))
+                <div class="text-[11px] rounded-lg bg-white/70 border border-amber-200 px-3 py-2 space-y-1">
+                    <p><strong>فحص Meta:</strong>
+                        messages = {{ ($webhookMeta['messages_subscribed'] ?? false) ? 'مشترك ✓' : 'غير مشترك ✗' }},
+                        WABA = {{ ($webhookMeta['waba_app_subscribed'] ?? false) ? 'مشترك ✓' : 'غير مشترك ✗' }}
+                    </p>
+                    @if(!empty($webhookMeta['callback_url']))
+                        <p class="dir-ltr break-all">Callback في Meta: {{ $webhookMeta['callback_url'] }}</p>
+                    @endif
+                </div>
+            @endif
+            @if(!empty($webhookTips))
+                <ul class="list-disc list-inside text-[11px] text-amber-900 space-y-1">
+                    @foreach($webhookTips as $tip)
+                        <li>{{ $tip }}</li>
+                    @endforeach
+                </ul>
+            @endif
+            @if($audience === 'admin')
+                <p class="text-xs leading-relaxed border-t border-amber-200 pt-2">
+                    <a href="{{ route('admin.whatsapp.settings') }}" class="underline font-semibold">إعدادات الربط</a>
+                    — تأكد من تفعيل اشتراك <code>messages</code> في جدول Webhook fields (ليس فقط حفظ الرابط).
+                </p>
+            @endif
         </div>
     @endif
 

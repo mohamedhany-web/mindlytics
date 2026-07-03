@@ -41,13 +41,16 @@ class WhatsAppWebhookController extends Controller
     public function handle(Request $request): Response
     {
         $inbox = app(WhatsAppInboxService::class);
-        $payload = $request->all();
+        $payload = $this->decodeWebhookPayload($request);
 
         Log::info('WhatsApp webhook received', [
             'object' => $payload['object'] ?? null,
+            'has_entry' => isset($payload['entry']),
         ]);
 
-        Cache::put('whatsapp:webhook:last_received_at', now()->toIso8601String(), now()->addDays(90));
+        $now = now()->toIso8601String();
+        Cache::put('whatsapp:webhook:last_received_at', $now, now()->addDays(90));
+        WhatsAppCloudSettings::recordWebhookHit('webhook');
 
         if (($payload['object'] ?? '') !== 'whatsapp_business_account') {
             return response()->json(['status' => 'ignored']);
@@ -67,6 +70,26 @@ class WhatsAppWebhookController extends Controller
         }
 
         return response()->json(['status' => 'ok']);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function decodeWebhookPayload(Request $request): array
+    {
+        $payload = $request->all();
+        if (is_array($payload) && $payload !== []) {
+            return $payload;
+        }
+
+        $raw = $request->getContent();
+        if (! is_string($raw) || $raw === '') {
+            return [];
+        }
+
+        $decoded = json_decode($raw, true);
+
+        return is_array($decoded) ? $decoded : [];
     }
 
     private function hubParam(Request $request, string $suffix): string

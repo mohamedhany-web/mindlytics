@@ -211,7 +211,25 @@
                             <li>Callback URL: <code class="dir-ltr">{{ $config['webhook_url'] }}</code> (حرفياً — ليس WhatsappWebhook)</li>
                             <li>Verify Token: نفس القيمة المحفوظة → <strong>Verify and save</strong></li>
                             <li>اشترك في: <code>messages</code> (لردود العملاء) و <code>message_status</code> (لحالة التسليم)</li>
+                            <li>في نفس الصفحة: <strong>عطّل</strong> خيار «Attach a client certificate» إلا إذا ضبطت mTLS على السيرفر.</li>
+                            <li>بعد الحفظ: انزل لجدول <strong>Webhook fields</strong> وفعّل Subscribe أمام <code>messages</code> (زر أزرق).</li>
                         </ol>
+                        @php $metaStatus = $webhookDiagnostics['meta'] ?? []; @endphp
+                        @if(!empty($metaStatus) && ($metaStatus['messages_subscribed'] !== null || !empty($metaStatus['callback_url'])))
+                            <div class="mt-3 rounded-lg border border-slate-200 bg-white p-3 text-slate-800 space-y-1">
+                                <p class="font-bold">حالة الاشتراك من Meta API:</p>
+                                <p>حقل messages: <strong>{{ ($metaStatus['messages_subscribed'] ?? false) ? 'مشترك' : 'غير مشترك' }}</strong></p>
+                                <p>حقل message_status: <strong>{{ ($metaStatus['message_status_subscribed'] ?? false) ? 'مشترك' : 'غير مشترك' }}</strong></p>
+                                <p>اشتراك WABA: <strong>{{ ($metaStatus['waba_app_subscribed'] ?? false) ? 'نعم' : 'لا' }}</strong></p>
+                                @if(!empty($metaStatus['callback_url']))
+                                    <p class="dir-ltr break-all text-[11px]">Callback في Meta: {{ $metaStatus['callback_url'] }}</p>
+                                @endif
+                                <button type="button" id="btn-resubscribe-webhook" class="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-violet-600 hover:bg-violet-700 text-white">
+                                    <i class="fas fa-sync-alt"></i> إعادة اشتراك Webhook من Meta
+                                </button>
+                                <p id="resubscribe-webhook-result" class="hidden text-xs mt-1"></p>
+                            </div>
+                        @endif
                         @if(!empty($webhookDiagnostics['issues'] ?? []))
                             <div class="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-rose-900">
                                 <p class="font-bold mb-1">تشخيص Webhook الحالي:</p>
@@ -270,6 +288,31 @@
 (function () {
     const csrf = @json(csrf_token());
     const testUrl = @json(route('admin.whatsapp.test-connection'));
+    const resubscribeUrl = @json(route('admin.whatsapp.webhook.resubscribe'));
+
+    document.getElementById('btn-resubscribe-webhook')?.addEventListener('click', async function () {
+        const box = document.getElementById('resubscribe-webhook-result');
+        if (!box) return;
+        box.classList.remove('hidden', 'text-emerald-700', 'text-rose-700');
+        box.textContent = 'جاري طلب الاشتراك من Meta…';
+        try {
+            const res = await fetch(resubscribeUrl, {
+                method: 'POST',
+                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const data = await res.json();
+            if (data.success) {
+                box.classList.add('text-emerald-700');
+                box.textContent = 'تم طلب الاشتراك — حدّث الصفحة ثم تأكد أن messages مشترك في Meta.';
+            } else {
+                box.classList.add('text-rose-700');
+                box.textContent = data.error || 'فشل الاشتراك';
+            }
+        } catch (_) {
+            box.classList.add('text-rose-700');
+            box.textContent = 'خطأ في الاتصال';
+        }
+    });
 
     document.getElementById('btn-test-connection')?.addEventListener('click', async function () {
         const box = document.getElementById('test-result');

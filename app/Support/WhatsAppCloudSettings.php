@@ -287,4 +287,41 @@ class WhatsAppCloudSettings
 
         return 'v21.0';
     }
+
+    private const WEBHOOK_STATUS_PATH = 'site/whatsapp_webhook_status.json';
+
+    public static function recordWebhookHit(string $type = 'webhook'): void
+    {
+        $disk = Storage::disk('local');
+        if (! $disk->exists('site')) {
+            $disk->makeDirectory('site');
+        }
+
+        $data = [];
+        if ($disk->exists(self::WEBHOOK_STATUS_PATH)) {
+            $decoded = json_decode((string) $disk->get(self::WEBHOOK_STATUS_PATH), true);
+            $data = is_array($decoded) ? $decoded : [];
+        }
+
+        $data[$type === 'inbound' ? 'last_inbound_at' : 'last_received_at'] = now()->toIso8601String();
+        $disk->put(self::WEBHOOK_STATUS_PATH, json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+    }
+
+    /**
+     * @return array{last_received_at: ?string, last_inbound_at: ?string}
+     */
+    public static function webhookStatus(): array
+    {
+        $disk = Storage::disk('local');
+        if (! $disk->exists(self::WEBHOOK_STATUS_PATH)) {
+            return ['last_received_at' => null, 'last_inbound_at' => null];
+        }
+
+        $decoded = json_decode((string) $disk->get(self::WEBHOOK_STATUS_PATH), true);
+
+        return [
+            'last_received_at' => is_array($decoded) ? ($decoded['last_received_at'] ?? null) : null,
+            'last_inbound_at' => is_array($decoded) ? ($decoded['last_inbound_at'] ?? null) : null,
+        ];
+    }
 }

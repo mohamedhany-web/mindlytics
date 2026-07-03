@@ -130,6 +130,18 @@ class WhatsAppCloudController extends Controller
         return response()->json($meta);
     }
 
+    public function resubscribeWebhook(): JsonResponse
+    {
+        $result = $this->cloud->ensureWebhookSubscription();
+        $diagnostics = $this->cloud->webhookDiagnostics();
+
+        return response()->json([
+            'success' => (bool) ($result['success'] ?? false),
+            'error' => $result['error'] ?? null,
+            'webhook' => $diagnostics,
+        ]);
+    }
+
     private function syncPhoneMetadataFromApi(): void
     {
         if (! WhatsAppCloudSettings::isSendConfigured()) {

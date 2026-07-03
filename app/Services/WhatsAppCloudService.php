@@ -149,21 +149,54 @@ class WhatsAppCloudService
                 ->count();
         }
 
-        $lastWebhook = Cache::get('whatsapp:webhook:last_received_at');
-        $lastInbound = Cache::get('whatsapp:webhook:last_inbound_at');
+        $stored = WhatsAppCloudSettings::webhookStatus();
+        $lastWebhook = Cache::get('whatsapp:webhook:last_received_at') ?? $stored['last_received_at'];
+        $lastInbound = Cache::get('whatsapp:webhook:last_inbound_at') ?? $stored['last_inbound_at'];
+
+        $meta = WhatsAppCloudSettings::isSendConfigured()
+            ? $this->fetchMetaWebhookStatus()
+            : ['success' => false, 'errors' => ['أكمل Access Token و WABA ID أولاً']];
 
         $issues = [];
+        $tips = [];
+
         if ($isLocalUrl) {
-            $issues[] = 'رابط Webhook يشير إلى localhost — Meta لا يستطيع الوصول إليه. اضبط APP_URL أو WHATSAPP_WEBHOOK_BASE_URL على نطاق عام (HTTPS).';
+            $issues[] = 'رابط Webhook في النظام يشير إلى localhost — اضبط APP_URL أو WHATSAPP_WEBHOOK_BASE_URL على https://mindlytics-academy.com';
         }
         if (! $hasVerifyToken) {
-            $issues[] = 'Verify Token غير مضبوط — لن يقبل Meta التحقق من Webhook.';
+            $issues[] = 'Verify Token غير محفوظ في إعدادات الربط — يجب أن يطابق ما في Meta حرفياً.';
         }
-        if (! $lastWebhook && $inboundCount === 0) {
-            $issues[] = 'لم يصل أي Webhook من Meta بعد — ردود العملاء لن تظهر في المحادثات حتى تربط Webhook وتشترك في حقل messages.';
-        } elseif ($lastWebhook && $inboundCount === 0 && ! $lastInbound) {
-            $issues[] = 'وصل Webhook من Meta لكن لا توجد رسائل واردة — تأكد من اشتراك حقل messages في Meta Developers.';
+
+        if (($meta['messages_subscribed'] ?? null) === false) {
+            $issues[] = 'حقل messages غير مشترك في Meta — من صفحة Webhooks فعّل الاشتراك لحقل messages (ليس فقط حفظ Callback URL).';
         }
+        if (($meta['callback_matches'] ?? null) === false && ! empty($meta['callback_url'])) {
+            $issues[] = 'Callback URL في Meta (' . $meta['callback_url'] . ') يختلف عن رابط النظام (' . $webhookUrl . ').';
+        }
+        if (($meta['waba_app_subscribed'] ?? null) === false) {
+            $issues[] = 'التطبيق غير مشترك في حساب الواتساب (WABA) — احفظ الإعدادات مرة أخرى أو اضغط «إعادة اشتراك Webhook».';
+        }
+        if (($meta['active'] ?? null) === false) {
+            $issues[] = 'اشتراك Webhook في Meta غير نشط (active=false).';
+        }
+
+        foreach ($meta['errors'] ?? [] as $apiError) {
+            $tips[] = $apiError;
+        }
+
+        $tips[] = 'إذا كان خيار «Attach a client certificate to Webhook requests» مفعّلاً في Meta — عطّله إلا إذا ضبطت mTLS على السيرفر.';
+
+        if ($inboundCount === 0 && ! $lastInbound) {
+            if (($meta['messages_subscribed'] ?? null) === true && ($meta['waba_app_subscribed'] ?? null) === true) {
+                $issues[] = 'Meta مضبوط والاشتراك سليم، لكن لم تُسجَّل رسائل واردة بعد — اطلب من عميل إرسال رسالة نصية لرقم الواتساب الرسمي ثم راقب السجلات.';
+            } elseif (! $lastWebhook) {
+                $issues[] = 'لم يصل أي طلب Webhook من Meta للسيرفر بعد — راجع اشتراك messages وتحقق أن الرقم الذي يرد عليه العميل هو نفس رقم الحساب المربوط.';
+            } elseif ($lastWebhook) {
+                $issues[] = 'وصل Webhook لكن بلا رسائل واردة — غالباً اشتراك message_status فقط بدون messages.';
+            }
+        }
+
+        $receiving = $inboundCount > 0 || $lastInbound !== null;
 
         return [
             'webhook_url' => $webhookUrl,
@@ -172,10 +205,108 @@ class WhatsAppCloudService
             'last_webhook_at' => $lastWebhook,
             'last_inbound_at' => $lastInbound,
             'inbound_message_count' => $inboundCount,
-            'receiving_replies' => $inboundCount > 0 || $lastInbound !== null,
-            'issues' => $issues,
-            'ok' => $issues === [],
+            'receiving_replies' => $receiving,
+            'meta' => $meta,
+            'issues' => array_values(array_unique($issues)),
+            'tips' => array_values(array_unique($tips)),
+            'ok' => $receiving && $issues === [],
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function fetchMetaWebhookStatus(): array
+    {
+        $appId = WhatsAppCloudSettings::appId();
+        $wabaId = WhatsAppCloudSettings::businessAccountId();
+        $expectedUrl = WhatsAppCloudSettings::webhookUrl();
+        $creds = $this->resolveCredentials();
+
+        $result = [
+            'success' => false,
+            'callback_url' => null,
+            'callback_matches' => null,
+            'messages_subscribed' => null,
+            'message_status_subscribed' => null,
+            'active' => null,
+            'subscribed_fields' => [],
+            'waba_app_subscribed' => null,
+            'waba_subscribed_app_ids' => [],
+            'errors' => [],
+        ];
+
+        if ($creds['access_token'] === '') {
+            $result['errors'][] = 'Access Token غير موجود';
+
+            return $result;
+        }
+
+        if ($appId !== '') {
+            try {
+                $response = Http::withToken($creds['access_token'])
+                    ->timeout(25)
+                    ->get("{$this->graphUrl()}/{$appId}/subscriptions");
+
+                if ($response->successful()) {
+                    foreach ($response->json('data') ?? [] as $row) {
+                        if (! is_array($row) || ($row['object'] ?? '') !== 'whatsapp_business_account') {
+                            continue;
+                        }
+
+                        $fields = is_array($row['fields'] ?? null) ? $row['fields'] : [];
+                        $result['subscribed_fields'] = $fields;
+                        $result['messages_subscribed'] = in_array('messages', $fields, true);
+                        $result['message_status_subscribed'] = in_array('message_status', $fields, true);
+                        $result['callback_url'] = (string) ($row['callback_url'] ?? '');
+                        $result['active'] = (bool) ($row['active'] ?? false);
+                        $result['callback_matches'] = rtrim($result['callback_url'], '/') === rtrim($expectedUrl, '/');
+                    }
+                } else {
+                    $body = $response->json() ?? [];
+                    $error = is_array($body['error'] ?? null) ? $body['error'] : [];
+                    $result['errors'][] = 'تعذّر قراءة اشتراكات التطبيق: ' . $this->humanizeMetaError((string) ($error['message'] ?? 'HTTP ' . $response->status()));
+                }
+            } catch (\Throwable $e) {
+                $result['errors'][] = 'تعذّر الاتصال بـ Meta للتحقق من Webhook: ' . $e->getMessage();
+            }
+        }
+
+        if ($wabaId !== '') {
+            try {
+                $response = Http::withToken($creds['access_token'])
+                    ->timeout(25)
+                    ->get("{$this->graphUrl()}/{$wabaId}/subscribed_apps");
+
+                if ($response->successful()) {
+                    $ids = [];
+                    foreach ($response->json('data') ?? [] as $row) {
+                        $id = (string) ($row['whatsapp_business_api_data']['id'] ?? $row['id'] ?? '');
+                        if ($id !== '') {
+                            $ids[] = $id;
+                        }
+                    }
+                    $result['waba_subscribed_app_ids'] = $ids;
+                    $result['waba_app_subscribed'] = $appId === ''
+                        ? $ids !== []
+                        : in_array($appId, $ids, true);
+                } else {
+                    $body = $response->json() ?? [];
+                    $error = is_array($body['error'] ?? null) ? $body['error'] : [];
+                    $result['errors'][] = 'تعذّر قراءة subscribed_apps للـ WABA: ' . $this->humanizeMetaError((string) ($error['message'] ?? 'HTTP ' . $response->status()));
+                }
+            } catch (\Throwable $e) {
+                $result['errors'][] = 'تعذّر التحقق من اشتراك WABA: ' . $e->getMessage();
+            }
+        } else {
+            $result['errors'][] = 'WABA ID غير مضبوط في الإعدادات';
+        }
+
+        $result['success'] = ($result['errors'] === [])
+            && ($result['messages_subscribed'] !== false)
+            && ($result['waba_app_subscribed'] !== false);
+
+        return $result;
     }
 
     /**

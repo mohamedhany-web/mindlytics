@@ -81,7 +81,9 @@ class WhatsAppInboxService
 
             $this->afterInboundMessage($conversation, $message);
 
-            Cache::put('whatsapp:webhook:last_inbound_at', now()->toIso8601String(), now()->addDays(90));
+            $inboundAt = now()->toIso8601String();
+            Cache::put('whatsapp:webhook:last_inbound_at', $inboundAt, now()->addDays(90));
+            \App\Support\WhatsAppCloudSettings::recordWebhookHit('inbound');
 
             return $message;
         });
