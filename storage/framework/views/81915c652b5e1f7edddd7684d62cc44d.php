@@ -349,6 +349,14 @@
                         </a>
                     </li>
                     <li>
+                        <a href="<?php echo e(route('admin.whatsapp.reports')); ?>"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.whatsapp.reports') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : ''); ?>">
+                            <i class="fas fa-chart-pie w-4"></i>
+                            <span>التقارير</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="<?php echo e(route('admin.whatsapp.batches.index')); ?>"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.whatsapp.batches.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : ''); ?>">

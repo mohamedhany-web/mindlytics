@@ -8,12 +8,15 @@ use App\Models\MessageTemplate;
 use App\Models\User;
 use App\Models\WhatsAppBusinessConnection;
 use App\Models\WhatsAppMessage;
+use App\Models\WhatsAppMetaTemplate;
 use App\Services\WhatsAppBatchService;
 use App\Services\WhatsAppCloudService;
 use App\Services\WhatsAppPacingService;
 use App\Services\WhatsAppService;
 use App\Support\WhatsAppCloudSettings;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 
 class WhatsAppController extends Controller
 {
@@ -57,39 +60,82 @@ class WhatsAppController extends Controller
             ->limit(6)
             ->get();
 
+        $metaTemplates = $this->approvedMetaTemplatesForSend();
+        $metaTemplatesError = null;
+        if ($metaTemplates === [] && WhatsAppCloudSettings::isSendConfigured()) {
+            $metaResult = $this->cloud->listApprovedTemplates();
+            $metaTemplatesError = ($metaResult['success'] ?? false) ? null : ($metaResult['error'] ?? null);
+        }
+
         return view('admin.whatsapp.send', compact(
             'students',
             'templates',
             'courses',
             'connectionMeta',
-            'recentMessages'
+            'recentMessages',
+            'metaTemplates',
+            'metaTemplatesError',
         ));
     }
 
     public function sendMessage(Request $request)
     {
         $recipientType = $request->input('recipient_type', 'manual');
+        $sendMode = $request->input('send_mode', 'text');
 
         if (in_array($recipientType, ['single_student', 'course_students', 'all_students'], true)) {
+            if ($sendMode === 'meta_template') {
+                if ($recipientType === 'single_student') {
+                    return $this->sendSingleStudentMetaTemplate($request);
+                }
+
+                return back()
+                    ->withInput()
+                    ->with('error', 'إرسال قالب Meta الجماعي غير متاح بعد — استخدم «رقم يدوي» أو «طالب واحد».');
+            }
+
             return $this->sendBulkMessages($request);
         }
 
         $request->validate([
+            'send_mode' => 'required|in:text,meta_template',
             'phone' => 'required|string|max:30',
-            'message' => 'required|string|max:4096',
+            'message' => ['nullable', 'string', 'max:4096', Rule::requiredIf($sendMode === 'text')],
             'template_id' => 'nullable|exists:message_templates,id',
+            'meta_template_name' => ['nullable', 'string', 'max:200', Rule::requiredIf($sendMode === 'meta_template')],
+            'meta_template_language' => ['nullable', 'string', 'max:20', Rule::requiredIf($sendMode === 'meta_template')],
+            'template_variables' => 'nullable|array',
+            'template_variables.*' => 'nullable|string|max:500',
         ], [
             'phone.required' => 'رقم الهاتف مطلوب',
             'message.required' => 'نص الرسالة مطلوب',
+            'meta_template_name.required' => 'اختر قالب Meta معتمداً',
+            'meta_template_language.required' => 'لغة القالب مطلوبة',
         ]);
 
-        $message = $request->message;
-        if ($request->filled('template_id')) {
-            $template = MessageTemplate::findOrFail($request->template_id);
-            $message = $template->render($this->genericTemplateVariables());
-        }
+        if ($sendMode === 'meta_template') {
+            $components = $this->buildMetaTemplateComponents(
+                (string) $request->input('meta_template_name'),
+                (string) $request->input('meta_template_language'),
+                $request->input('template_variables', [])
+            );
 
-        $result = $this->whatsapp->sendMessage($request->phone, $message);
+            $result = $this->whatsapp->sendTemplate(
+                $request->phone,
+                (string) $request->input('meta_template_name'),
+                (string) $request->input('meta_template_language'),
+                $components,
+                ['user_id' => auth()->id()]
+            );
+        } else {
+            $message = (string) $request->message;
+            if ($request->filled('template_id')) {
+                $template = MessageTemplate::findOrFail($request->template_id);
+                $message = $template->render($this->genericTemplateVariables());
+            }
+
+            $result = $this->whatsapp->sendMessage($request->phone, $message);
+        }
 
         if ($result['success'] ?? false) {
             $flash = $result['notice'] ?? 'تم قبول الرسالة من Meta — تحقق من وصولها للمستلم في سجل الرسائل.';
@@ -102,6 +148,52 @@ class WhatsAppController extends Controller
         return back()
             ->withInput()
             ->with('error', $result['error'] ?? 'فشل إرسال الرسالة.');
+    }
+
+    protected function sendSingleStudentMetaTemplate(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'meta_template_name' => 'required|string|max:200',
+            'meta_template_language' => 'required|string|max:20',
+            'template_variables' => 'nullable|array',
+            'template_variables.*' => 'nullable|string|max:500',
+        ], [
+            'user_id.required' => 'يجب اختيار الطالب',
+            'meta_template_name.required' => 'اختر قالب Meta معتمداً',
+        ]);
+
+        $student = User::students()
+            ->where('id', $request->user_id)
+            ->whereNotNull('phone')
+            ->where('phone', '!=', '')
+            ->first();
+
+        if (! $student) {
+            return back()->withInput()->with('error', 'الطالب المختار لا يملك رقم هاتف.');
+        }
+
+        $components = $this->buildMetaTemplateComponents(
+            (string) $request->input('meta_template_name'),
+            (string) $request->input('meta_template_language'),
+            $request->input('template_variables', [])
+        );
+
+        $result = $this->whatsapp->sendTemplate(
+            $student->phone,
+            (string) $request->input('meta_template_name'),
+            (string) $request->input('meta_template_language'),
+            $components,
+            ['user_id' => auth()->id()]
+        );
+
+        if ($result['success'] ?? false) {
+            return redirect()
+                ->route('admin.whatsapp.messages')
+                ->with('success', $result['notice'] ?? 'تم إرسال قالب Meta للطالب.');
+        }
+
+        return back()->withInput()->with('error', $result['error'] ?? 'فشل الإرسال.');
     }
 
     protected function sendBulkMessages(Request $request)
@@ -223,6 +315,90 @@ class WhatsAppController extends Controller
             'date' => now()->format('d/m/Y'),
             'month_name' => now()->locale('ar')->format('F Y'),
         ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    protected function approvedMetaTemplatesForSend(): array
+    {
+        $templates = [];
+
+        if (Schema::hasTable('whatsapp_meta_templates')) {
+            $templates = WhatsAppMetaTemplate::query()
+                ->where('status', WhatsAppMetaTemplate::STATUS_APPROVED)
+                ->orderBy('name')
+                ->get()
+                ->map(fn (WhatsAppMetaTemplate $t) => [
+                    'key' => $t->name . '|' . $t->language,
+                    'name' => $t->name,
+                    'language' => $t->language,
+                    'category' => $t->category,
+                    'label' => $t->displayLabel() . ' (' . $t->categoryLabel() . ')',
+                    'body_text' => $t->body_text,
+                    'body_variable_count' => (int) $t->body_variable_count,
+                ])
+                ->values()
+                ->all();
+        }
+
+        if ($templates !== []) {
+            return $templates;
+        }
+
+        $apiResult = $this->cloud->listApprovedTemplates();
+        if (! ($apiResult['success'] ?? false)) {
+            return [];
+        }
+
+        return collect($apiResult['templates'] ?? [])
+            ->map(fn (array $row) => [
+                'key' => ($row['name'] ?? '') . '|' . ($row['language'] ?? 'en_US'),
+                'name' => $row['name'] ?? '',
+                'language' => $row['language'] ?? 'en_US',
+                'category' => $row['category'] ?? '',
+                'label' => $row['label'] ?? (($row['name'] ?? '') . ' · ' . ($row['language'] ?? '')),
+                'body_text' => null,
+                'body_variable_count' => 0,
+            ])
+            ->filter(fn (array $row) => $row['name'] !== '')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<int|string, string|null>  $variables
+     * @return array<int, array<string, mixed>>
+     */
+    protected function buildMetaTemplateComponents(string $name, string $language, array $variables): array
+    {
+        $count = 0;
+        if (Schema::hasTable('whatsapp_meta_templates')) {
+            $tpl = WhatsAppMetaTemplate::query()
+                ->where('name', $name)
+                ->where('language', $language)
+                ->where('status', WhatsAppMetaTemplate::STATUS_APPROVED)
+                ->first();
+            $count = (int) ($tpl?->body_variable_count ?? 0);
+            if ($count === 0 && $tpl?->body_text) {
+                $count = preg_match_all('/\{\{\d+\}\}/', (string) $tpl->body_text);
+            }
+        }
+
+        if ($count < 1) {
+            return [];
+        }
+
+        $parameters = [];
+        for ($i = 1; $i <= $count; $i++) {
+            $value = trim((string) ($variables[$i] ?? $variables[(string) $i] ?? ''));
+            if ($value === '') {
+                $value = '—';
+            }
+            $parameters[] = ['type' => 'text', 'text' => $value];
+        }
+
+        return [['type' => 'body', 'parameters' => $parameters]];
     }
 
     public function resendMessage(WhatsAppMessage $message)

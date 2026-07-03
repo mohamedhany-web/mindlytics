@@ -1,4 +1,4 @@
-@if($crmReady ?? false)
+<?php if($crmReady ?? false): ?>
 <aside class="wa-crm-sidebar wa-inbox-col hidden xl:flex flex-col min-h-0 overflow-hidden border-e border-slate-200 bg-white"
        x-show="conversationId && activeConversation"
        x-cloak>
@@ -11,14 +11,14 @@
 
     <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-4 text-sm wa-conv-scroll" x-show="activeConversation?.crm" style="-webkit-overflow-scrolling: touch;">
 
-        {{-- الحالة والقسم --}}
+        
         <div class="space-y-2">
             <label class="text-xs font-bold text-slate-600">حالة المحادثة</label>
             <select x-model="crmStatus" @change="updateCrmStatus()"
                     class="w-full rounded-lg border-slate-200 text-sm py-2">
-                @foreach($crmStatuses as $key => $label)
-                    <option value="{{ $key }}">{{ $label }}</option>
-                @endforeach
+                <?php $__currentLoopData = $crmStatuses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => $label): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <option value="<?php echo e($key); ?>"><?php echo e($label); ?></option>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </select>
         </div>
 
@@ -27,24 +27,24 @@
             <select x-model="crmLeadStage" @change="updateLeadStage()"
                     class="w-full rounded-lg border-slate-200 text-sm py-2">
                 <option value="">— غير مرتبط —</option>
-                @foreach($pipelineStages ?? [] as $key => $label)
-                    <option value="{{ $key }}">{{ $label }}</option>
-                @endforeach
+                <?php $__currentLoopData = $pipelineStages ?? []; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => $label): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <option value="<?php echo e($key); ?>"><?php echo e($label); ?></option>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </select>
             <p class="text-[10px] text-slate-500" x-show="activeConversation?.crm?.sales_lead_stage_label">
                 الحالية: <span x-text="activeConversation?.crm?.sales_lead_stage_label"></span>
             </p>
         </div>
 
-        @if(($inboxAudience ?? 'admin') === 'admin')
+        <?php if(($inboxAudience ?? 'admin') === 'admin'): ?>
         <div class="space-y-2">
             <label class="text-xs font-bold text-slate-600">الموظف المسؤول</label>
             <select x-model="crmAssignee" @change="transferConversation()"
                     class="w-full rounded-lg border-slate-200 text-sm py-2">
                 <option value="">غير معيّن</option>
-                @foreach($crmAgents as $agent)
-                    <option value="{{ $agent['id'] }}">{{ $agent['name'] }}</option>
-                @endforeach
+                <?php $__currentLoopData = $crmAgents; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $agent): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <option value="<?php echo e($agent['id']); ?>"><?php echo e($agent['name']); ?></option>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </select>
         </div>
 
@@ -54,13 +54,13 @@
                    class="w-full rounded-lg border-slate-200 text-sm py-2" placeholder="مثال: يحتاج دعم فني">
             <button type="button" @click="confirmTransfer()" class="text-xs text-emerald-700 font-bold">تأكيد النقل</button>
         </div>
-        @endif
+        <?php endif; ?>
 
-        {{-- الوسوم --}}
+        
         <div>
             <label class="text-xs font-bold text-slate-600 block mb-2">الوسوم</label>
             <div class="flex flex-wrap gap-1.5">
-                @php
+                <?php
                     $tagColorClasses = [
                         'amber' => 'bg-amber-100 border-amber-300 text-amber-800',
                         'sky' => 'bg-sky-100 border-sky-300 text-sky-800',
@@ -69,21 +69,22 @@
                         'violet' => 'bg-violet-100 border-violet-300 text-violet-800',
                         'rose' => 'bg-rose-100 border-rose-300 text-rose-800',
                     ];
-                @endphp
-                @foreach($crmTags as $tag)
-                    @php $activeTagClass = $tagColorClasses[$tag->color] ?? $tagColorClasses['slate']; @endphp
+                ?>
+                <?php $__currentLoopData = $crmTags; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $tag): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <?php $activeTagClass = $tagColorClasses[$tag->color] ?? $tagColorClasses['slate']; ?>
                     <button type="button"
-                            @click="toggleTag({{ $tag->id }})"
-                            class="text-[10px] px-2 py-1 rounded-full border font-semibold transition-colors tag-btn-{{ $tag->id }}"
-                            data-active-class="{{ $activeTagClass }}"
-                            :class="hasTag({{ $tag->id }}) ? $el.dataset.activeClass : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'">
-                        {{ $tag->name }}
+                            @click="toggleTag(<?php echo e($tag->id); ?>)"
+                            class="text-[10px] px-2 py-1 rounded-full border font-semibold transition-colors tag-btn-<?php echo e($tag->id); ?>"
+                            data-active-class="<?php echo e($activeTagClass); ?>"
+                            :class="hasTag(<?php echo e($tag->id); ?>) ? $el.dataset.activeClass : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'">
+                        <?php echo e($tag->name); ?>
+
                     </button>
-                @endforeach
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </div>
         </div>
 
-        {{-- بيانات العميل --}}
+        
         <div class="rounded-xl border border-slate-200 p-3 bg-slate-50/80 space-y-2" x-show="activeConversation?.crm?.contact">
             <p class="text-xs font-bold text-slate-700">بيانات العميل</p>
             <template x-if="activeConversation?.crm?.sales_lead_url">
@@ -104,7 +105,7 @@
             </p>
         </div>
 
-        {{-- ملاحظات داخلية --}}
+        
         <div>
             <label class="text-xs font-bold text-slate-600 block mb-2">ملاحظات داخلية</label>
             <textarea x-model="noteBody" rows="2" placeholder="ملاحظة للفريق فقط..."
@@ -125,7 +126,7 @@
             </div>
         </div>
 
-        {{-- Timeline --}}
+        
         <div>
             <label class="text-xs font-bold text-slate-600 block mb-2">الخط الزمني</label>
             <div class="space-y-2 max-h-52 overflow-y-auto pr-1">
@@ -146,4 +147,5 @@
 
     <p x-show="crmError" class="text-xs text-rose-600 px-3 py-2 border-t" x-text="crmError"></p>
 </aside>
-@endif
+<?php endif; ?>
+<?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/admin/whatsapp/_crm_panel.blade.php ENDPATH**/ ?>

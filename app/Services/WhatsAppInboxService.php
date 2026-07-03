@@ -427,17 +427,13 @@ class WhatsAppInboxService
         \DateTimeInterface $sentAt
     ): void {
         $preview = mb_substr($message->displayBody(), 0, 200);
-        $sentAtCarbon = $sentAt instanceof \Carbon\Carbon ? $sentAt : \Carbon\Carbon::parse($sentAt);
-
-        if ($conversation->last_message_at && $conversation->last_message_at->greaterThan($sentAtCarbon)) {
-            return;
-        }
 
         $conversation->update([
-            'last_message_at' => $sentAtCarbon,
+            'last_message_at' => now(),
             'last_message_preview' => $preview,
-            'last_message_direction' => WhatsAppConversationMessage::DIRECTION_OUTBOUND,
+            'last_message_direction' => $message->direction,
             'user_id' => $conversation->user_id,
+            'contact_name' => $conversation->contact_name,
         ]);
     }
 
@@ -516,7 +512,7 @@ class WhatsAppInboxService
     /**
      * @return array<string, mixed>
      */
-    public function serializeConversation(WhatsAppConversation $conversation): array
+    public function serializeConversation(WhatsAppConversation $conversation, string $audience = 'admin'): array
     {
         $conversation->loadMissing(['user:id,name,phone', 'assignee:id,name', 'tags', 'contact', 'salesLead']);
 
@@ -536,7 +532,7 @@ class WhatsAppInboxService
         ];
 
         if (app(WhatsAppCrmService::class)->crmTablesReady()) {
-            $payload['crm'] = app(WhatsAppCrmService::class)->serializeCrm($conversation);
+            $payload['crm'] = app(WhatsAppCrmService::class)->serializeCrm($conversation, $audience);
         }
 
         return $payload;
@@ -555,45 +551,53 @@ class WhatsAppInboxService
 
     private function afterInboundMessage(WhatsAppConversation $conversation, WhatsAppConversationMessage $message): void
     {
-        $crm = app(WhatsAppCrmService::class);
-        if (! $crm->crmTablesReady()) {
-            return;
-        }
+        try {
+            $crm = app(WhatsAppCrmService::class);
+            if (! $crm->crmTablesReady()) {
+                return;
+            }
 
-        $conversation = $conversation->fresh();
-        $crm->ensureContactForConversation($conversation);
-        $crm->logEvent(
-            $conversation->fresh(),
-            \App\Models\WhatsAppConversationEvent::TYPE_MESSAGE_INBOUND,
-            'رسالة واردة',
-            mb_substr($message->displayBody(), 0, 200)
-        );
-        $crm->touchContactActivity($conversation->fresh());
+            $conversation = $conversation->fresh();
+            $crm->ensureContactForConversation($conversation);
+            $crm->logEvent(
+                $conversation->fresh(),
+                \App\Models\WhatsAppConversationEvent::TYPE_MESSAGE_INBOUND,
+                'رسالة واردة',
+                mb_substr($message->displayBody(), 0, 200)
+            );
+            $crm->touchContactActivity($conversation->fresh());
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     private function afterOutboundMessage(WhatsAppConversation $conversation, WhatsAppConversationMessage $message): void
     {
-        $crm = app(WhatsAppCrmService::class);
-        if (! $crm->crmTablesReady()) {
-            return;
+        try {
+            $crm = app(WhatsAppCrmService::class);
+            if (! $crm->crmTablesReady()) {
+                return;
+            }
+
+            $conversation = $conversation->fresh();
+            $crm->ensureContactForConversation($conversation);
+
+            $type = $message->template_name
+                ? \App\Models\WhatsAppConversationEvent::TYPE_TEMPLATE_SENT
+                : \App\Models\WhatsAppConversationEvent::TYPE_MESSAGE_OUTBOUND;
+
+            $crm->logEvent(
+                $conversation,
+                $type,
+                $message->template_name ? 'قالب Meta' : 'رد صادر',
+                mb_substr($message->displayBody(), 0, 200),
+                ['template_name' => $message->template_name]
+            );
+
+            $crm->touchContactActivity($conversation);
+            $crm->logOutboundToSalesLead($conversation, $message->displayBody(), $message->sent_by_user_id);
+        } catch (\Throwable $e) {
+            report($e);
         }
-
-        $conversation = $conversation->fresh();
-        $crm->ensureContactForConversation($conversation);
-
-        $type = $message->template_name
-            ? \App\Models\WhatsAppConversationEvent::TYPE_TEMPLATE_SENT
-            : \App\Models\WhatsAppConversationEvent::TYPE_MESSAGE_OUTBOUND;
-
-        $crm->logEvent(
-            $conversation,
-            $type,
-            $message->template_name ? 'قالب Meta' : 'رد صادر',
-            mb_substr($message->displayBody(), 0, 200),
-            ['template_name' => $message->template_name]
-        );
-
-        $crm->touchContactActivity($conversation);
-        $crm->logOutboundToSalesLead($conversation, $message->displayBody(), $message->sent_by_user_id);
     }
 }

@@ -338,10 +338,57 @@ class WhatsAppCrmService
         ])->all();
     }
 
+    public function updateLeadStage(
+        WhatsAppConversation $conversation,
+        string $stage,
+        ?int $userId = null,
+        bool $employeeScope = false
+    ): ?SalesLead {
+        if (! $conversation->sales_lead_id) {
+            return null;
+        }
+
+        $lead = SalesLead::query()->find($conversation->sales_lead_id);
+        if (! $lead) {
+            return null;
+        }
+
+        if ($employeeScope && (int) $lead->assigned_to !== (int) ($userId ?? auth()->id())) {
+            abort(403, 'لا يمكنك تعديل مرحلة عميل غير مخصص لك.');
+        }
+
+        $oldStage = $lead->stage;
+        $lead->update(['stage' => $stage]);
+
+        if ($oldStage !== 'contacted' && $stage !== 'new') {
+            $lead->update(['last_contacted_at' => now()]);
+        }
+
+        SalesActivity::create([
+            'sales_lead_id' => $lead->id,
+            'user_id' => $userId ?? auth()->id(),
+            'type' => 'stage_change',
+            'title' => 'تغيير مرحلة من المحادثات',
+            'body' => (SalesLead::STAGES[$oldStage] ?? $oldStage) . ' → ' . (SalesLead::STAGES[$stage] ?? $stage),
+            'meta' => ['conversation_id' => $conversation->id, 'from' => $oldStage, 'to' => $stage],
+        ]);
+
+        $this->logEvent(
+            $conversation,
+            WhatsAppConversationEvent::TYPE_STATUS_CHANGED,
+            'مرحلة Pipeline',
+            (SalesLead::STAGES[$oldStage] ?? $oldStage) . ' → ' . (SalesLead::STAGES[$stage] ?? $stage),
+            ['lead_stage_from' => $oldStage, 'lead_stage_to' => $stage],
+            $userId
+        );
+
+        return $lead->fresh();
+    }
+
     /**
      * @return array<string, mixed>
      */
-    public function serializeCrm(WhatsAppConversation $conversation): array
+    public function serializeCrm(WhatsAppConversation $conversation, string $audience = 'admin'): array
     {
         $conversation->loadMissing(['assignee:id,name', 'tags', 'contact', 'salesLead']);
 
@@ -356,8 +403,13 @@ class WhatsAppCrmService
             'sales_lead_id' => $conversation->sales_lead_id,
             'sales_lead_name' => $conversation->salesLead?->name,
             'sales_lead_stage' => $conversation->salesLead?->stage,
+            'sales_lead_stage_label' => $conversation->salesLead?->stage
+                ? (SalesLead::STAGES[$conversation->salesLead->stage] ?? $conversation->salesLead->stage)
+                : null,
             'sales_lead_url' => $conversation->sales_lead_id
-                ? route('admin.sales.leads.show', $conversation->sales_lead_id)
+                ? ($audience === 'employee'
+                    ? route('employee.sales.leads.show', $conversation->sales_lead_id)
+                    : route('admin.sales.leads.show', $conversation->sales_lead_id))
                 : null,
             'tags' => $conversation->tags->map(fn (WhatsAppTag $t) => [
                 'id' => $t->id,

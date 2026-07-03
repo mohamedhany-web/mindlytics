@@ -11,6 +11,7 @@ use App\Services\SalesAuditService;
 use App\Services\SalesDailyReportService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use App\Models\WhatsAppConversation;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -95,7 +96,28 @@ class SalesLeadController extends Controller
             'عرض عميل محتمل: ' . $lead->name
         );
 
-        return view('employee.sales.leads.show', compact('lead'));
+        $whatsappConversation = WhatsAppConversation::query()
+            ->where(function ($q) use ($lead) {
+                $q->where('sales_lead_id', $lead->id);
+                if ($lead->phone) {
+                    $digits = preg_replace('/[^0-9]/', '', (string) $lead->phone);
+                    if (strlen($digits) >= 8) {
+                        $q->orWhere('phone_number', 'like', '%' . substr($digits, -9) . '%');
+                    }
+                }
+            })
+            ->where(function ($q) {
+                $q->where('assigned_to', Auth::id())
+                    ->orWhereHas('salesLead', fn ($lq) => $lq->where('assigned_to', Auth::id()));
+            })
+            ->latest('last_message_at')
+            ->first();
+
+        $whatsappInboxUrl = $whatsappConversation
+            ? route('employee.sales.whatsapp.inbox.index', ['conversation' => $whatsappConversation->id])
+            : ($lead->phone ? route('employee.sales.whatsapp.inbox.index', ['start_lead' => $lead->id]) : null);
+
+        return view('employee.sales.leads.show', compact('lead', 'whatsappConversation', 'whatsappInboxUrl'));
     }
 
     public function edit(SalesLead $lead)

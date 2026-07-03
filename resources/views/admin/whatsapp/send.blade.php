@@ -20,15 +20,22 @@
         'name' => $s->name,
         'phone' => $s->phone,
     ])->values();
+    $metaTemplatesJson = collect($metaTemplates ?? [])->values();
     $waSendConfig = [
         'templates' => $templatesJson,
+        'metaTemplates' => $metaTemplatesJson,
         'students' => $studentsJson,
         'oldRecipient' => old('recipient_type', 'manual'),
+        'oldSendMode' => old('send_mode', 'text'),
         'oldMessage' => old('message', ''),
         'oldPhone' => old('phone', ''),
         'oldUserId' => old('user_id', ''),
         'oldCourseId' => old('course_id', ''),
         'oldTemplateId' => old('template_id', ''),
+        'oldMetaTemplateKey' => old('meta_template_name') && old('meta_template_language')
+            ? old('meta_template_name') . '|' . old('meta_template_language')
+            : '',
+        'oldTemplateVariables' => old('template_variables', []),
     ];
     $templateVariables = [
         ['var' => '{{student_name}}', 'desc' => 'اسم الطالب'],
@@ -46,17 +53,53 @@ function whatsappSendForm() {
     const config = window.__waSendFormConfig || {};
     return {
         recipientType: config.oldRecipient || 'manual',
+        sendMode: config.oldSendMode || 'text',
         message: config.oldMessage || '',
         phone: config.oldPhone || '',
         userId: config.oldUserId ? String(config.oldUserId) : '',
         courseId: config.oldCourseId ? String(config.oldCourseId) : '',
         templateId: config.oldTemplateId ? String(config.oldTemplateId) : '',
+        metaTemplateKey: config.oldMetaTemplateKey || '',
+        metaTemplateName: '',
+        metaTemplateLanguage: '',
+        templateVariables: config.oldTemplateVariables || {},
         templates: config.templates || [],
+        metaTemplates: config.metaTemplates || [],
         students: config.students || [],
         submitting: false,
 
+        init() {
+            if (this.templateId) {
+                this.applyLocalTemplate();
+            }
+            if (this.metaTemplateKey) {
+                this.applyMetaTemplate();
+            }
+        },
+
+        setSendMode(mode) {
+            this.sendMode = mode;
+            if (mode === 'meta_template') {
+                this.templateId = '';
+                if (this.metaTemplateKey) {
+                    this.applyMetaTemplate();
+                } else if (this.metaTemplates.length === 1) {
+                    this.metaTemplateKey = this.metaTemplates[0].key;
+                    this.applyMetaTemplate();
+                }
+            } else {
+                this.metaTemplateKey = '';
+                this.metaTemplateName = '';
+                this.metaTemplateLanguage = '';
+                this.templateVariables = {};
+            }
+        },
+
         setRecipientType(type) {
             this.recipientType = type;
+            if (type !== 'manual' && this.sendMode === 'meta_template' && !['single_student', 'manual'].includes(type)) {
+                this.setSendMode('text');
+            }
         },
 
         get charCount() {
@@ -64,10 +107,41 @@ function whatsappSendForm() {
         },
 
         get previewText() {
+            if (this.sendMode === 'meta_template') {
+                const t = this.selectedMetaTemplate();
+                if (!t) return 'اختر قالب Meta معتمداً...';
+                let body = t.body_text || ('قالب Meta: ' + t.label);
+                const count = this.metaVariableCount();
+                for (let i = 1; i <= count; i++) {
+                    const val = (this.templateVariables[i] || this.templateVariables[String(i)] || '').trim() || '{{' + i + '}}';
+                    body = body.replace(new RegExp('\\{\\{' + i + '\\}\\}', 'g'), val);
+                }
+                return body;
+            }
             if (!this.message || !this.message.trim()) {
                 return 'اكتب رسالتك لرؤية المعاينة هنا...';
             }
             return this.message;
+        },
+
+        selectedMetaTemplate() {
+            return this.metaTemplates.find(x => x.key === this.metaTemplateKey) || null;
+        },
+
+        metaVariableCount() {
+            const t = this.selectedMetaTemplate();
+            if (!t) return 0;
+            if (t.body_variable_count > 0) return t.body_variable_count;
+            if (t.body_text) {
+                const matches = t.body_text.match(/\{\{\d+\}\}/g);
+                return matches ? new Set(matches).size : 0;
+            }
+            return 0;
+        },
+
+        metaVariableIndexes() {
+            const n = this.metaVariableCount();
+            return Array.from({ length: n }, (_, i) => i + 1);
         },
 
         get recipientHint() {
@@ -102,11 +176,44 @@ function whatsappSendForm() {
             return s ? s.phone : '';
         },
 
-        applyTemplate() {
+        applyLocalTemplate() {
             const t = this.templates.find(x => String(x.id) === String(this.templateId));
             if (t && t.content) {
                 this.message = t.content;
+                this.sendMode = 'text';
             }
+        },
+
+        applyMetaTemplate() {
+            const t = this.selectedMetaTemplate();
+            if (!t) {
+                this.metaTemplateName = '';
+                this.metaTemplateLanguage = '';
+                return;
+            }
+            this.sendMode = 'meta_template';
+            this.metaTemplateName = t.name;
+            this.metaTemplateLanguage = t.language;
+            this.templateId = '';
+            const count = this.metaVariableCount();
+            const vars = { ...this.templateVariables };
+            for (let i = 1; i <= count; i++) {
+                if (vars[i] === undefined && vars[String(i)] === undefined) {
+                    vars[i] = '';
+                }
+            }
+            this.templateVariables = vars;
+        },
+
+        onLocalTemplateChange() {
+            if (!this.templateId) {
+                return;
+            }
+            this.applyLocalTemplate();
+        },
+
+        onMetaTemplateChange() {
+            this.applyMetaTemplate();
         },
 
         onStudentPick() {
@@ -129,6 +236,18 @@ function whatsappSendForm() {
         },
 
         onSubmit(e) {
+            if (this.sendMode === 'meta_template') {
+                if (!this.metaTemplateKey || !this.metaTemplateName) {
+                    e.preventDefault();
+                    alert('اختر قالب Meta معتمداً قبل الإرسال.');
+                    return;
+                }
+            } else if (!this.message || !this.message.trim()) {
+                e.preventDefault();
+                alert('اكتب نص الرسالة أو اختر قالباً نصياً.');
+                return;
+            }
+
             if (this.recipientType === 'all_students' || this.recipientType === 'course_students' || this.recipientType === 'single_student') {
                 const n = this.recipientType === 'single_student' ? 1
                     : (this.recipientType === 'course_students' ? 'طلاب الكورس' : this.students.length);
@@ -146,7 +265,12 @@ function whatsappSendForm() {
             this.userId = '';
             this.courseId = '';
             this.templateId = '';
+            this.metaTemplateKey = '';
+            this.metaTemplateName = '';
+            this.metaTemplateLanguage = '';
+            this.templateVariables = {};
             this.recipientType = 'manual';
+            this.sendMode = 'text';
             this.submitting = false;
         },
     };
@@ -200,18 +324,21 @@ function whatsappSendForm() {
                     <li>{{ $warning }}</li>
                 @endforeach
                 <li>الرسائل النصية الحرة (بدون قالب Meta) تُرسل فقط خلال <strong>24 ساعة</strong> من آخر رسالة من العميل لرقمكم.</li>
-                <li>للتسويق أو أول تواصل: أنشئ <strong>قالب رسالة معتمد</strong> في Meta Business ثم أرسله عبر API (قريباً في المنصة).</li>
+                <li>للتسويق أو أول تواصل: اختر <strong>قالب Meta معتمد</strong> من نفس الصفحة، أو أنشئ قالباً من <a href="{{ route('admin.whatsapp.templates.index') }}" class="underline font-semibold">قوالب Meta</a>.</li>
                 <li>بعد الإرسال راجع <a href="{{ route('admin.whatsapp.messages') }}" class="underline font-semibold">سجل الرسائل</a> — إن فشل التسليم ستظهر الحالة «فشل» مع السبب.</li>
             </ul>
         </div>
     @endif
 
     <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6"
-         x-data="whatsappSendForm()">
+         x-data="whatsappSendForm()" x-init="init()">
 
         <form method="POST" action="{{ route('admin.whatsapp.send.post') }}" @submit="onSubmit" class="xl:col-span-8 space-y-4">
             @csrf
             <input type="hidden" name="recipient_type" :value="recipientType">
+            <input type="hidden" name="send_mode" :value="sendMode">
+            <input type="hidden" name="meta_template_name" :value="metaTemplateName">
+            <input type="hidden" name="meta_template_language" :value="metaTemplateLanguage">
 
             <section class="{{ $waSectionClass }}">
                 <div class="px-5 py-4 border-b border-slate-200">
@@ -316,34 +443,99 @@ function whatsappSendForm() {
                         محتوى الرسالة
                     </h3>
                 </div>
-                <div class="p-5 sm:p-6">
-                        <div class="mb-5">
-                            <label class="{{ $waLabelClass }}">قالب رسالة (اختياري)</label>
-                            <select name="template_id" x-model="templateId" @change="applyTemplate" class="{{ $waSelectClass }}">
-                                <option value="">— رسالة مخصصة —</option>
-                                @foreach($templates as $template)
-                                    <option value="{{ $template->id }}">{{ $template->title }}</option>
-                                @endforeach
-                            </select>
-                            <p class="text-xs text-slate-500 mt-1.5">
-                                مع القالب في الإرسال الجماعي تُستبدل المتغيرات لكل طالب تلقائياً
-                                · <a href="{{ route('admin.messages.templates') }}" class="text-emerald-600 hover:underline">إدارة القوالب</a>
-                            </p>
+                <div class="p-5 sm:p-6 space-y-5">
+                    <div>
+                        <label class="{{ $waLabelClass }}">نوع الإرسال</label>
+                        <div class="grid grid-cols-2 gap-3 mt-1">
+                            <button type="button" @click="setSendMode('text')"
+                                    :class="sendMode === 'text' ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-white hover:border-emerald-300'"
+                                    class="p-3 rounded-xl border-2 text-right transition-all">
+                                <p class="font-bold text-sm text-slate-900">رسالة نصية</p>
+                                <p class="text-[11px] text-slate-500 mt-0.5">خلال نافذة 24 ساعة</p>
+                            </button>
+                            <button type="button" @click="setSendMode('meta_template')"
+                                    :class="sendMode === 'meta_template' ? 'border-sky-500 bg-sky-50' : 'border-slate-200 bg-white hover:border-sky-300'"
+                                    class="p-3 rounded-xl border-2 text-right transition-all">
+                                <p class="font-bold text-sm text-slate-900">قالب Meta معتمد</p>
+                                <p class="text-[11px] text-slate-500 mt-0.5">للتسويق أو أول تواصل</p>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div x-show="sendMode === 'text'" x-cloak>
+                        <label class="{{ $waLabelClass }}">قالب نصي محلي (اختياري)</label>
+                        <select name="template_id" x-model="templateId" @change="onLocalTemplateChange()" class="{{ $waSelectClass }}">
+                            <option value="">— رسالة مخصصة —</option>
+                            @foreach($templates as $template)
+                                <option value="{{ $template->id }}">{{ $template->title }}</option>
+                            @endforeach
+                        </select>
+                        <p class="text-xs text-slate-500 mt-1.5">
+                            يملأ نص الرسالة تلقائياً — في الإرسال الجماعي تُستبدل المتغيرات لكل طالب
+                            · <a href="{{ route('admin.messages.templates') }}" class="text-emerald-600 hover:underline">إدارة القوالب النصية</a>
+                        </p>
+                    </div>
+
+                    <div x-show="sendMode === 'meta_template'" x-cloak class="space-y-3">
+                        <div>
+                            <label class="{{ $waLabelClass }}">قالب Meta المعتمد</label>
+                            @if(count($metaTemplates ?? []) > 0)
+                                <select x-model="metaTemplateKey" @change="onMetaTemplateChange()" class="{{ $waSelectClass }} dir-ltr text-right">
+                                    <option value="">— اختر قالباً —</option>
+                                    @foreach($metaTemplates as $mt)
+                                        <option value="{{ $mt['key'] }}">{{ $mt['label'] }}</option>
+                                    @endforeach
+                                </select>
+                                <p class="text-xs text-slate-500 mt-1.5">
+                                    يُرسل عبر WhatsApp Cloud API كقالب رسمي — لا يحتاج نافذة 24 ساعة
+                                    · <a href="{{ route('admin.whatsapp.templates.index') }}" class="text-sky-600 hover:underline">إدارة قوالب Meta</a>
+                                </p>
+                            @else
+                                <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+                                    لا توجد قوالب Meta معتمدة.
+                                    @if(!empty($metaTemplatesError))
+                                        <span class="block mt-1">{{ $metaTemplatesError }}</span>
+                                    @endif
+                                    <a href="{{ route('admin.whatsapp.templates.index') }}" class="font-bold underline mt-1 inline-block">أنشئ واعتمد قالباً</a>
+                                </div>
+                            @endif
                         </div>
 
-                        {{-- نص الرسالة --}}
-                        <div class="mb-5">
-                            <div class="flex items-center justify-between mb-1.5">
-                                <label class="{{ $waLabelClass }} mb-0">نص الرسالة</label>
-                                <span class="text-xs font-mono tabular-nums"
-                                      :class="charCount > 4000 ? 'text-rose-600 font-bold' : 'text-slate-500'"
-                                      x-text="charCount + ' / 4096'"></span>
+                        <template x-if="metaVariableIndexes().length > 0">
+                            <div class="rounded-xl border border-sky-100 bg-sky-50/50 p-4 space-y-2">
+                                <p class="text-xs font-bold text-sky-900">متغيرات القالب</p>
+                                <template x-for="i in metaVariableIndexes()" :key="'mv-' + i">
+                                    <div>
+                                        <label class="text-[11px] text-slate-600 font-mono" x-text="'متغير ' + i"></label>
+                                        <input type="text" :name="'template_variables[' + i + ']'" x-model="templateVariables[i]"
+                                               class="{{ $waInputClass }} text-sm mt-0.5" :placeholder="'قيمة المتغير ' + i">
+                                    </div>
+                                </template>
                             </div>
-                            <textarea name="message" rows="8" required maxlength="4096" x-model="message"
-                                      class="{{ $waTextareaClass }}"
-                                      placeholder="اكتب رسالتك هنا...&#10;&#10;يمكنك استخدام *نص عريض* و _مائل_ كما في واتساب"></textarea>
-                            @error('message')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
+                        </template>
+                    </div>
+
+                    {{-- نص الرسالة --}}
+                    <div x-show="sendMode === 'text'" x-cloak>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="{{ $waLabelClass }} mb-0">نص الرسالة</label>
+                            <span class="text-xs font-mono tabular-nums"
+                                  :class="charCount > 4000 ? 'text-rose-600 font-bold' : 'text-slate-500'"
+                                  x-text="charCount + ' / 4096'"></span>
                         </div>
+                        <textarea name="message" rows="8" maxlength="4096" x-model="message"
+                                  :required="sendMode === 'text'"
+                                  class="{{ $waTextareaClass }}"
+                                  placeholder="اكتب رسالتك هنا...&#10;&#10;يمكنك استخدام *نص عريض* و _مائل_ كما في واتساب"></textarea>
+                        @error('message')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
+                        @error('meta_template_name')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div x-show="sendMode === 'meta_template' && selectedMetaTemplate()" x-cloak
+                         class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-700">
+                        <p class="font-bold text-slate-900 mb-1">معاينة القالب المختار</p>
+                        <p class="whitespace-pre-wrap" x-text="previewText"></p>
+                    </div>
 
                         {{-- أزرار --}}
                         <div class="flex flex-wrap items-center gap-2 pt-4 border-t border-slate-100">

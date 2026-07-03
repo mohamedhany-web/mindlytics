@@ -23,6 +23,12 @@
     <div class="flex flex-wrap items-center justify-between gap-3">
         <a href="{{ route('employee.sales.leads.index') }}" class="text-sm text-gray-600 hover:text-emerald-600"><i class="fas fa-arrow-right ml-1"></i> القائمة</a>
         <div class="flex gap-2">
+            @if(!empty($whatsappInboxUrl))
+                <a href="{{ $whatsappInboxUrl }}" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">
+                    <i class="fab fa-whatsapp ml-1"></i>
+                    {{ $whatsappConversation ? 'فتح المحادثة' : 'بدء واتساب' }}
+                </a>
+            @endif
             <a href="{{ route('employee.sales.leads.edit', $lead) }}" class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium">تعديل بيانات العميل</a>
             <form action="{{ route('employee.sales.leads.destroy', $lead) }}" method="post" onsubmit="return confirm('حذف هذا السجل؟');">
                 @csrf
