@@ -47,6 +47,7 @@ class SalesWhatsAppInboxController extends Controller
             'start' => route('employee.sales.whatsapp.inbox.start'),
             'conversation' => route('employee.sales.whatsapp.inbox.conversation', is_array($params[0] ?? null) ? $params[0] : ['conversation' => $params[0]]),
             'reply' => route('employee.sales.whatsapp.inbox.reply', $params[0]),
+            'react' => route('employee.sales.whatsapp.inbox.react', $params[0]),
             'template' => route('employee.sales.whatsapp.inbox.template', $params[0]),
             'status' => route('employee.sales.whatsapp.inbox.status', $params[0]),
             'notes' => route('employee.sales.whatsapp.inbox.notes', $params[0]),
@@ -90,6 +91,11 @@ class SalesWhatsAppInboxController extends Controller
     public function reply(Request $request, WhatsAppConversation $conversation): JsonResponse
     {
         return $this->inboxReply($request, $conversation);
+    }
+
+    public function react(Request $request, WhatsAppConversation $conversation): JsonResponse
+    {
+        return $this->inboxReact($request, $conversation);
     }
 
     public function sendTemplate(Request $request, WhatsAppConversation $conversation): JsonResponse

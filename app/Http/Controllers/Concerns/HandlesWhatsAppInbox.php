@@ -225,6 +225,7 @@ trait HandlesWhatsAppInbox
             'timeline' => $timeline,
             'within_service_window' => $inbox->isWithinServiceWindow($conversation),
             'reply_url' => $this->inboxRoute('reply', $conversation),
+            'react_url' => $this->inboxRoute('react', $conversation),
             'template_url' => $this->inboxRoute('template', $conversation),
             'crm_urls' => $this->inboxCrmUrls($conversation),
             'unread_total' => $this->inboxUnreadTotal(),
@@ -297,9 +298,32 @@ trait HandlesWhatsAppInbox
         [$inbox] = $this->inboxServices();
         $this->authorizeInboxConversation($conversation);
 
-        $validated = $request->validate(['body' => 'required|string|max:4096']);
+        $validated = $request->validate([
+            'body' => 'required|string|max:4096',
+            'context_message_id' => 'nullable|integer|exists:whatsapp_conversation_messages,id',
+        ]);
 
-        $result = $inbox->sendTextReply($conversation, $validated['body'], auth()->id());
+        $contextWaId = null;
+        $contextPreview = null;
+        if (! empty($validated['context_message_id'])) {
+            $contextMsg = WhatsAppConversationMessage::query()->findOrFail((int) $validated['context_message_id']);
+            if ((int) $contextMsg->conversation_id !== (int) $conversation->id) {
+                return response()->json(['success' => false, 'error' => 'الرسالة المرجعية لا تنتمي لهذه المحادثة'], 422);
+            }
+            $contextWaId = (string) ($contextMsg->whatsapp_message_id ?? '');
+            $contextPreview = mb_substr($contextMsg->displayBody(), 0, 200);
+            if ($contextWaId === '') {
+                return response()->json(['success' => false, 'error' => 'لا يمكن الرد على رسالة بدون معرّف Meta'], 422);
+            }
+        }
+
+        $result = $inbox->sendTextReply(
+            $conversation,
+            $validated['body'],
+            auth()->id(),
+            $contextWaId,
+            $contextPreview,
+        );
 
         if (! ($result['success'] ?? false)) {
             return response()->json([
@@ -323,6 +347,36 @@ trait HandlesWhatsAppInbox
             'success' => true,
             'message' => $inbox->serializeMessage($message->load('sentBy:id,name')),
             'conversation' => $inbox->serializeConversation($conversation, $this->inboxAudience()),
+        ]);
+    }
+
+    public function inboxReact(Request $request, WhatsAppConversation $conversation): JsonResponse
+    {
+        [$inbox] = $this->inboxServices();
+        $this->authorizeInboxConversation($conversation);
+
+        $validated = $request->validate([
+            'message_id' => 'required|integer|exists:whatsapp_conversation_messages,id',
+            'emoji' => 'required|string|max:16',
+        ]);
+
+        $target = WhatsAppConversationMessage::query()->findOrFail((int) $validated['message_id']);
+        if ((int) $target->conversation_id !== (int) $conversation->id) {
+            return response()->json(['success' => false, 'error' => 'الرسالة لا تنتمي لهذه المحادثة'], 422);
+        }
+
+        $result = $inbox->sendReaction($conversation, $target, $validated['emoji'], auth()->id());
+
+        if (! ($result['success'] ?? false)) {
+            return response()->json(['success' => false, 'error' => $result['error'] ?? 'فشل التفاعل'], 422);
+        }
+
+        /** @var WhatsAppConversationMessage $message */
+        $message = $result['message'];
+
+        return response()->json([
+            'success' => true,
+            'message' => $inbox->serializeMessage($message->load('sentBy:id,name')),
         ]);
     }
 
@@ -602,6 +656,7 @@ trait HandlesWhatsAppInbox
             'poll' => $this->inboxRoute('poll'),
             'conversationUrlTemplate' => $this->inboxRoute('conversation', ['conversation' => '__ID__']),
             'reply' => $active ? $this->inboxRoute('reply', $active) : null,
+            'react' => $active ? $this->inboxRoute('react', $active) : null,
             'template' => $active ? $this->inboxRoute('template', $active) : null,
             'start' => $this->inboxRoute('start'),
             'templates' => $this->inboxRoute('templates'),

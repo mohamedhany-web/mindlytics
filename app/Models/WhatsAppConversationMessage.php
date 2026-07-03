@@ -19,6 +19,9 @@ class WhatsAppConversationMessage extends Model
         'body',
         'message_type',
         'whatsapp_message_id',
+        'context_wa_message_id',
+        'context_preview',
+        'reaction_emoji',
         'status',
         'sent_by_user_id',
         'template_name',
@@ -64,6 +67,7 @@ class WhatsAppConversationMessage extends Model
         }
 
         return match ($this->message_type) {
+            'reaction' => $this->reaction_emoji ? $this->reaction_emoji : '[تفاعل]',
             'image' => '[صورة]',
             'audio' => '[رسالة صوتية]',
             'video' => '[فيديو]',

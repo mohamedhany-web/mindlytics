@@ -59,6 +59,12 @@ class WhatsAppWebhookController extends Controller
         foreach ($payload['entry'] ?? [] as $entry) {
             foreach ($entry['changes'] ?? [] as $change) {
                 $value = $change['value'] ?? [];
+                $field = (string) ($change['field'] ?? '');
+
+                if (str_starts_with($field, 'group_')) {
+                    app(\App\Services\WhatsAppGroupWebhookService::class)->handleChangeValue($value);
+                }
+
                 $this->processStatuses($value['statuses'] ?? []);
                 $this->processInboundMessages(
                     $inbox,

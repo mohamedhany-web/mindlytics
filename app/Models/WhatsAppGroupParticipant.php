@@ -11,7 +11,11 @@ class WhatsAppGroupParticipant extends Model
 
     public const STATUS_PENDING = 'pending';
 
-    public const STATUS_ADDED = 'added';
+    public const STATUS_INVITED = 'invited';
+
+    public const STATUS_JOINED = 'joined';
+
+    public const STATUS_ADDED = 'joined';
 
     public const STATUS_FAILED = 'failed';
 
@@ -25,6 +29,13 @@ class WhatsAppGroupParticipant extends Model
         'wa_participant_jid',
         'status',
         'error_message',
+        'invited_at',
+        'joined_at',
+    ];
+
+    protected $casts = [
+        'invited_at' => 'datetime',
+        'joined_at' => 'datetime',
     ];
 
     public function group(): BelongsTo
@@ -40,7 +51,8 @@ class WhatsAppGroupParticipant extends Model
     public function statusLabel(): string
     {
         return match ($this->status) {
-            self::STATUS_ADDED => 'مضاف',
+            self::STATUS_INVITED => 'دعوة مُرسلة',
+            self::STATUS_JOINED, self::STATUS_ADDED => 'انضم',
             self::STATUS_FAILED => 'فشل',
             self::STATUS_REMOVED => 'محذوف',
             default => 'قيد الانتظار',

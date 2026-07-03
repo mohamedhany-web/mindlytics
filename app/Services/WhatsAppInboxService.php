@@ -37,10 +37,17 @@ class WhatsAppInboxService
             return null;
         }
 
+        $type = (string) ($msg['type'] ?? 'text');
+        if ($type === 'reaction') {
+            return $this->recordInboundReaction($msg);
+        }
+
         $phone = $this->whatsapp->formatPhoneNumber($from);
         [$body, $messageType] = $this->extractInboundContent($msg);
+        $contextWaId = (string) ($msg['context']['id'] ?? '');
+        $contextPreview = $this->contextPreviewForWaId($contextWaId);
 
-        return DB::transaction(function () use ($phone, $msg, $metadata, $waMessageId, $body, $messageType) {
+        return DB::transaction(function () use ($phone, $msg, $metadata, $waMessageId, $body, $messageType, $contextWaId, $contextPreview) {
             $conversation = WhatsAppConversation::query()->firstOrCreate(
                 ['phone_number' => $phone],
                 ['contact_name' => null, 'unread_count' => 0]
@@ -61,6 +68,8 @@ class WhatsAppInboxService
                 'body' => $body,
                 'message_type' => $messageType,
                 'whatsapp_message_id' => $waMessageId ?: null,
+                'context_wa_message_id' => $contextWaId !== '' ? $contextWaId : null,
+                'context_preview' => $contextPreview,
                 'status' => 'received',
                 'payload' => [
                     'raw' => $msg,
@@ -254,8 +263,13 @@ class WhatsAppInboxService
     /**
      * @return array{success: bool, message?: WhatsAppConversationMessage, error?: string}
      */
-    public function sendTextReply(WhatsAppConversation $conversation, string $body, ?int $userId = null): array
-    {
+    public function sendTextReply(
+        WhatsAppConversation $conversation,
+        string $body,
+        ?int $userId = null,
+        ?string $contextWaMessageId = null,
+        ?string $contextPreview = null,
+    ): array {
         $body = trim($body);
         if ($body === '') {
             return ['success' => false, 'error' => 'نص الرد فارغ'];
@@ -263,6 +277,7 @@ class WhatsAppInboxService
 
         $result = $this->whatsapp->sendTextReply($conversation->phone_number, $body, [
             'user_id' => $userId,
+            'context_message_id' => $contextWaMessageId,
         ]);
 
         if (! ($result['success'] ?? false)) {
@@ -281,9 +296,86 @@ class WhatsAppInboxService
                 'body' => $body,
                 'message_type' => 'text',
                 'whatsapp_message_id' => $result['whatsapp_id'] ?? null,
+                'context_wa_message_id' => $contextWaMessageId,
+                'context_preview' => $contextPreview,
                 'sent_by_user_id' => $userId,
             ]),
         ];
+    }
+
+    /**
+     * @return array{success: bool, message?: WhatsAppConversationMessage, error?: string}
+     */
+    public function sendReaction(
+        WhatsAppConversation $conversation,
+        WhatsAppConversationMessage $target,
+        string $emoji,
+        ?int $userId = null,
+    ): array {
+        if (! $target->isInbound()) {
+            return ['success' => false, 'error' => 'يمكن التفاعل فقط مع رسائل العميل (Meta Cloud API).'];
+        }
+
+        $waId = (string) ($target->whatsapp_message_id ?? '');
+        if ($waId === '') {
+            return ['success' => false, 'error' => 'لا يوجد معرّف Meta لهذه الرسالة.'];
+        }
+
+        $emoji = trim($emoji);
+        if ($emoji === '') {
+            return ['success' => false, 'error' => 'اختر إيموجي للتفاعل'];
+        }
+
+        $result = $this->whatsapp->sendReaction($conversation->phone_number, $waId, $emoji, [
+            'user_id' => $userId,
+        ]);
+
+        if (! ($result['success'] ?? false)) {
+            return ['success' => false, 'error' => $result['error'] ?? 'فشل إرسال التفاعل'];
+        }
+
+        $target->update(['reaction_emoji' => $emoji]);
+
+        return [
+            'success' => true,
+            'message' => $target->fresh('sentBy'),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $msg
+     */
+    private function recordInboundReaction(array $msg): ?WhatsAppConversationMessage
+    {
+        $reaction = is_array($msg['reaction'] ?? null) ? $msg['reaction'] : [];
+        $targetWaId = (string) ($reaction['message_id'] ?? '');
+        if ($targetWaId === '') {
+            return null;
+        }
+
+        $emoji = (string) ($reaction['emoji'] ?? '');
+        $target = WhatsAppConversationMessage::query()->where('whatsapp_message_id', $targetWaId)->first();
+        if (! $target) {
+            return null;
+        }
+
+        $target->update(['reaction_emoji' => $emoji !== '' ? $emoji : null]);
+
+        return $target->fresh();
+    }
+
+    private function contextPreviewForWaId(string $waId): ?string
+    {
+        if ($waId === '') {
+            return null;
+        }
+
+        $parent = WhatsAppConversationMessage::query()->where('whatsapp_message_id', $waId)->first();
+        if (! $parent) {
+            return null;
+        }
+
+        return mb_substr($parent->displayBody(), 0, 200);
     }
 
     /**
@@ -412,6 +504,8 @@ class WhatsAppInboxService
             'body' => $data['body'] ?? null,
             'message_type' => $data['message_type'] ?? 'text',
             'whatsapp_message_id' => $data['whatsapp_message_id'] ?? null,
+            'context_wa_message_id' => $data['context_wa_message_id'] ?? null,
+            'context_preview' => $data['context_preview'] ?? null,
             'status' => 'sent',
             'sent_by_user_id' => $data['sent_by_user_id'] ?? null,
             'template_name' => $data['template_name'] ?? null,
@@ -499,6 +593,8 @@ class WhatsAppInboxService
      */
     public function serializeMessage(WhatsAppConversationMessage $message): array
     {
+        $at = $message->created_at;
+
         return [
             'id' => $message->id,
             'direction' => $message->direction,
@@ -508,8 +604,14 @@ class WhatsAppInboxService
             'template_name' => $message->template_name,
             'error_message' => $message->error_message,
             'sent_by' => $message->sentBy?->name,
-            'created_at' => $message->created_at?->toIso8601String(),
-            'created_at_human' => $message->created_at?->format('Y-m-d H:i'),
+            'whatsapp_message_id' => $message->whatsapp_message_id,
+            'context_wa_message_id' => $message->context_wa_message_id,
+            'context_preview' => $message->context_preview,
+            'reaction_emoji' => $message->reaction_emoji,
+            'created_at' => $at?->toIso8601String(),
+            'created_at_human' => $at
+                ? ($at->isToday() ? $at->format('H:i') : $at->format('d/m H:i'))
+                : '',
             'is_inbound' => $message->isInbound(),
         ];
     }

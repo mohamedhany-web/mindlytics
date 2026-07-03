@@ -22,9 +22,12 @@
     @if(session('success'))<div class="rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-2 text-sm">{{ session('success') }}</div>@endif
     @if(session('error'))<div class="rounded-lg border border-rose-200 bg-rose-50 text-rose-800 px-4 py-2 text-sm">{{ session('error') }}</div>@endif
 
-    <div class="sales-panel p-4 text-sm {{ ($bridge['connected'] ?? false) ? 'border-emerald-200 bg-emerald-50/50' : 'border-amber-200 bg-amber-50/50' }}">
-        <p class="font-bold mb-1"><i class="fab fa-whatsapp text-emerald-600 ml-1"></i> جلسة الجسر</p>
-        <p>{{ ($bridge['connected'] ?? false) ? 'متصل' : ($bridge['error'] ?? 'غير متصل') }}</p>
+    <div class="sales-panel p-4 text-sm {{ ($cloud['connected'] ?? false) ? 'border-emerald-200 bg-emerald-50/50' : 'border-amber-200 bg-amber-50/50' }}">
+        <p class="font-bold mb-1"><i class="fab fa-whatsapp text-emerald-600 ml-1"></i> Meta Cloud API</p>
+        <p>{{ ($cloud['connected'] ?? false) ? ($cloud['label'] ?? 'متصل') : ($cloud['error'] ?? 'غير جاهز') }}</p>
+        @foreach(($cloud['notes'] ?? []) as $note)
+            <p class="text-xs text-slate-600 mt-1">• {{ $note }}</p>
+        @endforeach
     </div>
 
     @include('employee.sales.whatsapp-groups._list', ['groups' => $groups, 'r' => $r])

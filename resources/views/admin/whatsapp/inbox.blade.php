@@ -44,6 +44,7 @@
         'pollUrl' => $routes['poll'] ?? '',
         'conversationUrlTemplate' => $routes['conversationUrlTemplate'] ?? '',
         'replyUrl' => $routes['reply'] ?? null,
+        'reactUrl' => $routes['react'] ?? null,
         'templateUrl' => $routes['template'] ?? null,
         'startUrl' => $routes['start'] ?? '',
         'templatesUrl' => $routes['templates'] ?? '',
@@ -307,34 +308,59 @@
                             <i class="fas fa-comments text-3xl text-slate-300 mb-2"></i>
                             <p>لا رسائل بعد — ابدأ المحادثة من الأسفل</p>
                         </div>
-                        <div class="space-y-2">
+                        <div class="space-y-1">
                             <template x-for="msg in chatMessages" :key="'m-' + (msg.id || msg._tmp)">
-                                <div class="flex" :class="msg.is_inbound ? 'justify-start' : 'justify-end'">
-                                    <div class="max-w-[88%] sm:max-w-[72%] rounded-lg px-3 py-2 shadow-sm text-sm whitespace-pre-wrap break-words relative"
-                                         :class="msg.is_inbound
-                                            ? 'bg-white text-slate-800 rounded-tl-none'
-                                            : (msg._pending ? 'bg-[#d9fdd3]/70 text-slate-700 rounded-tr-none ring-1 ring-emerald-200' : 'bg-[#d9fdd3] text-slate-900 rounded-tr-none')">
-                                        <p x-text="msg.body || '[رسالة]'"></p>
-                                        <template x-if="msg.template_name">
-                                            <p class="text-[10px] opacity-70 mt-1" x-text="'قالب: ' + msg.template_name"></p>
-                                        </template>
-                                        <template x-if="msg.error_message && msg.status === 'failed'">
-                                            <p class="text-[10px] text-rose-600 mt-1" x-text="msg.error_message"></p>
-                                        </template>
-                                        <div class="flex items-center justify-end gap-1 mt-0.5 text-[10px] opacity-60">
-                                            <span x-show="msg._pending" class="text-emerald-600">جاري الإرسال...</span>
-                                            <span x-show="msg.sent_by && !msg.is_inbound && !msg._pending" x-text="msg.sent_by"></span>
-                                            <span x-text="msg.created_at_human || ''"></span>
-                                            <template x-if="!msg.is_inbound && !msg._pending && msg.status === 'read'">
-                                                <i class="fas fa-check-double text-sky-500"></i>
+                                <div class="flex items-end gap-1 group/msg"
+                                     :class="msg.is_inbound ? 'justify-start' : 'justify-end'">
+                                    <div class="relative max-w-[min(85%,18rem)] w-fit">
+                                        <div class="wa-msg-bubble"
+                                             :class="msg.is_inbound
+                                                ? 'wa-msg-bubble--in'
+                                                : (msg._pending ? 'wa-msg-bubble--out wa-msg-bubble--pending' : 'wa-msg-bubble--out')">
+                                            <template x-if="msg.context_preview">
+                                                <div class="wa-msg-quote" x-text="msg.context_preview"></div>
                                             </template>
-                                            <template x-if="!msg.is_inbound && !msg._pending && msg.status === 'delivered'">
-                                                <i class="fas fa-check-double text-slate-400"></i>
+                                            <p class="wa-msg-text" x-text="msg.body || '[رسالة]'"></p>
+                                            <template x-if="msg.template_name">
+                                                <p class="wa-msg-meta-extra" x-text="'قالب: ' + msg.template_name"></p>
                                             </template>
-                                            <template x-if="!msg.is_inbound && !msg._pending && msg.status === 'sent'">
-                                                <i class="fas fa-check text-slate-400"></i>
+                                            <template x-if="msg.error_message && msg.status === 'failed'">
+                                                <p class="wa-msg-error" x-text="msg.error_message"></p>
+                                            </template>
+                                            <span class="wa-msg-meta">
+                                                <span x-show="msg._pending" class="text-emerald-600">···</span>
+                                                <span x-show="msg.sent_by && !msg.is_inbound && !msg._pending" x-text="msg.sent_by"></span>
+                                                <span x-text="msg.created_at_human || ''"></span>
+                                                <template x-if="!msg.is_inbound && !msg._pending && msg.status === 'read'">
+                                                    <i class="fas fa-check-double text-sky-500"></i>
+                                                </template>
+                                                <template x-if="!msg.is_inbound && !msg._pending && msg.status === 'delivered'">
+                                                    <i class="fas fa-check-double text-slate-400"></i>
+                                                </template>
+                                                <template x-if="!msg.is_inbound && !msg._pending && msg.status === 'sent'">
+                                                    <i class="fas fa-check text-slate-400"></i>
+                                                </template>
+                                            </span>
+                                        </div>
+                                        <div x-show="msg.reaction_emoji" class="wa-msg-reaction" x-text="msg.reaction_emoji"></div>
+                                        <div x-show="reactPickerFor === msg.id" x-cloak
+                                             class="absolute z-20 flex gap-0.5 bg-white rounded-full shadow-lg border border-slate-200 px-1.5 py-1 -bottom-9 inset-inline-start-0">
+                                            <template x-for="em in quickEmojis" :key="em">
+                                                <button type="button" @click="sendReaction(msg, em)"
+                                                        class="w-7 h-7 hover:bg-slate-100 rounded-full text-base leading-none" x-text="em"></button>
                                             </template>
                                         </div>
+                                    </div>
+                                    <div class="wa-msg-actions opacity-0 group-hover/msg:opacity-100 transition-opacity flex flex-col gap-0.5 shrink-0"
+                                         x-show="!msg._pending && msg.id">
+                                        <button type="button" @click="startReply(msg)" title="رد"
+                                                class="w-7 h-7 rounded-full bg-white/90 shadow text-slate-500 hover:text-emerald-600 text-xs">
+                                            <i class="fas fa-reply"></i>
+                                        </button>
+                                        <button type="button" x-show="msg.is_inbound" @click="toggleReactPicker(msg)" title="تفاعل"
+                                                class="w-7 h-7 rounded-full bg-white/90 shadow text-slate-500 hover:text-amber-500 text-xs">
+                                            <i class="far fa-smile"></i>
+                                        </button>
                                     </div>
                                 </div>
                             </template>
@@ -343,6 +369,14 @@
 
                     {{-- شريط الإرسال --}}
                     <div class="wa-chat-composer shrink-0 bg-[#f0f2f5] px-3 py-2 sm:px-4 sm:py-3 border-t border-slate-200">
+                        <div x-show="replyingTo" x-cloak
+                             class="flex items-center gap-2 text-xs bg-white border border-emerald-200 border-r-4 border-r-emerald-500 rounded-lg px-3 py-2 mb-2">
+                            <div class="flex-1 min-w-0">
+                                <p class="font-semibold text-emerald-700">رد على</p>
+                                <p class="text-slate-600 truncate" x-text="replyingTo?.body"></p>
+                            </div>
+                            <button type="button" @click="cancelReply()" class="text-slate-400 hover:text-slate-600 px-2">×</button>
+                        </div>
                         <div x-show="replyError" x-cloak class="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 mb-2" x-text="replyError"></div>
                         <p x-show="!withinWindow" x-cloak class="text-[10px] text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-1.5 mb-2">
                             إذا لم يرد العميل خلال 24 ساعة، قد يرفض Meta الرسالة النصية — جرّب الإرسال أو استخدم قالباً من الأسفل.
@@ -583,6 +617,76 @@
         }
     }
     [x-cloak] { display: none !important; }
+    .wa-msg-bubble {
+        position: relative;
+        display: inline-block;
+        max-width: 100%;
+        padding: 4px 8px 5px;
+        border-radius: 7.5px;
+        font-size: 14px;
+        line-height: 1.35;
+        box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
+        word-break: break-word;
+    }
+    .wa-msg-bubble--in {
+        background: #fff;
+        color: #111b21;
+        border-top-left-radius: 0;
+    }
+    .wa-msg-bubble--out {
+        background: #d9fdd3;
+        color: #111b21;
+        border-top-right-radius: 0;
+    }
+    .wa-msg-bubble--pending {
+        opacity: 0.75;
+        outline: 1px solid #86efac;
+    }
+    .wa-msg-text {
+        white-space: pre-wrap;
+        padding-inline-end: 52px;
+        min-height: 1.35em;
+    }
+    .wa-msg-quote {
+        font-size: 12px;
+        line-height: 1.3;
+        padding: 4px 6px;
+        margin-bottom: 4px;
+        border-inline-start: 3px solid #10b981;
+        background: rgba(0,0,0,0.04);
+        border-radius: 4px;
+        color: #54656f;
+        max-height: 2.6em;
+        overflow: hidden;
+    }
+    .wa-msg-meta {
+        float: left;
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        margin-top: 2px;
+        margin-inline-start: 6px;
+        font-size: 10px;
+        line-height: 1;
+        color: rgba(17, 27, 33, 0.45);
+        white-space: nowrap;
+        vertical-align: bottom;
+    }
+    .wa-msg-meta-extra { font-size: 10px; opacity: 0.7; margin-top: 2px; }
+    .wa-msg-error { font-size: 10px; color: #e11d48; margin-top: 2px; }
+    .wa-msg-reaction {
+        position: absolute;
+        bottom: -6px;
+        inset-inline-end: 8px;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 999px;
+        padding: 0 5px;
+        font-size: 13px;
+        line-height: 1.4;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    }
+    .group\/msg { position: relative; }
 </style>
 @endpush
 
@@ -599,6 +703,7 @@ function whatsappInbox() {
         pollUrl: cfg.pollUrl,
         conversationUrlTemplate: cfg.conversationUrlTemplate,
         replyUrl: cfg.replyUrl,
+        reactUrl: cfg.reactUrl,
         templateUrl: cfg.templateUrl,
         startUrl: cfg.startUrl,
         templatesUrl: cfg.templatesUrl,
@@ -610,6 +715,9 @@ function whatsappInbox() {
         metaTemplates: cfg.metaTemplates || [],
         searchQuery: new URLSearchParams(window.location.search).get('search') || '',
         replyBody: '',
+        replyingTo: null,
+        reactPickerFor: null,
+        quickEmojis: ['👍', '❤️', '😂', '😮', '😢', '🙏'],
         templateName: '',
         templateLang: '',
         selectedTemplateKey: '',
@@ -922,6 +1030,7 @@ function whatsappInbox() {
                 this.chatMessages = Array.isArray(data.messages) ? data.messages : [];
                 this.withinWindow = !!data.within_service_window;
                 this.replyUrl = data.reply_url || this.replyUrl;
+                this.reactUrl = data.react_url || this.reactUrl;
                 this.templateUrl = data.template_url || this.templateUrl;
                 this.crmUrls = data.crm_urls || this.crmUrls;
                 this.crmNotes = data.notes || this.crmNotes;
@@ -990,6 +1099,8 @@ function whatsappInbox() {
             this.loadingConversation = true;
             this.replyError = '';
             this.replyBody = '';
+            this.replyingTo = null;
+            this.reactPickerFor = null;
             this.showSidebarMobile = false;
             this.conversationId = id;
             if (isSwitch) {
@@ -1012,6 +1123,7 @@ function whatsappInbox() {
                 this.chatMessages = Array.isArray(data.messages) ? [...data.messages] : [];
                 this.withinWindow = !!data.within_service_window;
                 this.replyUrl = data.reply_url;
+                this.reactUrl = data.react_url || this.reactUrl;
                 this.templateUrl = data.template_url;
                 this.crmUrls = data.crm_urls || {};
                 this.crmNotes = data.notes || [];
@@ -1060,20 +1172,79 @@ function whatsappInbox() {
                 }
 
                 if (Array.isArray(data.messages) && data.messages.length) {
-                    const existingIds = new Set(this.chatMessages.map(m => m.id));
-                    const merged = [...this.chatMessages];
+                    const byId = Object.fromEntries(this.chatMessages.map(m => [m.id, m]));
+                    let changed = false;
                     data.messages.forEach(m => {
-                        if (!existingIds.has(m.id)) {
-                            merged.push(m);
+                        if (!m.id) return;
+                        if (byId[m.id]) {
+                            if (byId[m.id].reaction_emoji !== m.reaction_emoji || byId[m.id].status !== m.status) {
+                                Object.assign(byId[m.id], m);
+                                changed = true;
+                            }
+                        } else {
+                            this.chatMessages.push(m);
                             this.lastMessageId = Math.max(this.lastMessageId, m.id);
+                            changed = true;
                         }
                     });
-                    if (merged.length !== this.chatMessages.length) {
-                        this.chatMessages = merged;
+                    if (changed) {
+                        this.chatMessages = [...this.chatMessages];
                         this.scrollChat();
                     }
                 }
             } catch (_) {}
+        },
+
+        startReply(msg) {
+            if (!msg?.id) return;
+            this.replyingTo = msg;
+            this.reactPickerFor = null;
+            this.$refs.composer?.focus();
+        },
+
+        cancelReply() {
+            this.replyingTo = null;
+        },
+
+        toggleReactPicker(msg) {
+            if (!msg?.id) return;
+            this.reactPickerFor = this.reactPickerFor === msg.id ? null : msg.id;
+        },
+
+        async sendReaction(msg, emoji) {
+            if (!this.reactUrl || !msg?.id || this.sending) return;
+            this.sending = true;
+            this.replyError = '';
+            this.reactPickerFor = null;
+            try {
+                const res = await fetch(this.reactUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': this.csrf,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({ message_id: msg.id, emoji }),
+                });
+                const data = await this.parseJsonResponse(res);
+                if (!data.success) {
+                    this.replyError = data.error || 'فشل التفاعل';
+                    return;
+                }
+                if (data.message) {
+                    const idx = this.chatMessages.findIndex(m => m.id === data.message.id);
+                    if (idx >= 0) {
+                        const next = [...this.chatMessages];
+                        next[idx] = data.message;
+                        this.chatMessages = next;
+                    }
+                }
+            } catch (_) {
+                this.replyError = 'خطأ في الاتصال';
+            } finally {
+                this.sending = false;
+            }
         },
 
         async sendReply() {
@@ -1081,8 +1252,10 @@ function whatsappInbox() {
             this.sending = true;
             this.replyError = '';
             const body = this.replyBody.trim();
+            const contextMsg = this.replyingTo;
             const tmpId = 'tmp-' + Date.now();
             this.replyBody = '';
+            this.replyingTo = null;
             this.$nextTick(() => this.autoGrowComposer());
 
             this.appendChatMessage({
@@ -1091,12 +1264,16 @@ function whatsappInbox() {
                 id: null,
                 direction: 'outbound',
                 body,
+                context_preview: contextMsg?.body || null,
                 is_inbound: false,
                 status: 'pending',
                 created_at_human: 'الآن',
             });
 
             try {
+                const payload = { body };
+                if (contextMsg?.id) payload.context_message_id = contextMsg.id;
+
                 const res = await fetch(this.replyUrl, {
                     method: 'POST',
                     headers: {
@@ -1105,12 +1282,13 @@ function whatsappInbox() {
                         'X-CSRF-TOKEN': this.csrf,
                         'X-Requested-With': 'XMLHttpRequest',
                     },
-                    body: JSON.stringify({ body }),
+                    body: JSON.stringify(payload),
                 });
                 const data = await this.parseJsonResponse(res);
                 if (!data.success) {
                     this.removePendingMessage(tmpId);
                     this.replyBody = body;
+                    if (contextMsg) this.replyingTo = contextMsg;
                     this.replyError = data.error || 'فشل الإرسال';
                     if (data.requires_template) this.showTemplatePicker = true;
                     return;
@@ -1129,6 +1307,7 @@ function whatsappInbox() {
             } catch (_) {
                 this.removePendingMessage(tmpId);
                 this.replyBody = body;
+                if (contextMsg) this.replyingTo = contextMsg;
                 this.replyError = 'خطأ في الاتصال';
             } finally {
                 this.sending = false;

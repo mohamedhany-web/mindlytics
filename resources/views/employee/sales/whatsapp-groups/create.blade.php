@@ -13,6 +13,11 @@
 
     @if(session('error'))<div class="rounded-lg border border-rose-200 bg-rose-50 text-rose-800 px-4 py-2 text-sm">{{ session('error') }}</div>@endif
 
+    <div class="sales-panel p-4 text-xs text-slate-600 border-sky-200 bg-sky-50/50">
+        <p class="font-bold text-sky-900 mb-1">كيف تعمل المجموعات على Meta Cloud</p>
+        <p>1) تُنشأ المجموعة عبر API. 2) تُرسل دعوة لكل عميل عبر قالب <strong>Group Invite</strong> معتمد. 3) العميل يختار الانضمام — لا يمكن إضافته يدوياً.</p>
+    </div>
+
     <form method="post" action="{{ $r('store') }}" class="sales-panel p-5 space-y-5">
         @csrf
 
@@ -27,28 +32,41 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">ربط بمجموعة عملاء (CRM)</label>
-                <select name="sales_lead_group_id" class="w-full px-3 py-2.5 border border-slate-200 rounded-lg" id="crm-group-select">
+                <select name="sales_lead_group_id" class="w-full px-3 py-2.5 border border-slate-200 rounded-lg">
                     <option value="">— بدون —</option>
                     @foreach($crmGroups as $g)
                         <option value="{{ $g->id }}" @selected((int)old('sales_lead_group_id', $prefillCrmGroupId) === (int)$g->id)>{{ $g->name }}</option>
                     @endforeach
                 </select>
             </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">موافقة الانضمام</label>
+                <select name="join_approval_mode" class="w-full px-3 py-2.5 border border-slate-200 rounded-lg">
+                    <option value="auto_approve" @selected(old('join_approval_mode', 'auto_approve') === 'auto_approve')>انضمام تلقائي</option>
+                    <option value="approval_required" @selected(old('join_approval_mode') === 'approval_required')>يتطلب موافقة</option>
+                </select>
+            </div>
         </div>
 
-        <div class="grid sm:grid-cols-2 gap-3 text-sm">
-            <label class="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" name="announce_only" value="1" class="rounded" @checked(old('announce_only'))>
-                <span>الرسائل للمشرفين فقط (Announce)</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" name="restrict_info" value="1" class="rounded" @checked(old('restrict_info'))>
-                <span>تعديل معلومات المجموعة للمشرفين فقط</span>
-            </label>
+        <div class="grid md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">قالب دعوة المجموعة</label>
+                <select name="invite_template_name" class="w-full px-3 py-2.5 border border-slate-200 rounded-lg" id="invite-template">
+                    <option value="">— لاحقاً من صفحة المجموعة —</option>
+                    @foreach($inviteTemplates as $tpl)
+                        <option value="{{ $tpl['name'] }}" data-lang="{{ $tpl['language'] }}" @selected(old('invite_template_name') === $tpl['name'])>{{ $tpl['label'] ?? $tpl['name'] }}</option>
+                    @endforeach
+                </select>
+                <p class="text-[11px] text-slate-500 mt-1">أضف قالب Group Invite من مكتبة Meta (utility · group_invite_link).</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">لغة القالب</label>
+                <input type="text" name="invite_template_language" id="invite-template-lang" value="{{ old('invite_template_language', 'en') }}" class="w-full px-3 py-2.5 border border-slate-200 rounded-lg dir-ltr">
+            </div>
         </div>
 
         <div>
-            <label class="block text-sm font-bold text-slate-800 mb-2">الأعضاء (رقم واحد على الأقل) *</label>
+            <label class="block text-sm font-bold text-slate-800 mb-2">عملاء لإرسال الدعوة لهم (اختياري)</label>
             @if($prefillParticipants->isNotEmpty())
                 <p class="text-xs text-emerald-700 mb-2">تم تحميل {{ $prefillParticipants->count() }} عميل من مجموعة CRM</p>
                 @foreach($prefillParticipants as $p)
@@ -69,11 +87,11 @@
             <button type="button" onclick="addPhone()" class="mt-2 text-xs text-emerald-700 font-semibold">+ رقم آخر</button>
         </div>
 
-        <button type="submit" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold" @disabled(!($bridge['connected'] ?? false))>
-            إنشاء على واتساب
+        <button type="submit" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold" @disabled(!($cloud['connected'] ?? false))>
+            إنشاء على Meta Cloud
         </button>
-        @if(!($bridge['connected'] ?? false))
-            <p class="text-xs text-amber-700">يجب أن تكون جلسة الجسر متصلة أولاً.</p>
+        @if(!($cloud['connected'] ?? false))
+            <p class="text-xs text-amber-700">أكمل ربط Meta Cloud من إعدادات الواتساب أولاً.</p>
         @endif
     </form>
 </div>
@@ -88,5 +106,9 @@ function addPhone() {
     input.className = 'w-full px-3 py-2 border border-slate-200 rounded-lg dir-ltr';
     wrap.appendChild(input);
 }
+document.getElementById('invite-template')?.addEventListener('change', function () {
+    const lang = this.selectedOptions[0]?.dataset?.lang;
+    if (lang) document.getElementById('invite-template-lang').value = lang;
+});
 </script>
 @endsection

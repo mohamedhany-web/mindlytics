@@ -321,12 +321,7 @@ class WhatsAppService
 
             $response = Http::withToken($apiToken)
                 ->timeout(60)
-                ->post("{$apiUrl}/{$phoneNumberId}/messages", [
-                    'messaging_product' => 'whatsapp',
-                    'to' => $formattedPhone,
-                    'type' => 'text',
-                    'text' => ['body' => $message],
-                ]);
+                ->post("{$apiUrl}/{$phoneNumberId}/messages", $this->buildTextMessagePayload($formattedPhone, $message, $options));
 
             $responseData = $response->json() ?? [];
             $metaError = is_array($responseData['error'] ?? null) ? $responseData['error'] : null;
@@ -351,6 +346,96 @@ class WhatsAppService
         } catch (\Exception $e) {
             return ['success' => false, 'error' => 'خطأ في إرسال الرد'];
         }
+    }
+
+    /**
+     * تفاعل إيموجي على رسالة واردة (Meta Cloud API — reaction messages)
+     *
+     * @return array{success: bool, whatsapp_id?: string, error?: string}
+     */
+    public function sendReaction(string $phoneNumber, string $targetWaMessageId, string $emoji, array $options = []): array
+    {
+        $options['skip_log'] = true;
+        $options['skip_pacing'] = $options['skip_pacing'] ?? true;
+
+        try {
+            $formattedPhone = $this->formatPhoneNumber($phoneNumber);
+            $targetWaMessageId = trim($targetWaMessageId);
+            $emoji = trim($emoji);
+
+            if ($targetWaMessageId === '') {
+                return ['success' => false, 'error' => 'معرّف الرسالة مطلوب للتفاعل'];
+            }
+
+            if (! (bool) ($options['skip_ready_check'] ?? false)) {
+                $ready = $this->cloud->canSendNow();
+                if (! ($ready['success'] ?? false)) {
+                    return ['success' => false, 'error' => $ready['error'] ?? 'الواتساب غير جاهز'];
+                }
+            }
+
+            $creds = $this->cloud->resolveCredentials();
+            $apiUrl = WhatsAppCloudSettings::apiUrl();
+            $apiToken = $creds['access_token'];
+            $phoneNumberId = $creds['phone_number_id'];
+
+            if ($apiToken === '' || $phoneNumberId === '') {
+                return ['success' => false, 'error' => 'إعدادات WhatsApp غير مكتملة'];
+            }
+
+            $response = Http::withToken($apiToken)
+                ->timeout(60)
+                ->post("{$apiUrl}/{$phoneNumberId}/messages", [
+                    'messaging_product' => 'whatsapp',
+                    'recipient_type' => 'individual',
+                    'to' => $formattedPhone,
+                    'type' => 'reaction',
+                    'reaction' => [
+                        'message_id' => $targetWaMessageId,
+                        'emoji' => $emoji,
+                    ],
+                ]);
+
+            $responseData = $response->json() ?? [];
+            $metaError = is_array($responseData['error'] ?? null) ? $responseData['error'] : null;
+            $waMessageId = $responseData['messages'][0]['id'] ?? null;
+            $accepted = $response->successful() && is_string($waMessageId) && $waMessageId !== '';
+
+            if ($accepted) {
+                return ['success' => true, 'whatsapp_id' => $waMessageId];
+            }
+
+            return [
+                'success' => false,
+                'error' => $this->cloud->humanizeSendError(
+                    $metaError,
+                    (string) ($metaError['message'] ?? 'فشل إرسال التفاعل')
+                ),
+            ];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => 'خطأ في إرسال التفاعل'];
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildTextMessagePayload(string $to, string $body, array $options = []): array
+    {
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'recipient_type' => 'individual',
+            'to' => $to,
+            'type' => 'text',
+            'text' => ['body' => $body],
+        ];
+
+        $contextId = trim((string) ($options['context_message_id'] ?? ''));
+        if ($contextId !== '') {
+            $payload['context'] = ['message_id' => $contextId];
+        }
+
+        return $payload;
     }
 
     /**

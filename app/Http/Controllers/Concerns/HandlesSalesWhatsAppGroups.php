@@ -39,15 +39,16 @@ trait HandlesSalesWhatsAppGroups
             ->latest()
             ->paginate(20);
 
-        $bridge = $this->waGroupService()->bridgeStatus();
+        $cloud = $this->waGroupService()->cloudStatus();
 
-        return view($this->waGroupsView('index'), compact('groups', 'bridge'));
+        return view($this->waGroupsView('index'), compact('groups', 'cloud'));
     }
 
     public function waGroupsCreate(Request $request): View
     {
-        $bridge = $this->waGroupService()->bridgeStatus();
+        $cloud = $this->waGroupService()->cloudStatus();
         $crmGroups = $this->crmGroupsForSelect();
+        $inviteTemplates = $this->waGroupService()->inviteTemplates()['templates'] ?? [];
         $prefillCrmGroupId = (int) $request->query('crm_group');
         $prefillParticipants = collect();
 
@@ -61,7 +62,7 @@ trait HandlesSalesWhatsAppGroups
             }
         }
 
-        return view($this->waGroupsView('create'), compact('bridge', 'crmGroups', 'prefillCrmGroupId', 'prefillParticipants'));
+        return view($this->waGroupsView('create'), compact('cloud', 'crmGroups', 'prefillCrmGroupId', 'prefillParticipants', 'inviteTemplates'));
     }
 
     public function waGroupsStore(Request $request): RedirectResponse
@@ -70,8 +71,9 @@ trait HandlesSalesWhatsAppGroups
             'subject' => 'required|string|max:120',
             'description' => 'nullable|string|max:2000',
             'sales_lead_group_id' => 'nullable|exists:sales_lead_groups,id',
-            'announce_only' => 'nullable|boolean',
-            'restrict_info' => 'nullable|boolean',
+            'join_approval_mode' => 'nullable|in:auto_approve,approval_required',
+            'invite_template_name' => 'nullable|string|max:200',
+            'invite_template_language' => 'nullable|string|max:20',
             'phones' => 'nullable|array',
             'phones.*' => 'nullable|string|max:30',
             'lead_ids' => 'nullable|array',
@@ -79,8 +81,9 @@ trait HandlesSalesWhatsAppGroups
         ]);
 
         $participantRows = $this->buildParticipantRows($request);
-        if ($participantRows === []) {
-            return back()->withInput()->with('error', 'أضف رقماً واحداً على الأقل أو اختر عملاء.');
+        $hasInvitees = $participantRows !== [];
+        if ($hasInvitees && empty($validated['invite_template_name'])) {
+            return back()->withInput()->with('error', 'اختر قالب Group Invite لإرسال الدعوات للأرقام المحددة.');
         }
 
         $crmGroupId = ! empty($validated['sales_lead_group_id']) ? (int) $validated['sales_lead_group_id'] : null;
@@ -95,8 +98,11 @@ trait HandlesSalesWhatsAppGroups
             (int) Auth::id(),
             $crmGroupId,
             $validated['description'] ?? null,
-            $request->boolean('announce_only'),
-            $request->boolean('restrict_info'),
+            false,
+            false,
+            (string) ($validated['join_approval_mode'] ?? 'auto_approve'),
+            $validated['invite_template_name'] ?? null,
+            (string) ($validated['invite_template_language'] ?? 'en'),
         );
 
         if (! ($result['success'] ?? false)) {
@@ -105,20 +111,25 @@ trait HandlesSalesWhatsAppGroups
 
         /** @var WhatsAppGroup $group */
         $group = $result['group'];
+        $message = 'تم إنشاء مجموعة الواتساب «' . $group->subject . '» على Meta Cloud.';
+        if (! empty($result['warning'])) {
+            $message .= ' ' . $result['warning'];
+        }
 
         return redirect()->to($this->waGroupsRoute('show', $group))
-            ->with('success', 'تم إنشاء مجموعة الواتساب «' . $group->subject . '»');
+            ->with('success', $message);
     }
 
     public function waGroupsShow(WhatsAppGroup $whatsappGroup): View
     {
         $this->authorizeWaGroup($whatsappGroup);
         $whatsappGroup->load(['participants.salesLead', 'salesLeadGroup', 'creator:id,name']);
-        $bridge = $this->waGroupService()->bridgeStatus();
+        $cloud = $this->waGroupService()->cloudStatus();
         $crmGroups = $this->crmGroupsForSelect();
         $availableLeads = $this->availableLeadsForAdd($whatsappGroup);
+        $inviteTemplates = $this->waGroupService()->inviteTemplates()['templates'] ?? [];
 
-        return view($this->waGroupsView('show'), compact('whatsappGroup', 'bridge', 'crmGroups', 'availableLeads'));
+        return view($this->waGroupsView('show'), compact('whatsappGroup', 'cloud', 'crmGroups', 'availableLeads', 'inviteTemplates'));
     }
 
     public function waGroupsUpdate(Request $request, WhatsAppGroup $whatsappGroup): RedirectResponse
@@ -128,15 +139,11 @@ trait HandlesSalesWhatsAppGroups
         $validated = $request->validate([
             'subject' => 'required|string|max:120',
             'description' => 'nullable|string|max:2000',
-            'announce_only' => 'nullable|boolean',
-            'restrict_info' => 'nullable|boolean',
         ]);
 
         $result = $this->waGroupService()->updateSettings($whatsappGroup, [
             'subject' => $validated['subject'],
             'description' => $validated['description'] ?? '',
-            'announce_only' => $request->boolean('announce_only'),
-            'restrict_info' => $request->boolean('restrict_info'),
         ]);
 
         if (! ($result['success'] ?? false)) {
@@ -155,6 +162,8 @@ trait HandlesSalesWhatsAppGroups
             'phones.*' => 'nullable|string|max:30',
             'lead_ids' => 'nullable|array',
             'lead_ids.*' => 'integer|exists:sales_leads,id',
+            'invite_template_name' => 'required|string|max:200',
+            'invite_template_language' => 'nullable|string|max:20',
         ]);
 
         $rows = $this->buildParticipantRows($request);
@@ -162,12 +171,17 @@ trait HandlesSalesWhatsAppGroups
             return back()->with('error', 'اختر عملاء أو أدخل أرقاماً.');
         }
 
-        $result = $this->waGroupService()->addParticipants($whatsappGroup, $rows);
+        $result = $this->waGroupService()->addParticipants(
+            $whatsappGroup,
+            $rows,
+            $validated['invite_template_name'],
+            (string) ($validated['invite_template_language'] ?? 'en'),
+        );
         if (! ($result['success'] ?? false)) {
-            return back()->with('error', $result['error'] ?? 'فشل إضافة الأرقام');
+            return back()->with('error', $result['error'] ?? 'فشل إرسال الدعوات');
         }
 
-        return back()->with('success', 'تمت إضافة ' . ($result['added'] ?? 0) . ' رقم للمجموعة.');
+        return back()->with('success', 'تم إرسال ' . ($result['sent'] ?? 0) . ' دعوة عبر Meta Cloud.');
     }
 
     public function waGroupsRemoveParticipant(WhatsAppGroup $whatsappGroup, WhatsAppGroupParticipant $participant): RedirectResponse
@@ -199,7 +213,7 @@ trait HandlesSalesWhatsAppGroups
     public function waGroupsSync(WhatsAppGroup $whatsappGroup): RedirectResponse
     {
         $this->authorizeWaGroup($whatsappGroup);
-        $result = $this->waGroupService()->syncFromBridge($whatsappGroup);
+        $result = $this->waGroupService()->syncFromCloud($whatsappGroup);
         if (! ($result['success'] ?? false)) {
             return back()->with('error', $result['error'] ?? 'تعذّر المزامنة');
         }
@@ -237,15 +251,20 @@ trait HandlesSalesWhatsAppGroups
             return back()->with('error', 'لا يوجد عملاء بأرقام في هذه المجموعة.');
         }
 
-        $result = $this->waGroupService()->addParticipants($whatsappGroup, $rows);
+        $result = $this->waGroupService()->addParticipants(
+            $whatsappGroup,
+            $rows,
+            $whatsappGroup->invite_template_name,
+            $whatsappGroup->invite_template_language ?: 'en',
+        );
 
         if (! ($result['success'] ?? false)) {
-            return back()->with('error', $result['error'] ?? 'فشل الاستيراد');
+            return back()->with('error', $result['error'] ?? 'فشل الاستيراد — تأكد من اختيار قالب الدعوة أولاً.');
         }
 
         $whatsappGroup->update(['sales_lead_group_id' => $crmGroup->id]);
 
-        return back()->with('success', 'تم استيراد ' . ($result['added'] ?? 0) . ' عميل من مجموعة CRM.');
+        return back()->with('success', 'تم إرسال ' . ($result['sent'] ?? 0) . ' دعوة من مجموعة CRM.');
     }
 
     protected function authorizeWaGroup(WhatsAppGroup $group): void

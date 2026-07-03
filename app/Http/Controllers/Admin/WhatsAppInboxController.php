@@ -33,6 +33,7 @@ class WhatsAppInboxController extends Controller
             'start' => route('admin.whatsapp.inbox.start'),
             'conversation' => route('admin.whatsapp.inbox.conversation', is_array($params[0] ?? null) ? $params[0] : ['conversation' => $params[0]]),
             'reply' => route('admin.whatsapp.inbox.reply', $params[0]),
+            'react' => route('admin.whatsapp.inbox.react', $params[0]),
             'template' => route('admin.whatsapp.inbox.template', $params[0]),
             'status' => route('admin.whatsapp.inbox.status', $params[0]),
             'transfer' => route('admin.whatsapp.inbox.transfer', $params[0]),
@@ -79,6 +80,11 @@ class WhatsAppInboxController extends Controller
     public function reply(Request $request, WhatsAppConversation $conversation): JsonResponse
     {
         return $this->inboxReply($request, $conversation);
+    }
+
+    public function react(Request $request, WhatsAppConversation $conversation): JsonResponse
+    {
+        return $this->inboxReact($request, $conversation);
     }
 
     public function sendTemplate(Request $request, WhatsAppConversation $conversation): JsonResponse

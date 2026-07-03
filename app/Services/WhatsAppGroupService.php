@@ -7,12 +7,12 @@ use App\Models\SalesLeadGroup;
 use App\Models\WhatsAppGroup;
 use App\Models\WhatsAppGroupParticipant;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 class WhatsAppGroupService
 {
     public function __construct(
-        private WhatsAppGroupBridgeService $bridge,
+        private WhatsAppCloudGroupService $cloudGroups,
+        private WhatsAppCloudService $cloud,
         private WhatsAppService $whatsapp,
     ) {}
 
@@ -27,15 +27,13 @@ class WhatsAppGroupService
         ?string $description = null,
         bool $announceOnly = false,
         bool $restrictInfo = false,
+        string $joinApprovalMode = 'auto_approve',
+        ?string $inviteTemplateName = null,
+        string $inviteTemplateLanguage = 'en',
     ): array {
-        $conn = $this->bridge->connectionStatus();
+        $conn = $this->cloudGroups->connectionStatus();
         if (! ($conn['connected'] ?? false)) {
-            return ['success' => false, 'error' => $conn['error'] ?? 'جلسة الواتساب غير متصلة على الجسر.'];
-        }
-
-        $phones = collect($participantRows)->pluck('phone')->filter()->unique()->values()->all();
-        if (count($phones) < 1) {
-            return ['success' => false, 'error' => 'أضف رقماً واحداً على الأقل.'];
+            return ['success' => false, 'error' => $conn['error'] ?? 'Meta Cloud غير جاهز.'];
         }
 
         $group = WhatsAppGroup::create([
@@ -46,6 +44,10 @@ class WhatsAppGroupService
             'description' => $description,
             'announce_only' => $announceOnly,
             'restrict_info' => $restrictInfo,
+            'join_approval_mode' => $joinApprovalMode,
+            'invite_template_name' => $inviteTemplateName,
+            'invite_template_language' => $inviteTemplateLanguage,
+            'api_provider' => 'meta_cloud',
             'status' => WhatsAppGroup::STATUS_CREATING,
         ]);
 
@@ -63,7 +65,7 @@ class WhatsAppGroupService
             ]);
         }
 
-        $result = $this->bridge->createGroup($subject, $phones, $description, $announceOnly, $restrictInfo);
+        $result = $this->cloudGroups->createGroup($subject, $description, $joinApprovalMode);
 
         if (! ($result['success'] ?? false)) {
             $group->update([
@@ -74,31 +76,49 @@ class WhatsAppGroupService
             return ['success' => false, 'error' => $result['error'] ?? 'فشل إنشاء المجموعة', 'group' => $group];
         }
 
-        $waGroup = is_array($result['group'] ?? null) ? $result['group'] : [];
         $group->update([
-            'wa_group_jid' => (string) ($waGroup['jid'] ?? ''),
+            'wa_group_jid' => (string) ($result['group_id'] ?? ''),
             'invite_link' => $result['invite_link'] ?? null,
             'status' => WhatsAppGroup::STATUS_ACTIVE,
             'bridge_error' => null,
             'last_synced_at' => now(),
         ]);
 
-        $group->participants()->update([
-            'status' => WhatsAppGroupParticipant::STATUS_ADDED,
-            'error_message' => null,
-        ]);
+        $group = $group->fresh(['participants', 'salesLeadGroup']);
+
+        if ($inviteTemplateName && $group->participants->isNotEmpty()) {
+            $inviteResult = $this->sendInvites($group, $inviteTemplateName, $inviteTemplateLanguage);
+            if (! ($inviteResult['success'] ?? false) && ($inviteResult['sent'] ?? 0) === 0) {
+                return [
+                    'success' => true,
+                    'group' => $group->fresh(['participants', 'salesLeadGroup']),
+                    'warning' => $inviteResult['error'] ?? 'تم إنشاء المجموعة لكن فشل إرسال الدعوات.',
+                ];
+            }
+        }
 
         return ['success' => true, 'group' => $group->fresh(['participants', 'salesLeadGroup'])];
     }
 
     /**
      * @param  array<int, array{phone: string, sales_lead_id?: int|null, display_name?: string|null}>  $participantRows
-     * @return array{success: bool, error?: string, added?: int}
+     * @return array{success: bool, error?: string, added?: int, sent?: int}
      */
-    public function addParticipants(WhatsAppGroup $group, array $participantRows): array
-    {
+    public function addParticipants(
+        WhatsAppGroup $group,
+        array $participantRows,
+        ?string $templateName = null,
+        ?string $templateLanguage = null,
+    ): array {
         if (! $group->wa_group_jid) {
-            return ['success' => false, 'error' => 'المجموعة غير منشأة على واتساب بعد.'];
+            return ['success' => false, 'error' => 'المجموعة غير منشأة على Meta بعد.'];
+        }
+
+        $templateName = $templateName ?: $group->invite_template_name;
+        $templateLanguage = $templateLanguage ?: $group->invite_template_language ?: 'en';
+
+        if (! $templateName) {
+            return ['success' => false, 'error' => 'اختر قالب Group Invite معتمداً لإرسال الدعوات.'];
         }
 
         $phones = [];
@@ -122,29 +142,79 @@ class WhatsAppGroupService
             return ['success' => false, 'error' => 'لا توجد أرقام صالحة.'];
         }
 
-        $result = $this->bridge->addParticipants($group->wa_group_jid, $phones);
-        if (! ($result['success'] ?? false)) {
-            $group->participants()->whereIn('phone', $phones)->update([
-                'status' => WhatsAppGroupParticipant::STATUS_FAILED,
-                'error_message' => $result['error'] ?? null,
-            ]);
+        $group->update([
+            'invite_template_name' => $templateName,
+            'invite_template_language' => $templateLanguage,
+        ]);
 
-            return ['success' => false, 'error' => $result['error'] ?? 'فشل الإضافة'];
+        return $this->sendInvites($group->fresh('participants'), $templateName, $templateLanguage, $phones);
+    }
+
+    /**
+     * @param  array<int, string>|null  $onlyPhones
+     * @return array{success: bool, error?: string, sent?: int, failed?: int}
+     */
+    public function sendInvites(
+        WhatsAppGroup $group,
+        string $templateName,
+        string $templateLanguage = 'en',
+        ?array $onlyPhones = null,
+    ): array {
+        if (! $group->wa_group_jid) {
+            return ['success' => false, 'error' => 'لا يوجد معرّف مجموعة على Meta.'];
         }
 
-        $group->participants()->whereIn('phone', $phones)->update([
-            'status' => WhatsAppGroupParticipant::STATUS_ADDED,
-            'error_message' => null,
-        ]);
+        $participants = $group->participants;
+        if ($onlyPhones !== null) {
+            $participants = $participants->whereIn('phone', $onlyPhones);
+        }
+
+        $sent = 0;
+        $failed = 0;
+        $lastError = null;
+
+        foreach ($participants as $participant) {
+            if (in_array($participant->status, [WhatsAppGroupParticipant::STATUS_JOINED, WhatsAppGroupParticipant::STATUS_REMOVED], true)) {
+                continue;
+            }
+
+            $result = $this->cloudGroups->sendGroupInviteTemplate(
+                $participant->phone,
+                $group->wa_group_jid,
+                $templateName,
+                $templateLanguage,
+            );
+
+            if ($result['success'] ?? false) {
+                $sent++;
+                $participant->update([
+                    'status' => WhatsAppGroupParticipant::STATUS_INVITED,
+                    'invited_at' => now(),
+                    'error_message' => null,
+                ]);
+            } else {
+                $failed++;
+                $lastError = $result['error'] ?? 'فشل الإرسال';
+                $participant->update([
+                    'status' => WhatsAppGroupParticipant::STATUS_FAILED,
+                    'error_message' => $lastError,
+                ]);
+            }
+        }
+
         $group->update(['last_synced_at' => now()]);
 
-        return ['success' => true, 'added' => count($phones)];
+        if ($sent === 0) {
+            return ['success' => false, 'error' => $lastError ?? 'فشل إرسال الدعوات', 'sent' => 0, 'failed' => $failed];
+        }
+
+        return ['success' => true, 'sent' => $sent, 'failed' => $failed];
     }
 
     public function updateSettings(WhatsAppGroup $group, array $data): array
     {
         if (! $group->wa_group_jid) {
-            return ['success' => false, 'error' => 'المجموعة غير منشأة على واتساب.'];
+            return ['success' => false, 'error' => 'المجموعة غير منشأة على Meta.'];
         }
 
         $payload = [];
@@ -156,18 +226,18 @@ class WhatsAppGroupService
             $payload['description'] = (string) ($data['description'] ?? '');
             $group->description = $payload['description'];
         }
-        if (array_key_exists('announce_only', $data)) {
-            $payload['announce_only'] = (bool) $data['announce_only'];
-            $group->announce_only = $payload['announce_only'];
-        }
-        if (array_key_exists('restrict_info', $data)) {
-            $payload['restrict'] = (bool) $data['restrict_info'];
-            $group->restrict_info = $payload['restrict_info'];
+
+        if ($payload === []) {
+            return ['success' => true];
         }
 
-        $result = $this->bridge->updateGroup($group->wa_group_jid, $payload);
+        $result = $this->cloudGroups->updateGroup($group->wa_group_jid, $payload);
         if (! ($result['success'] ?? false)) {
             return ['success' => false, 'error' => $result['error'] ?? 'فشل التحديث'];
+        }
+
+        if (array_key_exists('join_approval_mode', $data)) {
+            $group->join_approval_mode = (string) $data['join_approval_mode'];
         }
 
         $group->last_synced_at = now();
@@ -182,7 +252,7 @@ class WhatsAppGroupService
             return ['success' => false, 'error' => 'لا يوجد معرّف مجموعة.'];
         }
 
-        $result = $this->bridge->inviteLink($group->wa_group_jid);
+        $result = $this->cloudGroups->resetInviteLink($group->wa_group_jid);
         if (! ($result['success'] ?? false)) {
             return $result;
         }
@@ -195,13 +265,13 @@ class WhatsAppGroupService
         return $result;
     }
 
-    public function syncFromBridge(WhatsAppGroup $group): array
+    public function syncFromCloud(WhatsAppGroup $group): array
     {
         if (! $group->wa_group_jid) {
             return ['success' => false, 'error' => 'لا يوجد معرّف مجموعة.'];
         }
 
-        $result = $this->bridge->getGroup($group->wa_group_jid);
+        $result = $this->cloudGroups->getGroup($group->wa_group_jid);
         if (! ($result['success'] ?? false)) {
             return $result;
         }
@@ -210,11 +280,31 @@ class WhatsAppGroupService
         $group->update([
             'subject' => (string) ($wa['subject'] ?? $group->subject),
             'description' => (string) ($wa['description'] ?? $group->description),
-            'announce_only' => (bool) ($wa['announce_only'] ?? $group->announce_only),
-            'restrict_info' => (bool) ($wa['restrict'] ?? $group->restrict_info),
+            'join_approval_mode' => (string) ($wa['join_approval_mode'] ?? $group->join_approval_mode),
             'invite_link' => $result['invite_link'] ?? $group->invite_link,
             'last_synced_at' => now(),
         ]);
+
+        $participantWaIds = collect($wa['participants'] ?? [])
+            ->map(fn ($p) => is_array($p) ? (string) ($p['wa_id'] ?? '') : '')
+            ->filter()
+            ->values();
+
+        foreach ($participantWaIds as $waId) {
+            $phone = $this->whatsapp->formatPhoneNumber($waId);
+            $participant = $group->participants()
+                ->where(function ($q) use ($phone, $waId) {
+                    $q->where('phone', $phone)->orWhere('phone', $waId);
+                })
+                ->first();
+
+            if ($participant) {
+                $participant->update([
+                    'status' => WhatsAppGroupParticipant::STATUS_JOINED,
+                    'joined_at' => $participant->joined_at ?? now(),
+                ]);
+            }
+        }
 
         return ['success' => true, 'group' => $group->fresh()];
     }
@@ -222,10 +312,10 @@ class WhatsAppGroupService
     public function removeParticipant(WhatsAppGroup $group, WhatsAppGroupParticipant $participant): array
     {
         if (! $group->wa_group_jid) {
-            return ['success' => false, 'error' => 'المجموعة غير نشطة على واتساب.'];
+            return ['success' => false, 'error' => 'المجموعة غير نشطة على Meta.'];
         }
 
-        $result = $this->bridge->removeParticipants($group->wa_group_jid, [$participant->phone]);
+        $result = $this->cloudGroups->removeParticipants($group->wa_group_jid, [$participant->phone]);
         if (! ($result['success'] ?? false)) {
             return $result;
         }
@@ -244,7 +334,7 @@ class WhatsAppGroupService
             return ['success' => true];
         }
 
-        $result = $this->bridge->leaveGroup($group->wa_group_jid);
+        $result = $this->cloudGroups->deleteGroup($group->wa_group_jid);
         if (! ($result['success'] ?? false)) {
             return $result;
         }
@@ -271,8 +361,50 @@ class WhatsAppGroupService
         ])->filter(fn ($r) => $r['phone'] !== '');
     }
 
+    /**
+     * @return array{success: bool, connected?: bool, error?: ?string, label?: string, notes?: array<int, string>}
+     */
+    public function cloudStatus(): array
+    {
+        return $this->cloudGroups->connectionStatus();
+    }
+
+    /**
+     * @return array{success: bool, templates: array<int, array<string, mixed>>, error?: string}
+     */
+    public function inviteTemplates(): array
+    {
+        $result = $this->cloud->listApprovedTemplates();
+        if (! ($result['success'] ?? false)) {
+            return $result;
+        }
+
+        $templates = collect($result['templates'] ?? [])
+            ->filter(function ($t) {
+                $category = strtoupper((string) ($t['category'] ?? ''));
+                $name = strtolower((string) ($t['name'] ?? ''));
+
+                return $category === 'UTILITY' || str_contains($name, 'group') || str_contains($name, 'invite');
+            })
+            ->values()
+            ->all();
+
+        if ($templates === []) {
+            $templates = $result['templates'] ?? [];
+        }
+
+        return ['success' => true, 'templates' => $templates];
+    }
+
+    /** @deprecated use cloudStatus() */
     public function bridgeStatus(): array
     {
-        return $this->bridge->connectionStatus();
+        return $this->cloudStatus();
+    }
+
+    /** @deprecated use syncFromCloud() */
+    public function syncFromBridge(WhatsAppGroup $group): array
+    {
+        return $this->syncFromCloud($group);
     }
 }
