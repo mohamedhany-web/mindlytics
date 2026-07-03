@@ -954,7 +954,6 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
                 Route::get('/', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'index'])->name('index');
                 Route::get('/templates', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'templates'])->name('templates');
                 Route::get('/poll', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'poll'])->name('poll');
-                Route::get('/{conversation}', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'showConversation'])->name('conversation');
                 Route::post('/start', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'start'])->name('start');
                 Route::post('/{conversation}/reply', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'reply'])->name('reply');
                 Route::post('/{conversation}/react', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'react'])->name('react');
@@ -966,6 +965,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
                 Route::post('/{conversation}/lead-stage', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'updateLeadStage'])->name('lead-stage');
                 Route::post('/{conversation}/notes', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'storeNote'])->name('notes');
                 Route::post('/{conversation}/tags/{tag}', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'syncTag'])->name('tag');
+                Route::get('/{conversation}', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'showConversation'])->name('conversation');
             });
         });
         
@@ -1730,7 +1730,6 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/reports', [\App\Http\Controllers\Admin\WhatsAppReportController::class, 'index'])->name('reports');
             Route::get('/inbox/templates', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'templates'])->name('inbox.templates');
             Route::get('/inbox/poll', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'poll'])->name('inbox.poll');
-            Route::get('/inbox/{conversation}', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'showConversation'])->name('inbox.conversation');
             Route::post('/inbox/start', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'start'])->name('inbox.start');
             Route::post('/inbox/{conversation}/reply', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'reply'])->name('inbox.reply');
             Route::post('/inbox/{conversation}/react', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'react'])->name('inbox.react');
@@ -1744,6 +1743,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('/inbox/{conversation}/assign', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'assign'])->name('inbox.assign');
             Route::post('/inbox/{conversation}/notes', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'storeNote'])->name('inbox.notes');
             Route::post('/inbox/{conversation}/tags/{tag}', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'syncTag'])->name('inbox.tag');
+            Route::get('/inbox/{conversation}', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'showConversation'])->name('inbox.conversation');
             Route::get('/settings', [\App\Http\Controllers\Admin\WhatsAppController::class, 'settings'])->name('settings');
             Route::post('/settings', [\App\Http\Controllers\Admin\WhatsAppCloudController::class, 'saveSettings'])->name('settings.update');
             Route::post('/test-connection', [\App\Http\Controllers\Admin\WhatsAppCloudController::class, 'testConnection'])->name('test-connection');

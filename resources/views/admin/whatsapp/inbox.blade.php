@@ -414,12 +414,12 @@
                             <input type="file" x-ref="mediaInput" class="hidden" accept="image/jpeg,image/png,image/webp,audio/ogg,audio/mpeg,audio/mp4,audio/aac,audio/amr,audio/webm" @change="onMediaPicked($event)">
                             <input type="file" x-ref="audioInput" class="hidden" accept="audio/ogg,audio/mpeg,audio/mp4,audio/aac,audio/amr,audio/webm,.ogg,.mp3,.m4a,.aac,.amr,.webm" @change="onMediaPicked($event)">
                             <div class="flex flex-col gap-1 shrink-0">
-                                <button type="button" @click="$refs.mediaInput.click()" :disabled="sending || !mediaUrl"
+                                <button type="button" @click="$refs.mediaInput.click()" :disabled="sending || !conversationId"
                                         title="إرفاق صورة أو صوت"
                                         class="w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-600 hover:text-emerald-600 hover:border-emerald-300 flex items-center justify-center shadow-sm disabled:opacity-40">
                                     <i class="fas fa-paperclip"></i>
                                 </button>
-                                <button type="button" @click="toggleRecording()" :disabled="sending || !mediaUrl"
+                                <button type="button" @click="toggleRecording()" :disabled="sending || !conversationId"
                                         :title="recording ? 'إيقاف التسجيل' : 'تسجيل صوت'"
                                         class="w-10 h-10 rounded-full border flex items-center justify-center shadow-sm disabled:opacity-40"
                                         :class="recording ? 'bg-rose-500 border-rose-500 text-white animate-pulse' : 'bg-white border-slate-200 text-slate-600 hover:text-rose-600 hover:border-rose-300'">
@@ -924,6 +924,33 @@ function whatsappInbox() {
             return (this.conversationUrlTemplate || '').replace('__ID__', id);
         },
 
+        /** مسار إرسال الوسائط — دائماً من المحادثة الحالية ونفس نطاق الصفحة لتجنب redirect → HTML */
+        mediaSendUrl(id) {
+            const cid = id || this.conversationId;
+            if (!cid) return null;
+
+            const conv = this.conversationUrl(cid);
+            if (conv) {
+                try {
+                    const path = (conv.startsWith('http') ? new URL(conv).pathname : conv)
+                        .replace(/\/+$/, '') + '/media';
+                    return window.location.origin + path;
+                } catch (_) {}
+            }
+
+            if (!this.mediaUrl) return null;
+            try {
+                const u = new URL(this.mediaUrl, window.location.origin);
+                return window.location.origin + u.pathname;
+            } catch (_) {
+                return this.mediaUrl;
+            }
+        },
+
+        csrfToken() {
+            return document.querySelector('meta[name="csrf-token"]')?.content || this.csrf || '';
+        },
+
         pushUrl(id) {
             const params = new URLSearchParams();
             if (id) params.set('conversation', id);
@@ -1178,6 +1205,20 @@ function whatsappInbox() {
 
         async parseJsonResponse(res) {
             const text = await res.text();
+            const trimmed = text.trim();
+            const looksHtml = trimmed.startsWith('<!DOCTYPE')
+                || trimmed.startsWith('<html')
+                || (trimmed.startsWith('<') && trimmed.includes('</head>'));
+
+            if (looksHtml) {
+                return {
+                    success: false,
+                    error: res.status >= 300 && res.status < 400
+                        ? 'تم إعادة توجيه طلب الإرسال — حدّث الصفحة (Ctrl+Shift+R) وحاول مرة أخرى.'
+                        : 'وصل الطلب لصفحة الويب بدل واجهة الإرسال — حدّث الصفحة وتأكد من رفع آخر تحديث للسيرفر.',
+                };
+            }
+
             try {
                 const data = JSON.parse(text);
                 if (data.success === undefined) {
@@ -1200,7 +1241,7 @@ function whatsappInbox() {
                     return { success: false, error: 'حجم الملف كبير جداً.' };
                 }
                 if (res.status === 404) {
-                    return { success: false, error: 'مسار إرسال الوسائط غير موجود — تأكد من رفع آخر تحديث للسيرفر.' };
+                    return { success: false, error: 'مسار إرسال الوسائط غير موجود — نفّذ php artisan route:clear على السيرفر.' };
                 }
                 const snippet = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100);
                 return {
@@ -1599,9 +1640,11 @@ function whatsappInbox() {
         },
 
         async uploadMediaFile(file) {
-            if (!this.mediaUrl || this.sending) return;
+            const uploadUrl = this.mediaSendUrl();
+            if (!uploadUrl || this.sending) return;
             this.sending = true;
             this.replyError = '';
+            const token = this.csrfToken();
             const isAudio = (file.type || '').startsWith('audio/');
             const label = isAudio ? '[رسالة صوتية]' : '[صورة]';
             const tmpId = 'tmp-media-' + Date.now();
@@ -1621,16 +1664,23 @@ function whatsappInbox() {
             try {
                 const form = new FormData();
                 form.append('file', file);
-                form.append('_token', this.csrf);
-                const res = await fetch(this.mediaUrl, {
+                form.append('_token', token);
+                const res = await fetch(uploadUrl, {
                     method: 'POST',
+                    credentials: 'same-origin',
+                    redirect: 'manual',
                     headers: {
                         'Accept': 'application/json',
-                        'X-CSRF-TOKEN': this.csrf,
+                        'X-CSRF-TOKEN': token,
                         'X-Requested-With': 'XMLHttpRequest',
                     },
                     body: form,
                 });
+                if (res.type === 'opaqueredirect' || (res.status >= 300 && res.status < 400)) {
+                    this.removePendingMessage(tmpId);
+                    this.replyError = 'تم إعادة توجيه الطلب — حدّث الصفحة (Ctrl+Shift+R) وحاول مرة أخرى.';
+                    return;
+                }
                 const data = await this.parseJsonResponse(res);
                 if (!data.success) {
                     this.removePendingMessage(tmpId);

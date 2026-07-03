@@ -69,11 +69,26 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (\Illuminate\Validation\ValidationException $e, \Illuminate\Http\Request $request) {
             if ($request->expectsJson()) {
                 return response()->json([
+                    'success' => false,
                     'message' => 'خطأ في التحقق من البيانات',
+                    'error' => collect($e->errors())->flatten()->first() ?: 'خطأ في التحقق من البيانات',
                     'errors' => $e->errors(),
                 ], 422);
             }
             return redirect()->back()->withInput()->withErrors($e->errors());
+        });
+
+        // CSRF منتهي — JSON بدل إعادة توجيه لصفحة HTML (تسبب «استجابة غير متوقعة» في fetch)
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, \Illuminate\Http\Request $request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'انتهت الجلسة',
+                    'error' => 'انتهت الجلسة. حدّث الصفحة وحاول مرة أخرى.',
+                ], 419);
+            }
+
+            return response()->view('errors.419', [], 419);
         });
 
         // معالجة "غير مصادق": إعادة توجيه لصفحة تسجيل الدخول بدلاً من 500
