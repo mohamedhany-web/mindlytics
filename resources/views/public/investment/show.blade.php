@@ -34,9 +34,12 @@
 @php
     $requirementLines = function (?string $text): array {
         return array_values(array_filter(
-            array_map(fn ($line) => trim(ltrim(trim($line), "•·-\t")),
-                preg_split('/\r\n|\r|\n/', (string) $text) ?: [])
-        ), fn ($line) => $line !== '');
+            array_map(
+                fn ($line) => trim(ltrim(trim($line), "•·-\t")),
+                preg_split('/\r\n|\r|\n/', (string) $text) ?: []
+            ),
+            fn ($line) => $line !== ''
+        ));
     };
 @endphp
 
