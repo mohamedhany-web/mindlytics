@@ -87,10 +87,12 @@
         </div>
 
         <aside class="xl:col-span-4 space-y-4">
-            <div class="sales-panel p-4 border border-emerald-200 bg-emerald-50/40">
-                <h3 class="font-bold text-emerald-900 text-sm mb-2"><i class="fab fa-whatsapp ml-1"></i> مجموعة واتساب (Meta Cloud)</h3>
-                <p class="text-xs text-emerald-900/80 mb-3">أنشئ مجموعة على Meta وأرسل دعوات لعملاء هذه المجموعة عبر قالب Group Invite.</p>
-                <a href="{{ route('employee.sales.whatsapp-groups.create', ['crm_group' => $group->id]) }}" class="inline-flex px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-semibold">إنشاء مجموعة واتساب</a>
+            <div class="sales-panel p-4 border border-emerald-200/60 bg-gradient-to-l from-emerald-50/80 to-white">
+                <h3 class="font-bold text-emerald-900 text-sm mb-1"><i class="fab fa-whatsapp ml-1 text-emerald-600"></i> مجموعة واتساب (Meta Cloud)</h3>
+                <p class="text-xs text-slate-600 mb-3">أنشئ مجموعة وأرسل دعوات لعملاء هذه المجموعة بقالب Group Invite.</p>
+                <a href="{{ route('employee.sales.whatsapp-groups.create', ['crm_group' => $group->id]) }}" class="inline-flex items-center gap-1 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold">
+                    <i class="fas fa-plus"></i> إنشاء مجموعة واتساب
+                </a>
             </div>
 
             @include('admin.sales.groups._whatsapp_bulk', [

@@ -32,16 +32,27 @@ trait HandlesSalesWhatsAppGroups
 
     public function waGroupsIndex(): View
     {
-        $groups = WhatsAppGroup::query()
-            ->visibleTo(Auth::user(), $this->isWaGroupsAdmin())
+        $baseQuery = WhatsAppGroup::query()->visibleTo(Auth::user(), $this->isWaGroupsAdmin());
+
+        $groups = (clone $baseQuery)
             ->with(['salesLeadGroup:id,name', 'creator:id,name'])
             ->withCount('participants')
             ->latest()
             ->paginate(20);
 
+        $groupIds = (clone $baseQuery)->pluck('id');
+
+        $stats = [
+            'total' => (clone $baseQuery)->count(),
+            'active' => (clone $baseQuery)->where('status', WhatsAppGroup::STATUS_ACTIVE)->count(),
+            'participants' => $groupIds->isEmpty()
+                ? 0
+                : WhatsAppGroupParticipant::query()->whereIn('whatsapp_group_id', $groupIds)->count(),
+        ];
+
         $cloud = $this->waGroupService()->cloudStatus();
 
-        return view($this->waGroupsView('index'), compact('groups', 'cloud'));
+        return view($this->waGroupsView('index'), compact('groups', 'cloud', 'stats'));
     }
 
     public function waGroupsCreate(Request $request): View
