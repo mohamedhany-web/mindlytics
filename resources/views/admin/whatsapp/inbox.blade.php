@@ -8,7 +8,9 @@
     $audience = $inboxAudience ?? 'admin';
     $canSend = (bool) ($connectionMeta['can_send'] ?? false);
     $webhookDiag = $connectionMeta['webhook'] ?? [];
-    $webhookIssues = ($webhookDiag['receiving_replies'] ?? false) ? [] : ($webhookDiag['issues'] ?? []);
+    $webhookIssues = ($webhookDiag['receiving_replies'] ?? false) || ($webhookDiag['webhook_reachable'] ?? false)
+        ? array_values(array_filter($webhookDiag['issues'] ?? [], fn ($issue) => ! str_contains($issue, 'لم يصل أي طلب Webhook') && ! str_contains($issue, 'غير مشترك')))
+        : ($webhookDiag['issues'] ?? []);
     $webhookTips = $webhookDiag['tips'] ?? [];
     $webhookMeta = $webhookDiag['meta'] ?? [];
     $activeId = $activeConversation?->id;

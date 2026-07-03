@@ -299,6 +299,13 @@
             : '<span class="inline-flex px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold">' + no + '</span>';
     }
 
+    function fieldBadge(subscribed) {
+        if (subscribed === null || subscribed === undefined) {
+            return '<span class="inline-flex px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold">غير معروف</span>';
+        }
+        return badge(!!subscribed);
+    }
+
     function renderWebhookPanel(webhook) {
         const meta = webhook?.meta || {};
         const summary = document.getElementById('webhook-status-summary');
@@ -312,6 +319,7 @@
             '<div class="rounded-lg border border-slate-200 bg-slate-50 p-2"><span class="text-slate-500">تطابق الرابط</span><p class="mt-1">' + badge(meta.callback_matches === true, 'متطابق', 'غير متطابق') + '</p></div>',
             '<div class="rounded-lg border border-slate-200 bg-slate-50 p-2"><span class="text-slate-500">اشتراك WABA</span><p class="mt-1">' + badge(meta.waba_app_subscribed === true, 'نعم', 'لا') + '</p></div>',
             '<div class="rounded-lg border border-slate-200 bg-slate-50 p-2"><span class="text-slate-500">آخر Webhook وصل</span><p class="mt-1 text-[11px]">' + (webhook.last_webhook_at || 'لم يصل بعد') + '</p></div>',
+            '<div class="rounded-lg border border-slate-200 bg-slate-50 p-2"><span class="text-slate-500">Meta يصل للسيرفر</span><p class="mt-1">' + badge(!!webhook.webhook_reachable, 'نعم', 'لا') + '</p></div>',
             '<div class="rounded-lg border border-slate-200 bg-slate-50 p-2"><span class="text-slate-500">رسائل واردة مسجّلة</span><p class="mt-1 font-bold">' + (webhook.inbound_message_count ?? 0) + '</p></div>',
         ].join('');
 
@@ -320,7 +328,7 @@
             '<tr class="border-t border-slate-100">'
             + '<td class="px-3 py-2 font-mono dir-ltr">' + row.field + (row.required ? ' *' : '') + '</td>'
             + '<td class="px-3 py-2">' + (row.label || row.field) + '</td>'
-            + '<td class="px-3 py-2">' + badge(!!row.subscribed) + '</td>'
+            + '<td class="px-3 py-2">' + fieldBadge(row.subscribed) + '</td>'
             + '</tr>'
         )).join('') || '<tr><td colspan="3" class="px-3 py-3 text-slate-500">اضغط «تحديث الحالة» لقراءة الحقول من Meta</td></tr>';
 

@@ -7,6 +7,7 @@ use App\Models\WhatsAppConversationMessage;
 use App\Support\WhatsAppCloudSettings;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class WhatsAppCloudService
@@ -167,7 +168,7 @@ class WhatsAppCloudService
             $issues[] = 'Verify Token غير محفوظ في إعدادات الربط — يجب أن يطابق ما في Meta حرفياً.';
         }
 
-        if (($meta['messages_subscribed'] ?? null) === false) {
+        if (($meta['messages_subscribed'] ?? null) === false && ! $lastWebhook && ! $lastInbound && $inboundCount === 0) {
             $issues[] = 'حقل messages غير مشترك في Meta — من صفحة Webhooks فعّل الاشتراك لحقل messages (ليس فقط حفظ Callback URL).';
         }
         if (($meta['callback_matches'] ?? null) === false && ! empty($meta['callback_url'])) {
@@ -190,17 +191,22 @@ class WhatsAppCloudService
             $issues[] = 'App Secret مطلوب لقراءة ومزامنة اشتراكات Webhook من Meta — احفظه في إعدادات الربط.';
         }
 
-        if ($inboundCount === 0 && ! $lastInbound) {
+        if ($inboundCount === 0 && ! $lastInbound && ! $lastWebhook) {
             if (($meta['messages_subscribed'] ?? null) === true && ($meta['waba_app_subscribed'] ?? null) === true) {
                 $issues[] = 'Meta مضبوط والاشتراك سليم، لكن لم تُسجَّل رسائل واردة بعد — اطلب من عميل إرسال رسالة نصية لرقم الواتساب الرسمي ثم راقب السجلات.';
-            } elseif (! $lastWebhook) {
+            } else {
                 $issues[] = 'لم يصل أي طلب Webhook من Meta للسيرفر بعد — راجع اشتراك messages وتحقق أن الرقم الذي يرد عليه العميل هو نفس رقم الحساب المربوط.';
-            } elseif ($lastWebhook) {
-                $issues[] = 'وصل Webhook لكن بلا رسائل واردة — غالباً اشتراك message_status فقط بدون messages.';
             }
+        } elseif ($lastWebhook && $inboundCount === 0 && ! $lastInbound && ($meta['messages_subscribed'] ?? null) === false) {
+            $issues[] = 'Meta يرسل Webhook لكن لم تُسجَّل رسائل واردة بعد — تحقق من رقم العميل أو من معالجة الرسالة في السيرفر.';
         }
 
         $receiving = $inboundCount > 0 || $lastInbound !== null;
+        $webhookReachable = $lastWebhook !== null || $receiving;
+
+        if ($webhookReachable && ($meta['messages_subscribed'] ?? null) === false) {
+            $meta = $this->inferWebhookSubscriptionFromActivity($meta, $receiving);
+        }
 
         return [
             'webhook_url' => $webhookUrl,
@@ -209,13 +215,40 @@ class WhatsAppCloudService
             'last_webhook_at' => $lastWebhook,
             'last_inbound_at' => $lastInbound,
             'inbound_message_count' => $inboundCount,
+            'webhook_reachable' => $webhookReachable,
             'receiving_replies' => $receiving,
             'meta' => $meta,
             'field_rows' => $meta['field_rows'] ?? [],
             'issues' => array_values(array_unique($issues)),
             'tips' => array_values(array_unique($tips)),
-            'ok' => $receiving && $issues === [],
+            'ok' => ($receiving || $webhookReachable) && $issues === [],
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $meta
+     * @return array<string, mixed>
+     */
+    private function inferWebhookSubscriptionFromActivity(array $meta, bool $hasInbound): array
+    {
+        if ($hasInbound) {
+            $meta['messages_subscribed'] = true;
+            $meta['messages_subscribed_inferred'] = true;
+        } elseif ($meta['messages_subscribed'] === false) {
+            $meta['messages_subscribed'] = null;
+            $meta['messages_subscribed_inferred'] = true;
+        }
+
+        if (! empty($meta['subscribed_fields']) || ($meta['messages_subscribed'] ?? null) === true) {
+            $fields = is_array($meta['subscribed_fields'] ?? null) ? $meta['subscribed_fields'] : [];
+            if ($hasInbound && ! in_array('messages', $fields, true)) {
+                $fields[] = 'messages';
+            }
+            $meta['subscribed_fields'] = $fields;
+            $meta['field_rows'] = $this->buildWebhookFieldRows($fields);
+        }
+
+        return $meta;
     }
 
     /**
@@ -263,17 +296,79 @@ class WhatsAppCloudService
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    private function graphResponseBody(\Illuminate\Http\Client\Response $response): array
+    {
+        $decoded = $response->json();
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    private function graphErrorMessage(array $body, string $fallback): string
+    {
+        $error = $body['error'] ?? null;
+        if (is_array($error)) {
+            return (string) ($error['message'] ?? $fallback);
+        }
+
+        if (is_string($error) && $error !== '') {
+            return $error;
+        }
+
+        return $fallback;
+    }
+
+    /**
+     * Meta ترجع fields أحياناً كـ string أو كمصفوفة كائنات فيها name.
+     *
+     * @return array<int, string>
+     */
+    private function normalizeSubscriptionFields(mixed $raw): array
+    {
+        if (is_string($raw)) {
+            $raw = trim($raw);
+            if ($raw === '') {
+                return [];
+            }
+
+            return array_values(array_unique(array_filter(array_map('trim', explode(',', $raw)))));
+        }
+
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        $names = [];
+        foreach ($raw as $item) {
+            if (is_string($item) && $item !== '') {
+                $names[] = $item;
+                continue;
+            }
+
+            if (is_array($item)) {
+                $name = trim((string) ($item['name'] ?? $item['field'] ?? ''));
+                if ($name !== '') {
+                    $names[] = $name;
+                }
+            }
+        }
+
+        return array_values(array_unique($names));
+    }
+
+    /**
      * @param  array<int, string>  $fields
      * @return array<int, array<string, mixed>>
      */
-    private function buildWebhookFieldRows(array $fields): array
+    private function buildWebhookFieldRows(array $fields, bool $unknown = false): array
     {
         $rows = [];
         foreach ($this->webhookFieldLabels() as $field => $label) {
             $rows[] = [
                 'field' => $field,
                 'label' => $label,
-                'subscribed' => in_array($field, $fields, true),
+                'subscribed' => $unknown ? null : in_array($field, $fields, true),
                 'required' => $field === 'messages',
             ];
         }
@@ -283,13 +378,33 @@ class WhatsAppCloudService
                 $rows[] = [
                     'field' => $field,
                     'label' => $field,
-                    'subscribed' => true,
+                    'subscribed' => $unknown ? null : true,
                     'required' => false,
                 ];
             }
         }
 
         return $rows;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function applySubscriptionRow(array $row, array &$result, string $expectedUrl): void
+    {
+        if (($row['object'] ?? '') !== 'whatsapp_business_account') {
+            return;
+        }
+
+        $fields = $this->normalizeSubscriptionFields($row['fields'] ?? null);
+        $result['subscribed_fields'] = $fields;
+        $result['field_rows'] = $this->buildWebhookFieldRows($fields);
+        $result['messages_subscribed'] = in_array('messages', $fields, true);
+        $result['message_status_subscribed'] = in_array('message_status', $fields, true);
+        $result['callback_url'] = (string) ($row['callback_url'] ?? '');
+        $result['active'] = (bool) ($row['active'] ?? false);
+        $result['callback_matches'] = rtrim($result['callback_url'], '/') === rtrim($expectedUrl, '/');
+        $result['subscriptions_readable'] = true;
     }
 
     /**
@@ -366,6 +481,7 @@ class WhatsAppCloudService
             'field_rows' => [],
             'waba_app_subscribed' => null,
             'waba_subscribed_app_ids' => [],
+            'subscriptions_readable' => false,
             'errors' => [],
         ];
 
@@ -387,33 +503,29 @@ class WhatsAppCloudService
                         ]);
 
                     if ($response->successful()) {
-                        foreach ($response->json('data') ?? [] as $row) {
-                            if (! is_array($row) || ($row['object'] ?? '') !== 'whatsapp_business_account') {
-                                continue;
-                            }
+                        $body = $this->graphResponseBody($response);
 
-                            $fields = is_array($row['fields'] ?? null) ? $row['fields'] : [];
-                            $result['subscribed_fields'] = $fields;
-                            $result['field_rows'] = $this->buildWebhookFieldRows($fields);
-                            $result['messages_subscribed'] = in_array('messages', $fields, true);
-                            $result['message_status_subscribed'] = in_array('message_status', $fields, true);
-                            $result['callback_url'] = (string) ($row['callback_url'] ?? '');
-                            $result['active'] = (bool) ($row['active'] ?? false);
-                            $result['callback_matches'] = rtrim($result['callback_url'], '/') === rtrim($expectedUrl, '/');
+                        if (config('app.debug')) {
+                            Log::debug('WhatsApp Meta subscriptions response', ['body' => $body]);
+                        }
+
+                        foreach ($body['data'] ?? [] as $row) {
+                            if (is_array($row)) {
+                                $this->applySubscriptionRow($row, $result, $expectedUrl);
+                            }
                         }
 
                         if ($result['field_rows'] === []) {
-                            $result['field_rows'] = $this->buildWebhookFieldRows([]);
+                            $result['field_rows'] = $this->buildWebhookFieldRows([], unknown: ! $result['subscriptions_readable']);
                         }
                     } else {
-                        $body = $response->json() ?? [];
-                        $error = is_array($body['error'] ?? null) ? $body['error'] : [];
-                        $result['errors'][] = 'تعذّر قراءة اشتراكات التطبيق: ' . $this->humanizeMetaError((string) ($error['message'] ?? 'HTTP ' . $response->status()));
-                        $result['field_rows'] = $this->buildWebhookFieldRows([]);
+                        $body = $this->graphResponseBody($response);
+                        $result['errors'][] = 'تعذّر قراءة اشتراكات التطبيق: ' . $this->humanizeMetaError($this->graphErrorMessage($body, 'HTTP ' . $response->status()));
+                        $result['field_rows'] = $this->buildWebhookFieldRows([], unknown: true);
                     }
                 } catch (\Throwable $e) {
                     $result['errors'][] = 'تعذّر الاتصال بـ Meta للتحقق من Webhook: ' . $e->getMessage();
-                    $result['field_rows'] = $this->buildWebhookFieldRows([]);
+                    $result['field_rows'] = $this->buildWebhookFieldRows([], unknown: true);
                 }
             }
         }
@@ -425,9 +537,21 @@ class WhatsAppCloudService
                     ->get("{$this->graphUrl()}/{$wabaId}/subscribed_apps");
 
                 if ($response->successful()) {
+                    $body = $this->graphResponseBody($response);
                     $ids = [];
-                    foreach ($response->json('data') ?? [] as $row) {
-                        $id = (string) ($row['whatsapp_business_api_data']['id'] ?? $row['id'] ?? '');
+                    foreach ($body['data'] ?? [] as $row) {
+                        if (! is_array($row)) {
+                            continue;
+                        }
+
+                        $apiData = $row['whatsapp_business_api_data'] ?? null;
+                        $id = '';
+                        if (is_array($apiData)) {
+                            $id = (string) ($apiData['id'] ?? '');
+                        }
+                        if ($id === '') {
+                            $id = (string) ($row['id'] ?? '');
+                        }
                         if ($id !== '') {
                             $ids[] = $id;
                         }
@@ -437,9 +561,8 @@ class WhatsAppCloudService
                         ? $ids !== []
                         : in_array($appId, $ids, true);
                 } else {
-                    $body = $response->json() ?? [];
-                    $error = is_array($body['error'] ?? null) ? $body['error'] : [];
-                    $result['errors'][] = 'تعذّر قراءة subscribed_apps للـ WABA: ' . $this->humanizeMetaError((string) ($error['message'] ?? 'HTTP ' . $response->status()));
+                    $body = $this->graphResponseBody($response);
+                    $result['errors'][] = 'تعذّر قراءة subscribed_apps للـ WABA: ' . $this->humanizeMetaError($this->graphErrorMessage($body, 'HTTP ' . $response->status()));
                 }
             } catch (\Throwable $e) {
                 $result['errors'][] = 'تعذّر التحقق من اشتراك WABA: ' . $e->getMessage();
