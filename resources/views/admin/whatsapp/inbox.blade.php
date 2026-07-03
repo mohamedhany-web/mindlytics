@@ -16,14 +16,21 @@
     $activeId = $activeConversation?->id;
     $inboxService = app(\App\Services\WhatsAppInboxService::class);
     $routes = $inboxRoutes ?? [];
-    $initialConversations = $conversations->getCollection()->map(fn ($c) => $inboxService->serializeConversation($c, $audience))->values();
+    $initialConversations = $conversations->getCollection()->map(function ($c) use ($inboxService, $audience) {
+        return rescue(fn () => $inboxService->serializeConversation($c, $audience), ['id' => $c->id], false);
+    })->values();
     $mediaRouteName = ($audience ?? 'admin') === 'employee'
         ? 'employee.sales.whatsapp.inbox.media'
         : 'admin.whatsapp.inbox.media';
     $initialMessages = $messages->map(function ($m) use ($inboxService, $mediaRouteName) {
-        $mediaUrl = $inboxService->messageHasMedia($m)
-            ? route($mediaRouteName, ['conversation' => $m->conversation_id, 'message' => $m->id])
-            : null;
+        $mediaUrl = null;
+        if ($inboxService->messageHasMedia($m) && \Illuminate\Support\Facades\Route::has($mediaRouteName)) {
+            try {
+                $mediaUrl = route($mediaRouteName, ['conversation' => $m->conversation_id, 'message' => $m->id]);
+            } catch (\Throwable) {
+                $mediaUrl = null;
+            }
+        }
 
         return $inboxService->serializeMessage($m, $mediaUrl);
     })->values();
@@ -31,23 +38,29 @@
     $crmTimelineInitial = [];
     $crmUrlsInitial = $routes['crm'] ?? [];
     if ($activeConversation && ($crmReady ?? false)) {
-        $crmService = app(\App\Services\WhatsAppCrmService::class);
-        $crmNotesInitial = $activeConversation->notes()
-            ->with('author:id,name')
-            ->latest()
-            ->limit(30)
-            ->get()
-            ->map(fn ($n) => [
-                'id' => $n->id,
-                'body' => $n->body,
-                'author' => $n->author?->name,
-                'created_at_human' => $n->created_at?->diffForHumans(),
-            ])->values()->all();
-        $crmTimelineInitial = $crmService->timeline($activeConversation);
+        try {
+            $crmService = app(\App\Services\WhatsAppCrmService::class);
+            $crmNotesInitial = $activeConversation->notes()
+                ->with('author:id,name')
+                ->latest()
+                ->limit(30)
+                ->get()
+                ->map(fn ($n) => [
+                    'id' => $n->id,
+                    'body' => $n->body,
+                    'author' => $n->author?->name,
+                    'created_at_human' => $n->created_at?->diffForHumans(),
+                ])->values()->all();
+            $crmTimelineInitial = $crmService->timeline($activeConversation);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
     $inboxConfig = [
         'conversationId' => $activeId,
-        'activeConversation' => $activeConversation ? $inboxService->serializeConversation($activeConversation, $audience) : null,
+        'activeConversation' => $activeConversation
+            ? rescue(fn () => $inboxService->serializeConversation($activeConversation, $audience), null, false)
+            : null,
         'conversations' => $initialConversations,
         'messages' => $initialMessages,
         'pollUrl' => $routes['poll'] ?? '',
@@ -71,7 +84,7 @@
         'startLeadId' => $startLead->id ?? null,
         'startLeadPhone' => $startLead->phone ?? null,
         'startLeadName' => $startLead->name ?? null,
-        'voiceNoteConversionReady' => $inboxService->voiceNoteConversionReady(),
+        'voiceNoteConversionReady' => rescue(fn () => $inboxService->voiceNoteConversionReady(), false, false),
     ];
 @endphp
 

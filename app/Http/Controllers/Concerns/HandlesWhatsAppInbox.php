@@ -75,8 +75,21 @@ trait HandlesWhatsAppInbox
     {
         [$inbox, $cloud, $crm] = $this->inboxServices();
 
-        $connectionMeta = $cloud->connectionMeta();
-        $connectionMeta['webhook'] = $cloud->webhookDiagnostics();
+        try {
+            $connectionMeta = $cloud->connectionMeta();
+            if (! isset($connectionMeta['webhook'])) {
+                $connectionMeta['webhook'] = $cloud->webhookDiagnostics();
+            }
+        } catch (\Throwable $e) {
+            report($e);
+            $connectionMeta = [
+                'success' => false,
+                'can_send' => false,
+                'label' => 'تعذّر التحقق من الربط',
+                'last_error' => 'حدث خطأ أثناء تحميل حالة الواتساب',
+                'webhook' => ['issues' => [], 'tips' => [], 'meta' => []],
+            ];
+        }
         $tablesReady = Schema::hasTable('whatsapp_conversations');
 
         $activeConversation = null;
@@ -84,7 +97,11 @@ trait HandlesWhatsAppInbox
         $withinWindow = false;
 
         if ($tablesReady) {
-            $inbox->syncRecentOutboundLogs();
+            try {
+                $inbox->syncRecentOutboundLogs();
+            } catch (\Throwable $e) {
+                report($e);
+            }
 
             $query = WhatsAppConversation::query()
                 ->with(['user:id,name', 'assignee:id,name', 'tags', 'salesLead:id,name,stage,assigned_to'])
@@ -225,11 +242,11 @@ trait HandlesWhatsAppInbox
             'notes' => $notes,
             'timeline' => $timeline,
             'within_service_window' => $inbox->isWithinServiceWindow($conversation),
-            'reply_url' => $this->inboxRoute('reply', $conversation),
-            'react_url' => $this->inboxRoute('react', $conversation),
-            'media_url' => $this->inboxRoute('media-send', $conversation),
-            'template_url' => $this->inboxRoute('template', $conversation),
-            'crm_urls' => $this->inboxCrmUrls($conversation),
+            'reply_url' => $this->safeInboxRoute('reply', $conversation),
+            'react_url' => $this->safeInboxRoute('react', $conversation),
+            'media_url' => $this->safeInboxRoute('media-send', $conversation),
+            'template_url' => $this->safeInboxRoute('template', $conversation),
+            'crm_urls' => $this->safeInboxCrmUrls($conversation),
             'unread_total' => $this->inboxUnreadTotal(),
         ]);
     }
@@ -715,9 +732,11 @@ trait HandlesWhatsAppInbox
         return [
             'crmReady' => true,
             'crmAgents' => $this->inboxAudience() === 'admin'
-                ? collect($assignment->eligibleAgents())->map(fn ($u) => ['id' => $u->id, 'name' => $u->name])->values()->all()
+                ? rescue(function () use ($assignment) {
+                    return collect($assignment->eligibleAgents())->map(fn ($u) => ['id' => $u->id, 'name' => $u->name])->values()->all();
+                }, [], false)
                 : [],
-            'crmTags' => WhatsAppTag::query()->orderBy('name')->get(['id', 'name', 'slug', 'color']),
+            'crmTags' => rescue(fn () => WhatsAppTag::query()->orderBy('name')->get(['id', 'name', 'slug', 'color']), collect(), false),
             'crmStatuses' => WhatsAppConversation::STATUSES,
             'crmDepartments' => WhatsAppConversation::DEPARTMENTS,
         ];
@@ -727,20 +746,43 @@ trait HandlesWhatsAppInbox
     protected function inboxRoutesForView(?WhatsAppConversation $active): array
     {
         [, , $crm] = $this->inboxServices();
-        $crmUrls = ($active && $crm->crmTablesReady()) ? $this->inboxCrmUrls($active) : [];
+        $crmUrls = ($active && $crm->crmTablesReady()) ? $this->safeInboxCrmUrls($active) : [];
 
         return [
-            'poll' => $this->inboxRoute('poll'),
-            'conversationUrlTemplate' => $this->inboxRoute('conversation', ['conversation' => '__ID__']),
-            'reply' => $active ? $this->inboxRoute('reply', $active) : null,
-            'react' => $active ? $this->inboxRoute('react', $active) : null,
-            'media' => $active ? $this->inboxRoute('media-send', $active) : null,
-            'template' => $active ? $this->inboxRoute('template', $active) : null,
-            'start' => $this->inboxRoute('start'),
-            'templates' => $this->inboxRoute('templates'),
-            'index' => $this->inboxRoute('index'),
+            'poll' => $this->safeInboxRoute('poll'),
+            'conversationUrlTemplate' => $this->safeInboxRoute('conversation', ['conversation' => '__ID__']),
+            'reply' => $active ? $this->safeInboxRoute('reply', $active) : null,
+            'react' => $active ? $this->safeInboxRoute('react', $active) : null,
+            'media' => $active ? $this->safeInboxRoute('media-send', $active) : null,
+            'template' => $active ? $this->safeInboxRoute('template', $active) : null,
+            'start' => $this->safeInboxRoute('start'),
+            'templates' => $this->safeInboxRoute('templates'),
+            'index' => $this->safeInboxRoute('index'),
             'crm' => $crmUrls,
         ];
+    }
+
+    protected function safeInboxRoute(string $action, mixed ...$params): ?string
+    {
+        try {
+            return $this->inboxRoute($action, ...$params);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return null;
+        }
+    }
+
+    /** @return array<string, string> */
+    protected function safeInboxCrmUrls(WhatsAppConversation $conversation): array
+    {
+        try {
+            return $this->inboxCrmUrls($conversation);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return [];
+        }
     }
 
     /** @return array<string, string> */
@@ -763,11 +805,25 @@ trait HandlesWhatsAppInbox
 
     protected function serializeInboxMessage(WhatsAppConversationMessage $message): array
     {
-        [$inbox] = $this->inboxServices();
-        $mediaUrl = $inbox->messageHasMedia($message)
-            ? $this->inboxRoute('media', ['conversation' => $message->conversation_id, 'message' => $message->id])
-            : null;
+        try {
+            [$inbox] = $this->inboxServices();
+            $mediaUrl = $inbox->messageHasMedia($message)
+                ? $this->safeInboxRoute('media', ['conversation' => $message->conversation_id, 'message' => $message->id])
+                : null;
 
-        return $inbox->serializeMessage($message, $mediaUrl);
+            return $inbox->serializeMessage($message, $mediaUrl);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return [
+                'id' => $message->id,
+                'direction' => $message->direction,
+                'body' => $message->displayBody(),
+                'message_type' => $message->message_type,
+                'status' => $message->status,
+                'created_at_human' => '',
+                'is_inbound' => $message->isInbound(),
+            ];
+        }
     }
 }

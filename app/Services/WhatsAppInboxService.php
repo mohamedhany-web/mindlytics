@@ -1044,7 +1044,25 @@ class WhatsAppInboxService
 
     public function voiceNoteConversionReady(): bool
     {
-        return $this->findFfmpegBinary() !== null;
+        try {
+            return $this->findFfmpegBinary() !== null;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    private function shellExecDisabled(): bool
+    {
+        if (! function_exists('shell_exec')) {
+            return true;
+        }
+
+        $disabled = ini_get('disable_functions');
+        if (! is_string($disabled) || trim($disabled) === '') {
+            return false;
+        }
+
+        return in_array('shell_exec', array_map('trim', explode(',', $disabled)), true);
     }
 
     private function findFfmpegBinary(): ?string
@@ -1055,11 +1073,22 @@ class WhatsAppInboxService
             $candidates[] = $envPath;
         }
 
-        $candidates[] = 'ffmpeg';
         if (PHP_OS_FAMILY === 'Windows') {
             $candidates[] = 'C:\\ffmpeg\\bin\\ffmpeg.exe';
             $candidates[] = 'C:\\xampp\\ffmpeg\\bin\\ffmpeg.exe';
         }
+
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        if ($this->shellExecDisabled()) {
+            return null;
+        }
+
+        $candidates[] = 'ffmpeg';
 
         foreach ($candidates as $candidate) {
             if (str_contains($candidate, '\\') || str_contains($candidate, '/')) {
@@ -1071,9 +1100,10 @@ class WhatsAppInboxService
             }
 
             $which = PHP_OS_FAMILY === 'Windows'
-                ? trim((string) shell_exec('where ' . $candidate . ' 2>NUL'))
-                : trim((string) shell_exec('which ' . $candidate . ' 2>/dev/null'));
+                ? @shell_exec('where ' . $candidate . ' 2>NUL')
+                : @shell_exec('which ' . $candidate . ' 2>/dev/null');
 
+            $which = trim((string) $which);
             if ($which !== '') {
                 $line = trim(explode("\n", $which)[0]);
 
