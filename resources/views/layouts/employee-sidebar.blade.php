@@ -102,6 +102,12 @@
                 <i class="fab fa-whatsapp text-base"></i>
                 <span>محادثات الواتساب</span>
             </a>
+            <a href="{{ route('employee.sales.whatsapp-groups.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.whatsapp-groups.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-users text-base"></i>
+                <span>مجموعات واتساب</span>
+            </a>
             <a href="{{ route('employee.sales.groups.index') }}"
                class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.groups.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
                @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">

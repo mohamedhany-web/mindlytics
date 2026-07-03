@@ -11,6 +11,14 @@
     @if(session('success'))<div class="text-sm text-emerald-700">{{ session('success') }}</div>@endif
     @if(session('error'))<div class="text-sm text-rose-700">{{ session('error') }}</div>@endif
 
+    <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+            <p class="font-bold text-emerald-900 text-sm"><i class="fab fa-whatsapp ml-1"></i> مجموعة واتساب حقيقية</p>
+            <p class="text-xs text-emerald-900/80 mt-1">أنشئ مجموعة واتساب وأضف عملاء هذه المجموعة تلقائياً.</p>
+        </div>
+        <a href="{{ route('admin.sales.whatsapp-groups.create', ['crm_group' => $group->id]) }}" class="inline-flex px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-semibold">إنشاء مجموعة واتساب</a>
+    </div>
+
     @include('admin.sales.groups._whatsapp_bulk', [
         'group' => $group,
         'leadsWithPhone' => $leadsWithPhone ?? collect(),

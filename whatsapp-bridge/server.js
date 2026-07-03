@@ -876,6 +876,179 @@ app.post('/api/logout', authMiddleware, async (_req, res) => {
     res.json({ success: true, message: 'Logged out.' });
 });
 
+function formatParticipantIds(phones) {
+    const list = Array.isArray(phones) ? phones : [phones];
+    const ids = [];
+    for (const phone of list) {
+        try {
+            const id = formatChatId(phone);
+            if (id && !ids.includes(id)) {
+                ids.push(id);
+            }
+        } catch (_) {
+            /* skip invalid */
+        }
+    }
+    return ids;
+}
+
+async function requireReadyClient() {
+    if (state.status !== 'ready' || !client) {
+        throw new Error('WhatsApp session not ready. Connect via QR or pairing first.');
+    }
+    return client;
+}
+
+async function getGroupChatByJid(jid) {
+    const wa = await requireReadyClient();
+    const chat = await wa.getChatById(jid);
+    if (!chat || !chat.isGroup) {
+        throw new Error('Group not found or invalid JID.');
+    }
+    return chat;
+}
+
+function serializeGroupChat(chat) {
+    const id = chat.id?._serialized || chat.id || '';
+    return {
+        jid: id,
+        subject: chat.name || chat.formattedTitle || '',
+        description: chat.description || '',
+        participant_count: chat.participants?.length || 0,
+        announce_only: !!chat.groupMetadata?.announce,
+        restrict: !!chat.groupMetadata?.restrict,
+        participants: (chat.participants || []).map((p) => ({
+            id: p.id?._serialized || p.id,
+            is_admin: !!p.isAdmin,
+            is_super_admin: !!p.isSuperAdmin,
+        })),
+    };
+}
+
+app.post('/api/groups/create', authMiddleware, async (req, res) => {
+    try {
+        const { subject, participants, description, announce_only, restrict } = req.body || {};
+        if (!subject || !String(subject).trim()) {
+            return res.status(422).json({ success: false, error: 'subject is required.' });
+        }
+        const ids = formatParticipantIds(participants || []);
+        if (ids.length < 1) {
+            return res.status(422).json({ success: false, error: 'At least one valid participant phone is required.' });
+        }
+        const wa = await requireReadyClient();
+        const created = await wa.createGroup(String(subject).trim(), ids);
+        const jid = created?.gid?._serialized || created?.id?._serialized || created;
+        const groupChat = await wa.getChatById(jid);
+        if (description) {
+            try {
+                await groupChat.setDescription(String(description));
+            } catch (_) {}
+        }
+        if (announce_only) {
+            try {
+                await groupChat.setMessagesAdminsOnly(true);
+            } catch (_) {}
+        }
+        if (restrict) {
+            try {
+                await groupChat.setInfoAdminsOnly(true);
+            } catch (_) {}
+        }
+        let invite_link = null;
+        try {
+            const code = await groupChat.getInviteCode();
+            invite_link = `https://chat.whatsapp.com/${code}`;
+        } catch (_) {}
+        res.json({ success: true, group: serializeGroupChat(groupChat), invite_link });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.get('/api/groups/:jid', authMiddleware, async (req, res) => {
+    try {
+        const groupChat = await getGroupChatByJid(req.params.jid);
+        let invite_link = null;
+        try {
+            const code = await groupChat.getInviteCode();
+            invite_link = `https://chat.whatsapp.com/${code}`;
+        } catch (_) {}
+        res.json({ success: true, group: serializeGroupChat(groupChat), invite_link });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.patch('/api/groups/:jid', authMiddleware, async (req, res) => {
+    try {
+        const { subject, description, announce_only, restrict } = req.body || {};
+        const groupChat = await getGroupChatByJid(req.params.jid);
+        if (subject && String(subject).trim()) {
+            await groupChat.setSubject(String(subject).trim());
+        }
+        if (description !== undefined) {
+            await groupChat.setDescription(String(description || ''));
+        }
+        if (announce_only !== undefined) {
+            await groupChat.setMessagesAdminsOnly(!!announce_only);
+        }
+        if (restrict !== undefined) {
+            await groupChat.setInfoAdminsOnly(!!restrict);
+        }
+        res.json({ success: true, group: serializeGroupChat(groupChat) });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.post('/api/groups/:jid/participants', authMiddleware, async (req, res) => {
+    try {
+        const ids = formatParticipantIds(req.body?.participants || []);
+        if (!ids.length) {
+            return res.status(422).json({ success: false, error: 'participants array required.' });
+        }
+        const groupChat = await getGroupChatByJid(req.params.jid);
+        const result = await groupChat.addParticipants(ids);
+        res.json({ success: true, group: serializeGroupChat(groupChat), add_result: result });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.delete('/api/groups/:jid/participants', authMiddleware, async (req, res) => {
+    try {
+        const ids = formatParticipantIds(req.body?.participants || []);
+        if (!ids.length) {
+            return res.status(422).json({ success: false, error: 'participants array required.' });
+        }
+        const groupChat = await getGroupChatByJid(req.params.jid);
+        await groupChat.removeParticipants(ids);
+        res.json({ success: true, group: serializeGroupChat(groupChat) });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.get('/api/groups/:jid/invite', authMiddleware, async (req, res) => {
+    try {
+        const groupChat = await getGroupChatByJid(req.params.jid);
+        const code = await groupChat.getInviteCode();
+        res.json({ success: true, invite_code: code, invite_link: `https://chat.whatsapp.com/${code}` });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.post('/api/groups/:jid/leave', authMiddleware, async (req, res) => {
+    try {
+        const groupChat = await getGroupChatByJid(req.params.jid);
+        await groupChat.leave();
+        res.json({ success: true, message: 'Left group.' });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Mindlytics WhatsApp Bridge listening on http://127.0.0.1:${PORT}`);
     if (!API_TOKEN) {

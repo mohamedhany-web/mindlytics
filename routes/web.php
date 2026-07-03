@@ -932,6 +932,19 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('groups/{group}/whatsapp-bulk', [\App\Http\Controllers\Employee\SalesGroupWhatsAppController::class, 'store'])->name('groups.whatsapp.store');
             Route::get('groups/{group}/whatsapp-batches/{batch}', [\App\Http\Controllers\Employee\SalesGroupWhatsAppController::class, 'showBatch'])->name('groups.whatsapp-batches.show');
             Route::get('groups/{group}/whatsapp-batches/{batch}/status', [\App\Http\Controllers\Employee\SalesGroupWhatsAppController::class, 'statusJson'])->name('groups.whatsapp-batches.status');
+            Route::prefix('whatsapp-groups')->name('whatsapp-groups.')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Employee\SalesWhatsAppGroupController::class, 'index'])->name('index');
+                Route::get('/create', [\App\Http\Controllers\Employee\SalesWhatsAppGroupController::class, 'create'])->name('create');
+                Route::post('/', [\App\Http\Controllers\Employee\SalesWhatsAppGroupController::class, 'store'])->name('store');
+                Route::get('/{whatsappGroup}', [\App\Http\Controllers\Employee\SalesWhatsAppGroupController::class, 'show'])->name('show');
+                Route::put('/{whatsappGroup}', [\App\Http\Controllers\Employee\SalesWhatsAppGroupController::class, 'update'])->name('update');
+                Route::post('/{whatsappGroup}/participants', [\App\Http\Controllers\Employee\SalesWhatsAppGroupController::class, 'addParticipants'])->name('participants.store');
+                Route::delete('/{whatsappGroup}/participants/{participant}', [\App\Http\Controllers\Employee\SalesWhatsAppGroupController::class, 'removeParticipant'])->name('participants.destroy');
+                Route::post('/{whatsappGroup}/refresh-invite', [\App\Http\Controllers\Employee\SalesWhatsAppGroupController::class, 'refreshInvite'])->name('refresh-invite');
+                Route::post('/{whatsappGroup}/sync', [\App\Http\Controllers\Employee\SalesWhatsAppGroupController::class, 'sync'])->name('sync');
+                Route::post('/{whatsappGroup}/leave', [\App\Http\Controllers\Employee\SalesWhatsAppGroupController::class, 'leave'])->name('leave');
+                Route::post('/{whatsappGroup}/import-crm', [\App\Http\Controllers\Employee\SalesWhatsAppGroupController::class, 'importFromCrm'])->name('import-crm');
+            });
             Route::post('leads/{lead}/activities', [\App\Http\Controllers\Employee\SalesLeadController::class, 'storeActivity'])->name('leads.activities.store');
             Route::post('leads/{lead}/quick-activity', [\App\Http\Controllers\Employee\SalesLeadController::class, 'quickActivity'])->name('leads.quick-activity');
             Route::post('leads/{lead}/csat', [\App\Http\Controllers\Employee\SalesLeadController::class, 'storeCsat'])->name('leads.csat.store');
@@ -1107,6 +1120,19 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('groups/{group}/whatsapp-bulk', [\App\Http\Controllers\Admin\SalesGroupWhatsAppController::class, 'store'])->name('groups.whatsapp.store');
             Route::get('groups/{group}/whatsapp-batches/{batch}', [\App\Http\Controllers\Admin\SalesGroupWhatsAppController::class, 'showBatch'])->name('groups.whatsapp-batches.show');
             Route::get('groups/{group}/whatsapp-batches/{batch}/status', [\App\Http\Controllers\Admin\SalesGroupWhatsAppController::class, 'statusJson'])->name('groups.whatsapp-batches.status');
+            Route::prefix('whatsapp-groups')->name('whatsapp-groups.')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Admin\SalesWhatsAppGroupController::class, 'index'])->name('index');
+                Route::get('/create', [\App\Http\Controllers\Admin\SalesWhatsAppGroupController::class, 'create'])->name('create');
+                Route::post('/', [\App\Http\Controllers\Admin\SalesWhatsAppGroupController::class, 'store'])->name('store');
+                Route::get('/{whatsappGroup}', [\App\Http\Controllers\Admin\SalesWhatsAppGroupController::class, 'show'])->name('show');
+                Route::put('/{whatsappGroup}', [\App\Http\Controllers\Admin\SalesWhatsAppGroupController::class, 'update'])->name('update');
+                Route::post('/{whatsappGroup}/participants', [\App\Http\Controllers\Admin\SalesWhatsAppGroupController::class, 'addParticipants'])->name('participants.store');
+                Route::delete('/{whatsappGroup}/participants/{participant}', [\App\Http\Controllers\Admin\SalesWhatsAppGroupController::class, 'removeParticipant'])->name('participants.destroy');
+                Route::post('/{whatsappGroup}/refresh-invite', [\App\Http\Controllers\Admin\SalesWhatsAppGroupController::class, 'refreshInvite'])->name('refresh-invite');
+                Route::post('/{whatsappGroup}/sync', [\App\Http\Controllers\Admin\SalesWhatsAppGroupController::class, 'sync'])->name('sync');
+                Route::post('/{whatsappGroup}/leave', [\App\Http\Controllers\Admin\SalesWhatsAppGroupController::class, 'leave'])->name('leave');
+                Route::post('/{whatsappGroup}/import-crm', [\App\Http\Controllers\Admin\SalesWhatsAppGroupController::class, 'importFromCrm'])->name('import-crm');
+            });
             Route::get('leads/export', [\App\Http\Controllers\Admin\SalesLeadController::class, 'export'])->name('leads.export');
             Route::get('leads/import', [\App\Http\Controllers\Admin\SalesLeadController::class, 'importForm'])->name('leads.import');
             Route::get('leads/import/template', [\App\Http\Controllers\Admin\SalesLeadController::class, 'importTemplate'])->name('leads.import.template');
