@@ -30,7 +30,10 @@ class MetaSocialGraphService
         }
 
         $connection = MetaSocialConnection::active();
-        $pagesCount = MetaSocialPage::query()->where('is_active', true)->count();
+        $pagesCount = 0;
+        if (\Illuminate\Support\Facades\Schema::hasTable('meta_social_pages')) {
+            $pagesCount = MetaSocialPage::query()->where('is_active', true)->count();
+        }
 
         if (! $connection) {
             return [

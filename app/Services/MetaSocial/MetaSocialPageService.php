@@ -33,11 +33,29 @@ class MetaSocialPageService
 
         $synced = 0;
         foreach ($result['pages'] ?? [] as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
             $ig = is_array($row['instagram_business_account'] ?? null) ? $row['instagram_business_account'] : null;
-            $picture = is_array($row['picture']['data'] ?? null) ? ($row['picture']['data']['url'] ?? null) : null;
+            $picture = null;
+            if (is_array($row['picture'] ?? null)) {
+                $pictureData = $row['picture']['data'] ?? null;
+                if (is_array($pictureData)) {
+                    $picture = $pictureData['url'] ?? null;
+                }
+            }
+            $picture = $picture ? mb_substr((string) $picture, 0, 512) : null;
+            $igPicture = $ig['profile_picture_url'] ?? null;
+            $igPicture = $igPicture ? mb_substr((string) $igPicture, 0, 512) : null;
+
+            $pageId = (string) ($row['id'] ?? '');
+            if ($pageId === '') {
+                continue;
+            }
 
             MetaSocialPage::query()->updateOrCreate(
-                ['page_id' => (string) $row['id']],
+                ['page_id' => $pageId],
                 [
                     'page_name' => (string) ($row['name'] ?? 'صفحة'),
                     'page_username' => $row['username'] ?? null,
@@ -46,11 +64,11 @@ class MetaSocialPageService
                     'category' => $row['category'] ?? null,
                     'instagram_business_id' => $ig['id'] ?? null,
                     'instagram_username' => $ig['username'] ?? null,
-                    'instagram_profile_picture' => $ig['profile_picture_url'] ?? null,
+                    'instagram_profile_picture' => $igPicture,
                     'is_active' => true,
                     'last_synced_at' => now(),
                     'connected_by' => $connectedBy,
-                    'meta' => ['raw' => ['id' => $row['id']]],
+                    'meta' => ['raw' => ['id' => $row['id'] ?? null]],
                 ],
             );
             $synced++;

@@ -22,9 +22,12 @@ class InputSanitizationMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->is('webhooks/whatsapp') || $request->is('webhooks/meta-social')) {
+        if ($request->is('webhooks/whatsapp') || $request->is('webhooks/meta-social') || $request->is('admin/meta-social/oauth/*')) {
             return $next($request);
         }
+
+        // OAuth query params must not be sanitized (would corrupt authorization codes)
+        $oauthSafeFields = ['code', 'state'];
 
         // حقول نصية طويلة (خبرات، نبذة، مهارات) نستثنيها من فحص SQL/XSS لتجنب إنذارات خاطئة عند كتابة نصوص كثيرة
         $longTextFields = ['experience', 'bio', 'skills', 'rejection_reason', 'bio_ar', 'bio_en'];
@@ -37,7 +40,7 @@ class InputSanitizationMiddleware
                     continue;
                 }
                 // تخطي الحقول النصية الطويلة المعروفة (تحصل على التنظيف فقط دون إيقاف الطلب)
-                if (in_array($key, $longTextFields)) {
+                if (in_array($key, $longTextFields, true) || in_array($key, $oauthSafeFields, true)) {
                     continue;
                 }
 
