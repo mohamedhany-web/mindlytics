@@ -29,6 +29,25 @@ Route::post('/webhooks/whatsapp', [\App\Http\Controllers\WhatsAppWebhookControll
         \App\Http\Middleware\CheckActiveStatus::class,
     ]);
 
+Route::get('/webhooks/meta-social', [\App\Http\Controllers\MetaSocialWebhookController::class, 'verify'])
+    ->name('webhooks.meta-social.verify')
+    ->withoutMiddleware([
+        \App\Http\Middleware\SetLocale::class,
+        \App\Http\Middleware\InputSanitizationMiddleware::class,
+        \App\Http\Middleware\FileUploadSecurityMiddleware::class,
+        \App\Http\Middleware\EnsureTwoFactorEnabled::class,
+        \App\Http\Middleware\CheckActiveStatus::class,
+    ]);
+Route::post('/webhooks/meta-social', [\App\Http\Controllers\MetaSocialWebhookController::class, 'handle'])
+    ->name('webhooks.meta-social.handle')
+    ->withoutMiddleware([
+        \App\Http\Middleware\SetLocale::class,
+        \App\Http\Middleware\InputSanitizationMiddleware::class,
+        \App\Http\Middleware\FileUploadSecurityMiddleware::class,
+        \App\Http\Middleware\EnsureTwoFactorEnabled::class,
+        \App\Http\Middleware\CheckActiveStatus::class,
+    ]);
+
 Route::get('/storage/{path}', function ($path) {
     $path = rawurldecode($path);
     $path = str_replace('..', '', $path);
@@ -1758,6 +1777,26 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('/batches/{batch}/retry', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'retry'])->name('batches.retry');
             Route::post('/batches/{batch}/items/{item}/retry', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'retryItem'])->name('batches.items.retry');
             Route::post('/batches/{batch}/cancel', [\App\Http\Controllers\Admin\WhatsAppBatchController::class, 'cancel'])->name('batches.cancel');
+        });
+
+        // إدارة السوشيال — Meta Graph (Facebook Pages + Messenger + Instagram)
+        Route::prefix('meta-social')->name('meta-social.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\MetaSocialController::class, 'index'])->name('index');
+            Route::get('/settings', [\App\Http\Controllers\Admin\MetaSocialSettingsController::class, 'edit'])->name('settings');
+            Route::post('/settings', [\App\Http\Controllers\Admin\MetaSocialSettingsController::class, 'update'])->name('settings.update');
+            Route::post('/settings/webhook-sync', [\App\Http\Controllers\Admin\MetaSocialSettingsController::class, 'syncWebhook'])->name('settings.webhook-sync');
+            Route::get('/settings/test', [\App\Http\Controllers\Admin\MetaSocialSettingsController::class, 'testConnection'])->name('settings.test');
+            Route::get('/oauth/redirect', [\App\Http\Controllers\Admin\MetaSocialOAuthController::class, 'redirect'])->name('oauth.redirect');
+            Route::get('/oauth/callback', [\App\Http\Controllers\Admin\MetaSocialOAuthController::class, 'callback'])->name('oauth.callback');
+            Route::post('/oauth/disconnect', [\App\Http\Controllers\Admin\MetaSocialOAuthController::class, 'disconnect'])->name('oauth.disconnect');
+            Route::get('/pages', [\App\Http\Controllers\Admin\MetaSocialPageController::class, 'index'])->name('pages.index');
+            Route::post('/pages/sync', [\App\Http\Controllers\Admin\MetaSocialPageController::class, 'sync'])->name('pages.sync');
+            Route::post('/pages/{page}/activate', [\App\Http\Controllers\Admin\MetaSocialPageController::class, 'activate'])->name('pages.activate');
+            Route::post('/pages/{page}/deactivate', [\App\Http\Controllers\Admin\MetaSocialPageController::class, 'deactivate'])->name('pages.deactivate');
+            Route::post('/pages/{page}/sync-conversations', [\App\Http\Controllers\Admin\MetaSocialPageController::class, 'syncConversations'])->name('pages.sync-conversations');
+            Route::get('/inbox', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'index'])->name('inbox.index');
+            Route::get('/inbox/poll', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'poll'])->name('inbox.poll');
+            Route::post('/inbox/{conversation}/reply', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'reply'])->name('inbox.reply');
         });
 
         // إدارة الرسائل والتقارير

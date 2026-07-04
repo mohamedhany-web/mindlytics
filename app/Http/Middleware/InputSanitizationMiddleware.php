@@ -22,7 +22,7 @@ class InputSanitizationMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->is('webhooks/whatsapp')) {
+        if ($request->is('webhooks/whatsapp') || $request->is('webhooks/meta-social')) {
             return $next($request);
         }
 

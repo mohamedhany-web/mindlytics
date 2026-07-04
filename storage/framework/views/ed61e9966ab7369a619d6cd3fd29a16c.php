@@ -26,6 +26,7 @@
             ?>
             <li>
                 <a href="<?php echo e(route('admin.dashboard')); ?>" 
+                   title="<?php echo e(__('admin.dashboard')); ?>"
                    @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
                    class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 relative group
                           <?php echo e($dashboardActive ? 'admin-nav-dashboard-active' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white overflow-hidden'); ?>">
@@ -298,15 +299,20 @@
             <?php
                 $whatsappMenuOpen = request()->routeIs('admin.whatsapp.*');
             ?>
-            <li x-data="{ open: <?php echo e($whatsappMenuOpen ? 'true' : 'false'); ?> }">
+            <li x-data="{ open: <?php echo e($whatsappMenuOpen ? 'true' : 'false'); ?> }" class="relative">
                 <button type="button" @click="open = !open" :aria-expanded="open"
-                        class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
+                        class="adm-full-nav flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
                     <div class="flex items-center gap-3">
                         <i class="fab fa-whatsapp w-5 text-emerald-400 group-hover:text-white"></i>
                         <span class="font-medium">قسم الواتساب</span>
                     </div>
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
+                <a href="<?php echo e(route('admin.whatsapp.inbox')); ?>"
+                   title="محادثات الواتساب"
+                   class="adm-compact-nav hidden items-center justify-center px-3 py-3 rounded-xl transition-all duration-300 <?php echo e(request()->routeIs('admin.whatsapp.inbox*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'); ?>">
+                    <i class="fab fa-whatsapp w-5"></i>
+                </a>
                 <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
                     <li>
                         <a href="<?php echo e(route('admin.whatsapp.index')); ?>"
@@ -370,6 +376,59 @@
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.whatsapp.batches.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : ''); ?>">
                             <i class="fas fa-layer-group w-4"></i>
                             <span>دفعات الإرسال</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            <?php
+                $metaSocialMenuOpen = request()->routeIs('admin.meta-social.*');
+            ?>
+            <li x-data="{ open: <?php echo e($metaSocialMenuOpen ? 'true' : 'false'); ?> }" class="relative">
+                <button type="button" @click="open = !open" :aria-expanded="open"
+                        class="adm-full-nav flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
+                    <div class="flex items-center gap-3">
+                        <i class="fab fa-meta w-5 text-sky-400 group-hover:text-white"></i>
+                        <span class="font-medium">السوشيال ميديا</span>
+                    </div>
+                    <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
+                </button>
+                <a href="<?php echo e(route('admin.meta-social.inbox.index')); ?>"
+                   title="محادثات السوشيال"
+                   class="adm-compact-nav hidden items-center justify-center px-3 py-3 rounded-xl transition-all duration-300 <?php echo e(request()->routeIs('admin.meta-social.inbox.*') ? 'bg-sky-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'); ?>">
+                    <i class="fab fa-meta w-5"></i>
+                </a>
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
+                    <li>
+                        <a href="<?php echo e(route('admin.meta-social.index')); ?>"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.meta-social.index') ? 'bg-sky-600/30 text-white font-semibold border-r-2 border-sky-400' : ''); ?>">
+                            <i class="fas fa-tachometer-alt w-4"></i>
+                            <span>لوحة السوشيال</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="<?php echo e(route('admin.meta-social.settings')); ?>"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.meta-social.settings*') ? 'bg-sky-600/30 text-white font-semibold border-r-2 border-sky-400' : ''); ?>">
+                            <i class="fas fa-plug w-4"></i>
+                            <span>ربط Meta</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="<?php echo e(route('admin.meta-social.pages.index')); ?>"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.meta-social.pages.*') ? 'bg-sky-600/30 text-white font-semibold border-r-2 border-sky-400' : ''); ?>">
+                            <i class="fab fa-facebook w-4"></i>
+                            <span>الصفحات</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="<?php echo e(route('admin.meta-social.inbox.index')); ?>"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white <?php echo e(request()->routeIs('admin.meta-social.inbox.*') ? 'bg-sky-600/30 text-white font-semibold border-r-2 border-sky-400' : ''); ?>">
+                            <i class="fas fa-inbox w-4"></i>
+                            <span>Messenger & Instagram</span>
                         </a>
                     </li>
                 </ul>

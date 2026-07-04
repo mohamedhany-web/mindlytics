@@ -90,7 +90,7 @@
 
 <script>window.__waInboxConfig = @json($inboxConfig);</script>
 
-<div class="wa-inbox-page flex flex-col min-h-0 overflow-hidden gap-2 {{ ($waImmersiveInbox ?? false) ? 'wa-inbox-employee-immersive sales-wa-inbox' : '' }}" x-data="whatsappInbox()" x-cloak>
+<div class="wa-inbox-page flex flex-col min-h-0 overflow-hidden gap-2 {{ ($waImmersiveInbox ?? false) ? 'wa-inbox-immersive admin-wa-inbox' : '' }} {{ ($inboxAudience ?? '') === 'employee' ? 'sales-wa-inbox' : '' }}" x-data="whatsappInbox()" x-cloak>
     @include('admin.whatsapp._alerts')
 
     @if(empty($waHideWebhookBanner) && (!empty($webhookIssues) || !empty($webhookTips)))
@@ -106,7 +106,7 @@
                     @endforeach
                 </ul>
             @endif
-            @if(!empty($webhookMeta) && ($webhookMeta['messages_subscribed'] !== null || $webhookMeta['callback_url']))
+            @if(!empty($webhookMeta) && (($webhookMeta['messages_subscribed'] ?? null) !== null || !empty($webhookMeta['callback_url'])))
                 <div class="text-[11px] rounded-lg bg-white/70 border border-amber-200 px-3 py-2 space-y-1">
                     <p><strong>فحص Meta:</strong>
                         messages = {{ ($webhookMeta['messages_subscribed'] ?? false) ? 'مشترك ✓' : 'غير مشترك ✗' }},
@@ -141,8 +141,8 @@
                 <i class="fas fa-bars text-sm"></i>
             </button>
             @endif
-            <div class="w-10 h-10 rounded-xl {{ ($inboxAudience ?? '') === 'employee' ? 'bg-slate-100 border border-slate-200' : 'bg-gradient-to-br from-emerald-500 to-green-600 shadow-md' }} flex items-center justify-center {{ ($inboxAudience ?? '') === 'employee' ? 'text-emerald-600' : 'text-white' }} shrink-0">
-                <i class="{{ ($inboxAudience ?? '') === 'employee' ? 'fab fa-whatsapp' : 'fas fa-inbox' }} text-sm"></i>
+            <div class="w-10 h-10 rounded-xl {{ ($waImmersiveInbox ?? false) ? 'bg-slate-100 border border-slate-200 text-emerald-600' : (($inboxAudience ?? '') === 'employee' ? 'bg-slate-100 border border-slate-200' : 'bg-gradient-to-br from-emerald-500 to-green-600 shadow-md') }} flex items-center justify-center {{ ($waImmersiveInbox ?? false) || ($inboxAudience ?? '') === 'employee' ? 'text-emerald-600' : 'text-white' }} shrink-0">
+                <i class="{{ ($waImmersiveInbox ?? false) || ($inboxAudience ?? '') === 'employee' ? 'fab fa-whatsapp' : 'fas fa-inbox' }} text-sm"></i>
             </div>
             <div class="min-w-0">
                 <h2 class="text-base sm:text-lg font-black text-slate-900 truncate">{{ $waInboxTitle ?? 'المحادثات الواردة' }}</h2>
@@ -160,6 +160,17 @@
                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors hidden md:inline-flex">
                 <i class="fas fa-chart-line text-slate-500"></i>
                 <span>مركز المبيعات</span>
+            </a>
+            @elseif(($inboxAudience ?? '') === 'admin' && ($waImmersiveInbox ?? false))
+            <a href="{{ $waAdminSettingsUrl ?? route('admin.whatsapp.settings') }}"
+               class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors">
+                <i class="fas fa-plug text-emerald-600"></i>
+                <span class="hidden sm:inline">ربط Meta</span>
+            </a>
+            <a href="{{ $waAdminReportsUrl ?? route('admin.whatsapp.reports') }}"
+               class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors hidden md:inline-flex">
+                <i class="fas fa-chart-pie text-slate-500"></i>
+                <span>التقارير</span>
             </a>
             @endif
             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-white border border-slate-200 text-slate-700">
@@ -670,32 +681,36 @@
             max-height: calc(100dvh - 4.75rem);
         }
     }
-    body.employee-wa-immersive .wa-inbox-page.wa-inbox-employee-immersive {
+    body.wa-immersive-inbox .wa-inbox-page.wa-inbox-immersive {
         height: 100dvh;
         max-height: 100dvh;
         gap: 0.375rem;
         padding: 0.25rem 0.375rem 0.375rem;
     }
     @media (min-width: 1024px) {
-        body.employee-wa-immersive .wa-inbox-page.wa-inbox-employee-immersive {
+        body.wa-immersive-inbox .wa-inbox-page.wa-inbox-immersive {
             padding: 0.375rem 0.5rem 0.5rem;
         }
     }
-    body.employee-wa-immersive main:has(.wa-inbox-page) > div:last-child {
+    body.wa-immersive-inbox main:has(.wa-inbox-page) > div:last-child {
         padding-bottom: 0 !important;
     }
-    body.employee-wa-immersive .wa-inbox-shell {
+    body.wa-immersive-inbox .wa-inbox-shell,
+    body.wa-immersive-inbox .admin-wa-inbox .wa-inbox-shell {
         border-radius: 1rem;
         border-color: #e2e8f0;
         box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
     }
-    .sales-wa-inbox .wa-inbox-shell {
+    .sales-wa-inbox .wa-inbox-shell,
+    .admin-wa-inbox .wa-inbox-shell {
         border-color: #e2e8f0;
     }
-    .sales-wa-inbox .wa-conv-sidebar {
+    .sales-wa-inbox .wa-conv-sidebar,
+    .admin-wa-inbox .wa-conv-sidebar {
         background: #f8fafc;
     }
-    .sales-wa-inbox .wa-conv-header {
+    .sales-wa-inbox .wa-conv-header,
+    .admin-wa-inbox .wa-conv-header {
         background: #f8fafc;
         border-color: #e2e8f0;
     }

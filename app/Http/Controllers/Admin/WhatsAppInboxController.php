@@ -20,6 +20,19 @@ class WhatsAppInboxController extends Controller
         return 'admin.whatsapp.inbox';
     }
 
+    /** @return array<string, mixed> */
+    protected function inboxExtraViewData(): array
+    {
+        return [
+            'waImmersiveInbox' => true,
+            'waInboxTitle' => 'محادثات الواتساب',
+            'waInboxSubtitle' => 'ردّ على العملاء وتابع الـ Pipeline والـ CRM',
+            'waAdminSettingsUrl' => route('admin.whatsapp.settings'),
+            'waAdminReportsUrl' => route('admin.whatsapp.reports'),
+            'waAdminWhatsAppUrl' => route('admin.whatsapp.index'),
+        ];
+    }
+
     protected function inboxAudience(): string
     {
         return 'admin';

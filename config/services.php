@@ -69,6 +69,14 @@ return [
         'extra_params' => env('WHATSAPP_EXTRA_PARAMS', '{}'),
     ],
 
+    'meta_social' => [
+        'app_id' => env('META_SOCIAL_APP_ID'),
+        'app_secret' => env('META_SOCIAL_APP_SECRET'),
+        'webhook_verify_token' => env('META_SOCIAL_WEBHOOK_VERIFY_TOKEN'),
+        'webhook_base_url' => env('META_SOCIAL_WEBHOOK_BASE_URL'),
+        'api_url' => env('META_SOCIAL_API_URL', 'https://graph.facebook.com/v21.0'),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Platform Settings

@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Meta يرسل POST بدون CSRF token
         $middleware->validateCsrfTokens(except: [
             'webhooks/whatsapp',
+            'webhooks/meta-social',
         ]);
 
         // Security Headers - يجب أن يكون أول middleware

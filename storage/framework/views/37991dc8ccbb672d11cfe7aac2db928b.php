@@ -1,4 +1,4 @@
-<?php $adminLocale = app()->getLocale(); $adminRtl = $adminLocale === 'ar'; ?>
+<?php $adminLocale = app()->getLocale(); $adminRtl = $adminLocale === 'ar'; $waImmersive = (bool) ($waImmersiveInbox ?? false); ?>
 <!DOCTYPE html>
 <html lang="<?php echo e($adminLocale); ?>" dir="<?php echo e($adminRtl ? 'rtl' : 'ltr'); ?>">
 <head>
@@ -504,11 +504,56 @@
                 padding: 0.75rem !important;
             }
         }
+
+        .adm-sidebar-compact .admin-sidebar-root > div:first-child > div > div:last-child {
+            display: none !important;
+        }
+        .adm-sidebar-compact .admin-sidebar-root > div:first-child {
+            padding: 0.75rem !important;
+        }
+        .adm-sidebar-compact .admin-sidebar-root > div:first-child .w-16 {
+            width: 2.5rem;
+            height: 2.5rem;
+        }
+        .adm-sidebar-compact .admin-sidebar-root > div:first-child > div {
+            justify-content: center;
+        }
+        .adm-sidebar-compact .admin-sidebar-nav > ul > li > a > span,
+        .adm-sidebar-compact .admin-sidebar-nav > ul > li > button span,
+        .adm-sidebar-compact .admin-sidebar-nav > ul > li > button .fa-chevron-down {
+            display: none !important;
+        }
+        .adm-sidebar-compact .admin-sidebar-sub {
+            display: none !important;
+        }
+        .adm-sidebar-compact .admin-sidebar-nav > ul > li > a,
+        .adm-sidebar-compact .admin-sidebar-nav > ul > li > button {
+            justify-content: center;
+            padding-left: 0.625rem;
+            padding-right: 0.625rem;
+        }
+        .adm-sidebar-compact .admin-sidebar-nav > ul > li > button > div {
+            justify-content: center;
+            gap: 0;
+        }
+        .adm-sidebar-compact .admin-sidebar-nav {
+            padding-left: 0.375rem;
+            padding-right: 0.375rem;
+        }
+        .adm-sidebar-compact .adm-full-nav {
+            display: none !important;
+        }
+        .adm-sidebar-compact .adm-compact-nav {
+            display: flex !important;
+        }
+        body.wa-immersive-inbox {
+            overflow: hidden;
+        }
     </style>
     
     <?php echo $__env->yieldPushContent('styles'); ?>
 </head>
-<body class="bg-gray-50" style="margin: 0 !important; padding: 0 !important; margin-top: 0 !important; padding-top: 0 !important; top: 0 !important; position: relative !important;"
+<body class="bg-gray-50 <?php echo e($waImmersive ? 'wa-immersive-inbox' : ''); ?>" style="margin: 0 !important; padding: 0 !important; margin-top: 0 !important; padding-top: 0 !important; top: 0 !important; position: relative !important;"
       x-data="{ 
           sidebarOpen: false
       }" 
@@ -568,10 +613,11 @@
               }, 150);
           });
       "
-      @close-sidebar.window="sidebarOpen = false">
+      @close-sidebar.window="sidebarOpen = false"
+      @open-sidebar.window="sidebarOpen = true">
     <div class="flex min-h-screen lg:h-screen overflow-x-hidden" style="margin: 0 !important; padding: 0 !important; margin-top: 0 !important; padding-top: 0 !important; top: 0 !important; position: relative !important; isolation: isolate !important;">
         <!-- Sidebar - Fixed and isolated -->
-        <aside class="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:right-0 lg:z-20 flex-shrink-0 inset-y-0" style="position: fixed !important; z-index: 20 !important; isolation: isolate !important;">
+        <aside class="hidden lg:flex <?php echo e($waImmersive ? 'lg:w-[4.25rem] adm-sidebar-compact' : 'lg:w-64'); ?> lg:flex-col lg:fixed lg:right-0 lg:z-20 flex-shrink-0 inset-y-0" style="position: fixed !important; z-index: 20 !important; isolation: isolate !important;">
             <?php if(request()->routeIs('branch.office.*')): ?>
                 <?php echo $__env->make('layouts.branch-office-sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
             <?php else: ?>
@@ -611,9 +657,9 @@
         </div>
 
         <!-- Main content area - Separate layer -->
-        <div class="flex flex-col flex-1 min-w-0 lg:pr-64 w-full lg:h-screen" style="position: relative !important; z-index: 10 !important; isolation: isolate !important;">
+        <div class="flex flex-col flex-1 min-w-0 <?php echo e($waImmersive ? 'lg:pr-[4.25rem]' : 'lg:pr-64'); ?> w-full lg:h-screen" style="position: relative !important; z-index: 10 !important; isolation: isolate !important;">
             <!-- Top navigation - Sticky header inside main content -->
-            <header class="sticky top-0 z-30 flex-shrink-0 flex h-14 sm:h-16 bg-gradient-to-r from-slate-50 via-blue-50 to-slate-100 shadow-lg border-b border-slate-200/50 bg-white/95 overflow-visible" style="position: sticky !important; z-index: 30 !important; isolation: isolate !important; overflow: visible !important;">
+            <header class="sticky top-0 z-30 flex-shrink-0 flex h-14 sm:h-16 bg-gradient-to-r from-slate-50 via-blue-50 to-slate-100 shadow-lg border-b border-slate-200/50 bg-white/95 overflow-visible <?php echo e($waImmersive ? 'lg:hidden' : ''); ?>" style="position: sticky !important; z-index: 30 !important; isolation: isolate !important; overflow: visible !important;">
                 <button @click="sidebarOpen = true" class="px-3 sm:px-4 border-l border-slate-200/50 text-slate-700 hover:bg-slate-100/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-400 lg:hidden transition-colors">
                     <i class="fas fa-bars text-base sm:text-lg"></i>
                 </button>
@@ -719,7 +765,8 @@
             </header>
 
             <!-- Page content - Scrollable area -->
-            <main class="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-br from-gray-50 via-white to-gray-50" style="position: relative !important; z-index: 1 !important; isolation: isolate !important; flex: 1 1 auto !important; min-height: 0 !important;">
+            <main class="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-br from-gray-50 via-white to-gray-50 <?php echo e($waImmersive ? 'overflow-hidden' : ''); ?>" style="position: relative !important; z-index: 1 !important; isolation: isolate !important; flex: 1 1 auto !important; min-height: 0 !important;">
+                <?php if(! $waImmersive): ?>
                 <!-- Flash Messages -->
                 <div class="px-3 sm:px-6 pt-4 sm:pt-6 space-y-3">
                     <?php if(session('success')): ?>
@@ -782,8 +829,9 @@
                         </div>
                     <?php endif; ?>
                 </div>
+                <?php endif; ?>
 
-                <div class="px-3 sm:px-6 pb-8 sm:pb-12">
+                <div class="<?php echo e($waImmersive ? 'p-0 h-full flex flex-col min-h-0 overflow-hidden' : 'px-3 sm:px-6 pb-8 sm:pb-12'); ?>">
                     <?php echo $__env->yieldContent('content'); ?>
                 </div>
             </main>

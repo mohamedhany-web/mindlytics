@@ -82,7 +82,7 @@
     
     <?php echo $__env->yieldPushContent('styles'); ?>
 </head>
-<body class="bg-gray-50 <?php echo e($waImmersive ? 'employee-wa-immersive' : ''); ?>">
+<body class="bg-gray-50 <?php echo e($waImmersive ? 'wa-immersive-inbox employee-wa-immersive' : ''); ?>">
     <div x-data="{ sidebarOpen: window.innerWidth >= 1024 }" 
          x-init="
           // إغلاق السايدبار عند النقر على الروابط
