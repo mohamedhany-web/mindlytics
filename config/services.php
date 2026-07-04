@@ -74,6 +74,7 @@ return [
         'app_secret' => env('META_SOCIAL_APP_SECRET'),
         'webhook_verify_token' => env('META_SOCIAL_WEBHOOK_VERIFY_TOKEN'),
         'webhook_base_url' => env('META_SOCIAL_WEBHOOK_BASE_URL'),
+        'oauth_base_url' => env('META_SOCIAL_OAUTH_BASE_URL'),
         'api_url' => env('META_SOCIAL_API_URL', 'https://graph.facebook.com/v21.0'),
     ],
 

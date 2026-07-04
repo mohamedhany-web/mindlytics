@@ -69,9 +69,15 @@
                     <p class="text-xs text-sky-700 font-semibold">Callback URL (Webhook)</p>
                     <code class="block text-xs dir-ltr break-all mt-1 text-sky-900">{{ $config['webhook_url'] ?? '' }}</code>
                 </div>
-                <div class="rounded-xl border border-sky-200 bg-sky-50/50 p-4">
-                    <p class="text-xs text-sky-700 font-semibold">OAuth Redirect URI</p>
-                    <code class="block text-xs dir-ltr break-all mt-1 text-sky-900">{{ $config['oauth_redirect_url'] ?? '' }}</code>
+                <div class="rounded-xl border border-sky-200 bg-sky-50/50 p-4 sm:col-span-2">
+                    <p class="text-xs text-sky-700 font-semibold">OAuth Redirect URI — انسخه إلى Meta (Facebook Login → Settings)</p>
+                    <div class="flex flex-wrap items-center gap-2 mt-1">
+                        <code id="sm-oauth-redirect-uri" class="flex-1 min-w-0 text-xs dir-ltr break-all bg-white px-3 py-2 rounded-lg border border-sky-200">{{ $config['oauth_redirect_url'] ?? '' }}</code>
+                        <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('sm-oauth-redirect-uri').textContent.trim()); this.textContent='تم النسخ ✓'; setTimeout(() => this.innerHTML='<i class=\'fas fa-copy\'></i> نسخ', 2000)"
+                                class="shrink-0 text-xs px-3 py-2 rounded-lg bg-sky-600 text-white font-bold hover:bg-sky-700">
+                            <i class="fas fa-copy"></i> نسخ
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -215,11 +221,19 @@
                     </h3>
                 </div>
                 <div class="p-5 sm:p-6">
-                    <ol class="list-decimal list-inside space-y-2 text-sm text-slate-700">
-                        <li>أضف Product: <strong>Facebook Login</strong> + <strong>Messenger</strong> + <strong>Instagram</strong></li>
-                        <li>Valid OAuth Redirect URI:
-                            <code class="block dir-ltr text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 mt-1 break-all">{{ $config['oauth_redirect_url'] ?? '' }}</code>
+                    <ol class="list-decimal list-inside space-y-3 text-sm text-slate-700">
+                        <li>
+                            <strong>Facebook Login → Settings</strong>
+                            <ul class="list-disc list-inside mr-4 mt-1 text-xs text-slate-600 space-y-1">
+                                <li>Client OAuth Login = <strong>Yes</strong></li>
+                                <li>Web OAuth Login = <strong>Yes</strong></li>
+                                <li>Valid OAuth Redirect URIs — أضف بالضبط:
+                                    <code class="block dir-ltr text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-1 break-all">{{ $config['oauth_redirect_url'] ?? '' }}</code>
+                                </li>
+                                <li>للتطوير المحلي أضف أيضاً: <code class="dir-ltr bg-slate-100 px-1 rounded">http://127.0.0.1:8000/admin/meta-social/oauth/callback</code></li>
+                            </ul>
                         </li>
+                        <li>أضف Products: <strong>Messenger</strong> + <strong>Instagram</strong></li>
                         <li>Webhooks → Object: <strong>Page</strong> → Callback:
                             <code class="block dir-ltr text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 mt-1 break-all">{{ $config['webhook_url'] ?? '' }}</code>
                         </li>

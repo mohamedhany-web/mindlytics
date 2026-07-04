@@ -195,19 +195,29 @@ class MetaSocialSettings
         return $scopes !== '' ? $scopes : implode(',', self::defaultOAuthScopes());
     }
 
-    public static function webhookUrl(): string
+    public static function publicBaseUrl(): string
     {
-        $base = trim((string) config('services.meta_social.webhook_base_url', ''));
-        if ($base === '') {
-            $base = (string) config('app.url');
+        $oauthBase = trim((string) config('services.meta_social.oauth_base_url', ''));
+        if ($oauthBase !== '') {
+            return rtrim($oauthBase, '/');
         }
 
-        return rtrim($base, '/') . '/webhooks/meta-social';
+        $webhookBase = trim((string) config('services.meta_social.webhook_base_url', ''));
+        if ($webhookBase !== '') {
+            return rtrim($webhookBase, '/');
+        }
+
+        return rtrim((string) config('app.url'), '/');
+    }
+
+    public static function webhookUrl(): string
+    {
+        return self::publicBaseUrl() . '/webhooks/meta-social';
     }
 
     public static function oauthRedirectUrl(): string
     {
-        return route('admin.meta-social.oauth.callback');
+        return self::publicBaseUrl() . '/admin/meta-social/oauth/callback';
     }
 
     public static function graphVersion(): string
