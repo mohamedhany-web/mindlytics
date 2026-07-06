@@ -1849,6 +1849,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::match(['put', 'patch', 'post'], '/transactions/{transaction}', [\App\Http\Controllers\Admin\TransactionController::class, 'update'])->middleware('throttle:20,5')->name('transactions.update');
         Route::post('/transactions/{transaction}/refund', [\App\Http\Controllers\Admin\TransactionController::class, 'refund'])->middleware('throttle:10,5')->name('transactions.refund');
         Route::post('/transactions/{transaction}/sync-wallet-withdrawal', [\App\Http\Controllers\Admin\TransactionController::class, 'syncWalletWithdrawal'])->middleware('throttle:10,5')->name('transactions.sync-wallet-withdrawal');
+        Route::get('/transactions/{transaction}/sync-wallet-withdrawal', fn (\App\Models\Transaction $transaction) => redirect()
+            ->route('admin.transactions.show', $transaction)
+            ->with('error', 'استخدم زر «تنفيذ السحب الآن» من صفحة المعاملة — لا تفتح رابط السحب مباشرة.'));
         Route::delete('/transactions/{transaction}', [\App\Http\Controllers\Admin\TransactionController::class, 'destroy'])->middleware('throttle:10,1')->name('transactions.destroy');
         
         Route::resource('wallets', \App\Http\Controllers\Admin\WalletController::class)

@@ -230,7 +230,7 @@ class TransactionController extends Controller
             ->with('success', 'تم استرداد المبلغ بنجاح. تم سحبه من المحفظة المرتبطة (إن وُجدت) وتحديث الدفعة والفاتورة.');
     }
 
-    public function syncWalletWithdrawal(Transaction $transaction)
+    public function syncWalletWithdrawal(Request $request, Transaction $transaction)
     {
         if (! Auth::check() || ! Auth::user()->isSuperAdmin()) {
             abort(403, 'غير مصرح لك بتنفيذ الاسترداد');
@@ -247,23 +247,32 @@ class TransactionController extends Controller
                 ? (float) $validated['amount']
                 : (float) ($metadata['refund_amount'] ?? $transaction->amount);
 
+            $walletIdOverride = ! empty($validated['wallet_id']) ? (int) $validated['wallet_id'] : null;
+
             $walletTxn = app(TransactionRefundService::class)->syncWalletWithdrawalIfMissing(
                 $transaction,
                 $amount,
                 auth()->id(),
-                isset($validated['wallet_id']) ? (int) $validated['wallet_id'] : null,
+                $walletIdOverride,
             );
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return back()->withErrors($e->errors());
+            return redirect()
+                ->route('admin.transactions.show', $transaction)
+                ->withErrors($e->errors());
         } catch (\Throwable $e) {
             Log::error('Wallet withdrawal sync failed: ' . $e->getMessage(), [
                 'transaction_id' => $transaction->id,
+                'trace' => $e->getTraceAsString(),
             ]);
 
-            return back()->with('error', 'تعذر سحب المبلغ من المحفظة: ' . $e->getMessage());
+            return redirect()
+                ->route('admin.transactions.show', $transaction)
+                ->with('error', 'تعذر سحب المبلغ من المحفظة: ' . $e->getMessage());
         }
 
-        return back()->with('success', 'تم سحب ' . number_format((float) $walletTxn->amount, 2) . ' ج.م من المحفظة بنجاح.');
+        return redirect()
+            ->route('admin.transactions.show', $transaction)
+            ->with('success', 'تم سحب ' . number_format((float) $walletTxn->amount, 2) . ' ج.م من المحفظة بنجاح.');
     }
 
     public function destroy(Transaction $transaction)

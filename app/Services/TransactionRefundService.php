@@ -224,7 +224,7 @@ class TransactionRefundService
             ]);
         }
 
-        $deposit = $this->findLinkedWalletDeposit($transaction);
+        $deposit = $this->findLinkedWalletDeposit($transaction, true);
         $walletId = $walletIdOverride ?: $this->resolveWalletId($transaction, $deposit);
         $hadDeposit = $deposit !== null;
 
@@ -257,28 +257,37 @@ class TransactionRefundService
             ]);
         }
 
-        return $wallet->refund(
-            $amount,
-            $transaction->payment_id,
-            null,
-            $notes . ' — سحب من محفظة: ' . ($wallet->name ?? ('#' . $wallet->id)),
-            $processedBy
-        );
+        try {
+            return $wallet->refund(
+                $amount,
+                $transaction->payment_id,
+                null,
+                $notes . ' — سحب من محفظة: ' . ($wallet->name ?? ('#' . $wallet->id)),
+                $processedBy
+            );
+        } catch (\Exception $e) {
+            throw ValidationException::withMessages([
+                'refund' => $e->getMessage(),
+            ]);
+        }
     }
 
-    private function findLinkedWalletDeposit(Transaction $transaction): ?WalletTransaction
+    private function findLinkedWalletDeposit(Transaction $transaction, bool $lock = false): ?WalletTransaction
     {
-        return WalletTransaction::query()
+        $query = WalletTransaction::query()
             ->where('type', 'deposit')
             ->where(function ($query) use ($transaction) {
                 $query->where('transaction_id', $transaction->id);
                 if ($transaction->payment_id) {
                     $query->orWhere('payment_id', $transaction->payment_id);
                 }
-            })
-            ->lockForUpdate()
-            ->latest('id')
-            ->first();
+            });
+
+        if ($lock) {
+            $query->lockForUpdate();
+        }
+
+        return $query->latest('id')->first();
     }
 
     private function resolveWalletId(Transaction $transaction, ?WalletTransaction $deposit = null): ?int
