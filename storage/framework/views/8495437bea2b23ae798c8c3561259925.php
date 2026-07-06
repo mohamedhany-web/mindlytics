@@ -29,6 +29,13 @@
                 </div>
             </div>
             <div class="flex flex-wrap items-center gap-2">
+                <a href="<?php echo e(route('admin.sales.win-approvals.index')); ?>" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 rounded-xl border border-slate-300 hover:bg-white">
+                    <i class="fas fa-trophy text-amber-600"></i>
+                    موافقة Win
+                    <?php if(($totals['pending_wins'] ?? 0) > 0): ?>
+                        <span class="text-[10px] font-black bg-amber-500 text-white px-1.5 py-0.5 rounded-full"><?php echo e($totals['pending_wins']); ?></span>
+                    <?php endif; ?>
+                </a>
                 <a href="<?php echo e(route('admin.sales.leads.index')); ?>" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 rounded-xl border border-slate-300 hover:bg-white">
                     <i class="fas fa-user-tag text-emerald-600"></i>
                     العملاء المحتملون

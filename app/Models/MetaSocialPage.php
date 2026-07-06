@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class MetaSocialPage extends Model
 {
     protected $fillable = [
+        'meta_social_connection_id',
         'page_id',
         'page_name',
         'page_username',
@@ -36,6 +37,11 @@ class MetaSocialPage extends Model
     public function connectedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'connected_by');
+    }
+
+    public function connection(): BelongsTo
+    {
+        return $this->belongsTo(MetaSocialConnection::class, 'meta_social_connection_id');
     }
 
     public function conversations(): HasMany

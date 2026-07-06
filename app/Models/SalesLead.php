@@ -128,6 +128,21 @@ class SalesLead extends Model
         return $query->whereNotIn('stage', ['won', 'lost']);
     }
 
+    public function scopePendingWinApproval($query)
+    {
+        return $query->where('stage', 'won')->whereNull('won_confirmed_at');
+    }
+
+    public function isPendingWinApproval(): bool
+    {
+        return $this->stage === 'won' && $this->won_confirmed_at === null;
+    }
+
+    public function isWinConfirmed(): bool
+    {
+        return $this->stage === 'won' && $this->won_confirmed_at !== null;
+    }
+
     public static function stageLabel(string $stage): string
     {
         return self::STAGES[$stage] ?? $stage;

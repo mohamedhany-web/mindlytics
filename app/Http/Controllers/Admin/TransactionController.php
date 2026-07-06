@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\Wallet;
 use App\Models\ActivityLog;
 use App\Services\TransactionRefundService;
 use Illuminate\Http\Request;
@@ -83,7 +84,22 @@ class TransactionController extends Controller
     public function show(Transaction $transaction)
     {
         $transaction->load('user', 'payment', 'invoice', 'expense', 'subscription', 'createdBy');
-        return view('admin.transactions.show', compact('transaction'));
+        $refundService = app(TransactionRefundService::class);
+        $canRefund = $refundService->canRefund($transaction);
+        $needsWalletSync = $refundService->needsWalletWithdrawalSync($transaction);
+        $suggestedWalletId = $refundService->suggestedWalletId($transaction);
+        $academyWallets = Wallet::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'type', 'balance']);
+
+        return view('admin.transactions.show', compact(
+            'transaction',
+            'canRefund',
+            'needsWalletSync',
+            'suggestedWalletId',
+            'academyWallets',
+        ));
     }
 
     public function create()
@@ -95,9 +111,23 @@ class TransactionController extends Controller
     public function edit(Transaction $transaction)
     {
         $users = User::where('role', 'student')->where('is_active', true)->get();
-        $canRefund = app(TransactionRefundService::class)->canRefund($transaction);
+        $refundService = app(TransactionRefundService::class);
+        $canRefund = $refundService->canRefund($transaction);
+        $needsWalletSync = $refundService->needsWalletWithdrawalSync($transaction);
+        $suggestedWalletId = $refundService->suggestedWalletId($transaction);
+        $academyWallets = Wallet::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'type', 'balance']);
 
-        return view('admin.transactions.edit', compact('transaction', 'users', 'canRefund'));
+        return view('admin.transactions.edit', compact(
+            'transaction',
+            'users',
+            'canRefund',
+            'needsWalletSync',
+            'suggestedWalletId',
+            'academyWallets',
+        ));
     }
 
     public function store(Request $request)
@@ -154,6 +184,13 @@ class TransactionController extends Controller
             ])->withInput();
         }
 
+        if ($validated['status'] === 'reversed' && $transaction->status !== 'reversed') {
+            return $this->refund($request->merge([
+                'amount' => $validated['amount'],
+                'description' => $validated['description'] ?? null,
+            ]), $transaction);
+        }
+
         $transaction->update($validated);
 
         return redirect()->route('admin.transactions.index')
@@ -191,6 +228,42 @@ class TransactionController extends Controller
 
         return redirect()->route('admin.transactions.show', $result['refund'])
             ->with('success', 'تم استرداد المبلغ بنجاح. تم سحبه من المحفظة المرتبطة (إن وُجدت) وتحديث الدفعة والفاتورة.');
+    }
+
+    public function syncWalletWithdrawal(Transaction $transaction)
+    {
+        if (! Auth::check() || ! Auth::user()->isSuperAdmin()) {
+            abort(403, 'غير مصرح لك بتنفيذ الاسترداد');
+        }
+
+        $validated = $request->validate([
+            'wallet_id' => 'nullable|exists:wallets,id',
+            'amount' => 'nullable|numeric|min:0.01',
+        ]);
+
+        try {
+            $metadata = is_array($transaction->metadata) ? $transaction->metadata : [];
+            $amount = isset($validated['amount'])
+                ? (float) $validated['amount']
+                : (float) ($metadata['refund_amount'] ?? $transaction->amount);
+
+            $walletTxn = app(TransactionRefundService::class)->syncWalletWithdrawalIfMissing(
+                $transaction,
+                $amount,
+                auth()->id(),
+                isset($validated['wallet_id']) ? (int) $validated['wallet_id'] : null,
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors());
+        } catch (\Throwable $e) {
+            Log::error('Wallet withdrawal sync failed: ' . $e->getMessage(), [
+                'transaction_id' => $transaction->id,
+            ]);
+
+            return back()->with('error', 'تعذر سحب المبلغ من المحفظة: ' . $e->getMessage());
+        }
+
+        return back()->with('success', 'تم سحب ' . number_format((float) $walletTxn->amount, 2) . ' ج.م من المحفظة بنجاح.');
     }
 
     public function destroy(Transaction $transaction)

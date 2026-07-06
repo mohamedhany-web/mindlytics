@@ -286,6 +286,18 @@
                         </a>
                     </li>
                     <li>
+                        @php $pendingWinApprovals = \App\Models\SalesLead::pendingWinApproval()->count(); @endphp
+                        <a href="{{ route('admin.sales.win-approvals.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.win-approvals.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-trophy w-4"></i>
+                            <span class="flex-1">موافقة صفقات Win</span>
+                            @if($pendingWinApprovals > 0)
+                                <span class="text-[10px] font-black bg-amber-500 text-white px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">{{ $pendingWinApprovals }}</span>
+                            @endif
+                        </a>
+                    </li>
+                    <li>
                         <a href="{{ route('admin.sales.commissions.index') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.commissions.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">

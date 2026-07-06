@@ -1138,6 +1138,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::put('kpi/targets', [\App\Http\Controllers\Admin\SalesKpiController::class, 'updateTargets'])->name('kpi.targets.update');
             Route::get('insights', [\App\Http\Controllers\Admin\SalesInsightsController::class, 'index'])->name('insights.index');
             Route::get('commissions', [\App\Http\Controllers\Admin\SalesCommissionController::class, 'index'])->name('commissions.index');
+            Route::get('win-approvals', [\App\Http\Controllers\Admin\SalesWinApprovalController::class, 'index'])->name('win-approvals.index');
+            Route::post('win-approvals/{lead}/approve', [\App\Http\Controllers\Admin\SalesWinApprovalController::class, 'approve'])->name('win-approvals.approve');
+            Route::post('win-approvals/{lead}/reject', [\App\Http\Controllers\Admin\SalesWinApprovalController::class, 'reject'])->name('win-approvals.reject');
             Route::resource('groups', \App\Http\Controllers\Admin\SalesLeadGroupController::class)->except(['edit']);
             Route::post('groups/{group}/whatsapp-bulk', [\App\Http\Controllers\Admin\SalesGroupWhatsAppController::class, 'store'])->name('groups.whatsapp.store');
             Route::get('groups/{group}/whatsapp-batches/{batch}', [\App\Http\Controllers\Admin\SalesGroupWhatsAppController::class, 'showBatch'])->name('groups.whatsapp-batches.show');
@@ -1791,6 +1794,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('/oauth/disconnect', [\App\Http\Controllers\Admin\MetaSocialOAuthController::class, 'disconnect'])->name('oauth.disconnect');
             Route::get('/pages', [\App\Http\Controllers\Admin\MetaSocialPageController::class, 'index'])->name('pages.index');
             Route::post('/pages/sync', [\App\Http\Controllers\Admin\MetaSocialPageController::class, 'sync'])->name('pages.sync');
+            Route::post('/pages/bulk-activate', [\App\Http\Controllers\Admin\MetaSocialPageController::class, 'bulkActivate'])->name('pages.bulk-activate');
+            Route::post('/pages/bulk-deactivate', [\App\Http\Controllers\Admin\MetaSocialPageController::class, 'bulkDeactivate'])->name('pages.bulk-deactivate');
+            Route::post('/pages/activate-all', [\App\Http\Controllers\Admin\MetaSocialPageController::class, 'activateAll'])->name('pages.activate-all');
             Route::post('/pages/{page}/activate', [\App\Http\Controllers\Admin\MetaSocialPageController::class, 'activate'])->name('pages.activate');
             Route::post('/pages/{page}/deactivate', [\App\Http\Controllers\Admin\MetaSocialPageController::class, 'deactivate'])->name('pages.deactivate');
             Route::post('/pages/{page}/sync-conversations', [\App\Http\Controllers\Admin\MetaSocialPageController::class, 'syncConversations'])->name('pages.sync-conversations');
@@ -1842,6 +1848,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             ->except(['update', 'destroy']);
         Route::match(['put', 'patch', 'post'], '/transactions/{transaction}', [\App\Http\Controllers\Admin\TransactionController::class, 'update'])->middleware('throttle:20,5')->name('transactions.update');
         Route::post('/transactions/{transaction}/refund', [\App\Http\Controllers\Admin\TransactionController::class, 'refund'])->middleware('throttle:10,5')->name('transactions.refund');
+        Route::post('/transactions/{transaction}/sync-wallet-withdrawal', [\App\Http\Controllers\Admin\TransactionController::class, 'syncWalletWithdrawal'])->middleware('throttle:10,5')->name('transactions.sync-wallet-withdrawal');
         Route::delete('/transactions/{transaction}', [\App\Http\Controllers\Admin\TransactionController::class, 'destroy'])->middleware('throttle:10,1')->name('transactions.destroy');
         
         Route::resource('wallets', \App\Http\Controllers\Admin\WalletController::class)

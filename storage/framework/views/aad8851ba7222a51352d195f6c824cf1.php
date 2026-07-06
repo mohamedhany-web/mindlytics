@@ -106,7 +106,7 @@
                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </ul>
             <?php endif; ?>
-            <?php if(!empty($webhookMeta) && ($webhookMeta['messages_subscribed'] !== null || $webhookMeta['callback_url'])): ?>
+            <?php if(!empty($webhookMeta) && (($webhookMeta['messages_subscribed'] ?? null) !== null || !empty($webhookMeta['callback_url']))): ?>
                 <div class="text-[11px] rounded-lg bg-white/70 border border-amber-200 px-3 py-2 space-y-1">
                     <p><strong>فحص Meta:</strong>
                         messages = <?php echo e(($webhookMeta['messages_subscribed'] ?? false) ? 'مشترك ✓' : 'غير مشترك ✗'); ?>,

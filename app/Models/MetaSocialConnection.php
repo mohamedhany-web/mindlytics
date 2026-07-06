@@ -35,19 +35,32 @@ class MetaSocialConnection extends Model
         return $this->belongsTo(User::class, 'connected_by');
     }
 
-    public static function active(): ?self
+    public function pages(): HasMany
+    {
+        return $this->hasMany(MetaSocialPage::class);
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Collection<int, self>
+     */
+    public static function connectedAll()
     {
         try {
             if (! \Illuminate\Support\Facades\Schema::hasTable('meta_social_connections')) {
-                return null;
+                return collect();
             }
 
             return self::query()
                 ->where('status', self::STATUS_CONNECTED)
-                ->latest('connected_at')
-                ->first();
+                ->orderByDesc('connected_at')
+                ->get();
         } catch (\Throwable) {
-            return null;
+            return collect();
         }
+    }
+
+    public static function active(): ?self
+    {
+        return self::connectedAll()->first();
     }
 }

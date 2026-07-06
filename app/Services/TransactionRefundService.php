@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Invoice;
 use App\Models\OfflineCourseEnrollment;
+use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Transaction;
 use App\Models\Wallet;
@@ -30,6 +31,90 @@ class TransactionRefundService
         $metadata = is_array($transaction->metadata) ? $transaction->metadata : [];
 
         return empty($metadata['refunded_at']);
+    }
+
+    public function needsWalletWithdrawalSync(Transaction $transaction): bool
+    {
+        if (! $this->isCreditTransaction($transaction) || $transaction->category === 'refund') {
+            return false;
+        }
+
+        $metadata = is_array($transaction->metadata) ? $transaction->metadata : [];
+        if ($transaction->status !== 'reversed' && empty($metadata['refunded_at'])) {
+            return false;
+        }
+
+        return ! $this->walletRefundCompleted($transaction);
+    }
+
+    public function walletRefundCompleted(Transaction $transaction): bool
+    {
+        $metadata = is_array($transaction->metadata) ? $transaction->metadata : [];
+
+        if (! empty($metadata['wallet_refund_transaction_id'])) {
+            $exists = WalletTransaction::query()
+                ->whereKey($metadata['wallet_refund_transaction_id'])
+                ->where('type', 'refund')
+                ->exists();
+            if ($exists) {
+                return true;
+            }
+        }
+
+        $amount = round((float) ($metadata['refund_amount'] ?? $transaction->amount), 2);
+
+        return $this->hasExistingWalletRefund($transaction, $amount);
+    }
+
+    public function suggestedWalletId(Transaction $transaction): ?int
+    {
+        $deposit = $this->findLinkedWalletDeposit($transaction);
+
+        return $this->resolveWalletId($transaction, $deposit);
+    }
+
+    public function syncWalletWithdrawalIfMissing(
+        Transaction $transaction,
+        ?float $amount = null,
+        ?int $processedBy = null,
+        ?int $walletIdOverride = null
+    ): ?WalletTransaction {
+        if (! $this->needsWalletWithdrawalSync($transaction)) {
+            throw ValidationException::withMessages([
+                'refund' => 'لا حاجة لمزامنة سحب المحفظة لهذه المعاملة.',
+            ]);
+        }
+
+        $metadata = is_array($transaction->metadata) ? $transaction->metadata : [];
+        $amount = round((float) ($amount ?? $metadata['refund_amount'] ?? $transaction->amount), 2);
+
+        return DB::transaction(function () use ($transaction, $amount, $processedBy, $metadata, $walletIdOverride) {
+            $transaction = Transaction::query()->lockForUpdate()->findOrFail($transaction->id);
+            $processedBy = $processedBy ?? auth()->id();
+            $notes = 'مزامنة سحب استرداد — معاملة: ' . ($transaction->transaction_number ?? ('#' . $transaction->id));
+
+            $walletWithdrawal = $this->withdrawFromLinkedWallet(
+                $transaction,
+                $amount,
+                $notes,
+                $processedBy,
+                $walletIdOverride
+            );
+            if (! $walletWithdrawal) {
+                throw ValidationException::withMessages([
+                    'refund' => 'لم يُعثر على محفظة مرتبطة لهذه المعاملة.',
+                ]);
+            }
+
+            $transaction->update([
+                'metadata' => array_merge($metadata, [
+                    'wallet_refund_transaction_id' => $walletWithdrawal->id,
+                    'wallet_withdrawal_synced_at' => now()->toIso8601String(),
+                ]),
+            ]);
+
+            return $walletWithdrawal;
+        });
     }
 
     /**
@@ -130,7 +215,8 @@ class TransactionRefundService
         Transaction $transaction,
         float $amount,
         string $notes,
-        ?int $processedBy
+        ?int $processedBy,
+        ?int $walletIdOverride = null
     ): ?WalletTransaction {
         if ($this->hasExistingWalletRefund($transaction, $amount)) {
             throw ValidationException::withMessages([
@@ -138,44 +224,35 @@ class TransactionRefundService
             ]);
         }
 
-        $deposit = WalletTransaction::query()
-            ->where('type', 'deposit')
-            ->where(function ($query) use ($transaction) {
-                $query->where('transaction_id', $transaction->id);
-                if ($transaction->payment_id) {
-                    $query->orWhere(function ($q) use ($transaction) {
-                        $q->where('payment_id', $transaction->payment_id)
-                            ->whereNull('transaction_id');
-                    });
-                }
-            })
-            ->lockForUpdate()
-            ->latest('id')
-            ->first();
-
-        $walletId = $deposit?->wallet_id;
-        if (! $walletId) {
-            $metadata = is_array($transaction->metadata) ? $transaction->metadata : [];
-            $walletId = $metadata['wallet_id'] ?? null;
-        }
-
-        if (! $walletId && $transaction->payment_id) {
-            $walletId = Payment::query()->whereKey($transaction->payment_id)->value('wallet_id');
-        }
+        $deposit = $this->findLinkedWalletDeposit($transaction);
+        $walletId = $walletIdOverride ?: $this->resolveWalletId($transaction, $deposit);
+        $hadDeposit = $deposit !== null;
 
         if (! $walletId) {
+            if ($hadDeposit) {
+                throw ValidationException::withMessages([
+                    'refund' => 'تعذر تحديد المحفظة المرتبطة بإيداع هذه المعاملة. راجع سجل محفظة الإيداع يدوياً.',
+                ]);
+            }
+
             return null;
         }
 
         /** @var Wallet|null $wallet */
         $wallet = Wallet::query()->lockForUpdate()->find($walletId);
         if (! $wallet) {
+            if ($hadDeposit || $this->transactionIndicatesWallet($transaction)) {
+                throw ValidationException::withMessages([
+                    'refund' => 'المحفظة المرتبطة بهذه المعاملة غير موجودة أو محذوفة.',
+                ]);
+            }
+
             return null;
         }
 
         if ((float) $wallet->balance < $amount) {
             throw ValidationException::withMessages([
-                'refund' => 'رصيد المحفظة غير كافٍ لاسترداد المبلغ. الرصيد الحالي: '
+                'refund' => 'رصيد المحفظة «' . ($wallet->name ?? ('#' . $wallet->id)) . '» غير كافٍ لاسترداد المبلغ. الرصيد الحالي: '
                     . number_format((float) $wallet->balance, 2) . ' ج.م',
             ]);
         }
@@ -187,6 +264,83 @@ class TransactionRefundService
             $notes . ' — سحب من محفظة: ' . ($wallet->name ?? ('#' . $wallet->id)),
             $processedBy
         );
+    }
+
+    private function findLinkedWalletDeposit(Transaction $transaction): ?WalletTransaction
+    {
+        return WalletTransaction::query()
+            ->where('type', 'deposit')
+            ->where(function ($query) use ($transaction) {
+                $query->where('transaction_id', $transaction->id);
+                if ($transaction->payment_id) {
+                    $query->orWhere('payment_id', $transaction->payment_id);
+                }
+            })
+            ->lockForUpdate()
+            ->latest('id')
+            ->first();
+    }
+
+    private function resolveWalletId(Transaction $transaction, ?WalletTransaction $deposit = null): ?int
+    {
+        if ($deposit?->wallet_id) {
+            return (int) $deposit->wallet_id;
+        }
+
+        $metadata = is_array($transaction->metadata) ? $transaction->metadata : [];
+
+        if (! empty($metadata['wallet_id'])) {
+            return (int) $metadata['wallet_id'];
+        }
+
+        if ($transaction->payment_id) {
+            $walletId = Payment::query()->whereKey($transaction->payment_id)->value('wallet_id');
+            if ($walletId) {
+                return (int) $walletId;
+            }
+        }
+
+        if (! empty($metadata['order_id'])) {
+            $walletId = Order::query()->whereKey($metadata['order_id'])->value('wallet_id');
+            if ($walletId) {
+                return (int) $walletId;
+            }
+        }
+
+        if ($transaction->payment_id) {
+            $orderWalletId = Order::query()
+                ->where('payment_id', $transaction->payment_id)
+                ->value('wallet_id');
+            if ($orderWalletId) {
+                return (int) $orderWalletId;
+            }
+        }
+
+        if ($transaction->invoice_id) {
+            $walletId = Payment::query()
+                ->where('invoice_id', $transaction->invoice_id)
+                ->when($transaction->payment_id, fn ($q) => $q->where('id', $transaction->payment_id))
+                ->whereNotNull('wallet_id')
+                ->value('wallet_id');
+            if ($walletId) {
+                return (int) $walletId;
+            }
+        }
+
+        return null;
+    }
+
+    private function transactionIndicatesWallet(Transaction $transaction): bool
+    {
+        if ($this->resolveWalletId($transaction) !== null) {
+            return true;
+        }
+
+        $metadata = is_array($transaction->metadata) ? $transaction->metadata : [];
+
+        return ! empty($metadata['wallet_id'])
+            || ! empty($metadata['order_id'])
+            || ($transaction->payment_id && Payment::query()->whereKey($transaction->payment_id)->whereNotNull('wallet_id')->exists());
     }
 
     private function hasExistingWalletRefund(Transaction $transaction, float $amount): bool
@@ -258,6 +412,11 @@ class TransactionRefundService
 
         $enrollment->paid_amount = max(0, (float) $enrollment->paid_amount - $amount);
         $enrollment->updatePaymentStatus();
+    }
+
+    private function isCreditTransaction(Transaction $transaction): bool
+    {
+        return in_array($transaction->type, ['credit', 'income'], true);
     }
 
     private function nextTransactionNumber(): string

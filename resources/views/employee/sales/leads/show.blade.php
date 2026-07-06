@@ -204,6 +204,22 @@
                     </div>
                 </dl>
                 @if($lead->stage === 'won')
+                    @if($lead->isWinConfirmed())
+                        <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm">
+                            <p class="font-bold text-emerald-900 flex items-center gap-2"><i class="fas fa-check-circle"></i> تم اعتماد الفوز والكوميشن</p>
+                            <p class="text-emerald-800 mt-1 tabular-nums">المبلغ: <strong>{{ number_format((float) ($lead->commission_amount ?? 0), 2) }} ج.م</strong></p>
+                            <p class="text-xs text-emerald-700 mt-0.5">{{ $lead->won_confirmed_at?->format('Y-m-d H:i') }}</p>
+                        </div>
+                    @elseif($lead->isPendingWinApproval())
+                        <div class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm">
+                            <p class="font-bold text-amber-900 flex items-center gap-2"><i class="fas fa-hourglass-half"></i> في انتظار موافقة الإدارة</p>
+                            <p class="text-amber-800 mt-1">تم تسجيل الفوز — سيتم احتساب الكوميشن بعد اعتماد الإدارة.</p>
+                            @if($lead->assignee)
+                                @php $est = $lead->assignee->calculateSalesCommissionAmount((float) ($lead->expected_value ?? 0)); @endphp
+                                <p class="text-xs text-amber-700 mt-1">كوميشن مقدّر: <strong>{{ number_format($est, 2) }} ج.م</strong></p>
+                            @endif
+                        </div>
+                    @endif
                     <div class="rounded-xl border border-amber-200 bg-amber-50/90 p-4 space-y-3">
                         <p class="text-sm font-bold text-amber-900 flex items-center gap-2"><i class="fas fa-star"></i> تقييم رضا العميل (CSAT)</p>
                         @if($lead->csat_rating)

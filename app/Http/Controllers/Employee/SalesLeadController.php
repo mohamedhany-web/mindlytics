@@ -151,6 +151,10 @@ class SalesLeadController extends Controller
                 'body' => 'من «' . SalesLead::stageLabel($oldStage) . '» إلى «' . SalesLead::stageLabel($lead->stage) . '»',
                 'meta' => ['from' => $oldStage, 'to' => $lead->stage],
             ]);
+
+            if ($lead->stage === 'won' && $oldStage !== 'won') {
+                app(SalesNotificationService::class)->notifyWinPendingApproval($lead->fresh(['assignee']));
+            }
         }
 
         $this->syncClosedAt($lead);
@@ -167,8 +171,13 @@ class SalesLeadController extends Controller
 
         $warnings = $this->duplicateWarnings($request, (int) $lead->assigned_to, $lead->id);
 
+        $successMessage = 'تم حفظ التعديلات';
+        if ($lead->stage === 'won' && ! $lead->won_confirmed_at) {
+            $successMessage = 'تم تسجيل الفوز — في انتظار موافقة الإدارة لاعتماد الكوميشن.';
+        }
+
         return redirect()->route('employee.sales.leads.show', $lead)
-            ->with('success', 'تم حفظ التعديلات')
+            ->with('success', $successMessage)
             ->with('sales_duplicate_warnings', $warnings);
     }
 

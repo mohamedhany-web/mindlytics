@@ -80,8 +80,13 @@
                         <option value="pending" {{ old('status', $transaction->status) === 'pending' ? 'selected' : '' }}>معلقة</option>
                         <option value="completed" {{ old('status', $transaction->status) === 'completed' ? 'selected' : '' }}>مكتملة</option>
                         <option value="cancelled" {{ old('status', $transaction->status) === 'cancelled' ? 'selected' : '' }}>ملغاة</option>
-                        <option value="reversed" {{ old('status', $transaction->status) === 'reversed' ? 'selected' : '' }}>مستردة</option>
+                        @if($canRefund)
+                        <option value="reversed" {{ old('status', $transaction->status) === 'reversed' ? 'selected' : '' }}>مستردة (سحب من المحفظة + استرداد كامل)</option>
+                        @endif
                     </select>
+                    @if($canRefund)
+                        <p class="text-xs text-orange-700 mt-1">اختيار «مستردة» يُنفّذ الاسترداد الكامل ويسحب المبلغ من المحفظة المرتبطة.</p>
+                    @endif
                 </div>
             </div>
 
@@ -134,6 +139,51 @@
             <button type="submit" class="inline-flex items-center gap-2 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white px-6 py-3 rounded-lg font-medium transition-colors shadow-lg shadow-orange-500/30">
                 <i class="fas fa-undo"></i>
                 تنفيذ الاسترداد
+            </button>
+        </form>
+    </div>
+    @endif
+
+    @if($needsWalletSync ?? false)
+    @php
+        $syncAmount = (float) (is_array($transaction->metadata) ? ($transaction->metadata['refund_amount'] ?? $transaction->amount) : $transaction->amount);
+    @endphp
+    <div id="wallet-sync-form" class="bg-amber-50 rounded-xl shadow-lg p-6 border-2 border-amber-400">
+        <h2 class="text-lg font-black text-amber-900 mb-1 flex items-center gap-2">
+            <i class="fas fa-wallet"></i>
+            إعادة سحب مبلغ الاسترداد من المحفظة
+        </h2>
+        <p class="text-sm text-amber-800 mb-4">
+            المعاملة مستردة لكن المبلغ لم يُسحب من المحفظة. المبلغ:
+            <strong>{{ number_format($syncAmount, 2) }} ج.م</strong>
+        </p>
+        <form action="{{ route('admin.transactions.sync-wallet-withdrawal', $transaction) }}" method="POST" class="space-y-4"
+              onsubmit="return confirm('تأكيد سحب المبلغ من المحفظة؟');">
+            @csrf
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-amber-900 mb-1">المحفظة / الحساب</label>
+                    <select name="wallet_id" class="w-full px-4 py-3 border border-amber-300 rounded-lg bg-white focus:ring-2 focus:ring-amber-500">
+                        <option value="">تلقائي (من سجل الإيداع)</option>
+                        @foreach($academyWallets ?? [] as $wallet)
+                            <option value="{{ $wallet->id }}" @selected((int) old('wallet_id', $suggestedWalletId ?? 0) === (int) $wallet->id)>
+                                {{ $wallet->name ?? ('محفظة #' . $wallet->id) }}
+                                — {{ \App\Models\Wallet::typeLabel($wallet->type) }}
+                                ({{ number_format((float) $wallet->balance, 2) }} ج.م)
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-amber-900 mb-1">المبلغ</label>
+                    <input type="number" name="amount" step="0.01" min="0.01" max="{{ $transaction->amount }}"
+                           value="{{ old('amount', $syncAmount) }}"
+                           class="w-full px-4 py-3 border border-amber-300 rounded-lg bg-white focus:ring-2 focus:ring-amber-500">
+                </div>
+            </div>
+            <button type="submit" class="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-lg font-bold">
+                <i class="fas fa-hand-holding-usd"></i>
+                تنفيذ السحب الآن
             </button>
         </form>
     </div>

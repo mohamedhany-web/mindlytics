@@ -162,7 +162,10 @@
                             معتمد {{ $lead->won_confirmed_at->format('Y-m-d H:i') }}
                         </span>
                     @else
-                        <span class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 border border-amber-200">غير معتمد</span>
+                        <span class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 border border-amber-200">في انتظار الموافقة</span>
+                        <a href="{{ route('admin.sales.win-approvals.index') }}" class="text-xs font-semibold text-emerald-700 hover:text-emerald-900 underline underline-offset-2">
+                            صفحة موافقة Win
+                        </a>
                     @endif
                 </div>
                 <div class="p-4 sm:p-5">

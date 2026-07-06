@@ -9,7 +9,8 @@
         'completed' => ['label' => 'مكتملة', 'classes' => 'bg-emerald-100 text-emerald-700'],
         'pending' => ['label' => 'معلقة', 'classes' => 'bg-amber-100 text-amber-700'],
         'failed' => ['label' => 'فاشلة', 'classes' => 'bg-rose-100 text-rose-700'],
-        'cancelled' => ['label' => 'ملغاة', 'classes' => 'bg-slate-100 text-slate-700']
+        'cancelled' => ['label' => 'ملغاة', 'classes' => 'bg-slate-100 text-slate-700'],
+        'reversed' => ['label' => 'مستردة', 'classes' => 'bg-orange-100 text-orange-700'],
     ];
 
     $typeBadges = [
@@ -21,6 +22,37 @@
 @endphp
 
 <div class="space-y-10">
+    @if(session('success'))
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('success') }}</div>
+    @endif
+    @if(session('error'))
+        <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{{ session('error') }}</div>
+    @endif
+    @if($errors->any())
+        <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+            <ul class="list-disc list-inside space-y-1">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
+        </div>
+    @endif
+
+    @if($needsWalletSync ?? false)
+        <div class="rounded-2xl border-2 border-amber-400 bg-amber-50 px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <p class="text-base font-black text-amber-900 flex items-center gap-2">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    استرداد بدون سحب من المحفظة
+                </p>
+                <p class="text-sm text-amber-800 mt-1">
+                    المعاملة مُعلَّمة كمستردة لكن المبلغ لم يُخصم بعد من المحفظة/الحساب. استخدم الزر لإتمام السحب.
+                </p>
+            </div>
+            <button type="button" onclick="document.getElementById('wallet-sync-form')?.scrollIntoView({behavior:'smooth'})"
+                    class="inline-flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap">
+                <i class="fas fa-wallet"></i>
+                سحب الفلوس من المحفظة
+            </button>
+        </div>
+    @endif
+
     <section class="rounded-3xl bg-white/95 backdrop-blur border border-slate-200 shadow-lg overflow-hidden">
         <div class="px-5 py-6 sm:px-8 lg:px-12 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -29,6 +61,12 @@
                 <p class="text-sm text-slate-500 mt-1">أُنشئت في {{ $transaction->created_at->format('Y-m-d H:i') }}</p>
             </div>
             <div class="flex flex-wrap items-center gap-3">
+                @if($needsWalletSync ?? false)
+                    <a href="#wallet-sync-form" class="inline-flex items-center gap-2 rounded-2xl bg-amber-600 hover:bg-amber-700 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/30 transition">
+                        <i class="fas fa-wallet"></i>
+                        سحب من المحفظة
+                    </a>
+                @endif
                 <a href="{{ route('admin.transactions.edit', $transaction) }}" class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-sky-300 hover:text-sky-600">
                     <i class="fas fa-edit"></i>
                     تعديل المعاملة
@@ -212,6 +250,80 @@
             @endif
         </div>
     </section>
+
+    @if($needsWalletSync ?? false)
+    @php
+        $syncAmount = (float) (is_array($transaction->metadata) ? ($transaction->metadata['refund_amount'] ?? $transaction->amount) : $transaction->amount);
+    @endphp
+    <section id="wallet-sync-form" class="rounded-3xl bg-amber-50 border-2 border-amber-400 shadow-lg p-6 sm:p-8">
+        <h3 class="text-lg font-black text-amber-900 mb-1 flex items-center gap-2">
+            <i class="fas fa-wallet"></i>
+            إعادة سحب مبلغ الاسترداد من المحفظة
+        </h3>
+        <p class="text-sm text-amber-800 mb-5">
+            اضغط لتنفيذ السحب الذي لم يتم عند الاسترداد. المبلغ المستهدف:
+            <strong class="tabular-nums">{{ number_format($syncAmount, 2) }} ج.م</strong>
+        </p>
+        <form action="{{ route('admin.transactions.sync-wallet-withdrawal', $transaction) }}" method="POST" class="space-y-4"
+              onsubmit="return confirm('تأكيد سحب {{ number_format($syncAmount, 2) }} ج.م من المحفظة المحددة؟');">
+            @csrf
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-amber-900 mb-1">المحفظة / الحساب</label>
+                    <select name="wallet_id" class="w-full rounded-xl border border-amber-300 bg-white px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500">
+                        <option value="">تلقائي (من سجل الإيداع)</option>
+                        @foreach($academyWallets ?? [] as $wallet)
+                            <option value="{{ $wallet->id }}" @selected((int) old('wallet_id', $suggestedWalletId ?? 0) === (int) $wallet->id)>
+                                {{ $wallet->name ?? ('محفظة #' . $wallet->id) }}
+                                — {{ \App\Models\Wallet::typeLabel($wallet->type) }}
+                                (رصيد: {{ number_format((float) $wallet->balance, 2) }} ج.م)
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="text-xs text-amber-700 mt-1">إذا لم يُكتشف الحساب تلقائياً، اختر المحفظة التي نزل فيها المبلغ.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-amber-900 mb-1">المبلغ المراد سحبه</label>
+                    <input type="number" name="amount" step="0.01" min="0.01" max="{{ $transaction->amount }}"
+                           value="{{ old('amount', $syncAmount) }}"
+                           class="w-full rounded-xl border border-amber-300 bg-white px-4 py-2.5 text-sm focus:ring-2 focus:ring-amber-500">
+                </div>
+            </div>
+            <button type="submit" class="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-lg shadow-amber-500/30">
+                <i class="fas fa-hand-holding-usd"></i>
+                تنفيذ السحب الآن
+            </button>
+        </form>
+    </section>
+    @endif
+
+    @if($canRefund ?? false)
+    <section class="rounded-3xl bg-white border border-orange-200 shadow-lg p-6 sm:p-8">
+        <h3 class="text-lg font-bold text-slate-900 mb-2">تنفيذ الاسترداد</h3>
+        <p class="text-sm text-slate-600 mb-4">
+            عند الاسترداد يُسحب المبلغ من المحفظة/الحساب الذي أُودع فيه، وتُنشأ معاملة استرداد، ويُحدَّث سجل الدفعة والفاتورة.
+        </p>
+        <form action="{{ route('admin.transactions.refund', $transaction) }}" method="POST" class="space-y-4" onsubmit="return confirm('تأكيد الاسترداد؟ سيتم سحب المبلغ من المحفظة المرتبطة.');">
+            @csrf
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">مبلغ الاسترداد</label>
+                    <input type="number" name="amount" step="0.01" min="0.01" max="{{ $transaction->amount }}" value="{{ $transaction->amount }}"
+                           class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-orange-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">سبب / ملاحظات</label>
+                    <input type="text" name="description" value="استرداد معاملة: {{ $transaction->transaction_number ?? $transaction->id }}"
+                           class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-orange-500">
+                </div>
+            </div>
+            <button type="submit" class="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold">
+                <i class="fas fa-undo"></i>
+                تنفيذ الاسترداد
+            </button>
+        </form>
+    </section>
+    @endif
 </div>
 @endsection
 

@@ -215,6 +215,76 @@ class SalesNotificationService
         ]);
     }
 
+    public function notifyWinPendingApproval(SalesLead $lead): void
+    {
+        $lead->loadMissing(['assignee']);
+        $rep = $lead->assignee;
+        $repName = $rep?->name ?? 'موظف';
+        $value = number_format((float) ($lead->expected_value ?? 0), 2);
+        $estCommission = $rep
+            ? number_format($rep->calculateSalesCommissionAmount((float) ($lead->expected_value ?? 0)), 2)
+            : '0.00';
+
+        if ($rep) {
+            Notification::create([
+                'user_id' => $rep->id,
+                'sender_id' => auth()->id(),
+                'title' => 'طلب اعتماد فوز — في انتظار الإدارة',
+                'message' => 'تم تسجيل فوز «'.$lead->name.'» بقيمة '.$value.' ج.م — الكوميشن المقدّر '.$estCommission.' ج.م بعد موافقة الإدارة.',
+                'type' => 'employee',
+                'priority' => 'normal',
+                'audience' => 'employee',
+                'action_url' => route('employee.sales.leads.show', $lead),
+                'action_text' => 'عرض العميل',
+                'data' => ['kind' => 'sales_win_pending', 'lead_id' => $lead->id],
+            ]);
+        }
+
+        $title = 'طلب اعتماد صفقة Win';
+        $message = "الموظف {$repName} — العميل «{$lead->name}» — قيمة {$value} ج.م — كوميشن مقدّر {$estCommission} ج.م";
+
+        $admins = User::query()->whereIn('role', ['admin', 'super_admin'])->where('is_active', true)->get();
+        foreach ($admins as $admin) {
+            $this->sendOnceToday(
+                (int) $admin->id,
+                $title.' #'.$lead->id,
+                route('admin.sales.win-approvals.index'),
+                fn () => Notification::create([
+                    'user_id' => $admin->id,
+                    'sender_id' => $rep?->id,
+                    'title' => $title,
+                    'message' => $message,
+                    'type' => 'warning',
+                    'priority' => 'high',
+                    'audience' => 'employee',
+                    'action_url' => route('admin.sales.win-approvals.index'),
+                    'action_text' => 'مراجعة الطلبات',
+                    'data' => [
+                        'kind' => 'sales_win_pending_admin',
+                        'lead_id' => $lead->id,
+                        'rep_id' => $rep?->id,
+                    ],
+                ])
+            );
+        }
+    }
+
+    public function notifyWinRejected(User $rep, SalesLead $lead, string $reason): void
+    {
+        Notification::create([
+            'user_id' => $rep->id,
+            'sender_id' => auth()->id(),
+            'title' => 'تم رفض اعتماد الفوز',
+            'message' => 'صفقة «'.$lead->name.'» — '.$reason,
+            'type' => 'warning',
+            'priority' => 'high',
+            'audience' => 'employee',
+            'action_url' => route('employee.sales.leads.show', $lead),
+            'action_text' => 'عرض العميل',
+            'data' => ['kind' => 'sales_win_rejected', 'lead_id' => $lead->id],
+        ]);
+    }
+
     public function notifyKpiAlert(User $rep, float $composite, array $flags, bool $critical = false): void
     {
         $title = $critical ? 'تنبيه حرج — أداء المبيعات' : 'تنبيه — أداء المبيعات';

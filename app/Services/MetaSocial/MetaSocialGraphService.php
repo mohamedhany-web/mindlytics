@@ -30,6 +30,7 @@ class MetaSocialGraphService
         }
 
         $connection = MetaSocialConnection::active();
+        $connectionsCount = MetaSocialConnection::connectedAll()->count();
         $pagesCount = 0;
         if (\Illuminate\Support\Facades\Schema::hasTable('meta_social_pages')) {
             $pagesCount = MetaSocialPage::query()->where('is_active', true)->count();
@@ -42,6 +43,7 @@ class MetaSocialGraphService
                 'label' => 'غير مربوط — سجّل الدخول عبر Meta',
                 'last_error' => null,
                 'pages_count' => $pagesCount,
+                'connections_count' => 0,
             ];
         }
 
@@ -56,6 +58,7 @@ class MetaSocialGraphService
             'last_error' => ($test['valid'] ?? false) ? null : ($test['error'] ?? 'Token غير صالح'),
             'connection' => $connection,
             'pages_count' => $pagesCount,
+            'connections_count' => $connectionsCount,
             'meta_user_name' => $connection->meta_user_name,
             'token_expires_at' => $connection->token_expires_at?->toIso8601String(),
         ];
@@ -175,19 +178,31 @@ class MetaSocialGraphService
                 'instagram_business_account{id,username,profile_picture_url}',
             ]);
 
-            $response = Http::timeout(45)->get("{$this->graphUrl()}/me/accounts", [
+            $pages = [];
+            $url = "{$this->graphUrl()}/me/accounts";
+            $query = [
                 'fields' => $fields,
                 'limit' => 100,
                 'access_token' => $userAccessToken,
-            ]);
+            ];
 
-            if (! $response->successful()) {
-                return ['success' => false, 'error' => $this->graphErrorMessage($response->json() ?? [], 'تعذّر جلب الصفحات')];
+            for ($i = 0; $i < 20 && $url; $i++) {
+                $response = Http::timeout(45)->get($url, $query);
+                if (! $response->successful()) {
+                    return ['success' => false, 'error' => $this->graphErrorMessage($response->json() ?? [], 'تعذّر جلب الصفحات')];
+                }
+
+                $batch = $response->json('data') ?? [];
+                if (is_array($batch)) {
+                    $pages = array_merge($pages, $batch);
+                }
+
+                $next = $response->json('paging.next');
+                $url = is_string($next) && $next !== '' ? $next : null;
+                $query = [];
             }
 
-            $pages = $response->json('data') ?? [];
-
-            return ['success' => true, 'pages' => is_array($pages) ? $pages : []];
+            return ['success' => true, 'pages' => $pages];
         } catch (\Throwable $e) {
             return ['success' => false, 'error' => $e->getMessage()];
         }
