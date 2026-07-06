@@ -58,8 +58,41 @@ class WalletTransaction extends Model
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'balance_before' => 'decimal:2',
         'balance_after' => 'decimal:2',
+        'metadata' => 'array',
     ];
+
+    public static function typeLabels(): array
+    {
+        return [
+            'deposit' => 'إيداع',
+            'withdrawal' => 'سحب',
+            'refund' => 'استرداد',
+            'commission' => 'عمولة',
+            'bonus' => 'مكافأة',
+            'deduction' => 'خصم',
+        ];
+    }
+
+    public static function typeLabel(?string $type): string
+    {
+        if ($type === null || $type === '') {
+            return 'غير محدد';
+        }
+
+        return static::typeLabels()[$type] ?? $type;
+    }
+
+    public function isIncoming(): bool
+    {
+        return in_array($this->type, ['deposit', 'bonus'], true);
+    }
+
+    public function noteText(): string
+    {
+        return trim((string) ($this->description ?? $this->notes ?? ''));
+    }
 
     /**
      * العلاقة مع المحفظة

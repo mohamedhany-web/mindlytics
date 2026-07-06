@@ -195,16 +195,66 @@ class WalletController extends Controller
         ]);
     }
 
-    public function transactions(Wallet $wallet)
+    public function transactions(Request $request, Wallet $wallet)
     {
         $this->abortUnlessAcademyWallet($wallet);
-        $wallet->load(['user', 'transactions' => function ($query) {
-            $query->latest();
-        }]);
+        $wallet->load('user');
+
+        $query = $wallet->transactions()
+            ->with([
+                'payment.user',
+                'payment.invoice',
+                'transaction.user',
+                'creator',
+            ])
+            ->latest();
+
+        if ($request->filled('type')) {
+            $type = preg_replace('/[^a-z_]/', '', (string) $request->type);
+            if (array_key_exists($type, WalletTransaction::typeLabels())) {
+                $query->where('type', $type);
+            }
+        }
+
+        if ($request->filled('from')) {
+            $query->whereDate('created_at', '>=', $request->input('from'));
+        }
+
+        if ($request->filled('to')) {
+            $query->whereDate('created_at', '<=', $request->input('to'));
+        }
+
+        if ($request->filled('search')) {
+            $search = trim((string) $request->search);
+            if ($search !== '') {
+                $query->where(function ($q) use ($search) {
+                    $q->where('description', 'like', "%{$search}%")
+                        ->orWhere('notes', 'like', "%{$search}%")
+                        ->orWhere('reference_number', 'like', "%{$search}%")
+                        ->orWhereHas('payment', fn ($pq) => $pq->where('payment_number', 'like', "%{$search}%"))
+                        ->orWhereHas('transaction', fn ($tq) => $tq->where('transaction_number', 'like', "%{$search}%"))
+                        ->orWhereHas('payment.user', fn ($uq) => $uq
+                            ->where('name', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%"));
+                });
+            }
+        }
+
+        $transactions = $query->paginate(25)->withQueryString();
+
+        $stats = [
+            'total' => $wallet->transactions()->count(),
+            'deposits' => (float) $wallet->transactions()->where('type', 'deposit')->sum('amount'),
+            'outgoing' => (float) $wallet->transactions()->whereIn('type', ['withdrawal', 'refund', 'deduction'])->sum('amount'),
+            'refunds' => (float) $wallet->transactions()->where('type', 'refund')->sum('amount'),
+            'net' => (float) $wallet->transactions()->where('type', 'deposit')->sum('amount')
+                - (float) $wallet->transactions()->whereIn('type', ['withdrawal', 'refund', 'deduction'])->sum('amount'),
+        ];
 
         return view('admin.wallets.transactions', [
             'wallet' => $wallet,
-            'transactions' => $wallet->transactions,
+            'transactions' => $transactions,
+            'stats' => $stats,
         ]);
     }
 
