@@ -429,7 +429,8 @@ class WhatsAppInboxService
         string $phone,
         string $templateName,
         string $languageCode = 'en_US',
-        ?int $userId = null
+        ?int $userId = null,
+        array $components = []
     ): array {
         $normalized = $this->whatsapp->formatPhoneNumber($phone);
 
@@ -438,7 +439,7 @@ class WhatsAppInboxService
             ['unread_count' => 0]
         );
 
-        $result = $this->sendTemplateReply($conversation, $templateName, $languageCode, [], $userId);
+        $result = $this->sendTemplateReply($conversation, $templateName, $languageCode, $components, $userId);
 
         if (! ($result['success'] ?? false)) {
             return $result;

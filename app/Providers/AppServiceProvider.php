@@ -183,6 +183,13 @@ class AppServiceProvider extends ServiceProvider
             $view->with('platformContact', PlatformSettings::contactPage());
         });
 
+        View::composer(['layouts.employee', 'employee.attendance.locked'], function ($view) {
+            $user = auth()->user();
+            if ($user?->isEmployee()) {
+                $view->with('employeeAttendance', app(\App\Services\EmployeeAttendanceService::class)->getState($user));
+            }
+        });
+
         // إجبار روابط الموقع على HTTPS: الإنتاج، أو عندما يكون APP_URL أصلاً https (يشمل استضافة خلف بروكسي)
         $appUrl = (string) config('app.url', '');
         if ($appUrl !== '' && ($this->app->environment('production') || str_starts_with($appUrl, 'https://'))) {

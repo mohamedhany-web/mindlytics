@@ -1460,7 +1460,7 @@
 
             <!-- إدارة الموظفين -->
             @php
-                $employeesOpen = request()->routeIs('admin.employees.*') || request()->routeIs('admin.employee-jobs.*') || request()->routeIs('admin.employee-tasks.*') || request()->routeIs('admin.design-task-cycles.*') || request()->routeIs('admin.moderator-marketing-plans.*') || request()->routeIs('admin.employee-deductions.*') || request()->routeIs('admin.employee-additions.*') || request()->routeIs('admin.employee-daily-reports.*') || request()->routeIs('admin.leaves.*') || request()->routeIs('admin.tasks.*') || request()->routeIs('admin.instructor-requests.*');
+                $employeesOpen = request()->routeIs('admin.employees.*') || request()->routeIs('admin.work-schedules.*') || request()->routeIs('admin.employee-attendance.*') || request()->routeIs('admin.employee-jobs.*') || request()->routeIs('admin.employee-tasks.*') || request()->routeIs('admin.design-task-cycles.*') || request()->routeIs('admin.moderator-marketing-plans.*') || request()->routeIs('admin.employee-deductions.*') || request()->routeIs('admin.employee-additions.*') || request()->routeIs('admin.employee-daily-reports.*') || request()->routeIs('admin.leaves.*') || request()->routeIs('admin.tasks.*') || request()->routeIs('admin.instructor-requests.*');
             @endphp
             <li x-data="{ open: {{ $employeesOpen ? 'true' : 'false' }} }">
                 <button type="button" @click="open = !open" :aria-expanded="open" 
@@ -1478,6 +1478,22 @@
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.employees.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
                             <i class="fas fa-user-tie w-4"></i>
                             <span>{{ __('admin.employees') }}</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.work-schedules.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.work-schedules.*') ? 'bg-indigo-600/30 text-white font-semibold border-r-2 border-indigo-400' : '' }}">
+                            <i class="fas fa-clock w-4"></i>
+                            <span>مواعيد العمل</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.employee-attendance.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.employee-attendance.*') ? 'bg-teal-600/30 text-white font-semibold border-r-2 border-teal-400' : '' }}">
+                            <i class="fas fa-user-clock w-4"></i>
+                            <span>حضور الموظفين</span>
                         </a>
                     </li>
                     <li>

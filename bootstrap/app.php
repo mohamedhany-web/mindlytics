@@ -53,6 +53,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'community.contributor' => \App\Http\Middleware\EnsureCommunityContributor::class,
             'sales.employee' => \App\Http\Middleware\EnsureSalesEmployee::class,
             'moderator.employee' => \App\Http\Middleware\EnsureModeratorEmployee::class,
+            'employee.work' => \App\Http\Middleware\EnsureEmployeeWorkAccess::class,
             'api.student' => \App\Http\Middleware\EnsureApiStudent::class,
             'api.instructor' => \App\Http\Middleware\EnsureApiInstructor::class,
             'branch.office' => \App\Http\Middleware\BranchOfficePanel::class,
@@ -228,6 +229,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('sales:enforce-import-contact')->dailyAt('10:00');
         $schedule->command('employees:remind-daily-report')->dailyAt('16:30');
         $schedule->command('employees:apply-daily-report-penalties')->dailyAt('02:00');
+        $schedule->command('employees:apply-attendance-penalties')->dailyAt('02:30');
         $schedule->command('marketing:remind-today-events')
             ->dailyAt(\App\Support\MarketingPlanSettings::reminderTime());
         $schedule->command('marketing:apply-execution-penalties')

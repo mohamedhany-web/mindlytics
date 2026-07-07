@@ -47,6 +47,7 @@ class User extends Authenticatable
         'employee_code',
         'hire_date',
         'weekly_off_day',
+        'work_schedule_id',
         'termination_date',
         'salary',
         'employee_notes',
@@ -730,6 +731,22 @@ class User extends Authenticatable
     public function employeeJob()
     {
         return $this->belongsTo(EmployeeJob::class, 'employee_job_id');
+    }
+
+    public function workSchedule()
+    {
+        return $this->belongsTo(WorkSchedule::class, 'work_schedule_id');
+    }
+
+    public function employeeAttendanceRecords()
+    {
+        return $this->hasMany(EmployeeAttendanceRecord::class);
+    }
+
+    public function todayAttendanceRecord()
+    {
+        return $this->hasOne(EmployeeAttendanceRecord::class)
+            ->whereDate('work_date', today());
     }
 
     /**

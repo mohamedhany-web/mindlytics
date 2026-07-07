@@ -329,15 +329,10 @@ class WhatsAppController extends Controller
                 ->where('status', WhatsAppMetaTemplate::STATUS_APPROVED)
                 ->orderBy('name')
                 ->get()
-                ->map(fn (WhatsAppMetaTemplate $t) => [
-                    'key' => $t->name . '|' . $t->language,
-                    'name' => $t->name,
-                    'language' => $t->language,
-                    'category' => $t->category,
-                    'label' => $t->displayLabel() . ' (' . $t->categoryLabel() . ')',
-                    'body_text' => $t->body_text,
-                    'body_variable_count' => (int) $t->body_variable_count,
-                ])
+                ->map(fn (WhatsAppMetaTemplate $t) => array_merge(
+                    app(\App\Services\WhatsAppTemplateService::class)->templateMetaForList($t),
+                    ['key' => $t->name . '|' . $t->language]
+                ))
                 ->values()
                 ->all();
         }
@@ -352,16 +347,10 @@ class WhatsAppController extends Controller
         }
 
         return collect($apiResult['templates'] ?? [])
-            ->map(fn (array $row) => [
+            ->map(fn (array $row) => array_merge($row, [
                 'key' => ($row['name'] ?? '') . '|' . ($row['language'] ?? 'en_US'),
-                'name' => $row['name'] ?? '',
-                'language' => $row['language'] ?? 'en_US',
-                'category' => $row['category'] ?? '',
-                'label' => $row['label'] ?? (($row['name'] ?? '') . ' · ' . ($row['language'] ?? '')),
-                'body_text' => null,
-                'body_variable_count' => 0,
-            ])
-            ->filter(fn (array $row) => $row['name'] !== '')
+            ]))
+            ->filter(fn (array $row) => ($row['name'] ?? '') !== '')
             ->values()
             ->all();
     }
@@ -372,33 +361,15 @@ class WhatsAppController extends Controller
      */
     protected function buildMetaTemplateComponents(string $name, string $language, array $variables): array
     {
-        $count = 0;
-        if (Schema::hasTable('whatsapp_meta_templates')) {
-            $tpl = WhatsAppMetaTemplate::query()
-                ->where('name', $name)
-                ->where('language', $language)
-                ->where('status', WhatsAppMetaTemplate::STATUS_APPROVED)
-                ->first();
-            $count = (int) ($tpl?->body_variable_count ?? 0);
-            if ($count === 0 && $tpl?->body_text) {
-                $count = preg_match_all('/\{\{\d+\}\}/', (string) $tpl->body_text);
-            }
+        $build = app(\App\Services\WhatsAppTemplateService::class)->buildSendComponents($name, $language, $variables);
+
+        if (isset($build['error'])) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'template_variables' => $build['error'],
+            ]);
         }
 
-        if ($count < 1) {
-            return [];
-        }
-
-        $parameters = [];
-        for ($i = 1; $i <= $count; $i++) {
-            $value = trim((string) ($variables[$i] ?? $variables[(string) $i] ?? ''));
-            if ($value === '') {
-                $value = '—';
-            }
-            $parameters[] = ['type' => 'text', 'text' => $value];
-        }
-
-        return [['type' => 'body', 'parameters' => $parameters]];
+        return $build['components'];
     }
 
     public function resendMessage(WhatsAppMessage $message)

@@ -501,14 +501,26 @@ trait HandlesWhatsAppInbox
 
         $validated = $request->validate([
             'template_name' => 'required|string|max:200',
-            'language_code' => 'nullable|string|max:20',
+            'language_code' => 'required|string|max:20',
+            'template_variables' => 'nullable|array',
+            'template_variables.*' => 'nullable|string|max:500',
         ]);
+
+        $build = app(\App\Services\WhatsAppTemplateService::class)->buildSendComponents(
+            $validated['template_name'],
+            $validated['language_code'],
+            $request->input('template_variables', [])
+        );
+
+        if (isset($build['error'])) {
+            return response()->json(['success' => false, 'error' => $build['error']], 422);
+        }
 
         $result = $inbox->sendTemplateReply(
             $conversation,
             $validated['template_name'],
-            $validated['language_code'] ?? 'en_US',
-            [],
+            $validated['language_code'],
+            $build['components'],
             auth()->id()
         );
 
@@ -537,6 +549,8 @@ trait HandlesWhatsAppInbox
             'body' => 'nullable|string|max:4096',
             'template_name' => 'nullable|string|max:200',
             'language_code' => 'nullable|string|max:20',
+            'template_variables' => 'nullable|array',
+            'template_variables.*' => 'nullable|string|max:500',
             'sales_lead_id' => 'nullable|exists:sales_leads,id',
         ]);
 
@@ -551,11 +565,27 @@ trait HandlesWhatsAppInbox
         if ($body !== '') {
             $result = $inbox->startConversationWithMessage($validated['phone'], $body, auth()->id());
         } elseif ($templateName !== '') {
+            $language = trim((string) ($validated['language_code'] ?? ''));
+            if ($language === '') {
+                return response()->json(['success' => false, 'error' => 'لغة القالب مطلوبة'], 422);
+            }
+
+            $build = app(\App\Services\WhatsAppTemplateService::class)->buildSendComponents(
+                $templateName,
+                $language,
+                $request->input('template_variables', [])
+            );
+
+            if (isset($build['error'])) {
+                return response()->json(['success' => false, 'error' => $build['error']], 422);
+            }
+
             $result = $inbox->startConversationWithTemplate(
                 $validated['phone'],
                 $templateName,
-                $validated['language_code'] ?? 'en_US',
-                auth()->id()
+                $language,
+                auth()->id(),
+                $build['components']
             );
         } else {
             return response()->json(['success' => false, 'error' => 'اكتب رسالة للإرسال'], 422);

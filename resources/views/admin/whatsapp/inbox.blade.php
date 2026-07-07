@@ -507,16 +507,38 @@
                             </button>
                         </div>
 
-                        <div x-show="showTemplatePicker" x-cloak class="mt-2 flex gap-2">
-                            <select x-model="selectedTemplateKey" @change="applySelectedTemplate()"
-                                    class="flex-1 rounded-full bg-white px-3 py-1.5 text-xs shadow-sm border-0">
-                                <option value="">قالب Meta...</option>
-                                <template x-for="t in metaTemplates" :key="'tp-' + t.name + t.language">
-                                    <option :value="t.name + '|' + t.language" x-text="t.label"></option>
-                                </template>
-                            </select>
-                            <button type="button" @click="sendTemplate()" :disabled="sending || !templateName"
-                                    class="text-xs px-3 py-1.5 rounded-full bg-white text-emerald-700 font-semibold shadow-sm">إرسال قالب</button>
+                        <div x-show="showTemplatePicker" x-cloak class="mt-2 space-y-2">
+                            <div class="flex gap-2">
+                                <select x-model="selectedTemplateKey" @change="applySelectedTemplate()"
+                                        class="flex-1 rounded-full bg-white px-3 py-1.5 text-xs shadow-sm border-0">
+                                    <option value="">قالب Meta...</option>
+                                    <template x-for="t in metaTemplates" :key="'tp-' + t.name + t.language">
+                                        <option :value="t.name + '|' + t.language" x-text="t.label"></option>
+                                    </template>
+                                </select>
+                                <button type="button" @click="sendTemplate()" :disabled="sending || !templateName || !templateVariablesReady()"
+                                        class="text-xs px-3 py-1.5 rounded-full bg-white text-emerald-700 font-semibold shadow-sm disabled:opacity-50">إرسال قالب</button>
+                            </div>
+                            <template x-if="selectedTemplateMeta()">
+                                <div class="rounded-xl bg-white/95 border border-emerald-100 p-3 space-y-2 text-xs">
+                                    <p class="text-slate-600 dir-ltr text-left" x-show="selectedTemplateMeta().body_text" x-text="selectedTemplateMeta().body_text"></p>
+                                    <p class="text-[10px] text-slate-500">اللغة: <span class="font-mono" x-text="templateLang"></span></p>
+                                    <template x-if="selectedTemplateMeta().header_variable_count > 0">
+                                        <div>
+                                            <label class="block text-[10px] font-semibold text-slate-600 mb-1">متغير العنوان (Header)</label>
+                                            <input type="text" x-model="templateVariables.header_1" placeholder="قيمة عنوان القالب"
+                                                   class="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs">
+                                        </div>
+                                    </template>
+                                    <template x-for="i in templateBodyVarSlots()" :key="'tv-' + i">
+                                        <div>
+                                            <label class="block text-[10px] font-semibold text-slate-600 mb-1" x-text="'متغير ' + i"></label>
+                                            <input type="text" x-model="templateVariables[i]"
+                                                   class="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs">
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
                         </div>
                         <p x-show="micWaiting" x-cloak class="mt-1.5 text-[10px] text-sky-800 bg-sky-50 border border-sky-100 rounded-lg px-3 py-1.5 flex items-center gap-2">
                             <i class="fas fa-spinner fa-spin"></i> اختر <strong>السماح</strong> في رسالة المتصفح التي ظهرت أعلى الصفحة
@@ -573,6 +595,22 @@
                             <option value="{{ $tpl['name'] }}|{{ $tpl['language'] }}">{{ $tpl['label'] }}</option>
                         @endforeach
                     </select>
+                    <template x-if="selectedTemplateMeta() && (selectedTemplateMeta().body_variable_count > 0 || selectedTemplateMeta().header_variable_count > 0)">
+                        <div class="rounded-xl bg-slate-50 border border-slate-200 p-3 space-y-2">
+                            <template x-if="selectedTemplateMeta().header_variable_count > 0">
+                                <div>
+                                    <label class="text-xs font-semibold text-slate-600">متغير العنوان</label>
+                                    <input type="text" x-model="templateVariables.header_1" class="{{ $waInputClass }} text-sm mt-1">
+                                </div>
+                            </template>
+                            <template x-for="i in templateBodyVarSlots()" :key="'stv-' + i">
+                                <div>
+                                    <label class="text-xs font-semibold text-slate-600" x-text="'متغير ' + i"></label>
+                                    <input type="text" x-model="templateVariables[i]" class="{{ $waInputClass }} text-sm mt-1">
+                                </div>
+                            </template>
+                        </div>
+                    </template>
                 @else
                     <p class="text-xs text-slate-500">لا توجد قوالب معتمدة.</p>
                 @endif
@@ -941,6 +979,7 @@ function whatsappInbox() {
         quickEmojis: ['👍', '❤️', '😂', '😮', '😢', '🙏'],
         templateName: '',
         templateLang: '',
+        templateVariables: {},
         selectedTemplateKey: '',
         startPhone: '',
         startBody: '',
@@ -1249,14 +1288,70 @@ function whatsappInbox() {
         },
 
         applySelectedTemplate(forStart = false) {
-            if (!this.selectedTemplateKey) return;
+            if (!this.selectedTemplateKey) {
+                this.templateName = '';
+                this.templateLang = '';
+                this.templateVariables = {};
+                return;
+            }
             const parts = this.selectedTemplateKey.split('|');
             this.templateName = parts[0] || '';
-            this.templateLang = parts[1] || 'en_US';
+            this.templateLang = parts[1] || '';
+            this.resetTemplateVariables();
             if (forStart) {
                 this.startTemplate = this.templateName;
                 this.startLang = this.templateLang;
             }
+        },
+
+        selectedTemplateMeta() {
+            if (!this.templateName || !this.templateLang) return null;
+            return this.metaTemplates.find(t => t.name === this.templateName && t.language === this.templateLang) || null;
+        },
+
+        resetTemplateVariables() {
+            const meta = this.selectedTemplateMeta();
+            const vars = {};
+            if (!meta) {
+                this.templateVariables = vars;
+                return;
+            }
+            if ((meta.header_variable_count || 0) > 0) {
+                vars.header_1 = this.templateVariables.header_1 || '';
+            }
+            const count = meta.body_variable_count || 0;
+            for (let i = 1; i <= count; i++) {
+                vars[i] = this.templateVariables[i] || '';
+            }
+            this.templateVariables = vars;
+        },
+
+        templateVariablesReady() {
+            const meta = this.selectedTemplateMeta();
+            if (!meta) return !!this.templateName;
+            if ((meta.header_variable_count || 0) > 0 && !(this.templateVariables.header_1 || '').trim()) {
+                return false;
+            }
+            const count = meta.body_variable_count || 0;
+            for (let i = 1; i <= count; i++) {
+                if (!(this.templateVariables[i] || '').trim()) return false;
+            }
+            return true;
+        },
+
+        templateVariablesPayload() {
+            const payload = {};
+            Object.keys(this.templateVariables || {}).forEach(key => {
+                const val = (this.templateVariables[key] || '').trim();
+                if (val !== '') payload[key] = val;
+            });
+            return payload;
+        },
+
+        templateBodyVarSlots() {
+            const meta = this.selectedTemplateMeta();
+            const count = meta?.body_variable_count || 0;
+            return Array.from({ length: count }, (_, index) => index + 1);
         },
 
         autoGrowComposer() {
@@ -1972,7 +2067,7 @@ function whatsappInbox() {
         },
 
         async sendTemplate() {
-            if (!this.templateUrl || !this.templateName.trim() || this.sending) return;
+            if (!this.templateUrl || !this.templateName.trim() || this.sending || !this.templateVariablesReady()) return;
             this.sending = true;
             this.replyError = '';
             try {
@@ -1986,7 +2081,8 @@ function whatsappInbox() {
                     },
                     body: JSON.stringify({
                         template_name: this.templateName,
-                        language_code: this.templateLang || 'en_US',
+                        language_code: this.templateLang,
+                        template_variables: this.templateVariablesPayload(),
                     }),
                 });
                 const data = await this.parseJsonResponse(res);
@@ -2040,8 +2136,14 @@ function whatsappInbox() {
                 if (body) {
                     payload.body = body;
                 } else if (useTemplate) {
+                    if (!this.templateVariablesReady()) {
+                        this.startError = 'أكمل جميع متغيرات القالب';
+                        this.sending = false;
+                        return;
+                    }
                     payload.template_name = this.startTemplate;
-                    payload.language_code = this.startLang || 'en_US';
+                    payload.language_code = this.startLang;
+                    payload.template_variables = this.templateVariablesPayload();
                 }
 
                 const res = await fetch(this.startUrl, {

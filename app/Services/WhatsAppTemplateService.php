@@ -207,6 +207,177 @@ class WhatsAppTemplateService
         return max(array_map('intval', $matches[1]));
     }
 
+    public function countHeaderVariables(?string $headerType, ?string $headerContent): int
+    {
+        if (strtolower((string) $headerType) !== 'text' || trim((string) $headerContent) === '') {
+            return 0;
+        }
+
+        return $this->countBodyVariables((string) $headerContent);
+    }
+
+    /**
+     * @return array{
+     *     name: string,
+     *     language: string,
+     *     body_text: ?string,
+     *     body_variable_count: int,
+     *     header_type: ?string,
+     *     header_content: ?string,
+     *     header_variable_count: int
+     * }|null
+     */
+    public function resolveApprovedTemplate(string $name, string $language): ?array
+    {
+        $name = trim($name);
+        $language = trim($language);
+
+        if ($name === '' || $language === '') {
+            return null;
+        }
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('whatsapp_meta_templates')) {
+            $tpl = WhatsAppMetaTemplate::query()
+                ->where('name', $name)
+                ->where('language', $language)
+                ->where('status', WhatsAppMetaTemplate::STATUS_APPROVED)
+                ->first();
+
+            if ($tpl) {
+                $bodyText = (string) ($tpl->body_text ?? '');
+                $bodyCount = (int) $tpl->body_variable_count;
+                if ($bodyCount < 1 && $bodyText !== '') {
+                    $bodyCount = $this->countBodyVariables($bodyText);
+                }
+
+                return [
+                    'name' => $tpl->name,
+                    'language' => $tpl->language,
+                    'body_text' => $bodyText !== '' ? $bodyText : null,
+                    'body_variable_count' => $bodyCount,
+                    'header_type' => $tpl->header_type,
+                    'header_content' => $tpl->header_content,
+                    'header_variable_count' => $this->countHeaderVariables($tpl->header_type, $tpl->header_content),
+                ];
+            }
+        }
+
+        $listed = $this->cloud->listApprovedTemplates();
+        foreach ($listed['templates'] ?? [] as $row) {
+            if (($row['name'] ?? '') === $name && ($row['language'] ?? '') === $language) {
+                return [
+                    'name' => $name,
+                    'language' => $language,
+                    'body_text' => $row['body_text'] ?? null,
+                    'body_variable_count' => (int) ($row['body_variable_count'] ?? 0),
+                    'header_type' => $row['header_type'] ?? null,
+                    'header_content' => $row['header_content'] ?? null,
+                    'header_variable_count' => (int) ($row['header_variable_count'] ?? 0),
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<int|string, string|null>  $variables
+     * @return array{components: array<int, array<string, mixed>>, error?: string}
+     */
+    public function buildSendComponents(string $name, string $language, array $variables): array
+    {
+        $definition = $this->resolveApprovedTemplate($name, $language);
+        if ($definition === null) {
+            return [
+                'components' => [],
+                'error' => 'القالب أو اللغة غير موجودين — اختر القالب من القائمة بنفس اللغة المعتمدة في Meta (مثل ar أو en_US).',
+            ];
+        }
+
+        $components = [];
+
+        if ($definition['header_variable_count'] > 0) {
+            $headerValue = trim((string) ($variables['header_1'] ?? $variables['h1'] ?? ''));
+            if ($headerValue === '') {
+                return ['components' => [], 'error' => 'متغير عنوان القالب (Header) مطلوب'];
+            }
+
+            $components[] = [
+                'type' => 'header',
+                'parameters' => [['type' => 'text', 'text' => $headerValue]],
+            ];
+        }
+
+        $bodyCount = $definition['body_variable_count'];
+        if ($bodyCount > 0) {
+            $parameters = [];
+            for ($i = 1; $i <= $bodyCount; $i++) {
+                $value = trim((string) ($variables[$i] ?? $variables[(string) $i] ?? ''));
+                if ($value === '') {
+                    return ['components' => [], 'error' => "متغير القالب {$i} مطلوب"];
+                }
+                $parameters[] = ['type' => 'text', 'text' => $value];
+            }
+
+            $components[] = ['type' => 'body', 'parameters' => $parameters];
+        }
+
+        return ['components' => $components];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function templateMetaForList(WhatsAppMetaTemplate $template): array
+    {
+        $bodyText = (string) ($template->body_text ?? '');
+        $bodyCount = (int) $template->body_variable_count;
+        if ($bodyCount < 1 && $bodyText !== '') {
+            $bodyCount = $this->countBodyVariables($bodyText);
+        }
+
+        return [
+            'name' => $template->name,
+            'language' => $template->language,
+            'category' => $template->category,
+            'label' => $template->displayLabel() . ' (' . $template->categoryLabel() . ')',
+            'source' => 'database',
+            'body_text' => $bodyText !== '' ? $bodyText : null,
+            'body_variable_count' => $bodyCount,
+            'header_type' => $template->header_type,
+            'header_content' => $template->header_content,
+            'header_variable_count' => $this->countHeaderVariables($template->header_type, $template->header_content),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     * @return array<string, mixed>
+     */
+    public function templateMetaFromMetaApiRow(array $row): array
+    {
+        $name = (string) ($row['name'] ?? '');
+        $language = (string) ($row['language'] ?? '');
+        $category = (string) ($row['category'] ?? '');
+        $bodyText = $this->extractBodyFromComponents($row['components'] ?? []);
+        $header = $this->extractHeaderFromComponents($row['components'] ?? []);
+        $bodyCount = $this->countBodyVariables($bodyText);
+        $headerCount = $this->countHeaderVariables($header['type'], $header['content']);
+
+        return [
+            'name' => $name,
+            'language' => $language,
+            'category' => $category,
+            'label' => $name . ' · ' . $language . ($category !== '' ? ' (' . $category . ')' : ''),
+            'source' => 'meta_api',
+            'body_text' => $bodyText !== '' ? $bodyText : null,
+            'body_variable_count' => $bodyCount,
+            'header_type' => $header['type'],
+            'header_content' => $header['content'],
+            'header_variable_count' => $headerCount,
+        ];
+    }
+
     /**
      * @param  array<string, mixed>  $data
      * @return array<int, array<string, mixed>>

@@ -935,7 +935,11 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
     });
 
     // لوحة الموظفين
-    Route::prefix('employee')->name('employee.')->middleware(['auth'])->group(function () {
+    Route::prefix('employee')->name('employee.')->middleware(['auth', 'employee.work'])->group(function () {
+        Route::post('/attendance/clock-in', [\App\Http\Controllers\Employee\EmployeeAttendanceController::class, 'clockIn'])->name('attendance.clock-in');
+        Route::post('/attendance/clock-out', [\App\Http\Controllers\Employee\EmployeeAttendanceController::class, 'clockOut'])->name('attendance.clock-out');
+        Route::get('/attendance/status', [\App\Http\Controllers\Employee\EmployeeAttendanceController::class, 'status'])->name('attendance.status');
+
         Route::get('/dashboard', [\App\Http\Controllers\Employee\EmployeeController::class, 'dashboard'])->name('dashboard');
 
         Route::middleware('sales.employee')->prefix('sales')->name('sales.')->group(function () {
@@ -1655,6 +1659,13 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
 
         // إدارة الموظفين
         Route::resource('employees', \App\Http\Controllers\Admin\EmployeeController::class);
+        Route::resource('work-schedules', \App\Http\Controllers\Admin\WorkScheduleController::class)->except(['show']);
+        Route::get('employee-attendance', [\App\Http\Controllers\Admin\EmployeeAttendanceReportController::class, 'index'])->name('employee-attendance.index');
+        Route::get('employee-attendance/export', [\App\Http\Controllers\Admin\EmployeeAttendanceReportController::class, 'export'])->name('employee-attendance.export');
+        Route::get('employee-attendance/penalty-settings', [\App\Http\Controllers\Admin\EmployeeAttendanceReportController::class, 'penaltySettings'])->name('employee-attendance.penalty-settings');
+        Route::put('employee-attendance/penalty-settings', [\App\Http\Controllers\Admin\EmployeeAttendanceReportController::class, 'updatePenaltySettings'])->name('employee-attendance.penalty-settings.update');
+        Route::post('employee-attendance/apply-penalties', [\App\Http\Controllers\Admin\EmployeeAttendanceReportController::class, 'applyPenalties'])->name('employee-attendance.apply-penalties');
+        Route::get('employee-attendance/employees/{employee}', [\App\Http\Controllers\Admin\EmployeeAttendanceReportController::class, 'employeeSummary'])->name('employee-attendance.employee');
         Route::resource('employee-jobs', \App\Http\Controllers\Admin\EmployeeJobController::class);
         Route::match(['put', 'patch'], 'employee-tasks/{employee_task}/deliverables/{deliverable}', [\App\Http\Controllers\Admin\EmployeeTaskController::class, 'updateDeliverable'])->name('employee-tasks.deliverables.update');
         Route::delete('employee-tasks/{employee_task}/deliverables/{deliverable}', [\App\Http\Controllers\Admin\EmployeeTaskController::class, 'destroyDeliverable'])->name('employee-tasks.deliverables.destroy');

@@ -66,7 +66,9 @@ class EmployeeController extends Controller
     public function create()
     {
         $jobs = EmployeeJob::active()->orderBy('name')->get();
-        return view('admin.employees.create', compact('jobs'));
+        $workSchedules = \App\Models\WorkSchedule::query()->where('is_active', true)->orderBy('name')->get();
+
+        return view('admin.employees.create', compact('jobs', 'workSchedules'));
     }
 
     /**
@@ -83,12 +85,17 @@ class EmployeeController extends Controller
             'employee_code' => 'nullable|string|unique:users,employee_code',
             'hire_date' => 'required|date',
             'weekly_off_day' => 'nullable|integer|min:0|max:6',
+            'work_schedule_id' => 'nullable|exists:work_schedules,id',
             'salary' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
         ]);
 
         if ($validated['weekly_off_day'] === '' || ! isset($validated['weekly_off_day'])) {
             $validated['weekly_off_day'] = null;
+        }
+
+        if (empty($validated['work_schedule_id'])) {
+            $validated['work_schedule_id'] = null;
         }
 
         // إنشاء رمز الموظف إذا لم يتم توفيره
@@ -152,7 +159,9 @@ class EmployeeController extends Controller
     public function edit(User $employee)
     {
         $jobs = EmployeeJob::active()->orderBy('name')->get();
-        return view('admin.employees.edit', compact('employee', 'jobs'));
+        $workSchedules = \App\Models\WorkSchedule::query()->where('is_active', true)->orderBy('name')->get();
+
+        return view('admin.employees.edit', compact('employee', 'jobs', 'workSchedules'));
     }
 
     /**
@@ -169,6 +178,7 @@ class EmployeeController extends Controller
             'employee_code' => 'nullable|string|unique:users,employee_code,' . $employee->id,
             'hire_date' => 'required|date',
             'weekly_off_day' => 'nullable|integer|min:0|max:6',
+            'work_schedule_id' => 'nullable|exists:work_schedules,id',
             'termination_date' => 'nullable|date|after:hire_date',
             'salary' => 'nullable|numeric|min:0',
             'employee_notes' => 'nullable|string',
@@ -188,6 +198,10 @@ class EmployeeController extends Controller
 
         if (! array_key_exists('weekly_off_day', $validated) || $validated['weekly_off_day'] === '') {
             $validated['weekly_off_day'] = null;
+        }
+
+        if (empty($validated['work_schedule_id'])) {
+            $validated['work_schedule_id'] = null;
         }
 
         $validated['is_active'] = $request->has('is_active') ? true : false;

@@ -149,6 +149,7 @@
                     </div>
                     
                     <div class="flex items-center gap-2 sm:gap-4">
+                        @include('components.employee-attendance-bar')
                         <!-- Notifications -->
                         <div class="relative">
                             <button class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">

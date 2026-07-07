@@ -851,13 +851,7 @@ class WhatsAppCloudService
                 ->where('status', \App\Models\WhatsAppMetaTemplate::STATUS_APPROVED)
                 ->orderBy('name')
                 ->get()
-                ->map(fn ($t) => [
-                    'name' => $t->name,
-                    'language' => $t->language,
-                    'category' => $t->category,
-                    'label' => $t->displayLabel() . ' (' . $t->categoryLabel() . ')',
-                    'source' => 'database',
-                ])
+                ->map(fn ($t) => app(\App\Services\WhatsAppTemplateService::class)->templateMetaForList($t))
                 ->all();
         }
 
@@ -883,7 +877,7 @@ class WhatsAppCloudService
             $response = Http::withToken($creds['access_token'])
                 ->timeout(30)
                 ->get("{$this->graphUrl()}/{$wabaId}/message_templates", [
-                    'fields' => 'name,language,status,category',
+                    'fields' => 'name,language,status,category,components',
                     'limit' => 100,
                 ]);
 
@@ -899,6 +893,7 @@ class WhatsAppCloudService
                 ];
             }
 
+            $templateService = app(\App\Services\WhatsAppTemplateService::class);
             $templates = [];
             foreach ($body['data'] ?? [] as $row) {
                 if (! is_array($row)) {
@@ -916,13 +911,7 @@ class WhatsAppCloudService
                     continue;
                 }
 
-                $category = (string) ($row['category'] ?? '');
-                $templates[] = [
-                    'name' => $name,
-                    'language' => $language,
-                    'category' => $category,
-                    'label' => $name . ' · ' . $language . ($category !== '' ? ' (' . $category . ')' : ''),
-                ];
+                $templates[] = $templateService->templateMetaFromMetaApiRow($row);
             }
 
             usort($templates, fn ($a, $b) => strcmp($a['name'] . $a['language'], $b['name'] . $b['language']));
