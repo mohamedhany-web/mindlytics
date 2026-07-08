@@ -59,6 +59,32 @@ class WorkshopWhatsAppTemplateService
         ]];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    public function formPreset(Workshop $workshop): array
+    {
+        $groupLink = trim((string) $workshop->whatsapp_group_link);
+
+        return [
+            'name' => $this->templateNameFor($workshop),
+            'body_text' => $this->defaultWelcomeBody(),
+            'footer_text' => 'Mindlytics',
+            'category' => 'UTILITY',
+            'language' => 'ar',
+            'buttons' => $this->defaultWelcomeButtons($workshop),
+            'has_group_link' => $groupLink !== '',
+            'group_link' => $groupLink !== '' ? $groupLink : null,
+            'workshop_title' => $workshop->title,
+            'variable_labels' => $this->workshopVariableLabels(),
+        ];
+    }
+
+    public function linkTemplateToWorkshop(Workshop $workshop, WhatsAppMetaTemplate $template): void
+    {
+        $workshop->update(['welcome_meta_template_id' => $template->id]);
+    }
+
     public function templateNameFor(Workshop $workshop): string
     {
         $slug = Str::slug(Str::limit($workshop->title, 24, ''));
@@ -392,6 +418,15 @@ class WorkshopWhatsAppTemplateService
         }
 
         return $variables;
+    }
+
+    /**
+     * @param  mixed  $buttons
+     * @return array<int, array<string, string>>
+     */
+    public function enrichButtonExamplesForWorkshop(Workshop $workshop, mixed $buttons): array
+    {
+        return $this->enrichButtonExamples($buttons, $workshop);
     }
 
     /**

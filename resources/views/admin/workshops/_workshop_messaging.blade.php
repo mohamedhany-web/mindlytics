@@ -90,7 +90,7 @@
 
                 @if($templates->isEmpty())
                     <p class="text-sm text-amber-800">لا توجد قوالب معتمدة.
-                        <a href="{{ route('admin.workshops.whatsapp-template.create.form', $workshop) }}" class="font-bold underline">أنشئ قالب ترحيب للورشة</a>
+                        <a href="{{ route('admin.whatsapp.templates.create', ['workshop_id' => $workshop->id]) }}" class="font-bold underline">أنشئ قالب ترحيب للورشة</a>
                         أو من <a href="{{ route('admin.whatsapp.templates.index') }}" class="font-bold underline">قسم القوالب</a>.
                     </p>
                 @else
@@ -192,7 +192,7 @@
                 @if(!$welcomeTpl || !$welcomeTpl->isSendable())
                     <div class="rounded-lg border border-violet-100 bg-violet-50/50 p-3 space-y-2">
                         <p class="text-xs text-slate-700">أنشئ أو عدّل قالب الترحيب بنفس نموذج Meta الرسمي (Header، Body، Footer، أزرار، متغيرات).</p>
-                        <a href="{{ route('admin.workshops.whatsapp-template.create.form', $workshop) }}"
+                        <a href="{{ route('admin.whatsapp.templates.create', ['workshop_id' => $workshop->id]) }}"
                            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 text-white text-xs font-bold hover:bg-violet-700">
                             <i class="fas fa-plus-circle"></i>
                             {{ $welcomeTpl ? 'تعديل قالب الورشة' : 'إنشاء قالب ترحيب' }}

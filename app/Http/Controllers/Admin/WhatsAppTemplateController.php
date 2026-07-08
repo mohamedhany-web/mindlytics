@@ -4,11 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\WhatsAppMetaTemplate;
+use App\Models\Workshop;
 use App\Services\WhatsAppCloudService;
 use App\Services\WhatsAppTemplateAccessService;
 use App\Services\WhatsAppTemplateService;
+use App\Services\WorkshopWhatsAppTemplateService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class WhatsAppTemplateController extends Controller
@@ -66,20 +70,66 @@ class WhatsAppTemplateController extends Controller
 
     public function create(): View
     {
+        $workshops = collect();
+        if (Schema::hasTable('workshops')) {
+            $columns = ['id', 'title'];
+            if (Schema::hasColumn('workshops', 'whatsapp_group_link')) {
+                $columns[] = 'whatsapp_group_link';
+            }
+            if (Schema::hasColumn('workshops', 'starts_at')) {
+                $columns[] = 'starts_at';
+            }
+
+            $workshops = Workshop::query()
+                ->orderByDesc('starts_at')
+                ->orderByDesc('id')
+                ->get($columns);
+        }
+
         return view('admin.whatsapp.templates.create', [
             'connectionMeta' => app(WhatsAppCloudService::class)->connectionMeta(),
+            'workshops' => $workshops,
+            'workshopVariableLabels' => app(WorkshopWhatsAppTemplateService::class)->workshopVariableLabels(),
+            'initialWorkshopId' => (int) request('workshop_id', 0) ?: null,
         ]);
     }
 
-    public function store(Request $request, WhatsAppTemplateService $service): RedirectResponse
+    public function workshopPreset(Workshop $workshop, WorkshopWhatsAppTemplateService $workshopTemplates): JsonResponse
+    {
+        return response()->json($workshopTemplates->formPreset($workshop));
+    }
+
+    public function store(Request $request, WhatsAppTemplateService $service, WorkshopWhatsAppTemplateService $workshopTemplates): RedirectResponse
     {
         $validated = $service->validateDraftFromRequest($request);
+
+        $workshop = null;
+        $workshopId = (int) $request->input('workshop_id');
+        if ($workshopId > 0 && Schema::hasTable('workshops')) {
+            $workshop = Workshop::query()->find($workshopId);
+        }
+
+        if ($request->input('template_mode') === 'workshop' && ! $workshop) {
+            return back()->withInput()->withErrors(['workshop_id' => 'اختر ورشة عند إنشاء قالب مرتبط بورشة.']);
+        }
+
+        if ($workshop) {
+            $validated['name'] = $workshopTemplates->templateNameFor($workshop);
+            $validated['body_text'] = $workshopTemplates->normalizeBodyForMeta((string) ($validated['body_text'] ?? ''));
+            $validated['buttons'] = $workshopTemplates->enrichButtonExamplesForWorkshop($workshop, $validated['buttons'] ?? []);
+        }
 
         try {
             $template = $service->createDraft($validated, auth()->id());
         } catch (\InvalidArgumentException $e) {
             return back()->withInput()->withErrors(['name' => $e->getMessage()]);
         }
+
+        if ($workshop && Schema::hasColumn('workshops', 'welcome_meta_template_id')) {
+            $workshopTemplates->linkTemplateToWorkshop($workshop, $template);
+        }
+
+        $linkedMsg = $workshop ? ' وتم ربطه بورشة «'.$workshop->title.'».' : '';
 
         if ($request->boolean('submit_now')) {
             $submit = $service->submitToMeta($template);
@@ -91,12 +141,12 @@ class WhatsAppTemplateController extends Controller
 
             return redirect()
                 ->route('admin.whatsapp.templates.show', $template)
-                ->with('success', 'تم إرسال القالب إلى Meta للمراجعة.');
+                ->with('success', 'تم إرسال القالب إلى Meta للمراجعة'.$linkedMsg);
         }
 
         return redirect()
             ->route('admin.whatsapp.templates.show', $template)
-            ->with('success', 'تم حفظ القالب كمسودة.');
+            ->with('success', 'تم حفظ القالب كمسودة'.$linkedMsg);
     }
 
     public function show(WhatsAppMetaTemplate $template, WhatsAppTemplateAccessService $access): View

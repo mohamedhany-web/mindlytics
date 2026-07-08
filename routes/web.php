@@ -1776,6 +1776,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('/messages/{message}/resend', [\App\Http\Controllers\Admin\WhatsAppController::class, 'resendMessage'])->name('messages.resend');
             Route::get('/templates', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'index'])->name('templates.index');
             Route::get('/templates/create', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'create'])->name('templates.create');
+            Route::get('/templates/workshop-preset/{workshop}', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'workshopPreset'])->name('templates.workshop-preset');
             Route::post('/templates', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'store'])->name('templates.store');
             Route::post('/templates/sync', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'sync'])->name('templates.sync');
             Route::post('/templates/access-mode', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'updateAccessMode'])->name('templates.access-mode');
