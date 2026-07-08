@@ -222,7 +222,8 @@ class WorkshopWhatsAppTemplateService
         WhatsAppMetaTemplate $template,
         int $createdBy,
         string $scope = 'all',
-        ?string $phone = null
+        ?string $phone = null,
+        array $variableOverrides = []
     ): \App\Models\WhatsAppBatch {
         if (! $template->isSendable()) {
             throw new \RuntimeException(
@@ -235,7 +236,7 @@ class WorkshopWhatsAppTemplateService
             throw new \RuntimeException('لا يوجد مسجلون لديهم أرقام واتساب ضمن المعايير المحددة.');
         }
 
-        $items = $this->buildTemplateItems($workshop, $registrations, $template, $createdBy);
+        $items = $this->buildTemplateItems($workshop, $registrations, $template, $createdBy, $variableOverrides);
 
         return $this->batchService->dispatchPreparedItems(
             $workshop,
@@ -266,19 +267,98 @@ class WorkshopWhatsAppTemplateService
     }
 
     /**
+     * @param  array<int|string, string>  $variableOverrides
      * @throws \RuntimeException
      */
     public function validateTemplateForRegistration(
         Workshop $workshop,
         WhatsAppMetaTemplate $template,
-        WorkshopRegistration $reg
+        WorkshopRegistration $reg,
+        array $variableOverrides = []
     ): void {
-        $variables = $this->variablesForRegistration($reg, $workshop, $template);
+        $variables = $this->variablesForRegistration($reg, $workshop, $template, $variableOverrides);
         $built = $this->templates->buildSendComponents($template->name, $template->language, $variables);
 
         if ($built['error'] ?? null) {
             throw new \RuntimeException((string) $built['error']);
         }
+    }
+
+    public function templateNeedsGroupInviteCode(WhatsAppMetaTemplate $template): bool
+    {
+        return $this->groupInviteVariableIndex($template) !== null;
+    }
+
+    public function groupInviteVariableIndex(WhatsAppMetaTemplate $template): ?int
+    {
+        $body = (string) ($template->body_text ?? '');
+        $max = (int) $template->body_variable_count;
+        if ($max < 1 && $body !== '') {
+            $max = $this->templates->countBodyVariables($body);
+        }
+
+        for ($i = 1; $i <= $max; $i++) {
+            if ($this->templates->bodyVariableExpectsWhatsappInviteCode($body, $i)) {
+                return $i;
+            }
+        }
+
+        if ($max >= 3 && str_contains($body, '{{3}}')) {
+            return 3;
+        }
+
+        return null;
+    }
+
+    public function resolveGroupInviteCode(Workshop $workshop, ?string $override = null): string
+    {
+        $override = trim((string) $override);
+        if ($override !== '') {
+            return $this->templates->inviteCodeFromExampleValue($override) ?? $override;
+        }
+
+        return $this->groupLinkDynamicPart(
+            $this->templates->normalizeMetaButtonUrl((string) $workshop->whatsapp_group_link)
+        );
+    }
+
+    public function missingGroupInviteForSend(
+        Workshop $workshop,
+        WhatsAppMetaTemplate $template,
+        ?string $override = null
+    ): ?string {
+        if (! $this->templateNeedsGroupInviteCode($template)) {
+            return null;
+        }
+
+        if ($this->resolveGroupInviteCode($workshop, $override) !== '') {
+            return null;
+        }
+
+        $index = $this->groupInviteVariableIndex($template) ?? 3;
+
+        return 'متغير القالب '.$index.' مطلوب — أدخل كود دعوة جروب واتساب (الجزء الأخير من الرابط بعد chat.whatsapp.com/).';
+    }
+
+    /**
+     * @return array<int|string, string>
+     */
+    public function buildSendVariableOverrides(
+        Workshop $workshop,
+        WhatsAppMetaTemplate $template,
+        ?string $groupInviteCode = null
+    ): array {
+        $index = $this->groupInviteVariableIndex($template);
+        if ($index === null) {
+            return [];
+        }
+
+        $code = $this->resolveGroupInviteCode($workshop, $groupInviteCode);
+        if ($code === '') {
+            return [];
+        }
+
+        return [$index => $code];
     }
 
     /**
@@ -289,26 +369,27 @@ class WorkshopWhatsAppTemplateService
         Workshop $workshop,
         Collection $registrations,
         WhatsAppMetaTemplate $template,
-        int $senderId
+        int $senderId,
+        array $variableOverrides = []
     ): Collection {
         $seenPhones = [];
         $whatsapp = app(WhatsAppService::class);
 
-        return $registrations->shuffle()->map(function (WorkshopRegistration $reg) use ($workshop, $template, &$seenPhones, $whatsapp, $senderId) {
+        return $registrations->shuffle()->map(function (WorkshopRegistration $reg) use ($workshop, $template, &$seenPhones, $whatsapp, $senderId, $variableOverrides) {
             $formatted = $whatsapp->formatPhoneNumber((string) $reg->phone);
             if ($formatted === '' || isset($seenPhones[$formatted])) {
                 return null;
             }
             $seenPhones[$formatted] = true;
 
-            $variables = $this->variablesForRegistration($reg, $workshop, $template);
+            $variables = $this->variablesForRegistration($reg, $workshop, $template, $variableOverrides);
 
             $built = $this->templates->buildSendComponents($template->name, $template->language, $variables);
             if ($built['error'] ?? null) {
                 throw new \RuntimeException((string) $built['error']);
             }
 
-            $preview = $this->renderPreview((string) $template->body_text, $reg, $workshop);
+            $preview = $this->renderPreview($template, $reg, $workshop, $variableOverrides);
 
             return [
                 'recipient_name' => $reg->name,
@@ -326,21 +407,23 @@ class WorkshopWhatsAppTemplateService
         })->filter()->values();
     }
 
-    private function renderPreview(string $body, WorkshopRegistration $reg, Workshop $workshop): string
-    {
-        $pool = $this->variablePool($reg, $workshop);
-        $out = $body;
+    private function renderPreview(
+        WhatsAppMetaTemplate $template,
+        WorkshopRegistration $reg,
+        Workshop $workshop,
+        array $variableOverrides = []
+    ): string {
+        $variables = $this->variablesForRegistration($reg, $workshop, $template, $variableOverrides);
+        $out = (string) $template->body_text;
 
-        foreach ($pool as $index => $value) {
-            $n = $index + 1;
-            $out = str_replace('{{'.$n.'}}', $value, $out);
+        foreach ($variables as $key => $value) {
+            if (! is_int($key) && ! is_numeric($key)) {
+                continue;
+            }
+            $out = str_replace('{{'.$key.'}}', (string) $value, $out);
         }
 
-        return str_replace(
-            ['{{name}}', '{{workshop_name}}', '{{workshop}}', '{{group_link}}'],
-            [$reg->name, $workshop->title, $workshop->title, (string) ($workshop->whatsapp_group_link ?? '')],
-            $out
-        );
+        return $out;
     }
 
     /**
@@ -367,7 +450,8 @@ class WorkshopWhatsAppTemplateService
     private function variablesForRegistration(
         WorkshopRegistration $reg,
         Workshop $workshop,
-        WhatsAppMetaTemplate $template
+        WhatsAppMetaTemplate $template,
+        array $variableOverrides = []
     ): array {
         $pool = $this->variablePool($reg, $workshop);
 
@@ -378,16 +462,26 @@ class WorkshopWhatsAppTemplateService
 
         $variables = [];
         $bodyText = (string) ($template->body_text ?? '');
-        $groupDynamic = $this->groupLinkDynamicPart(
-            app(WhatsAppTemplateService::class)->normalizeMetaButtonUrl((string) $workshop->whatsapp_group_link)
-        );
+        $groupDynamic = $this->resolveGroupInviteCode($workshop);
 
         for ($i = 1; $i <= $bodyCount; $i++) {
+            if (isset($variableOverrides[$i]) || isset($variableOverrides[(string) $i])) {
+                $value = (string) ($variableOverrides[$i] ?? $variableOverrides[(string) $i]);
+                if (! $this->templates->bodyVariableExpectsWhatsappInviteCode($bodyText, $i)
+                    && ! str_contains($value, '://')
+                    && $value !== '') {
+                    $value = 'https://chat.whatsapp.com/'.$value;
+                }
+                $variables[$i] = $value;
+
+                continue;
+            }
+
             $value = $pool[$i - 1] ?? $reg->name;
-            if (app(WhatsAppTemplateService::class)->bodyVariableExpectsWhatsappInviteCode($bodyText, $i)) {
+            if ($this->templates->bodyVariableExpectsWhatsappInviteCode($bodyText, $i)) {
                 $value = $groupDynamic !== ''
                     ? $groupDynamic
-                    : app(WhatsAppTemplateService::class)->inviteCodeFromExampleValue((string) $value) ?? $value;
+                    : ($this->templates->inviteCodeFromExampleValue((string) $value) ?? '');
             }
             $variables[$i] = $value;
         }

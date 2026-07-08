@@ -12,9 +12,16 @@
         ? $welcomeTpl->name.'|'.$welcomeTpl->language
         : ($templates->first() ? $templates->first()->name.'|'.$templates->first()->language : '');
     $messagePlaceholder = "مرحباً @{{name}}،\n\nشكراً لتسجيلك في ورشة «@{{workshop}}» (@{{attendance}}).";
+    $workshopGroupInviteCode = $workshopGroupInviteCode ?? '';
+    $whatsappTemplatesSendMeta = $whatsappTemplatesSendMeta ?? [];
+    $openInviteModal = session('show_group_invite_modal', false);
 @endphp
 
-<section class="rounded-2xl border border-emerald-200 bg-white shadow-sm overflow-hidden" x-data="{ mode: 'template', showAdvanced: false }">
+<section class="rounded-2xl border border-emerald-200 bg-white shadow-sm overflow-hidden" x-data="workshopWaSend({
+    templatesMeta: @js($whatsappTemplatesSendMeta),
+    savedInviteCode: @js($workshopGroupInviteCode),
+    openOnLoad: @js((bool) $openInviteModal),
+})">
     <div class="px-5 py-4 border-b border-emerald-100 bg-gradient-to-r from-emerald-50/80 to-white flex flex-wrap items-center justify-between gap-3">
         <div>
             <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
@@ -107,12 +114,22 @@
                     </select>
                     <input type="hidden" name="template_language" id="wa-template-lang"
                            value="{{ $templates->firstWhere(fn($t) => ($t->name.'|'.$t->language) === $defaultTplKey)?->language ?? $templates->first()?->language }}">
+                    <input type="hidden" name="group_invite_code" id="group-invite-code-input" :value="inviteCode">
 
                     <p class="text-[11px] text-slate-600">
-                        المتغيرات تُملأ تلقائياً: @{{1}} الاسم، @{{2}} الورشة، @{{3}} رابط الجروب، @{{4}} الهاتف، @{{5}} الحضور.
+                        المتغيرات تُملأ تلقائياً: @{{1}} الاسم، @{{2}} الورشة، @{{5}} الحضور.
+                        <span class="text-violet-800 font-semibold">@{{3}} = كود دعوة الجروب</span> (ليس الرابط الكامل).
+                    </p>
+                    <p x-show="selectedTemplateNeedsInvite() && !inviteCode.trim()" x-cloak class="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        لم يُحفظ رابط الجروب في الورشة — سيُطلب منك كود الدعوة عند الإرسال.
+                        <a href="{{ route('admin.workshops.edit', $workshop) }}" class="font-bold underline">أو أضفه في تعديل الورشة</a>.
+                    </p>
+                    <p x-show="inviteCode.trim()" x-cloak class="text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2" dir="ltr">
+                        كود الجروب: <span class="font-mono font-bold" x-text="inviteCode"></span>
+                        <button type="button" @click="openInviteModal()" class="mr-2 text-violet-700 font-bold underline" dir="rtl">تعديل</button>
                     </p>
 
-                    <button type="submit" @disabled(!$waCanSend)
+                    <button type="button" @click="submitTemplateForm()" @disabled(!$waCanSend)
                             class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white rounded-xl text-sm font-bold">
                         <i class="fas fa-paper-plane"></i>
                         إرسال القالب للمسجلين
@@ -215,10 +232,126 @@
             </div>
         </details>
     </div>
+
+    {{-- نافذة كود دعوة الجروب (متغير {{3}}) --}}
+    <div x-show="showInviteModal" x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50"
+         @keydown.escape.window="closeInviteModal()">
+        <div class="w-full max-w-md rounded-2xl bg-white shadow-xl border border-slate-200 p-5 space-y-4" @click.outside="closeInviteModal()">
+            <div>
+                <h4 class="text-base font-black text-slate-900">كود دعوة جروب واتساب</h4>
+                <p class="text-xs text-slate-600 mt-1">
+                    القالب يحتاج المتغير <code dir="ltr" class="bg-slate-100 px-1 rounded">@{{3}}</code> —
+                    الصق <strong>كود الدعوة فقط</strong> من رابط الجروب.
+                </p>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">كود الدعوة</label>
+                <input type="text" x-model="inviteCodeDraft" dir="ltr"
+                       placeholder="Ld0j8PUAprmCnDi65uUqTC"
+                       class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-mono focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+                       @keydown.enter.prevent="confirmInviteModal()">
+                <p class="text-[10px] text-slate-500 mt-1">
+                    من رابط مثل <code dir="ltr">https://chat.whatsapp.com/<strong>هذا_الكود</strong></code>
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-2 justify-end">
+                <button type="button" @click="closeInviteModal()"
+                        class="px-4 py-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50">
+                    إلغاء
+                </button>
+                <button type="button" @click="confirmInviteModal()"
+                        class="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold">
+                    متابعة الإرسال
+                </button>
+            </div>
+        </div>
+    </div>
 </section>
 
 @push('scripts')
 <script>
+function workshopWaSend(config) {
+    return {
+        mode: 'template',
+        showInviteModal: false,
+        inviteCode: config.savedInviteCode || '',
+        inviteCodeDraft: config.savedInviteCode || '',
+        templatesMeta: config.templatesMeta || [],
+        pendingSubmit: false,
+
+        init() {
+            if (config.openOnLoad) {
+                this.openInviteModal();
+            }
+        },
+
+        selectedTemplateMeta() {
+            const nameEl = document.getElementById('wa-template-name');
+            const langEl = document.getElementById('wa-template-lang');
+            if (!nameEl || !langEl) return null;
+            return this.templatesMeta.find(t => t.name === nameEl.value && t.language === langEl.value) || null;
+        },
+
+        selectedTemplateNeedsInvite() {
+            const meta = this.selectedTemplateMeta();
+            return !!(meta && meta.needs_invite_code);
+        },
+
+        openInviteModal() {
+            this.inviteCodeDraft = this.inviteCode || '';
+            this.showInviteModal = true;
+        },
+
+        closeInviteModal() {
+            this.showInviteModal = false;
+            this.pendingSubmit = false;
+        },
+
+        confirmInviteModal() {
+            const code = (this.inviteCodeDraft || '').trim();
+            if (!code) {
+                alert('أدخل كود دعوة الجروب.');
+                return;
+            }
+            this.inviteCode = code;
+            const hidden = document.getElementById('group-invite-code-input');
+            if (hidden) hidden.value = code;
+            this.showInviteModal = false;
+            if (this.pendingSubmit) {
+                this.pendingSubmit = false;
+                this.submitTemplateForm(true);
+            }
+        },
+
+        submitTemplateForm(skipInviteCheck = false) {
+            const form = document.getElementById('workshop-wa-template-form');
+            if (!form) return;
+
+            if (typeof window.workshopWaSyncScope === 'function') window.workshopWaSyncScope();
+
+            const scope = document.getElementById('tpl-scope')?.value || 'all';
+            const needsInvite = this.selectedTemplateNeedsInvite();
+            const hasCode = (this.inviteCode || '').trim() !== '';
+
+            if (needsInvite && !hasCode && !skipInviteCheck) {
+                this.pendingSubmit = true;
+                this.openInviteModal();
+                return;
+            }
+
+            const hidden = document.getElementById('group-invite-code-input');
+            if (hidden && hasCode) hidden.value = this.inviteCode.trim();
+
+            if (!confirm('إرسال القالب إلى ' + window.workshopWaConfirmCount(scope) + ' مسجّل؟')) {
+                return;
+            }
+
+            form.submit();
+        },
+    };
+}
+
 (function () {
     const scopeRadios = document.querySelectorAll('input[name="wa_scope_ui"]');
     const phoneInput = document.getElementById('wa-phone-input');
@@ -258,10 +391,11 @@
         return count;
     }
 
+    window.workshopWaSyncScope = syncScope;
+    window.workshopWaConfirmCount = confirmCount;
+
     document.getElementById('workshop-wa-template-form')?.addEventListener('submit', function (e) {
-        syncScope();
-        const scope = tplScope?.value || 'all';
-        if (!confirm('إرسال القالب إلى ' + confirmCount(scope) + ' مسجّل؟')) e.preventDefault();
+        e.preventDefault();
     });
 
     document.getElementById('workshop-wa-bulk-form')?.addEventListener('submit', function (e) {

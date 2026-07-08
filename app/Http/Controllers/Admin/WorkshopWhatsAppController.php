@@ -122,6 +122,7 @@ class WorkshopWhatsAppController extends Controller
             'phone' => 'nullable|string|max:30',
             'template_name' => 'required|string|max:512',
             'template_language' => 'required|string|max:20',
+            'group_invite_code' => 'nullable|string|max:200',
         ]);
 
         if ($validated['scope'] === 'phone' && empty(trim((string) ($validated['phone'] ?? '')))) {
@@ -141,10 +142,23 @@ class WorkshopWhatsAppController extends Controller
             return back()->with('error', 'القالب المختار غير معتمد أو غير موجود.');
         }
 
+        $inviteOverride = trim((string) ($validated['group_invite_code'] ?? ''));
+        if ($missing = $this->templateService->missingGroupInviteForSend($workshop, $template, $inviteOverride ?: null)) {
+            return back()
+                ->with('error', $missing)
+                ->with('show_group_invite_modal', true);
+        }
+
+        $variableOverrides = $this->templateService->buildSendVariableOverrides(
+            $workshop,
+            $template,
+            $inviteOverride !== '' ? $inviteOverride : null
+        );
+
         try {
             $sample = $this->bulkService->registrationsForWorkshop($workshop, $validated['scope'], $validated['phone'] ?? null)->first();
             if ($sample) {
-                $this->templateService->validateTemplateForRegistration($workshop, $template, $sample);
+                $this->templateService->validateTemplateForRegistration($workshop, $template, $sample, $variableOverrides);
             }
 
             $batch = $this->templateService->dispatchTemplate(
@@ -152,7 +166,8 @@ class WorkshopWhatsAppController extends Controller
                 $template,
                 (int) auth()->id(),
                 $validated['scope'],
-                $validated['phone'] ?? null
+                $validated['phone'] ?? null,
+                $variableOverrides
             );
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());

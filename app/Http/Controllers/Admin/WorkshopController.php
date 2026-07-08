@@ -143,6 +143,15 @@ class WorkshopController extends Controller
                 ->get(['id', 'name', 'language', 'body_text', 'body_variable_count']);
         }
 
+        $workshopTemplateService = app(\App\Services\WorkshopWhatsAppTemplateService::class);
+        $workshopGroupInviteCode = $workshopTemplateService->resolveGroupInviteCode($workshop);
+        $whatsappTemplatesSendMeta = $approvedWhatsAppTemplates->map(fn ($tpl) => [
+            'name' => $tpl->name,
+            'language' => $tpl->language,
+            'needs_invite_code' => $workshopTemplateService->templateNeedsGroupInviteCode($tpl),
+            'invite_var_index' => $workshopTemplateService->groupInviteVariableIndex($tpl),
+        ])->values()->all();
+
         return view('admin.workshops.show', compact(
             'workshop',
             'registrations',
@@ -160,6 +169,8 @@ class WorkshopController extends Controller
             'welcomeTemplate',
             'defaultWelcomeBody',
             'approvedWhatsAppTemplates',
+            'workshopGroupInviteCode',
+            'whatsappTemplatesSendMeta',
         ));
     }
 
