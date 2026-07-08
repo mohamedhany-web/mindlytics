@@ -48,13 +48,11 @@ class WorkshopWhatsAppTemplateService
             return [];
         }
 
-        $dynamicPart = $this->groupLinkDynamicPart($groupLink);
-
         return [[
             'type' => 'URL',
             'text' => 'انضم للجروب',
-            'url' => 'https://chat.whatsapp.com/{{1}}',
-            'url_example' => $dynamicPart !== '' ? 'https://chat.whatsapp.com/'.$dynamicPart : $groupLink,
+            'url' => $groupLink,
+            'url_example' => '',
             'phone' => '',
         ]];
     }
@@ -445,14 +443,22 @@ class WorkshopWhatsAppTemplateService
             }
 
             $url = (string) ($btn['url'] ?? '');
+            if ($groupLink !== '' && preg_match('/\{\{\d+\}\}/', $url)) {
+                $btn['url'] = $groupLink;
+                $btn['url_example'] = '';
+
+                continue;
+            }
+
             if (! preg_match('/\{\{\d+\}\}/', $url)) {
                 continue;
             }
 
             if (trim((string) ($btn['url_example'] ?? '')) === '') {
-                $btn['url_example'] = $dynamicPart !== ''
-                    ? preg_replace('/\{\{\d+\}\}/', $dynamicPart, $url) ?? $groupLink
-                    : $groupLink;
+                $btn['url_example'] = $dynamicPart !== '' ? $dynamicPart : 'sample_invite';
+            } else {
+                $btn['url_example'] = app(WhatsAppTemplateService::class)
+                    ->resolveUrlButtonExampleSuffix($url, (string) $btn['url_example']);
             }
         }
         unset($btn);

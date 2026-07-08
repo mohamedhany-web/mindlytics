@@ -82,11 +82,15 @@ class WhatsAppTemplateService
             return ['success' => false, 'error' => 'يمكن إرسال المسودات والقوالب المرفوضة فقط إلى Meta.'];
         }
 
-        $components = $template->components ?? $this->buildMetaComponents($template->toArray());
+        $components = $this->buildMetaComponents($template->toArray());
         $mediaHeader = in_array($template->header_type, ['image', 'video', 'document'], true);
 
         if ($mediaHeader && empty($template->header_content)) {
             return ['success' => false, 'error' => 'Header الوسائط يتطلب رابط مثال (Example URL) للمراجعة من Meta.'];
+        }
+
+        if ($components === []) {
+            return ['success' => false, 'error' => 'محتوى القالب فارغ — أضف نص الرسالة (Body) على الأقل.'];
         }
 
         $result = $this->cloud->createMessageTemplate(
@@ -528,11 +532,14 @@ class WhatsAppTemplateService
                     if ($url !== '') {
                         $metaBtn = ['type' => 'URL', 'text' => $text, 'url' => $url];
                         if (preg_match('/\{\{\d+\}\}/', $url)) {
-                            $example = trim((string) ($btn['url_example'] ?? ''));
-                            if ($example === '') {
-                                $example = preg_replace('/\{\{\d+\}\}/', 'example', $url) ?? $url;
+                            $suffix = $this->resolveUrlButtonExampleSuffix(
+                                $url,
+                                trim((string) ($btn['url_example'] ?? ''))
+                            );
+                            if ($suffix === '') {
+                                continue;
                             }
-                            $metaBtn['example'] = [$example];
+                            $metaBtn['example'] = [$suffix];
                         }
                         $metaButtons[] = $metaBtn;
                     }
@@ -587,6 +594,42 @@ class WhatsAppTemplateService
         }
 
         return array_slice($out, 0, 10);
+    }
+
+    /**
+     * Meta expects only the dynamic URL suffix in button examples, not the full URL.
+     */
+    public function resolveUrlButtonExampleSuffix(string $urlTemplate, string $example): string
+    {
+        $example = trim($example);
+        if ($example === '') {
+            return '';
+        }
+
+        if (! preg_match('/\{\{\d+\}\}/', $urlTemplate)) {
+            return $example;
+        }
+
+        if (! str_contains($example, '://') && ! str_contains($example, '/')) {
+            return $example;
+        }
+
+        $staticPrefix = preg_replace('/\{\{\d+\}\}/', '', $urlTemplate) ?? '';
+        if ($staticPrefix !== '' && str_starts_with($example, $staticPrefix)) {
+            return trim(substr($example, strlen($staticPrefix)), '/');
+        }
+
+        $path = parse_url($example, PHP_URL_PATH);
+        if (is_string($path) && $path !== '') {
+            $segments = array_values(array_filter(explode('/', trim($path, '/'))));
+            if ($segments !== []) {
+                return (string) end($segments);
+            }
+        }
+
+        return preg_replace('/\{\{\d+\}\}/', $example, $urlTemplate) === $urlTemplate
+            ? $example
+            : $example;
     }
 
     /**
