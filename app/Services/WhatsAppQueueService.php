@@ -33,7 +33,7 @@ class WhatsAppQueueService
             return false;
         }
 
-        if ($conversation->assigned_to) {
+        if ($this->assigneeId($conversation->assigned_to) !== null) {
             return false;
         }
 
@@ -46,11 +46,15 @@ class WhatsAppQueueService
             return false;
         }
 
-        if ($conversation->sales_lead_id) {
-            $conversation->loadMissing('salesLead');
-            if ($conversation->salesLead?->assigned_to) {
-                return false;
-            }
+        $conversation->loadMissing('salesLead');
+
+        if ($conversation->sales_lead_id && $this->assigneeId($conversation->salesLead?->assigned_to) !== null) {
+            return false;
+        }
+
+        // رقم مربوط بعميل مسند في CRM حتى لو المحادثة غير مربوطة بعد
+        if ($this->phoneHasAssignedLead($conversation->phone_number)) {
+            return false;
         }
 
         return true;
@@ -70,7 +74,44 @@ class WhatsAppQueueService
     {
         return WhatsAppConversation::query()
             ->inSalesQueue()
+            ->whereNotExists(function ($sub) {
+                $sub->selectRaw('1')
+                    ->from('sales_leads')
+                    ->whereNotNull('sales_leads.assigned_to')
+                    ->where('sales_leads.assigned_to', '!=', 0)
+                    ->whereRaw(
+                        "REPLACE(REPLACE(REPLACE(COALESCE(sales_leads.phone,''),'+',''),' ',''),'-','') LIKE CONCAT('%', RIGHT(REPLACE(REPLACE(REPLACE(COALESCE(whatsapp_conversations.phone_number,''),'+',''),' ',''),'-',''), 10))"
+                    )
+                    ->whereRaw('CHAR_LENGTH(REPLACE(REPLACE(REPLACE(COALESCE(whatsapp_conversations.phone_number,\'\'),\'+\',\'\'),\' \',\'\'),\'-\',\'\')) >= 8');
+            })
             ->orderByDesc('last_message_at');
+    }
+
+    private function assigneeId(mixed $value): ?int
+    {
+        $id = (int) ($value ?? 0);
+
+        return $id > 0 ? $id : null;
+    }
+
+    private function phoneHasAssignedLead(?string $phone): bool
+    {
+        $digits = preg_replace('/[^0-9]/', '', (string) $phone);
+        if ($digits === '' || strlen($digits) < 8) {
+            return false;
+        }
+
+        $suffix = substr($digits, -10);
+
+        return SalesLead::query()
+            ->whereNotNull('assigned_to')
+            ->where('assigned_to', '!=', 0)
+            ->where(function ($q) use ($digits, $suffix) {
+                $q->where('phone', 'like', '%'.$digits)
+                    ->orWhere('phone', 'like', '%'.$suffix)
+                    ->orWhere('phone', 'like', '%'.ltrim($digits, '0'));
+            })
+            ->exists();
     }
 
     public function handleAfterInbound(WhatsAppConversation $conversation, WhatsAppConversationMessage $message): void

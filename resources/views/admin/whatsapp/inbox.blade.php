@@ -83,7 +83,7 @@
         'inboxUrl' => $routes['index'] ?? '',
         'csrf' => csrf_token(),
         'withinWindow' => (bool) ($withinWindow ?? false),
-        'lastMessageId' => $messages->last()?->id ?? 0,
+        'lastMessageId' => $messages->first()?->id ?? 0,
         'metaTemplates' => $metaTemplates ?? [],
         'crmReady' => (bool) ($crmReady ?? false),
         'crmUrls' => $crmUrlsInitial,
@@ -378,7 +378,7 @@
                         <div x-show="chatMessages.length === 0" x-cloak
                              class="flex flex-col items-center justify-center py-16 text-slate-500 text-sm">
                             <i class="fas fa-comments text-3xl text-slate-300 mb-2"></i>
-                            <p>لا رسائل بعد — ابدأ المحادثة من الأسفل</p>
+                            <p>لا رسائل بعد — ابدأ المحادثة بالرد من الأسفل</p>
                         </div>
                         <div class="space-y-1">
                             <template x-for="msg in chatMessages" :key="'m-' + (msg.id || msg._tmp)">
@@ -977,7 +977,15 @@ function whatsappInbox() {
         conversationId: cfg.conversationId || null,
         activeConversation: cfg.activeConversation || null,
         conversations: cfg.conversations || [],
-        chatMessages: cfg.messages || [],
+        chatMessages: (function () {
+            const list = Array.isArray(cfg.messages) ? [...cfg.messages] : [];
+            return list.sort((a, b) => {
+                const aTs = Date.parse(a?.created_at || '') || 0;
+                const bTs = Date.parse(b?.created_at || '') || 0;
+                if (aTs !== bTs) return bTs - aTs;
+                return (b?.id || 0) - (a?.id || 0);
+            });
+        })(),
         pollUrl: cfg.pollUrl,
         conversationUrlTemplate: cfg.conversationUrlTemplate,
         replyUrl: cfg.replyUrl,
@@ -1381,11 +1389,32 @@ function whatsappInbox() {
             el.style.height = Math.min(el.scrollHeight, 128) + 'px';
         },
 
+        newestMessageId() {
+            let maxId = 0;
+            for (const m of this.chatMessages) {
+                if (m?.id && m.id > maxId) maxId = m.id;
+            }
+            return maxId;
+        },
+
+        sortMessagesNewestFirst(list) {
+            return [...(list || [])].sort((a, b) => {
+                const aPending = a?._pending || a?._tmp;
+                const bPending = b?._pending || b?._tmp;
+                if (aPending && !bPending) return -1;
+                if (!aPending && bPending) return 1;
+                const aTs = Date.parse(a?.created_at || '') || 0;
+                const bTs = Date.parse(b?.created_at || '') || 0;
+                if (aTs !== bTs) return bTs - aTs;
+                return (b?.id || 0) - (a?.id || 0);
+            });
+        },
+
         scrollChat(smooth = true) {
             const run = () => {
                 const el = document.getElementById('chat-messages');
                 if (!el) return;
-                el.scrollTop = el.scrollHeight;
+                el.scrollTop = 0;
             };
             this.$nextTick(() => {
                 run();
@@ -1393,7 +1422,7 @@ function whatsappInbox() {
                     run();
                     if (smooth) {
                         const el = document.getElementById('chat-messages');
-                        if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+                        if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
                     }
                 });
             });
@@ -1403,7 +1432,7 @@ function whatsappInbox() {
             if (!msg) return;
             const exists = this.chatMessages.some(m => m.id && msg.id && m.id === msg.id);
             if (exists) return;
-            this.chatMessages = [...this.chatMessages, msg];
+            this.chatMessages = this.sortMessagesNewestFirst([msg, ...this.chatMessages]);
             if (msg.id) {
                 this.lastMessageId = Math.max(this.lastMessageId, msg.id);
             }
@@ -1415,7 +1444,7 @@ function whatsappInbox() {
             if (idx >= 0) {
                 const next = [...this.chatMessages];
                 next[idx] = serverMsg;
-                this.chatMessages = next;
+                this.chatMessages = this.sortMessagesNewestFirst(next);
             } else {
                 this.appendChatMessage(serverMsg);
             }
@@ -1439,7 +1468,7 @@ function whatsappInbox() {
                 if (!data.success) return null;
 
                 this.activeConversation = data.conversation;
-                this.chatMessages = Array.isArray(data.messages) ? data.messages : [];
+                this.chatMessages = this.sortMessagesNewestFirst(Array.isArray(data.messages) ? data.messages : []);
                 this.withinWindow = !!data.within_service_window;
                 this.replyUrl = data.reply_url || this.replyUrl;
                 this.reactUrl = data.react_url || this.reactUrl;
@@ -1449,9 +1478,7 @@ function whatsappInbox() {
                 this.crmNotes = data.notes || this.crmNotes;
                 this.crmTimeline = data.timeline || this.crmTimeline;
                 this.syncCrmFromConversation(data.conversation);
-                this.lastMessageId = this.chatMessages.length
-                    ? this.chatMessages[this.chatMessages.length - 1].id
-                    : 0;
+                this.lastMessageId = this.newestMessageId();
 
                 if (data.conversation) {
                     data.conversation.unread_count = 0;
@@ -1572,7 +1599,7 @@ function whatsappInbox() {
 
                 this.conversationId = id;
                 this.activeConversation = data.conversation;
-                this.chatMessages = Array.isArray(data.messages) ? [...data.messages] : [];
+                this.chatMessages = this.sortMessagesNewestFirst(Array.isArray(data.messages) ? [...data.messages] : []);
                 this.withinWindow = !!data.within_service_window;
                 this.replyUrl = data.reply_url;
                 this.reactUrl = data.react_url || this.reactUrl;
@@ -1582,7 +1609,7 @@ function whatsappInbox() {
                 this.crmNotes = data.notes || [];
                 this.crmTimeline = data.timeline || [];
                 this.syncCrmFromConversation(data.conversation);
-                this.lastMessageId = this.chatMessages.length ? this.chatMessages[this.chatMessages.length - 1].id : 0;
+                this.lastMessageId = this.newestMessageId();
                 this.unreadTotal = data.unread_total ?? this.unreadTotal;
 
                 if (data.conversation) {
@@ -1625,7 +1652,7 @@ function whatsappInbox() {
                 }
 
                 if (Array.isArray(data.messages) && data.messages.length) {
-                    const byId = Object.fromEntries(this.chatMessages.map(m => [m.id, m]));
+                    const byId = Object.fromEntries(this.chatMessages.filter(m => m.id).map(m => [m.id, m]));
                     let changed = false;
                     data.messages.forEach(m => {
                         if (!m.id) return;
@@ -1635,13 +1662,13 @@ function whatsappInbox() {
                                 changed = true;
                             }
                         } else {
-                            this.chatMessages.push(m);
+                            this.chatMessages.unshift(m);
                             this.lastMessageId = Math.max(this.lastMessageId, m.id);
                             changed = true;
                         }
                     });
                     if (changed) {
-                        this.chatMessages = [...this.chatMessages];
+                        this.chatMessages = this.sortMessagesNewestFirst(this.chatMessages);
                         this.scrollChat();
                     }
                 }

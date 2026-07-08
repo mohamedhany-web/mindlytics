@@ -157,10 +157,19 @@ class WhatsAppConversation extends Model
     public function scopeInSalesQueue(Builder $query): Builder
     {
         return $query
-            ->whereNull('assigned_to')
+            ->where(function (Builder $q) {
+                $q->whereNull('assigned_to')->orWhere('assigned_to', 0);
+            })
             ->where(function (Builder $q) {
                 $q->whereNull('sales_lead_id')
-                    ->orWhereHas('salesLead', fn (Builder $lq) => $lq->whereNull('assigned_to'));
+                    ->orWhereHas('salesLead', function (Builder $lq) {
+                        $lq->where(function (Builder $inner) {
+                            $inner->whereNull('assigned_to')->orWhere('assigned_to', 0);
+                        });
+                    });
+            })
+            ->whereDoesntHave('salesLead', function (Builder $lq) {
+                $lq->whereNotNull('assigned_to')->where('assigned_to', '!=', 0);
             })
             ->where(function (Builder $q) {
                 $q->where('department', 'sales')->orWhereNull('department');

@@ -22,7 +22,7 @@ class SalesWhatsAppQueueController extends Controller
     public function index(Request $request): View
     {
         $conversations = $this->queue->pendingQuery()
-            ->paginate(20)
+            ->paginate(48)
             ->withQueryString();
 
         return view('employee.sales.whatsapp.queue', [
