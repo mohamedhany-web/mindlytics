@@ -18,7 +18,9 @@ class WhatsAppTemplateService
     public function createDraft(array $data, ?int $userId = null): WhatsAppMetaTemplate
     {
         $name = $this->normalizeTemplateName((string) ($data['name'] ?? ''));
-        $bodyText = trim((string) ($data['body_text'] ?? ''));
+        $bodyText = $this->normalizeMetaBodyText((string) ($data['body_text'] ?? ''));
+        $data['body_text'] = $bodyText;
+        $data['buttons'] = $this->normalizeButtonsForMeta($data['buttons'] ?? []);
 
         return WhatsAppMetaTemplate::create([
             'name' => $name,
@@ -29,7 +31,7 @@ class WhatsAppTemplateService
             'header_type' => $data['header_type'] ?: null,
             'header_content' => $data['header_content'] ?? null,
             'footer_text' => $data['footer_text'] ?? null,
-            'buttons' => $this->sanitizeButtons($data['buttons'] ?? []),
+            'buttons' => $data['buttons'],
             'body_variable_count' => $this->countBodyVariables($bodyText),
             'components' => $this->buildMetaComponents($data),
             'created_by' => $userId,
@@ -45,11 +47,11 @@ class WhatsAppTemplateService
             throw new \RuntimeException('لا يمكن تعديل قالب بحالة: ' . $template->statusLabel());
         }
 
-        $bodyText = trim((string) ($data['body_text'] ?? $template->body_text));
+        $bodyText = $this->normalizeMetaBodyText((string) ($data['body_text'] ?? $template->body_text));
         $merged = array_merge($template->toArray(), $data, [
             'name' => $this->normalizeTemplateName((string) ($data['name'] ?? $template->name)),
             'body_text' => $bodyText,
-            'buttons' => $this->sanitizeButtons($data['buttons'] ?? $template->buttons ?? []),
+            'buttons' => $this->normalizeButtonsForMeta($data['buttons'] ?? $template->buttons ?? []),
             'body_variable_count' => $this->countBodyVariables($bodyText),
         ]);
 
@@ -91,6 +93,10 @@ class WhatsAppTemplateService
 
         if ($components === []) {
             return ['success' => false, 'error' => 'محتوى القالب فارغ — أضف نص الرسالة (Body) على الأقل.'];
+        }
+
+        if ($validationError = $this->validateMetaComponents($components)) {
+            return ['success' => false, 'error' => $validationError];
         }
 
         $result = $this->cloud->createMessageTemplate(
@@ -490,7 +496,7 @@ class WhatsAppTemplateService
             ];
         }
 
-        $bodyText = trim((string) ($data['body_text'] ?? ''));
+        $bodyText = $this->normalizeMetaBodyText((string) ($data['body_text'] ?? ''));
         if ($bodyText !== '') {
             $bodyComponent = [
                 'type' => 'BODY',
@@ -500,7 +506,7 @@ class WhatsAppTemplateService
             $varCount = $this->countBodyVariables($bodyText);
             if ($varCount > 0) {
                 $bodyComponent['example'] = [
-                    'body_text' => [array_map(fn ($i) => 'مثال' . $i, range(1, $varCount))],
+                    'body_text' => [$this->defaultBodyExamples($varCount)],
                 ];
             }
 
@@ -520,7 +526,7 @@ class WhatsAppTemplateService
             $metaButtons = [];
             foreach ($buttons as $btn) {
                 $type = strtoupper((string) ($btn['type'] ?? ''));
-                $text = trim((string) ($btn['text'] ?? ''));
+                $text = $this->normalizeMetaButtonText(trim((string) ($btn['text'] ?? '')));
                 if ($text === '') {
                     continue;
                 }
@@ -528,7 +534,7 @@ class WhatsAppTemplateService
                 if ($type === 'QUICK_REPLY') {
                     $metaButtons[] = ['type' => 'QUICK_REPLY', 'text' => $text];
                 } elseif ($type === 'URL') {
-                    $url = trim((string) ($btn['url'] ?? ''));
+                    $url = $this->normalizeMetaButtonUrl(trim((string) ($btn['url'] ?? '')));
                     if ($url !== '') {
                         $metaBtn = ['type' => 'URL', 'text' => $text, 'url' => $url];
                         if (preg_match('/\{\{\d+\}\}/', $url)) {
@@ -594,6 +600,113 @@ class WhatsAppTemplateService
         }
 
         return array_slice($out, 0, 10);
+    }
+
+    /**
+     * @param  mixed  $buttons
+     * @return array<int, array<string, string>>
+     */
+    public function normalizeButtonsForMeta(mixed $buttons): array
+    {
+        $sanitized = $this->sanitizeButtons($buttons);
+
+        foreach ($sanitized as &$btn) {
+            if (strtoupper((string) ($btn['type'] ?? '')) === 'URL') {
+                $btn['url'] = $this->normalizeMetaButtonUrl((string) ($btn['url'] ?? ''));
+            }
+            $btn['text'] = $this->normalizeMetaButtonText((string) ($btn['text'] ?? ''));
+        }
+        unset($btn);
+
+        return array_values(array_filter(
+            $sanitized,
+            fn (array $btn) => trim((string) ($btn['text'] ?? '')) !== ''
+        ));
+    }
+
+    public function normalizeMetaBodyText(string $body): string
+    {
+        $body = str_replace(["\r\n", "\r"], "\n", $body);
+
+        return trim($body);
+    }
+
+    public function normalizeMetaButtonUrl(string $url): string
+    {
+        $url = trim($url);
+        if ($url === '') {
+            return '';
+        }
+
+        $parts = parse_url($url);
+        if (! is_array($parts) || empty($parts['host'])) {
+            return $url;
+        }
+
+        $scheme = strtolower((string) ($parts['scheme'] ?? 'https'));
+        $host = strtolower((string) $parts['host']);
+        $path = (string) ($parts['path'] ?? '');
+        $path = $path !== '' ? rtrim($path, '/') : '';
+
+        return $scheme.'://'.$host.$path;
+    }
+
+    public function normalizeMetaButtonText(string $text): string
+    {
+        $text = trim($text);
+        if ($text === '') {
+            return '';
+        }
+
+        if (mb_strlen($text) > 25) {
+            return mb_substr($text, 0, 25);
+        }
+
+        return $text;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function defaultBodyExamples(int $count): array
+    {
+        $pool = ['أحمد', 'ورشة Mindlytics', 'https://chat.whatsapp.com/Example', '201012345678', 'أونلاين', 'القاهرة'];
+
+        $examples = [];
+        for ($i = 1; $i <= $count; $i++) {
+            $examples[] = $pool[$i - 1] ?? ('sample_'.$i);
+        }
+
+        return $examples;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $components
+     */
+    public function validateMetaComponents(array $components): ?string
+    {
+        foreach ($components as $component) {
+            if (strtoupper((string) ($component['type'] ?? '')) !== 'BUTTONS') {
+                continue;
+            }
+
+            foreach ($component['buttons'] ?? [] as $btn) {
+                if (! is_array($btn) || strtoupper((string) ($btn['type'] ?? '')) !== 'URL') {
+                    continue;
+                }
+
+                $url = (string) ($btn['url'] ?? '');
+                if ($url === '' || ! filter_var($url, FILTER_VALIDATE_URL)) {
+                    return 'رابط زر URL غير صالح — استخدم https:// فقط بدون مسافات.';
+                }
+
+                if (preg_match('/[\?#]/', $url)) {
+                    return 'رابط زر URL يجب ألا يحتوي على ? أو # — للجروبات استخدم chat.whatsapp.com/CODE فقط.';
+                }
+            }
+        }
+
+        return null;
     }
 
     /**

@@ -54,6 +54,7 @@ class WorkshopController extends Controller
 
         $data['created_by'] = auth()->id();
         $data['is_active'] = $request->boolean('is_active', true);
+        $data['whatsapp_group_link'] = $this->normalizeWorkshopGroupLink($data['whatsapp_group_link'] ?? null);
 
         $workshop = Workshop::create($data);
 
@@ -540,6 +541,7 @@ class WorkshopController extends Controller
         ]);
 
         $data['is_active'] = $request->boolean('is_active', $workshop->is_active);
+        $data['whatsapp_group_link'] = $this->normalizeWorkshopGroupLink($data['whatsapp_group_link'] ?? null);
 
         $workshop->update($data);
 
@@ -681,6 +683,16 @@ class WorkshopController extends Controller
         }
 
         return $clean ?: null;
+    }
+
+    private function normalizeWorkshopGroupLink(?string $link): ?string
+    {
+        $link = trim((string) $link);
+        if ($link === '') {
+            return null;
+        }
+
+        return app(\App\Services\WhatsAppTemplateService::class)->normalizeMetaButtonUrl($link) ?: null;
     }
 }
 

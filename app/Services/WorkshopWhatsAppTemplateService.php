@@ -48,6 +48,11 @@ class WorkshopWhatsAppTemplateService
             return [];
         }
 
+        $groupLink = app(WhatsAppTemplateService::class)->normalizeMetaButtonUrl($groupLink);
+        if ($groupLink === '') {
+            return [];
+        }
+
         return [[
             'type' => 'URL',
             'text' => 'انضم للجروب',
@@ -63,6 +68,9 @@ class WorkshopWhatsAppTemplateService
     public function formPreset(Workshop $workshop): array
     {
         $groupLink = trim((string) $workshop->whatsapp_group_link);
+        $normalizedLink = $groupLink !== ''
+            ? app(WhatsAppTemplateService::class)->normalizeMetaButtonUrl($groupLink)
+            : '';
 
         return [
             'name' => $this->templateNameFor($workshop),
@@ -71,8 +79,8 @@ class WorkshopWhatsAppTemplateService
             'category' => 'UTILITY',
             'language' => 'ar',
             'buttons' => $this->defaultWelcomeButtons($workshop),
-            'has_group_link' => $groupLink !== '',
-            'group_link' => $groupLink !== '' ? $groupLink : null,
+            'has_group_link' => $normalizedLink !== '',
+            'group_link' => $normalizedLink !== '' ? $normalizedLink : null,
             'workshop_title' => $workshop->title,
             'variable_labels' => $this->workshopVariableLabels(),
         ];
