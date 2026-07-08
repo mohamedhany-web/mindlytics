@@ -785,6 +785,10 @@ class WhatsAppCloudService
             return 'القالب أو اللغة غير موجودين في حسابك — اختر قالباً بحالة Approved من القائمة في صفحة المحادثات، أو أنشئ قالباً في WhatsApp Manager بنفس الاسم واللغة.';
         }
 
+        if ($code === 100 && str_contains(mb_strtolower($message), 'invalid parameter')) {
+            return 'معامل غير صالح في القالب — لروابط جروب واتساب استخدم زر URL ديناميكي: https://chat.whatsapp.com/{{3}} مع مثال كود الدعوة (وليس الرابط الكامل). تأكد أن رقم المتغير في الزر أكبر من متغيرات النص ({{1}}، {{2}}…).';
+        }
+
         if ($code === 130472 || str_contains(mb_strtolower($message), 'experiment')) {
             return 'الرقم في تجربة Meta ولا يستقبل رسائل تجارية حالياً — جرّب رقماً آخر أو انتظر.';
         }
@@ -1038,10 +1042,15 @@ class WhatsAppCloudService
             }
 
             $error = is_array($body['error'] ?? null) ? $body['error'] : [];
+            $message = (string) ($error['message'] ?? 'فشل إنشاء القالب في Meta');
+            $userMsg = trim((string) ($error['error_user_msg'] ?? ''));
+            if ($userMsg !== '' && ! str_contains($message, $userMsg)) {
+                $message .= ' — '.$userMsg;
+            }
 
             return [
                 'success' => false,
-                'error' => $this->humanizeSendError($error, (string) ($error['message'] ?? 'فشل إنشاء القالب في Meta')),
+                'error' => $this->humanizeSendError($error, $message),
             ];
         } catch (\Throwable $e) {
             return ['success' => false, 'error' => $this->humanizeMetaError($e->getMessage())];

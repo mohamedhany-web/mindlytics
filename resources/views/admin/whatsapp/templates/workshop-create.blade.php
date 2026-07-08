@@ -34,7 +34,7 @@
             @foreach($workshopVariableLabels as $num => $label)
                 <p><code dir="ltr" class="bg-white px-1.5 py-0.5 rounded border border-slate-200">@{{{{ $num }}}}</code> — {{ $label }}</p>
             @endforeach
-            <p class="text-slate-500 pt-1">لزر «انضم للجروب» استخدم URL مثل <code dir="ltr" class="bg-white px-1 rounded">https://chat.whatsapp.com/@{{1}}</code> مع مثال للمراجعة.</p>
+            <p class="text-slate-500 pt-1">لزر «انضم للجروب» استخدم URL مثل <code dir="ltr" class="bg-white px-1 rounded">https://chat.whatsapp.com/@{{3}}</code> (المتغير @{{3}} لأن @{{1}} و@{{2}} في النص) مع مثال كود الدعوة للمراجعة.</p>
         </div>
 
         <form method="POST" action="{{ route('admin.workshops.whatsapp-template.create', $workshop) }}">

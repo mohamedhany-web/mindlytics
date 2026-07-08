@@ -199,10 +199,10 @@
                         <input type="text" :name="'buttons['+i+'][text]'" x-model="btn.text" placeholder="نص الزر" class="{{ $waInputClass }} !text-xs">
                     </div>
                     <div class="sm:col-span-4" x-show="btn.type === 'URL'">
-                        <input type="text" :name="'buttons['+i+'][url]'" x-model="btn.url" placeholder="https://.../@{{1}}" dir="ltr" class="{{ $waInputClass }} !text-xs">
+                        <input type="text" :name="'buttons['+i+'][url]'" x-model="btn.url" placeholder="https://chat.whatsapp.com/@{{3}}" dir="ltr" class="{{ $waInputClass }} !text-xs">
                     </div>
                     <div class="sm:col-span-4" x-show="btn.type === 'URL' && /\{\{\d+\}\}/.test(btn.url || '')">
-                        <input type="text" :name="'buttons['+i+'][url_example]'" x-model="btn.url_example" placeholder="رابط مثال للمراجعة" dir="ltr" class="{{ $waInputClass }} !text-xs">
+                        <input type="text" :name="'buttons['+i+'][url_example]'" x-model="btn.url_example" placeholder="كود الدعوة فقط (مثل Ld0j8PUAprmCnDi65uUqTC)" dir="ltr" class="{{ $waInputClass }} !text-xs">
                     </div>
                     <div class="sm:col-span-4" x-show="btn.type === 'PHONE_NUMBER'">
                         <input type="text" :name="'buttons['+i+'][phone]'" x-model="btn.phone" placeholder="+2010..." dir="ltr" class="{{ $waInputClass }} !text-xs">

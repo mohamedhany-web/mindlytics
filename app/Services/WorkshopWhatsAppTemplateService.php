@@ -32,9 +32,9 @@ class WorkshopWhatsAppTemplateService
 
     public function defaultWelcomeBody(): string
     {
-        return "مرحباً {{1}} 👋\n\n"
-            ."شكراً لتسجيلك في ورشة «{{2}}».\n\n"
-            ."للانضمام لجروب الورشة استخدم الرابط في الزر أدناه.\n\n"
+        return "مرحباً {{1}}\n\n"
+            ."شكراً لتسجيلك في ورشة {{2}}.\n\n"
+            ."للانضمام لجروب الورشة استخدم الزر أدناه.\n\n"
             ."فريق Mindlytics";
     }
 
@@ -53,11 +53,13 @@ class WorkshopWhatsAppTemplateService
             return [];
         }
 
+        $inviteCode = $this->groupLinkDynamicPart($groupLink);
+
         return [[
             'type' => 'URL',
             'text' => 'انضم للجروب',
-            'url' => $groupLink,
-            'url_example' => '',
+            'url' => 'https://chat.whatsapp.com/{{3}}',
+            'url_example' => $inviteCode,
             'phone' => '',
         ]];
     }
@@ -408,9 +410,13 @@ class WorkshopWhatsAppTemplateService
             }
 
             $varIndex = (int) $matches[1];
-            $value = $varIndex === 1 && $groupDynamic !== ''
-                ? $groupDynamic
-                : ($pool[$varIndex - 1] ?? $groupDynamic);
+            if (str_contains(strtolower($url), 'chat.whatsapp.com')) {
+                $value = $groupDynamic !== '' ? $groupDynamic : $this->groupLinkDynamicPart((string) ($pool[$varIndex - 1] ?? ''));
+            } else {
+                $value = $varIndex === 1 && $groupDynamic !== ''
+                    ? $groupDynamic
+                    : ($pool[$varIndex - 1] ?? $groupDynamic);
+            }
 
             if ($value === '') {
                 continue;
@@ -451,13 +457,6 @@ class WorkshopWhatsAppTemplateService
             }
 
             $url = (string) ($btn['url'] ?? '');
-            if ($groupLink !== '' && preg_match('/\{\{\d+\}\}/', $url)) {
-                $btn['url'] = $groupLink;
-                $btn['url_example'] = '';
-
-                continue;
-            }
-
             if (! preg_match('/\{\{\d+\}\}/', $url)) {
                 continue;
             }

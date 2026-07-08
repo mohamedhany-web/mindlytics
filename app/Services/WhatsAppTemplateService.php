@@ -20,7 +20,12 @@ class WhatsAppTemplateService
         $name = $this->normalizeTemplateName((string) ($data['name'] ?? ''));
         $bodyText = $this->normalizeMetaBodyText((string) ($data['body_text'] ?? ''));
         $data['body_text'] = $bodyText;
-        $data['buttons'] = $this->normalizeButtonsForMeta($data['buttons'] ?? []);
+        $data['buttons'] = $this->normalizeButtonsForMeta(
+            $data['buttons'] ?? [],
+            $bodyText,
+            (string) ($data['header_type'] ?? ''),
+            (string) ($data['header_content'] ?? '')
+        );
 
         return WhatsAppMetaTemplate::create([
             'name' => $name,
@@ -51,7 +56,12 @@ class WhatsAppTemplateService
         $merged = array_merge($template->toArray(), $data, [
             'name' => $this->normalizeTemplateName((string) ($data['name'] ?? $template->name)),
             'body_text' => $bodyText,
-            'buttons' => $this->normalizeButtonsForMeta($data['buttons'] ?? $template->buttons ?? []),
+            'buttons' => $this->normalizeButtonsForMeta(
+                $data['buttons'] ?? $template->buttons ?? [],
+                $bodyText,
+                (string) ($data['header_type'] ?? $template->header_type ?? ''),
+                (string) ($data['header_content'] ?? $template->header_content ?? '')
+            ),
             'body_variable_count' => $this->countBodyVariables($bodyText),
         ]);
 
@@ -522,6 +532,12 @@ class WhatsAppTemplateService
         }
 
         $buttons = $this->sanitizeButtons($data['buttons'] ?? []);
+        $buttons = $this->normalizeGroupInviteButtons(
+            $buttons,
+            $bodyText,
+            $headerType,
+            $headerContent
+        );
         if ($buttons !== []) {
             $metaButtons = [];
             foreach ($buttons as $btn) {
@@ -606,13 +622,26 @@ class WhatsAppTemplateService
      * @param  mixed  $buttons
      * @return array<int, array<string, string>>
      */
-    public function normalizeButtonsForMeta(mixed $buttons): array
-    {
+    public function normalizeButtonsForMeta(
+        mixed $buttons,
+        string $bodyText = '',
+        string $headerType = '',
+        ?string $headerContent = null
+    ): array {
         $sanitized = $this->sanitizeButtons($buttons);
+        $sanitized = $this->normalizeGroupInviteButtons(
+            $sanitized,
+            $bodyText,
+            $headerType,
+            (string) ($headerContent ?? '')
+        );
 
         foreach ($sanitized as &$btn) {
             if (strtoupper((string) ($btn['type'] ?? '')) === 'URL') {
-                $btn['url'] = $this->normalizeMetaButtonUrl((string) ($btn['url'] ?? ''));
+                $url = (string) ($btn['url'] ?? '');
+                if (! preg_match('/\{\{\d+\}\}/', $url)) {
+                    $btn['url'] = $this->normalizeMetaButtonUrl($url);
+                }
             }
             $btn['text'] = $this->normalizeMetaButtonText((string) ($btn['text'] ?? ''));
         }
@@ -634,8 +663,8 @@ class WhatsAppTemplateService
     public function normalizeMetaButtonUrl(string $url): string
     {
         $url = trim($url);
-        if ($url === '') {
-            return '';
+        if ($url === '' || preg_match('/\{\{\d+\}\}/', $url)) {
+            return $url;
         }
 
         $parts = parse_url($url);
@@ -649,6 +678,135 @@ class WhatsAppTemplateService
         $path = $path !== '' ? rtrim($path, '/') : '';
 
         return $scheme.'://'.$host.$path;
+    }
+
+    /**
+     * Meta uses one global variable index across body/header/buttons.
+     * Static chat.whatsapp.com invite links in URL buttons are rejected — use {{N}} suffix.
+     *
+     * @param  array<int, array<string, string>>  $buttons
+     * @return array<int, array<string, string>>
+     */
+    public function normalizeGroupInviteButtons(
+        array $buttons,
+        string $bodyText,
+        string $headerType = '',
+        string $headerContent = ''
+    ): array {
+        $textParts = [$bodyText];
+        if (strtolower($headerType) === 'text' && trim($headerContent) !== '') {
+            $textParts[] = $headerContent;
+        }
+
+        $textMaxVar = $this->maxVariableIndex(...$textParts);
+        $nextVarIndex = $textMaxVar;
+
+        foreach ($buttons as &$btn) {
+            if (strtoupper((string) ($btn['type'] ?? '')) !== 'URL') {
+                continue;
+            }
+
+            $url = trim((string) ($btn['url'] ?? ''));
+            if ($url === '') {
+                continue;
+            }
+
+            if (preg_match('#^https://chat\.whatsapp\.com/\{\{(\d+)\}\}$#i', $url, $matches)) {
+                $currentVar = (int) $matches[1];
+                if ($currentVar <= $textMaxVar) {
+                    $nextVarIndex++;
+                    $currentVar = $nextVarIndex;
+                    $btn['url'] = 'https://chat.whatsapp.com/{{'.$currentVar.'}}';
+                } else {
+                    $nextVarIndex = max($nextVarIndex, $currentVar);
+                }
+
+                if (trim((string) ($btn['url_example'] ?? '')) !== '') {
+                    $btn['url_example'] = $this->resolveUrlButtonExampleSuffix(
+                        (string) $btn['url'],
+                        (string) $btn['url_example']
+                    );
+                }
+
+                continue;
+            }
+
+            $inviteCode = $this->extractWhatsappGroupInviteCode($url);
+            if ($inviteCode === null) {
+                continue;
+            }
+
+            $nextVarIndex++;
+            $btn['url'] = 'https://chat.whatsapp.com/{{'.$nextVarIndex.'}}';
+
+            if (trim((string) ($btn['url_example'] ?? '')) === '') {
+                $btn['url_example'] = $inviteCode;
+            } else {
+                $btn['url_example'] = $this->resolveUrlButtonExampleSuffix(
+                    (string) $btn['url'],
+                    (string) $btn['url_example']
+                );
+            }
+        }
+        unset($btn);
+
+        return $buttons;
+    }
+
+    public function extractWhatsappGroupInviteCode(string $url): ?string
+    {
+        $url = trim($url);
+        if ($url === '') {
+            return null;
+        }
+
+        if (preg_match('#^https://chat\.whatsapp\.com/([A-Za-z0-9_-]+)$#i', $url, $matches)) {
+            return $matches[1];
+        }
+
+        if (preg_match('#^https://chat\.whatsapp\.com/\{\{(\d+)\}\}$#i', $url)) {
+            $example = trim((string) (parse_url($url, PHP_URL_PATH) ?? ''));
+            // For dynamic URLs, code comes from url_example — handled by caller.
+            return null;
+        }
+
+        $path = parse_url($url, PHP_URL_PATH);
+        if (! is_string($path) || $path === '') {
+            return null;
+        }
+
+        $segments = array_values(array_filter(explode('/', trim($path, '/'))));
+        if ($segments === []) {
+            return null;
+        }
+
+        $last = (string) end($segments);
+        if ($last === '' || preg_match('/^\{\{\d+\}\}$/', $last)) {
+            return null;
+        }
+
+        if (strtolower((string) parse_url($url, PHP_URL_HOST)) !== 'chat.whatsapp.com') {
+            return null;
+        }
+
+        return $last;
+    }
+
+    /**
+     * @param  string  ...$parts
+     */
+    public function maxVariableIndex(string ...$parts): int
+    {
+        $max = 0;
+
+        foreach ($parts as $part) {
+            preg_match_all('/\{\{(\d+)\}\}/', $part, $matches);
+            foreach ($matches[1] ?? [] as $number) {
+                $max = max($max, (int) $number);
+            }
+        }
+
+        return $max;
     }
 
     public function normalizeMetaButtonText(string $text): string
@@ -685,6 +843,21 @@ class WhatsAppTemplateService
      */
     public function validateMetaComponents(array $components): ?string
     {
+        $bodyText = '';
+        $headerText = '';
+
+        foreach ($components as $component) {
+            $type = strtoupper((string) ($component['type'] ?? ''));
+            if ($type === 'BODY') {
+                $bodyText = (string) ($component['text'] ?? '');
+            }
+            if ($type === 'HEADER' && strtoupper((string) ($component['format'] ?? '')) === 'TEXT') {
+                $headerText = (string) ($component['text'] ?? '');
+            }
+        }
+
+        $textMaxVar = $this->maxVariableIndex($bodyText, $headerText);
+
         foreach ($components as $component) {
             if (strtoupper((string) ($component['type'] ?? '')) !== 'BUTTONS') {
                 continue;
@@ -696,12 +869,34 @@ class WhatsAppTemplateService
                 }
 
                 $url = (string) ($btn['url'] ?? '');
-                if ($url === '' || ! filter_var($url, FILTER_VALIDATE_URL)) {
+                if ($url === '') {
+                    return 'رابط زر URL مطلوب.';
+                }
+
+                if (preg_match('#^https://chat\.whatsapp\.com/[A-Za-z0-9_-]+$#i', $url)) {
+                    return 'رابط جروب واتساب في الزر يجب أن يكون ديناميكياً: https://chat.whatsapp.com/{{3}} (استخدم رقم متغير بعد متغيرات النص).';
+                }
+
+                if (preg_match('/\{\{(\d+)\}\}/', $url, $matches)) {
+                    $buttonVar = (int) $matches[1];
+                    if ($buttonVar <= $textMaxVar) {
+                        return 'متغير زر URL {{'.$buttonVar.'}} يتعارض مع متغيرات النص — استخدم {{'.($textMaxVar + 1).'}} أو أعلى لرابط الجروب.';
+                    }
+
+                    $examples = $btn['example'] ?? [];
+                    if (! is_array($examples) || trim((string) ($examples[0] ?? '')) === '') {
+                        return 'زر URL الديناميكي يحتاج مثالاً (كود الدعوة فقط، بدون الرابط الكامل).';
+                    }
+
+                    continue;
+                }
+
+                if (! filter_var($url, FILTER_VALIDATE_URL)) {
                     return 'رابط زر URL غير صالح — استخدم https:// فقط بدون مسافات.';
                 }
 
                 if (preg_match('/[\?#]/', $url)) {
-                    return 'رابط زر URL يجب ألا يحتوي على ? أو # — للجروبات استخدم chat.whatsapp.com/CODE فقط.';
+                    return 'رابط زر URL يجب ألا يحتوي على ? أو # — للجروبات استخدم chat.whatsapp.com/{{N}}.';
                 }
             }
         }
