@@ -23,7 +23,7 @@ class WhatsAppQueueService
 
     public function queueEnabled(): bool
     {
-        return (bool) config('whatsapp.queue.enabled', true)
+        return (bool) config('whatsapp.inbox_queue.enabled', true)
             && config('whatsapp.assignment.strategy') === 'manual_queue';
     }
 

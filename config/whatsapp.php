@@ -92,7 +92,8 @@ return [
         'strategy' => env('WHATSAPP_ASSIGNMENT_STRATEGY', 'manual_queue'),
     ],
 
-    'queue' => [
+    /** طابور انتظار المحادثات في صندوق الوارد (CRM) — ليس طابور Laravel */
+    'inbox_queue' => [
         'enabled' => env('WHATSAPP_QUEUE_ENABLED', true),
     ],
 
