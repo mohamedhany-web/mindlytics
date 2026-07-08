@@ -1,20 +1,28 @@
 @php
     $template = $template ?? null;
-    $buttons = old('buttons', $template?->buttons ?? [['type' => 'QUICK_REPLY', 'text' => '', 'url' => '', 'phone' => '']]);
+    $buttons = old('buttons', $defaultButtons ?? $template?->buttons ?? [['type' => 'QUICK_REPLY', 'text' => '', 'url' => '', 'url_example' => '', 'phone' => '']]);
     if (! is_array($buttons) || $buttons === []) {
-        $buttons = [['type' => 'QUICK_REPLY', 'text' => '', 'url' => '', 'phone' => '']];
+        $buttons = [['type' => 'QUICK_REPLY', 'text' => '', 'url' => '', 'url_example' => '', 'phone' => '']];
     }
+    $lockName = $lockName ?? false;
+    $lockedName = $lockedName ?? old('name', $template?->name);
 @endphp
 
 <div class="space-y-6" x-data="{ headerType: '{{ old('header_type', $template?->header_type ?? '') }}', buttons: @js($buttons) }">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div>
             <label class="{{ $waLabelClass }}">اسم القالب (Name) *</label>
-            <input type="text" name="name" value="{{ old('name', $template?->name) }}" required
-                   pattern="[a-z0-9_]+" dir="ltr"
-                   placeholder="order_confirmation"
-                   class="{{ $waInputClass }} font-mono">
-            <p class="text-xs text-slate-500 mt-1">أحرف إنجليزية صغيرة، أرقام، و _ فقط — يُستخدم في Meta API</p>
+            @if($lockName)
+                <input type="text" value="{{ $lockedName }}" readonly dir="ltr"
+                       class="{{ $waInputClass }} font-mono bg-slate-50 text-slate-600">
+                <p class="text-xs text-slate-500 mt-1">اسم ثابت مرتبط بالورشة — يُستخدم في Meta API</p>
+            @else
+                <input type="text" name="name" value="{{ old('name', $template?->name) }}" required
+                       pattern="[a-z0-9_]+" dir="ltr"
+                       placeholder="order_confirmation"
+                       class="{{ $waInputClass }} font-mono">
+                <p class="text-xs text-slate-500 mt-1">أحرف إنجليزية صغيرة، أرقام، و _ فقط — يُستخدم في Meta API</p>
+            @endif
             @error('name')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
         </div>
         <div>
@@ -57,7 +65,7 @@
     <div>
         <label class="{{ $waLabelClass }}">محتوى الرسالة (Body) *</label>
         <textarea name="body_text" rows="6" required class="{{ $waTextareaClass }}"
-                  placeholder="مرحباً @{{1}}، طلبك رقم @{{2}} تم تأكيده.">{{ old('body_text', $template?->body_text) }}</textarea>
+                  placeholder="مرحباً @{{1}}، طلبك رقم @{{2}} تم تأكيده.">{{ old('body_text', $defaultBody ?? $template?->body_text) }}</textarea>
         <p class="text-xs text-slate-500 mt-1">استخدم متغيرات Meta: <code class="bg-slate-100 px-1 rounded" dir="ltr">@{{1}}</code> <code class="bg-slate-100 px-1 rounded" dir="ltr">@{{2}}</code> …</p>
         @error('body_text')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
     </div>
@@ -71,7 +79,7 @@
     <div>
         <div class="flex items-center justify-between mb-3">
             <label class="{{ $waLabelClass }} mb-0">الأزرار (Buttons)</label>
-            <button type="button" @click="buttons.push({type:'QUICK_REPLY',text:'',url:'',phone:''})"
+            <button type="button" @click="buttons.push({type:'QUICK_REPLY',text:'',url:'',url_example:'',phone:''})"
                     class="text-xs font-bold text-emerald-700 hover:underline">+ إضافة زر</button>
         </div>
         <div class="space-y-3">
@@ -88,7 +96,10 @@
                         <input type="text" :name="'buttons['+i+'][text]'" x-model="btn.text" placeholder="نص الزر" class="{{ $waInputClass }} !text-xs">
                     </div>
                     <div class="sm:col-span-4" x-show="btn.type === 'URL'">
-                        <input type="url" :name="'buttons['+i+'][url]'" x-model="btn.url" placeholder="https://..." dir="ltr" class="{{ $waInputClass }} !text-xs">
+                        <input type="text" :name="'buttons['+i+'][url]'" x-model="btn.url" placeholder="https://.../@{{1}}" dir="ltr" class="{{ $waInputClass }} !text-xs">
+                    </div>
+                    <div class="sm:col-span-4" x-show="btn.type === 'URL' && /\{\{\d+\}\}/.test(btn.url || '')">
+                        <input type="text" :name="'buttons['+i+'][url_example]'" x-model="btn.url_example" placeholder="رابط مثال للمراجعة" dir="ltr" class="{{ $waInputClass }} !text-xs">
                     </div>
                     <div class="sm:col-span-4" x-show="btn.type === 'PHONE_NUMBER'">
                         <input type="text" :name="'buttons['+i+'][phone]'" x-model="btn.phone" placeholder="+2010..." dir="ltr" class="{{ $waInputClass }} !text-xs">

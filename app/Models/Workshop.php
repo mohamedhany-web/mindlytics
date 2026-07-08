@@ -14,6 +14,7 @@ class Workshop extends Model
     protected $fillable = [
         'title',
         'location',
+        'whatsapp_group_link',
         'slug',
         'description',
         'mode',

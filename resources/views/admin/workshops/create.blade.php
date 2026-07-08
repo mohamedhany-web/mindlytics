@@ -49,6 +49,16 @@
                 </div>
 
                 <div class="space-y-2">
+                    <label for="whatsapp_group_link" class="block text-sm font-semibold text-slate-800">
+                        رابط جروب واتساب (اختياري)
+                    </label>
+                    <input type="url" id="whatsapp_group_link" name="whatsapp_group_link" value="{{ old('whatsapp_group_link') }}"
+                           class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500"
+                           placeholder="https://chat.whatsapp.com/..." dir="ltr">
+                    <p class="text-xs text-slate-500">يُستخدم في قوالب ترحيب الورشة كمتغير @{{3}} أو زر «انضم للجروب».</p>
+                </div>
+
+                <div class="space-y-2">
                     <label class="block text-sm font-semibold text-slate-800">
                         حالة النشر
                     </label>

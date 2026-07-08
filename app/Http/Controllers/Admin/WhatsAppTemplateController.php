@@ -73,7 +73,7 @@ class WhatsAppTemplateController extends Controller
 
     public function store(Request $request, WhatsAppTemplateService $service): RedirectResponse
     {
-        $validated = $this->validateTemplate($request);
+        $validated = $service->validateDraftFromRequest($request);
 
         try {
             $template = $service->createDraft($validated, auth()->id());
@@ -156,7 +156,7 @@ class WhatsAppTemplateController extends Controller
 
     public function update(Request $request, WhatsAppMetaTemplate $template, WhatsAppTemplateService $service): RedirectResponse
     {
-        $validated = $this->validateTemplate($request);
+        $validated = $service->validateDraftFromRequest($request);
 
         try {
             $service->updateDraft($template, $validated);
@@ -216,29 +216,4 @@ class WhatsAppTemplateController extends Controller
             ->with('success', 'تم حذف القالب.');
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function validateTemplate(Request $request): array
-    {
-        return $request->validate([
-            'name' => 'required|string|max:512',
-            'language' => 'required|string|max:20',
-            'category' => 'required|in:AUTHENTICATION,UTILITY,MARKETING',
-            'body_text' => 'required|string|max:1024',
-            'header_type' => 'nullable|in:text,image,video,document',
-            'header_content' => 'nullable|string|max:500',
-            'footer_text' => 'nullable|string|max:60',
-            'buttons' => 'nullable|array|max:10',
-            'buttons.*.type' => 'nullable|in:QUICK_REPLY,URL,PHONE_NUMBER',
-            'buttons.*.text' => 'nullable|string|max:25',
-            'buttons.*.url' => 'nullable|url|max:500',
-            'buttons.*.phone' => 'nullable|string|max:30',
-            'submit_now' => 'nullable|boolean',
-        ], [
-            'name.required' => 'اسم القالب مطلوب',
-            'body_text.required' => 'محتوى الرسالة مطلوب',
-            'category.required' => 'فئة القالب مطلوبة',
-        ]);
-    }
 }

@@ -81,7 +81,7 @@ class WorkshopWhatsAppBatchService
             throw new \RuntimeException('لا يوجد مسجلون لديهم أرقام واتساب ضمن المعايير المحددة.');
         }
 
-        $items = $this->buildItems($workshop, $registrations, $messageTemplate);
+        $items = $this->buildItems($workshop, $registrations, $messageTemplate, $createdBy);
 
         if ($items->isEmpty()) {
             throw new \RuntimeException('لا توجد أرقام صالحة للإرسال بعد التحقق.');
@@ -176,24 +176,26 @@ class WorkshopWhatsAppBatchService
      * @param  Collection<int, WorkshopRegistration>  $registrations
      * @return Collection<int, array{recipient_name: string, phone: string, message: string, message_type: string, workshop_registration_id: int}>
      */
-    private function buildItems(Workshop $workshop, Collection $registrations, string $messageTemplate): Collection
+    private function buildItems(Workshop $workshop, Collection $registrations, string $messageTemplate, int $senderId): Collection
     {
         $seenPhones = [];
+        $whatsapp = app(WhatsAppService::class);
 
-        return $registrations->shuffle()->map(function (WorkshopRegistration $reg) use ($workshop, $messageTemplate, &$seenPhones) {
-            $normalized = $this->normalizePhone((string) $reg->phone);
-            if ($normalized === '' || isset($seenPhones[$normalized])) {
+        return $registrations->shuffle()->map(function (WorkshopRegistration $reg) use ($workshop, $messageTemplate, &$seenPhones, $whatsapp, $senderId) {
+            $formatted = $whatsapp->formatPhoneNumber((string) $reg->phone);
+            if ($formatted === '' || isset($seenPhones[$formatted])) {
                 return null;
             }
 
-            $seenPhones[$normalized] = true;
+            $seenPhones[$formatted] = true;
 
             return [
                 'recipient_name' => $reg->name,
-                'phone' => (string) $reg->phone,
+                'phone' => $formatted,
                 'message' => $this->renderMessage($messageTemplate, $workshop, $reg),
                 'message_type' => 'text',
                 'workshop_registration_id' => $reg->id,
+                'user_id' => $senderId,
             ];
         })->filter()->values();
     }

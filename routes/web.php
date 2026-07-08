@@ -1306,12 +1306,10 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             ->name('workshops.export');
         Route::post('workshops/{workshop}/send-acceptance', [\App\Http\Controllers\Admin\WorkshopController::class, 'sendAcceptanceEmails'])
             ->name('workshops.send-acceptance');
-        Route::post('workshops/{workshop}/send-whatsapp', [\App\Http\Controllers\Admin\WorkshopController::class, 'sendWhatsappMessages'])
-            ->name('workshops.send-whatsapp');
-        Route::post('workshops/{workshop}/registrations/{registration}/whatsapp-contacted', [\App\Http\Controllers\Admin\WorkshopController::class, 'markWhatsappContacted'])
-            ->name('workshops.whatsapp-contacted');
         Route::post('workshops/{workshop}/whatsapp-bulk', [\App\Http\Controllers\Admin\WorkshopWhatsAppController::class, 'store'])
             ->name('workshops.whatsapp-bulk');
+        Route::get('workshops/{workshop}/whatsapp-template/create', [\App\Http\Controllers\Admin\WorkshopWhatsAppController::class, 'createTemplateForm'])
+            ->name('workshops.whatsapp-template.create.form');
         Route::post('workshops/{workshop}/whatsapp-template/create', [\App\Http\Controllers\Admin\WorkshopWhatsAppController::class, 'createTemplate'])
             ->name('workshops.whatsapp-template.create');
         Route::post('workshops/{workshop}/whatsapp-template/sync', [\App\Http\Controllers\Admin\WorkshopWhatsAppController::class, 'syncTemplate'])

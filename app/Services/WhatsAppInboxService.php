@@ -199,8 +199,19 @@ class WhatsAppInboxService
                 ['unread_count' => 0]
             );
 
+            $params = is_array($log->template_params) ? $log->template_params : [];
+            $contactName = trim((string) ($params['contact_name'] ?? ''));
+            if ($contactName === '') {
+                $responseMeta = is_array($log->response_data) ? $log->response_data : [];
+                $contactName = trim((string) ($responseMeta['contact_name'] ?? ''));
+            }
+
             if (! $conversation->user_id) {
                 $conversation->user_id = $log->user_id ?: $this->guessUserId($phone);
+            }
+
+            if ($contactName !== '' && blank($conversation->contact_name)) {
+                $conversation->contact_name = $contactName;
             }
 
             $sentAt = $log->sent_at ?? $log->created_at ?? now();
@@ -221,6 +232,7 @@ class WhatsAppInboxService
             ]);
 
             $this->touchConversationAfterMessage($conversation, $message, $sentAt);
+            $conversation->save();
 
             return $message;
         });

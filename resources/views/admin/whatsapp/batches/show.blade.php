@@ -242,7 +242,7 @@
         document.getElementById('batch-status-label').textContent = data.status_label;
 
         const banner = document.getElementById('connection-blocked-banner');
-        if ($banner && data.bridge && data.bridge.can_send && !data.paused_for_bridge) {
+        if (banner && data.bridge && data.bridge.can_send && !data.paused_for_bridge) {
             banner.remove();
         }
 

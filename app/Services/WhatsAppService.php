@@ -120,13 +120,18 @@ class WhatsAppService
                     (string) ($metaError['message'] ?? 'فشل إرسال الرسالة')
                 );
 
+            $responseMeta = $responseData;
+            if (! empty($options['contact_name'])) {
+                $responseMeta['contact_name'] = (string) $options['contact_name'];
+            }
+
             $whatsappMessage = WhatsAppMessage::create([
                 'user_id' => $actorId,
                 'phone_number' => $formattedPhone,
                 'message' => $message,
                 'type' => $type,
                 'status' => $accepted ? 'sent' : 'failed',
-                'response_data' => $responseData,
+                'response_data' => $responseMeta,
                 'whatsapp_message_id' => $waMessageId,
                 'sent_at' => $accepted ? now() : null,
                 'error_message' => $errorText,
@@ -249,17 +254,28 @@ class WhatsAppService
                 );
 
             if (! $skipLog) {
+                $previewText = trim((string) ($options['preview_text'] ?? ''));
+                $contactName = trim((string) ($options['contact_name'] ?? ''));
+                $logBody = $previewText !== ''
+                    ? $previewText
+                    : '[قالب: '.$templateName.']';
+
                 $whatsappMessage = WhatsAppMessage::create([
                     'user_id' => $actorId,
                     'phone_number' => $formattedPhone,
-                    'message' => '[قالب: ' . $templateName . ']',
+                    'message' => $logBody,
                     'type' => 'template',
                     'status' => $accepted ? 'sent' : 'failed',
                     'response_data' => $responseData,
                     'whatsapp_message_id' => $waMessageId,
                     'sent_at' => $accepted ? now() : null,
                     'template_name' => $templateName,
-                    'template_params' => ['language' => $languageCode, 'components' => $components],
+                    'template_params' => array_filter([
+                        'language' => $languageCode,
+                        'components' => $components,
+                        'preview' => $previewText !== '' ? $previewText : null,
+                        'contact_name' => $contactName !== '' ? $contactName : null,
+                    ], fn ($v) => $v !== null && $v !== []),
                     'error_message' => $errorText,
                 ]);
 
@@ -273,6 +289,7 @@ class WhatsAppService
                     'success' => true,
                     'accepted_by_meta' => true,
                     'whatsapp_id' => $waMessageId,
+                    'message_id' => isset($whatsappMessage) ? $whatsappMessage->id : null,
                     'phone' => $formattedPhone,
                 ];
             }

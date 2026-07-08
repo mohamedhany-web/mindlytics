@@ -258,6 +258,7 @@ class WhatsAppTemplateService
                     'header_type' => $tpl->header_type,
                     'header_content' => $tpl->header_content,
                     'header_variable_count' => $this->countHeaderVariables($tpl->header_type, $tpl->header_content),
+                    'buttons' => is_array($tpl->buttons) ? $tpl->buttons : [],
                 ];
             }
         }
@@ -278,6 +279,33 @@ class WhatsAppTemplateService
         }
 
         return null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function validateDraftFromRequest(\Illuminate\Http\Request $request): array
+    {
+        return $request->validate([
+            'name' => 'required|string|max:512',
+            'language' => 'required|string|max:20',
+            'category' => 'required|in:AUTHENTICATION,UTILITY,MARKETING',
+            'body_text' => 'required|string|max:1024',
+            'header_type' => 'nullable|in:text,image,video,document',
+            'header_content' => 'nullable|string|max:500',
+            'footer_text' => 'nullable|string|max:60',
+            'buttons' => 'nullable|array|max:10',
+            'buttons.*.type' => 'nullable|in:QUICK_REPLY,URL,PHONE_NUMBER',
+            'buttons.*.text' => 'nullable|string|max:25',
+            'buttons.*.url' => 'nullable|string|max:500',
+            'buttons.*.url_example' => 'nullable|string|max:200',
+            'buttons.*.phone' => 'nullable|string|max:30',
+            'submit_now' => 'nullable|boolean',
+        ], [
+            'name.required' => 'اسم القالب مطلوب',
+            'body_text.required' => 'محتوى الرسالة مطلوب',
+            'category.required' => 'فئة القالب مطلوبة',
+        ]);
     }
 
     /**
@@ -322,11 +350,62 @@ class WhatsAppTemplateService
             $components[] = ['type' => 'body', 'parameters' => $parameters];
         }
 
+        $buttonError = $this->appendButtonSendComponents($components, $definition, $variables);
+        if ($buttonError !== null) {
+            return ['components' => [], 'error' => $buttonError];
+        }
+
         return ['components' => $components];
     }
 
     /**
-     * @return array<string, mixed>|null
+     * @param  array<int, array<string, mixed>>  $components
+     * @param  array<string, mixed>  $definition
+     * @param  array<int|string, string|null>  $variables
+     */
+    private function appendButtonSendComponents(array &$components, array $definition, array $variables): ?string
+    {
+        $buttons = $definition['buttons'] ?? [];
+        if (! is_array($buttons) || $buttons === []) {
+            return null;
+        }
+
+        foreach ($buttons as $index => $btn) {
+            if (! is_array($btn) || strtoupper((string) ($btn['type'] ?? '')) !== 'URL') {
+                continue;
+            }
+
+            $url = (string) ($btn['url'] ?? '');
+            if (! preg_match('/\{\{(\d+)\}\}/', $url, $matches)) {
+                continue;
+            }
+
+            $varIndex = (int) $matches[1];
+            $value = trim((string) (
+                $variables['button_'.$index]
+                ?? $variables['button_url_'.$index]
+                ?? $variables[$varIndex]
+                ?? $variables[(string) $varIndex]
+                ?? ''
+            ));
+
+            if ($value === '') {
+                return 'متغير زر الرابط «'.((string) ($btn['text'] ?? 'URL')).'» مطلوب عند الإرسال.';
+            }
+
+            $components[] = [
+                'type' => 'button',
+                'sub_type' => 'url',
+                'index' => (string) $index,
+                'parameters' => [['type' => 'text', 'text' => $value]],
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<string, mixed>
      */
     public function templateMetaForList(WhatsAppMetaTemplate $template): array
     {
@@ -340,13 +419,14 @@ class WhatsAppTemplateService
             'name' => $template->name,
             'language' => $template->language,
             'category' => $template->category,
-            'label' => $template->displayLabel() . ' (' . $template->categoryLabel() . ')',
+            'label' => $template->displayLabel().' ('.$template->categoryLabel().')',
             'source' => 'database',
             'body_text' => $bodyText !== '' ? $bodyText : null,
             'body_variable_count' => $bodyCount,
             'header_type' => $template->header_type,
             'header_content' => $template->header_content,
             'header_variable_count' => $this->countHeaderVariables($template->header_type, $template->header_content),
+            'buttons' => is_array($template->buttons) ? $template->buttons : [],
         ];
     }
 
@@ -446,7 +526,15 @@ class WhatsAppTemplateService
                 } elseif ($type === 'URL') {
                     $url = trim((string) ($btn['url'] ?? ''));
                     if ($url !== '') {
-                        $metaButtons[] = ['type' => 'URL', 'text' => $text, 'url' => $url];
+                        $metaBtn = ['type' => 'URL', 'text' => $text, 'url' => $url];
+                        if (preg_match('/\{\{\d+\}\}/', $url)) {
+                            $example = trim((string) ($btn['url_example'] ?? ''));
+                            if ($example === '') {
+                                $example = preg_replace('/\{\{\d+\}\}/', 'example', $url) ?? $url;
+                            }
+                            $metaBtn['example'] = [$example];
+                        }
+                        $metaButtons[] = $metaBtn;
                     }
                 } elseif ($type === 'PHONE_NUMBER') {
                     $phone = trim((string) ($btn['phone'] ?? ''));
@@ -490,6 +578,7 @@ class WhatsAppTemplateService
             $row = ['type' => $type, 'text' => $text];
             if ($type === 'URL') {
                 $row['url'] = trim((string) ($btn['url'] ?? ''));
+                $row['url_example'] = trim((string) ($btn['url_example'] ?? ''));
             }
             if ($type === 'PHONE_NUMBER') {
                 $row['phone'] = trim((string) ($btn['phone'] ?? ''));

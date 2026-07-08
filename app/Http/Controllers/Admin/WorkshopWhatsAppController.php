@@ -4,17 +4,21 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Workshop;
+use App\Services\WhatsAppCloudService;
+use App\Services\WhatsAppTemplateService;
 use App\Services\WorkshopWhatsAppBatchService;
 use App\Services\WorkshopWhatsAppTemplateService;
 use App\Support\WhatsAppCloudSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class WorkshopWhatsAppController extends Controller
 {
     public function __construct(
         private WorkshopWhatsAppBatchService $bulkService,
         private WorkshopWhatsAppTemplateService $templateService,
+        private WhatsAppTemplateService $metaTemplates,
     ) {}
 
     public function store(Request $request, Workshop $workshop): RedirectResponse
@@ -52,19 +56,39 @@ class WorkshopWhatsAppController extends Controller
             ->with('success', 'تم بدء إرسال '.$batch->total_count.' رسالة واتساب — تابع التقدّم من هذه الصفحة.');
     }
 
+    public function createTemplateForm(Workshop $workshop): View|RedirectResponse
+    {
+        $linked = $this->templateService->linkedTemplate($workshop);
+        if ($linked && ! $linked->isEditable()) {
+            return redirect()
+                ->route('admin.workshops.show', $workshop)
+                ->with('info', 'قالب الورشة بحالة «'.$linked->statusLabel().'» — لا يمكن تعديله. يمكنك المزامنة أو الإرسال من صفحة الورشة.');
+        }
+
+        $defaultButtons = $this->templateService->defaultWelcomeButtons($workshop);
+
+        return view('admin.whatsapp.templates.workshop-create', [
+            'workshop' => $workshop,
+            'template' => $linked,
+            'connectionMeta' => app(WhatsAppCloudService::class)->connectionMeta(),
+            'workshopVariableLabels' => $this->templateService->workshopVariableLabels(),
+            'defaultTemplateName' => $this->templateService->templateNameFor($workshop),
+            'defaultBody' => old('body_text', $linked?->body_text ?: $this->templateService->defaultWelcomeBody()),
+            'defaultButtons' => old('buttons', $linked?->buttons ?: $defaultButtons),
+        ]);
+    }
+
     public function createTemplate(Request $request, Workshop $workshop): RedirectResponse
     {
-        $validated = $request->validate([
-            'body_text' => 'nullable|string|max:1024',
-        ]);
-
         if (! WhatsAppCloudSettings::usesOfficial()) {
             return back()->with('error', 'إرسال الواتساب غير مفعّل — أكمل إعداد Meta Cloud API.');
         }
 
+        $validated = $this->metaTemplates->validateDraftFromRequest($request);
+
         $result = $this->templateService->createAndSubmitWelcomeTemplate(
             $workshop,
-            $validated['body_text'] ?? null,
+            array_merge($validated, ['submit_now' => $request->boolean('submit_now')]),
             (int) auth()->id()
         );
 
@@ -72,7 +96,9 @@ class WorkshopWhatsAppController extends Controller
             return back()->withInput()->with('error', $result['error'] ?? 'فشل إنشاء القالب');
         }
 
-        return back()->with('success', $result['message'] ?? 'تم إنشاء قالب الترحيب.');
+        return redirect()
+            ->route('admin.workshops.show', $workshop)
+            ->with('success', $result['message'] ?? 'تم إنشاء قالب الترحيب.');
     }
 
     public function syncTemplate(Workshop $workshop): RedirectResponse
@@ -94,6 +120,8 @@ class WorkshopWhatsAppController extends Controller
         $validated = $request->validate([
             'scope' => 'required|in:all,online,offline,phone',
             'phone' => 'nullable|string|max:30',
+            'template_name' => 'required|string|max:512',
+            'template_language' => 'required|string|max:20',
         ]);
 
         if ($validated['scope'] === 'phone' && empty(trim((string) ($validated['phone'] ?? '')))) {
@@ -104,9 +132,24 @@ class WorkshopWhatsAppController extends Controller
             return back()->with('error', 'إرسال الواتساب غير مفعّل — أكمل إعداد Meta Cloud API.');
         }
 
+        $template = $this->templateService->resolveSendableTemplate(
+            $validated['template_name'],
+            $validated['template_language']
+        );
+
+        if (! $template) {
+            return back()->with('error', 'القالب المختار غير معتمد أو غير موجود.');
+        }
+
         try {
-            $batch = $this->templateService->dispatchWelcomeTemplate(
+            $sample = $this->bulkService->registrationsForWorkshop($workshop, $validated['scope'], $validated['phone'] ?? null)->first();
+            if ($sample) {
+                $this->templateService->validateTemplateForRegistration($workshop, $template, $sample);
+            }
+
+            $batch = $this->templateService->dispatchTemplate(
                 $workshop,
+                $template,
                 (int) auth()->id(),
                 $validated['scope'],
                 $validated['phone'] ?? null
@@ -117,6 +160,6 @@ class WorkshopWhatsAppController extends Controller
 
         return redirect()
             ->route('admin.whatsapp.batches.show', $batch)
-            ->with('success', 'تم بدء إرسال قالب الترحيب إلى '.$batch->total_count.' مسجّل — يظهر في سجل الدفعات.');
+            ->with('success', 'تم بدء إرسال القالب إلى '.$batch->total_count.' مسجّل.');
     }
 }

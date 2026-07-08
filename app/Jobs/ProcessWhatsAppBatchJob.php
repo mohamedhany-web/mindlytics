@@ -285,6 +285,8 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
                         'user_id' => $item->user_id ?? $batch->created_by,
                         'batch_id' => $batch->id,
                         'skip_ready_check' => $skipReadyCheck,
+                        'preview_text' => (string) ($payload['preview'] ?? ''),
+                        'contact_name' => (string) ($item->recipient_name ?? ''),
                     ]
                 );
             } else {
@@ -296,6 +298,7 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
                         'user_id' => $item->user_id ?? $batch->created_by,
                         'batch_id' => $batch->id,
                         'skip_ready_check' => $skipReadyCheck,
+                        'contact_name' => (string) ($item->recipient_name ?? ''),
                     ]
                 );
             }
