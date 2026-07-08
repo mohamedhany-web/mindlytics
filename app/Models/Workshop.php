@@ -24,6 +24,7 @@ class Workshop extends Model
         'seats_offline',
         'is_active',
         'created_by',
+        'welcome_meta_template_id',
     ];
 
     protected $casts = [
@@ -44,6 +45,11 @@ class Workshop extends Model
     public function registrations(): HasMany
     {
         return $this->hasMany(WorkshopRegistration::class);
+    }
+
+    public function welcomeMetaTemplate(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(WhatsAppMetaTemplate::class, 'welcome_meta_template_id');
     }
 
     public function getRemainingSeatsAttribute(): ?int

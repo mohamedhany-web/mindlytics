@@ -44,6 +44,24 @@ class WhatsAppBatchService
     }
 
     /**
+     * @return \Illuminate\Database\Eloquent\Collection<int, WhatsAppBatch>
+     */
+    public function batchesForWorkshop(int $workshopId, int $limit = 10): \Illuminate\Database\Eloquent\Collection
+    {
+        if (! self::isReady()) {
+            return WhatsAppBatch::query()->whereRaw('1 = 0')->get();
+        }
+
+        return WhatsAppBatch::query()
+            ->where('source_type', 'workshop')
+            ->where('source_id', $workshopId)
+            ->with('creator:id,name')
+            ->latest()
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
      * @param  Collection<int, array{recipient_name: string, phone: string, message: string, message_type?: string, workshop_registration_id?: int|null, user_id?: int|null}>  $items
      */
     public function createAndDispatch(

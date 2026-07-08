@@ -107,6 +107,7 @@ class User extends Authenticatable
             'is_community_contributor' => 'boolean',
             'birth_date' => 'date',
             'last_login_at' => 'datetime',
+            'presence_last_seen_at' => 'datetime',
             'referred_at' => 'datetime',
             'hire_date' => 'date',
             'weekly_off_day' => 'integer',
@@ -839,6 +840,43 @@ class User extends Authenticatable
     }
 
     /**
+     * موظف بوظيفة مدير مبيعات (رمز الوظيفة sales_manager).
+     */
+    public function isSalesManager(): bool
+    {
+        if (! $this->isEmployee()) {
+            return false;
+        }
+        $this->loadMissing('employeeJob');
+
+        return $this->employeeJob && strtolower((string) $this->employeeJob->code) === 'sales_manager';
+    }
+
+    /**
+     * موظف مبيعات أو مدير مبيعات.
+     */
+    public function isSalesStaff(): bool
+    {
+        return $this->isSalesEmployee() || $this->isSalesManager();
+    }
+
+    /**
+     * هل يخضع لنظام قفل الدوام (حضور/انصراف/خصومات)؟
+     */
+    public function isSubjectToWorkSchedule(): bool
+    {
+        if (! $this->isEmployee()) {
+            return false;
+        }
+
+        if (config('employee_attendance.sales_employees_only', true)) {
+            return $this->isSalesStaff();
+        }
+
+        return true;
+    }
+
+    /**
      * موظف بوظيفة مشرف محتوى (رمز الوظيفة moderator).
      */
     public function isModeratorEmployee(): bool
@@ -870,6 +908,16 @@ class User extends Authenticatable
     public function assignedSalesLeads()
     {
         return $this->hasMany(SalesLead::class, 'assigned_to');
+    }
+
+    public function managedSalesTeam()
+    {
+        return $this->hasOne(SalesTeam::class, 'manager_id');
+    }
+
+    public function salesTeamMembership()
+    {
+        return $this->hasOne(SalesTeamMember::class, 'user_id');
     }
 
     /**
@@ -947,6 +995,23 @@ class User extends Authenticatable
     {
         return $query->employees()->whereHas('employeeJob', function ($q) {
             $q->whereRaw('LOWER(code) = ?', ['sales']);
+        });
+    }
+
+    public function scopeSalesManagers($query)
+    {
+        return $query->employees()->whereHas('employeeJob', function ($q) {
+            $q->whereRaw('LOWER(code) = ?', ['sales_manager']);
+        });
+    }
+
+    public function scopeSalesStaff($query)
+    {
+        return $query->employees()->whereHas('employeeJob', function ($q) {
+            $q->where(function ($inner) {
+                $inner->whereRaw('LOWER(code) = ?', ['sales'])
+                    ->orWhereRaw('LOWER(code) = ?', ['sales_manager']);
+            });
         });
     }
 

@@ -4,7 +4,7 @@
     $phoneCountOffline = $whatsappPhoneCountOffline ?? 0;
     $pacing = app(\App\Services\WhatsAppPacingService::class)->usageStats();
     $remainingToday = app(\App\Services\WhatsAppPacingService::class)->remainingDailyQuota();
-    $waTemplateVars = ['{{name}}', '{{phone}}', '{{workshop}}', '{{attendance}}', '{{location}}'];
+    $waTemplateVars = ['{{name}}', '{{workshop_name}}', '{{workshop}}', '{{phone}}', '{{attendance}}', '{{location}}'];
     $messagePlaceholder = "مرحباً {{name}}،\n\nشكراً لتسجيلك في ورشة «{{workshop}}» ({{attendance}}).\n\n...";
     $waConfigured = \App\Support\WhatsAppCloudSettings::isAppConfigured();
     $waConnectionMeta = app(\App\Services\WhatsAppCloudService::class)->connectionMeta();

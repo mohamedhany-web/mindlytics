@@ -21,11 +21,12 @@ class ApplyEmployeeAttendancePenalties extends Command
         $counts = $service->processDate($date);
 
         $this->info(sprintf(
-            'Attendance penalties for %s — late: %d, absence: %d, incomplete: %d',
+            'Attendance penalties for %s — late: %d, absence: %d, incomplete: %d, presence: %d',
             $date->toDateString(),
             $counts['late'],
             $counts['absence'],
             $counts['incomplete'],
+            $counts['presence'],
         ));
 
         return self::SUCCESS;

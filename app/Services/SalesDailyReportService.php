@@ -129,6 +129,10 @@ class SalesDailyReportService
 
         $this->syncContacts($report, $contacts, $user->id);
 
+        if ($submit) {
+            app(\App\Services\SalesTeamService::class)->syncMemberReportTeamId($user, $report);
+        }
+
         return $report->fresh(['contacts.lead']);
     }
 

@@ -10,6 +10,8 @@ use App\Models\SalesLead;
 use App\Models\SalesLeadCategory;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\WhatsAppConversation;
+use App\Models\WhatsAppConversationMessage;
 use App\Models\Workshop;
 use App\Support\SalesDailyReportSettings;
 use Illuminate\Support\Facades\Mail;
@@ -484,6 +486,80 @@ class SalesNotificationService
             cache()->put($cacheKey, true, now()->endOfDay());
         } catch (\Throwable) {
             // لا نوقف التذكير داخل المنصة إذا فشل البريد
+        }
+    }
+
+    public function notifyWhatsAppInboundMessage(User $rep, WhatsAppConversation $conversation, WhatsAppConversationMessage $message): void
+    {
+        if (! $rep->isSalesStaff()) {
+            return;
+        }
+
+        if (Notification::query()
+            ->where('user_id', $rep->id)
+            ->where('data->kind', 'whatsapp_inbound')
+            ->where('data->message_id', $message->id)
+            ->exists()) {
+            return;
+        }
+
+        $inboxUrl = app(WhatsAppQueueService::class)->inboxUrlFor($rep, $conversation);
+        $name = $conversation->displayName();
+        $preview = mb_substr($message->displayBody() ?: 'رسالة جديدة', 0, 120);
+
+        Notification::create([
+            'user_id' => $rep->id,
+            'sender_id' => null,
+            'title' => 'رسالة واتساب جديدة',
+            'message' => 'من «'.$name.'»: '.$preview,
+            'type' => 'employee',
+            'priority' => 'high',
+            'audience' => 'employee',
+            'action_url' => $inboxUrl,
+            'action_text' => 'فتح المحادثة',
+            'data' => [
+                'kind' => 'whatsapp_inbound',
+                'conversation_id' => $conversation->id,
+                'message_id' => $message->id,
+            ],
+        ]);
+    }
+
+    public function notifyWhatsAppQueueRequest(WhatsAppConversation $conversation, WhatsAppConversationMessage $message): void
+    {
+        $agents = app(WhatsAppAssignmentService::class)->eligibleSalesStaff();
+        $queueUrl = route('employee.sales.whatsapp.queue.index');
+        $name = $conversation->displayName();
+        $preview = mb_substr($message->displayBody() ?: 'رسالة جديدة', 0, 120);
+
+        foreach ($agents as $agent) {
+            $recent = Notification::query()
+                ->where('user_id', $agent->id)
+                ->where('data->kind', 'whatsapp_queue')
+                ->where('data->conversation_id', $conversation->id)
+                ->where('created_at', '>=', now()->subMinutes(30))
+                ->exists();
+
+            if ($recent) {
+                continue;
+            }
+
+            Notification::create([
+                'user_id' => $agent->id,
+                'sender_id' => null,
+                'title' => 'طلب واتساب جديد',
+                'message' => '«'.$name.'» — '.$preview,
+                'type' => 'employee',
+                'priority' => 'high',
+                'audience' => 'employee',
+                'action_url' => $queueUrl,
+                'action_text' => 'عرض الطلبات',
+                'data' => [
+                    'kind' => 'whatsapp_queue',
+                    'conversation_id' => $conversation->id,
+                    'message_id' => $message->id,
+                ],
+            ]);
         }
     }
 

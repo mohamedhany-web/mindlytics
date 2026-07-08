@@ -14,4 +14,7 @@ return [
     'penalty_type' => 'penalty',
     'penalty_status' => 'applied',
     'notify_employee' => true,
+
+    /** قفل النظام + حضور/انصراف + خصومات الحضور — لموظفي المبيعات فقط */
+    'sales_employees_only' => true,
 ];

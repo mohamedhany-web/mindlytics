@@ -27,9 +27,27 @@ class WhatsAppAssignmentService
             ->all();
     }
 
+    /**
+     * @return array<int, User>
+     */
+    public function eligibleSalesStaff(): array
+    {
+        return User::query()
+            ->where('is_active', true)
+            ->where('is_employee', true)
+            ->whereHas('employeeJob', fn ($j) => $j->whereIn('code', ['sales', 'sales_manager']))
+            ->orderBy('name')
+            ->get(['id', 'name', 'role'])
+            ->all();
+    }
+
     public function autoAssign(WhatsAppConversation $conversation): ?WhatsAppConversation
     {
         if ($conversation->assigned_to) {
+            return $conversation;
+        }
+
+        if (config('whatsapp.assignment.strategy') === 'manual_queue') {
             return $conversation;
         }
 

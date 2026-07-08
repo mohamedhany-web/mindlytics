@@ -18,6 +18,7 @@ class EmployeeAttendanceController extends Controller
     {
         $user = $request->user();
         abort_unless($user?->isEmployee(), 403);
+        abort_unless($user->isSubjectToWorkSchedule(), 404);
 
         $state = $this->attendance->getState($user);
 
@@ -44,6 +45,7 @@ class EmployeeAttendanceController extends Controller
     {
         $user = $request->user();
         abort_unless($user?->isEmployee(), 403);
+        abort_unless($user->isSubjectToWorkSchedule(), 403, 'نظام الدوام متاح لموظفي المبيعات فقط.');
 
         try {
             $this->attendance->clockIn($user, $request->ip());
@@ -66,6 +68,7 @@ class EmployeeAttendanceController extends Controller
     {
         $user = $request->user();
         abort_unless($user?->isEmployee(), 403);
+        abort_unless($user->isSubjectToWorkSchedule(), 403, 'نظام الدوام متاح لموظفي المبيعات فقط.');
 
         try {
             $record = $this->attendance->clockOut($user, $request->ip());

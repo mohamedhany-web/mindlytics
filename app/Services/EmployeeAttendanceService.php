@@ -33,6 +33,14 @@ class EmployeeAttendanceService
             return $this->state(['mode' => 'not_employee', 'can_access' => true]);
         }
 
+        if (! $user->isSubjectToWorkSchedule()) {
+            return $this->state([
+                'mode' => 'exempt',
+                'can_access' => true,
+                'message' => '',
+            ]);
+        }
+
         $schedule = $this->resolveSchedule($user);
         if (! $schedule) {
             return $this->state([
@@ -163,6 +171,11 @@ class EmployeeAttendanceService
             $record = $record->fresh(['user']);
             app(EmployeeAttendancePenaltyService::class)->applyLatePenalty($record);
 
+            $user->forceFill([
+                'presence_last_seen_at' => $now,
+                'presence_status' => 'online',
+            ])->save();
+
             return $record->fresh();
         });
     }
@@ -204,6 +217,7 @@ class EmployeeAttendanceService
 
             $record = $record->fresh(['user']);
             app(EmployeeAttendancePenaltyService::class)->applyIncompletePenalty($record);
+            app(EmployeePresenceService::class)->closeViolationsOnClockOut($user);
 
             return $record->fresh();
         });

@@ -109,13 +109,17 @@ class EmployeeAttendancePenaltyService
     }
 
     /**
-     * @return array{late: int, absence: int, incomplete: int}
+     * @return array{late: int, absence: int, incomplete: int, presence: int}
      */
     public function processDate(Carbon $date): array
     {
-        $counts = ['late' => 0, 'absence' => 0, 'incomplete' => 0];
+        $counts = ['late' => 0, 'absence' => 0, 'incomplete' => 0, 'presence' => 0];
 
-        $employees = User::employees()->where('is_active', true)->get();
+        $employees = User::employees()
+            ->where('is_active', true)
+            ->with('employeeJob')
+            ->get()
+            ->filter(fn (User $employee) => $employee->isSubjectToWorkSchedule());
 
         foreach ($employees as $employee) {
             if ($deduction = $this->applyAbsencePenalty($employee, $date)) {
@@ -142,9 +146,49 @@ class EmployeeAttendancePenaltyService
                     $counts['incomplete']++;
                 }
             }
+
+            if ($this->applyPresencePenalty($record->fresh())) {
+                $counts['presence']++;
+            }
         }
 
         return $counts;
+    }
+
+    public function applyPresencePenalty(EmployeeAttendanceRecord $record): ?EmployeeSalaryDeduction
+    {
+        if (! (bool) config('employee_presence.presence_penalty_enabled', true)) {
+            return null;
+        }
+
+        if ($record->presence_deduction_id || ! $record->clock_in_at) {
+            return null;
+        }
+
+        $daily = \App\Models\EmployeePresenceDaily::query()
+            ->where('user_id', $record->user_id)
+            ->whereDate('work_date', $record->work_date)
+            ->first();
+
+        $offlineMinutes = (int) round(($daily?->offline_seconds ?? 0) / 60);
+        $minMinutes = (int) config('employee_presence.presence_penalty_min_offline_minutes', 15);
+
+        if ($offlineMinutes < $minMinutes) {
+            return null;
+        }
+
+        $deduction = $this->createDeduction(
+            $record->user ?? $record->user()->first(),
+            Carbon::parse($record->work_date),
+            (float) config('employee_presence.presence_penalty_amount', 35),
+            (string) config('employee_presence.presence_penalty_title', 'غرامة انقطاع عن النظام أثناء الدوام'),
+            'انقطاع عن النظام '.$offlineMinutes.' دقيقة أثناء الدوام — '.$record->work_date->format('Y-m-d')
+        );
+
+        $record->update(['presence_deduction_id' => $deduction->id]);
+        $this->notifyEmployee($record->user, $deduction, 'انقطاع عن النظام');
+
+        return $deduction;
     }
 
     private function createDeduction(User $employee, Carbon $date, float $amount, string $title, string $description): EmployeeSalaryDeduction

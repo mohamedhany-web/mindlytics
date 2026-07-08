@@ -185,7 +185,7 @@ class AppServiceProvider extends ServiceProvider
 
         View::composer(['layouts.employee', 'employee.attendance.locked'], function ($view) {
             $user = auth()->user();
-            if ($user?->isEmployee()) {
+            if ($user?->isSubjectToWorkSchedule()) {
                 $view->with('employeeAttendance', app(\App\Services\EmployeeAttendanceService::class)->getState($user));
             }
         });

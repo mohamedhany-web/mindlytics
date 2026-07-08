@@ -25,6 +25,7 @@ class SalesLead extends Model
         'referral' => 'إحالة',
         'call' => 'مكالمة واردة',
         'social' => 'وسائل التواصل',
+        'whatsapp' => 'واتساب',
         'event' => 'فعالية',
         'other' => 'أخرى',
     ];
@@ -121,6 +122,20 @@ class SalesLead extends Model
     public function scopeForAssignee($query, int $userId)
     {
         return $query->where('assigned_to', $userId);
+    }
+
+    public function scopeForVisibleSalesUser($query, User $user)
+    {
+        if ($user->isSalesManager()) {
+            $ids = app(\App\Services\SalesTeamService::class)->visibleAssigneeIds($user);
+            if ($ids === []) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            return $query->whereIn('assigned_to', $ids);
+        }
+
+        return $query->forAssignee((int) $user->id);
     }
 
     public function scopeOpenPipeline($query)

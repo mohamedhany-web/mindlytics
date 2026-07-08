@@ -1,4 +1,4 @@
-@if(auth()->user()?->isEmployee() && !empty($employeeAttendance))
+@if(auth()->user()?->isSubjectToWorkSchedule() && !empty($employeeAttendance) && ($employeeAttendance['mode'] ?? '') !== 'exempt')
 @php
     $att = $employeeAttendance;
     $mode = $att['mode'] ?? '';
@@ -15,6 +15,10 @@
         <div class="hidden sm:flex flex-col items-end leading-tight px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-200">
             <span class="text-[10px] font-semibold text-emerald-700">تايمر العمل</span>
             <span class="text-sm font-black text-emerald-800 tabular-nums" x-text="workTimerLabel"></span>
+        </div>
+        <div class="hidden md:flex items-center gap-1.5 px-2 py-1 rounded-lg bg-sky-50 border border-sky-200" title="يجب إبقاء النظام مفتوحاً طوال الدوام">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="text-[10px] font-semibold text-sky-800">مراقبة التواجد</span>
         </div>
         @if($att['can_clock_out'] ?? false)
             <form method="post" action="{{ route('employee.attendance.clock-out') }}" onsubmit="return confirm('إنهاء يوم العمل؟');">

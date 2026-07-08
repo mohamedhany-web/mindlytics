@@ -98,11 +98,22 @@ class WhatsAppCrmService
 
         $conversation->update($conversationUpdates);
 
-        if (! $conversation->assigned_to) {
+        if (! $conversation->assigned_to && $this->shouldAutoAssign($conversation->fresh())) {
             $this->assignment->autoAssign($conversation->fresh());
         }
 
         return $contact->fresh();
+    }
+
+    private function shouldAutoAssign(WhatsAppConversation $conversation): bool
+    {
+        $strategy = (string) config('whatsapp.assignment.strategy', 'manual_queue');
+
+        if ($strategy === 'manual_queue') {
+            return false;
+        }
+
+        return true;
     }
 
     public function findLeadByPhone(string $phone): ?SalesLead

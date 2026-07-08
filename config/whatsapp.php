@@ -84,11 +84,21 @@ return [
     |--------------------------------------------------------------------------
     | توزيع المحادثات (Inbox CRM)
     |--------------------------------------------------------------------------
+    | manual_queue = طابور انتظار — الموظف المتاح يقبل الطلب يدوياً
     | lead_owner_then_round_robin = مالك العميل في CRM ثم Round Robin
     | round_robin = توزيع دائري فقط
     */
     'assignment' => [
-        'strategy' => env('WHATSAPP_ASSIGNMENT_STRATEGY', 'lead_owner_then_round_robin'),
+        'strategy' => env('WHATSAPP_ASSIGNMENT_STRATEGY', 'manual_queue'),
+    ],
+
+    'queue' => [
+        'enabled' => env('WHATSAPP_QUEUE_ENABLED', true),
+    ],
+
+    'notifications' => [
+        'inbound_messages' => env('WHATSAPP_NOTIFY_INBOUND', true),
+        'queue_requests' => env('WHATSAPP_NOTIFY_QUEUE', true),
     ],
 
 ];

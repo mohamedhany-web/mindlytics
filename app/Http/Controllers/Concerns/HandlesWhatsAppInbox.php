@@ -48,6 +48,11 @@ trait HandlesWhatsAppInbox
             return;
         }
 
+        $user = auth()->user();
+        if ($user && app(\App\Services\SalesTeamService::class)->canAccessConversation($user, $conversation)) {
+            return;
+        }
+
         abort(403, 'هذه المحادثة غير مخصصة لك.');
     }
 

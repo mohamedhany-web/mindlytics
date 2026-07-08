@@ -26,6 +26,7 @@ class EmployeeAttendanceRecord extends Model
         'late_deduction_id',
         'absence_deduction_id',
         'incomplete_deduction_id',
+        'presence_deduction_id',
     ];
 
     protected $casts = [
@@ -84,11 +85,17 @@ class EmployeeAttendanceRecord extends Model
         return $this->belongsTo(EmployeeSalaryDeduction::class, 'incomplete_deduction_id');
     }
 
+    public function presenceDeduction(): BelongsTo
+    {
+        return $this->belongsTo(EmployeeSalaryDeduction::class, 'presence_deduction_id');
+    }
+
     public function totalDeductionAmount(): float
     {
         return (float) ($this->lateDeduction?->amount ?? 0)
             + (float) ($this->absenceDeduction?->amount ?? 0)
-            + (float) ($this->incompleteDeduction?->amount ?? 0);
+            + (float) ($this->incompleteDeduction?->amount ?? 0)
+            + (float) ($this->presenceDeduction?->amount ?? 0);
     }
 
     public function isActive(): bool

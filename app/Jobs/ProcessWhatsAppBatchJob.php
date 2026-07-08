@@ -270,16 +270,35 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
         $lastResult = ['success' => false, 'error' => 'فشل الإرسال'];
 
         for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
-            $lastResult = $whatsapp->sendMessage(
-                $item->phone,
-                $item->message,
-                $item->message_type,
-                [
-                    'user_id' => $item->user_id ?? $batch->created_by,
-                    'batch_id' => $batch->id,
-                    'skip_ready_check' => $skipReadyCheck,
-                ]
-            );
+            if ($item->message_type === 'template') {
+                $payload = json_decode($item->message, true);
+                if (! is_array($payload) || empty($payload['template_name'])) {
+                    return ['success' => false, 'error' => 'بيانات قالب غير صالحة'];
+                }
+
+                $lastResult = $whatsapp->sendTemplate(
+                    $item->phone,
+                    (string) $payload['template_name'],
+                    (string) ($payload['language'] ?? 'ar'),
+                    is_array($payload['components'] ?? null) ? $payload['components'] : [],
+                    [
+                        'user_id' => $item->user_id ?? $batch->created_by,
+                        'batch_id' => $batch->id,
+                        'skip_ready_check' => $skipReadyCheck,
+                    ]
+                );
+            } else {
+                $lastResult = $whatsapp->sendMessage(
+                    $item->phone,
+                    $item->message,
+                    $item->message_type,
+                    [
+                        'user_id' => $item->user_id ?? $batch->created_by,
+                        'batch_id' => $batch->id,
+                        'skip_ready_check' => $skipReadyCheck,
+                    ]
+                );
+            }
 
             if ($lastResult['success'] ?? false) {
                 return $lastResult;

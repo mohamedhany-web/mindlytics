@@ -21,6 +21,10 @@ class EnsureEmployeeWorkAccess
             return $next($request);
         }
 
+        if (! $user->isSubjectToWorkSchedule()) {
+            return $next($request);
+        }
+
         if ($this->isExemptRoute($request)) {
             return $next($request);
         }
@@ -53,6 +57,7 @@ class EnsureEmployeeWorkAccess
         $name = $request->route()?->getName() ?? '';
 
         return str_starts_with($name, 'employee.attendance.')
+            || str_starts_with($name, 'employee.presence.')
             || $name === 'logout';
     }
 

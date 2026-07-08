@@ -13,7 +13,9 @@
     @include('components.favicon-meta')
     
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -27,7 +29,7 @@
     <!-- Custom Styles -->
     <style>
         * {
-            font-family: 'IBM Plex Sans Arabic', sans-serif;
+            font-family: 'Tajawal', 'IBM Plex Sans Arabic', sans-serif;
         }
         /* إخفاء شريط التمرير في سايدبار الموظف مع بقاء التمرير يعمل */
         .employee-sidebar-nav {
@@ -195,7 +197,7 @@
             </header>
 
             <!-- Page Content -->
-            <main class="flex-1 overflow-y-auto {{ $waImmersive ? 'overflow-hidden bg-slate-50' : 'bg-gray-50' }}">
+            <main class="flex-1 overflow-y-auto {{ $waImmersive ? 'overflow-hidden bg-slate-50' : 'bg-[#f8fafc]' }}">
                 <div class="{{ $waImmersive ? 'p-0 h-full flex flex-col min-h-0 overflow-hidden' : 'p-3 sm:p-4 md:p-6' }}">
                     @if(! $waImmersive)
                     @if(session('success'))
@@ -383,5 +385,6 @@
     </style>
 
     @stack('scripts')
+    @include('components.employee-presence-heartbeat')
 </body>
 </html>

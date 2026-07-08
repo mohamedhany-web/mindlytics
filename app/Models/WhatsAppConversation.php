@@ -138,10 +138,37 @@ class WhatsAppConversation extends Model
             return $query->ownedBySalesAgent($user);
         }
 
+        if ($user->isSalesManager()) {
+            $memberIds = app(\App\Services\SalesTeamService::class)->visibleAssigneeIds($user);
+            $memberIds[] = (int) $user->id;
+
+            return $query->where(function (Builder $q) use ($memberIds) {
+                $q->whereIn('assigned_to', $memberIds)
+                    ->orWhereHas('salesLead', fn (Builder $lq) => $lq->whereIn('assigned_to', $memberIds));
+            });
+        }
+
         return $query->where(function (Builder $q) use ($user) {
             $q->where('assigned_to', $user->id)
                 ->orWhereNull('assigned_to');
         });
+    }
+
+    public function scopeInSalesQueue(Builder $query): Builder
+    {
+        return $query
+            ->whereNull('assigned_to')
+            ->where(function (Builder $q) {
+                $q->whereNull('sales_lead_id')
+                    ->orWhereHas('salesLead', fn (Builder $lq) => $lq->whereNull('assigned_to'));
+            })
+            ->where(function (Builder $q) {
+                $q->where('department', 'sales')->orWhereNull('department');
+            })
+            ->where(function (Builder $q) {
+                $q->whereNull('status')
+                    ->orWhereIn('status', [self::STATUS_OPEN, self::STATUS_PENDING]);
+            });
     }
 
     public function scopeFilterCrm(Builder $query, array $filters): Builder

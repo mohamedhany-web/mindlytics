@@ -262,6 +262,9 @@
                     <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
                         <i class="fas fa-paper-plane text-slate-600"></i> التواصل مع المسجلين
                     </h3>
+
+                    @include('admin.workshops._whatsapp_template', ['workshop' => $workshop])
+
                     <div class="grid md:grid-cols-2 gap-4 items-start">
                         <form method="POST" action="{{ route('admin.workshops.send-acceptance', $workshop) }}" class="rounded-xl border border-slate-200 p-4 space-y-3 bg-slate-50/50 h-full">
                             @csrf

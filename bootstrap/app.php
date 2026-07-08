@@ -52,6 +52,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'landing.locale' => \App\Http\Middleware\SetLandingLocale::class,
             'community.contributor' => \App\Http\Middleware\EnsureCommunityContributor::class,
             'sales.employee' => \App\Http\Middleware\EnsureSalesEmployee::class,
+            'sales.manager' => \App\Http\Middleware\EnsureSalesManager::class,
+            'sales.staff' => \App\Http\Middleware\EnsureSalesStaff::class,
             'moderator.employee' => \App\Http\Middleware\EnsureModeratorEmployee::class,
             'employee.work' => \App\Http\Middleware\EnsureEmployeeWorkAccess::class,
             'api.student' => \App\Http\Middleware\EnsureApiStudent::class,
@@ -230,6 +232,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('employees:remind-daily-report')->dailyAt('16:30');
         $schedule->command('employees:apply-daily-report-penalties')->dailyAt('02:00');
         $schedule->command('employees:apply-attendance-penalties')->dailyAt('02:30');
+        $schedule->command('employees:check-presence')->everyMinute();
         $schedule->command('marketing:remind-today-events')
             ->dailyAt(\App\Support\MarketingPlanSettings::reminderTime());
         $schedule->command('marketing:apply-execution-penalties')

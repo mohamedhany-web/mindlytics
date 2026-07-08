@@ -112,7 +112,63 @@ class WorkshopWhatsAppBatchService
                 'workshop_title' => $workshop->title,
                 'scope' => $scope,
                 'phone_filter' => $phone,
+                'send_mode' => 'text',
             ]
+        );
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $items
+     * @throws \RuntimeException
+     */
+    public function dispatchPreparedItems(
+        Workshop $workshop,
+        Collection $items,
+        int $createdBy,
+        string $scope,
+        ?string $phone,
+        array $meta,
+        string $title,
+        ?string $messageTemplate = null
+    ): WhatsAppBatch {
+        if (! WhatsAppCloudSettings::usesOfficial()) {
+            throw new \RuntimeException('إرسال الواتساب غير مفعّل — أكمل إعداد Meta Cloud API في قسم الواتساب.');
+        }
+
+        if (! WhatsAppBatchService::isReady()) {
+            throw new \RuntimeException('جداول دفعات الواتساب غير موجودة. نفّذ php artisan migrate على السيرفر.');
+        }
+
+        if ($items->isEmpty()) {
+            throw new \RuntimeException('لا توجد أرقام صالحة للإرسال بعد التحقق.');
+        }
+
+        if ($limitError = $this->pacing->assertCanSend()) {
+            throw new \RuntimeException($limitError);
+        }
+
+        app(WhatsAppCloudService::class)->assertReadyForBulkSend();
+
+        $remainingToday = $this->pacing->remainingDailyQuota();
+        if ($remainingToday !== null && $items->count() > $remainingToday) {
+            throw new \RuntimeException(
+                'عدد المستلمين ('.$items->count().') يتجاوز المتبقي اليوم ('.$remainingToday.' رسالة).'
+            );
+        }
+
+        return $this->batchService->createAndDispatch(
+            sourceType: 'workshop',
+            sourceId: $workshop->id,
+            title: $title,
+            messageTemplate: $messageTemplate,
+            items: $items,
+            createdBy: $createdBy,
+            meta: array_merge([
+                'workshop_id' => $workshop->id,
+                'workshop_title' => $workshop->title,
+                'scope' => $scope,
+                'phone_filter' => $phone,
+            ], $meta)
         );
     }
 
@@ -151,10 +207,11 @@ class WorkshopWhatsAppBatchService
         };
 
         return str_replace(
-            ['{{name}}', '{{phone}}', '{{workshop}}', '{{attendance}}', '{{location}}'],
+            ['{{name}}', '{{phone}}', '{{workshop}}', '{{workshop_name}}', '{{attendance}}', '{{location}}'],
             [
                 $reg->name,
                 $reg->phone ?? '',
+                $workshop->title,
                 $workshop->title,
                 $modeLabel,
                 $workshop->location ?? '',

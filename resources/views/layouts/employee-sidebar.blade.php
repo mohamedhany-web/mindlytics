@@ -52,6 +52,20 @@
         </div>
         @endif
 
+        @if(auth()->user()->isSalesStaff())
+        @php $waQueueCount = app(\App\Services\WhatsAppQueueService::class)->pendingCount(); @endphp
+        <div class="border-t border-slate-700/50 my-2 pt-2">
+            <p class="px-4 text-xs font-semibold text-amber-400/90 uppercase tracking-wider mb-1">واتساب — طلبات</p>
+            <a href="{{ route('employee.sales.whatsapp.queue.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.whatsapp.queue.*') ? 'bg-amber-500 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-bell text-base"></i>
+                <span class="flex-1">طلبات جديدة</span>
+                <span id="wa-queue-badge" class="min-w-[1.25rem] h-5 px-1.5 rounded-full text-xs font-bold flex items-center justify-center {{ $waQueueCount > 0 ? 'bg-amber-500 text-white' : 'hidden' }}">{{ $waQueueCount }}</span>
+            </a>
+        </div>
+        @endif
+
         @if(auth()->user()->isSalesEmployee())
         <div class="border-t border-slate-700/50 my-2 pt-2">
             <p class="px-4 text-xs font-semibold text-emerald-400/90 uppercase tracking-wider mb-1">المبيعات</p>
@@ -105,13 +119,6 @@
                 <i class="fab fa-whatsapp text-base"></i>
                 <span>محادثات الواتساب</span>
             </a>
-            <a href="{{ route('employee.sales.whatsapp-groups.index') }}"
-               title="مجموعات واتساب"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.whatsapp-groups.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
-               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fas fa-users text-base"></i>
-                <span>مجموعات واتساب</span>
-            </a>
             <a href="{{ route('employee.sales.groups.index') }}"
                class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.groups.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
                @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
@@ -121,7 +128,61 @@
         </div>
         @endif
 
-        @if(!auth()->user()->isSalesEmployee())
+        @if(auth()->user()->isSalesManager())
+        <div class="border-t border-slate-700/50 my-2 pt-2">
+            <p class="px-4 text-xs font-semibold text-teal-400/90 uppercase tracking-wider mb-1">مدير المبيعات</p>
+            <a href="{{ route('employee.sales-manager.dashboard') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.dashboard') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-users-cog text-base"></i>
+                <span>مركز الفريق</span>
+            </a>
+            <a href="{{ route('employee.sales-manager.leads.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.leads.*') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-user-plus text-base"></i>
+                <span>عملاء الفريق</span>
+            </a>
+            <a href="{{ route('employee.sales-manager.whatsapp.inbox.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.whatsapp.inbox.*') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fab fa-whatsapp text-base"></i>
+                <span>محادثات الفريق</span>
+            </a>
+            <a href="{{ route('employee.sales-manager.daily-reports.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.daily-reports.*') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-clipboard-list text-base"></i>
+                <span>تقارير الأعضاء</span>
+            </a>
+            <a href="{{ route('employee.sales-manager.team-reports.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.team-reports.*') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-clipboard-check text-base"></i>
+                <span>تقرير الفريق للإدارة</span>
+            </a>
+            <a href="{{ route('employee.sales-manager.attendance.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.attendance.*') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-clock text-base"></i>
+                <span>حضور الفريق</span>
+            </a>
+            <a href="{{ route('employee.sales-manager.presence.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.presence.*') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-satellite-dish text-base"></i>
+                <span>مراقبة التواجد</span>
+            </a>
+            <a href="{{ route('employee.sales-manager.transfer.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.transfer.*') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-exchange-alt text-base"></i>
+                <span>تحويل Leads</span>
+            </a>
+        </div>
+        @endif
+
+        @if(!auth()->user()->isSalesEmployee() && !auth()->user()->isSalesManager())
         <a href="{{ route('employee.daily-reports.index') }}"
            class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.daily-reports.*') ? 'bg-sky-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">

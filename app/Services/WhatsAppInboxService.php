@@ -1185,6 +1185,8 @@ class WhatsAppInboxService
                 mb_substr($message->displayBody(), 0, 200)
             );
             $crm->touchContactActivity($conversation->fresh());
+
+            app(WhatsAppQueueService::class)->handleAfterInbound($conversation->fresh(), $message);
         } catch (\Throwable $e) {
             report($e);
         }
