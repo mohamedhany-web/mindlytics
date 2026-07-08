@@ -786,7 +786,12 @@ class WhatsAppCloudService
         }
 
         if ($code === 100 && str_contains(mb_strtolower($message), 'invalid parameter')) {
-            return 'معامل غير صالح في القالب — لروابط جروب واتساب استخدم زر URL ديناميكي: https://chat.whatsapp.com/{{3}} مع مثال كود الدعوة (وليس الرابط الكامل). تأكد أن رقم المتغير في الزر أكبر من متغيرات النص ({{1}}، {{2}}…).';
+            $details = trim((string) ($errorPayload['error_data']['details'] ?? ''));
+            if ($details !== '') {
+                return 'Meta: '.$details;
+            }
+
+            return 'معامل غير صالح في القالب — تأكد من اللغة (ar أو en_US) وعدم استخدام رابط جروب واتساب في زر URL (ضعه في النص كـ {{3}}).';
         }
 
         if ($code === 130472 || str_contains(mb_strtolower($message), 'experiment')) {

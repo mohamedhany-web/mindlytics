@@ -34,34 +34,18 @@ class WorkshopWhatsAppTemplateService
     {
         return "مرحباً {{1}}\n\n"
             ."شكراً لتسجيلك في ورشة {{2}}.\n\n"
-            ."للانضمام لجروب الورشة استخدم الزر أدناه.\n\n"
+            ."للانضمام لجروب الورشة:\n{{3}}\n\n"
             ."فريق Mindlytics";
     }
 
     /**
+     * Meta لا يقبل chat.whatsapp.com في أزرار URL — الرابط يُوضَع في النص كـ {{3}}.
+     *
      * @return array<int, array<string, string>>
      */
     public function defaultWelcomeButtons(Workshop $workshop): array
     {
-        $groupLink = trim((string) $workshop->whatsapp_group_link);
-        if ($groupLink === '') {
-            return [];
-        }
-
-        $groupLink = app(WhatsAppTemplateService::class)->normalizeMetaButtonUrl($groupLink);
-        if ($groupLink === '') {
-            return [];
-        }
-
-        $inviteCode = $this->groupLinkDynamicPart($groupLink);
-
-        return [[
-            'type' => 'URL',
-            'text' => 'انضم للجروب',
-            'url' => 'https://chat.whatsapp.com/{{3}}',
-            'url_example' => $inviteCode,
-            'phone' => '',
-        ]];
+        return [];
     }
 
     /**

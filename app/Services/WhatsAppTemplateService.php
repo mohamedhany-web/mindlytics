@@ -18,8 +18,8 @@ class WhatsAppTemplateService
     public function createDraft(array $data, ?int $userId = null): WhatsAppMetaTemplate
     {
         $name = $this->normalizeTemplateName((string) ($data['name'] ?? ''));
-        $bodyText = $this->normalizeMetaBodyText((string) ($data['body_text'] ?? ''));
-        $data['body_text'] = $bodyText;
+        $data = $this->prepareMetaTemplateData($data);
+        $bodyText = (string) $data['body_text'];
         $data['buttons'] = $this->normalizeButtonsForMeta(
             $data['buttons'] ?? [],
             $bodyText,
@@ -53,17 +53,17 @@ class WhatsAppTemplateService
         }
 
         $bodyText = $this->normalizeMetaBodyText((string) ($data['body_text'] ?? $template->body_text));
-        $merged = array_merge($template->toArray(), $data, [
-            'name' => $this->normalizeTemplateName((string) ($data['name'] ?? $template->name)),
-            'body_text' => $bodyText,
-            'buttons' => $this->normalizeButtonsForMeta(
-                $data['buttons'] ?? $template->buttons ?? [],
-                $bodyText,
-                (string) ($data['header_type'] ?? $template->header_type ?? ''),
-                (string) ($data['header_content'] ?? $template->header_content ?? '')
-            ),
-            'body_variable_count' => $this->countBodyVariables($bodyText),
-        ]);
+        $merged = array_merge($template->toArray(), $data, ['body_text' => $bodyText]);
+        $merged = $this->prepareMetaTemplateData($merged);
+        $bodyText = (string) $merged['body_text'];
+        $merged['name'] = $this->normalizeTemplateName((string) ($data['name'] ?? $template->name));
+        $merged['buttons'] = $this->normalizeButtonsForMeta(
+            $merged['buttons'] ?? [],
+            $bodyText,
+            (string) ($merged['header_type'] ?? ''),
+            (string) ($merged['header_content'] ?? '')
+        );
+        $merged['body_variable_count'] = $this->countBodyVariables($bodyText);
 
         $template->update([
             'name' => $merged['name'],
@@ -94,7 +94,15 @@ class WhatsAppTemplateService
             return ['success' => false, 'error' => 'يمكن إرسال المسودات والقوالب المرفوضة فقط إلى Meta.'];
         }
 
-        $components = $this->buildMetaComponents($template->toArray());
+        $prepared = $this->prepareMetaTemplateData($template->toArray());
+        $prepared['buttons'] = $this->normalizeButtonsForMeta(
+            $prepared['buttons'] ?? [],
+            (string) $prepared['body_text'],
+            (string) ($prepared['header_type'] ?? ''),
+            (string) ($prepared['header_content'] ?? '')
+        );
+
+        $components = $this->buildMetaComponents($prepared);
         $mediaHeader = in_array($template->header_type, ['image', 'video', 'document'], true);
 
         if ($mediaHeader && empty($template->header_content)) {
@@ -108,6 +116,13 @@ class WhatsAppTemplateService
         if ($validationError = $this->validateMetaComponents($components)) {
             return ['success' => false, 'error' => $validationError];
         }
+
+        $template->update([
+            'body_text' => $prepared['body_text'],
+            'buttons' => $prepared['buttons'],
+            'body_variable_count' => $this->countBodyVariables((string) $prepared['body_text']),
+            'components' => $components,
+        ]);
 
         $result = $this->cloud->createMessageTemplate(
             $template->name,
@@ -484,6 +499,7 @@ class WhatsAppTemplateService
      */
     public function buildMetaComponents(array $data): array
     {
+        $data = $this->prepareMetaTemplateData($data);
         $components = [];
 
         $headerType = strtolower((string) ($data['header_type'] ?? ''));
@@ -532,12 +548,6 @@ class WhatsAppTemplateService
         }
 
         $buttons = $this->sanitizeButtons($data['buttons'] ?? []);
-        $buttons = $this->normalizeGroupInviteButtons(
-            $buttons,
-            $bodyText,
-            $headerType,
-            $headerContent
-        );
         if ($buttons !== []) {
             $metaButtons = [];
             foreach ($buttons as $btn) {
@@ -629,12 +639,10 @@ class WhatsAppTemplateService
         ?string $headerContent = null
     ): array {
         $sanitized = $this->sanitizeButtons($buttons);
-        $sanitized = $this->normalizeGroupInviteButtons(
+        $sanitized = array_values(array_filter(
             $sanitized,
-            $bodyText,
-            $headerType,
-            (string) ($headerContent ?? '')
-        );
+            fn (array $btn) => ! $this->isWhatsappGroupUrlButton($btn)
+        ));
 
         foreach ($sanitized as &$btn) {
             if (strtoupper((string) ($btn['type'] ?? '')) === 'URL') {
@@ -651,6 +659,78 @@ class WhatsAppTemplateService
             $sanitized,
             fn (array $btn) => trim((string) ($btn['text'] ?? '')) !== ''
         ));
+    }
+
+    /**
+     * Meta rejects chat.whatsapp.com in URL buttons (even dynamic {{N}}).
+     * Move the group link into the body as a text variable instead.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public function prepareMetaTemplateData(array $data): array
+    {
+        $headerType = strtolower((string) ($data['header_type'] ?? ''));
+        $headerContent = trim((string) ($data['header_content'] ?? ''));
+        $bodyText = $this->normalizeMetaBodyText((string) ($data['body_text'] ?? ''));
+        $buttons = is_array($data['buttons'] ?? null) ? $this->sanitizeButtons($data['buttons']) : [];
+
+        $keptButtons = [];
+        $groupVarIndex = null;
+
+        foreach ($buttons as $btn) {
+            if (! $this->isWhatsappGroupUrlButton($btn)) {
+                $keptButtons[] = $btn;
+
+                continue;
+            }
+
+            $url = trim((string) ($btn['url'] ?? ''));
+            if (preg_match('/\{\{(\d+)\}\}/', $url, $matches)) {
+                $groupVarIndex = (int) $matches[1];
+            } else {
+                $textParts = [$bodyText];
+                if ($headerType === 'text' && $headerContent !== '') {
+                    $textParts[] = $headerContent;
+                }
+                $groupVarIndex = $this->maxVariableIndex(...$textParts) + 1;
+            }
+        }
+
+        if ($groupVarIndex !== null) {
+            $placeholder = '{{'.$groupVarIndex.'}}';
+            if (! str_contains($bodyText, $placeholder)) {
+                if (preg_match('/\n?\n?للانضمام[^\n]*(?:الزر|الرابط)[^\n]*/u', $bodyText)) {
+                    $bodyText = preg_replace(
+                        '/\n?\n?للانضمام[^\n]*(?:الزر|الرابط)[^\n]*/u',
+                        "\n\nللانضمام لجروب الورشة:\n".$placeholder,
+                        $bodyText,
+                        1
+                    ) ?? $bodyText;
+                } else {
+                    $bodyText = rtrim($bodyText)."\n\nللانضمام لجروب الورشة:\n".$placeholder;
+                }
+            }
+
+            $data['buttons'] = $keptButtons;
+        }
+
+        $data['body_text'] = $bodyText;
+        $data['body_variable_count'] = $this->countBodyVariables($bodyText);
+
+        return $data;
+    }
+
+    /**
+     * @param  array<string, mixed>  $btn
+     */
+    public function isWhatsappGroupUrlButton(array $btn): bool
+    {
+        if (strtoupper((string) ($btn['type'] ?? '')) !== 'URL') {
+            return false;
+        }
+
+        return str_contains(strtolower(trim((string) ($btn['url'] ?? ''))), 'chat.whatsapp.com');
     }
 
     public function normalizeMetaBodyText(string $body): string
@@ -828,7 +908,7 @@ class WhatsAppTemplateService
      */
     public function defaultBodyExamples(int $count): array
     {
-        $pool = ['أحمد', 'ورشة Mindlytics', 'https://chat.whatsapp.com/Example', '201012345678', 'أونلاين', 'القاهرة'];
+        $pool = ['أحمد', 'ورشة Mindlytics', 'https://chat.whatsapp.com/ExampleInvite', '201012345678', 'أونلاين', 'القاهرة'];
 
         $examples = [];
         for ($i = 1; $i <= $count; $i++) {
@@ -873,8 +953,9 @@ class WhatsAppTemplateService
                     return 'رابط زر URL مطلوب.';
                 }
 
-                if (preg_match('#^https://chat\.whatsapp\.com/[A-Za-z0-9_-]+$#i', $url)) {
-                    return 'رابط جروب واتساب في الزر يجب أن يكون ديناميكياً: https://chat.whatsapp.com/{{3}} (استخدم رقم متغير بعد متغيرات النص).';
+                if (preg_match('#^https://chat\.whatsapp\.com/[A-Za-z0-9_-]+$#i', $url)
+                    || preg_match('#^https://chat\.whatsapp\.com/\{\{\d+\}\}$#i', $url)) {
+                    return 'Meta لا يقبل روابط chat.whatsapp.com في أزرار URL — ضع رابط الجروب في نص الرسالة كمتغير {{3}} بدلاً من زر.';
                 }
 
                 if (preg_match('/\{\{(\d+)\}\}/', $url, $matches)) {
