@@ -114,7 +114,7 @@
                     </select>
                     <input type="hidden" name="template_language" id="wa-template-lang"
                            value="{{ $templates->firstWhere(fn($t) => ($t->name.'|'.$t->language) === $defaultTplKey)?->language ?? $templates->first()?->language }}">
-                    <input type="hidden" name="group_invite_code" id="group-invite-code-input" :value="inviteCode">
+                    <input type="hidden" name="group_invite_code" id="group-invite-code-input" value="">
 
                     <p class="text-[11px] text-slate-600">
                         المتغيرات تُملأ تلقائياً: @{{1}} الاسم، @{{2}} الورشة، @{{5}} الحضور.
@@ -281,6 +281,10 @@ function workshopWaSend(config) {
         pendingSubmit: false,
 
         init() {
+            const hidden = document.getElementById('group-invite-code-input');
+            if (hidden && (this.inviteCode || '').trim() !== '') {
+                hidden.value = this.inviteCode.trim();
+            }
             if (config.openOnLoad) {
                 this.openInviteModal();
             }
@@ -341,7 +345,7 @@ function workshopWaSend(config) {
             }
 
             const hidden = document.getElementById('group-invite-code-input');
-            if (hidden && hasCode) hidden.value = this.inviteCode.trim();
+            if (hidden) hidden.value = hasCode ? this.inviteCode.trim() : '';
 
             if (!confirm('إرسال القالب إلى ' + window.workshopWaConfirmCount(scope) + ' مسجّل؟')) {
                 return;

@@ -303,10 +303,6 @@ class WorkshopWhatsAppTemplateService
             }
         }
 
-        if ($max >= 3 && str_contains($body, '{{3}}')) {
-            return 3;
-        }
-
         return null;
     }
 
@@ -392,7 +388,7 @@ class WorkshopWhatsAppTemplateService
             $preview = $this->renderPreview($template, $reg, $workshop, $variableOverrides);
 
             return [
-                'recipient_name' => $reg->name,
+                'recipient_name' => $this->templates->scalarToString($reg->name),
                 'phone' => $formatted,
                 'message' => json_encode([
                     'template_name' => $template->name,
@@ -420,7 +416,7 @@ class WorkshopWhatsAppTemplateService
             if (! is_int($key) && ! is_numeric($key)) {
                 continue;
             }
-            $out = str_replace('{{'.$key.'}}', (string) $value, $out);
+            $out = str_replace('{{'.$key.'}}', $this->templates->scalarToString($value), $out);
         }
 
         return $out;
@@ -435,12 +431,12 @@ class WorkshopWhatsAppTemplateService
         $groupLink = trim((string) $workshop->whatsapp_group_link);
 
         return [
-            $reg->name,
-            $workshop->title,
-            $groupLink,
-            (string) $reg->phone,
-            $attendance,
-            (string) ($workshop->location ?? ''),
+            $this->templates->scalarToString($reg->name),
+            $this->templates->scalarToString($workshop->title),
+            $this->templates->scalarToString($groupLink),
+            $this->templates->scalarToString($reg->phone),
+            $this->templates->scalarToString($attendance),
+            $this->templates->scalarToString($workshop->location ?? ''),
         ];
     }
 
@@ -466,7 +462,9 @@ class WorkshopWhatsAppTemplateService
 
         for ($i = 1; $i <= $bodyCount; $i++) {
             if (isset($variableOverrides[$i]) || isset($variableOverrides[(string) $i])) {
-                $value = (string) ($variableOverrides[$i] ?? $variableOverrides[(string) $i]);
+                $value = $this->templates->scalarToString(
+                    $variableOverrides[$i] ?? $variableOverrides[(string) $i]
+                );
                 if (! $this->templates->bodyVariableExpectsWhatsappInviteCode($bodyText, $i)
                     && ! str_contains($value, '://')
                     && $value !== '') {
@@ -477,17 +475,17 @@ class WorkshopWhatsAppTemplateService
                 continue;
             }
 
-            $value = $pool[$i - 1] ?? $reg->name;
+            $value = $this->templates->scalarToString($pool[$i - 1] ?? $reg->name);
             if ($this->templates->bodyVariableExpectsWhatsappInviteCode($bodyText, $i)) {
                 $value = $groupDynamic !== ''
                     ? $groupDynamic
-                    : ($this->templates->inviteCodeFromExampleValue((string) $value) ?? '');
+                    : ($this->templates->inviteCodeFromExampleValue($value) ?? '');
             }
             $variables[$i] = $value;
         }
 
-        if ($template->header_type === 'text' && str_contains((string) $template->header_content, '{{1}}')) {
-            $variables['header_1'] = $workshop->title;
+        if ($template->header_type === 'text' && str_contains($this->templates->scalarToString($template->header_content), '{{1}}')) {
+            $variables['header_1'] = $this->templates->scalarToString($workshop->title);
         }
 
         $buttons = is_array($template->buttons) ? $template->buttons : [];
@@ -498,18 +496,20 @@ class WorkshopWhatsAppTemplateService
                 continue;
             }
 
-            $url = (string) ($btn['url'] ?? '');
+            $url = $this->templates->scalarToString($btn['url'] ?? '');
             if (! preg_match('/\{\{(\d+)\}\}/', $url, $matches)) {
                 continue;
             }
 
             $varIndex = (int) $matches[1];
             if (str_contains(strtolower($url), 'chat.whatsapp.com')) {
-                $value = $groupDynamic !== '' ? $groupDynamic : $this->groupLinkDynamicPart((string) ($pool[$varIndex - 1] ?? ''));
+                $value = $groupDynamic !== '' ? $groupDynamic : $this->groupLinkDynamicPart(
+                    $this->templates->scalarToString($pool[$varIndex - 1] ?? '')
+                );
             } else {
                 $value = $varIndex === 1 && $groupDynamic !== ''
                     ? $groupDynamic
-                    : ($pool[$varIndex - 1] ?? $groupDynamic);
+                    : $this->templates->scalarToString($pool[$varIndex - 1] ?? $groupDynamic);
             }
 
             if ($value === '') {

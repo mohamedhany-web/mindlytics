@@ -117,6 +117,12 @@ class WorkshopWhatsAppController extends Controller
 
     public function sendTemplate(Request $request, Workshop $workshop): RedirectResponse
     {
+        if (is_array($request->input('group_invite_code'))) {
+            $request->merge([
+                'group_invite_code' => $this->metaTemplates->scalarToString($request->input('group_invite_code')),
+            ]);
+        }
+
         $validated = $request->validate([
             'scope' => 'required|in:all,online,offline,phone',
             'phone' => 'nullable|string|max:30',

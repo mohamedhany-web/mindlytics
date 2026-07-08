@@ -12,6 +12,31 @@ class WhatsAppTemplateService
         private WhatsAppCloudService $cloud
     ) {}
 
+    public function scalarToString(mixed $value, string $default = ''): string
+    {
+        if ($value === null) {
+            return $default;
+        }
+        if (is_string($value)) {
+            return trim($value);
+        }
+        if (is_int($value) || is_float($value) || is_bool($value)) {
+            return trim((string) $value);
+        }
+        if (is_array($value)) {
+            foreach ($value as $item) {
+                $candidate = $this->scalarToString($item, '');
+                if ($candidate !== '') {
+                    return $candidate;
+                }
+            }
+
+            return $default;
+        }
+
+        return $default;
+    }
+
     /**
      * @param  array<string, mixed>  $data
      */
@@ -361,7 +386,7 @@ class WhatsAppTemplateService
         $components = [];
 
         if ($definition['header_variable_count'] > 0) {
-            $headerValue = trim((string) ($variables['header_1'] ?? $variables['h1'] ?? ''));
+            $headerValue = $this->scalarToString($variables['header_1'] ?? $variables['h1'] ?? '');
             if ($headerValue === '') {
                 return ['components' => [], 'error' => 'متغير عنوان القالب (Header) مطلوب'];
             }
@@ -376,7 +401,7 @@ class WhatsAppTemplateService
         if ($bodyCount > 0) {
             $parameters = [];
             for ($i = 1; $i <= $bodyCount; $i++) {
-                $value = trim((string) ($variables[$i] ?? $variables[(string) $i] ?? ''));
+                $value = $this->scalarToString($variables[$i] ?? $variables[(string) $i] ?? '');
                 if ($value === '') {
                     return ['components' => [], 'error' => "متغير القالب {$i} مطلوب"];
                 }
@@ -411,19 +436,19 @@ class WhatsAppTemplateService
                 continue;
             }
 
-            $url = (string) ($btn['url'] ?? '');
+            $url = $this->scalarToString($btn['url'] ?? '');
             if (! preg_match('/\{\{(\d+)\}\}/', $url, $matches)) {
                 continue;
             }
 
             $varIndex = (int) $matches[1];
-            $value = trim((string) (
+            $value = $this->scalarToString(
                 $variables['button_'.$index]
                 ?? $variables['button_url_'.$index]
                 ?? $variables[$varIndex]
                 ?? $variables[(string) $varIndex]
                 ?? ''
-            ));
+            );
 
             if ($value === '') {
                 return 'متغير زر الرابط «'.((string) ($btn['text'] ?? 'URL')).'» مطلوب عند الإرسال.';
@@ -614,18 +639,18 @@ class WhatsAppTemplateService
             if (! is_array($btn)) {
                 continue;
             }
-            $type = strtoupper((string) ($btn['type'] ?? 'QUICK_REPLY'));
-            $text = trim((string) ($btn['text'] ?? ''));
+            $type = strtoupper($this->scalarToString($btn['type'] ?? 'QUICK_REPLY'));
+            $text = $this->scalarToString($btn['text'] ?? '');
             if ($text === '') {
                 continue;
             }
             $row = ['type' => $type, 'text' => $text];
             if ($type === 'URL') {
-                $row['url'] = trim((string) ($btn['url'] ?? ''));
-                $row['url_example'] = trim((string) ($btn['url_example'] ?? ''));
+                $row['url'] = $this->scalarToString($btn['url'] ?? '');
+                $row['url_example'] = $this->scalarToString($btn['url_example'] ?? '');
             }
             if ($type === 'PHONE_NUMBER') {
-                $row['phone'] = trim((string) ($btn['phone'] ?? ''));
+                $row['phone'] = $this->scalarToString($btn['phone'] ?? '');
             }
             $out[] = $row;
         }
@@ -786,9 +811,9 @@ class WhatsAppTemplateService
         return $examples;
     }
 
-    public function inviteCodeFromExampleValue(string $value): ?string
+    public function inviteCodeFromExampleValue(mixed $value): ?string
     {
-        $value = trim($value);
+        $value = $this->scalarToString($value);
         if ($value === '') {
             return null;
         }
@@ -1205,10 +1230,14 @@ class WhatsAppTemplateService
                     'text' => (string) ($btn['text'] ?? ''),
                 ];
                 if ($type === 'URL') {
-                    $row['url'] = (string) ($btn['url'] ?? '');
+                    $row['url'] = $this->scalarToString($btn['url'] ?? '');
+                    $example = $btn['example'] ?? null;
+                    if ($row['url'] === '' && is_array($example)) {
+                        $row['url_example'] = $this->scalarToString($example[0] ?? '');
+                    }
                 }
                 if ($type === 'PHONE_NUMBER') {
-                    $row['phone'] = (string) ($btn['phone_number'] ?? $btn['phone'] ?? '');
+                    $row['phone'] = $this->scalarToString($btn['phone_number'] ?? $btn['phone'] ?? '');
                 }
                 $buttons[] = $row;
             }
