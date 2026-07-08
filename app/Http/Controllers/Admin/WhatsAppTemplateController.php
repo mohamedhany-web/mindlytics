@@ -117,6 +117,11 @@ class WhatsAppTemplateController extends Controller
             $validated['name'] = $workshopTemplates->templateNameFor($workshop);
             $validated['body_text'] = $workshopTemplates->normalizeBodyForMeta((string) ($validated['body_text'] ?? ''));
             $validated['buttons'] = $workshopTemplates->enrichButtonExamplesForWorkshop($workshop, $validated['buttons'] ?? []);
+            $validated['language'] = $validated['language'] ?? 'ar_EG';
+            $groupLink = trim((string) $workshop->whatsapp_group_link);
+            if ($groupLink !== '') {
+                $validated['group_invite_example'] = $workshopTemplates->groupLinkDynamicPart($groupLink);
+            }
         }
 
         try {

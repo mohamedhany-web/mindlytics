@@ -121,12 +121,13 @@ class WhatsAppTemplateService
             'body_text' => $prepared['body_text'],
             'buttons' => $prepared['buttons'],
             'body_variable_count' => $this->countBodyVariables((string) $prepared['body_text']),
+            'language' => $this->normalizeMetaLanguage($template->language),
             'components' => $components,
         ]);
 
         $result = $this->cloud->createMessageTemplate(
             $template->name,
-            $template->language,
+            $this->normalizeMetaLanguage($template->language),
             $template->category,
             $components
         );
@@ -531,8 +532,12 @@ class WhatsAppTemplateService
 
             $varCount = $this->countBodyVariables($bodyText);
             if ($varCount > 0) {
+                $examples = $this->sanitizeBodyExamples(
+                    $bodyText,
+                    $this->defaultBodyExamples($varCount, $data)
+                );
                 $bodyComponent['example'] = [
-                    'body_text' => [$this->defaultBodyExamples($varCount)],
+                    'body_text' => [$examples],
                 ];
             }
 
@@ -700,22 +705,23 @@ class WhatsAppTemplateService
         if ($groupVarIndex !== null) {
             $placeholder = '{{'.$groupVarIndex.'}}';
             if (! str_contains($bodyText, $placeholder)) {
+                $linkLine = 'https://chat.whatsapp.com/'.$placeholder;
                 if (preg_match('/\n?\n?للانضمام[^\n]*(?:الزر|الرابط)[^\n]*/u', $bodyText)) {
                     $bodyText = preg_replace(
                         '/\n?\n?للانضمام[^\n]*(?:الزر|الرابط)[^\n]*/u',
-                        "\n\nللانضمام لجروب الورشة:\n".$placeholder,
+                        "\n\nللانضمام لجروب الورشة:\n".$linkLine,
                         $bodyText,
                         1
                     ) ?? $bodyText;
                 } else {
-                    $bodyText = rtrim($bodyText)."\n\nللانضمام لجروب الورشة:\n".$placeholder;
+                    $bodyText = rtrim($bodyText)."\n\nللانضمام لجروب الورشة:\n".$linkLine;
                 }
             }
 
             $data['buttons'] = $keptButtons;
         }
 
-        $data['body_text'] = $bodyText;
+        $data['body_text'] = $this->normalizeGroupInviteBodyFormat($bodyText);
         $data['body_variable_count'] = $this->countBodyVariables($bodyText);
 
         return $data;
@@ -731,6 +737,78 @@ class WhatsAppTemplateService
         }
 
         return str_contains(strtolower(trim((string) ($btn['url'] ?? ''))), 'chat.whatsapp.com');
+    }
+
+    public function normalizeGroupInviteBodyFormat(string $body): string
+    {
+        if (preg_match('/chat\.whatsapp\.com\/\{\{\d+\}\}/i', $body)) {
+            return $body;
+        }
+
+        return preg_replace(
+            '/(للانضمام[^\n]*\n)(\{\{(\d+)\}\})/u',
+            '$1https://chat.whatsapp.com/$2',
+            $body,
+            1
+        ) ?? $body;
+    }
+
+    public function bodyVariableExpectsWhatsappInviteCode(string $body, int $varIndex): bool
+    {
+        return (bool) preg_match(
+            '/chat\.whatsapp\.com\/\{\{'.$varIndex.'\}\}/i',
+            $body
+        );
+    }
+
+    /**
+     * Meta rejects full URLs inside body variable examples — use invite code suffix only.
+     *
+     * @param  array<int, string>  $examples
+     * @return array<int, string>
+     */
+    public function sanitizeBodyExamples(string $bodyText, array $examples): array
+    {
+        foreach ($examples as $index => $example) {
+            $varNumber = $index + 1;
+
+            if ($this->bodyVariableExpectsWhatsappInviteCode($bodyText, $varNumber)) {
+                $examples[$index] = $this->inviteCodeFromExampleValue($example) ?? 'ExampleInviteCode';
+
+                continue;
+            }
+
+            if (preg_match('#https?://#i', $example)) {
+                $examples[$index] = 'نص_مثال_'.$varNumber;
+            }
+        }
+
+        return $examples;
+    }
+
+    public function inviteCodeFromExampleValue(string $value): ?string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+
+        if (! str_contains($value, '://') && ! str_contains($value, '/')) {
+            return $value;
+        }
+
+        return $this->extractWhatsappGroupInviteCode($value)
+            ?? (preg_match('#chat\.whatsapp\.com/([A-Za-z0-9_-]+)#i', $value, $m) ? $m[1] : null);
+    }
+
+    public function normalizeMetaLanguage(string $language): string
+    {
+        $language = trim($language);
+
+        return match ($language) {
+            'ar' => 'ar_EG',
+            default => $language,
+        };
     }
 
     public function normalizeMetaBodyText(string $body): string
@@ -904,11 +982,19 @@ class WhatsAppTemplateService
     }
 
     /**
+     * @param  array<string, mixed>  $context
      * @return array<int, string>
      */
-    public function defaultBodyExamples(int $count): array
+    public function defaultBodyExamples(int $count, array $context = []): array
     {
-        $pool = ['أحمد', 'ورشة Mindlytics', 'https://chat.whatsapp.com/ExampleInvite', '201012345678', 'أونلاين', 'القاهرة'];
+        $inviteExample = trim((string) ($context['group_invite_example'] ?? ''));
+        if ($inviteExample === '') {
+            $inviteExample = 'Ld0j8PUAprmCnDi65uUqTC';
+        } else {
+            $inviteExample = $this->inviteCodeFromExampleValue($inviteExample) ?? 'Ld0j8PUAprmCnDi65uUqTC';
+        }
+
+        $pool = ['أحمد', 'ورشة Mindlytics', $inviteExample, '201012345678', 'أونلاين', 'القاهرة'];
 
         $examples = [];
         for ($i = 1; $i <= $count; $i++) {
@@ -937,6 +1023,32 @@ class WhatsAppTemplateService
         }
 
         $textMaxVar = $this->maxVariableIndex($bodyText, $headerText);
+
+        foreach ($components as $component) {
+            if (strtoupper((string) ($component['type'] ?? '')) !== 'BODY') {
+                continue;
+            }
+
+            $examples = $component['example']['body_text'][0] ?? [];
+            if (! is_array($examples)) {
+                continue;
+            }
+
+            foreach ($examples as $index => $example) {
+                $varNumber = (int) $index + 1;
+                $example = (string) $example;
+
+                if ($this->bodyVariableExpectsWhatsappInviteCode($bodyText, $varNumber)
+                    && preg_match('#https?://#i', $example)) {
+                    return 'مثال {{'.$varNumber.'}} يجب أن يكون كود الدعوة فقط — الصيغة في النص: https://chat.whatsapp.com/{{'.$varNumber.'}}';
+                }
+
+                if (! $this->bodyVariableExpectsWhatsappInviteCode($bodyText, $varNumber)
+                    && preg_match('#https?://#i', $example)) {
+                    return 'مثال {{'.$varNumber.'}} لا يجب أن يحتوي رابطاً.';
+                }
+            }
+        }
 
         foreach ($components as $component) {
             if (strtoupper((string) ($component['type'] ?? '')) !== 'BUTTONS') {

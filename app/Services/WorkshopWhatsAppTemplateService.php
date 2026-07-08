@@ -34,7 +34,8 @@ class WorkshopWhatsAppTemplateService
     {
         return "مرحباً {{1}}\n\n"
             ."شكراً لتسجيلك في ورشة {{2}}.\n\n"
-            ."للانضمام لجروب الورشة:\n{{3}}\n\n"
+            ."للانضمام لجروب الورشة، افتح الرابط:\n"
+            ."https://chat.whatsapp.com/{{3}}\n\n"
             ."فريق Mindlytics";
     }
 
@@ -57,14 +58,18 @@ class WorkshopWhatsAppTemplateService
         $normalizedLink = $groupLink !== ''
             ? app(WhatsAppTemplateService::class)->normalizeMetaButtonUrl($groupLink)
             : '';
+        $inviteCode = $normalizedLink !== ''
+            ? $this->groupLinkDynamicPart($normalizedLink)
+            : '';
 
         return [
             'name' => $this->templateNameFor($workshop),
             'body_text' => $this->defaultWelcomeBody(),
             'footer_text' => 'Mindlytics',
             'category' => 'UTILITY',
-            'language' => 'ar',
+            'language' => 'ar_EG',
             'buttons' => $this->defaultWelcomeButtons($workshop),
+            'group_invite_example' => $inviteCode !== '' ? $inviteCode : null,
             'has_group_link' => $normalizedLink !== '',
             'group_link' => $normalizedLink !== '' ? $normalizedLink : null,
             'workshop_title' => $workshop->title,
@@ -110,7 +115,7 @@ class WorkshopWhatsAppTemplateService
 
         $payload['name'] = $this->templateNameFor($workshop);
         $payload['body_text'] = $this->normalizeBodyForMeta((string) ($payload['body_text'] ?? $this->defaultWelcomeBody()));
-        $payload['language'] = (string) ($payload['language'] ?? 'ar');
+        $payload['language'] = (string) ($payload['language'] ?? 'ar_EG');
         $payload['category'] = strtoupper((string) ($payload['category'] ?? 'UTILITY'));
         $payload['buttons'] = $this->enrichButtonExamples($payload['buttons'] ?? [], $workshop);
 
@@ -372,8 +377,19 @@ class WorkshopWhatsAppTemplateService
         }
 
         $variables = [];
+        $bodyText = (string) ($template->body_text ?? '');
+        $groupDynamic = $this->groupLinkDynamicPart(
+            app(WhatsAppTemplateService::class)->normalizeMetaButtonUrl((string) $workshop->whatsapp_group_link)
+        );
+
         for ($i = 1; $i <= $bodyCount; $i++) {
-            $variables[$i] = $pool[$i - 1] ?? $reg->name;
+            $value = $pool[$i - 1] ?? $reg->name;
+            if (app(WhatsAppTemplateService::class)->bodyVariableExpectsWhatsappInviteCode($bodyText, $i)) {
+                $value = $groupDynamic !== ''
+                    ? $groupDynamic
+                    : app(WhatsAppTemplateService::class)->inviteCodeFromExampleValue((string) $value) ?? $value;
+            }
+            $variables[$i] = $value;
         }
 
         if ($template->header_type === 'text' && str_contains((string) $template->header_content, '{{1}}')) {
@@ -457,7 +473,7 @@ class WorkshopWhatsAppTemplateService
         return $sanitized;
     }
 
-    private function groupLinkDynamicPart(string $groupLink): string
+    public function groupLinkDynamicPart(string $groupLink): string
     {
         $groupLink = trim($groupLink);
         if ($groupLink === '') {

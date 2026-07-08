@@ -787,11 +787,13 @@ class WhatsAppCloudService
 
         if ($code === 100 && str_contains(mb_strtolower($message), 'invalid parameter')) {
             $details = trim((string) ($errorPayload['error_data']['details'] ?? ''));
+            $userMsg = trim((string) ($errorPayload['error_user_msg'] ?? ''));
+            if ($userMsg !== '') {
+                return $userMsg;
+            }
             if ($details !== '') {
                 return 'Meta: '.$details;
             }
-
-            return 'معامل غير صالح في القالب — تأكد من اللغة (ar أو en_US) وعدم استخدام رابط جروب واتساب في زر URL (ضعه في النص كـ {{3}}).';
         }
 
         if ($code === 130472 || str_contains(mb_strtolower($message), 'experiment')) {
@@ -1034,6 +1036,7 @@ class WhatsAppCloudService
                     'name' => $name,
                     'language' => $language,
                     'category' => strtoupper($category),
+                    'parameter_format' => 'POSITIONAL',
                     'components' => $components,
                 ]);
 
@@ -1048,10 +1051,25 @@ class WhatsAppCloudService
 
             $error = is_array($body['error'] ?? null) ? $body['error'] : [];
             $message = (string) ($error['message'] ?? 'فشل إنشاء القالب في Meta');
+            $userTitle = trim((string) ($error['error_user_title'] ?? ''));
             $userMsg = trim((string) ($error['error_user_msg'] ?? ''));
-            if ($userMsg !== '' && ! str_contains($message, $userMsg)) {
-                $message .= ' — '.$userMsg;
+            $details = trim((string) ($error['error_data']['details'] ?? ''));
+            $subcode = (int) ($error['error_subcode'] ?? 0);
+
+            if ($userMsg !== '') {
+                $message = $userTitle !== '' ? ($userTitle.' — '.$userMsg) : $userMsg;
+            } elseif ($details !== '') {
+                $message .= ' — '.$details;
             }
+
+            Log::warning('whatsapp.meta.template_create_failed', [
+                'name' => $name,
+                'language' => $language,
+                'category' => $category,
+                'subcode' => $subcode,
+                'components' => $components,
+                'error' => $error,
+            ]);
 
             return [
                 'success' => false,

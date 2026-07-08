@@ -169,7 +169,7 @@
         <label class="{{ $waLabelClass }}">محتوى الرسالة (Body) *</label>
         <textarea name="body_text" rows="6" required class="{{ $waTextareaClass }}" x-model="bodyText"
                   placeholder="مرحباً @{{1}}، طلبك رقم @{{2}} تم تأكيده."></textarea>
-        <p class="text-xs text-slate-500 mt-1">استخدم متغيرات Meta: <code class="bg-slate-100 px-1 rounded" dir="ltr">@{{1}}</code> <code class="bg-slate-100 px-1 rounded" dir="ltr">@{{2}}</code> … — لرابط جروب واتساب ضع <code class="bg-slate-100 px-1 rounded" dir="ltr">@{{3}}</code> في النص (ليس في زر URL).</p>
+        <p class="text-xs text-slate-500 mt-1">استخدم متغيرات Meta: <code class="bg-slate-100 px-1 rounded" dir="ltr">@{{1}}</code> <code class="bg-slate-100 px-1 rounded" dir="ltr">@{{2}}</code> … — لجروب واتساب اكتب في النص: <code dir="ltr" class="bg-slate-100 px-1 rounded">https://chat.whatsapp.com/@{{3}}</code> (كود الدعوة فقط في @{{3}}، ليس الرابط الكامل).</p>
         @error('body_text')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
     </div>
 
@@ -186,7 +186,9 @@
                     class="text-xs font-bold text-emerald-700 hover:underline">+ إضافة زر</button>
         </div>
         <p class="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-3">
-            Meta لا يقبل روابط <code dir="ltr">chat.whatsapp.com</code> في أزرار URL — ضع رابط الجروب في نص الرسالة كمتغير <code dir="ltr">@{{3}}</code>.
+            Meta لا يقبل روابط الجروب في أزرار URL. الصيغة الصحيحة في النص:
+            <code dir="ltr" class="bg-white px-1 rounded">https://chat.whatsapp.com/@{{3}}</code>
+            — عند الإرسال يُملأ @{{3}} بكود الدعوة فقط.
         </p>
         <div class="space-y-3">
             <template x-for="(btn, i) in buttons" :key="i">

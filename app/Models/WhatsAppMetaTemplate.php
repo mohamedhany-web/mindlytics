@@ -123,6 +123,7 @@ class WhatsAppMetaTemplate extends Model
     {
         return [
             'ar' => 'العربية (ar)',
+            'ar_EG' => 'العربية — مصر (ar_EG)',
             'en' => 'English (en)',
             'en_US' => 'English US (en_US)',
             'en_GB' => 'English UK (en_GB)',
