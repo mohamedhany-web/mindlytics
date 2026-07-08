@@ -56,8 +56,12 @@ class WhatsAppMetaTemplate extends Model
 
     public function assignedUsers(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'whatsapp_meta_template_user')
-            ->withTimestamps();
+        return $this->belongsToMany(
+            User::class,
+            'whatsapp_meta_template_user',
+            'whatsapp_meta_template_id',
+            'user_id'
+        )->withTimestamps();
     }
 
     public function statusLabel(): string
