@@ -25,6 +25,11 @@ class WhatsAppTemplateAccessService
         return $this->mode() === self::MODE_RESTRICTED;
     }
 
+    public function hasAssignmentTable(): bool
+    {
+        return Schema::hasTable('whatsapp_meta_template_user');
+    }
+
     /**
      * @return array<string, string>
      */

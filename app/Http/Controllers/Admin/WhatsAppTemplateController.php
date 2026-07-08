@@ -17,7 +17,7 @@ class WhatsAppTemplateController extends Controller
     {
         $query = WhatsAppMetaTemplate::query()->with('creator:id,name')->latest();
 
-        if ($access->isRestricted()) {
+        if ($access->isRestricted() && $access->hasAssignmentTable()) {
             $query->withCount('assignedUsers');
         }
 
@@ -101,13 +101,18 @@ class WhatsAppTemplateController extends Controller
 
     public function show(WhatsAppMetaTemplate $template, WhatsAppTemplateAccessService $access): View
     {
-        $template->load(['creator:id,name', 'assignedUsers:id,name,email']);
+        $template->load(['creator:id,name']);
+
+        if ($access->hasAssignmentTable()) {
+            $template->load(['assignedUsers:id,name,email']);
+        } else {
+            $template->setRelation('assignedUsers', collect());
+        }
 
         return view('admin.whatsapp.templates.show', [
             'template' => $template,
-            'connectionMeta' => app(WhatsAppCloudService::class)->connectionMeta(),
-            'templateAccessMode' => $access->mode(),
-            'salesStaff' => $access->salesStaffForAssignment(),
+            'templateAccessMode' => $access->hasAssignmentTable() ? $access->mode() : WhatsAppTemplateAccessService::MODE_ALL,
+            'salesStaff' => $access->hasAssignmentTable() ? $access->salesStaffForAssignment() : collect(),
         ]);
     }
 

@@ -52,9 +52,12 @@
                 @if($template->footer_text)
                     <p class="text-xs text-slate-500 mt-4 pt-2 border-t">{{ $template->footer_text }}</p>
                 @endif
-                @if($template->buttons)
+                @if(is_array($template->buttons) && $template->buttons !== [])
                     <div class="mt-4 flex flex-wrap gap-2">
                         @foreach($template->buttons as $btn)
+                            @if(! is_array($btn))
+                                @continue
+                            @endif
                             <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-800">
                                 @if(($btn['type'] ?? '') === 'URL')<i class="fas fa-link"></i>
                                 @elseif(($btn['type'] ?? '') === 'PHONE_NUMBER')<i class="fas fa-phone"></i>
@@ -66,10 +69,10 @@
                 @endif
             </section>
 
-            @if($template->components)
+            @if(is_array($template->components) && $template->components !== [])
                 <section class="{{ $waSectionClass }}">
                     <div class="px-5 py-3 border-b font-bold text-slate-900 text-sm">JSON المُرسل لـ Meta</div>
-                    <pre class="p-5 text-xs overflow-x-auto dir-ltr text-left bg-slate-50 text-slate-700 max-h-64">{{ json_encode($template->components, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
+                    <pre class="p-5 text-xs overflow-x-auto dir-ltr text-left bg-slate-50 text-slate-700 max-h-64">{{ json_encode($template->components, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE) }}</pre>
                 </section>
             @endif
 
@@ -88,7 +91,7 @@
                             @csrf
                             @method('PUT')
                             <div class="grid sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto border border-slate-100 rounded-xl p-3 bg-slate-50/50">
-                                @php $assignedIds = $template->assignedUsers->pluck('id')->all(); @endphp
+                                @php $assignedIds = ($template->assignedUsers ?? collect())->pluck('id')->all(); @endphp
                                 @foreach($salesStaff as $staff)
                                     <label class="flex items-center gap-2 text-sm text-slate-800 cursor-pointer rounded-lg px-2 py-1.5 hover:bg-white">
                                         <input type="checkbox" name="user_ids[]" value="{{ $staff->id }}"
