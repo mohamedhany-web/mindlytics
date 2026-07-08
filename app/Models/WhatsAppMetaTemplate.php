@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class WhatsAppMetaTemplate extends Model
 {
@@ -51,6 +52,12 @@ class WhatsAppMetaTemplate extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function assignedUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'whatsapp_meta_template_user')
+            ->withTimestamps();
     }
 
     public function statusLabel(): string

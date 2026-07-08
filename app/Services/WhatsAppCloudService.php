@@ -843,12 +843,13 @@ class WhatsAppCloudService
     /**
      * @return array{success: bool, templates: array<int, array<string, string>>, error?: string}
      */
-    public function listApprovedTemplates(): array
+    public function listApprovedTemplates(?\App\Models\User $user = null, bool $forceAll = false): array
     {
+        $access = app(\App\Services\WhatsAppTemplateAccessService::class);
+
         $fromDb = [];
         if (\Illuminate\Support\Facades\Schema::hasTable('whatsapp_meta_templates')) {
-            $fromDb = \App\Models\WhatsAppMetaTemplate::query()
-                ->where('status', \App\Models\WhatsAppMetaTemplate::STATUS_APPROVED)
+            $fromDb = $access->approvedQueryForUser($user, $forceAll)
                 ->orderBy('name')
                 ->get()
                 ->map(fn ($t) => app(\App\Services\WhatsAppTemplateService::class)->templateMetaForList($t))
@@ -915,6 +916,8 @@ class WhatsAppCloudService
             }
 
             usort($templates, fn ($a, $b) => strcmp($a['name'] . $a['language'], $b['name'] . $b['language']));
+
+            $templates = $access->filterTemplateRowsForUser($templates, $user, $forceAll);
 
             return ['success' => true, 'templates' => $templates];
         } catch (\Throwable $e) {

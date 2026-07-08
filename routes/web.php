@@ -1780,9 +1780,11 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/templates/create', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'create'])->name('templates.create');
             Route::post('/templates', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'store'])->name('templates.store');
             Route::post('/templates/sync', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'sync'])->name('templates.sync');
+            Route::post('/templates/access-mode', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'updateAccessMode'])->name('templates.access-mode');
             Route::get('/templates/{template}', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'show'])->name('templates.show');
             Route::get('/templates/{template}/edit', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'edit'])->name('templates.edit');
             Route::put('/templates/{template}', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'update'])->name('templates.update');
+            Route::put('/templates/{template}/access', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'updateAccess'])->name('templates.access');
             Route::post('/templates/{template}/submit', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'submit'])->name('templates.submit');
             Route::delete('/templates/{template}', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'destroy'])->name('templates.destroy');
             Route::get('/inbox', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'index'])->name('inbox');

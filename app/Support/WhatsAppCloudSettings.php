@@ -29,6 +29,7 @@ class WhatsAppCloudSettings
             'business_account_id' => '',
             'display_phone_number' => '',
             'verified_display_name' => '',
+            'template_access_mode' => 'all',
         ];
     }
 
@@ -323,5 +324,19 @@ class WhatsAppCloudSettings
             'last_received_at' => is_array($decoded) ? ($decoded['last_received_at'] ?? null) : null,
             'last_inbound_at' => is_array($decoded) ? ($decoded['last_inbound_at'] ?? null) : null,
         ];
+    }
+
+    public static function templateAccessMode(): string
+    {
+        $mode = (string) (self::all()['template_access_mode'] ?? self::defaults()['template_access_mode']);
+
+        return in_array($mode, ['all', 'restricted'], true) ? $mode : 'all';
+    }
+
+    public static function setTemplateAccessMode(string $mode): void
+    {
+        self::save([
+            'template_access_mode' => in_array($mode, ['all', 'restricted'], true) ? $mode : 'all',
+        ]);
     }
 }

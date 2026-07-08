@@ -72,6 +72,39 @@
                     <pre class="p-5 text-xs overflow-x-auto dir-ltr text-left bg-slate-50 text-slate-700 max-h-64">{{ json_encode($template->components, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
                 </section>
             @endif
+
+            @if(($templateAccessMode ?? 'all') === 'restricted')
+                <section class="{{ $waSectionClass }} p-5">
+                    <h3 class="font-bold text-slate-900 mb-3 flex items-center gap-2">
+                        <i class="fas fa-user-shield text-violet-600"></i>
+                        الموظفون المصرّح لهم
+                    </h3>
+                    @if(($salesStaff ?? collect())->isEmpty())
+                        <p class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                            لا يوجد موظفو مبيعات نشطون لإسناد القالب إليهم.
+                        </p>
+                    @else
+                        <form method="POST" action="{{ route('admin.whatsapp.templates.access', $template) }}" class="space-y-4">
+                            @csrf
+                            @method('PUT')
+                            <div class="grid sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto border border-slate-100 rounded-xl p-3 bg-slate-50/50">
+                                @php $assignedIds = $template->assignedUsers->pluck('id')->all(); @endphp
+                                @foreach($salesStaff as $staff)
+                                    <label class="flex items-center gap-2 text-sm text-slate-800 cursor-pointer rounded-lg px-2 py-1.5 hover:bg-white">
+                                        <input type="checkbox" name="user_ids[]" value="{{ $staff->id }}"
+                                               @checked(in_array($staff->id, $assignedIds, true))
+                                               class="rounded text-violet-600">
+                                        <span>{{ $staff->name }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            <button type="submit" class="{{ $waBtnPrimary }} text-sm w-full sm:w-auto justify-center">
+                                <i class="fas fa-save"></i> حفظ الصلاحيات
+                            </button>
+                        </form>
+                    @endif
+                </section>
+            @endif
         </div>
 
         <aside class="space-y-4">

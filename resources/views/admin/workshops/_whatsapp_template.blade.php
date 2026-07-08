@@ -12,6 +12,13 @@
     $defaultBody = $defaultWelcomeBody ?? app(\App\Services\WorkshopWhatsAppTemplateService::class)->defaultWelcomeBody();
     $displayBody = str_replace(['{{1}}', '{{2}}'], ['{{name}}', '{{workshop_name}}'], $defaultBody);
     $batches = $workshopWhatsAppBatches ?? collect();
+    $tplBodyDisplay = $tpl?->body_text
+        ? str_replace(['{{1}}', '{{2}}'], ['{{name}}', '{{workshop_name}}'], $tpl->body_text)
+        : '';
+    $textareaBody = old('body_text');
+    if ($textareaBody === null) {
+        $textareaBody = $tplBodyDisplay !== '' ? $tplBodyDisplay : $displayBody;
+    }
 @endphp
 
 <section class="rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50/80 to-white p-4 sm:p-5 space-y-4">
@@ -23,9 +30,9 @@
             </h3>
             <p class="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
                 أنشئ قالباً معتمداً من Meta وارسله لجميع المسجلين. المتغيرات:
-                <code class="bg-white px-1 rounded text-[10px]">{{name}}</code>
+                <code class="bg-white px-1 rounded text-[10px]">@{{name}}</code>
                 (اسم المسجّل) و
-                <code class="bg-white px-1 rounded text-[10px]">{{workshop_name}}</code>
+                <code class="bg-white px-1 rounded text-[10px]">@{{workshop_name}}</code>
                 (اسم الورشة).
             </p>
         </div>
@@ -44,7 +51,7 @@
             <p><strong>اسم القالب في Meta:</strong> <code class="bg-slate-100 px-1 rounded">{{ $tpl->name }}</code></p>
             <p><strong>اللغة:</strong> {{ $tpl->language }}</p>
             @if($tpl->body_text)
-                <p class="text-slate-600 whitespace-pre-line mt-2 border-t border-slate-100 pt-2">{{ str_replace(['{{1}}','{{2}}'], ['{{name}}','{{workshop_name}}'], $tpl->body_text) }}</p>
+                <p class="text-slate-600 whitespace-pre-line mt-2 border-t border-slate-100 pt-2">{{ $tplBodyDisplay }}</p>
             @endif
             @if($tpl->rejection_reason)
                 <p class="text-rose-700 bg-rose-50 rounded px-2 py-1 mt-1"><strong>سبب الرفض:</strong> {{ $tpl->rejection_reason }}</p>
@@ -71,9 +78,9 @@
         @if(! $tplApproved)
             <form method="POST" action="{{ route('admin.workshops.whatsapp-template.create', $workshop) }}" class="space-y-3 border-t border-violet-100 pt-4">
                 @csrf
-                <label class="block text-xs font-bold text-slate-800">نص رسالة الترحيب (يُحوَّل تلقائياً لصيغة Meta {{1}} و {{2}})</label>
+                <label class="block text-xs font-bold text-slate-800">نص رسالة الترحيب (يُحوَّل تلقائياً لصيغة Meta @{{1}} و @{{2}})</label>
                 <textarea name="body_text" rows="6" maxlength="1024"
-                          class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs leading-relaxed">{{ old('body_text', $tpl?->body_text ? str_replace(['{{1}}','{{2}}'], ['{{name}}','{{workshop_name}}'], $tpl->body_text) : $displayBody) }}</textarea>
+                          class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs leading-relaxed">{{ $textareaBody }}</textarea>
                 <button type="submit" @disabled(!$waCanSend)
                         class="inline-flex items-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold">
                     <i class="fas fa-cloud-upload-alt"></i>

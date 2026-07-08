@@ -32,6 +32,59 @@
         </div>
     @endif
 
+    <section class="{{ $waSectionClass }} p-5">
+        <div class="flex flex-wrap items-start justify-between gap-4 mb-4">
+            <div>
+                <h3 class="font-bold text-slate-900 flex items-center gap-2">
+                    <i class="fas fa-user-shield text-violet-600"></i>
+                    صلاحيات القوالب للموظفين
+                </h3>
+                <p class="text-xs text-slate-600 mt-1 max-w-2xl">
+                    حدّد هل يرى موظفو المبيعات كل القوالب المعتمدة، أم قوالباً محددة تُعيَّن لكل قالب على حدة.
+                </p>
+            </div>
+            <span class="text-[10px] px-2.5 py-1 rounded-full font-bold
+                @if(($templateAccessMode ?? 'all') === 'restricted') bg-violet-100 text-violet-800 @else bg-emerald-100 text-emerald-800 @endif">
+                {{ $templateAccessLabels[$templateAccessMode ?? 'all'] ?? '—' }}
+            </span>
+        </div>
+        <form method="POST" action="{{ route('admin.whatsapp.templates.access-mode') }}" class="space-y-3">
+            @csrf
+            <div class="grid sm:grid-cols-2 gap-3">
+                @foreach($templateAccessLabels ?? [] as $mode => $label)
+                    <label class="flex items-start gap-3 rounded-xl border p-4 cursor-pointer transition-colors
+                        @if(($templateAccessMode ?? 'all') === $mode) border-violet-300 bg-violet-50/60 @else border-slate-200 hover:border-slate-300 @endif">
+                        <input type="radio" name="template_access_mode" value="{{ $mode }}"
+                               @checked(($templateAccessMode ?? 'all') === $mode)
+                               class="mt-1 text-violet-600">
+                        <span>
+                            <span class="block text-sm font-bold text-slate-900">{{ $label }}</span>
+                            <span class="block text-[11px] text-slate-500 mt-1">
+                                @if($mode === 'all')
+                                    كل موظفي المبيعات ومديري المبيعات يرون كل القوالب المعتمدة في المحادثات.
+                                @else
+                                    يظهر لكل موظف فقط القوالب التي تحدّدها له من صفحة كل قالب.
+                                @endif
+                            </span>
+                        </span>
+                    </label>
+                @endforeach
+            </div>
+            <button type="submit" class="{{ $waBtnPrimary }} text-sm">
+                <i class="fas fa-save"></i> حفظ إعداد الصلاحيات
+            </button>
+        </form>
+        @if(($templateAccessMode ?? 'all') === 'restricted')
+            <p class="text-[11px] text-violet-800 bg-violet-50 border border-violet-100 rounded-lg px-3 py-2 mt-3">
+                <i class="fas fa-info-circle ml-1"></i>
+                افتح أي قالب من الجدول أدناه وحدّد الموظفين المسموح لهم باستخدامه.
+                @if(($salesStaff ?? collect())->isEmpty())
+                    <strong class="block mt-1 text-amber-800">لا يوجد موظفو مبيعات نشطون حالياً.</strong>
+                @endif
+            </p>
+        @endif
+    </section>
+
     <section class="{{ $waSectionClass }}">
         <div class="px-5 py-4 border-b border-slate-200">
             <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-3">
@@ -66,6 +119,9 @@
                         <th class="px-5 py-3 text-right font-semibold">القالب</th>
                         <th class="px-5 py-3 text-right font-semibold">الفئة</th>
                         <th class="px-5 py-3 text-right font-semibold">الحالة</th>
+                        @if(($templateAccessMode ?? 'all') === 'restricted')
+                            <th class="px-5 py-3 text-right font-semibold">الموظفون</th>
+                        @endif
                         <th class="px-5 py-3 text-right font-semibold">المحتوى</th>
                         <th class="px-5 py-3 text-right font-semibold">آخر مزامنة</th>
                         <th class="px-5 py-3 text-center font-semibold">إجراء</th>
@@ -94,6 +150,14 @@
                                     <p class="text-[10px] text-rose-600 mt-1 max-w-xs truncate" title="{{ $tpl->rejection_reason }}">{{ Str::limit($tpl->rejection_reason, 40) }}</p>
                                 @endif
                             </td>
+                            @if(($templateAccessMode ?? 'all') === 'restricted')
+                                <td class="px-5 py-3.5 text-xs">
+                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-violet-50 text-violet-800 font-semibold">
+                                        <i class="fas fa-users text-[10px]"></i>
+                                        {{ $tpl->assigned_users_count ?? 0 }}
+                                    </span>
+                                </td>
+                            @endif
                             <td class="px-5 py-3.5 max-w-xs">
                                 <p class="truncate text-slate-600" title="{{ $tpl->body_text }}">{{ Str::limit($tpl->body_text, 60) }}</p>
                             </td>
@@ -106,7 +170,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-5 py-16 text-center">
+                            <td colspan="{{ ($templateAccessMode ?? 'all') === 'restricted' ? 7 : 6 }}" class="px-5 py-16 text-center">
                                 <div class="flex flex-col items-center text-slate-400">
                                     <i class="fas fa-file-alt text-4xl mb-3"></i>
                                     <p class="font-semibold text-slate-600 mb-1">لا توجد قوالب بعد</p>

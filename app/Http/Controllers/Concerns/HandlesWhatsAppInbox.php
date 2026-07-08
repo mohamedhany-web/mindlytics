@@ -152,7 +152,8 @@ trait HandlesWhatsAppInbox
         $metaTemplates = [];
         $metaTemplatesError = null;
         if (WhatsAppCloudSettings::isSendConfigured()) {
-            $tplResult = $cloud->listApprovedTemplates();
+            $forceAll = $this->inboxAudience() === 'admin';
+            $tplResult = $cloud->listApprovedTemplates(auth()->user(), $forceAll);
             $metaTemplates = $tplResult['templates'] ?? [];
             $metaTemplatesError = ($tplResult['success'] ?? false) ? null : ($tplResult['error'] ?? null);
         }
@@ -190,8 +191,9 @@ trait HandlesWhatsAppInbox
     public function inboxTemplates(): JsonResponse
     {
         [, $cloud] = $this->inboxServices();
+        $forceAll = $this->inboxAudience() === 'admin';
 
-        return response()->json($cloud->listApprovedTemplates());
+        return response()->json($cloud->listApprovedTemplates(auth()->user(), $forceAll));
     }
 
     public function inboxShowConversation(WhatsAppConversation $conversation): JsonResponse
@@ -511,6 +513,17 @@ trait HandlesWhatsAppInbox
             'template_variables.*' => 'nullable|string|max:500',
         ]);
 
+        $forceAll = $this->inboxAudience() === 'admin';
+        $access = app(\App\Services\WhatsAppTemplateAccessService::class);
+        if (! $access->userCanUseTemplate(
+            auth()->user(),
+            $validated['template_name'],
+            $validated['language_code'],
+            $forceAll
+        )) {
+            return response()->json(['success' => false, 'error' => 'غير مصرح لك باستخدام هذا القالب.'], 403);
+        }
+
         $build = app(\App\Services\WhatsAppTemplateService::class)->buildSendComponents(
             $validated['template_name'],
             $validated['language_code'],
@@ -573,6 +586,12 @@ trait HandlesWhatsAppInbox
             $language = trim((string) ($validated['language_code'] ?? ''));
             if ($language === '') {
                 return response()->json(['success' => false, 'error' => 'لغة القالب مطلوبة'], 422);
+            }
+
+            $forceAll = $this->inboxAudience() === 'admin';
+            $access = app(\App\Services\WhatsAppTemplateAccessService::class);
+            if (! $access->userCanUseTemplate(auth()->user(), $templateName, $language, $forceAll)) {
+                return response()->json(['success' => false, 'error' => 'غير مصرح لك باستخدام هذا القالب.'], 403);
             }
 
             $build = app(\App\Services\WhatsAppTemplateService::class)->buildSendComponents(

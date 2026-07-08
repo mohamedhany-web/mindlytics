@@ -125,9 +125,14 @@ class WorkshopController extends Controller
         $whatsappPhoneCountOffline = $waBulkService->countDistinctPhones($workshop, 'offline');
         $latestWhatsAppBatch = $waBulkService->latestForWorkshop((int) $workshop->id);
         $workshopWhatsAppBatches = app(\App\Services\WhatsAppBatchService::class)->batchesForWorkshop((int) $workshop->id, 8);
-        $workshop->load('welcomeMetaTemplate');
-        $welcomeTemplate = $workshop->welcomeMetaTemplate;
-        $defaultWelcomeBody = app(\App\Services\WorkshopWhatsAppTemplateService::class)->defaultWelcomeBody();
+
+        $welcomeTemplate = null;
+        $defaultWelcomeBody = '';
+        if (Schema::hasColumn('workshops', 'welcome_meta_template_id')) {
+            $workshop->load('welcomeMetaTemplate');
+            $welcomeTemplate = $workshop->welcomeMetaTemplate;
+            $defaultWelcomeBody = app(\App\Services\WorkshopWhatsAppTemplateService::class)->defaultWelcomeBody();
+        }
 
         $hasWaSentColumn = Schema::hasColumn('workshop_registrations', 'whatsapp_link_sent_at');
         $whatsappContactedCount = $hasWaSentColumn

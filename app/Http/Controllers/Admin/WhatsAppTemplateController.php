@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\WhatsAppMetaTemplate;
 use App\Services\WhatsAppCloudService;
+use App\Services\WhatsAppTemplateAccessService;
 use App\Services\WhatsAppTemplateService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -12,9 +13,13 @@ use Illuminate\View\View;
 
 class WhatsAppTemplateController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, WhatsAppTemplateAccessService $access): View
     {
         $query = WhatsAppMetaTemplate::query()->with('creator:id,name')->latest();
+
+        if ($access->isRestricted()) {
+            $query->withCount('assignedUsers');
+        }
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -52,7 +57,11 @@ class WhatsAppTemplateController extends Controller
             'templates',
             'stats',
             'connectionMeta',
-        ));
+        ) + [
+            'templateAccessMode' => $access->mode(),
+            'templateAccessLabels' => $access->modeLabels(),
+            'salesStaff' => $access->salesStaffForAssignment(),
+        ]);
     }
 
     public function create(): View
@@ -90,14 +99,45 @@ class WhatsAppTemplateController extends Controller
             ->with('success', 'تم حفظ القالب كمسودة.');
     }
 
-    public function show(WhatsAppMetaTemplate $template): View
+    public function show(WhatsAppMetaTemplate $template, WhatsAppTemplateAccessService $access): View
     {
-        $template->load('creator:id,name');
+        $template->load(['creator:id,name', 'assignedUsers:id,name,email']);
 
         return view('admin.whatsapp.templates.show', [
             'template' => $template,
             'connectionMeta' => app(WhatsAppCloudService::class)->connectionMeta(),
+            'templateAccessMode' => $access->mode(),
+            'salesStaff' => $access->salesStaffForAssignment(),
         ]);
+    }
+
+    public function updateAccessMode(Request $request, WhatsAppTemplateAccessService $access): RedirectResponse
+    {
+        $validated = $request->validate([
+            'template_access_mode' => 'required|in:all,restricted',
+        ]);
+
+        $access->setMode($validated['template_access_mode']);
+
+        $label = $access->modeLabels()[$validated['template_access_mode']] ?? $validated['template_access_mode'];
+
+        return back()->with('success', 'تم تحديث صلاحيات القوالب: '.$label);
+    }
+
+    public function updateAccess(Request $request, WhatsAppMetaTemplate $template, WhatsAppTemplateAccessService $access): RedirectResponse
+    {
+        if (! $access->isRestricted()) {
+            return back()->with('error', 'فعّل وضع «قوالب محددة لكل موظف» أولاً من صفحة القوالب.');
+        }
+
+        $validated = $request->validate([
+            'user_ids' => 'nullable|array',
+            'user_ids.*' => 'integer|exists:users,id',
+        ]);
+
+        $access->syncTemplateAssignments($template, $validated['user_ids'] ?? []);
+
+        return back()->with('success', 'تم حفظ الموظفين المصرّح لهم باستخدام هذا القالب.');
     }
 
     public function edit(WhatsAppMetaTemplate $template): View|RedirectResponse
