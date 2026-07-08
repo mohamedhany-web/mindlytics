@@ -47,6 +47,7 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
             $maxMessages = max(1, (int) config('whatsapp.batch_max_messages_per_job', 12));
             $processed = 0;
             $hasMore = true;
+            $shouldContinue = false;
 
             while ($hasMore && $processed < $maxMessages && time() < $deadline) {
                 $chunkProcessed = $this->processChunk($whatsapp);
@@ -70,11 +71,40 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
             }
 
             if ($batch && ! $batch->isFinished() && $batch->pendingCount() > 0) {
-                WhatsAppBatchService::dispatchBatch($this->batchId);
+                $shouldContinue = true;
             }
         } finally {
             $lock->release();
         }
+
+        if ($shouldContinue ?? false) {
+            $this->continueBatchProcessing();
+        }
+    }
+
+    /**
+     * متابعة الدفعة دون الاعتماد على queue worker (مهم على الاستضافة المشتركة).
+     */
+    private function continueBatchProcessing(): void
+    {
+        $chainKey = 'wa_batch_chain_depth_' . $this->batchId;
+        $depth = (int) Cache::get($chainKey, 0);
+        $maxDepth = max(1, (int) config('whatsapp.batch_max_chain_depth', 30));
+
+        if ($depth >= $maxDepth) {
+            Log::warning('WhatsApp batch chain depth limit reached', [
+                'batch_id' => $this->batchId,
+                'depth' => $depth,
+            ]);
+
+            WhatsAppBatchService::dispatchBatch($this->batchId);
+
+            return;
+        }
+
+        Cache::put($chainKey, $depth + 1, now()->addHours(6));
+
+        ProcessWhatsAppBatchJob::dispatch($this->batchId)->onConnection('sync');
     }
 
     /**
@@ -168,6 +198,11 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
                 $this->handleSendFailure($item, $batch, (string) ($result['error'] ?? 'فشل الإرسال'));
             }
 
+            $betweenMessages = max(0, (int) config('whatsapp.batch_between_messages_seconds', 0));
+            if ($betweenMessages > 0 && $batch->pendingCount() > 0) {
+                sleep($betweenMessages);
+            }
+
             Cache::put('wa_batch_activity_' . $batch->id, now()->timestamp, now()->addHours(6));
         }
 
@@ -192,6 +227,8 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
         $remaining = $batch->items()->whereIn('status', ['pending', 'processing'])->count();
 
         if ($remaining === 0) {
+            Cache::forget('wa_batch_chain_depth_' . $batch->id);
+
             $batch->update([
                 'status' => 'completed',
                 'completed_at' => now(),
@@ -286,6 +323,7 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
                         'user_id' => $item->user_id ?? $batch->created_by,
                         'batch_id' => $batch->id,
                         'skip_ready_check' => $skipReadyCheck,
+                        'skip_pacing' => true,
                         'preview_text' => (string) ($payload['preview'] ?? ''),
                         'contact_name' => (string) ($item->recipient_name ?? ''),
                     ]
@@ -299,6 +337,7 @@ class ProcessWhatsAppBatchJob implements ShouldQueue
                         'user_id' => $item->user_id ?? $batch->created_by,
                         'batch_id' => $batch->id,
                         'skip_ready_check' => $skipReadyCheck,
+                        'skip_pacing' => true,
                         'contact_name' => (string) ($item->recipient_name ?? ''),
                     ]
                 );

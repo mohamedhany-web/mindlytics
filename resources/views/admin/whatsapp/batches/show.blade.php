@@ -70,7 +70,7 @@
                         <span id="batch-status-label">{{ $batch->statusLabel() }}</span>
                     </span>
                     @if(!$batch->isFinished())
-                        <span class="text-xs text-slate-500">الإرسال يعمل تلقائياً — تُعالَج الدفعة من هذه الصفحة ومن طابور whatsapp كل دقيقة</span>
+                        <span class="text-xs text-slate-500">الإرسال يعمل تلقائياً من هذه الصفحة — مع Meta الرسمي بدون تأخير Bridge. أبقِ الصفحة مفتوحة حتى يكتمل العدد.</span>
                     @endif
                 </div>
                 <p class="text-sm font-bold text-slate-700 tabular-nums"><span id="batch-progress-text">{{ $batch->progressPercent() }}</span>%</p>
@@ -286,8 +286,8 @@
         }
     }
 
-    pollTimer = setInterval(poll, 4000);
-    setInterval(driveProcess, 12000);
+    pollTimer = setInterval(poll, 3000);
+    setInterval(driveProcess, 6000);
     poll();
     driveProcess();
 })();

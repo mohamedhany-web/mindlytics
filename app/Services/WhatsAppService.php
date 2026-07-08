@@ -33,6 +33,7 @@ class WhatsAppService
             $actorId = $options['user_id'] ?? auth()->id();
             $batchId = $options['batch_id'] ?? null;
             $skipReadyCheck = (bool) ($options['skip_ready_check'] ?? false);
+            $skipPacing = (bool) ($options['skip_pacing'] ?? false);
             $forceOfficial = (bool) ($options['force_official'] ?? false);
 
             $formattedPhone = $this->formatPhoneNumber($phoneNumber);
@@ -73,7 +74,7 @@ class WhatsAppService
                 }
             }
 
-            if ($limitError = $this->pacing->assertCanSend()) {
+            if (! $skipPacing && ($limitError = $this->pacing->assertCanSend())) {
                 WhatsAppMessage::create([
                     'user_id' => $actorId,
                     'phone_number' => $formattedPhone,
@@ -86,7 +87,9 @@ class WhatsAppService
                 return ['success' => false, 'error' => $limitError];
             }
 
-            $this->pacing->waitBeforeSend($batchId);
+            if (! $skipPacing) {
+                $this->pacing->waitBeforeSend($batchId);
+            }
 
             $creds = $this->cloud->resolveCredentials();
             $apiUrl = WhatsAppCloudSettings::apiUrl();

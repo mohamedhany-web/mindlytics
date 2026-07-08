@@ -72,9 +72,6 @@ trait HandlesWhatsAppInbox
 
         try {
             $connectionMeta = $cloud->connectionMeta();
-            if (! isset($connectionMeta['webhook'])) {
-                $connectionMeta['webhook'] = $cloud->webhookDiagnostics();
-            }
         } catch (\Throwable $e) {
             report($e);
             $connectionMeta = [

@@ -92,7 +92,23 @@ class WhatsAppBatchController extends Controller
         }
 
         try {
-            ProcessWhatsAppBatchJob::dispatchSync($batch->id);
+            $deadline = time() + max(15, (int) config('whatsapp.batch_process_http_seconds', 25));
+            $maxRuns = max(1, (int) config('whatsapp.batch_process_http_runs', 4));
+
+            for ($run = 0; $run < $maxRuns; $run++) {
+                $batch->refresh();
+                if ($batch->isFinished() || $batch->pendingCount() === 0) {
+                    break;
+                }
+                if ($batch->status === 'paused' || $batch->isPausedForBridge()) {
+                    break;
+                }
+                if (time() >= $deadline) {
+                    break;
+                }
+
+                ProcessWhatsAppBatchJob::dispatchSync($batch->id);
+            }
         } catch (\Throwable $e) {
             report($e);
 

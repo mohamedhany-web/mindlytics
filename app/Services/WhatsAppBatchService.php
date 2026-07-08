@@ -282,7 +282,7 @@ class WhatsAppBatchService
         }
 
         $stalled = $batch->status === 'pending'
-            || ($batch->status === 'processing' && ($lastActivity === null || $lastActivity < now()->subMinutes(2)->timestamp));
+            || ($batch->status === 'processing' && ($lastActivity === null || $lastActivity < now()->subSeconds(45)->timestamp));
 
         if (! $stalled) {
             return false;

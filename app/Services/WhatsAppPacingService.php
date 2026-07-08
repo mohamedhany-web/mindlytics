@@ -15,6 +15,10 @@ class WhatsAppPacingService
 
     public function enabled(): bool
     {
+        if (\App\Support\WhatsAppCloudSettings::usesOfficial()) {
+            return (bool) config('whatsapp.pacing.force_for_cloud', false);
+        }
+
         return (bool) config('whatsapp.pacing.enabled', true);
     }
 

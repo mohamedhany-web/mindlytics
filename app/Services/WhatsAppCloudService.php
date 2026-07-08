@@ -12,6 +12,23 @@ use Illuminate\Support\Facades\Schema;
 
 class WhatsAppCloudService
 {
+    public function clearDiagnosticsCache(): void
+    {
+        Cache::forget('whatsapp:verify_api_access_v1');
+        Cache::forget('whatsapp:meta_webhook_status_v1');
+        Cache::forget('whatsapp:connection_meta_v1');
+    }
+
+    public function isGraphRateLimitMessage(string $message): bool
+    {
+        $lower = mb_strtolower($message);
+
+        return str_contains($lower, 'application request limit')
+            || str_contains($lower, 'request limit reached')
+            || str_contains($message, '(#4)')
+            || preg_match('/\berror\s*#?\s*4\b/i', $message) === 1;
+    }
+
     public function graphUrl(): string
     {
         return WhatsAppCloudSettings::apiUrl();
@@ -53,8 +70,15 @@ class WhatsAppCloudService
     /**
      * @return array{success: bool, label?: string, can_send?: bool, last_error?: ?string, connection?: ?WhatsAppBusinessConnection}
      */
-    public function connectionMeta(): array
+    public function connectionMeta(bool $fresh = false): array
     {
+        if (! $fresh) {
+            $cached = Cache::get('whatsapp:connection_meta_v1');
+            if (is_array($cached)) {
+                return $cached;
+            }
+        }
+
         if (! WhatsAppCloudSettings::isAppConfigured()) {
             return [
                 'success' => false,
@@ -112,12 +136,12 @@ class WhatsAppCloudService
             $warnings[] = 'Webhook غير مضبوط — لن تظهر ردود العملاء في المحادثات ولن تُحدَّث حالة التسليم.';
         }
 
-        $webhook = $this->webhookDiagnostics();
+        $webhook = $this->webhookDiagnostics($fresh);
         foreach ($webhook['issues'] as $issue) {
             $warnings[] = $issue;
         }
 
-        return [
+        $meta = [
             'success' => true,
             'can_send' => true,
             'label' => 'متصل — Meta Cloud API',
@@ -132,12 +156,16 @@ class WhatsAppCloudService
             'send_warnings' => $warnings,
             'webhook' => $webhook,
         ];
+
+        Cache::put('whatsapp:connection_meta_v1', $meta, now()->addMinutes(5));
+
+        return $meta;
     }
 
     /**
      * @return array<string, mixed>
      */
-    public function webhookDiagnostics(): array
+    public function webhookDiagnostics(bool $fresh = false): array
     {
         $webhookUrl = WhatsAppCloudSettings::webhookUrl();
         $hasVerifyToken = WhatsAppCloudSettings::webhookVerifyToken() !== '';
@@ -155,11 +183,12 @@ class WhatsAppCloudService
         $lastInbound = Cache::get('whatsapp:webhook:last_inbound_at') ?? $stored['last_inbound_at'];
 
         $meta = WhatsAppCloudSettings::isSendConfigured()
-            ? $this->fetchMetaWebhookStatus()
+            ? $this->fetchMetaWebhookStatus($fresh)
             : ['success' => false, 'errors' => ['أكمل Access Token و WABA ID أولاً']];
 
         $issues = [];
         $tips = [];
+        $rateLimited = false;
 
         if ($isLocalUrl) {
             $issues[] = 'رابط Webhook في النظام يشير إلى localhost — اضبط APP_URL أو WHATSAPP_WEBHOOK_BASE_URL على https://mindlytics-academy.com';
@@ -182,6 +211,11 @@ class WhatsAppCloudService
         }
 
         foreach ($meta['errors'] ?? [] as $apiError) {
+            if ($this->isGraphRateLimitMessage((string) $apiError)) {
+                $rateLimited = true;
+
+                continue;
+            }
             if (! str_contains($apiError, 'Application Secret required')) {
                 $issues[] = $apiError;
             }
@@ -208,6 +242,10 @@ class WhatsAppCloudService
             $meta = $this->inferWebhookSubscriptionFromActivity($meta, $receiving);
         }
 
+        if ($rateLimited) {
+            $tips[] = 'تم الوصول مؤقتاً لحد طلبات Meta للتشخيص — هذا لا يعني أن Webhook معطّل. انتظر 15–60 دقيقة ثم اضغط «تحديث الحالة» من إعدادات الربط.';
+        }
+
         return [
             'webhook_url' => $webhookUrl,
             'is_local_url' => $isLocalUrl,
@@ -221,7 +259,11 @@ class WhatsAppCloudService
             'field_rows' => $meta['field_rows'] ?? [],
             'issues' => array_values(array_unique($issues)),
             'tips' => array_values(array_unique($tips)),
-            'ok' => ($receiving || $webhookReachable) && $issues === [],
+            'rate_limited' => $rateLimited,
+            'rate_limit_notice' => $rateLimited
+                ? 'Meta رفضت طلب فحص اشتراكات التطبيق مؤقتاً (Application request limit #4) — غالباً بسبب كثرة طلبات API بعد إرسال دفعة كبيرة.'
+                : null,
+            'ok' => ($receiving || $webhookReachable) && $issues === [] && ! $rateLimited,
         ];
     }
 
@@ -265,9 +307,11 @@ class WhatsAppCloudService
             ];
         }
 
+        $this->clearDiagnosticsCache();
+
         return [
             'sync' => $syncResults,
-            'webhook' => $this->webhookDiagnostics(),
+            'webhook' => $this->webhookDiagnostics(fresh: true),
         ];
     }
 
@@ -463,8 +507,15 @@ class WhatsAppCloudService
     /**
      * @return array<string, mixed>
      */
-    public function fetchMetaWebhookStatus(): array
+    public function fetchMetaWebhookStatus(bool $fresh = false): array
     {
+        if (! $fresh) {
+            $cached = Cache::get('whatsapp:meta_webhook_status_v1');
+            if (is_array($cached)) {
+                return $cached;
+            }
+        }
+
         $appId = WhatsAppCloudSettings::appId();
         $wabaId = WhatsAppCloudSettings::businessAccountId();
         $expectedUrl = WhatsAppCloudSettings::webhookUrl();
@@ -575,6 +626,15 @@ class WhatsAppCloudService
             && ($result['messages_subscribed'] !== false)
             && ($result['waba_app_subscribed'] !== false);
 
+        $ttl = now()->addMinutes(20);
+        foreach ($result['errors'] as $error) {
+            if ($this->isGraphRateLimitMessage((string) $error)) {
+                $ttl = now()->addMinutes(30);
+                break;
+            }
+        }
+        Cache::put('whatsapp:meta_webhook_status_v1', $result, $ttl);
+
         return $result;
     }
 
@@ -634,14 +694,22 @@ class WhatsAppCloudService
      */
     public function canSendNow(): array
     {
-        $meta = $this->connectionMeta();
-        if ($meta['can_send'] ?? false) {
+        if (! WhatsAppCloudSettings::isAppConfigured()) {
+            return ['success' => false, 'error' => 'إعدادات Meta غير مكتملة — App ID و App Secret'];
+        }
+
+        if (! WhatsAppCloudSettings::isSendConfigured()) {
+            return ['success' => false, 'error' => 'أدخل Access Token و Phone Number ID في إعدادات الربط'];
+        }
+
+        $test = $this->verifyApiAccess();
+        if ($test['success'] ?? false) {
             return ['success' => true];
         }
 
         return [
             'success' => false,
-            'error' => ($meta['label'] ?? 'غير جاهز') . ' — ' . ($meta['last_error'] ?? 'أكمل الربط من قسم الواتساب'),
+            'error' => $this->humanizeMetaError((string) ($test['error'] ?? 'تعذّر التحقق من الربط')),
         ];
     }
 
@@ -695,8 +763,15 @@ class WhatsAppCloudService
     /**
      * @return array{success: bool, data?: array<string, mixed>, error?: string}
      */
-    public function verifyApiAccess(): array
+    public function verifyApiAccess(bool $fresh = false): array
     {
+        if (! $fresh) {
+            $cached = Cache::get('whatsapp:verify_api_access_v1');
+            if (is_array($cached)) {
+                return $cached;
+            }
+        }
+
         $creds = $this->resolveCredentials();
 
         if ($creds['access_token'] === '' || $creds['phone_number_id'] === '') {
@@ -713,16 +788,29 @@ class WhatsAppCloudService
             $body = $response->json();
 
             if ($response->successful()) {
-                return ['success' => true, 'data' => is_array($body) ? $body : []];
+                $result = ['success' => true, 'data' => is_array($body) ? $body : []];
+                Cache::put('whatsapp:verify_api_access_v1', $result, now()->addMinutes(10));
+
+                return $result;
             }
 
-            return [
+            $errorMessage = $this->humanizeMetaError($body['error']['message'] ?? ('HTTP ' . $response->status()));
+            $result = [
                 'success' => false,
-                'error' => $this->humanizeMetaError($body['error']['message'] ?? ('HTTP ' . $response->status())),
+                'error' => $errorMessage,
                 'data' => is_array($body) ? $body : [],
             ];
+            $ttl = $this->isGraphRateLimitMessage($errorMessage)
+                ? now()->addMinutes(15)
+                : now()->addMinutes(3);
+            Cache::put('whatsapp:verify_api_access_v1', $result, $ttl);
+
+            return $result;
         } catch (\Throwable $e) {
-            return ['success' => false, 'error' => $this->humanizeMetaError($e->getMessage())];
+            $result = ['success' => false, 'error' => $this->humanizeMetaError($e->getMessage())];
+            Cache::put('whatsapp:verify_api_access_v1', $result, now()->addMinutes(3));
+
+            return $result;
         }
     }
 
@@ -743,6 +831,10 @@ class WhatsAppCloudService
 
         if (str_contains($lower, 'oauth') || str_contains($lower, 'permission')) {
             return 'التوكن لا يملك الصلاحيات المطلوبة: whatsapp_business_messaging و whatsapp_business_management.';
+        }
+
+        if ($this->isGraphRateLimitMessage($error)) {
+            return 'تم الوصول مؤقتاً لحد طلبات Meta (Application request limit) — انتظر 15–60 دقيقة. الإرسال قد يستمر؛ فحص Webhook من لوحة الإدارة يتأخر فقط.';
         }
 
         return $error;

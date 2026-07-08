@@ -47,6 +47,8 @@ class WhatsAppCloudController extends Controller
             'business_account_id' => $validated['business_account_id'] ?? '',
         ]);
 
+        $this->cloud->clearDiagnosticsCache();
+
         if ($newToken !== '') {
             $this->cloud->disconnect();
         }
@@ -109,6 +111,7 @@ class WhatsAppCloudController extends Controller
     public function disconnect(): RedirectResponse
     {
         $this->cloud->disconnect();
+        $this->cloud->clearDiagnosticsCache();
 
         WhatsAppCloudSettings::save([
             'access_token' => '',
@@ -124,8 +127,7 @@ class WhatsAppCloudController extends Controller
 
     public function statusJson(): JsonResponse
     {
-        $meta = $this->cloud->connectionMeta();
-        $meta['webhook'] = $this->cloud->webhookDiagnostics();
+        $meta = $this->cloud->connectionMeta(request()->boolean('fresh'));
 
         return response()->json($meta);
     }

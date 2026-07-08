@@ -4,12 +4,14 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Human-like pacing (whatsapp-web.js Bridge)
+    | Human-like pacing (whatsapp-web.js Bridge فقط)
     |--------------------------------------------------------------------------
-    | يقلّل سرعة الإرسال ويحاكي سلوكاً بشرياً — لا يضمن عدم الحظر.
+    | مع Meta Cloud API الرسمي يُعطَّل تلقائياً — لا حاجة لتأخير 5–14 ثانية بين الرسائل.
+    | لتفعيله مع Cloud API (غير موصى به): WHATSAPP_PACING_FORCE_CLOUD=true
     */
     'pacing' => [
         'enabled' => env('WHATSAPP_PACING_ENABLED', true),
+        'force_for_cloud' => env('WHATSAPP_PACING_FORCE_CLOUD', false),
 
         /** تأخير عشوائي قبل كل رسالة (ثوانٍ) */
         'min_delay_seconds' => (int) env('WHATSAPP_MIN_DELAY', 5),
@@ -51,13 +53,22 @@ return [
     'batch_chunk_size' => max(1, (int) env('WHATSAPP_BATCH_CHUNK_SIZE', 3)),
 
     /** أقصى رسائل في تشغيل واحد للـ Job قبل إعادة الجدولة */
-    'batch_max_messages_per_job' => max(1, (int) env('WHATSAPP_BATCH_MAX_MESSAGES_PER_JOB', 12)),
+    'batch_max_messages_per_job' => max(1, (int) env('WHATSAPP_BATCH_MAX_MESSAGES_PER_JOB', 80)),
+
+    /** أقصى تسلسل sync متتابع داخل نفس الطلب (بدون queue worker) */
+    'batch_max_chain_depth' => max(1, (int) env('WHATSAPP_BATCH_MAX_CHAIN_DEPTH', 30)),
 
     /** مهلة تشغيل Job الواحد (ثوانٍ) */
-    'batch_job_max_seconds' => max(30, (int) env('WHATSAPP_BATCH_JOB_MAX_SECONDS', 240)),
+    'batch_job_max_seconds' => max(30, (int) env('WHATSAPP_BATCH_JOB_MAX_SECONDS', 280)),
 
-    /** انتظار بين رسالتين متتاليتين داخل الدفعة */
-    'batch_between_messages_seconds' => max(0, (int) env('WHATSAPP_BATCH_BETWEEN_MESSAGES', 4)),
+    /** انتظار بين رسالتين متتاليتين داخل الدفعة (ثوانٍ) — Meta الرسمي: 0–1 كافٍ */
+    'batch_between_messages_seconds' => max(0, (int) env('WHATSAPP_BATCH_BETWEEN_MESSAGES', 0)),
+
+    /** ميزانية طلب «متابعة من الصفحة» (ثوانٍ) */
+    'batch_process_http_seconds' => max(10, (int) env('WHATSAPP_BATCH_PROCESS_HTTP_SECONDS', 25)),
+
+    /** عدد تشغيلات الـ Job في طلب المتابعة من الصفحة */
+    'batch_process_http_runs' => max(1, (int) env('WHATSAPP_BATCH_PROCESS_HTTP_RUNS', 4)),
 
     /** إعادة محاولة العنصر عبر الطابور قبل اعتباره فاشلاً نهائياً */
     'batch_item_max_attempts' => max(1, (int) env('WHATSAPP_BATCH_ITEM_MAX_ATTEMPTS', 6)),

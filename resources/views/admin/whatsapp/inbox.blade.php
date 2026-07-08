@@ -8,9 +8,18 @@
     $audience = $inboxAudience ?? 'admin';
     $canSend = (bool) ($connectionMeta['can_send'] ?? false);
     $webhookDiag = $connectionMeta['webhook'] ?? [];
+    $webhookRateLimited = (bool) ($webhookDiag['rate_limited'] ?? false);
+    $webhookRateLimitNotice = $webhookDiag['rate_limit_notice'] ?? null;
     $webhookIssues = ($webhookDiag['receiving_replies'] ?? false) || ($webhookDiag['webhook_reachable'] ?? false)
         ? array_values(array_filter($webhookDiag['issues'] ?? [], fn ($issue) => ! str_contains($issue, 'لم يصل أي طلب Webhook') && ! str_contains($issue, 'غير مشترك')))
         : ($webhookDiag['issues'] ?? []);
+    $webhookIssues = array_values(array_filter($webhookIssues, function ($issue) {
+        $issue = mb_strtolower((string) $issue);
+
+        return ! str_contains($issue, 'application request limit')
+            && ! str_contains($issue, 'request limit reached')
+            && ! str_contains($issue, '(#4)');
+    }));
     $webhookTips = $webhookDiag['tips'] ?? [];
     $webhookMeta = $webhookDiag['meta'] ?? [];
     $activeId = $activeConversation?->id;
@@ -92,6 +101,17 @@
 
 <div class="wa-inbox-page flex flex-col min-h-0 overflow-hidden gap-2 {{ ($waImmersiveInbox ?? false) ? 'wa-inbox-immersive admin-wa-inbox' : '' }} {{ ($inboxAudience ?? '') === 'employee' ? 'sales-wa-inbox' : '' }}" x-data="whatsappInbox()" x-cloak>
     @include('admin.whatsapp._alerts')
+
+    @if(empty($waHideWebhookBanner) && $webhookRateLimited)
+        <div class="shrink-0 rounded-xl border border-sky-300 bg-sky-50 px-4 py-3 text-sm text-sky-950 space-y-1">
+            <p class="font-bold flex items-center gap-2">
+                <i class="fas fa-clock text-sky-600"></i>
+                حد Meta للتشخيص مؤقتاً — ليس خطأ في Webhook
+            </p>
+            <p class="text-xs leading-relaxed">{{ $webhookRateLimitNotice ?? 'Meta رفضت طلب فحص اشتراكات التطبيق مؤقتاً بعد كثرة طلبات API. انتظر 15–60 دقيقة.' }}</p>
+            <p class="text-[11px] text-sky-800">الإرسال واستقبال الردود عبر Webhook قد يعملان بشكل طبيعي. إن لم تظهر ردود عميل بعد ساعة، راجع إعدادات الربط.</p>
+        </div>
+    @endif
 
     @if(empty($waHideWebhookBanner) && (!empty($webhookIssues) || !empty($webhookTips)))
         <div class="shrink-0 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 space-y-2">
