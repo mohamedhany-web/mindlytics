@@ -131,8 +131,8 @@ trait HandlesWhatsAppInbox
                 $withinWindow = $inbox->isWithinServiceWindow($activeConversation);
                 $messages = $activeConversation->messages()
                     ->with('sentBy:id,name')
-                    ->orderByDesc('created_at')
-                    ->orderByDesc('id')
+                    ->orderBy('created_at')
+                    ->orderBy('id')
                     ->get();
             }
         } else {
@@ -207,8 +207,8 @@ trait HandlesWhatsAppInbox
 
         $messages = $conversation->messages()
             ->with('sentBy:id,name')
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
+            ->orderBy('created_at')
+            ->orderBy('id')
             ->get()
             ->map(fn ($m) => $this->serializeInboxMessage($m));
 
@@ -294,7 +294,7 @@ trait HandlesWhatsAppInbox
                     return response()->json(['success' => false, 'error' => 'غير مصرح'], 403);
                 }
 
-                $query = $conversation->messages()->with('sentBy:id,name')->orderByDesc('created_at')->orderByDesc('id');
+                $query = $conversation->messages()->with('sentBy:id,name')->orderBy('created_at')->orderBy('id');
                 if ($afterId > 0) {
                     $query->where('id', '>', $afterId);
                 }
