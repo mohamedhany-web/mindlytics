@@ -192,14 +192,31 @@ class WhatsAppConversation extends Model
 
         if (! empty($filters['assigned_to'])) {
             if ($filters['assigned_to'] === 'unassigned') {
-                $query->whereNull('assigned_to');
+                $query->where(function (Builder $q) {
+                    $q->whereNull('assigned_to')->orWhere('assigned_to', 0);
+                });
             } else {
-                $query->where('assigned_to', (int) $filters['assigned_to']);
+                $assigneeId = (int) $filters['assigned_to'];
+                $query->where(function (Builder $q) use ($assigneeId) {
+                    $q->where('assigned_to', $assigneeId)
+                        ->orWhereHas('salesLead', fn (Builder $lq) => $lq->where('assigned_to', $assigneeId));
+                });
             }
         }
 
         if (! empty($filters['sales_owned']) && auth()->check()) {
-            $query->ownedBySalesAgent(auth()->user());
+            $user = auth()->user();
+            if ($user && $user->isSalesManager()) {
+                $memberIds = app(\App\Services\SalesTeamService::class)->visibleAssigneeIds($user);
+                $memberIds[] = (int) $user->id;
+
+                $query->where(function (Builder $q) use ($memberIds) {
+                    $q->whereIn('assigned_to', $memberIds)
+                        ->orWhereHas('salesLead', fn (Builder $lq) => $lq->whereIn('assigned_to', $memberIds));
+                });
+            } else {
+                $query->ownedBySalesAgent($user);
+            }
         }
 
         if (! empty($filters['mine']) && auth()->check()) {

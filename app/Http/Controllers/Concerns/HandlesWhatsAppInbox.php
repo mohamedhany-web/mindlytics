@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Concerns;
 
 use App\Models\SalesLead;
+use App\Models\User;
 use App\Models\WhatsAppConversation;
 use App\Models\WhatsAppConversationMessage;
 use App\Models\WhatsAppSuggestedTemplate;
@@ -11,6 +12,7 @@ use App\Services\WhatsAppAssignmentService;
 use App\Services\WhatsAppCloudService;
 use App\Services\WhatsAppCrmService;
 use App\Services\WhatsAppInboxService;
+use App\Services\SalesTeamService;
 use App\Support\WhatsAppCloudSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -823,7 +825,7 @@ trait HandlesWhatsAppInbox
     /** @return array<string, mixed> */
     protected function inboxCrmViewData(): array
     {
-        [, , $crm, $assignment] = $this->inboxServices();
+        [, , $crm] = $this->inboxServices();
 
         if (! $crm->crmTablesReady()) {
             return [
@@ -837,15 +839,44 @@ trait HandlesWhatsAppInbox
 
         return [
             'crmReady' => true,
-            'crmAgents' => $this->inboxAudience() === 'admin'
-                ? rescue(function () use ($assignment) {
-                    return collect($assignment->eligibleAgents())->map(fn ($u) => ['id' => $u->id, 'name' => $u->name])->values()->all();
-                }, [], false)
-                : [],
+            'crmAgents' => $this->inboxCrmAgentsList(),
             'crmTags' => rescue(fn () => WhatsAppTag::query()->orderBy('name')->get(['id', 'name', 'slug', 'color']), collect(), false),
             'crmStatuses' => WhatsAppConversation::STATUSES,
             'crmDepartments' => WhatsAppConversation::DEPARTMENTS,
         ];
+    }
+
+    /** @return list<array{id: int, name: string}> */
+    protected function inboxCrmAgentsList(): array
+    {
+        if ($this->inboxAudience() === 'admin') {
+            return rescue(function () {
+                [, , , $assignment] = $this->inboxServices();
+
+                return collect($assignment->eligibleAgents())
+                    ->map(fn ($u) => ['id' => $u->id, 'name' => $u->name])
+                    ->values()
+                    ->all();
+            }, [], false);
+        }
+
+        $user = auth()->user();
+        if (! $user || ! $user->isSalesManager()) {
+            return [];
+        }
+
+        $team = app(SalesTeamService::class)->teamFor($user);
+        if (! $team) {
+            return [];
+        }
+
+        return User::query()
+            ->whereIn('id', $team->allStaffUserIds())
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn ($u) => ['id' => $u->id, 'name' => $u->name])
+            ->values()
+            ->all();
     }
 
     /** @return array<string, mixed> */

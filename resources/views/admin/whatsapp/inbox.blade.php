@@ -259,16 +259,18 @@
                         @if(empty($waHideAdminFilters))
                         <select x-model="filterAssigned" @change="applyFilters()"
                                 class="col-span-1 text-[11px] rounded-lg border-0 bg-white px-2 py-1.5 shadow-sm ring-1 ring-slate-200/60 text-slate-700">
-                            <option value="">كل الموظفين</option>
+                            <option value="">{{ !empty($waTeamInbox) ? 'كل الفريق' : 'كل الموظفين' }}</option>
                             <option value="unassigned">غير معيّنة</option>
                             @foreach($crmAgents as $agent)
                                 <option value="{{ $agent['id'] }}">{{ $agent['name'] }}</option>
                             @endforeach
                         </select>
+                        @if(empty($waTeamInbox))
                         <label class="col-span-2 inline-flex items-center justify-center gap-1.5 text-[11px] bg-white rounded-lg px-2 py-1.5 shadow-sm ring-1 ring-slate-200/60 cursor-pointer text-slate-600">
                             <input type="checkbox" x-model="filterMine" @change="applyFilters()" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
                             محادثاتي فقط
                         </label>
+                        @endif
                         @endif
                     </div>
                     @endif

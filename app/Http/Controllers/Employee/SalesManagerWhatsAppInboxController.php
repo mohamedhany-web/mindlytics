@@ -35,7 +35,8 @@ class SalesManagerWhatsAppInboxController extends Controller
             'waInboxTitle' => 'محادثات الفريق',
             'waInboxSubtitle' => 'راقب وتابع محادثات جميع أعضاء فريقك.',
             'waHideWebhookBanner' => true,
-            'waHideAdminFilters' => true,
+            'waHideAdminFilters' => false,
+            'waTeamInbox' => true,
             'waImmersiveInbox' => true,
             'waEmployeeLeadsUrl' => route('employee.sales-manager.leads.index'),
             'waEmployeeSalesUrl' => route('employee.sales-manager.dashboard'),
@@ -80,7 +81,8 @@ class SalesManagerWhatsAppInboxController extends Controller
         return array_filter([
             'status' => $request->query('status'),
             'tag_id' => $request->query('tag_id'),
-            'sales_owned' => true,
+            'assigned_to' => $request->query('assigned_to'),
+            'mine' => $request->boolean('mine') ? '1' : null,
         ], fn ($v) => $v !== null && $v !== '');
     }
 
