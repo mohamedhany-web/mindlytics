@@ -387,7 +387,7 @@
     <?php endif; ?>
 </div>
 
-<?php if (! $__env->hasRenderedOnce('7d4575a5-af42-453e-beef-5901da3774f1')): $__env->markAsRenderedOnce('7d4575a5-af42-453e-beef-5901da3774f1'); ?>
+<?php if (! $__env->hasRenderedOnce('2eb8a99b-4121-422f-a5c4-cac1ace5062c')): $__env->markAsRenderedOnce('2eb8a99b-4121-422f-a5c4-cac1ace5062c'); ?>
     <?php $__env->startPush('scripts'); ?>
         <script>
             function toggleCurriculumAttach(sectionId, type) {

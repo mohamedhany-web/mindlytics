@@ -137,6 +137,7 @@
                         @forelse($suggestedTemplates as $tpl)
                             <button type="button"
                                     @click="select(@js([
+                                        'id' => $tpl->id,
                                         'key' => $tpl->key,
                                         'title' => $tpl->title,
                                         'category_label' => $tpl->categoryLabel(),
@@ -144,13 +145,21 @@
                                         'body' => $tpl->body,
                                         'help' => $tpl->help,
                                         'variables' => $tpl->variables ?? [],
+                                        'meta_status' => $tpl->metaTemplate?->status,
                                     ]))"
                                     class="w-full text-right px-5 py-4 border-b border-slate-100 hover:bg-violet-50/50 transition-colors"
                                     :class="selected?.key === @js($tpl->key) ? 'bg-violet-50 border-r-4 border-r-violet-500' : ''">
-                                <p class="font-bold text-slate-900 text-sm">{{ $tpl->title }}</p>
-                                <div class="flex flex-wrap gap-1.5 mt-2">
-                                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold">{{ $tpl->categoryLabel() }}</span>
-                                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 font-bold uppercase">{{ $tpl->language }}</span>
+                                <div class="flex items-start justify-between gap-2">
+                                    <div class="min-w-0">
+                                        <p class="font-bold text-slate-900 text-sm">{{ $tpl->title }}</p>
+                                        <div class="flex flex-wrap gap-1.5 mt-2">
+                                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold">{{ $tpl->categoryLabel() }}</span>
+                                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 font-bold uppercase">{{ $tpl->language }}</span>
+                                            @if($tpl->metaTemplate)
+                                                <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold">Meta: {{ $tpl->metaTemplate->statusLabel() }}</span>
+                                            @endif
+                                        </div>
+                                    </div>
                                 </div>
                             </button>
                         @empty
@@ -175,6 +184,12 @@
                                         <span x-text="copied ? 'تم النسخ!' : 'نسخ النص'"></span>
                                     </button>
                                 </div>
+                                <div class="flex flex-wrap gap-2" x-show="selected?.id">
+                                    <a :href="'{{ url('admin/whatsapp/templates/suggested') }}/' + selected.id + '/edit'"
+                                       class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 text-xs font-bold hover:bg-slate-50">
+                                        <i class="fas fa-edit"></i> تعديل
+                                    </a>
+                                </div>
                                 <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
                                     <p class="text-[11px] font-bold text-slate-500 mb-2">معاينة الرسالة</p>
                                     <pre class="whitespace-pre-wrap text-sm text-slate-800 leading-relaxed" x-text="selected.body"></pre>
@@ -188,6 +203,16 @@
                                     <template x-for="v in selected.variables" :key="v">
                                         <code class="mx-1 bg-slate-100 px-1.5 py-0.5 rounded" x-text="'@{{' + v + '}}'"></code>
                                     </template>
+                                </div>
+                                <div class="flex flex-wrap gap-2 pt-2 border-t border-slate-100" x-show="selected?.id">
+                                    <form method="POST" x-bind:action="'{{ url('admin/whatsapp/templates/suggested') }}/' + selected.id + '/meta-draft'">
+                                        @csrf
+                                        <button type="submit" class="{{ $waBtnSecondary }} text-xs"><i class="fas fa-file-export"></i> مسودة Meta</button>
+                                    </form>
+                                    <form method="POST" x-bind:action="'{{ url('admin/whatsapp/templates/suggested') }}/' + selected.id + '/submit-meta'">
+                                        @csrf
+                                        <button type="submit" class="{{ $waBtnPrimary }} text-xs"><i class="fab fa-meta"></i> إرسال لـ Meta</button>
+                                    </form>
                                 </div>
                             </div>
                         </template>

@@ -70,6 +70,7 @@ class WhatsAppTemplateController extends Controller
 
         if ($suggestedReady) {
             $suggestedQuery = WhatsAppSuggestedTemplate::query()
+                ->with('metaTemplate:id,name,language,status')
                 ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->orderBy('id');

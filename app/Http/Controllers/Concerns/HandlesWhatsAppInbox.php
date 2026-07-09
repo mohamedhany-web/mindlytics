@@ -206,19 +206,25 @@ trait HandlesWhatsAppInbox
         $lang = in_array($locale, ['en', 'en_US', 'en_GB'], true) ? 'en' : 'ar';
 
         $rows = WhatsAppSuggestedTemplate::query()
+            ->with('metaTemplate:id,name,language,status')
             ->where('is_active', true)
             ->where('language', $lang)
             ->orderBy('sort_order')
             ->orderBy('id')
-            ->get(['key', 'title', 'category', 'language', 'body', 'help', 'variables'])
+            ->get(['id', 'key', 'title', 'category', 'language', 'body', 'help', 'variables', 'meta_template_id'])
             ->map(fn ($t) => [
+                'id' => $t->id,
                 'key' => $t->key,
                 'title' => $t->title,
                 'category' => $t->category,
+                'category_label' => $t->categoryLabel(),
                 'language' => $t->language,
                 'body' => $t->body,
                 'help' => $t->help,
                 'variables' => $t->variables ?? [],
+                'meta_template_id' => $t->meta_template_id,
+                'meta_status' => $t->metaTemplate?->status,
+                'meta_name' => $t->metaTemplate?->name,
             ])
             ->values()
             ->all();

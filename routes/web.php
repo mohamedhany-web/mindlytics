@@ -1782,6 +1782,10 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('/templates', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'store'])->name('templates.store');
             Route::post('/templates/sync', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'sync'])->name('templates.sync');
             Route::post('/templates/seed-suggested', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'seedSuggestedLibrary'])->name('templates.seed-suggested');
+            Route::get('/templates/suggested/{suggestedTemplate}/edit', [\App\Http\Controllers\Admin\WhatsAppSuggestedTemplateController::class, 'edit'])->name('templates.suggested.edit');
+            Route::put('/templates/suggested/{suggestedTemplate}', [\App\Http\Controllers\Admin\WhatsAppSuggestedTemplateController::class, 'update'])->name('templates.suggested.update');
+            Route::post('/templates/suggested/{suggestedTemplate}/meta-draft', [\App\Http\Controllers\Admin\WhatsAppSuggestedTemplateController::class, 'createMetaDraft'])->name('templates.suggested.meta-draft');
+            Route::post('/templates/suggested/{suggestedTemplate}/submit-meta', [\App\Http\Controllers\Admin\WhatsAppSuggestedTemplateController::class, 'submitMeta'])->name('templates.suggested.submit-meta');
             Route::post('/templates/access-mode', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'updateAccessMode'])->name('templates.access-mode');
             Route::get('/templates/{template}', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'show'])->name('templates.show');
             Route::get('/templates/{template}/edit', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'edit'])->name('templates.edit');

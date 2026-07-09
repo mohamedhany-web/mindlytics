@@ -95,6 +95,7 @@
         'startLeadPhone' => $startLead->phone ?? null,
         'startLeadName' => $startLead->name ?? null,
         'voiceNoteConversionReady' => rescue(fn () => $inboxService->voiceNoteConversionReady(), false, false),
+        'currentUserName' => auth()->user()?->name ?? '',
     ];
 @endphp
 
@@ -598,7 +599,7 @@
                     <div class="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3">
                         <div>
                             <h3 class="font-bold text-slate-900">مكتبة رسائل مقترحة للسيلز</h3>
-                            <p class="text-xs text-slate-600 mt-1">اختر رسالة، عدّل المتغيرات، ثم اضغط “استخدام” لإدراجها في صندوق الكتابة.</p>
+                            <p class="text-xs text-slate-600 mt-1">اختر رسالة ثم عدّل المتغيرات والنص قبل الإدراج في المحادثة.</p>
                         </div>
                         <button type="button" @click="showSuggestedModal = false" class="text-slate-400 hover:text-slate-600 p-2">
                             <i class="fas fa-times"></i>
@@ -636,13 +637,12 @@
                         <div class="md:col-span-2">
                             <div class="grid grid-cols-1 gap-2 max-h-[55vh] overflow-auto pr-1">
                                 <template x-for="tpl in filteredSuggestedTemplates()" :key="'sug-' + tpl.key">
-                                    <button type="button" @click="selectSuggestedTemplate(tpl)"
-                                            class="text-right rounded-xl border px-4 py-3 hover:bg-slate-50 transition-colors"
-                                            :class="selectedSuggested?.key === tpl.key ? 'border-emerald-300 bg-emerald-50/40' : 'border-slate-200 bg-white'">
+                                    <button type="button" @click="openSuggestedCompose(tpl)"
+                                            class="text-right rounded-xl border px-4 py-3 hover:bg-slate-50 transition-colors border-slate-200 bg-white">
                                         <div class="flex items-start justify-between gap-3">
                                             <div class="min-w-0">
                                                 <p class="font-bold text-slate-900 text-sm" x-text="tpl.title"></p>
-                                                <p class="text-[11px] text-slate-500 mt-1 whitespace-pre-line" x-text="tpl.help || ''"></p>
+                                                <p class="text-[11px] text-slate-500 mt-1 line-clamp-2" x-text="tpl.category_label || tpl.category"></p>
                                             </div>
                                             <span class="shrink-0 text-[10px] px-2 py-1 rounded-full bg-slate-100 text-slate-700 font-bold" x-text="tpl.category"></span>
                                         </div>
@@ -657,23 +657,59 @@
                                 </div>
                             </div>
 
-                            <div x-show="selectedSuggested" x-cloak class="mt-4 rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
-                                <div class="flex items-start justify-between gap-3">
-                                    <div class="min-w-0">
-                                        <p class="font-bold text-slate-900" x-text="selectedSuggested?.title"></p>
-                                        <p class="text-[11px] text-slate-500 mt-1 whitespace-pre-line" x-text="selectedSuggested?.help || ''"></p>
-                                    </div>
-                                    <button type="button" class="px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold"
-                                            @click="useSuggestedTemplate()">
-                                        استخدام
-                                    </button>
-                                </div>
-                                <pre class="whitespace-pre-wrap text-sm bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800" x-text="suggestedPreview()"></pre>
-                                <p class="text-[10px] text-slate-500">
-                                    المتغيرات تُكتب بهذا الشكل: <code class="bg-slate-100 px-1 rounded">@{{name}}</code>
-                                </p>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- popup: تعديل القالب قبل الإدراج --}}
+            <div x-show="showSuggestedComposeModal" x-cloak
+                 class="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50"
+                 @keydown.escape.window="showSuggestedComposeModal = false">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col" @click.outside="showSuggestedComposeModal = false">
+                    <div class="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3 shrink-0">
+                        <div class="min-w-0">
+                            <h3 class="font-bold text-slate-900" x-text="selectedSuggested?.title || 'تعديل الرسالة'"></h3>
+                            <p class="text-[11px] text-slate-500 mt-1 whitespace-pre-line" x-show="selectedSuggested?.help" x-text="selectedSuggested?.help"></p>
+                        </div>
+                        <button type="button" @click="showSuggestedComposeModal = false" class="text-slate-400 hover:text-slate-600 p-2 shrink-0">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="p-5 space-y-4 overflow-y-auto flex-1">
+                        <template x-if="suggestedComposeVariableList().length > 0">
+                            <div class="space-y-2">
+                                <p class="text-xs font-bold text-slate-700">املأ المتغيرات</p>
+                                <template x-for="v in suggestedComposeVariableList()" :key="'sv-' + v">
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-slate-600 mb-1" x-text="suggestedVariableLabel(v)"></label>
+                                        <input type="text"
+                                               x-model="suggestedComposeValues[v]"
+                                               @input="refreshSuggestedComposeBody()"
+                                               class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-2">الرسالة (يمكنك التعديل)</label>
+                            <textarea x-model="suggestedComposeBody" rows="8"
+                                      class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm leading-relaxed resize-y min-h-[140px]"></textarea>
+                        </div>
+                        <div class="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                            <p class="text-[10px] font-bold text-slate-500 mb-1">معاينة</p>
+                            <pre class="whitespace-pre-wrap text-sm text-slate-800" x-text="suggestedComposeBody"></pre>
+                        </div>
+                    </div>
+                    <div class="px-5 py-4 border-t border-slate-100 flex flex-wrap gap-2 justify-end shrink-0 bg-slate-50/80">
+                        <button type="button" @click="showSuggestedComposeModal = false" class="{{ $waBtnSecondary }} text-sm">إلغاء</button>
+                        <button type="button" @click="confirmSuggestedCompose(false)" class="{{ $waBtnSecondary }} text-sm">
+                            <i class="fas fa-plus"></i> إدراج في المحادثة
+                        </button>
+                        <button type="button" @click="confirmSuggestedCompose(true)" class="{{ $waBtnPrimary }} text-sm">
+                            <i class="fas fa-paper-plane"></i> إدراج وإرسال
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1137,12 +1173,16 @@ function whatsappInbox() {
         showSidebarMobile: false,
         showTemplatePicker: false,
         showSuggestedModal: false,
+        showSuggestedComposeModal: false,
         loadingSuggested: false,
         suggestedTemplates: [],
         suggested24hNote: '',
         suggestedSearch: '',
         suggestedCategory: '',
         selectedSuggested: null,
+        suggestedComposeValues: {},
+        suggestedComposeBody: '',
+        currentUserName: cfg.currentUserName || '',
         pollTimer: null,
         searchTimer: null,
         crmReady: !!cfg.crmReady,
@@ -1274,17 +1314,81 @@ function whatsappInbox() {
             this.selectedSuggested = tpl || null;
         },
 
+        suggestedComposeVariableList() {
+            const vars = this.selectedSuggested?.variables;
+            return Array.isArray(vars) ? vars : [];
+        },
+
+        suggestedVariableLabel(name) {
+            const labels = {
+                name: 'اسم العميل',
+                agent: 'اسم الموظف',
+                topic: 'الموضوع / المسار',
+                product: 'المنتج / الكورس',
+                price: 'السعر',
+                duration: 'المدة',
+                level: 'المستوى',
+                slot1: 'موعد 1',
+                slot2: 'موعد 2',
+            };
+            return labels[name] || name;
+        },
+
+        suggestedVariableDefaults(tpl) {
+            const defaults = {};
+            const contact = (this.activeConversation?.display_name || this.activeConversation?.contact_name || '').trim();
+            (tpl?.variables || []).forEach((v) => {
+                if (v === 'name') defaults[v] = contact;
+                else if (v === 'agent') defaults[v] = (this.currentUserName || '').trim();
+                else defaults[v] = '';
+            });
+            return defaults;
+        },
+
+        substituteSuggestedVariables(body, values) {
+            let out = String(body || '');
+            Object.entries(values || {}).forEach(([key, val]) => {
+                const safe = String(val ?? '');
+                out = out.split('{{' + key + '}}').join(safe);
+            });
+            return out;
+        },
+
+        openSuggestedCompose(tpl) {
+            if (!tpl) return;
+            this.selectedSuggested = tpl;
+            this.suggestedComposeValues = { ...this.suggestedVariableDefaults(tpl) };
+            this.suggestedComposeBody = this.substituteSuggestedVariables(tpl.body, this.suggestedComposeValues);
+            this.showSuggestedComposeModal = true;
+        },
+
+        refreshSuggestedComposeBody() {
+            if (!this.selectedSuggested?.body) return;
+            this.suggestedComposeBody = this.substituteSuggestedVariables(
+                this.selectedSuggested.body,
+                this.suggestedComposeValues
+            );
+        },
+
         suggestedPreview() {
             return (this.selectedSuggested && this.selectedSuggested.body) ? this.selectedSuggested.body : '';
         },
 
-        useSuggestedTemplate() {
-            const text = this.suggestedPreview();
+        confirmSuggestedCompose(sendNow = false) {
+            const text = (this.suggestedComposeBody || '').trim();
             if (!text) return;
-            const current = (this.replyBody || '').trim();
-            this.replyBody = current ? (current + "\n\n" + text) : text;
+            this.replyBody = text;
+            this.showSuggestedComposeModal = false;
             this.showSuggestedModal = false;
-            this.$nextTick(() => this.$refs?.composer?.focus?.());
+            this.$nextTick(() => {
+                this.$refs?.composer?.focus?.();
+                if (sendNow) this.sendReply();
+            });
+        },
+
+        useSuggestedTemplate() {
+            if (!this.selectedSuggested) return;
+            this.openSuggestedCompose(this.selectedSuggested);
         },
 
         /** مسار إرسال الوسائط — مسار نسبي على نفس الصفحة (يتجنب redirect على الاستضافة المشتركة) */

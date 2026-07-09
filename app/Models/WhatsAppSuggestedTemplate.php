@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WhatsAppSuggestedTemplate extends Model
 {
@@ -18,6 +19,7 @@ class WhatsAppSuggestedTemplate extends Model
         'variables',
         'is_active',
         'sort_order',
+        'meta_template_id',
     ];
 
     protected $casts = [
@@ -45,6 +47,11 @@ class WhatsAppSuggestedTemplate extends Model
     public function categoryLabel(): string
     {
         return self::categoryLabels()[$this->category] ?? $this->category;
+    }
+
+    public function metaTemplate(): BelongsTo
+    {
+        return $this->belongsTo(WhatsAppMetaTemplate::class, 'meta_template_id');
     }
 }
 
