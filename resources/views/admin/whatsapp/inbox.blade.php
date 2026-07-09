@@ -80,6 +80,7 @@
         'templateUrl' => $routes['template'] ?? null,
         'startUrl' => $routes['start'] ?? '',
         'templatesUrl' => $routes['templates'] ?? '',
+        'suggestedTemplatesUrl' => $routes['suggested-templates'] ?? '',
         'inboxUrl' => $routes['index'] ?? '',
         'csrf' => csrf_token(),
         'withinWindow' => (bool) ($withinWindow ?? false),
@@ -519,6 +520,13 @@
                                           @input="autoGrowComposer()"
                                           @keydown.enter="if(!$event.shiftKey){ $event.preventDefault(); sendReply(); }"
                                           class="flex-1 border-0 bg-transparent text-sm resize-none py-2 px-1 max-h-32 focus:ring-0 focus:outline-none placeholder:text-slate-400"></textarea>
+                                <button type="button"
+                                        @click="openSuggestedTemplates()"
+                                        :disabled="sending || !suggestedTemplatesUrl"
+                                        title="مكتبة رسائل مقترحة"
+                                        class="shrink-0 w-9 h-9 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-emerald-700 flex items-center justify-center disabled:opacity-40">
+                                    <i class="fas fa-wand-magic-sparkles text-sm"></i>
+                                </button>
                             </div>
                             <button type="button" @click="sendReply()"
                                     :disabled="sending || !replyBody.trim()"
@@ -579,6 +587,94 @@
                         </button>
                     </div>
                 </div>
+
+            {{-- modal: مكتبة رسائل مقترحة --}}
+            <div x-show="showSuggestedModal" x-cloak
+                 class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40"
+                 @keydown.escape.window="showSuggestedModal = false">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden" @click.outside="showSuggestedModal = false">
+                    <div class="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3">
+                        <div>
+                            <h3 class="font-bold text-slate-900">مكتبة رسائل مقترحة للسيلز</h3>
+                            <p class="text-xs text-slate-600 mt-1">اختر رسالة، عدّل المتغيرات، ثم اضغط “استخدام” لإدراجها في صندوق الكتابة.</p>
+                        </div>
+                        <button type="button" @click="showSuggestedModal = false" class="text-slate-400 hover:text-slate-600 p-2">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="px-5 py-3 bg-amber-50 border-b border-amber-100 text-amber-900 text-xs leading-relaxed">
+                        <strong>ملاحظة مهمة:</strong>
+                        <span x-text="suggested24hNote || 'إرسال رسالة قالب (Template Message) يفتح نافذة محادثة 24 ساعة.'"></span>
+                    </div>
+
+                    <div class="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="md:col-span-1 space-y-2">
+                            <input type="search" x-model="suggestedSearch" placeholder="بحث..."
+                                   class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button" @click="suggestedCategory = ''"
+                                        class="px-3 py-1 rounded-full text-[11px] font-bold border"
+                                        :class="suggestedCategory === '' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700 border-slate-200'">
+                                    الكل
+                                </button>
+                                <template x-for="cat in suggestedCategories()" :key="'cat-' + cat">
+                                    <button type="button" @click="suggestedCategory = cat"
+                                            class="px-3 py-1 rounded-full text-[11px] font-bold border"
+                                            :class="suggestedCategory === cat ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700 border-slate-200'">
+                                        <span x-text="cat"></span>
+                                    </button>
+                                </template>
+                            </div>
+                            <div class="text-[11px] text-slate-500">
+                                اضغط على أي رسالة من اليمين لعرضها.
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <div class="grid grid-cols-1 gap-2 max-h-[55vh] overflow-auto pr-1">
+                                <template x-for="tpl in filteredSuggestedTemplates()" :key="'sug-' + tpl.key">
+                                    <button type="button" @click="selectSuggestedTemplate(tpl)"
+                                            class="text-right rounded-xl border px-4 py-3 hover:bg-slate-50 transition-colors"
+                                            :class="selectedSuggested?.key === tpl.key ? 'border-emerald-300 bg-emerald-50/40' : 'border-slate-200 bg-white'">
+                                        <div class="flex items-start justify-between gap-3">
+                                            <div class="min-w-0">
+                                                <p class="font-bold text-slate-900 text-sm" x-text="tpl.title"></p>
+                                                <p class="text-[11px] text-slate-500 mt-1 whitespace-pre-line" x-text="tpl.help || ''"></p>
+                                            </div>
+                                            <span class="shrink-0 text-[10px] px-2 py-1 rounded-full bg-slate-100 text-slate-700 font-bold" x-text="tpl.category"></span>
+                                        </div>
+                                    </button>
+                                </template>
+                                <div x-show="!loadingSuggested && filteredSuggestedTemplates().length === 0"
+                                     class="text-center text-sm text-slate-500 py-8">
+                                    لا توجد نتائج.
+                                </div>
+                                <div x-show="loadingSuggested" class="text-center text-sm text-slate-500 py-8">
+                                    جاري تحميل المكتبة...
+                                </div>
+                            </div>
+
+                            <div x-show="selectedSuggested" x-cloak class="mt-4 rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <p class="font-bold text-slate-900" x-text="selectedSuggested?.title"></p>
+                                        <p class="text-[11px] text-slate-500 mt-1 whitespace-pre-line" x-text="selectedSuggested?.help || ''"></p>
+                                    </div>
+                                    <button type="button" class="px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold"
+                                            @click="useSuggestedTemplate()">
+                                        استخدام
+                                    </button>
+                                </div>
+                                <pre class="whitespace-pre-wrap text-sm bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800" x-text="suggestedPreview()"></pre>
+                                <p class="text-[10px] text-slate-500">
+                                    المتغيرات تُكتب بهذا الشكل: <code class="bg-slate-100 px-1 rounded">{{'{{name}}'}}</code>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             {{-- خطأ أو محادثة غير محمّلة --}}
             <div x-show="conversationId && !activeConversation && !loadingConversation" x-cloak
@@ -994,6 +1090,7 @@ function whatsappInbox() {
         templateUrl: cfg.templateUrl,
         startUrl: cfg.startUrl,
         templatesUrl: cfg.templatesUrl,
+        suggestedTemplatesUrl: cfg.suggestedTemplatesUrl || '',
         inboxUrl: cfg.inboxUrl,
         csrf: cfg.csrf,
         withinWindow: !!cfg.withinWindow,
@@ -1037,6 +1134,13 @@ function whatsappInbox() {
         showStartTemplatePicker: false,
         showSidebarMobile: false,
         showTemplatePicker: false,
+        showSuggestedModal: false,
+        loadingSuggested: false,
+        suggestedTemplates: [],
+        suggested24hNote: '',
+        suggestedSearch: '',
+        suggestedCategory: '',
+        selectedSuggested: null,
         pollTimer: null,
         searchTimer: null,
         crmReady: !!cfg.crmReady,
@@ -1063,6 +1167,7 @@ function whatsappInbox() {
 
         init() {
             this.bootstrapTemplates();
+            this.bootstrapSuggestedTemplates();
             if (this.activeConversation) {
                 this.syncCrmFromConversation(this.activeConversation);
             }
@@ -1103,6 +1208,81 @@ function whatsappInbox() {
 
         conversationUrl(id) {
             return (this.conversationUrlTemplate || '').replace('__ID__', id);
+        },
+
+        bootstrapSuggestedTemplates() {
+            // Lazy-load on first open for speed; keep a lightweight preflight here if needed.
+            this.suggested24hNote = '';
+        },
+
+        async openSuggestedTemplates() {
+            this.showSuggestedModal = true;
+            if (!this.suggestedTemplatesUrl || this.loadingSuggested) return;
+            if (Array.isArray(this.suggestedTemplates) && this.suggestedTemplates.length > 0) return;
+            await this.fetchSuggestedTemplates();
+        },
+
+        async fetchSuggestedTemplates() {
+            if (!this.suggestedTemplatesUrl) return;
+            this.loadingSuggested = true;
+            try {
+                const url = new URL(this.suggestedTemplatesUrl, window.location.origin);
+                url.searchParams.set('lang', document.documentElement.lang || '');
+                const res = await fetch(url.toString(), {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!data || data.success !== true) {
+                    this.suggestedTemplates = [];
+                    this.suggested24hNote = '';
+                    return;
+                }
+                this.suggestedTemplates = Array.isArray(data.templates) ? data.templates : [];
+                this.suggested24hNote = data.note_24h || '';
+            } catch (_) {
+                this.suggestedTemplates = [];
+                this.suggested24hNote = '';
+            } finally {
+                this.loadingSuggested = false;
+            }
+        },
+
+        suggestedCategories() {
+            const set = new Set();
+            (this.suggestedTemplates || []).forEach((t) => {
+                if (t && t.category) set.add(t.category);
+            });
+            return Array.from(set);
+        },
+
+        filteredSuggestedTemplates() {
+            const q = (this.suggestedSearch || '').trim().toLowerCase();
+            const cat = (this.suggestedCategory || '').trim();
+            return (this.suggestedTemplates || []).filter((t) => {
+                if (!t) return false;
+                if (cat && t.category !== cat) return false;
+                if (!q) return true;
+                const hay = `${t.title || ''} ${t.body || ''} ${t.help || ''}`.toLowerCase();
+                return hay.includes(q);
+            });
+        },
+
+        selectSuggestedTemplate(tpl) {
+            this.selectedSuggested = tpl || null;
+        },
+
+        suggestedPreview() {
+            return (this.selectedSuggested && this.selectedSuggested.body) ? this.selectedSuggested.body : '';
+        },
+
+        useSuggestedTemplate() {
+            const text = this.suggestedPreview();
+            if (!text) return;
+            const current = (this.replyBody || '').trim();
+            this.replyBody = current ? (current + "\n\n" + text) : text;
+            this.showSuggestedModal = false;
+            this.$nextTick(() => this.$refs?.composer?.focus?.());
         },
 
         /** مسار إرسال الوسائط — مسار نسبي على نفس الصفحة (يتجنب redirect على الاستضافة المشتركة) */

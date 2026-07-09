@@ -55,9 +55,19 @@ class WhatsAppContact extends Model
 
     public function displayName(): string
     {
-        return $this->name
-            ?: $this->salesLead?->name
-            ?: $this->user?->name
-            ?: '+' . $this->phone_number;
+        $this->loadMissing(['salesLead', 'user:id,name,role']);
+
+        foreach ([
+            $this->name,
+            $this->salesLead?->name,
+            ($this->user && $this->user->isStudent()) ? $this->user->name : null,
+        ] as $candidate) {
+            $candidate = trim((string) $candidate);
+            if ($candidate !== '') {
+                return $candidate;
+            }
+        }
+
+        return '+' . $this->phone_number;
     }
 }

@@ -1,0 +1,268 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\WhatsAppSuggestedTemplate;
+use Illuminate\Database\Seeder;
+
+class WhatsAppSuggestedTemplatesSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $rows = [
+            // ========== Intro / Qualification ==========
+            [
+                'key' => 'sales_intro_01',
+                'title' => 'ترحيب وتعريف سريع',
+                'category' => 'intro',
+                'language' => 'ar',
+                'sort_order' => 10,
+                'body' => "أهلاً {{name}} 👋\nمعاك {{agent}} من Mindlytics.\nحابب أساعدك تختار المسار/الكورس المناسب—تحب تبدأ بإيه؟",
+                'help' => "متى تستخدمها:\n- أول رسالة لعميل جديد.\n\nنصائح:\n- غيّر {{agent}} لاسم موظف السيلز.\n- اسأل سؤال واحد واضح لفتح الحوار.\n\nملاحظة:\n- داخل نافذة 24 ساعة يمكنك إرسال رسائل عادية. خارج النافذة تحتاج Template Message لإعادة فتحها.",
+                'variables' => ['name', 'agent'],
+            ],
+            [
+                'key' => 'sales_intro_02',
+                'title' => 'ترحيب + سؤال تحديد الهدف',
+                'category' => 'intro',
+                'language' => 'ar',
+                'sort_order' => 20,
+                'body' => "أهلاً {{name}}!\nإنت حابب تتعلم علشان:\n1) شغل/كارير شيفت\n2) تطوير مهارة معينة\n3) مشروع/فريلانسينج\nقولّي رقم (1/2/3) عشان أرشحلك الأفضل.",
+                'help' => "هدفه:\n- تصنيف العميل بسرعة بدون أسئلة كثيرة.\n\nكيف تستخدمه:\n- اطلب رقم فقط (1/2/3) لتقليل التشتت.\n- بعدها اسأل سؤال متابعة واحد.",
+                'variables' => ['name'],
+            ],
+            [
+                'key' => 'sales_qualify_01',
+                'title' => 'أسئلة تأهيل سريعة (مبتدئ/وقت/هدف)',
+                'category' => 'qualification',
+                'language' => 'ar',
+                'sort_order' => 25,
+                'body' => "تمام يا {{name}} ✅\nقبل ما أرشحلك الأفضل، 3 أسئلة سريعة:\n1) مستواك الحالي في {{topic}}؟ (مبتدئ/متوسط)\n2) متاح قد إيه أسبوعياً؟\n3) هدفك خلال 3 شهور؟",
+                'help' => "متى تستخدمها:\n- بعد الترحيب مباشرة.\n\nالهدف:\n- تحديد المسار الصحيح + توقعات واقعية.\n\nمتغيرات:\n- {{topic}} مثال: Data, Frontend, AI",
+                'variables' => ['name', 'topic'],
+            ],
+            [
+                'key' => 'sales_qualify_02',
+                'title' => 'تحديد الميزانية + طريقة الدفع',
+                'category' => 'qualification',
+                'language' => 'ar',
+                'sort_order' => 26,
+                'body' => "علشان أقدملك أنسب اختيار يا {{name}}:\nالميزانية المناسبة لك تقريباً كام؟\nوكمان تفضّل الدفع:\n1) دفعة واحدة\n2) أقساط\nقولّي رقم (1/2) + الميزانية.",
+                'help' => "نصيحة:\n- اسأل الميزانية بعد ما توضح القيمة/المحتوى.\n- لو العميل متحسس من السؤال، استخدمه بصيغة “نطاق تقريبي”.",
+                'variables' => ['name'],
+            ],
+
+            // ========== Follow-up / No answer ==========
+            [
+                'key' => 'sales_followup_01',
+                'title' => 'متابعة بعد عدم الرد',
+                'category' => 'followup',
+                'language' => 'ar',
+                'sort_order' => 30,
+                'body' => "حبيت أعمل متابعة بسيطة يا {{name}} 👋\nهل لسه مهتم/ة بـ {{topic}}؟\nلو تحب، ابعتلي هدفك الحالي وأنا أرتبلك ترشيح سريع.",
+                'help' => "متى تستخدمها:\n- بعد 24–48 ساعة بدون رد.\n\nنصيحة:\n- اسأل سؤال واحد فقط لتسهيل الرد.",
+                'variables' => ['name', 'topic'],
+            ],
+            [
+                'key' => 'sales_followup_02',
+                'title' => 'متابعة + عرض مكالمة قصيرة',
+                'category' => 'followup',
+                'language' => 'ar',
+                'sort_order' => 40,
+                'body' => "يا {{name}} تحب نعمل مكالمة 5 دقايق أشرحلك الخيارات؟\nمتاح لك:\n- {{slot1}}\n- {{slot2}}\nقولّي الأنسب.",
+                'help' => "أفضل استخدام:\n- لو العميل متردد أو عنده أسئلة كثيرة.\n\nاملأ مواعيد حقيقية:\n- {{slot1}} و {{slot2}}",
+                'variables' => ['name', 'slot1', 'slot2'],
+            ],
+            [
+                'key' => 'sales_followup_03',
+                'title' => 'متابعة خفيفة (رسالة واحدة)',
+                'category' => 'followup',
+                'language' => 'ar',
+                'sort_order' => 45,
+                'body' => "سؤال سريع يا {{name}}: تحب أرشحلك خيار (سريع) ولا (متكامل) في {{topic}}؟",
+                'help' => "ميزة القالب:\n- يسهّل الرد بكلمة واحدة.\n\nمتى تستخدمه:\n- بعد متابعة أولى أو لما العميل مشغول.",
+                'variables' => ['name', 'topic'],
+            ],
+
+            // ========== Pricing / Payment ==========
+            [
+                'key' => 'sales_price_01',
+                'title' => 'تفاصيل السعر + المحتوى',
+                'category' => 'pricing',
+                'language' => 'ar',
+                'sort_order' => 50,
+                'body' => "بالنسبة لـ {{product}}:\n- السعر: {{price}}\n- المدة: {{duration}}\n- المستوى: {{level}}\nتحب أبعتلك خطة المحتوى/المنهج؟",
+                'help' => "متى تستخدمها:\n- قبل إرسال لينك الدفع/التسجيل.\n\nنصيحة:\n- اربط السعر بالقيمة (مش بس رقم).",
+                'variables' => ['product', 'price', 'duration', 'level'],
+            ],
+            [
+                'key' => 'sales_price_02',
+                'title' => 'تفاصيل أقساط (مختصر)',
+                'category' => 'pricing',
+                'language' => 'ar',
+                'sort_order' => 55,
+                'body' => "ممكن تقسيط {{product}} ✅\n- مقدم: {{down_payment}}\n- قسط شهري: {{monthly}}\n- مدة الأقساط: {{months}} شهر\nتحب أجهزلك طريقة الدفع المناسبة؟",
+                'help' => "متى تستخدمها:\n- عندما يسأل العميل عن التقسيط أو الميزانية.\n\nنصيحة:\n- تأكد من الأرقام قبل الإرسال.",
+                'variables' => ['product', 'down_payment', 'monthly', 'months'],
+            ],
+            [
+                'key' => 'sales_payment_01',
+                'title' => 'لينك تسجيل/دفع',
+                'category' => 'payment',
+                'language' => 'ar',
+                'sort_order' => 60,
+                'body' => "تمام يا {{name}} ✅\nده لينك التسجيل/الدفع لـ {{product}}:\n{{link}}\nلو واجهت أي مشكلة ابعتلي سكرين وأنا معاك خطوة بخطوة.",
+                'help' => "متى تستخدمها:\n- بعد تأكيد العميل.\n\nتأكد:\n- ضع رابط صحيح في {{link}}.\n- اطلب سكرين لو واجه مشكلة (يحسن التحويل).",
+                'variables' => ['name', 'product', 'link'],
+            ],
+            [
+                'key' => 'sales_payment_02',
+                'title' => 'تأكيد استلام الدفع + الخطوة التالية',
+                'category' => 'payment',
+                'language' => 'ar',
+                'sort_order' => 65,
+                'body' => "تم ✅ يا {{name}}\nاستلمنا طلبك على {{product}}.\nالخطوة الجاية: {{next_step}}\nلو تحب أتابع معاك لحد ما تدخل المنصة قولّي “تمام”.",
+                'help' => "متغير {{next_step}} أمثلة:\n- تفعيل الحساب خلال X ساعات\n- إضافة للمجموعة\n- إرسال بيانات الدخول",
+                'variables' => ['name', 'product', 'next_step'],
+            ],
+
+            // ========== Reminders / Attendance ==========
+            [
+                'key' => 'sales_reminder_01',
+                'title' => 'تذكير قبل بدء الكورس',
+                'category' => 'reminder',
+                'language' => 'ar',
+                'sort_order' => 70,
+                'body' => "تذكير سريع يا {{name}} 🌟\n{{product}} هيبدأ يوم {{date}} الساعة {{time}}.\nتحب أبعتلك خطوات الدخول/التحضير؟",
+                'help' => "متى تستخدمها:\n- قبل البدء بيوم أو نفس اليوم.\n\nنصيحة:\n- أضف خطوة واضحة (تحضير/لينك/مكان).",
+                'variables' => ['name', 'product', 'date', 'time'],
+            ],
+            [
+                'key' => 'sales_reminder_02',
+                'title' => 'تذكير بموعد مكالمة',
+                'category' => 'reminder',
+                'language' => 'ar',
+                'sort_order' => 75,
+                'body' => "تذكير يا {{name}} 👋\nمكالمة سريعة بعد {{minutes}} دقيقة.\nلو تحب نأجلها قولّي الوقت الأنسب.",
+                'help' => "استخدمها:\n- قبل المكالمة بـ 10–15 دقيقة.",
+                'variables' => ['name', 'minutes'],
+            ],
+
+            // ========== Objections / FAQs ==========
+            [
+                'key' => 'sales_faq_01',
+                'title' => 'رد على سؤال: مناسب للمبتدئين؟',
+                'category' => 'faq',
+                'language' => 'ar',
+                'sort_order' => 80,
+                'body' => "أيوه مناسب للمبتدئين 👌\nهنبدأ من الأساسيات بالتدريج + تطبيقات عملية.\nمستواك الحالي إيه؟ (مبتدئ/متوسط/متقدم)",
+                'help' => "هدفه:\n- طمأنة العميل + سؤال متابعة لتأهيله.",
+                'variables' => [],
+            ],
+            [
+                'key' => 'sales_faq_02',
+                'title' => 'رد على سؤال: كام ساعة أسبوعياً؟',
+                'category' => 'faq',
+                'language' => 'ar',
+                'sort_order' => 90,
+                'body' => "معدل مناسب لمعظم الناس: {{hours}} ساعات أسبوعياً.\nلو وقتك أقل، هنظبطلك خطة مذاكرة أخف.\nتحب تقولّي متاح كام ساعة تقريباً؟",
+                'help' => "غيّر {{hours}} حسب الكورس.\n\nنصيحة:\n- اطلب رقم تقريبي لتخصيص الخطة.",
+                'variables' => ['hours'],
+            ],
+            [
+                'key' => 'sales_objection_01',
+                'title' => 'اعتراض: السعر عالي',
+                'category' => 'objection',
+                'language' => 'ar',
+                'sort_order' => 95,
+                'body' => "فاهمك يا {{name}} 🙏\nخليني أسألك: أي جزء في السعر حاسس إنه عالي؟\n1) إجمالي السعر\n2) طريقة الدفع\n3) مقارنة بخيارات تانية\nلو تحب، أقدملك خيار أنسب لميزانيتك بدون ما تضيع الهدف.",
+                'help' => "فكرة الرد:\n- اعترف بالمشاعر + سؤال تشخيص + اقتراح بدائل (باقة/تقسيط/مسار أقصر).\n\nملاحظة:\n- لا تدخل في جدال، شخّص الاعتراض أولاً.",
+                'variables' => ['name'],
+            ],
+            [
+                'key' => 'sales_objection_02',
+                'title' => 'اعتراض: مش فاضي',
+                'category' => 'objection',
+                'language' => 'ar',
+                'sort_order' => 96,
+                'body' => "ولا يهمك يا {{name}} ✅\nقولّي متوسط وقتك أسبوعياً (حتى لو 2–3 ساعات).\nوأنا أرشحلك خطة تناسب وقتك + خطوات صغيرة تمشي عليها.",
+                'help' => "هدفه:\n- تحويل الاعتراض لبيانات (ساعات) ثم اقتراح خطة.",
+                'variables' => ['name'],
+            ],
+            [
+                'key' => 'sales_objection_03',
+                'title' => 'اعتراض: محتاج أفكر',
+                'category' => 'objection',
+                'language' => 'ar',
+                'sort_order' => 97,
+                'body' => "أكيد خُد وقتك يا {{name}} 🙌\nعشان أساعدك تفكر صح: إيه أهم حاجة محتاج تتأكد منها؟\n- المحتوى؟\n- السعر؟\n- المواعيد؟\nقولّي واحدة وأنا أوضحها بسرعة.",
+                'help' => "نصيحة:\n- اجعل العميل يحدد “نقطة واحدة” بدل تفكير عام.\n- ثم قدّم إجابة قصيرة وواضحة.",
+                'variables' => ['name'],
+            ],
+
+            // ========== Closing / Next step ==========
+            [
+                'key' => 'sales_close_01',
+                'title' => 'إغلاق لطيف (اختيارين)',
+                'category' => 'closing',
+                'language' => 'ar',
+                'sort_order' => 110,
+                'body' => "تمام يا {{name}} 👌\nتحب نمشي على:\n1) {{option1}}\n2) {{option2}}\nقولّي رقم (1/2) وأنا أجهزلك الخطوات.",
+                'help' => "أفضل استخدام:\n- عندما العميل مهتم لكن متردد.\n\nنصيحة:\n- اجعل الاختيارين واضحين ومحددين.",
+                'variables' => ['name', 'option1', 'option2'],
+            ],
+
+            // ========== Reactivation / Window ==========
+            [
+                'key' => 'sales_window_01',
+                'title' => 'تنبيه: نافذة 24 ساعة (شرح مبسط)',
+                'category' => 'policy',
+                'language' => 'ar',
+                'sort_order' => 200,
+                'body' => "ملاحظة سريعة يا {{name}}:\nواتساب بيتيح لنا الرد برسائل عادية خلال 24 ساعة من آخر رسالة منك.\nلو عدّت 24 ساعة، بنحتاج نبدأ برسالة “قالب” (Template) علشان نفتح المحادثة من جديد.",
+                'help' => "استخدمها فقط عند الحاجة:\n- عندما العميل يسأل لماذا لا يمكن الرد برسالة عادية.\n\nمهم:\n- لا تُكثر من إرسالها.",
+                'variables' => ['name'],
+            ],
+
+            // English variants (small starter set)
+            [
+                'key' => 'sales_intro_en_01',
+                'title' => 'Quick intro',
+                'category' => 'intro',
+                'language' => 'en',
+                'sort_order' => 10,
+                'body' => "Hi {{name}} 👋\nThis is {{agent}} from Mindlytics.\nWhat are you trying to achieve (job switch / skill upgrade / project)?",
+                'help' => "When to use:\n- First message to a new lead.\n\nNote:\n- Outside the 24h window, you may need a Template Message to reopen the chat.",
+                'variables' => ['name', 'agent'],
+            ],
+            [
+                'key' => 'sales_followup_en_01',
+                'title' => 'Follow-up (no reply)',
+                'category' => 'followup',
+                'language' => 'en',
+                'sort_order' => 30,
+                'body' => "Just checking in, {{name}} 👋\nAre you still interested in {{topic}}?\nTell me your goal and I’ll recommend the best option.",
+                'help' => "When to use:\n- After 24–48 hours of no reply.\n\nTip:\n- Ask one simple question to get a response.",
+                'variables' => ['name', 'topic'],
+            ],
+            [
+                'key' => 'sales_price_en_01',
+                'title' => 'Pricing + curriculum',
+                'category' => 'pricing',
+                'language' => 'en',
+                'sort_order' => 50,
+                'body' => "For {{product}}:\n- Price: {{price}}\n- Duration: {{duration}}\n- Level: {{level}}\nWould you like the curriculum outline?",
+                'help' => "Use before sending the payment link.",
+                'variables' => ['product', 'price', 'duration', 'level'],
+            ],
+        ];
+
+        foreach ($rows as $row) {
+            WhatsAppSuggestedTemplate::query()->updateOrCreate(
+                ['key' => $row['key']],
+                $row
+            );
+        }
+    }
+}
+

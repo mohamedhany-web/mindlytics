@@ -207,10 +207,18 @@ class WhatsAppInboxService
             }
 
             if (! $conversation->user_id) {
-                $conversation->user_id = $log->user_id ?: $this->guessUserId($phone);
+                $conversation->user_id = $this->guessUserId($phone);
             }
 
-            if ($contactName !== '' && blank($conversation->contact_name)) {
+            if ($contactName === '') {
+                $lead = app(WhatsAppCrmService::class)->findLeadByPhone($phone);
+                $contactName = trim((string) ($lead?->name ?? ''));
+                if ($lead && ! $conversation->sales_lead_id) {
+                    $conversation->sales_lead_id = $lead->id;
+                }
+            }
+
+            if ($contactName !== '' && (! $conversation->contact_name || ! $conversation->isCustomerDisplayName($conversation->contact_name))) {
                 $conversation->contact_name = $contactName;
             }
 

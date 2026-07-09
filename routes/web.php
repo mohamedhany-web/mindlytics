@@ -971,6 +971,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::prefix('whatsapp/inbox')->name('whatsapp.inbox.')->group(function () {
                 Route::get('/', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'index'])->name('index');
                 Route::get('/templates', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'templates'])->name('templates');
+                Route::get('/suggested-templates', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'suggestedTemplates'])->name('suggested-templates');
                 Route::get('/poll', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'poll'])->name('poll');
                 Route::post('/start', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'start'])->name('start');
                 Route::post('/{conversation}/reply', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'reply'])->name('reply');
@@ -1007,6 +1008,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::prefix('whatsapp/inbox')->name('whatsapp.inbox.')->group(function () {
                 Route::get('/', [\App\Http\Controllers\Employee\SalesManagerWhatsAppInboxController::class, 'index'])->name('index');
                 Route::get('/templates', [\App\Http\Controllers\Employee\SalesManagerWhatsAppInboxController::class, 'templates'])->name('templates');
+                Route::get('/suggested-templates', [\App\Http\Controllers\Employee\SalesManagerWhatsAppInboxController::class, 'suggestedTemplates'])->name('suggested-templates');
                 Route::get('/poll', [\App\Http\Controllers\Employee\SalesManagerWhatsAppInboxController::class, 'poll'])->name('poll');
                 Route::post('/start', [\App\Http\Controllers\Employee\SalesManagerWhatsAppInboxController::class, 'start'])->name('start');
                 Route::post('/{conversation}/reply', [\App\Http\Controllers\Employee\SalesManagerWhatsAppInboxController::class, 'reply'])->name('reply');

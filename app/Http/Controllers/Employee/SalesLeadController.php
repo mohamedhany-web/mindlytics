@@ -9,6 +9,7 @@ use App\Models\SalesLeadCategory;
 use App\Models\SalesLeadGroup;
 use App\Services\SalesAuditService;
 use App\Services\SalesDailyReportService;
+use App\Services\SalesNotificationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use App\Models\WhatsAppConversation;
@@ -153,7 +154,16 @@ class SalesLeadController extends Controller
             ]);
 
             if ($lead->stage === 'won' && $oldStage !== 'won') {
-                app(SalesNotificationService::class)->notifyWinPendingApproval($lead->fresh(['assignee']));
+                try {
+                    app(SalesNotificationService::class)->notifyWinPendingApproval($lead->fresh(['assignee']));
+                } catch (\Throwable $e) {
+                    Log::warning('sales.lead.win_notification_failed', [
+                        'lead_id' => $lead->id,
+                        'user_id' => Auth::id(),
+                        'message' => $e->getMessage(),
+                    ]);
+                    report($e);
+                }
             }
         }
 

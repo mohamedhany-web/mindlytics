@@ -215,23 +215,42 @@ class WhatsAppConversation extends Model
 
     public function displayName(): string
     {
-        if ($this->contact_name) {
-            return $this->contact_name;
+        $this->loadMissing(['user:id,name,role', 'assignee:id,name', 'contact', 'salesLead']);
+
+        foreach ([
+            $this->contact_name,
+            $this->salesLead?->name,
+            $this->contact?->name,
+            ($this->user && $this->user->isStudent()) ? $this->user->name : null,
+        ] as $candidate) {
+            if ($this->isCustomerDisplayName($candidate)) {
+                return trim((string) $candidate);
+            }
         }
 
-        if ($this->contact?->displayName()) {
-            return $this->contact->displayName();
+        return $this->formattedPhone();
+    }
+
+  public function isCustomerDisplayName(?string $name): bool
+    {
+        $name = trim((string) $name);
+        if ($name === '') {
+            return false;
         }
 
-        if ($this->salesLead?->name) {
-            return $this->salesLead->name;
+        $this->loadMissing(['assignee:id,name', 'user:id,name,role']);
+
+        if ($this->assignee?->name && mb_strtolower($name) === mb_strtolower(trim($this->assignee->name))) {
+            return false;
         }
 
-        if ($this->user?->name) {
-            return $this->user->name;
+        if ($this->user && ! $this->user->isStudent()) {
+            if (mb_strtolower($name) === mb_strtolower(trim($this->user->name))) {
+                return false;
+            }
         }
 
-        return '+' . $this->phone_number;
+        return true;
     }
 
     public function formattedPhone(): string

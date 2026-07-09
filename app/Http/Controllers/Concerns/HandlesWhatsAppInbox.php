@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Concerns;
 use App\Models\SalesLead;
 use App\Models\WhatsAppConversation;
 use App\Models\WhatsAppConversationMessage;
+use App\Models\WhatsAppSuggestedTemplate;
 use App\Models\WhatsAppTag;
 use App\Services\WhatsAppAssignmentService;
 use App\Services\WhatsAppCloudService;
@@ -191,6 +192,40 @@ trait HandlesWhatsAppInbox
         $forceAll = $this->inboxAudience() === 'admin';
 
         return response()->json($cloud->listApprovedTemplates(auth()->user(), $forceAll));
+    }
+
+    public function inboxSuggestedTemplates(Request $request): JsonResponse
+    {
+        if (! Schema::hasTable('whatsapp_suggested_templates')) {
+            return response()->json(['success' => false, 'error' => 'الجداول غير جاهزة — نفّذ migrate'], 503);
+        }
+
+        $locale = $request->query('lang') ?: app()->getLocale();
+        $lang = in_array($locale, ['en', 'en_US', 'en_GB'], true) ? 'en' : 'ar';
+
+        $rows = WhatsAppSuggestedTemplate::query()
+            ->where('is_active', true)
+            ->where('language', $lang)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get(['key', 'title', 'category', 'language', 'body', 'help', 'variables'])
+            ->map(fn ($t) => [
+                'key' => $t->key,
+                'title' => $t->title,
+                'category' => $t->category,
+                'language' => $t->language,
+                'body' => $t->body,
+                'help' => $t->help,
+                'variables' => $t->variables ?? [],
+            ])
+            ->values()
+            ->all();
+
+        return response()->json([
+            'success' => true,
+            'templates' => $rows,
+            'note_24h' => 'إرسال رسالة قالب (Template Message) يفتح نافذة محادثة لمدة 24 ساعة. بعد انتهاء النافذة، قد تحتاج لإرسال Template Message مرة أخرى.',
+        ]);
     }
 
     public function inboxShowConversation(WhatsAppConversation $conversation): JsonResponse

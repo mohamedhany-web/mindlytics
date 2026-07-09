@@ -87,6 +87,20 @@ class DatabaseSeeder extends Seeder
             $this->command->newLine();
         }
 
+        // 6.5 قوالب واتساب مقترحة للسيلز (اختياري)
+        if (\Illuminate\Support\Facades\Schema::hasTable('whatsapp_suggested_templates')) {
+            $this->command->info('💬 6.5 إنشاء مكتبة قوالب واتساب المقترحة...');
+            try {
+                $this->call([
+                    WhatsAppSuggestedTemplatesSeeder::class,
+                ]);
+                $this->command->info('✅ تم إنشاء قوالب واتساب المقترحة');
+            } catch (\Exception $e) {
+                $this->command->warn('⚠️  فشل إنشاء قوالب واتساب المقترحة: ' . $e->getMessage());
+            }
+            $this->command->newLine();
+        }
+
         // 7. إنشاء كورسات تجريبية (اختياري)
         if ($this->command->confirm('هل تريد إنشاء كورسات تجريبية؟', false)) {
             $this->command->info('📖 7. إنشاء كورسات تجريبية...');

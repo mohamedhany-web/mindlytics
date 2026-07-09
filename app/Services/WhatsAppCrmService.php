@@ -83,6 +83,10 @@ class WhatsAppCrmService
             ]);
         }
 
+        if ($lead?->name && (! $conversation->contact_name || ! $conversation->isCustomerDisplayName($conversation->contact_name))) {
+            $conversationUpdates['contact_name'] = $lead->name;
+        }
+
         if ($lead?->assigned_to && ! $conversation->assigned_to) {
             $conversationUpdates['assigned_to'] = $lead->assigned_to;
             $contact->update(['assigned_to' => $lead->assigned_to]);

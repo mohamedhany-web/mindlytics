@@ -182,8 +182,8 @@
                         <i class="fas fa-chalkboard-teacher text-sm"></i>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">الكورسات الأوفلاين</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ $offlineCountSidebar }} {{ __('student.offline_course') }} نشط</div>
+                        <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.offline_courses') }}</div>
+                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ $offlineCountSidebar }} {{ __('student.offline_course') }} {{ __('student.active_offline_courses') }}</div>
                     </div>
                     <i class="fas fa-chevron-down text-gray-500 text-xs flex-shrink-0 transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
                 </button>
@@ -205,8 +205,8 @@
                         <i class="fas fa-laptop-house text-sm"></i>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">كورساتي الأونلاين</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">المجموعات المفعّلة في بوابة الطالب</div>
+                        <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.my_online_courses') }}</div>
+                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ __('student.online_courses_portal_subtitle') }}</div>
                     </div>
                     @if($onlineCountSidebar > 0)
                         <span class="text-[11px] bg-indigo-500 text-white px-1.5 py-0.5 rounded-full font-semibold">{{ $onlineCountSidebar }}</span>
@@ -218,29 +218,11 @@
                        @click="if (window.innerWidth < 1024) sidebarOpen = false"
                        class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors {{ request()->routeIs('student.online-courses.*') ? 'bg-indigo-600 text-white font-semibold' : 'text-gray-700 hover:bg-indigo-100/80' }}">
                         <i class="fas fa-book-open w-4 text-center opacity-90"></i>
-                        <span>قائمة كورسات الأونلاين</span>
+                        <span>{{ __('student.online_courses_list') }}</span>
                     </a>
                 </div>
             </div>
             @endif
-            @endunless
-
-            <!-- مجتمع الذكاء الاصطناعي -->
-            @unless($scholarshipOnlyPortal)
-            <a href="{{ route('community.dashboard') }}" 
-               @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="nav-card block {{ request()->routeIs('community.*') ? 'active' : '' }}">
-                <div class="flex items-center gap-3">
-                    <div class="nav-icon bg-gradient-to-br from-cyan-500 to-blue-600 text-white flex-shrink-0">
-                        <i class="fas fa-brain text-sm"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">مجتمع الذكاء الاصطناعي</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">مسابقات ومجموعات بيانات</div>
-                    </div>
-                    <i class="fas fa-chevron-left text-gray-400 text-xs flex-shrink-0"></i>
-                </div>
-            </a>
             @endunless
 
             <!-- Orders -->
@@ -273,8 +255,8 @@
                         <i class="fas fa-tasks text-sm"></i>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">الواجبات</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">عرض وتسليم واجباتك</div>
+                        <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.assignments') }}</div>
+                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ __('student.assignments_view_submit') }}</div>
                     </div>
                     <i class="fas fa-chevron-left text-gray-400 text-xs flex-shrink-0"></i>
                 </div>

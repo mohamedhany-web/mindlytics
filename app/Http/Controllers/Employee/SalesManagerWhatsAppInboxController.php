@@ -55,6 +55,7 @@ class SalesManagerWhatsAppInboxController extends Controller
             'index' => route('employee.sales-manager.whatsapp.inbox.index', $params[0] ?? []),
             'poll' => route('employee.sales-manager.whatsapp.inbox.poll', $params[0] ?? []),
             'templates' => route('employee.sales-manager.whatsapp.inbox.templates'),
+            'suggested-templates' => route('employee.sales-manager.whatsapp.inbox.suggested-templates'),
             'start' => route('employee.sales-manager.whatsapp.inbox.start'),
             'conversation' => route('employee.sales-manager.whatsapp.inbox.conversation', is_array($params[0] ?? null) ? $params[0] : ['conversation' => $params[0]]),
             'reply' => route('employee.sales-manager.whatsapp.inbox.reply', $params[0]),
@@ -91,6 +92,11 @@ class SalesManagerWhatsAppInboxController extends Controller
     public function templates(): JsonResponse
     {
         return $this->inboxTemplates();
+    }
+
+    public function suggestedTemplates(Request $request): JsonResponse
+    {
+        return $this->inboxSuggestedTemplates($request);
     }
 
     public function showConversation(WhatsAppConversation $conversation): JsonResponse
