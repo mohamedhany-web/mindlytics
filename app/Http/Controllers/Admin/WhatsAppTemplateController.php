@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\WhatsAppMetaTemplate;
+use App\Models\WhatsAppSuggestedTemplate;
 use App\Models\Workshop;
+use Database\Seeders\WhatsAppSuggestedTemplatesSeeder;
 use App\Services\WhatsAppCloudService;
 use App\Services\WhatsAppTemplateAccessService;
 use App\Services\WhatsAppTemplateService;
@@ -12,6 +14,7 @@ use App\Services\WorkshopWhatsAppTemplateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
@@ -57,15 +60,80 @@ class WhatsAppTemplateController extends Controller
 
         $connectionMeta = app(WhatsAppCloudService::class)->connectionMeta();
 
+        $activeTab = in_array($request->query('tab'), ['meta', 'suggested'], true)
+            ? (string) $request->query('tab')
+            : 'meta';
+
+        $suggestedReady = Schema::hasTable('whatsapp_suggested_templates');
+        $suggestedTemplates = collect();
+        $suggestedStats = ['total' => 0, 'ar' => 0, 'en' => 0];
+
+        if ($suggestedReady) {
+            $suggestedQuery = WhatsAppSuggestedTemplate::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('id');
+
+            if ($request->filled('suggested_category')) {
+                $suggestedQuery->where('category', (string) $request->suggested_category);
+            }
+
+            if ($request->filled('suggested_language')) {
+                $suggestedQuery->where('language', (string) $request->suggested_language);
+            }
+
+            if ($request->filled('suggested_search')) {
+                $s = trim((string) $request->suggested_search);
+                $suggestedQuery->where(function ($q) use ($s) {
+                    $q->where('title', 'like', "%{$s}%")
+                        ->orWhere('body', 'like', "%{$s}%")
+                        ->orWhere('help', 'like', "%{$s}%");
+                });
+            }
+
+            $suggestedTemplates = $suggestedQuery->get();
+            $suggestedStats = [
+                'total' => WhatsAppSuggestedTemplate::where('is_active', true)->count(),
+                'ar' => WhatsAppSuggestedTemplate::where('is_active', true)->where('language', 'ar')->count(),
+                'en' => WhatsAppSuggestedTemplate::where('is_active', true)->where('language', 'en')->count(),
+            ];
+        }
+
+        if ($activeTab === 'meta' && ($stats['total'] ?? 0) === 0 && ($suggestedStats['total'] ?? 0) > 0) {
+            $activeTab = 'suggested';
+        }
+
         return view('admin.whatsapp.templates.index', compact(
             'templates',
             'stats',
             'connectionMeta',
+            'activeTab',
+            'suggestedReady',
+            'suggestedTemplates',
+            'suggestedStats',
         ) + [
             'templateAccessMode' => $access->mode(),
             'templateAccessLabels' => $access->modeLabels(),
             'salesStaff' => $access->salesStaffForAssignment(),
         ]);
+    }
+
+    public function seedSuggestedLibrary(): RedirectResponse
+    {
+        if (! Schema::hasTable('whatsapp_suggested_templates')) {
+            return back()->with('error', 'جدول المكتبة غير موجود — نفّذ php artisan migrate أولاً.');
+        }
+
+        Artisan::call('db:seed', [
+            '--class' => WhatsAppSuggestedTemplatesSeeder::class,
+            '--force' => true,
+        ]);
+
+        $count = WhatsAppSuggestedTemplate::where('is_active', true)->count();
+
+        return redirect()
+            ->route('admin.whatsapp.templates.index', ['tab' => 'suggested'])
+            ->with('success', "تم تحميل مكتبة القوالب المقترحة ({$count} قالباً).");
     }
 
     public function create(): View

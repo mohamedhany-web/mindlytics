@@ -1781,6 +1781,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/templates/workshop-preset/{workshop}', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'workshopPreset'])->name('templates.workshop-preset');
             Route::post('/templates', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'store'])->name('templates.store');
             Route::post('/templates/sync', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'sync'])->name('templates.sync');
+            Route::post('/templates/seed-suggested', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'seedSuggestedLibrary'])->name('templates.seed-suggested');
             Route::post('/templates/access-mode', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'updateAccessMode'])->name('templates.access-mode');
             Route::get('/templates/{template}', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'show'])->name('templates.show');
             Route::get('/templates/{template}/edit', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'edit'])->name('templates.edit');
@@ -1791,6 +1792,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/inbox', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'index'])->name('inbox');
             Route::get('/reports', [\App\Http\Controllers\Admin\WhatsAppReportController::class, 'index'])->name('reports');
             Route::get('/inbox/templates', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'templates'])->name('inbox.templates');
+            Route::get('/inbox/suggested-templates', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'suggestedTemplates'])->name('inbox.suggested-templates');
             Route::get('/inbox/poll', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'poll'])->name('inbox.poll');
             Route::post('/inbox/start', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'start'])->name('inbox.start');
             Route::post('/inbox/{conversation}/reply', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'reply'])->name('inbox.reply');
