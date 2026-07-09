@@ -198,12 +198,20 @@ class WhatsAppTemplateService
                 $footer = $this->extractFooterFromComponents($row['components'] ?? []);
                 $buttons = $this->extractButtonsFromComponents($row['components'] ?? []);
 
+                $status = WhatsAppMetaTemplate::normalizeMetaStatus($row['status'] ?? 'PENDING');
+                $rejectionReason = WhatsAppMetaTemplate::normalizeRejectionReason(
+                    $row['rejected_reason'] ?? $row['rejection_reason'] ?? null
+                );
+                if ($status === WhatsAppMetaTemplate::STATUS_APPROVED) {
+                    $rejectionReason = null;
+                }
+
                 WhatsAppMetaTemplate::updateOrCreate(
                     ['name' => $name, 'language' => $language],
                     [
                         'meta_template_id' => $row['id'] ?? null,
                         'category' => strtoupper((string) ($row['category'] ?? 'UTILITY')),
-                        'status' => WhatsAppMetaTemplate::normalizeMetaStatus($row['status'] ?? 'PENDING'),
+                        'status' => $status,
                         'body_text' => $bodyText ?: '—',
                         'header_type' => $header['type'] ?? null,
                         'header_content' => $header['content'] ?? null,
@@ -211,7 +219,7 @@ class WhatsAppTemplateService
                         'buttons' => $buttons,
                         'body_variable_count' => $this->countBodyVariables($bodyText),
                         'components' => $row['components'] ?? null,
-                        'rejection_reason' => $row['rejected_reason'] ?? $row['rejection_reason'] ?? null,
+                        'rejection_reason' => $rejectionReason,
                         'quality_score' => is_array($row['quality_score'] ?? null)
                             ? json_encode($row['quality_score'], JSON_UNESCAPED_UNICODE)
                             : ($row['quality_score'] ?? null),
@@ -241,6 +249,36 @@ class WhatsAppTemplateService
         $template->delete();
 
         return ['success' => true];
+    }
+
+    public function duplicateAsDraft(WhatsAppMetaTemplate $source, ?int $userId = null): WhatsAppMetaTemplate
+    {
+        $language = (string) $source->language;
+        $baseName = (string) $source->name;
+        $name = $baseName;
+        $suffix = 2;
+
+        while (WhatsAppMetaTemplate::query()->where('name', $name)->where('language', $language)->exists()) {
+            $name = $this->normalizeTemplateName($baseName.'_v'.$suffix);
+            $suffix++;
+        }
+
+        if ($name === $baseName) {
+            $name = $this->normalizeTemplateName($baseName.'_v2');
+        }
+
+        $data = [
+            'name' => $name,
+            'language' => $language,
+            'category' => $source->category,
+            'body_text' => $source->body_text,
+            'header_type' => $source->header_type,
+            'header_content' => $source->header_content,
+            'footer_text' => $source->footer_text,
+            'buttons' => $source->buttons ?? [],
+        ];
+
+        return $this->createDraft($data, $userId);
     }
 
     public function normalizeTemplateName(string $name): string

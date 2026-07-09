@@ -586,7 +586,6 @@
                             <i class="fas fa-file-alt"></i> <span x-text="showTemplatePicker ? 'إخفاء القوالب' : 'إرسال بقالب Meta (اختياري)'"></span>
                         </button>
                     </div>
-                </div>
             </div>
 
             {{-- خطأ أو محادثة غير محمّلة --}}
@@ -1001,16 +1000,17 @@
         max-height: 100%;
         overflow: hidden;
     }
-    .wa-chat-panel__pane {
+    .wa-chat-panel__pane,
+    .wa-chat-active {
+        grid-row: 1;
+        grid-column: 1;
         min-height: 0;
+        max-height: 100%;
         overflow: hidden;
     }
     .wa-chat-active {
         display: grid;
         grid-template-rows: auto minmax(0, 1fr) auto;
-        min-height: 0;
-        max-height: 100%;
-        overflow: hidden;
     }
     .wa-chat-messages {
         min-height: 0;

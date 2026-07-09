@@ -320,6 +320,23 @@ class WhatsAppTemplateController extends Controller
         return back()->with('success', 'تم إرسال القالب إلى Meta — الحالة: قيد المراجعة.');
     }
 
+    public function duplicate(WhatsAppMetaTemplate $template, WhatsAppTemplateService $service): RedirectResponse
+    {
+        if (! $template->canDuplicateForResubmit()) {
+            return back()->with('error', 'لا يمكن نسخ هذا القالب حالياً.');
+        }
+
+        try {
+            $draft = $service->duplicateAsDraft($template, auth()->id());
+        } catch (\Throwable $e) {
+            return back()->with('error', 'تعذّر نسخ القالب: '.$e->getMessage());
+        }
+
+        return redirect()
+            ->route('admin.whatsapp.templates.edit', $draft)
+            ->with('success', 'تم إنشاء نسخة مسودة — عدّل المحتوى ثم أرسلها إلى Meta. (Meta لا يسمح بتعديل القالب المعتمد مباشرة)');
+    }
+
     public function sync(WhatsAppTemplateService $service): RedirectResponse
     {
         $result = $service->syncFromMeta();

@@ -27,10 +27,10 @@
         ',
     ])
 
-    @if($template->rejection_reason)
+    @if($template->displayRejectionReason())
         <div class="rounded-2xl border-2 border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-900">
             <p class="font-bold mb-1"><i class="fas fa-times-circle ml-1"></i> سبب الرفض من Meta</p>
-            <p>{{ $template->rejection_reason }}</p>
+            <p>{{ $template->displayRejectionReason() }}</p>
         </div>
     @endif
 
@@ -120,12 +120,21 @@
             </section>
 
             <div class="space-y-2">
-                @if(in_array($template->status, ['draft', 'rejected']))
+                @if($template->isEditable())
                     <form method="POST" action="{{ route('admin.whatsapp.templates.submit', $template) }}">@csrf
                         <button type="submit" class="{{ $waBtnPrimary }} w-full justify-center">
-                            <i class="fab fa-meta"></i> Submit to Meta
+                            <i class="fab fa-meta"></i> إرسال إلى Meta للاعتماد
                         </button>
                     </form>
+                @elseif($template->canDuplicateForResubmit())
+                    <form method="POST" action="{{ route('admin.whatsapp.templates.duplicate', $template) }}">@csrf
+                        <button type="submit" class="{{ $waBtnPrimary }} w-full justify-center">
+                            <i class="fas fa-copy"></i> نسخ للتعديل وإعادة الإرسال
+                        </button>
+                    </form>
+                    <p class="text-[11px] text-slate-500 leading-relaxed px-1">
+                        Meta لا يسمح بتعديل القالب المعتمد مباشرة — يُنشأ نسخة مسودة جديدة للتعديل ثم الإرسال.
+                    </p>
                 @endif
 
                 @if($template->status === 'pending')

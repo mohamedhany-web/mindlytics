@@ -340,8 +340,8 @@
                             <td class="px-5 py-3.5 text-xs">{{ $tpl->categoryLabel() }}</td>
                             <td class="px-5 py-3.5">
                                 <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-bold border {{ $statusClass }}">{{ $tpl->statusLabel() }}</span>
-                                @if($tpl->rejection_reason)
-                                    <p class="text-[10px] text-rose-600 mt-1 max-w-xs truncate" title="{{ $tpl->rejection_reason }}">{{ Str::limit($tpl->rejection_reason, 40) }}</p>
+                                @if($tpl->displayRejectionReason())
+                                    <p class="text-[10px] text-rose-600 mt-1 max-w-xs truncate" title="{{ $tpl->displayRejectionReason() }}">{{ Str::limit($tpl->displayRejectionReason(), 40) }}</p>
                                 @endif
                             </td>
                             @if(($templateAccessMode ?? 'all') === 'restricted')

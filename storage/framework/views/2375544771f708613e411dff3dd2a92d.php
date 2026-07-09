@@ -1,0 +1,124 @@
+
+
+<?php $__env->startSection('title', 'طلبات واتساب'); ?>
+<?php $__env->startSection('header', 'طلبات واتساب الجديدة'); ?>
+
+<?php $__env->startSection('content'); ?>
+<div class="w-full space-y-4">
+    <div class="rounded-xl border border-emerald-200 bg-gradient-to-l from-emerald-50 via-white to-teal-50/40 px-4 py-3 sm:px-5 sm:py-3.5">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="min-w-0 flex-1">
+                <h2 class="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+                    <i class="fab fa-whatsapp text-emerald-600"></i>
+                    طابور الطلبات
+                </h2>
+                <p class="text-xs sm:text-sm text-slate-600 mt-0.5 leading-relaxed">
+                    يظهر هنا فقط الأرقام/العملاء <strong>غير المسندين لأي موظف</strong> — لن تظهر leads المسندة لشخص آخر.
+                </p>
+            </div>
+            <div class="shrink-0 flex items-center gap-3">
+                <div class="text-center rounded-lg bg-white/80 border border-emerald-100 px-3 py-1.5">
+                    <p class="text-xl sm:text-2xl font-black text-emerald-700 tabular-nums leading-none" id="wa-queue-total"><?php echo e($conversations->total()); ?></p>
+                    <p class="text-[10px] text-slate-500 mt-0.5">في الانتظار</p>
+                </div>
+                <a href="<?php echo e(route('employee.sales.whatsapp.inbox.index')); ?>"
+                   class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors">
+                    <i class="fas fa-inbox text-emerald-600"></i>
+                    المحادثات
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <?php if(! $queueEnabled): ?>
+        <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            طابور الانتظار غير مفعّل حالياً. راجع إعدادات الواتساب (<code class="text-xs">WHATSAPP_ASSIGNMENT_STRATEGY=manual_queue</code>).
+        </div>
+    <?php endif; ?>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5" id="wa-queue-list">
+        <?php $__empty_1 = true; $__currentLoopData = $conversations; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $conversation): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+            <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm hover:border-emerald-300 hover:shadow transition-all flex flex-col gap-2 min-h-0">
+                <div class="flex items-start gap-2.5 min-w-0">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 text-sm">
+                        <i class="fab fa-whatsapp"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-1.5 min-w-0">
+                            <h3 class="font-bold text-sm text-slate-900 truncate" title="<?php echo e($conversation->displayName()); ?>">
+                                <?php echo e($conversation->displayName()); ?>
+
+                            </h3>
+                            <?php if($conversation->unread_count > 0): ?>
+                                <span class="shrink-0 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-emerald-600 text-white text-[10px] font-bold tabular-nums">
+                                    <?php echo e($conversation->unread_count); ?>
+
+                                </span>
+                            <?php endif; ?>
+                        </div>
+                        <p class="text-[11px] text-slate-500 tabular-nums dir-ltr truncate mt-0.5"><?php echo e($conversation->formattedPhone()); ?></p>
+                    </div>
+                </div>
+
+                <p class="text-xs text-slate-600 line-clamp-2 leading-relaxed min-h-[2.25rem]" title="<?php echo e($conversation->last_message_preview ?: ''); ?>">
+                    <?php echo e($conversation->last_message_preview ?: '—'); ?>
+
+                </p>
+
+                <div class="flex items-center justify-between gap-2 mt-auto pt-1 border-t border-slate-100">
+                    <p class="text-[10px] text-slate-400 truncate">
+                        <?php if($conversation->last_message_at): ?>
+                            <?php echo e($conversation->last_message_at->diffForHumans()); ?>
+
+                        <?php else: ?>
+                            —
+                        <?php endif; ?>
+                    </p>
+                    <form method="POST" action="<?php echo e(route('employee.sales.whatsapp.queue.accept', $conversation)); ?>" class="shrink-0">
+                        <?php echo csrf_field(); ?>
+                        <button type="submit"
+                                class="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-colors">
+                            <i class="fas fa-check text-[10px]"></i>
+                            قبول
+                        </button>
+                    </form>
+                </div>
+            </div>
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+            <div class="col-span-full rounded-xl border border-dashed border-slate-200 bg-white px-6 py-14 text-center">
+                <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-slate-50 flex items-center justify-center">
+                    <i class="fas fa-inbox text-xl text-slate-400"></i>
+                </div>
+                <p class="font-bold text-slate-900 mb-1">لا توجد طلبات حالياً</p>
+                <p class="text-sm text-slate-500">ستظهر هنا المحادثات الواردة من أرقام جديدة</p>
+            </div>
+        <?php endif; ?>
+    </div>
+
+    <?php if($conversations->hasPages()): ?>
+        <div class="pt-1 flex justify-center"><?php echo e($conversations->links()); ?></div>
+    <?php endif; ?>
+</div>
+<?php $__env->stopSection(); ?>
+
+<?php $__env->startPush('scripts'); ?>
+<script>
+    setInterval(() => {
+        if (document.hidden) return;
+        fetch('<?php echo e(route('employee.sales.whatsapp.queue.count')); ?>', {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(r => r.json())
+            .then(data => {
+                const badge = document.getElementById('wa-queue-badge');
+                if (!badge) return;
+                const count = data.count || 0;
+                badge.textContent = count;
+                badge.classList.toggle('hidden', count === 0);
+            })
+            .catch(() => {});
+    }, 15000);
+</script>
+<?php $__env->stopPush(); ?>
+
+<?php echo $__env->make('layouts.employee', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views\employee\sales\whatsapp\queue.blade.php ENDPATH**/ ?>

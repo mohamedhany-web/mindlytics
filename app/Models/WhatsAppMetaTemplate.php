@@ -84,6 +84,41 @@ class WhatsAppMetaTemplate extends Model
         return $this->status === self::STATUS_APPROVED;
     }
 
+    public static function normalizeRejectionReason(?string $reason): ?string
+    {
+        $reason = trim((string) $reason);
+        if ($reason === '') {
+            return null;
+        }
+
+        $upper = strtoupper($reason);
+        if (in_array($upper, ['NONE', 'N/A', 'NA', 'NULL', '-', '—', 'UNKNOWN'], true)) {
+            return null;
+        }
+
+        return $reason;
+    }
+
+    public function displayRejectionReason(): ?string
+    {
+        if ($this->status === self::STATUS_APPROVED) {
+            return null;
+        }
+
+        return self::normalizeRejectionReason($this->rejection_reason);
+    }
+
+    public function canDuplicateForResubmit(): bool
+    {
+        return in_array($this->status, [
+            self::STATUS_APPROVED,
+            self::STATUS_REJECTED,
+            self::STATUS_PAUSED,
+            self::STATUS_DISABLED,
+            self::STATUS_PENDING,
+        ], true);
+    }
+
     public function displayLabel(): string
     {
         return $this->name . ' · ' . $this->language;

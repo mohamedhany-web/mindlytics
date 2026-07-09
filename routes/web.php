@@ -1792,6 +1792,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::put('/templates/{template}', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'update'])->name('templates.update');
             Route::put('/templates/{template}/access', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'updateAccess'])->name('templates.access');
             Route::post('/templates/{template}/submit', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'submit'])->name('templates.submit');
+            Route::post('/templates/{template}/duplicate', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'duplicate'])->name('templates.duplicate');
             Route::delete('/templates/{template}', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'destroy'])->name('templates.destroy');
             Route::get('/inbox', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'index'])->name('inbox');
             Route::get('/reports', [\App\Http\Controllers\Admin\WhatsAppReportController::class, 'index'])->name('reports');
