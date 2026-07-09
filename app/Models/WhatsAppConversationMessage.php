@@ -63,7 +63,13 @@ class WhatsAppConversationMessage extends Model
         }
 
         if ($this->template_name) {
-            return '[قالب: ' . $this->template_name . ']';
+            $params = is_array($this->template_params) ? $this->template_params : [];
+            $preview = trim((string) ($params['preview'] ?? ''));
+            if ($preview !== '') {
+                return $preview;
+            }
+
+            return '[قالب: '.$this->template_name.']';
         }
 
         return match ($this->message_type) {

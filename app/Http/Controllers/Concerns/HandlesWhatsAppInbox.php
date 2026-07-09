@@ -574,12 +574,20 @@ trait HandlesWhatsAppInbox
             return response()->json(['success' => false, 'error' => $build['error']], 422);
         }
 
+        $variables = $request->input('template_variables', []);
+        $previewText = app(\App\Services\WhatsAppTemplateService::class)->renderTemplatePreview(
+            $validated['template_name'],
+            $validated['language_code'],
+            is_array($variables) ? $variables : []
+        );
+
         $result = $inbox->sendTemplateReply(
             $conversation,
             $validated['template_name'],
             $validated['language_code'],
             $build['components'],
-            auth()->id()
+            auth()->id(),
+            $previewText
         );
 
         if (! ($result['success'] ?? false)) {
@@ -644,12 +652,20 @@ trait HandlesWhatsAppInbox
                 return response()->json(['success' => false, 'error' => $build['error']], 422);
             }
 
+            $variables = $request->input('template_variables', []);
+            $previewText = app(\App\Services\WhatsAppTemplateService::class)->renderTemplatePreview(
+                $templateName,
+                $language,
+                is_array($variables) ? $variables : []
+            );
+
             $result = $inbox->startConversationWithTemplate(
                 $validated['phone'],
                 $templateName,
                 $language,
                 auth()->id(),
-                $build['components']
+                $build['components'],
+                $previewText
             );
         } else {
             return response()->json(['success' => false, 'error' => 'اكتب رسالة للإرسال'], 422);

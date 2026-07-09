@@ -4,9 +4,6 @@
             ? 'bg-white text-slate-800 rounded-tl-sm'
             : 'bg-emerald-100 text-emerald-950 rounded-tr-sm border border-emerald-200' }}">
         <p>{{ $msg->displayBody() }}</p>
-        @if($msg->template_name)
-            <p class="text-[10px] opacity-70 mt-1">قالب: {{ $msg->template_name }}</p>
-        @endif
         @if($msg->error_message && $msg->status === 'failed')
             <p class="text-[10px] text-rose-600 mt-1">{{ $msg->error_message }}</p>
         @endif

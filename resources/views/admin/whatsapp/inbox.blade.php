@@ -415,9 +415,6 @@
                                                 </a>
                                             </template>
                                             <p class="wa-msg-text" x-show="shouldShowBody(msg)" x-text="msg.body"></p>
-                                            <template x-if="msg.template_name">
-                                                <p class="wa-msg-meta-extra" x-text="'قالب: ' + msg.template_name"></p>
-                                            </template>
                                             <template x-if="msg.error_message && msg.status === 'failed'">
                                                 <p class="wa-msg-error" x-text="msg.error_message"></p>
                                             </template>
@@ -547,8 +544,8 @@
                                         <option :value="t.name + '|' + t.language" x-text="t.label"></option>
                                     </template>
                                 </select>
-                                <button type="button" @click="sendTemplate()" :disabled="sending || !templateName || !templateVariablesReady()"
-                                        class="text-xs px-3 py-1.5 rounded-full bg-white text-emerald-700 font-semibold shadow-sm disabled:opacity-50">إرسال قالب</button>
+                                <button type="button" @click="openMetaTemplatePreview('reply')" :disabled="sending || !templateName || !templateVariablesReady()"
+                                        class="text-xs px-3 py-1.5 rounded-full bg-white text-emerald-700 font-semibold shadow-sm disabled:opacity-50">معاينة وإرسال</button>
                             </div>
                             <template x-if="selectedTemplateMeta()">
                                 <div class="rounded-xl bg-white/95 border border-emerald-100 p-3 space-y-2 text-xs">
@@ -590,128 +587,6 @@
                         </button>
                     </div>
                 </div>
-
-            {{-- modal: مكتبة رسائل مقترحة --}}
-            <div x-show="showSuggestedModal" x-cloak
-                 class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40"
-                 @keydown.escape.window="showSuggestedModal = false">
-                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden" @click.outside="showSuggestedModal = false">
-                    <div class="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3">
-                        <div>
-                            <h3 class="font-bold text-slate-900">مكتبة رسائل مقترحة للسيلز</h3>
-                            <p class="text-xs text-slate-600 mt-1">اختر رسالة ثم عدّل المتغيرات والنص قبل الإدراج في المحادثة.</p>
-                        </div>
-                        <button type="button" @click="showSuggestedModal = false" class="text-slate-400 hover:text-slate-600 p-2">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-
-                    <div class="px-5 py-3 bg-amber-50 border-b border-amber-100 text-amber-900 text-xs leading-relaxed">
-                        <strong>ملاحظة مهمة:</strong>
-                        <span x-text="suggested24hNote || 'إرسال رسالة قالب (Template Message) يفتح نافذة محادثة 24 ساعة.'"></span>
-                    </div>
-
-                    <div class="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="md:col-span-1 space-y-2">
-                            <input type="search" x-model="suggestedSearch" placeholder="بحث..."
-                                   class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
-                            <div class="flex flex-wrap gap-2">
-                                <button type="button" @click="suggestedCategory = ''"
-                                        class="px-3 py-1 rounded-full text-[11px] font-bold border"
-                                        :class="suggestedCategory === '' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700 border-slate-200'">
-                                    الكل
-                                </button>
-                                <template x-for="cat in suggestedCategories()" :key="'cat-' + cat">
-                                    <button type="button" @click="suggestedCategory = cat"
-                                            class="px-3 py-1 rounded-full text-[11px] font-bold border"
-                                            :class="suggestedCategory === cat ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700 border-slate-200'">
-                                        <span x-text="cat"></span>
-                                    </button>
-                                </template>
-                            </div>
-                            <div class="text-[11px] text-slate-500">
-                                اضغط على أي رسالة من اليمين لعرضها.
-                            </div>
-                        </div>
-
-                        <div class="md:col-span-2">
-                            <div class="grid grid-cols-1 gap-2 max-h-[55vh] overflow-auto pr-1">
-                                <template x-for="tpl in filteredSuggestedTemplates()" :key="'sug-' + tpl.key">
-                                    <button type="button" @click="openSuggestedCompose(tpl)"
-                                            class="text-right rounded-xl border px-4 py-3 hover:bg-slate-50 transition-colors border-slate-200 bg-white">
-                                        <div class="flex items-start justify-between gap-3">
-                                            <div class="min-w-0">
-                                                <p class="font-bold text-slate-900 text-sm" x-text="tpl.title"></p>
-                                                <p class="text-[11px] text-slate-500 mt-1 line-clamp-2" x-text="tpl.category_label || tpl.category"></p>
-                                            </div>
-                                            <span class="shrink-0 text-[10px] px-2 py-1 rounded-full bg-slate-100 text-slate-700 font-bold" x-text="tpl.category"></span>
-                                        </div>
-                                    </button>
-                                </template>
-                                <div x-show="!loadingSuggested && filteredSuggestedTemplates().length === 0"
-                                     class="text-center text-sm text-slate-500 py-8">
-                                    لا توجد نتائج.
-                                </div>
-                                <div x-show="loadingSuggested" class="text-center text-sm text-slate-500 py-8">
-                                    جاري تحميل المكتبة...
-                                </div>
-                            </div>
-
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- popup: تعديل القالب قبل الإدراج --}}
-            <div x-show="showSuggestedComposeModal" x-cloak
-                 class="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50"
-                 @keydown.escape.window="showSuggestedComposeModal = false">
-                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col" @click.outside="showSuggestedComposeModal = false">
-                    <div class="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3 shrink-0">
-                        <div class="min-w-0">
-                            <h3 class="font-bold text-slate-900" x-text="selectedSuggested?.title || 'تعديل الرسالة'"></h3>
-                            <p class="text-[11px] text-slate-500 mt-1 whitespace-pre-line" x-show="selectedSuggested?.help" x-text="selectedSuggested?.help"></p>
-                        </div>
-                        <button type="button" @click="showSuggestedComposeModal = false" class="text-slate-400 hover:text-slate-600 p-2 shrink-0">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="p-5 space-y-4 overflow-y-auto flex-1">
-                        <template x-if="suggestedComposeVariableList().length > 0">
-                            <div class="space-y-2">
-                                <p class="text-xs font-bold text-slate-700">املأ المتغيرات</p>
-                                <template x-for="v in suggestedComposeVariableList()" :key="'sv-' + v">
-                                    <div>
-                                        <label class="block text-[11px] font-semibold text-slate-600 mb-1" x-text="suggestedVariableLabel(v)"></label>
-                                        <input type="text"
-                                               x-model="suggestedComposeValues[v]"
-                                               @input="refreshSuggestedComposeBody()"
-                                               class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
-                                    </div>
-                                </template>
-                            </div>
-                        </template>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-2">الرسالة (يمكنك التعديل)</label>
-                            <textarea x-model="suggestedComposeBody" rows="8"
-                                      class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm leading-relaxed resize-y min-h-[140px]"></textarea>
-                        </div>
-                        <div class="rounded-xl bg-slate-50 border border-slate-200 p-3">
-                            <p class="text-[10px] font-bold text-slate-500 mb-1">معاينة</p>
-                            <pre class="whitespace-pre-wrap text-sm text-slate-800" x-text="suggestedComposeBody"></pre>
-                        </div>
-                    </div>
-                    <div class="px-5 py-4 border-t border-slate-100 flex flex-wrap gap-2 justify-end shrink-0 bg-slate-50/80">
-                        <button type="button" @click="showSuggestedComposeModal = false" class="{{ $waBtnSecondary }} text-sm">إلغاء</button>
-                        <button type="button" @click="confirmSuggestedCompose(false)" class="{{ $waBtnSecondary }} text-sm">
-                            <i class="fas fa-plus"></i> إدراج في المحادثة
-                        </button>
-                        <button type="button" @click="confirmSuggestedCompose(true)" class="{{ $waBtnPrimary }} text-sm">
-                            <i class="fas fa-paper-plane"></i> إدراج وإرسال
-                        </button>
-                    </div>
-                </div>
             </div>
 
             {{-- خطأ أو محادثة غير محمّلة --}}
@@ -725,6 +600,166 @@
         </section>
 
         @include('admin.whatsapp._crm_panel')
+    </div>
+
+    {{-- modal: مكتبة رسائل مقترحة --}}
+    <div x-show="showSuggestedModal" x-cloak
+         class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40"
+         @keydown.escape.window="showSuggestedModal = false">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden" @click.outside="showSuggestedModal = false">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3">
+                <div>
+                    <h3 class="font-bold text-slate-900">مكتبة رسائل مقترحة</h3>
+                    <p class="text-xs text-slate-600 mt-1">اختر رسالة، راجع المعاينة، ثم اضغط «تخصيص وإدراج».</p>
+                </div>
+                <button type="button" @click="showSuggestedModal = false" class="text-slate-400 hover:text-slate-600 p-2">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="px-5 py-3 bg-amber-50 border-b border-amber-100 text-amber-900 text-xs leading-relaxed">
+                <strong>ملاحظة:</strong>
+                <span x-text="suggested24hNote || 'إرسال Template Message يفتح نافذة محادثة 24 ساعة.'"></span>
+            </div>
+
+            <div class="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="md:col-span-1 space-y-2">
+                    <input type="search" x-model="suggestedSearch" placeholder="بحث..."
+                           class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" @click="suggestedCategory = ''"
+                                class="px-3 py-1 rounded-full text-[11px] font-bold border"
+                                :class="suggestedCategory === '' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700 border-slate-200'">
+                            الكل
+                        </button>
+                        <template x-for="cat in suggestedCategories()" :key="'cat-' + cat">
+                            <button type="button" @click="suggestedCategory = cat"
+                                    class="px-3 py-1 rounded-full text-[11px] font-bold border"
+                                    :class="suggestedCategory === cat ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700 border-slate-200'">
+                                <span x-text="cat"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="md:col-span-2">
+                    <div class="grid grid-cols-1 gap-2 max-h-[40vh] overflow-auto pr-1">
+                        <template x-for="tpl in filteredSuggestedTemplates()" :key="'sug-' + tpl.key">
+                            <button type="button" @click="selectSuggestedTemplate(tpl)"
+                                    class="text-right rounded-xl border px-4 py-3 hover:bg-slate-50 transition-colors"
+                                    :class="selectedSuggested?.key === tpl.key ? 'border-emerald-300 bg-emerald-50/40' : 'border-slate-200 bg-white'">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <p class="font-bold text-slate-900 text-sm" x-text="tpl.title"></p>
+                                        <p class="text-[11px] text-slate-500 mt-1 whitespace-pre-line line-clamp-2" x-text="tpl.help || ''"></p>
+                                    </div>
+                                    <span class="shrink-0 text-[10px] px-2 py-1 rounded-full bg-slate-100 text-slate-700 font-bold" x-text="tpl.category"></span>
+                                </div>
+                            </button>
+                        </template>
+                        <div x-show="!loadingSuggested && filteredSuggestedTemplates().length === 0"
+                             class="text-center text-sm text-slate-500 py-8">
+                            لا توجد نتائج.
+                        </div>
+                        <div x-show="loadingSuggested" class="text-center text-sm text-slate-500 py-8">
+                            جاري تحميل المكتبة...
+                        </div>
+                    </div>
+
+                    <div x-show="selectedSuggested" x-cloak class="mt-4 rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <p class="font-bold text-slate-900" x-text="selectedSuggested?.title"></p>
+                                <p class="text-[11px] text-slate-500 mt-1 whitespace-pre-line" x-text="selectedSuggested?.help || ''"></p>
+                            </div>
+                            <button type="button" class="px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shrink-0"
+                                    @click="openSuggestedCompose(selectedSuggested)">
+                                تخصيص وإدراج
+                            </button>
+                        </div>
+                        <pre class="whitespace-pre-wrap text-sm bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800" x-text="suggestedPreview()"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- popup: تخصيص القالب قبل الإدراج --}}
+    <div x-show="showSuggestedComposeModal" x-cloak
+         class="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50"
+         @keydown.escape.window="showSuggestedComposeModal = false">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col" @click.outside="showSuggestedComposeModal = false">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3 shrink-0">
+                <div class="min-w-0">
+                    <h3 class="font-bold text-slate-900" x-text="selectedSuggested?.title || 'تخصيص الرسالة'"></h3>
+                </div>
+                <button type="button" @click="showSuggestedComposeModal = false" class="text-slate-400 hover:text-slate-600 p-2 shrink-0">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-5 space-y-4 overflow-y-auto flex-1">
+                <template x-if="suggestedComposeVariableList().length > 0">
+                    <div class="space-y-2">
+                        <p class="text-xs font-bold text-slate-700">املأ المتغيرات</p>
+                        <template x-for="v in suggestedComposeVariableList()" :key="'sv-' + v">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1" x-text="suggestedVariableLabel(v)"></label>
+                                <input type="text"
+                                       x-model="suggestedComposeValues[v]"
+                                       @input="refreshSuggestedComposeBody()"
+                                       class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                            </div>
+                        </template>
+                    </div>
+                </template>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-2">الرسالة</label>
+                    <textarea x-model="suggestedComposeBody" rows="7"
+                              class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm leading-relaxed resize-y"></textarea>
+                </div>
+                <div class="rounded-xl bg-[#efeae2] p-3">
+                    <p class="text-[10px] font-bold text-slate-500 mb-2">معاينة كما ستظهر في واتساب</p>
+                    <div class="flex justify-end">
+                        <div class="max-w-[90%] rounded-2xl rounded-tl-md bg-[#d9fdd3] shadow-sm px-3 py-2 text-sm text-slate-900 whitespace-pre-wrap leading-relaxed"
+                             x-text="suggestedComposeBody"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="px-5 py-4 border-t border-slate-100 flex flex-wrap gap-2 justify-end shrink-0 bg-slate-50/80">
+                <button type="button" @click="showSuggestedComposeModal = false" class="{{ $waBtnSecondary }} text-sm">إلغاء</button>
+                <button type="button" @click="confirmSuggestedCompose(false)" class="{{ $waBtnSecondary }} text-sm">إدراج</button>
+                <button type="button" @click="confirmSuggestedCompose(true)" class="{{ $waBtnPrimary }} text-sm">إدراج وإرسال</button>
+            </div>
+        </div>
+    </div>
+
+    {{-- popup: معاينة قالب Meta قبل الإرسال --}}
+    <div x-show="showMetaTemplatePreviewModal" x-cloak
+         class="fixed inset-0 z-[85] flex items-center justify-center p-4 bg-black/50"
+         @keydown.escape.window="showMetaTemplatePreviewModal = false">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" @click.outside="showMetaTemplatePreviewModal = false">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3">
+                <div>
+                    <h3 class="font-bold text-slate-900">معاينة الرسالة</h3>
+                    <p class="text-xs text-slate-500 mt-1">هذا الشكل التقريبي لما سيصل للعميل على واتساب</p>
+                </div>
+                <button type="button" @click="showMetaTemplatePreviewModal = false" class="text-slate-400 hover:text-slate-600 p-2">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-5 bg-[#efeae2]">
+                <div class="flex justify-end">
+                    <div class="max-w-[85%] rounded-2xl rounded-tl-md bg-[#d9fdd3] shadow-sm px-4 py-3 text-sm text-slate-900 whitespace-pre-wrap leading-relaxed"
+                         x-text="metaTemplatePreviewText"></div>
+                </div>
+            </div>
+            <div class="px-5 py-4 border-t border-slate-100 flex flex-wrap gap-2 justify-end bg-slate-50/80">
+                <button type="button" @click="showMetaTemplatePreviewModal = false" class="{{ $waBtnSecondary }} text-sm">رجوع</button>
+                <button type="button" @click="confirmMetaTemplatePreview()" :disabled="sending" class="{{ $waBtnPrimary }} text-sm">
+                    <i class="fas fa-paper-plane"></i> تأكيد الإرسال
+                </button>
+            </div>
+        </div>
     </div>
 
     {{-- modal محادثة جديدة --}}
@@ -1174,6 +1209,9 @@ function whatsappInbox() {
         showTemplatePicker: false,
         showSuggestedModal: false,
         showSuggestedComposeModal: false,
+        showMetaTemplatePreviewModal: false,
+        metaTemplatePreviewText: '',
+        metaTemplatePreviewMode: 'reply',
         loadingSuggested: false,
         suggestedTemplates: [],
         suggested24hNote: '',
@@ -1651,6 +1689,51 @@ function whatsappInbox() {
                 if (!(this.templateVariables[i] || '').trim()) return false;
             }
             return true;
+        },
+
+        renderMetaTemplatePreview() {
+            const meta = this.selectedTemplateMeta();
+            if (!meta) return '';
+            const parts = [];
+            const headerType = (meta.header_type || '').toLowerCase();
+            const headerContent = (meta.header_content || '').trim();
+            if (headerType === 'text' && headerContent) {
+                let headerText = headerContent;
+                if ((meta.header_variable_count || 0) > 0) {
+                    headerText = headerText.split('{{1}}').join((this.templateVariables.header_1 || '').trim());
+                }
+                parts.push(headerText);
+            }
+            let body = (meta.body_text || '').trim();
+            if (body) {
+                const count = meta.body_variable_count || 0;
+                for (let i = 1; i <= count; i++) {
+                    body = body.split('{{' + i + '}}').join((this.templateVariables[i] || '').trim());
+                }
+                parts.push(body);
+            }
+            return parts.filter(Boolean).join('\n\n');
+        },
+
+        openMetaTemplatePreview(mode = 'reply') {
+            if (!this.templateName.trim() || !this.templateVariablesReady()) return;
+            this.metaTemplatePreviewMode = mode;
+            this.metaTemplatePreviewText = this.renderMetaTemplatePreview();
+            if (!this.metaTemplatePreviewText.trim()) {
+                if (mode === 'start') this.startError = 'تعذّر بناء معاينة القالب';
+                else this.replyError = 'تعذّر بناء معاينة القالب';
+                return;
+            }
+            this.showMetaTemplatePreviewModal = true;
+        },
+
+        confirmMetaTemplatePreview() {
+            this.showMetaTemplatePreviewModal = false;
+            if (this.metaTemplatePreviewMode === 'start') {
+                this.startConversation(true);
+            } else {
+                this.sendTemplate(true);
+            }
         },
 
         templateVariablesPayload() {
@@ -2392,8 +2475,12 @@ function whatsappInbox() {
             }
         },
 
-        async sendTemplate() {
+        async sendTemplate(confirmed = false) {
             if (!this.templateUrl || !this.templateName.trim() || this.sending || !this.templateVariablesReady()) return;
+            if (!confirmed) {
+                this.openMetaTemplatePreview('reply');
+                return;
+            }
             this.sending = true;
             this.replyError = '';
             try {
@@ -2426,6 +2513,7 @@ function whatsappInbox() {
                     this.upsertConversation(data.conversation);
                 }
                 this.withinWindow = true;
+                this.showTemplatePicker = false;
                 this.scrollChat();
             } catch (_) {
                 this.replyError = 'خطأ في الاتصال';
@@ -2434,7 +2522,7 @@ function whatsappInbox() {
             }
         },
 
-        async startConversation() {
+        async startConversation(confirmed = false) {
             if (!this.startUrl || !this.startPhone.trim()) {
                 this.startError = 'أدخل رقم الواتساب';
                 return;
@@ -2450,6 +2538,15 @@ function whatsappInbox() {
 
             if (useTemplate && !body) {
                 this.applySelectedTemplate(true);
+            }
+
+            if (useTemplate && !body && !confirmed) {
+                if (!this.templateVariablesReady()) {
+                    this.startError = 'أكمل جميع متغيرات القالب';
+                    return;
+                }
+                this.openMetaTemplatePreview('start');
+                return;
             }
 
             this.sending = true;

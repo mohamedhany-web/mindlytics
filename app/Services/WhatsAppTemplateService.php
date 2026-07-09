@@ -420,6 +420,44 @@ class WhatsAppTemplateService
     }
 
     /**
+     * @param  array<int|string, string|null>  $variables
+     */
+    public function renderTemplatePreview(string $name, string $language, array $variables): ?string
+    {
+        $definition = $this->resolveApprovedTemplate($name, $language);
+        if ($definition === null) {
+            return null;
+        }
+
+        $parts = [];
+
+        $headerType = strtolower((string) ($definition['header_type'] ?? ''));
+        $headerContent = trim((string) ($definition['header_content'] ?? ''));
+        if ($headerType === 'text' && $headerContent !== '') {
+            $headerText = $headerContent;
+            if (($definition['header_variable_count'] ?? 0) > 0) {
+                $headerVal = $this->scalarToString($variables['header_1'] ?? $variables['h1'] ?? '');
+                $headerText = preg_replace('/\{\{1\}\}/', $headerVal, $headerText) ?? $headerText;
+            }
+            $parts[] = $headerText;
+        }
+
+        $bodyText = trim((string) ($definition['body_text'] ?? ''));
+        if ($bodyText !== '') {
+            $bodyCount = (int) ($definition['body_variable_count'] ?? 0);
+            for ($i = 1; $i <= $bodyCount; $i++) {
+                $val = $this->scalarToString($variables[$i] ?? $variables[(string) $i] ?? '');
+                $bodyText = str_replace('{{'.$i.'}}', $val, $bodyText);
+            }
+            $parts[] = $bodyText;
+        }
+
+        $rendered = trim(implode("\n\n", array_filter($parts, fn ($p) => trim((string) $p) !== '')));
+
+        return $rendered !== '' ? $rendered : null;
+    }
+
+    /**
      * @param  array<int, array<string, mixed>>  $components
      * @param  array<string, mixed>  $definition
      * @param  array<int|string, string|null>  $variables

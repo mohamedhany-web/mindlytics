@@ -200,6 +200,15 @@ class WhatsAppInboxService
             );
 
             $params = is_array($log->template_params) ? $log->template_params : [];
+            $logBody = trim((string) ($log->message ?? ''));
+            $preview = trim((string) ($params['preview'] ?? ''));
+            if ($preview === '' && str_starts_with($logBody, '[قالب:')) {
+                $preview = $logBody;
+            }
+            if ($preview !== '') {
+                $logBody = $preview;
+            }
+
             $contactName = trim((string) ($params['contact_name'] ?? ''));
             if ($contactName === '') {
                 $responseMeta = is_array($log->response_data) ? $log->response_data : [];
@@ -227,7 +236,7 @@ class WhatsAppInboxService
             $message = WhatsAppConversationMessage::create([
                 'conversation_id' => $conversation->id,
                 'direction' => WhatsAppConversationMessage::DIRECTION_OUTBOUND,
-                'body' => $log->message,
+                'body' => $logBody !== '' ? $logBody : $log->message,
                 'message_type' => $log->type ?: 'text',
                 'whatsapp_message_id' => $waMessageId,
                 'status' => in_array($log->status, ['delivered', 'read'], true) ? $log->status : 'sent',
@@ -410,32 +419,48 @@ class WhatsAppInboxService
         string $templateName,
         string $languageCode = 'en_US',
         array $components = [],
-        ?int $userId = null
+        ?int $userId = null,
+        ?string $previewText = null,
     ): array {
         $templateName = trim($templateName);
         if ($templateName === '') {
             return ['success' => false, 'error' => 'اسم القالب مطلوب'];
         }
 
+        $previewText = trim((string) ($previewText ?? ''));
+
         $result = $this->whatsapp->sendTemplate(
             $conversation->phone_number,
             $templateName,
             $languageCode,
             $components,
-            ['user_id' => $userId, 'skip_log' => false]
+            [
+                'user_id' => $userId,
+                'skip_log' => false,
+                'preview_text' => $previewText,
+                'contact_name' => $conversation->displayName(),
+            ]
         );
 
         if (! ($result['success'] ?? false)) {
             return ['success' => false, 'error' => $result['error'] ?? 'فشل إرسال القالب'];
         }
 
+        $templateParams = [
+            'language' => $languageCode,
+            'components' => $components,
+        ];
+        if ($previewText !== '') {
+            $templateParams['preview'] = $previewText;
+        }
+
         return [
             'success' => true,
             'message' => $this->recordOutbound($conversation, [
-                'body' => null,
+                'body' => $previewText !== '' ? $previewText : null,
                 'message_type' => 'template',
                 'template_name' => $templateName,
-                'template_params' => ['language' => $languageCode, 'components' => $components],
+                'template_params' => $templateParams,
                 'whatsapp_message_id' => $result['whatsapp_id'] ?? null,
                 'sent_by_user_id' => $userId,
             ]),
@@ -450,7 +475,8 @@ class WhatsAppInboxService
         string $templateName,
         string $languageCode = 'en_US',
         ?int $userId = null,
-        array $components = []
+        array $components = [],
+        ?string $previewText = null,
     ): array {
         $normalized = $this->whatsapp->formatPhoneNumber($phone);
 
@@ -459,7 +485,7 @@ class WhatsAppInboxService
             ['unread_count' => 0]
         );
 
-        $result = $this->sendTemplateReply($conversation, $templateName, $languageCode, $components, $userId);
+        $result = $this->sendTemplateReply($conversation, $templateName, $languageCode, $components, $userId, $previewText);
 
         if (! ($result['success'] ?? false)) {
             return $result;
