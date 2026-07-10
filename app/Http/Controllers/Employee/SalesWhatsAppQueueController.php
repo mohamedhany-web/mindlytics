@@ -28,6 +28,7 @@ class SalesWhatsAppQueueController extends Controller
         return view('employee.sales.whatsapp.queue', [
             'conversations' => $conversations,
             'queueEnabled' => $this->queue->queueEnabled(),
+            'inboxUrl' => $this->queue->inboxIndexUrlFor($request->user()),
         ]);
     }
 

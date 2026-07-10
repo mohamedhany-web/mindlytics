@@ -965,7 +965,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('groups/{group}/whatsapp-batches/{batch}/status', [\App\Http\Controllers\Employee\SalesGroupWhatsAppController::class, 'statusJson'])->name('groups.whatsapp-batches.status');
             Route::post('leads/{lead}/activities', [\App\Http\Controllers\Employee\SalesLeadController::class, 'storeActivity'])->name('leads.activities.store');
             Route::post('leads/{lead}/quick-activity', [\App\Http\Controllers\Employee\SalesLeadController::class, 'quickActivity'])->name('leads.quick-activity');
+            Route::post('leads/{lead}/next-follow', [\App\Http\Controllers\Employee\SalesLeadController::class, 'setNextFollow'])->name('leads.next-follow');
             Route::post('leads/{lead}/csat', [\App\Http\Controllers\Employee\SalesLeadController::class, 'storeCsat'])->name('leads.csat.store');
+            Route::get('follow-ups', [\App\Http\Controllers\Employee\SalesFollowUpController::class, 'index'])->name('follow-ups.index');
             Route::resource('leads', \App\Http\Controllers\Employee\SalesLeadController::class);
 
             Route::prefix('whatsapp/inbox')->name('whatsapp.inbox.')->group(function () {
@@ -993,10 +995,13 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('leads', [\App\Http\Controllers\Employee\SalesManagerLeadController::class, 'index'])->name('leads.index');
             Route::get('leads/{lead}', [\App\Http\Controllers\Employee\SalesManagerLeadController::class, 'show'])->name('leads.show');
             Route::post('leads/{lead}/transfer', [\App\Http\Controllers\Employee\SalesManagerLeadController::class, 'transfer'])->name('leads.transfer');
+            Route::get('follow-ups', [\App\Http\Controllers\Employee\SalesManagerFollowUpController::class, 'index'])->name('follow-ups.index');
             Route::get('transfer', [\App\Http\Controllers\Employee\SalesManagerTransferController::class, 'index'])->name('transfer.index');
             Route::post('transfer', [\App\Http\Controllers\Employee\SalesManagerTransferController::class, 'store'])->name('transfer.store');
             Route::get('attendance', [\App\Http\Controllers\Employee\SalesManagerAttendanceController::class, 'index'])->name('attendance.index');
             Route::get('attendance/employees/{employee}', [\App\Http\Controllers\Employee\SalesManagerAttendanceController::class, 'employee'])->name('attendance.employee');
+            Route::post('attendance/employees/{employee}/unlock', [\App\Http\Controllers\Employee\SalesManagerAttendanceController::class, 'unlock'])->name('attendance.unlock');
+            Route::post('attendance/employees/{employee}/unlocks/{unlock}/revoke', [\App\Http\Controllers\Employee\SalesManagerAttendanceController::class, 'revokeUnlock'])->name('attendance.unlock.revoke');
             Route::get('presence', [\App\Http\Controllers\Employee\SalesManagerPresenceController::class, 'index'])->name('presence.index');
             Route::get('presence/poll', [\App\Http\Controllers\Employee\SalesManagerPresenceController::class, 'poll'])->name('presence.poll');
             Route::post('presence/violations/{violation}/acknowledge', [\App\Http\Controllers\Employee\SalesManagerPresenceController::class, 'acknowledge'])->name('presence.acknowledge');

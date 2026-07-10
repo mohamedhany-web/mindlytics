@@ -6,6 +6,6 @@
             <option value="{{ $value }}" @selected((string) old('weekly_off_day', $employee->weekly_off_day ?? '') === (string) $value)>{{ $label }}</option>
         @endforeach
     </select>
-    <p class="text-xs text-gray-500 mt-1">يُستثنى من التقرير اليومي الإلزامي والخصم التلقائي. مثال: موظف بإجازة الجمعة يعمل السبت والأحد.</p>
+    <p class="text-xs text-gray-500 mt-1">يُستخدم لقفل النظام في يوم الراحة، واستثناء التقرير اليومي والخصم التلقائي. مثال: إجازة الجمعة = يعمل باقي الأيام حسب موعده.</p>
     @error('weekly_off_day')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
 </div>

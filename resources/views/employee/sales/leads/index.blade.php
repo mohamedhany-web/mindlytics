@@ -269,6 +269,12 @@
                                 <input type="hidden" name="redirect_to" value="{{ $redirectTo }}">
                                 <button type="submit" class="act-btn" title="متابعة غداً 10:00"><i class="fas fa-redo"></i></button>
                             </form>
+                            @if($lead->isOpen())
+                                <button type="button" class="act-btn" title="تحديد Next Follow"
+                                        onclick="openNextFollowModal({{ $lead->id }}, @js($lead->name), @js($lead->next_follow_up_at && $lead->next_follow_up_at->isFuture() ? $lead->next_follow_up_at->format('Y-m-d\TH:i') : now()->addDay()->setTime(10, 0)->format('Y-m-d\TH:i')))">
+                                    <i class="fas fa-calendar-plus"></i>
+                                </button>
+                            @endif
                             <a href="{{ route('employee.sales.leads.show', $lead) }}" class="act-btn" title="عرض"><i class="fas fa-eye"></i></a>
                             <a href="{{ route('employee.sales.leads.edit', $lead) }}" class="act-btn" title="تعديل"><i class="fas fa-pen"></i></a>
                         </div>
@@ -290,4 +296,55 @@
         <div>{{ $leads->links() }}</div>
     @endif
 </div>
+
+{{-- مودال تحديد Next Follow --}}
+<div id="next-follow-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/40">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onclick="event.stopPropagation()">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h3 class="font-bold text-slate-900">تحديد Next Follow</h3>
+                <p class="text-xs text-slate-500 mt-0.5" id="nf-lead-name"></p>
+            </div>
+            <button type="button" onclick="closeNextFollowModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fas fa-times"></i></button>
+        </div>
+        <form method="post" id="nf-form" class="p-5 space-y-3">
+            @csrf
+            <input type="hidden" name="redirect_to" value="{{ $redirectTo }}">
+            <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">موعد المتابعة</label>
+                <input type="datetime-local" name="next_follow_up_at" id="nf-datetime" required
+                       min="{{ now()->addMinute()->format('Y-m-d\TH:i') }}"
+                       class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">ملاحظة (اختياري)</label>
+                <input type="text" name="note" maxlength="500" placeholder="مثال: متابعة عرض السعر"
+                       class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+            </div>
+            <div class="flex gap-2 justify-end pt-1">
+                <button type="button" onclick="closeNextFollowModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700">إلغاء</button>
+                <button type="submit" class="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold">حفظ الموعد</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+function openNextFollowModal(leadId, name, datetime) {
+    var modal = document.getElementById('next-follow-modal');
+    var form = document.getElementById('nf-form');
+    form.action = @json(url('/employee/sales/leads')) + '/' + leadId + '/next-follow';
+    document.getElementById('nf-lead-name').textContent = name || '';
+    document.getElementById('nf-datetime').value = datetime || '';
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+function closeNextFollowModal() {
+    var modal = document.getElementById('next-follow-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+document.getElementById('next-follow-modal').addEventListener('click', function (e) {
+    if (e.target === this) closeNextFollowModal();
+});
+</script>
 @endsection

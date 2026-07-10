@@ -3,12 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\EmployeeAttendanceRecord;
 use App\Models\User;
 use App\Models\WorkSchedule;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class WorkScheduleController extends Controller
 {
@@ -46,9 +44,7 @@ class WorkScheduleController extends Controller
 
     public function create()
     {
-        return view('admin.work-schedules.create', [
-            'dayOptions' => User::weeklyOffDayOptions(),
-        ]);
+        return view('admin.work-schedules.create');
     }
 
     public function store(Request $request): RedirectResponse
@@ -63,7 +59,6 @@ class WorkScheduleController extends Controller
     {
         return view('admin.work-schedules.edit', [
             'schedule' => $workSchedule,
-            'dayOptions' => User::weeklyOffDayOptions(),
         ]);
     }
 
@@ -92,8 +87,6 @@ class WorkScheduleController extends Controller
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i',
             'required_hours' => 'required|numeric|min:1|max:24',
-            'work_days' => 'required|array|min:1',
-            'work_days.*' => 'integer|min:0|max:6',
             'grace_minutes' => 'nullable|integer|min:0|max:120',
             'early_access_minutes' => 'nullable|integer|min:0|max:120',
             'description' => 'nullable|string|max:2000',
@@ -103,7 +96,8 @@ class WorkScheduleController extends Controller
         $validated['is_active'] = $request->boolean('is_active', true);
         $validated['grace_minutes'] = (int) ($validated['grace_minutes'] ?? 15);
         $validated['early_access_minutes'] = (int) ($validated['early_access_minutes'] ?? 10);
-        $validated['work_days'] = array_values(array_unique(array_map('intval', $validated['work_days'])));
+        // أيام العمل/الإجازة تُدار من ملف الموظف (weekly_off_day) وليس من الموعد
+        $validated['work_days'] = null;
 
         return $validated;
     }

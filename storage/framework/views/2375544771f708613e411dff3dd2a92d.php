@@ -21,10 +21,11 @@
                     <p class="text-xl sm:text-2xl font-black text-emerald-700 tabular-nums leading-none" id="wa-queue-total"><?php echo e($conversations->total()); ?></p>
                     <p class="text-[10px] text-slate-500 mt-0.5">في الانتظار</p>
                 </div>
-                <a href="<?php echo e(route('employee.sales.whatsapp.inbox.index')); ?>"
+                <a href="<?php echo e($inboxUrl); ?>"
                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors">
                     <i class="fas fa-inbox text-emerald-600"></i>
-                    المحادثات
+                    <?php echo e(auth()->user()->isSalesManager() ? 'محادثات الفريق' : 'المحادثات'); ?>
+
                 </a>
             </div>
         </div>

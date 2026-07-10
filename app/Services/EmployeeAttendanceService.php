@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\EmployeeAttendanceRecord;
+use App\Models\EmployeeWorkUnlock;
 use App\Models\User;
 use App\Models\WorkSchedule;
 use Carbon\Carbon;
@@ -23,6 +24,105 @@ class EmployeeAttendanceService
         }
 
         return WorkSchedule::query()->where('is_active', true)->orderBy('id')->first();
+    }
+
+    public function activeUnlock(User $user, ?Carbon $now = null): ?EmployeeWorkUnlock
+    {
+        $now = $now ?? now();
+
+        return EmployeeWorkUnlock::query()
+            ->with('unlockedBy:id,name')
+            ->where('user_id', $user->id)
+            ->whereDate('work_date', $now->toDateString())
+            ->active($now)
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    /**
+     * فتح النظام لموظف خارج موعده / في يوم راحته (بواسطة مدير المبيعات).
+     */
+    public function unlockForManager(
+        User $employee,
+        User $manager,
+        string $reason,
+        string $durationKey = 'end_of_day',
+    ): EmployeeWorkUnlock {
+        if (! $employee->isSubjectToWorkSchedule()) {
+            throw ValidationException::withMessages([
+                'employee' => 'هذا الموظف غير خاضع لنظام مواعيد العمل.',
+            ]);
+        }
+
+        $reason = trim($reason);
+        if (mb_strlen($reason) < 5) {
+            throw ValidationException::withMessages([
+                'reason' => 'اكتب سبباً واضحاً لفتح النظام (5 أحرف على الأقل).',
+            ]);
+        }
+
+        $now = now();
+        $expiresAt = $this->resolveUnlockExpiry($now, $durationKey);
+        $labels = EmployeeWorkUnlock::durationOptions();
+
+        return DB::transaction(function () use ($employee, $manager, $reason, $durationKey, $labels, $now, $expiresAt) {
+            EmployeeWorkUnlock::query()
+                ->where('user_id', $employee->id)
+                ->whereDate('work_date', $now->toDateString())
+                ->whereNull('revoked_at')
+                ->where('expires_at', '>', $now)
+                ->update([
+                    'revoked_at' => $now,
+                    'revoked_by' => $manager->id,
+                    'revoke_reason' => 'استُبدل بفتح جديد',
+                ]);
+
+            $schedule = $this->resolveSchedule($employee);
+            if ($schedule) {
+                $record = $this->ensureTodayRecord($employee, $schedule, $now);
+                if (in_array($record->status, ['off_day', 'on_leave', 'absent'], true) && ! $record->clock_in_at) {
+                    $fromStatus = $record->status;
+                    $record->update([
+                        'status' => 'pending',
+                        'metadata' => array_merge($record->metadata ?? [], [
+                            'opened_by_manager' => true,
+                            'opened_from_status' => $fromStatus,
+                            'opened_at' => $now->toIso8601String(),
+                        ]),
+                    ]);
+                }
+            }
+
+            return EmployeeWorkUnlock::query()->create([
+                'user_id' => $employee->id,
+                'unlocked_by' => $manager->id,
+                'work_date' => $now->toDateString(),
+                'starts_at' => $now,
+                'expires_at' => $expiresAt,
+                'reason' => $reason,
+                'duration_label' => $labels[$durationKey] ?? $durationKey,
+                'metadata' => [
+                    'duration_key' => $durationKey,
+                ],
+            ]);
+        });
+    }
+
+    public function revokeUnlock(EmployeeWorkUnlock $unlock, User $manager, ?string $reason = null): EmployeeWorkUnlock
+    {
+        if ($unlock->revoked_at || $unlock->expires_at->lte(now())) {
+            throw ValidationException::withMessages([
+                'unlock' => 'هذا الفتح غير نشط حالياً.',
+            ]);
+        }
+
+        $unlock->update([
+            'revoked_at' => now(),
+            'revoked_by' => $manager->id,
+            'revoke_reason' => $reason ?: 'تم الإلغاء بواسطة المدير',
+        ]);
+
+        return $unlock->fresh();
     }
 
     public function getState(User $user, ?Carbon $now = null): array
@@ -51,8 +151,33 @@ class EmployeeAttendanceService
         }
 
         $record = $this->ensureTodayRecord($user, $schedule, $now);
+        $unlock = $this->activeUnlock($user, $now);
+        $unlockMeta = $unlock ? [
+            'unlock' => [
+                'id' => $unlock->id,
+                'reason' => $unlock->reason,
+                'expires_at' => $unlock->expires_at->toIso8601String(),
+                'expires_at_human' => $unlock->expires_at->format('H:i'),
+                'duration_label' => $unlock->duration_label,
+                'manager_name' => $unlock->unlockedBy?->name,
+            ],
+        ] : [];
 
-        if (in_array($record->status, ['on_leave', 'off_day'], true)) {
+        if ($unlock && $record->isCompleted()) {
+            return $this->state(array_merge([
+                'mode' => 'manager_unlocked',
+                'can_access' => true,
+                'can_clock_in' => false,
+                'can_clock_out' => false,
+                'schedule' => $schedule,
+                'record' => $record,
+                'worked_seconds' => ($record->worked_minutes ?? 0) * 60,
+                'required_seconds' => $record->required_minutes * 60,
+                'message' => 'تم فتح النظام بواسطة المدير حتى '.$unlock->expires_at->format('H:i').'.',
+            ], $unlockMeta));
+        }
+
+        if (in_array($record->status, ['on_leave', 'off_day'], true) && ! $unlock) {
             return $this->state([
                 'mode' => $record->status,
                 'can_access' => false,
@@ -62,7 +187,7 @@ class EmployeeAttendanceService
             ]);
         }
 
-        if ($record->isCompleted()) {
+        if ($record->isCompleted() && ! $unlock) {
             return $this->state([
                 'mode' => 'completed',
                 'can_access' => false,
@@ -78,7 +203,8 @@ class EmployeeAttendanceService
         $secondsUntilOpen = $now->lt($window['access_starts_at'])
             ? (int) $now->diffInSeconds($window['access_starts_at'])
             : 0;
-        if ($now->lt($window['access_starts_at'])) {
+
+        if ($now->lt($window['access_starts_at']) && ! $unlock) {
             return $this->state([
                 'mode' => 'locked_before_shift',
                 'can_access' => false,
@@ -91,7 +217,7 @@ class EmployeeAttendanceService
             ]);
         }
 
-        if ($now->gt($window['shift_ends_at']) && ! $record->clock_in_at) {
+        if ($now->gt($window['shift_ends_at']) && ! $record->clock_in_at && ! $unlock) {
             return $this->state([
                 'mode' => 'missed_shift',
                 'can_access' => false,
@@ -102,8 +228,12 @@ class EmployeeAttendanceService
         }
 
         if (! $record->clock_in_at) {
-            return $this->state([
-                'mode' => 'awaiting_clock_in',
+            $message = $unlock
+                ? 'تم فتح النظام بواسطة المدير — سجّل حضورك لبدء العمل.'
+                : 'سجّل حضورك لبدء يوم العمل.';
+
+            return $this->state(array_merge([
+                'mode' => $unlock ? 'manager_unlocked' : 'awaiting_clock_in',
                 'can_access' => false,
                 'can_clock_in' => true,
                 'schedule' => $schedule,
@@ -111,16 +241,16 @@ class EmployeeAttendanceService
                 'seconds_until_open' => 0,
                 'shift_starts_at' => $window['shift_starts_at']->toIso8601String(),
                 'shift_ends_at' => $window['shift_ends_at']->toIso8601String(),
-                'message' => 'سجّل حضورك لبدء يوم العمل.',
-            ]);
+                'message' => $message,
+            ], $unlockMeta));
         }
 
         $workedSeconds = (int) $record->clock_in_at->diffInSeconds($now);
         $requiredSeconds = $record->required_minutes * 60;
-        $canClockOut = $workedSeconds >= $requiredSeconds || $now->gte($window['shift_ends_at']);
+        $canClockOut = $workedSeconds >= $requiredSeconds || $now->gte($window['shift_ends_at']) || (bool) $unlock;
 
-        return $this->state([
-            'mode' => 'working',
+        return $this->state(array_merge([
+            'mode' => $unlock ? 'manager_unlocked_working' : 'working',
             'can_access' => true,
             'can_clock_in' => false,
             'can_clock_out' => $canClockOut,
@@ -131,8 +261,10 @@ class EmployeeAttendanceService
             'shift_starts_at' => $window['shift_starts_at']->toIso8601String(),
             'shift_ends_at' => $window['shift_ends_at']->toIso8601String(),
             'clock_in_at' => $record->clock_in_at->toIso8601String(),
-            'message' => $canClockOut ? 'يمكنك إنهاء يوم العمل الآن.' : 'استمر في العمل حتى إكمال الساعات المطلوبة.',
-        ]);
+            'message' => $unlock
+                ? 'نظام مفتوح بتصريح المدير حتى '.$unlock->expires_at->format('H:i').'.'
+                : ($canClockOut ? 'يمكنك إنهاء يوم العمل الآن.' : 'استمر في العمل حتى إكمال الساعات المطلوبة.'),
+        ], $unlockMeta));
     }
 
     public function clockIn(User $user, ?string $ip = null): EmployeeAttendanceRecord
@@ -159,13 +291,21 @@ class EmployeeAttendanceService
             }
 
             $window = $this->scheduleWindow($state['schedule'], $now);
-            $isLate = $now->gt($window['shift_starts_at']->copy()->addMinutes((int) $state['schedule']->grace_minutes));
+            $unlock = $state['unlock'] ?? null;
+            $isLate = ! $unlock && $now->gt($window['shift_starts_at']->copy()->addMinutes((int) $state['schedule']->grace_minutes));
+
+            $metadata = $record->metadata ?? [];
+            if ($unlock) {
+                $metadata['clock_in_via_manager_unlock'] = true;
+                $metadata['unlock_id'] = $unlock['id'] ?? null;
+            }
 
             $record->update([
                 'clock_in_at' => $now,
                 'clock_in_ip' => $ip,
                 'status' => 'active',
                 'is_late' => $isLate,
+                'metadata' => $metadata,
             ]);
 
             $record = $record->fresh(['user']);
@@ -235,53 +375,25 @@ class EmployeeAttendanceService
         }
 
         $window = $this->scheduleWindow($schedule, $now);
-        $workDays = $schedule->work_days ?? WorkSchedule::defaultWorkDays();
-
-        if ($user->isWeeklyOff($now)) {
-            return EmployeeAttendanceRecord::create([
-                'user_id' => $user->id,
-                'work_schedule_id' => $schedule->id,
-                'work_date' => $now->toDateString(),
-                'scheduled_start' => $window['shift_starts_at'],
-                'scheduled_end' => $window['shift_ends_at'],
-                'required_minutes' => (int) round((float) $schedule->required_hours * 60),
-                'status' => 'off_day',
-            ]);
-        }
-
-        if ($user->isOnApprovedLeave($now)) {
-            return EmployeeAttendanceRecord::create([
-                'user_id' => $user->id,
-                'work_schedule_id' => $schedule->id,
-                'work_date' => $now->toDateString(),
-                'scheduled_start' => $window['shift_starts_at'],
-                'scheduled_end' => $window['shift_ends_at'],
-                'required_minutes' => (int) round((float) $schedule->required_hours * 60),
-                'status' => 'on_leave',
-            ]);
-        }
-
-        if (! in_array($now->dayOfWeek, $workDays, true)) {
-            return EmployeeAttendanceRecord::create([
-                'user_id' => $user->id,
-                'work_schedule_id' => $schedule->id,
-                'work_date' => $now->toDateString(),
-                'scheduled_start' => $window['shift_starts_at'],
-                'scheduled_end' => $window['shift_ends_at'],
-                'required_minutes' => (int) round((float) $schedule->required_hours * 60),
-                'status' => 'off_day',
-            ]);
-        }
-
-        return EmployeeAttendanceRecord::create([
+        $base = [
             'user_id' => $user->id,
             'work_schedule_id' => $schedule->id,
             'work_date' => $now->toDateString(),
             'scheduled_start' => $window['shift_starts_at'],
             'scheduled_end' => $window['shift_ends_at'],
             'required_minutes' => (int) round((float) $schedule->required_hours * 60),
-            'status' => 'pending',
-        ]);
+        ];
+
+        // يوم الراحة من ملف الموظف (weekly_off_day) وليس من موعد العمل
+        if ($user->isWeeklyOff($now)) {
+            return EmployeeAttendanceRecord::create($base + ['status' => 'off_day']);
+        }
+
+        if ($user->isOnApprovedLeave($now)) {
+            return EmployeeAttendanceRecord::create($base + ['status' => 'on_leave']);
+        }
+
+        return EmployeeAttendanceRecord::create($base + ['status' => 'pending']);
     }
 
     /** @return array{shift_starts_at: Carbon, shift_ends_at: Carbon, access_starts_at: Carbon} */
@@ -300,6 +412,16 @@ class EmployeeAttendanceService
             'shift_ends_at' => $end,
             'access_starts_at' => $accessStarts,
         ];
+    }
+
+    private function resolveUnlockExpiry(Carbon $now, string $durationKey): Carbon
+    {
+        return match ($durationKey) {
+            '2h' => $now->copy()->addHours(2),
+            '4h' => $now->copy()->addHours(4),
+            '8h' => $now->copy()->addHours(8),
+            default => $now->copy()->endOfDay(),
+        };
     }
 
     private function parseTimeOnDate(mixed $time, Carbon $date): Carbon
@@ -325,6 +447,7 @@ class EmployeeAttendanceService
             'shift_ends_at' => null,
             'clock_in_at' => null,
             'message' => '',
+            'unlock' => null,
         ], $data);
     }
 }

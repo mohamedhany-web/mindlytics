@@ -23,7 +23,7 @@
         <div class="space-y-6">
             <div class="border-b border-gray-200 pb-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">بيانات الموعد</h2>
-                @include('admin.work-schedules._form', ['dayOptions' => $dayOptions])
+                @include('admin.work-schedules._form')
             </div>
 
             <div class="flex items-center justify-end gap-3">

@@ -255,10 +255,15 @@ class WhatsAppQueueService
 
     public function inboxUrlFor(User $user, WhatsAppConversation $conversation): string
     {
+        return $this->inboxIndexUrlFor($user, ['conversation' => $conversation->id]);
+    }
+
+    public function inboxIndexUrlFor(User $user, array $params = []): string
+    {
         if ($user->isSalesManager()) {
-            return route('employee.sales-manager.whatsapp.inbox.index', ['conversation' => $conversation->id]);
+            return route('employee.sales-manager.whatsapp.inbox.index', $params);
         }
 
-        return route('employee.sales.whatsapp.inbox.index', ['conversation' => $conversation->id]);
+        return route('employee.sales.whatsapp.inbox.index', $params);
     }
 }

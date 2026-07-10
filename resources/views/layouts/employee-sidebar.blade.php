@@ -112,6 +112,13 @@
                 <i class="fas fa-user-plus text-base"></i>
                 <span>العملاء المحتملون</span>
             </a>
+            <a href="{{ route('employee.sales.follow-ups.index') }}"
+               title="متابعاتي"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.follow-ups.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-calendar-check text-base"></i>
+                <span>متابعاتي</span>
+            </a>
             <a href="{{ route('employee.sales.whatsapp.inbox.index') }}"
                title="محادثات الواتساب"
                class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.whatsapp.inbox.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
@@ -142,6 +149,12 @@
                @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
                 <i class="fas fa-user-plus text-base"></i>
                 <span>عملاء الفريق</span>
+            </a>
+            <a href="{{ route('employee.sales-manager.follow-ups.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.follow-ups.*') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-clipboard-list text-base"></i>
+                <span>رقابة المتابعات</span>
             </a>
             <a href="{{ route('employee.sales-manager.whatsapp.inbox.index') }}"
                class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.whatsapp.inbox.*') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"

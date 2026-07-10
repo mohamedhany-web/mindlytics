@@ -293,6 +293,55 @@ class SalesLeadController extends Controller
             ->with('success', 'تم تسجيل «'.SalesActivity::typeLabel($activity->type).'» — '.$lead->name);
     }
 
+    public function setNextFollow(Request $request, SalesLead $lead)
+    {
+        $this->authorizeOwn($lead);
+
+        $validated = $request->validate([
+            'next_follow_up_at' => 'required|date|after:now',
+            'note' => 'nullable|string|max:500',
+        ], [
+            'next_follow_up_at.required' => 'حدد موعد المتابعة التالية.',
+            'next_follow_up_at.after' => 'موعد المتابعة يجب أن يكون في المستقبل.',
+        ]);
+
+        $previous = $lead->next_follow_up_at?->toDateTimeString();
+        $nextAt = \Carbon\Carbon::parse($validated['next_follow_up_at']);
+
+        $lead->update([
+            'next_follow_up_at' => $nextAt,
+        ]);
+
+        $activity = SalesActivity::create([
+            'sales_lead_id' => $lead->id,
+            'user_id' => Auth::id(),
+            'type' => 'follow_up',
+            'title' => 'تحديد Next Follow',
+            'body' => trim(($validated['note'] ?? '')."\nموعد المتابعة: ".$nextAt->format('Y-m-d H:i')),
+            'meta' => [
+                'previous_next_follow_up_at' => $previous,
+                'next_follow_up_at' => $nextAt->toDateTimeString(),
+            ],
+        ]);
+
+        SalesAuditService::log(
+            'sales_next_follow_set',
+            $lead,
+            ['next_follow_up_at' => $previous],
+            ['next_follow_up_at' => $nextAt->toDateTimeString()],
+            'Next Follow: '.$lead->name.' → '.$nextAt->format('Y-m-d H:i')
+        );
+
+        $this->syncTodayDailyReport();
+
+        $redirect = $request->input('redirect_to');
+        if ($redirect && str_starts_with($redirect, url('/'))) {
+            return redirect()->to($redirect)->with('success', 'تم تحديد موعد المتابعة: '.$nextAt->format('Y-m-d H:i'));
+        }
+
+        return back()->with('success', 'تم تحديد Next Follow: '.$nextAt->format('Y-m-d H:i'));
+    }
+
     private function syncTodayDailyReport(): void
     {
         $user = Auth::user();

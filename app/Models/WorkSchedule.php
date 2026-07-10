@@ -44,12 +44,7 @@ class WorkSchedule extends Model
 
     public function workDaysLabel(): string
     {
-        $options = User::weeklyOffDayOptions();
-        $days = $this->work_days ?? self::defaultWorkDays();
-
-        return collect($days)
-            ->map(fn ($d) => $options[(int) $d] ?? (string) $d)
-            ->implode('، ');
+        return 'من ملف الموظف (يوم الإجازة الأسبوعية)';
     }
 
     public function timeRangeLabel(): string

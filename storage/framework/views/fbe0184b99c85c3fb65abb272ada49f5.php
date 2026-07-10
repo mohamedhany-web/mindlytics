@@ -208,6 +208,42 @@
                         <dd class="font-medium text-gray-900"><?php echo e($lead->last_contacted_at?->format('Y-m-d H:i') ?? '—'); ?></dd>
                     </div>
                 </dl>
+
+                <?php if($lead->isOpen()): ?>
+                    <div class="rounded-xl border border-teal-200 bg-teal-50/70 p-4 space-y-3">
+                        <p class="text-sm font-bold text-teal-900 flex items-center gap-2">
+                            <i class="fas fa-calendar-check"></i> تحديد Next Follow
+                        </p>
+                        <form method="post" action="<?php echo e(route('employee.sales.leads.next-follow', $lead)); ?>" class="space-y-2">
+                            <?php echo csrf_field(); ?>
+                            <?php $__errorArgs = ['next_follow_up_at'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><p class="text-xs text-rose-600"><?php echo e($message); ?></p><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">موعد المتابعة</label>
+                                <input type="datetime-local" name="next_follow_up_at" required
+                                       min="<?php echo e(now()->addMinute()->format('Y-m-d\TH:i')); ?>"
+                                       value="<?php echo e(old('next_follow_up_at', $lead->next_follow_up_at && $lead->next_follow_up_at->isFuture() ? $lead->next_follow_up_at->format('Y-m-d\TH:i') : now()->addDay()->setTime(10, 0)->format('Y-m-d\TH:i'))); ?>"
+                                       class="w-full border border-teal-200 rounded-lg px-3 py-2 text-sm bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">ملاحظة (اختياري)</label>
+                                <input type="text" name="note" value="<?php echo e(old('note')); ?>" maxlength="500"
+                                       placeholder="مثال: متابعة عرض السعر"
+                                       class="w-full border border-teal-200 rounded-lg px-3 py-2 text-sm bg-white">
+                            </div>
+                            <button type="submit" class="w-full py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold">
+                                حفظ موعد المتابعة
+                            </button>
+                        </form>
+                    </div>
+                <?php endif; ?>
+
                 <?php if($lead->stage === 'won'): ?>
                     <?php if($lead->isWinConfirmed()): ?>
                         <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm">

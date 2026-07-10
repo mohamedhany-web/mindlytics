@@ -6,7 +6,7 @@
             <option value="<?php echo e($value); ?>" <?php if((string) old('weekly_off_day', $employee->weekly_off_day ?? '') === (string) $value): echo 'selected'; endif; ?>><?php echo e($label); ?></option>
         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
     </select>
-    <p class="text-xs text-gray-500 mt-1">يُستثنى من التقرير اليومي الإلزامي والخصم التلقائي. مثال: موظف بإجازة الجمعة يعمل السبت والأحد.</p>
+    <p class="text-xs text-gray-500 mt-1">يُستخدم لقفل النظام في يوم الراحة، واستثناء التقرير اليومي والخصم التلقائي. مثال: إجازة الجمعة = يعمل باقي الأيام حسب موعده.</p>
     <?php $__errorArgs = ['weekly_off_day'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
 if ($__bag->has($__errorArgs[0])) :

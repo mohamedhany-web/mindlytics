@@ -1,6 +1,5 @@
 @php
     $schedule = $schedule ?? null;
-    $selectedDays = old('work_days', $schedule?->work_days ?? \App\Models\WorkSchedule::defaultWorkDays());
 @endphp
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
     <div>
@@ -27,16 +26,15 @@
         <label class="block text-sm font-medium text-gray-700 mb-2">فتح مبكر (دقيقة)</label>
         <input type="number" min="0" max="120" name="early_access_minutes" value="{{ old('early_access_minutes', $schedule?->early_access_minutes ?? 10) }}" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
     </div>
-    <div class="md:col-span-2">
-        <label class="block text-sm font-medium text-gray-700 mb-2">أيام العمل *</label>
-        <div class="flex flex-wrap gap-3">
-            @foreach($dayOptions as $dayNum => $dayLabel)
-                <label class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 cursor-pointer">
-                    <input type="checkbox" name="work_days[]" value="{{ $dayNum }}" @checked(in_array($dayNum, $selectedDays))>
-                    <span class="text-sm">{{ $dayLabel }}</span>
-                </label>
-            @endforeach
-        </div>
+    <div class="md:col-span-2 rounded-xl border border-sky-100 bg-sky-50/70 px-4 py-3 text-sm text-sky-900 leading-relaxed">
+        <p class="font-bold flex items-center gap-2 mb-1">
+            <i class="fas fa-info-circle text-sky-600"></i>
+            يوم الإجازة الأسبوعية
+        </p>
+        <p class="text-xs sm:text-sm text-sky-800/90">
+            لا يُحدَّد من هنا. يُؤخذ من <strong>ملف الموظف</strong> عند إنشاء/تعديل الحساب
+            (حقل «يوم الإجازة الأسبوعية»). موعد العمل يحدد فقط ساعات الدوام.
+        </p>
     </div>
     <div class="md:col-span-2">
         <label class="block text-sm font-medium text-gray-700 mb-2">ملاحظات</label>

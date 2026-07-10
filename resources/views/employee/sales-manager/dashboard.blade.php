@@ -77,6 +77,7 @@
             <div class="panel-card-head"><h2 class="font-bold text-slate-900">اختصارات</h2></div>
             <div class="p-5 space-y-2">
                 <a href="{{ route('employee.sales-manager.whatsapp.inbox.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm font-medium text-slate-700"><i class="fab fa-whatsapp text-emerald-600"></i> محادثات الفريق</a>
+                <a href="{{ route('employee.sales-manager.follow-ups.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm font-medium text-slate-700"><i class="fas fa-clipboard-list text-teal-600"></i> رقابة المتابعات</a>
                 <a href="{{ route('employee.sales-manager.daily-reports.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm font-medium text-slate-700"><i class="fas fa-clipboard-list text-sky-600"></i> تقارير الأعضاء</a>
                 <a href="{{ route('employee.sales-manager.presence.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm font-medium text-slate-700"><i class="fas fa-satellite-dish text-rose-600"></i> مراقبة التواجد (Live)</a>
                 <a href="{{ route('employee.sales-manager.transfer.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm font-medium text-slate-700"><i class="fas fa-exchange-alt text-amber-600"></i> تحويل Leads</a>
@@ -88,7 +89,7 @@
     <div class="panel-card">
         <div class="panel-card-head flex justify-between items-center">
             <h2 class="font-bold text-slate-900">Task Queue — الفريق</h2>
-            <a href="{{ route('employee.sales-manager.leads.index', ['follow_up' => 'overdue']) }}" class="text-xs text-emerald-700 font-semibold">عرض الكل</a>
+            <a href="{{ route('employee.sales-manager.follow-ups.index', ['filter' => 'overdue']) }}" class="text-xs text-emerald-700 font-semibold">عرض الكل</a>
         </div>
         <ul class="divide-y divide-slate-100">
             @forelse(($taskQueue ?? collect()) as $item)

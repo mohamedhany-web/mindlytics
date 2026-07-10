@@ -195,7 +195,7 @@
         <div class="panel-card panel-card-accent-alert">
             <div class="panel-card-head flex justify-between items-center">
                 <h2 class="font-bold text-slate-900">متابعات متأخرة</h2>
-                <a href="<?php echo e(route('employee.sales.leads.index', ['follow_up' => 'overdue', 'sort' => 'follow_up'])); ?>" class="text-sm text-slate-600 font-medium hover:underline">عرض الكل</a>
+                <a href="<?php echo e(route('employee.sales.follow-ups.index', ['filter' => 'overdue'])); ?>" class="text-sm text-slate-600 font-medium hover:underline">عرض الكل</a>
             </div>
             <ul class="divide-y divide-slate-100">
                 <?php $__empty_1 = true; $__currentLoopData = $overdueLeads; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $l): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
@@ -255,7 +255,7 @@
         <div class="panel-card">
             <div class="panel-card-head flex justify-between items-center">
                 <h2 class="font-bold text-slate-900">متابعات اليوم</h2>
-                <a href="<?php echo e(route('employee.sales.leads.index', ['follow_up' => 'today'])); ?>" class="text-sm text-slate-600 font-medium hover:underline">القائمة</a>
+                <a href="<?php echo e(route('employee.sales.follow-ups.index', ['filter' => 'today'])); ?>" class="text-sm text-slate-600 font-medium hover:underline">القائمة</a>
             </div>
             <ul class="divide-y divide-slate-100">
                 <?php $__empty_1 = true; $__currentLoopData = $followupsToday; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $l): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>

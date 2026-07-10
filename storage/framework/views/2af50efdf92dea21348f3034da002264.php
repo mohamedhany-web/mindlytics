@@ -10,7 +10,7 @@
         <div class="flex justify-between items-center">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900">مواعيد العمل</h1>
-                <p class="text-gray-600 mt-1">تحديد أوقات الدوام وساعات العمل لجميع أنواع الموظفين</p>
+                <p class="text-gray-600 mt-1">تحديد أوقات الدوام وساعات العمل — يوم الإجازة يُؤخذ من ملف كل موظف</p>
             </div>
             <a href="<?php echo e(route('admin.work-schedules.create')); ?>"
                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
@@ -142,8 +142,8 @@
 
                         <div class="flex items-start text-sm">
                             <i class="fas fa-calendar-week text-gray-400 w-4 ml-2 mt-0.5"></i>
-                            <span class="text-gray-600 shrink-0">أيام العمل:</span>
-                            <span class="text-gray-900 mr-2 font-medium leading-relaxed"><?php echo e($schedule->workDaysLabel()); ?></span>
+                            <span class="text-gray-600 shrink-0">الإجازة الأسبوعية:</span>
+                            <span class="text-gray-900 mr-2 font-medium leading-relaxed">من ملف الموظف</span>
                         </div>
 
                         <div class="flex items-center text-sm">

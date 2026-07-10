@@ -109,10 +109,12 @@
     $att = $state ?? ($employeeAttendance ?? []);
     $mode = $att['mode'] ?? 'locked_before_shift';
     $user = auth()->user();
+    $unlock = $att['unlock'] ?? null;
 
     $title = match ($mode) {
         'completed' => 'انتهى يوم العمل',
         'awaiting_clock_in' => 'حان وقت الحضور',
+        'manager_unlocked' => 'تم فتح النظام',
         'missed_shift' => 'فات موعد الحضور',
         'on_leave' => 'يوم إجازة',
         'off_day' => 'يوم راحة',
@@ -122,6 +124,7 @@
     $icon = match ($mode) {
         'completed' => 'fa-check',
         'awaiting_clock_in' => 'fa-fingerprint',
+        'manager_unlocked' => 'fa-unlock-alt',
         'missed_shift' => 'fa-exclamation',
         'on_leave' => 'fa-umbrella-beach',
         'off_day' => 'fa-moon',
@@ -159,6 +162,25 @@
             {{ $att['message'] ?? 'لا يمكن الوصول للنظام خارج موعد العمل.' }}
         </p>
 
+        @if($unlock)
+            <div class="mb-6 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-right text-sm text-teal-900">
+                <p class="font-bold flex items-center gap-2 justify-start">
+                    <i class="fas fa-unlock-alt text-teal-600"></i>
+                    تصريح فتح من المدير
+                </p>
+                <p class="text-xs text-teal-800 mt-1.5 leading-relaxed">
+                    بواسطة: <strong>{{ $unlock['manager_name'] ?? 'مدير المبيعات' }}</strong>
+                    · حتى <strong>{{ $unlock['expires_at_human'] ?? '—' }}</strong>
+                    @if(!empty($unlock['duration_label']))
+                        ({{ $unlock['duration_label'] }})
+                    @endif
+                </p>
+                @if(!empty($unlock['reason']))
+                    <p class="text-[11px] text-teal-700/90 mt-1">السبب: {{ $unlock['reason'] }}</p>
+                @endif
+            </div>
+        @endif
+
         {{-- Countdown --}}
         @if($mode === 'locked_before_shift' && ($att['seconds_until_open'] ?? 0) > 0)
             <div class="mb-8" x-data="countdown({{ (int) ($att['seconds_until_open'] ?? 0) }})" x-init="start()">
@@ -177,7 +199,7 @@
         @endif
 
         {{-- Actions --}}
-        @if($mode === 'awaiting_clock_in')
+        @if(in_array($mode, ['awaiting_clock_in', 'manager_unlocked'], true) && ($att['can_clock_in'] ?? false))
             <form method="post" action="{{ route('employee.attendance.clock-in') }}" class="mb-6">
                 @csrf
                 <button type="submit" class="btn-primary w-full text-white font-bold py-3.5 px-6 rounded-xl inline-flex items-center justify-center gap-2">
