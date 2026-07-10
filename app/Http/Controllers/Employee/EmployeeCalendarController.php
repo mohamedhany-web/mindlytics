@@ -6,12 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Models\CalendarEvent;
 use App\Models\EmployeeTask;
 use App\Models\ModeratorMarketingCalendarEvent;
+use App\Models\SalesLead;
+use App\Services\SalesTeamService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
 class EmployeeCalendarController extends Controller
 {
+    public function __construct(
+        private SalesTeamService $teamService
+    ) {}
+
     /**
      * عرض التقويم
      */
@@ -32,7 +38,9 @@ class EmployeeCalendarController extends Controller
             'tasks' => $events->where('type', 'task')->count(),
             'leaves' => $events->where('type', 'leave')->count(),
             'meetings' => $events->where('type', 'meeting')->count(),
+            'followups' => $events->where('type', 'follow_up')->count(),
             'upcoming' => $events->where('start_date', '>=', now())->count(),
+            'is_sales_manager' => $user->isSalesManager(),
         ];
 
         return view('employee.calendar.index', compact('events', 'stats'));
@@ -67,8 +75,11 @@ class EmployeeCalendarController extends Controller
                 'url' => $event->url ?? null,
                 'description' => $event->description ?? null,
                 'extendedProps' => [
+                    'type' => $event->type,
                     'priority' => $event->priority ?? 'medium',
                     'location' => $event->location ?? null,
+                    'assignee' => $event->assignee_name ?? null,
+                    'description' => $event->description ?? null,
                 ]
             ];
         });
@@ -198,8 +209,87 @@ class EmployeeCalendarController extends Controller
             ]);
         }
 
+        // 5. متابعات المبيعات (Next Follow) — للمانجر: فريقه بالكامل
+        $this->appendSalesFollowUpEvents($user, $events, $startDate, $endDate);
+
         // ترتيب الأحداث حسب التاريخ
         return $events->sortBy('start_date')->values();
+    }
+
+    /**
+     * إضافة مواعيد المتابعة من العملاء المحتملين إلى التقويم.
+     */
+    private function appendSalesFollowUpEvents($user, $events, $startDate = null, $endDate = null): void
+    {
+        if (! $user->isSalesStaff()) {
+            return;
+        }
+
+        $assigneeIds = $this->teamService->visibleAssigneeIds($user);
+        if ($assigneeIds === []) {
+            return;
+        }
+
+        $query = SalesLead::query()
+            ->whereIn('assigned_to', $assigneeIds)
+            ->openPipeline()
+            ->whereNotNull('next_follow_up_at')
+            ->with(['assignee:id,name']);
+
+        if ($startDate) {
+            $query->where('next_follow_up_at', '>=', Carbon::parse($startDate)->startOfDay());
+        }
+        if ($endDate) {
+            $query->where('next_follow_up_at', '<=', Carbon::parse($endDate)->endOfDay());
+        }
+
+        $isManager = $user->isSalesManager();
+
+        foreach ($query->get() as $lead) {
+            $at = $lead->next_follow_up_at;
+            if (! $at) {
+                continue;
+            }
+
+            $assigneeName = $lead->assignee?->name;
+            $title = 'متابعة: '.$lead->name;
+            if ($isManager && $assigneeName) {
+                $title .= ' — '.$assigneeName;
+            }
+
+            $url = $isManager
+                ? route('employee.sales-manager.leads.show', $lead)
+                : route('employee.sales.leads.show', $lead);
+
+            $events->push((object) [
+                'calendar_id' => 'followup_'.$lead->id,
+                'id' => 'followup_'.$lead->id,
+                'title' => $title,
+                'description' => trim(($lead->phone ?? '').($assigneeName ? ' · '.$assigneeName : '')),
+                'start_date' => $at,
+                'end_date' => $at->copy()->addHour(),
+                'is_all_day' => false,
+                'type' => 'follow_up',
+                'color' => $this->getFollowUpColor($lead),
+                'priority' => $lead->isFollowUpOverdue() ? 'urgent' : 'medium',
+                'url' => $url,
+                'location' => $assigneeName,
+                'assignee_name' => $assigneeName,
+            ]);
+        }
+    }
+
+    private function getFollowUpColor(SalesLead $lead): string
+    {
+        if ($lead->isFollowUpOverdue()) {
+            return '#DC2626';
+        }
+
+        if ($lead->next_follow_up_at?->isToday()) {
+            return '#F59E0B';
+        }
+
+        return '#0D9488';
     }
 
     /**
@@ -215,6 +305,7 @@ class EmployeeCalendarController extends Controller
             'review' => '#10B981',
             'personal' => '#6366F1',
             'marketing' => '#db2777',
+            'follow_up' => '#0D9488',
             default => '#6B7280',
         };
     }

@@ -92,7 +92,7 @@ class SalesManagerLeadController extends Controller
         $team = $this->teamService->managedTeamOrFail(Auth::user());
         $members = $team->members()->with('user:id,name')->get();
 
-        $lead->load(['assignee', 'category', 'activities.user', 'csatResponses']);
+        $lead->load(['assignee', 'category', 'activities.user']);
 
         return view('employee.sales-manager.leads.show', compact('lead', 'members', 'team'));
     }
