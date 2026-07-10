@@ -942,6 +942,19 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::post('/presence/heartbeat', [\App\Http\Controllers\Employee\EmployeePresenceController::class, 'heartbeat'])->name('presence.heartbeat');
         Route::get('/presence/status', [\App\Http\Controllers\Employee\EmployeePresenceController::class, 'status'])->name('presence.status');
 
+        Route::middleware('sales.staff')->prefix('team-chat')->name('team-chat.')->group(function () {
+            Route::get('/bootstrap', [\App\Http\Controllers\Employee\SalesTeamChatController::class, 'bootstrap'])->name('bootstrap');
+            Route::get('/conversations', [\App\Http\Controllers\Employee\SalesTeamChatController::class, 'conversations'])->name('conversations');
+            Route::get('/unread', [\App\Http\Controllers\Employee\SalesTeamChatController::class, 'unread'])->name('unread');
+            Route::post('/conversations/team', [\App\Http\Controllers\Employee\SalesTeamChatController::class, 'openTeam'])->name('conversations.team');
+            Route::post('/conversations/direct', [\App\Http\Controllers\Employee\SalesTeamChatController::class, 'openDirect'])->name('conversations.direct');
+            Route::get('/conversations/{conversation}/messages', [\App\Http\Controllers\Employee\SalesTeamChatController::class, 'messages'])->name('messages');
+            Route::post('/conversations/{conversation}/messages', [\App\Http\Controllers\Employee\SalesTeamChatController::class, 'send'])->name('messages.send');
+            Route::post('/conversations/{conversation}/read', [\App\Http\Controllers\Employee\SalesTeamChatController::class, 'read'])->name('read');
+            Route::post('/messages/{message}/reactions', [\App\Http\Controllers\Employee\SalesTeamChatController::class, 'react'])->name('reactions');
+            Route::delete('/messages/{message}', [\App\Http\Controllers\Employee\SalesTeamChatController::class, 'destroyMessage'])->name('messages.destroy');
+        });
+
         Route::get('/dashboard', [\App\Http\Controllers\Employee\EmployeeController::class, 'dashboard'])->name('dashboard');
 
         Route::middleware('sales.staff')->prefix('sales/whatsapp/queue')->name('sales.whatsapp.queue.')->group(function () {

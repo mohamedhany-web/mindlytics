@@ -50,6 +50,11 @@ class SalesTeam extends Model
         return $this->hasMany(SalesLeadTransfer::class);
     }
 
+    public function conversations(): HasMany
+    {
+        return $this->hasMany(SalesTeamConversation::class);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
