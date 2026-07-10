@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Employee;
 use App\Http\Controllers\Controller;
 use App\Models\SalesLead;
 use App\Models\SalesLeadCategory;
+use App\Models\WhatsAppConversation;
 use App\Services\SalesTeamService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -92,9 +93,51 @@ class SalesManagerLeadController extends Controller
         $team = $this->teamService->managedTeamOrFail(Auth::user());
         $members = $team->members()->with('user:id,name')->get();
 
-        $lead->load(['assignee', 'category', 'activities.user']);
+        $lead->load([
+            'assignee:id,name,email,phone',
+            'creator:id,name',
+            'category',
+            'group',
+            'activities.user:id,name',
+            'transfers.fromUser:id,name',
+            'transfers.toUser:id,name',
+            'transfers.transferredBy:id,name',
+        ]);
 
-        return view('employee.sales-manager.leads.show', compact('lead', 'members', 'team'));
+        $whatsappConversation = WhatsAppConversation::query()
+            ->where(function ($q) use ($lead) {
+                $q->where('sales_lead_id', $lead->id);
+                if ($lead->phone) {
+                    $digits = preg_replace('/[^0-9]/', '', (string) $lead->phone);
+                    if (strlen($digits) >= 8) {
+                        $q->orWhere('phone_number', 'like', '%'.substr($digits, -9).'%');
+                    }
+                }
+            })
+            ->latest('last_message_at')
+            ->first();
+
+        $whatsappInboxUrl = $whatsappConversation
+            ? route('employee.sales-manager.whatsapp.inbox.index', ['conversation' => $whatsappConversation->id])
+            : ($lead->phone
+                ? route('employee.sales-manager.whatsapp.inbox.index', ['start_lead' => $lead->id])
+                : route('employee.sales-manager.whatsapp.inbox.index'));
+
+        $pipelineStages = array_keys(SalesLead::STAGES);
+        $currentStageIndex = array_search($lead->stage, $pipelineStages, true);
+        if ($currentStageIndex === false) {
+            $currentStageIndex = 0;
+        }
+
+        return view('employee.sales-manager.leads.show', compact(
+            'lead',
+            'members',
+            'team',
+            'whatsappConversation',
+            'whatsappInboxUrl',
+            'pipelineStages',
+            'currentStageIndex'
+        ));
     }
 
     public function transfer(Request $request, SalesLead $lead): RedirectResponse
