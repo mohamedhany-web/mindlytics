@@ -8,9 +8,35 @@
     id="sales-team-chat-widget"
     x-data="salesTeamChat()"
     x-cloak
-    class="fixed z-[60] bottom-5 {{ app()->getLocale() === 'ar' ? 'left-5' : 'right-5' }} font-sans"
-    style="font-family: 'Tajawal', 'IBM Plex Sans Arabic', sans-serif;"
+    class="fixed z-[60] bottom-5 {{ app()->getLocale() === 'ar' ? 'left-5' : 'right-5' }} font-sans stc-widget"
+    style="font-family: 'Tajawal', 'Cairo', 'Noto Sans Arabic', sans-serif;"
 >
+    <style>
+        #sales-team-chat-widget {
+            --stc-blue: #1e40af;
+            --stc-blue-deep: #1e3a8a;
+            --stc-blue-bright: #1d4ed8;
+            --stc-sky: #0ea5e9;
+            --stc-sky-dark: #0284c7;
+        }
+        #sales-team-chat-widget .stc-header {
+            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 45%, #1d4ed8 100%);
+        }
+        #sales-team-chat-widget .stc-fab {
+            background: linear-gradient(135deg, #0ea5e9 0%, #1d4ed8 45%, #1e3a8a 100%);
+            box-shadow: 0 8px 24px rgba(30, 64, 175, 0.35);
+        }
+        #sales-team-chat-widget .stc-fab:hover {
+            box-shadow: 0 12px 28px rgba(14, 165, 233, 0.4);
+        }
+        #sales-team-chat-widget .stc-panel {
+            border-color: rgba(59, 130, 246, 0.2);
+            box-shadow: 0 20px 50px rgba(30, 58, 138, 0.18);
+        }
+        #sales-team-chat-widget .stc-thread-bg {
+            background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 40%, #f8fafc 100%);
+        }
+    </style>
     {{-- Panel --}}
     <div
         x-show="open"
@@ -20,14 +46,14 @@
         x-transition:leave="transition ease-in duration-150"
         x-transition:leave-start="opacity-100 translate-y-0 scale-100"
         x-transition:leave-end="opacity-0 translate-y-3 scale-95"
-        class="mb-3 w-[min(100vw-2rem,380px)] h-[min(72vh,560px)] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col"
+        class="stc-panel mb-3 w-[min(100vw-2rem,380px)] h-[min(72vh,560px)] bg-white rounded-2xl border overflow-hidden flex flex-col"
         @click.outside="if (!pickingMember) open = false"
     >
         {{-- Header --}}
-        <div class="px-4 py-3 bg-gradient-to-l from-indigo-600 to-slate-800 text-white flex items-center justify-between gap-2 shrink-0">
+        <div class="stc-header px-4 py-3 text-white flex items-center justify-between gap-2 shrink-0">
             <div class="min-w-0">
                 <p class="text-sm font-black truncate" x-text="view === 'thread' ? (activeTitle || 'محادثة') : 'شات الفريق'"></p>
-                <p class="text-[11px] text-indigo-100 truncate" x-show="view !== 'thread'" x-text="team?.name || ''"></p>
+                <p class="text-[11px] text-sky-100/90 truncate" x-show="view !== 'thread'" x-text="team?.name || ''"></p>
             </div>
             <div class="flex items-center gap-1 shrink-0">
                 <button type="button" x-show="view === 'thread'" @click="backToList()" class="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center" title="رجوع">
@@ -40,25 +66,26 @@
         </div>
 
         {{-- List view --}}
-        <div x-show="view === 'list'" class="flex-1 flex flex-col min-h-0 bg-slate-50">
+        <div x-show="view === 'list'" class="flex-1 flex flex-col min-h-0 bg-sky-50/40">
             <div class="p-3 grid grid-cols-2 gap-2 shrink-0">
                 <button type="button" @click="openTeamChannel()"
-                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm">
+                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-white text-xs font-bold shadow-sm"
+                        style="background: linear-gradient(135deg, #0ea5e9, #1d4ed8);">
                     <i class="fas fa-users"></i> قناة الفريق
                 </button>
                 <button type="button" @click="pickingMember = !pickingMember"
-                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-800 text-xs font-bold">
-                    <i class="fas fa-comment-medical"></i> محادثة جديدة
+                        class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-white border border-blue-200 hover:bg-sky-50 text-blue-900 text-xs font-bold">
+                    <i class="fas fa-comment-medical text-sky-600"></i> محادثة جديدة
                 </button>
             </div>
 
-            <div x-show="pickingMember" class="mx-3 mb-2 rounded-xl border border-slate-200 bg-white overflow-hidden shrink-0 max-h-40 overflow-y-auto">
-                <p class="px-3 py-2 text-[11px] font-bold text-slate-500 border-b border-slate-100">اختر زميلاً</p>
+            <div x-show="pickingMember" class="mx-3 mb-2 rounded-xl border border-blue-100 bg-white overflow-hidden shrink-0 max-h-40 overflow-y-auto">
+                <p class="px-3 py-2 text-[11px] font-bold text-blue-800/70 border-b border-sky-50">اختر زميلاً</p>
                 <template x-for="m in members.filter(x => !x.is_me)" :key="m.id">
                     <button type="button" @click="startDirect(m.id)"
-                            class="w-full text-right px-3 py-2 text-sm hover:bg-indigo-50 flex items-center justify-between gap-2 border-b border-slate-50 last:border-0">
+                            class="w-full text-right px-3 py-2 text-sm hover:bg-sky-50 flex items-center justify-between gap-2 border-b border-slate-50 last:border-0">
                         <span class="font-semibold text-slate-800" x-text="m.name"></span>
-                        <span x-show="m.is_manager" class="text-[10px] font-bold text-indigo-600">مانجر</span>
+                        <span x-show="m.is_manager" class="text-[10px] font-bold text-blue-700">مانجر</span>
                     </button>
                 </template>
             </div>
@@ -69,9 +96,11 @@
                 </template>
                 <template x-for="c in conversations" :key="c.id">
                     <button type="button" @click="openConversation(c)"
-                            class="w-full text-right rounded-xl border border-slate-200 bg-white px-3 py-2.5 hover:border-indigo-300 hover:shadow-sm transition flex gap-3 items-start">
+                            class="w-full text-right rounded-xl border border-blue-100 bg-white px-3 py-2.5 hover:border-sky-400 hover:shadow-sm transition flex gap-3 items-start">
                         <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-white text-sm"
-                             :class="c.is_team ? 'bg-indigo-500' : 'bg-slate-700'">
+                             :style="c.is_team
+                                ? 'background: linear-gradient(135deg, #0ea5e9, #1d4ed8)'
+                                : 'background: linear-gradient(135deg, #1e40af, #1e3a8a)'">
                             <i :class="c.is_team ? 'fas fa-bullhorn' : 'fas fa-user'"></i>
                         </div>
                         <div class="min-w-0 flex-1">
@@ -87,7 +116,7 @@
         </div>
 
         {{-- Thread view --}}
-        <div x-show="view === 'thread'" class="flex-1 flex flex-col min-h-0 bg-slate-100">
+        <div x-show="view === 'thread'" class="stc-thread-bg flex-1 flex flex-col min-h-0">
             <div class="flex-1 overflow-y-auto px-3 py-3 space-y-2" x-ref="messagesBox">
                 <template x-if="messagesLoading && messages.length === 0">
                     <p class="text-center text-xs text-slate-400 py-8">جاري تحميل الرسائل…</p>
@@ -96,11 +125,14 @@
                     <div class="flex" :class="msg.is_mine ? 'justify-start' : 'justify-end'">
                         <div class="max-w-[85%] group">
                             <div class="rounded-2xl px-3 py-2 shadow-sm border"
-                                 :class="msg.is_mine ? 'bg-indigo-600 text-white border-indigo-600 rounded-br-md' : 'bg-white text-slate-800 border-slate-200 rounded-bl-md'">
+                                 :class="msg.is_mine
+                                    ? 'text-white border-transparent rounded-br-md'
+                                    : 'bg-white text-slate-800 border-blue-100 rounded-bl-md'"
+                                 :style="msg.is_mine ? 'background: linear-gradient(135deg, #1d4ed8, #1e40af)' : ''">
                                 <p class="text-[10px] font-bold mb-0.5 opacity-80" x-show="!msg.is_mine" x-text="msg.user_name"></p>
                                 <template x-if="msg.reply_to">
                                     <div class="mb-1.5 text-[11px] rounded-lg px-2 py-1 border"
-                                         :class="msg.is_mine ? 'bg-indigo-500/40 border-indigo-400/50' : 'bg-slate-50 border-slate-200 text-slate-600'">
+                                         :class="msg.is_mine ? 'bg-white/15 border-white/25' : 'bg-sky-50 border-sky-100 text-slate-600'">
                                         <span class="font-bold" x-text="msg.reply_to.user_name"></span>
                                         <span x-text="': ' + msg.reply_to.body"></span>
                                     </div>
@@ -122,11 +154,11 @@
                                 <template x-for="r in (msg.reactions || [])" :key="r.emoji">
                                     <button type="button" @click="react(msg.id, r.emoji)"
                                             class="text-[11px] px-1.5 py-0.5 rounded-full border bg-white shadow-sm"
-                                            :class="r.mine ? 'border-indigo-400' : 'border-slate-200'"
+                                            :class="r.mine ? 'border-sky-400' : 'border-slate-200'"
                                             x-text="r.emoji + ' ' + r.count"></button>
                                 </template>
                             </div>
-                            <div x-show="emojiFor === msg.id" class="mt-1 flex gap-1 bg-white border border-slate-200 rounded-xl px-2 py-1 shadow-sm"
+                            <div x-show="emojiFor === msg.id" class="mt-1 flex gap-1 bg-white border border-blue-100 rounded-xl px-2 py-1 shadow-sm"
                                  :class="msg.is_mine ? 'justify-start' : 'justify-end'">
                                 <template x-for="e in quickEmojis" :key="e">
                                     <button type="button" class="text-base hover:scale-110 transition" @click="react(msg.id, e); emojiFor = null" x-text="e"></button>
@@ -137,22 +169,23 @@
                 </template>
             </div>
 
-            <div x-show="replyTo" class="px-3 py-1.5 bg-amber-50 border-t border-amber-100 flex items-center justify-between gap-2 text-xs shrink-0">
-                <p class="truncate text-amber-900">
+            <div x-show="replyTo" class="px-3 py-1.5 bg-sky-50 border-t border-sky-100 flex items-center justify-between gap-2 text-xs shrink-0">
+                <p class="truncate text-blue-900">
                     رد على <strong x-text="replyTo?.user_name"></strong>:
                     <span x-text="replyTo?.body"></span>
                 </p>
-                <button type="button" @click="replyTo = null" class="text-amber-700"><i class="fas fa-times"></i></button>
+                <button type="button" @click="replyTo = null" class="text-sky-700"><i class="fas fa-times"></i></button>
             </div>
 
-            <form @submit.prevent="sendMessage()" class="p-3 bg-white border-t border-slate-200 flex gap-2 shrink-0">
+            <form @submit.prevent="sendMessage()" class="p-3 bg-white border-t border-blue-100 flex gap-2 shrink-0">
                 <input type="text" x-model="draft" maxlength="4000"
                        placeholder="اكتب رسالة…"
-                       class="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                       class="flex-1 px-3 py-2.5 rounded-xl border border-blue-100 text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
                        :disabled="sending"
                        autocomplete="off">
                 <button type="submit" :disabled="sending || !draft.trim()"
-                        class="w-11 h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white flex items-center justify-center shrink-0">
+                        class="w-11 h-11 rounded-xl disabled:opacity-50 text-white flex items-center justify-center shrink-0"
+                        style="background: linear-gradient(135deg, #0ea5e9, #1d4ed8);">
                     <i class="fas fa-paper-plane text-sm"></i>
                 </button>
             </form>
@@ -161,7 +194,7 @@
 
     {{-- FAB --}}
     <button type="button" @click="toggle()"
-            class="relative w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-slate-800 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition flex items-center justify-center border-2 border-white"
+            class="stc-fab relative w-14 h-14 rounded-full text-white hover:scale-105 transition flex items-center justify-center border-2 border-white"
             title="شات الفريق">
         <i class="fas fa-comments text-xl" x-show="!open"></i>
         <i class="fas fa-times text-xl" x-show="open"></i>
