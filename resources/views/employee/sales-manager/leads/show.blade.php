@@ -32,7 +32,7 @@
 @endphp
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-5 pb-10">
+<div class="space-y-5 pb-10">
     @if(session('success'))
         <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 flex items-start gap-2">
             <i class="fas fa-check-circle text-emerald-600 mt-0.5"></i>
@@ -188,9 +188,9 @@
         </div>
     @endif
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
         {{-- Main: timeline --}}
-        <div class="lg:col-span-8 space-y-5 order-2 lg:order-1">
+        <div class="xl:col-span-8 space-y-5 order-2 xl:order-1">
             <section class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
                 <div class="px-4 sm:px-5 py-4 border-b border-slate-100 bg-gradient-to-l from-white to-teal-50/40 flex flex-wrap items-end justify-between gap-3">
                     <div>
@@ -296,7 +296,7 @@
         </div>
 
         {{-- Sidebar --}}
-        <aside class="lg:col-span-4 space-y-4 order-1 lg:order-2 lg:sticky lg:top-4">
+        <aside class="xl:col-span-4 space-y-4 order-1 xl:order-2 xl:sticky xl:top-4">
             {{-- Contact data --}}
             <section class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
                 <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/80">

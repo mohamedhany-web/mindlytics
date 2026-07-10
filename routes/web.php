@@ -992,6 +992,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
 
         Route::middleware('sales.manager')->prefix('sales-manager')->name('sales-manager.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Employee\SalesManagerDashboardController::class, 'index'])->name('dashboard');
+            Route::get('team/{employee}', [\App\Http\Controllers\Employee\SalesManagerTeamController::class, 'show'])->name('team.show');
             Route::get('leads', [\App\Http\Controllers\Employee\SalesManagerLeadController::class, 'index'])->name('leads.index');
             Route::get('leads/{lead}', [\App\Http\Controllers\Employee\SalesManagerLeadController::class, 'show'])->name('leads.show');
             Route::post('leads/{lead}/transfer', [\App\Http\Controllers\Employee\SalesManagerLeadController::class, 'transfer'])->name('leads.transfer');

@@ -58,15 +58,56 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="panel-card lg:col-span-2">
-            <div class="panel-card-head"><h2 class="font-bold text-slate-900">أعضاء الفريق</h2></div>
+            <div class="panel-card-head flex flex-wrap items-center justify-between gap-2">
+                <h2 class="font-bold text-slate-900">أعضاء الفريق</h2>
+                <a href="{{ route('employee.sales-manager.attendance.index') }}" class="text-xs text-emerald-700 font-semibold hover:underline">حضور الفريق</a>
+            </div>
             <ul class="divide-y divide-slate-100">
                 @forelse($members as $member)
-                    <li class="px-5 py-3 flex items-center justify-between gap-3">
-                        <div>
-                            <p class="font-semibold text-slate-900">{{ $member->user->name ?? '—' }}</p>
-                            <p class="text-xs text-slate-500">{{ $member->user->email ?? '' }}</p>
+                    @php
+                        $u = $member->user;
+                        $uid = (int) ($u->id ?? $member->user_id);
+                        $onLeave = in_array($uid, $onLeaveIds ?? [], true);
+                        $schedule = $u?->workSchedule;
+                    @endphp
+                    <li class="px-5 py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <p class="font-semibold text-slate-900">{{ $u->name ?? '—' }}</p>
+                                @if($onLeave)
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-50 text-violet-800 border border-violet-200">إجازة</span>
+                                @endif
+                            </div>
+                            <p class="text-xs text-slate-500 mt-0.5">{{ $u->email ?? '' }}</p>
+                            <p class="text-[11px] text-slate-500 mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+                                <span>
+                                    <i class="fas fa-clock text-indigo-500 ml-0.5"></i>
+                                    @if($schedule)
+                                        {{ $schedule->timeRangeLabel() }}
+                                    @else
+                                        بدون جدول
+                                    @endif
+                                </span>
+                                <span>
+                                    <i class="fas fa-calendar-day text-amber-500 ml-0.5"></i>
+                                    راحة: {{ $u?->weeklyOffDayLabel() ?? '—' }}
+                                </span>
+                                <span>
+                                    <i class="fas fa-users text-slate-400 ml-0.5"></i>
+                                    {{ (int) ($leadCounts[$uid] ?? 0) }} عميل
+                                </span>
+                            </p>
                         </div>
-                        <a href="{{ route('employee.sales-manager.attendance.employee', $member->user_id) }}" class="text-xs text-emerald-700 font-semibold hover:underline">الحضور</a>
+                        <div class="flex flex-wrap items-center gap-2 shrink-0">
+                            <a href="{{ route('employee.sales-manager.team.show', $uid) }}"
+                               class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 text-white text-xs font-bold hover:bg-slate-900">
+                                <i class="fas fa-id-card"></i> عرض الملف
+                            </a>
+                            <a href="{{ route('employee.sales-manager.attendance.employee', $uid) }}"
+                               class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50">
+                                الحضور
+                            </a>
+                        </div>
                     </li>
                 @empty
                     <li class="px-5 py-8 text-center text-slate-500">لا يوجد أعضاء في الفريق بعد.</li>

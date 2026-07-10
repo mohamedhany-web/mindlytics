@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
+use App\Models\LeaveRequest;
 use App\Models\SalesLead;
 use App\Services\SalesTeamService;
 use Illuminate\Database\Eloquent\Builder;
@@ -114,7 +115,24 @@ class SalesManagerDashboardController extends Controller
             ->take(10)
             ->values();
 
-        $members = $team->members()->with('user:id,name,email')->get();
+        $members = $team->members()
+            ->with(['user' => fn ($q) => $q->with(['workSchedule', 'employeeJob'])])
+            ->get();
+
+        $leadCounts = SalesLead::query()
+            ->whereIn('assigned_to', $memberIds)
+            ->selectRaw('assigned_to, count(*) as c')
+            ->groupBy('assigned_to')
+            ->pluck('c', 'assigned_to');
+
+        $onLeaveIds = LeaveRequest::query()
+            ->whereIn('employee_id', $memberIds)
+            ->approved()
+            ->whereDate('start_date', '<=', today())
+            ->whereDate('end_date', '>=', today())
+            ->pluck('employee_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
 
         return view('employee.sales-manager.dashboard', compact(
             'stats',
@@ -127,7 +145,9 @@ class SalesManagerDashboardController extends Controller
             'noFirstResponseLeads',
             'slaCutoffHours',
             'team',
-            'members'
+            'members',
+            'leadCounts',
+            'onLeaveIds'
         ));
     }
 
