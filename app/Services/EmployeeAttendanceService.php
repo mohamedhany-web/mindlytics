@@ -371,7 +371,7 @@ class EmployeeAttendanceService
             ->first();
 
         if ($existing) {
-            return $existing;
+            return $this->syncDayStatusFromEmployeeFile($user, $existing, $now);
         }
 
         $window = $this->scheduleWindow($schedule, $now);
@@ -394,6 +394,80 @@ class EmployeeAttendanceService
         }
 
         return EmployeeAttendanceRecord::create($base + ['status' => 'pending']);
+    }
+
+    /**
+     * مزامنة حالة يوم الحضور مع يوم الإجازة/الإجازة المعتمدة من ملف الموظف.
+     * لا تُغيَّر السجلات التي بدأ فيها الحضور أو اكتملت، ولا أثناء فتح المدير النشط.
+     */
+    public function syncDayStatusFromEmployeeFile(
+        User $user,
+        EmployeeAttendanceRecord $record,
+        ?Carbon $now = null
+    ): EmployeeAttendanceRecord {
+        $now = $now ?? now();
+
+        if ($record->clock_in_at || in_array($record->status, ['active', 'completed'], true)) {
+            return $record;
+        }
+
+        if (! in_array($record->status, ['pending', 'off_day', 'on_leave', 'absent'], true)) {
+            return $record;
+        }
+
+        $desired = $this->desiredDayStatus($user, $now);
+
+        // فتح المدير يبقي اليوم قابلاً للعمل حتى لو كان يوم راحة
+        if (in_array($desired, ['off_day', 'on_leave'], true) && $this->activeUnlock($user, $now)) {
+            if ($record->status === 'pending') {
+                return $record;
+            }
+            $desired = 'pending';
+        }
+
+        if ($record->status === $desired) {
+            return $record;
+        }
+
+        $record->update([
+            'status' => $desired,
+            'metadata' => array_merge($record->metadata ?? [], [
+                'synced_from_employee_file_at' => $now->toIso8601String(),
+                'synced_weekly_off_day' => $user->weekly_off_day,
+            ]),
+        ]);
+
+        return $record->fresh();
+    }
+
+    /**
+     * بعد تحديث ملف الموظف: أعد حساب حالة اليوم الحالي إن وُجد سجل.
+     */
+    public function resyncTodayAfterEmployeeUpdate(User $user): ?EmployeeAttendanceRecord
+    {
+        if (! $user->isSubjectToWorkSchedule()) {
+            return null;
+        }
+
+        $schedule = $this->resolveSchedule($user);
+        if (! $schedule) {
+            return null;
+        }
+
+        return $this->ensureTodayRecord($user, $schedule, now());
+    }
+
+    private function desiredDayStatus(User $user, Carbon $now): string
+    {
+        if ($user->isWeeklyOff($now)) {
+            return 'off_day';
+        }
+
+        if ($user->isOnApprovedLeave($now)) {
+            return 'on_leave';
+        }
+
+        return 'pending';
     }
 
     /** @return array{shift_starts_at: Carbon, shift_ends_at: Carbon, access_starts_at: Carbon} */

@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Models\Concerns\QueriesByBranch;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
@@ -110,7 +111,6 @@ class User extends Authenticatable
             'presence_last_seen_at' => 'datetime',
             'referred_at' => 'datetime',
             'hire_date' => 'date',
-            'weekly_off_day' => 'integer',
             'termination_date' => 'date',
             'salary' => 'decimal:2',
             'is_employee' => 'boolean',
@@ -925,6 +925,30 @@ class User extends Authenticatable
      *
      * @return array<int, string>
      */
+    /**
+     * يوم الإجازة الأسبوعية (0=أحد … 6=سبت). null = افتراضي سبت/أحد.
+     * لا نستخدم cast integer حتى لا تتحول القيمة الفارغة إلى 0 (الأحد).
+     */
+    protected function weeklyOffDay(): Attribute
+    {
+        return Attribute::make(
+            get: function (mixed $value): ?int {
+                if ($value === null || $value === '') {
+                    return null;
+                }
+
+                return (int) $value;
+            },
+            set: function (mixed $value): ?int {
+                if ($value === null || $value === '') {
+                    return null;
+                }
+
+                return (int) $value;
+            },
+        );
+    }
+
     public static function weeklyOffDayOptions(): array
     {
         return [
@@ -949,15 +973,34 @@ class User extends Authenticatable
 
     /**
      * هل التاريخ يوافق يوم الإجازة الأسبوعية للموظف؟
+     * المصدر الوحيد: users.weekly_off_day من ملف الموظف (تعديل الموظف في لوحة الإدارة).
      * إن لم يُحدَّد يوم، يُعتمد عطلة نهاية الأسبوع (سبت/أحد).
      */
     public function isWeeklyOff(\Carbon\Carbon $date): bool
     {
-        if ($this->weekly_off_day !== null) {
-            return (int) $this->weekly_off_day === $date->dayOfWeek;
+        $offDay = $this->weekly_off_day;
+        if ($offDay !== null) {
+            return (int) $offDay === (int) $date->dayOfWeek;
         }
 
         return $date->isWeekend();
+    }
+
+    /**
+     * أقرب يوم إجازة أسبوعية اعتباراً من تاريخ معيّن (شامل اليوم إن كان راحة).
+     */
+    public function nextWeeklyOffDate(?\Carbon\Carbon $from = null): \Carbon\Carbon
+    {
+        $from = ($from ?? now())->copy()->startOfDay();
+
+        for ($i = 0; $i < 8; $i++) {
+            $day = $from->copy()->addDays($i);
+            if ($this->isWeeklyOff($day)) {
+                return $day;
+            }
+        }
+
+        return $from->copy()->next(\Carbon\Carbon::SATURDAY)->startOfDay();
     }
 
     /**

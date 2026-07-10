@@ -137,6 +137,13 @@
             <div>
                 <p class="text-sm text-gray-600 mb-1">يوم الإجازة الأسبوعية</p>
                 <p class="font-semibold text-gray-900 text-lg">{{ $employee->weeklyOffDayLabel() ?? 'عطلة نهاية الأسبوع (افتراضي)' }}</p>
+                <p class="text-xs text-slate-500 mt-1">
+                    @if($employee->isWeeklyOff(now()))
+                        اليوم راحة
+                    @else
+                        أقرب راحة: {{ $employee->nextWeeklyOffDate()->locale('ar')->translatedFormat('l j F Y') }}
+                    @endif
+                </p>
             </div>
             @if($employee->salary)
             <div>

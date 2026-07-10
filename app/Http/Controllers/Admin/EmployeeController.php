@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\EmployeeJob;
+use App\Services\EmployeeAttendanceService;
 use App\Services\UserDeletionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -90,8 +91,10 @@ class EmployeeController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        if ($validated['weekly_off_day'] === '' || ! isset($validated['weekly_off_day'])) {
+        if (! isset($validated['weekly_off_day']) || $validated['weekly_off_day'] === '') {
             $validated['weekly_off_day'] = null;
+        } else {
+            $validated['weekly_off_day'] = (int) $validated['weekly_off_day'];
         }
 
         if (empty($validated['work_schedule_id'])) {
@@ -196,8 +199,10 @@ class EmployeeController extends Controller
             unset($validated['password']);
         }
 
-        if (! array_key_exists('weekly_off_day', $validated) || $validated['weekly_off_day'] === '') {
+        if (! array_key_exists('weekly_off_day', $validated) || $validated['weekly_off_day'] === '' || $validated['weekly_off_day'] === null) {
             $validated['weekly_off_day'] = null;
+        } else {
+            $validated['weekly_off_day'] = (int) $validated['weekly_off_day'];
         }
 
         if (empty($validated['work_schedule_id'])) {
@@ -207,9 +212,13 @@ class EmployeeController extends Controller
         $validated['is_active'] = $request->has('is_active') ? true : false;
 
         $employee->update($validated);
+        $employee->refresh();
+
+        // أعد حساب يوم الراحة/الحضور لليوم الحالي حسب weekly_off_day من ملف الموظف
+        app(EmployeeAttendanceService::class)->resyncTodayAfterEmployeeUpdate($employee);
 
         return redirect()->route('admin.employees.show', $employee)
-                        ->with('success', 'تم تحديث بيانات الموظف بنجاح');
+                        ->with('success', 'تم تحديث بيانات الموظف بنجاح — يوم الإجازة الأسبوعية يُطبَّق فوراً على قفل النظام والحضور.');
     }
 
     /**
