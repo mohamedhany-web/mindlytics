@@ -1,6 +1,9 @@
 @php
     $depth = $depth ?? 0;
     $marginClass = $depth > 0 ? 'mr-4 border-r-2 border-slate-200' : '';
+    $isScholarshipCurriculum = $isScholarshipCurriculum ?? false;
+    $sectionScope = $section->visibility_scope ?? 'all';
+    $sectionSelectedCount = $section->relationLoaded('visibleStudents') ? $section->visibleStudents->count() : 0;
 @endphp
 <div class="rounded-xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition-shadow mb-4 section-block {{ $marginClass }}" data-section-id="{{ $section->id }}" style="{{ $depth > 0 ? 'margin-right: ' . ($depth * 1.5) . 'rem;' : '' }}">
     <div class="flex items-center justify-between p-4 cursor-pointer section-header" onclick="toggleSection({{ $section->id }})">
@@ -9,13 +12,28 @@
                 <i class="fas fa-chevron-down"></i>
             </span>
             <div class="flex-1 min-w-0">
-                <h3 class="text-lg font-bold text-slate-800">{{ $section->title }}</h3>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="text-lg font-bold text-slate-800">{{ $section->title }}</h3>
+                    @if($isScholarshipCurriculum && $sectionScope === 'selected')
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[10px] font-semibold" title="ظاهر لطلبة محددين">
+                            <i class="fas fa-user-check"></i>
+                            {{ $sectionSelectedCount }} طالب
+                        </span>
+                    @endif
+                </div>
                 @if($section->description)
                     <p class="text-sm text-slate-500 truncate">{{ $section->description }}</p>
                 @endif
             </div>
         </div>
         <div class="flex items-center gap-2 shrink-0" onclick="event.stopPropagation();">
+            @if($isScholarshipCurriculum)
+                <button type="button" onclick="event.stopPropagation(); openAccessVisibilityModal('section', {{ $section->id }}, '{{ addslashes($section->title) }}')"
+                        class="p-2 rounded-lg {{ $sectionScope === 'selected' ? 'bg-indigo-200 text-indigo-800' : 'bg-indigo-100 text-indigo-700' }} hover:bg-indigo-200 text-sm transition-colors"
+                        title="إعداد الوصول للقسم">
+                    <i class="fas fa-user-lock"></i>
+                </button>
+            @endif
             <button onclick="event.stopPropagation(); editSection({{ $section->id }}, '{{ addslashes($section->title) }}', '{{ addslashes($section->description ?? '') }}', {{ $section->parent_id ?? 'null' }}, '{{ $section->unlock_rule ?? 'previous_all_items' }}', {{ $section->unlock_percent !== null ? (int)$section->unlock_percent : 'null' }})"
                     class="p-2 rounded-lg bg-sky-100 hover:bg-sky-200 text-sky-600 text-sm transition-colors" title="تعديل القسم">
                 <i class="fas fa-edit"></i>
@@ -76,9 +94,17 @@
                                             <span>أسئلة فيديو</span>
                                         </span>
                                     @endif
+                                    @if($isScholarshipCurriculum && ($item->visibility_scope ?? 'all') === 'selected')
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[10px] shrink-0" title="ظاهر لطلبة محددين">
+                                            <i class="fas fa-user-check"></i>
+                                        </span>
+                                    @endif
                                 </div>
                                 <span class="text-xs text-slate-500 shrink-0">(محاضرة)</span>
                                 <div class="flex items-center gap-1 shrink-0">
+                                    @if($isScholarshipCurriculum)
+                                        <button type="button" onclick="openAccessVisibilityModal('item', {{ $item->id }}, '{{ addslashes($item->item->title ?? 'عنصر') }}')" class="p-1.5 rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-xs" title="إعداد الوصول"><i class="fas fa-user-lock"></i></button>
+                                    @endif
                                     <button type="button" onclick="openVideoQuestionsModal({{ $item->item->id }}, '{{ addslashes($item->item->title) }}')" class="p-1.5 rounded bg-amber-100 hover:bg-amber-200 text-amber-700 text-xs" title="أسئلة الفيديو"><i class="fas fa-question-circle"></i></button>
                                     <button onclick="editLectureFromCurriculum({{ $item->item->id }}, {{ $section->id }})" class="p-1.5 rounded bg-sky-100 hover:bg-sky-200 text-sky-600 text-xs" title="تعديل المحاضرة"><i class="fas fa-edit"></i></button>
                                     <button onclick="deleteLectureFromCurriculum({{ $item->item->id }}, {{ $item->id }})" class="p-1.5 rounded bg-red-50 hover:bg-red-100 text-red-600 text-xs" title="حذف المحاضرة"><i class="fas fa-trash"></i></button>
@@ -86,16 +112,32 @@
                             @elseif($item->item instanceof \App\Models\Assignment)
                                 <i class="fas fa-tasks text-emerald-500 shrink-0"></i>
                                 <span class="font-semibold text-slate-800 truncate">{{ $item->item->title }}</span>
+                                @if($isScholarshipCurriculum && ($item->visibility_scope ?? 'all') === 'selected')
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[10px] shrink-0" title="ظاهر لطلبة محددين">
+                                        <i class="fas fa-user-check"></i>
+                                    </span>
+                                @endif
                                 <span class="text-xs text-slate-500 shrink-0">(واجب)</span>
                                 <div class="flex items-center gap-1 shrink-0">
+                                    @if($isScholarshipCurriculum)
+                                        <button type="button" onclick="openAccessVisibilityModal('item', {{ $item->id }}, '{{ addslashes($item->item->title ?? 'عنصر') }}')" class="p-1.5 rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-xs" title="إعداد الوصول"><i class="fas fa-user-lock"></i></button>
+                                    @endif
                                     <a href="{{ route('instructor.assignments.edit', $item->item) }}" class="p-1.5 rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-600 text-xs" title="تعديل الواجب"><i class="fas fa-edit"></i></a>
                                     <button onclick="removeItem({{ $item->id }})" class="p-1.5 rounded bg-red-50 hover:bg-red-100 text-red-600 text-xs" title="إزالة من المنهج"><i class="fas fa-times"></i></button>
                                 </div>
                             @elseif($item->item instanceof \App\Models\AdvancedExam || $item->item instanceof \App\Models\Exam)
                                 <i class="fas fa-clipboard-check text-violet-500 shrink-0"></i>
                                 <span class="font-semibold text-slate-800 truncate">{{ $item->item->title }}</span>
+                                @if($isScholarshipCurriculum && ($item->visibility_scope ?? 'all') === 'selected')
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[10px] shrink-0" title="ظاهر لطلبة محددين">
+                                        <i class="fas fa-user-check"></i>
+                                    </span>
+                                @endif
                                 <span class="text-xs text-slate-500 shrink-0">(امتحان)</span>
                                 <div class="flex items-center gap-1 shrink-0">
+                                    @if($isScholarshipCurriculum)
+                                        <button type="button" onclick="openAccessVisibilityModal('item', {{ $item->id }}, '{{ addslashes($item->item->title ?? 'عنصر') }}')" class="p-1.5 rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-xs" title="إعداد الوصول"><i class="fas fa-user-lock"></i></button>
+                                    @endif
                                     @if($item->item instanceof \App\Models\AdvancedExam)
                                         <a href="{{ route('instructor.exams.edit', $item->item) }}" class="p-1.5 rounded bg-violet-100 hover:bg-violet-200 text-violet-600 text-xs" title="تعديل الامتحان"><i class="fas fa-edit"></i></a>
                                     @endif
@@ -105,8 +147,16 @@
                                 @php $typeInfo = $item->item->getTypeInfo(); @endphp
                                 <i class="{{ $typeInfo['icon'] ?? 'fas fa-puzzle-piece' }} text-amber-500 shrink-0"></i>
                                 <span class="font-semibold text-slate-800 truncate">{{ $item->item->title }}</span>
+                                @if($isScholarshipCurriculum && ($item->visibility_scope ?? 'all') === 'selected')
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[10px] shrink-0" title="ظاهر لطلبة محددين">
+                                        <i class="fas fa-user-check"></i>
+                                    </span>
+                                @endif
                                 <span class="text-xs text-slate-500 shrink-0">({{ $typeInfo['name'] ?? 'نمط تعليمي' }})</span>
                                 <div class="flex items-center gap-1 shrink-0">
+                                    @if($isScholarshipCurriculum)
+                                        <button type="button" onclick="openAccessVisibilityModal('item', {{ $item->id }}, '{{ addslashes($item->item->title ?? 'عنصر') }}')" class="p-1.5 rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-xs" title="إعداد الوصول"><i class="fas fa-user-lock"></i></button>
+                                    @endif
                                     <a href="{{ route('instructor.learning-patterns.edit', [$course, $item->item]) }}" class="p-1.5 rounded bg-amber-100 hover:bg-amber-200 text-amber-600 text-xs" title="تعديل النمط"><i class="fas fa-edit"></i></a>
                                     <button onclick="removeItem({{ $item->id }})" class="p-1.5 rounded bg-red-50 hover:bg-red-100 text-red-600 text-xs" title="إزالة من المنهج"><i class="fas fa-times"></i></button>
                                 </div>
@@ -126,7 +176,7 @@
         @if($section->children && $section->children->count() > 0)
             <div class="sections-children mt-4 pr-4 border-r-2 border-slate-100 space-y-4" data-parent-id="{{ $section->id }}" style="margin-right: 1rem;">
                 @foreach($section->children as $child)
-                    @include('instructor.curriculum.partials.section', ['section' => $child, 'depth' => $depth + 1])
+                    @include('instructor.curriculum.partials.section', ['section' => $child, 'depth' => $depth + 1, 'isScholarshipCurriculum' => $isScholarshipCurriculum, 'course' => $course])
                 @endforeach
             </div>
         @else

@@ -193,15 +193,22 @@
     </div>
 
     {{-- FAB --}}
-    <button type="button" @click="toggle()"
-            class="stc-fab relative w-14 h-14 rounded-full text-white hover:scale-105 transition flex items-center justify-center border-2 border-white"
-            title="شات الفريق">
-        <i class="fas fa-comments text-xl" x-show="!open"></i>
-        <i class="fas fa-times text-xl" x-show="open"></i>
-        <span x-show="unreadTotal > 0 && !open"
-              class="absolute -top-1 -right-1 min-w-[1.35rem] h-5 px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-white"
-              x-text="unreadTotal > 99 ? '99+' : unreadTotal"></span>
-    </button>
+    <div class="flex items-end gap-2">
+        <button type="button" @click="toggleSound()"
+                class="w-10 h-10 rounded-full bg-white border border-blue-200 text-blue-800 shadow-md hover:bg-sky-50 flex items-center justify-center"
+                :title="soundOn ? 'كتم أصوات الشات' : 'تشغيل أصوات الشات'">
+            <i class="fas text-sm" :class="soundOn ? 'fa-volume-up text-sky-600' : 'fa-volume-mute text-slate-400'"></i>
+        </button>
+        <button type="button" @click="toggle()"
+                class="stc-fab relative w-14 h-14 rounded-full text-white hover:scale-105 transition flex items-center justify-center border-2 border-white"
+                title="شات الفريق">
+            <i class="fas fa-comments text-xl" x-show="!open"></i>
+            <i class="fas fa-times text-xl" x-show="open"></i>
+            <span x-show="unreadTotal > 0 && !open"
+                  class="absolute -top-1 -right-1 min-w-[1.35rem] h-5 px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-white"
+                  x-text="unreadTotal > 99 ? '99+' : unreadTotal"></span>
+        </button>
+    </div>
 </div>
 
 <script>
@@ -219,6 +226,8 @@ function salesTeamChat() {
         read: (id) => @json(url('/employee/team-chat/conversations')).replace(/\/$/, '') + '/' + id + '/read',
         react: (id) => @json(url('/employee/team-chat/messages')).replace(/\/$/, '') + '/' + id + '/reactions',
     };
+
+    const SOUND_KEY = 'stc_sound_on';
 
     return {
         open: false,
@@ -241,6 +250,8 @@ function salesTeamChat() {
         lastMessageId: 0,
         pollTimer: null,
         unreadTimer: null,
+        soundOn: localStorage.getItem(SOUND_KEY) !== '0',
+        _audioCtx: null,
         quickEmojis: ['👍', '❤️', '😂', '🔥', '👏', '✅'],
 
         init() {
@@ -250,7 +261,60 @@ function salesTeamChat() {
             }, 15000);
         },
 
+        toggleSound() {
+            this.soundOn = !this.soundOn;
+            localStorage.setItem(SOUND_KEY, this.soundOn ? '1' : '0');
+            this.unlockAudio();
+            if (this.soundOn) this.playSound('notify');
+        },
+
+        unlockAudio() {
+            try {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx) return;
+                if (!this._audioCtx) this._audioCtx = new Ctx();
+                if (this._audioCtx.state === 'suspended') this._audioCtx.resume();
+            } catch (e) {}
+        },
+
+        playSound(type) {
+            if (!this.soundOn) return;
+            try {
+                this.unlockAudio();
+                const ctx = this._audioCtx;
+                if (!ctx) return;
+
+                const now = ctx.currentTime;
+                const beep = (freq, start, dur, gain = 0.08, typeOsc = 'sine') => {
+                    const osc = ctx.createOscillator();
+                    const g = ctx.createGain();
+                    osc.type = typeOsc;
+                    osc.frequency.value = freq;
+                    g.gain.setValueAtTime(0.0001, now + start);
+                    g.gain.exponentialRampToValueAtTime(gain, now + start + 0.015);
+                    g.gain.exponentialRampToValueAtTime(0.0001, now + start + dur);
+                    osc.connect(g);
+                    g.connect(ctx.destination);
+                    osc.start(now + start);
+                    osc.stop(now + start + dur + 0.02);
+                };
+
+                if (type === 'send') {
+                    beep(720, 0, 0.08, 0.06);
+                    beep(980, 0.07, 0.1, 0.05);
+                } else if (type === 'receive') {
+                    beep(520, 0, 0.1, 0.07);
+                    beep(660, 0.09, 0.12, 0.06);
+                } else {
+                    // notify
+                    beep(880, 0, 0.12, 0.08, 'triangle');
+                    beep(1175, 0.12, 0.16, 0.07, 'triangle');
+                }
+            } catch (e) {}
+        },
+
         async toggle() {
+            this.unlockAudio();
             this.open = !this.open;
             if (this.open) {
                 await this.bootstrap();
@@ -302,16 +366,24 @@ function salesTeamChat() {
 
         async refreshList() {
             try {
+                const prevUnread = this.unreadTotal;
                 const data = await this.api(routes.conversations);
                 this.conversations = data.conversations || [];
                 this.unreadTotal = data.unread_total || 0;
+                if (this.unreadTotal > prevUnread) {
+                    this.playSound(this.open ? 'receive' : 'notify');
+                }
             } catch (e) {}
         },
 
         async fetchUnread() {
             try {
+                const prev = this.unreadTotal;
                 const data = await this.api(routes.unread);
                 this.unreadTotal = data.unread_total || 0;
+                if (this.unreadTotal > prev && !this.open) {
+                    this.playSound('notify');
+                }
             } catch (e) {}
         },
 
@@ -393,6 +465,7 @@ function salesTeamChat() {
                 if (data.message) {
                     this.messages.push(data.message);
                     this.lastMessageId = data.message.id;
+                    this.playSound('send');
                     this.$nextTick(() => this.scrollBottom());
                 }
             } catch (e) {
@@ -430,10 +503,15 @@ function salesTeamChat() {
                 const incoming = data.messages || [];
                 if (incoming.length) {
                     const existing = new Set(this.messages.map(m => m.id));
+                    let gotFromOther = false;
                     incoming.forEach(m => {
-                        if (!existing.has(m.id)) this.messages.push(m);
+                        if (!existing.has(m.id)) {
+                            this.messages.push(m);
+                            if (!m.is_mine) gotFromOther = true;
+                        }
                     });
                     this.lastMessageId = this.messages[this.messages.length - 1].id;
+                    if (gotFromOther) this.playSound('receive');
                     this.$nextTick(() => this.scrollBottom());
                     await this.api(routes.read(this.activeId), { method: 'POST', body: '{}' });
                 }

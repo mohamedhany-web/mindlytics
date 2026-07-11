@@ -11,6 +11,7 @@ use App\Models\Exam;
 use App\Models\LearningPattern;
 use App\Models\Lecture;
 use App\Models\AdvancedExam;
+use App\Services\ScholarshipCurriculumVisibilityService;
 use App\Support\LectureRecordingResolver;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\JsonResponse;
@@ -21,6 +22,10 @@ use Illuminate\Http\Request;
  */
 class StudentLearnController extends Controller
 {
+    public function __construct(
+        private ScholarshipCurriculumVisibilityService $scholarshipVisibility
+    ) {
+    }
     /**
      * قائمة الكورسات النشطة للطالب مع التقدّم.
      */
@@ -70,11 +75,16 @@ class StudentLearnController extends Controller
         }
 
         $sections = $course->activeSections()
-            ->with(['activeItems' => function ($query) {
-                $query->orderBy('order')->with('item');
-            }])
+            ->with([
+                'visibleStudents:id',
+                'activeItems' => function ($query) {
+                    $query->orderBy('order')->with(['item', 'visibleStudents:id']);
+                },
+            ])
             ->orderBy('order')
             ->get();
+
+        $sections = $this->scholarshipVisibility->filterSectionsForStudent($sections, $user, $course);
 
         foreach ($sections as $section) {
             foreach ($section->activeItems as $curriculumItem) {
@@ -135,6 +145,13 @@ class StudentLearnController extends Controller
         $lectureModel = $course->lectures()->find($lecture);
         if (! $lectureModel) {
             return response()->json(['message' => 'المحاضرة غير موجودة.'], 404);
+        }
+
+        if (! $this->scholarshipVisibility->contentVisibleToStudent($course, Lecture::class, (int) $lectureModel->id, $user)) {
+            return response()->json([
+                'message' => 'هذه المحاضرة غير متاحة لك.',
+                'code' => 'not_visible',
+            ], 403);
         }
 
         $cacheKey = sprintf('api_lecture_playback:%d:%d:%d', $course->id, $lectureModel->id, $user->id);

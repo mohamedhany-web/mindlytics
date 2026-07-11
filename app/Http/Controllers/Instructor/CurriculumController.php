@@ -10,12 +10,18 @@ use App\Models\CurriculumItem;
 use App\Models\CourseLesson;
 use App\Models\Lecture;
 use App\Models\Assignment;
+use App\Services\ScholarshipCurriculumVisibilityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class CurriculumController extends Controller
 {
+    public function __construct(
+        private ScholarshipCurriculumVisibilityService $scholarshipVisibility
+    ) {
+    }
+
     /**
      * عرض صفحة بناء المنهج للكورس
      */
@@ -30,9 +36,12 @@ class CurriculumController extends Controller
         
         // جلب كل الأقسام مع العناصر ثم ربط كل قسم بأبنائه لعرض الشجرة
         $allSections = $course->sections()
-            ->with(['items' => function($query) {
-                $query->orderBy('order');
-            }])
+            ->with([
+                'visibleStudents:id,name,email',
+                'items' => function ($query) {
+                    $query->orderBy('order')->with(['visibleStudents:id,name,email']);
+                },
+            ])
             ->orderBy('order')
             ->get();
         foreach ($allSections as $section) {
@@ -40,6 +49,26 @@ class CurriculumController extends Controller
         }
         $sections = $allSections->whereNull('parent_id')->values();
         $sectionsFlatForSelect = $this->flattenSectionsForSelect($sections);
+
+        $isScholarshipCurriculum = $this->scholarshipVisibility->isScholarshipCourse($course);
+        $scholarshipStudents = $isScholarshipCurriculum
+            ? $this->scholarshipVisibility->selectableStudents($course)
+            : collect();
+
+        $sectionVisibilityMap = [];
+        $itemVisibilityMap = [];
+        foreach ($allSections as $section) {
+            $sectionVisibilityMap[$section->id] = [
+                'scope' => $section->visibility_scope ?? 'all',
+                'student_ids' => $section->visibleStudents->pluck('id')->values()->all(),
+            ];
+            foreach ($section->items as $item) {
+                $itemVisibilityMap[$item->id] = [
+                    'scope' => $item->visibility_scope ?? 'all',
+                    'student_ids' => $item->visibleStudents->pluck('id')->values()->all(),
+                ];
+            }
+        }
         
         // جلب العناصر المتاحة (محاضرات، واجبات، امتحانات، أنماط) — تم إلغاء الدروس
         $availableLectures = $course->lectures()
@@ -73,7 +102,11 @@ class CurriculumController extends Controller
             'availableLectures',
             'availableAssignments',
             'availableExams',
-            'availableLearningPatterns'
+            'availableLearningPatterns',
+            'isScholarshipCurriculum',
+            'scholarshipStudents',
+            'sectionVisibilityMap',
+            'itemVisibilityMap'
         ));
     }
 
@@ -93,6 +126,9 @@ class CurriculumController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'parent_id' => 'nullable|exists:course_sections,id',
+            'visibility_scope' => 'nullable|string|in:all,selected',
+            'visible_student_ids' => 'nullable|array',
+            'visible_student_ids.*' => 'integer|exists:users,id',
         ], [
             'title.required' => 'عنوان القسم مطلوب',
         ]);
@@ -112,12 +148,20 @@ class CurriculumController extends Controller
             'description' => $parentId ? null : ($validated['description'] ?? null),
             'order' => $lastOrder + 1,
             'is_active' => true,
+            'visibility_scope' => 'all',
         ]);
+
+        $this->scholarshipVisibility->syncSectionVisibility(
+            $section,
+            $course,
+            $validated['visibility_scope'] ?? 'all',
+            $validated['visible_student_ids'] ?? []
+        );
         
         return response()->json([
             'success' => true,
             'message' => 'تم إنشاء القسم بنجاح',
-            'section' => $section,
+            'section' => $section->fresh(['visibleStudents:id']),
         ]);
     }
 
@@ -138,6 +182,9 @@ class CurriculumController extends Controller
             'description' => 'nullable|string',
             'unlock_rule' => 'nullable|string|in:always,previous_percent,previous_all_items',
             'unlock_percent' => 'nullable|integer|min:0|max:100',
+            'visibility_scope' => 'nullable|string|in:all,selected',
+            'visible_student_ids' => 'nullable|array',
+            'visible_student_ids.*' => 'integer|exists:users,id',
         ]);
         if ($section->parent_id) {
             $validated['description'] = null;
@@ -146,12 +193,87 @@ class CurriculumController extends Controller
         if (($validated['unlock_rule'] ?? '') !== 'previous_percent') {
             $validated['unlock_percent'] = null;
         }
+
+        $visibilityScope = $validated['visibility_scope'] ?? null;
+        $visibleStudentIds = $validated['visible_student_ids'] ?? null;
+        unset($validated['visibility_scope'], $validated['visible_student_ids']);
+
         $section->update($validated);
+
+        if ($visibilityScope !== null) {
+            $this->scholarshipVisibility->syncSectionVisibility(
+                $section,
+                $section->course,
+                $visibilityScope,
+                $visibleStudentIds ?? []
+            );
+        }
         
         return response()->json([
             'success' => true,
             'message' => 'تم تحديث القسم بنجاح',
-            'section' => $section->fresh(),
+            'section' => $section->fresh(['visibleStudents:id']),
+        ]);
+    }
+
+    /**
+     * تحديث ظهور قسم لطلبة المنحة
+     */
+    public function updateSectionVisibility(Request $request, CourseSection $section)
+    {
+        $instructor = Auth::user();
+        if ($section->course->instructor_id !== $instructor->id) {
+            abort(403, 'غير مسموح لك بتعديل هذا القسم');
+        }
+
+        $validated = $request->validate([
+            'visibility_scope' => 'required|string|in:all,selected',
+            'visible_student_ids' => 'nullable|array',
+            'visible_student_ids.*' => 'integer|exists:users,id',
+        ]);
+
+        $this->scholarshipVisibility->syncSectionVisibility(
+            $section,
+            $section->course,
+            $validated['visibility_scope'],
+            $validated['visible_student_ids'] ?? []
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تحديث وصول القسم بنجاح',
+            'section' => $section->fresh(['visibleStudents:id']),
+        ]);
+    }
+
+    /**
+     * تحديث ظهور عنصر المنهج لطلبة المنحة
+     */
+    public function updateItemVisibility(Request $request, CurriculumItem $item)
+    {
+        $instructor = Auth::user();
+        $section = $item->section;
+        if (! $section || $section->course->instructor_id !== $instructor->id) {
+            abort(403, 'غير مسموح لك بتعديل هذا العنصر');
+        }
+
+        $validated = $request->validate([
+            'visibility_scope' => 'required|string|in:all,selected',
+            'visible_student_ids' => 'nullable|array',
+            'visible_student_ids.*' => 'integer|exists:users,id',
+        ]);
+
+        $this->scholarshipVisibility->syncItemVisibility(
+            $item,
+            $section->course,
+            $validated['visibility_scope'],
+            $validated['visible_student_ids'] ?? []
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تحديث ظهور العنصر بنجاح',
+            'item' => $item->fresh(['visibleStudents:id']),
         ]);
     }
 

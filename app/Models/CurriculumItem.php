@@ -15,6 +15,7 @@ class CurriculumItem extends Model
         'item_id',
         'order',
         'is_active',
+        'visibility_scope',
     ];
 
     protected $casts = [
@@ -29,6 +30,12 @@ class CurriculumItem extends Model
     public function item()
     {
         return $this->morphTo();
+    }
+
+    public function visibleStudents()
+    {
+        return $this->belongsToMany(User::class, 'curriculum_item_visible_students')
+            ->withTimestamps();
     }
 
     public function scopeActive($query)

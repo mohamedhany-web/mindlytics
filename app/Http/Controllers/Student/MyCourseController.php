@@ -9,6 +9,7 @@ use App\Models\LectureVideoQuestion;
 use App\Models\LectureVideoQuestionAnswer;
 use App\Models\CourseLesson;
 use App\Models\Lecture;
+use App\Services\ScholarshipCurriculumVisibilityService;
 use App\Support\LectureRecordingResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,6 +18,11 @@ use Illuminate\Support\Facades\Storage;
 
 class MyCourseController extends Controller
 {
+    public function __construct(
+        private ScholarshipCurriculumVisibilityService $scholarshipVisibility
+    ) {
+    }
+
     /**
      * عرض الكورسات المفعلة للطالب
      */
@@ -79,12 +85,17 @@ class MyCourseController extends Controller
 
         // جلب الأقسام مع العناصر مرتبة
         $sections = $course->activeSections()
-            ->with(['activeItems' => function($query) {
-                $query->orderBy('order')->with('item');
-            }])
+            ->with([
+                'visibleStudents:id',
+                'activeItems' => function ($query) {
+                    $query->orderBy('order')->with(['item', 'visibleStudents:id']);
+                },
+            ])
             ->orderBy('order')
             ->get();
-        
+
+        $sections = $this->scholarshipVisibility->filterSectionsForStudent($sections, $user, $course);
+
         // تحميل تقدم الدروس والأنماط والامتحانات والواجبات في العناصر
         foreach ($sections as $section) {
             foreach ($section->activeItems as $curriculumItem) {
@@ -184,11 +195,16 @@ class MyCourseController extends Controller
 
         // جلب كل الأقسام (مسطحة) مع العناصر لاحتساب التقدم وبناء الشجرة
         $allSections = $course->activeSections()
-            ->with(['activeItems' => function($query) {
-                $query->orderBy('order')->with('item');
-            }])
+            ->with([
+                'visibleStudents:id',
+                'activeItems' => function ($query) {
+                    $query->orderBy('order')->with(['item', 'visibleStudents:id']);
+                },
+            ])
             ->orderBy('order')
             ->get();
+
+        $allSections = $this->scholarshipVisibility->filterSectionsForStudent($allSections, $user, $course);
 
         // تحميل تقدم الدروس والأنماط والامتحانات في العناصر
         foreach ($allSections as $section) {
@@ -338,6 +354,10 @@ class MyCourseController extends Controller
         $course = $user->activeCourses()->findOrFail($courseId);
         $lecture = $course->lectures()->findOrFail($lectureId);
 
+        if (! $this->scholarshipVisibility->contentVisibleToStudent($course, Lecture::class, (int) $lectureId, $user)) {
+            abort(403, 'هذه المحاضرة غير متاحة لك');
+        }
+
         $resolved = LectureRecordingResolver::resolve($lecture->recording_url, $lecture->video_platform);
         $recordingUrl = $resolved['recording_url'];
         $videoPlatform = $resolved['video_platform'];
@@ -437,11 +457,16 @@ class MyCourseController extends Controller
         $course = $user->activeCourses()->findOrFail($courseId);
 
         $allSections = $course->activeSections()
-            ->with(['activeItems' => function ($q) {
-                $q->orderBy('order')->with('item');
-            }])
+            ->with([
+                'visibleStudents:id',
+                'activeItems' => function ($q) {
+                    $q->orderBy('order')->with(['item', 'visibleStudents:id']);
+                },
+            ])
             ->orderBy('order')
             ->get();
+
+        $allSections = $this->scholarshipVisibility->filterSectionsForStudent($allSections, $user, $course);
 
         // تحميل التقدم الذي تعتمد عليه الأقفال
         foreach ($allSections as $section) {
@@ -520,6 +545,10 @@ class MyCourseController extends Controller
         $course = $user->activeCourses()->findOrFail($courseId);
         $lecture = $course->lectures()->findOrFail($lectureId);
 
+        if (! $this->scholarshipVisibility->contentVisibleToStudent($course, Lecture::class, (int) $lectureId, $user)) {
+            return response()->json(['success' => false, 'message' => 'هذه المحاضرة غير متاحة لك'], 403);
+        }
+
         $data = $request->validate([
             'current_sec' => 'required|numeric|min:0',
             'duration_sec' => 'required|numeric|min:1',
@@ -539,9 +568,13 @@ class MyCourseController extends Controller
         $this->updateCourseProgress($user->id, (int) $courseId);
 
         $sectionsForProgress = $course->activeSections()
-            ->with(['activeItems' => fn ($q) => $q->with('item')])
+            ->with([
+                'visibleStudents:id',
+                'activeItems' => fn ($q) => $q->with(['item', 'visibleStudents:id']),
+            ])
             ->orderBy('order')
             ->get();
+        $sectionsForProgress = $this->scholarshipVisibility->filterSectionsForStudent($sectionsForProgress, $user, $course);
         foreach ($sectionsForProgress as $section) {
             foreach ($section->activeItems as $curriculumItem) {
                 if ($curriculumItem->item instanceof \App\Models\Lecture) {
@@ -684,7 +717,14 @@ class MyCourseController extends Controller
         $this->updateCourseProgress($user->id, $courseId);
 
         $course = $user->activeCourses()->findOrFail($courseId);
-        $sections = $course->activeSections()->with(['activeItems' => fn ($q) => $q->with('item')])->orderBy('order')->get();
+        $sections = $course->activeSections()
+            ->with([
+                'visibleStudents:id',
+                'activeItems' => fn ($q) => $q->with(['item', 'visibleStudents:id']),
+            ])
+            ->orderBy('order')
+            ->get();
+        $sections = $this->scholarshipVisibility->filterSectionsForStudent($sections, $user, $course);
         foreach ($sections as $section) {
             foreach ($section->activeItems as $curriculumItem) {
                 $entity = $curriculumItem->item;
@@ -842,7 +882,15 @@ class MyCourseController extends Controller
     {
         $course = \App\Models\AdvancedCourse::findOrFail($courseId);
         $user = \App\Models\User::findOrFail($userId);
-        $sections = $course->activeSections()->with(['activeItems' => fn ($q) => $q->with('item')])->orderBy('order')->get();
+        $sections = $course->activeSections()
+            ->with([
+                'visibleStudents:id',
+                'activeItems' => fn ($q) => $q->with(['item', 'visibleStudents:id']),
+            ])
+            ->orderBy('order')
+            ->get();
+
+        $sections = $this->scholarshipVisibility->filterSectionsForStudent($sections, $user, $course);
 
         foreach ($sections as $section) {
             foreach ($section->activeItems as $curriculumItem) {

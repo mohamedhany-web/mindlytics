@@ -18,6 +18,7 @@ class CourseSection extends Model
         'is_active',
         'unlock_rule',
         'unlock_percent',
+        'visibility_scope',
     ];
 
     protected $casts = [
@@ -29,6 +30,12 @@ class CourseSection extends Model
         static::deleting(function (CourseSection $section) {
             $section->children()->each(fn ($child) => $child->delete());
         });
+    }
+
+    public function visibleStudents()
+    {
+        return $this->belongsToMany(User::class, 'course_section_visible_students')
+            ->withTimestamps();
     }
 
     public function parent()
