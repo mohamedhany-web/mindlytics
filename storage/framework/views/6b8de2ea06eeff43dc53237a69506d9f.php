@@ -1,31 +1,31 @@
-@extends('layouts.admin')
 
-@section('title', 'مجموعات ووصول المنح - Mindlytics')
-@section('header', 'قسم المنح')
 
-@section('content')
-@include('admin.scholarships._styles')
+<?php $__env->startSection('title', 'مجموعات ووصول المنح - Mindlytics'); ?>
+<?php $__env->startSection('header', 'قسم المنح'); ?>
 
-@php
+<?php $__env->startSection('content'); ?>
+<?php echo $__env->make('admin.scholarships._styles', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+
+<?php
     $o = $overview ?? [];
-@endphp
+?>
 
 <div class="w-full space-y-6">
-    @include('admin.scholarships._alerts')
+    <?php echo $__env->make('admin.scholarships._alerts', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
-    @include('admin.scholarships._header', [
+    <?php echo $__env->make('admin.scholarships._header', [
         'title' => 'المجموعات والوصول',
         'subtitle' => 'رقابة مجموعات طلبة المنح وإدارة الأعضاء — إعدادات الوصول تظهر داخل كورس المنحة',
         'icon' => 'fas fa-layer-group',
         'actions' => '<button type="button" onclick="openScholarshipGroupModal()" class="' . $schBtnPrimary . '"><i class="fas fa-plus"></i><span>إنشاء مجموعة</span></button>',
-    ])
+    ], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
-    @include('admin.scholarships._stats-grid', ['cards' => [
+    <?php echo $__env->make('admin.scholarships._stats-grid', ['cards' => [
         ['label' => 'المجموعات', 'value' => number_format($o['groups_total'] ?? 0), 'icon' => 'fas fa-layer-group', 'description' => 'كل مجموعات المنح'],
         ['label' => 'أقسام مقيّدة', 'value' => number_format($o['restricted_sections'] ?? 0), 'icon' => 'fas fa-user-lock', 'description' => 'وصول محدود للأقسام'],
         ['label' => 'عناصر مقيّدة', 'value' => number_format($o['restricted_items'] ?? 0), 'icon' => 'fas fa-lock', 'description' => 'محاضرات/واجبات محدودة'],
         ['label' => 'طلاب مفعّلون', 'value' => number_format($o['activated'] ?? 0), 'icon' => 'fas fa-user-check', 'description' => 'يمكن ضمهم للمجموعات'],
-    ]])
+    ]], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
 
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
@@ -39,143 +39,146 @@
             </div>
         </div>
         <div class="px-6 py-5">
-            <form method="GET" action="{{ route('admin.scholarships.groups.index') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <form method="GET" action="<?php echo e(route('admin.scholarships.groups.index')); ?>" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="sm:col-span-2">
-                    <label class="{{ $schLabelClass }}"><i class="fas fa-search text-blue-600 text-sm"></i> البحث</label>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="اسم المجموعة أو المنحة" class="{{ $schInputClass }}">
+                    <label class="<?php echo e($schLabelClass); ?>"><i class="fas fa-search text-blue-600 text-sm"></i> البحث</label>
+                    <input type="text" name="search" value="<?php echo e(request('search')); ?>" placeholder="اسم المجموعة أو المنحة" class="<?php echo e($schInputClass); ?>">
                 </div>
                 <div>
-                    <label class="{{ $schLabelClass }}"><i class="fas fa-award text-blue-600 text-sm"></i> المنحة</label>
-                    <select name="program_id" class="{{ $schSelectClass }}">
+                    <label class="<?php echo e($schLabelClass); ?>"><i class="fas fa-award text-blue-600 text-sm"></i> المنحة</label>
+                    <select name="program_id" class="<?php echo e($schSelectClass); ?>">
                         <option value="">كل المنح</option>
-                        @foreach($programs as $program)
-                            <option value="{{ $program->id }}" @selected((string) request('program_id') === (string) $program->id)>{{ $program->name }}</option>
-                        @endforeach
+                        <?php $__currentLoopData = $programs; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $program): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($program->id); ?>" <?php if((string) request('program_id') === (string) $program->id): echo 'selected'; endif; ?>><?php echo e($program->name); ?></option>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </select>
                 </div>
                 <div class="flex items-end gap-2">
-                    <button type="submit" class="flex-1 {{ $schBtnPrimary }}"><i class="fas fa-search"></i><span>بحث</span></button>
-                    @if(request()->anyFilled(['search', 'program_id']))
-                        <a href="{{ route('admin.scholarships.groups.index') }}" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors" title="مسح الفلتر"><i class="fas fa-times"></i></a>
-                    @endif
+                    <button type="submit" class="flex-1 <?php echo e($schBtnPrimary); ?>"><i class="fas fa-search"></i><span>بحث</span></button>
+                    <?php if(request()->anyFilled(['search', 'program_id'])): ?>
+                        <a href="<?php echo e(route('admin.scholarships.groups.index')); ?>" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors" title="مسح الفلتر"><i class="fas fa-times"></i></a>
+                    <?php endif; ?>
                 </div>
             </form>
         </div>
     </section>
 
-    <section class="{{ $schSectionClass }}">
+    <section class="<?php echo e($schSectionClass); ?>">
         <div class="px-6 py-5 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <h3 class="text-lg font-black text-slate-900">مجموعات الطلبة</h3>
-            <a href="{{ route('admin.scholarships.courses.index') }}" class="{{ $schBtnSecondary }}">
+            <a href="<?php echo e(route('admin.scholarships.courses.index')); ?>" class="<?php echo e($schBtnSecondary); ?>">
                 <i class="fas fa-user-lock"></i>
                 <span>رقابة وصول الكورسات</span>
             </a>
         </div>
         <div class="p-6">
-            @if($groups->isEmpty())
+            <?php if($groups->isEmpty()): ?>
                 <div class="text-center py-12 text-slate-500">
                     <i class="fas fa-layer-group text-3xl text-slate-300 mb-3"></i>
                     <p class="font-medium">لا توجد مجموعات بعد — أنشئ مجموعة وقسّم الطلبة المفعّلين.</p>
                 </div>
-            @else
+            <?php else: ?>
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    @foreach($groups as $group)
+                    <?php $__currentLoopData = $groups; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $group): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                         <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
                             <div class="flex items-start justify-between gap-2 mb-2">
                                 <div class="min-w-0">
-                                    <h3 class="font-bold text-slate-800 truncate">{{ $group->name }}</h3>
+                                    <h3 class="font-bold text-slate-800 truncate"><?php echo e($group->name); ?></h3>
                                     <p class="text-xs text-slate-500 mt-0.5">
-                                        {{ $group->program?->name }}
-                                        @if($group->program?->instructor)
-                                            — {{ $group->program->instructor->name }}
-                                        @endif
+                                        <?php echo e($group->program?->name); ?>
+
+                                        <?php if($group->program?->instructor): ?>
+                                            — <?php echo e($group->program->instructor->name); ?>
+
+                                        <?php endif; ?>
                                     </p>
                                 </div>
                                 <span class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-semibold">
-                                    <i class="fas fa-users"></i> {{ $group->members_count }}
+                                    <i class="fas fa-users"></i> <?php echo e($group->members_count); ?>
+
                                 </span>
                             </div>
-                            @if($group->description)
-                                <p class="text-xs text-slate-600 mb-3 line-clamp-2">{{ $group->description }}</p>
-                            @endif
+                            <?php if($group->description): ?>
+                                <p class="text-xs text-slate-600 mb-3 line-clamp-2"><?php echo e($group->description); ?></p>
+                            <?php endif; ?>
                             <div class="flex flex-wrap gap-1.5 mb-3 max-h-16 overflow-hidden">
-                                @forelse($group->members->take(6) as $member)
-                                    <span class="inline-flex px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-[11px] text-slate-700">{{ $member->name }}</span>
-                                @empty
+                                <?php $__empty_1 = true; $__currentLoopData = $group->members->take(6); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $member): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                                    <span class="inline-flex px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-[11px] text-slate-700"><?php echo e($member->name); ?></span>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                                     <span class="text-[11px] text-slate-400">لا أعضاء بعد</span>
-                                @endforelse
-                                @if($group->members->count() > 6)
-                                    <span class="text-[11px] text-slate-500">+{{ $group->members->count() - 6 }}</span>
-                                @endif
+                                <?php endif; ?>
+                                <?php if($group->members->count() > 6): ?>
+                                    <span class="text-[11px] text-slate-500">+<?php echo e($group->members->count() - 6); ?></span>
+                                <?php endif; ?>
                             </div>
                             <div class="flex gap-2">
                                 <button type="button"
-                                        onclick="editScholarshipGroup({{ \Illuminate\Support\Js::from([
+                                        onclick="editScholarshipGroup(<?php echo e(\Illuminate\Support\Js::from([
                                             'id' => $group->id,
                                             'name' => $group->name,
                                             'description' => $group->description,
                                             'program_id' => $group->scholarship_program_id,
                                             'member_ids' => $group->members->pluck('id')->values()->all(),
-                                        ]) }})"
+                                        ])); ?>)"
                                         class="flex-1 px-3 py-1.5 rounded-lg bg-sky-100 hover:bg-sky-200 text-sky-700 text-xs font-semibold transition-colors">
                                     <i class="fas fa-edit ml-1"></i> تعديل
                                 </button>
-                                @if($group->program?->course)
-                                    <a href="{{ route('admin.scholarships.courses.show', $group->program->course) }}"
+                                <?php if($group->program?->course): ?>
+                                    <a href="<?php echo e(route('admin.scholarships.courses.show', $group->program->course)); ?>"
                                        class="px-3 py-1.5 rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-xs font-semibold transition-colors"
                                        title="رقابة الوصول">
                                         <i class="fas fa-user-lock"></i>
                                     </a>
-                                @endif
-                                <form method="POST" action="{{ route('admin.scholarships.groups.destroy', $group) }}"
+                                <?php endif; ?>
+                                <form method="POST" action="<?php echo e(route('admin.scholarships.groups.destroy', $group)); ?>"
                                       onsubmit="return confirm('حذف هذه المجموعة؟')">
-                                    @csrf
-                                    @method('DELETE')
+                                    <?php echo csrf_field(); ?>
+                                    <?php echo method_field('DELETE'); ?>
                                     <button type="submit" class="px-3 py-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-700 text-xs font-semibold transition-colors">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </form>
                             </div>
                         </div>
-                    @endforeach
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </div>
-            @endif
+            <?php endif; ?>
         </div>
-        @if($groups->hasPages())
-            <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-center">{{ $groups->links() }}</div>
-        @endif
+        <?php if($groups->hasPages()): ?>
+            <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-center"><?php echo e($groups->links()); ?></div>
+        <?php endif; ?>
     </section>
 </div>
 
-{{-- Modal مجموعة --}}
+
 <div id="scholarshipGroupModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
     <div class="bg-white rounded-2xl p-6 max-w-lg w-full shadow-xl border border-slate-200 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-bold text-slate-800" id="scholarshipGroupModalTitle">إنشاء مجموعة</h3>
             <button type="button" onclick="closeScholarshipGroupModal()" class="p-2 rounded-lg text-slate-500 hover:bg-slate-100"><i class="fas fa-times"></i></button>
         </div>
-        <form id="scholarshipGroupForm" method="POST" action="{{ route('admin.scholarships.groups.store') }}">
-            @csrf
+        <form id="scholarshipGroupForm" method="POST" action="<?php echo e(route('admin.scholarships.groups.store')); ?>">
+            <?php echo csrf_field(); ?>
             <input type="hidden" name="_method" id="scholarshipGroupMethod" value="POST">
             <div class="mb-4">
-                <label class="{{ $schLabelClass }}">المنحة <span class="text-red-500">*</span></label>
+                <label class="<?php echo e($schLabelClass); ?>">المنحة <span class="text-red-500">*</span></label>
                 <select name="scholarship_program_id" id="scholarshipGroupProgram" required onchange="renderGroupMemberCheckboxes()"
-                        class="{{ $schSelectClass }}">
+                        class="<?php echo e($schSelectClass); ?>">
                     <option value="">اختر المنحة</option>
-                    @foreach($programs as $program)
-                        <option value="{{ $program->id }}">{{ $program->name }}</option>
-                    @endforeach
+                    <?php $__currentLoopData = $programs; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $program): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <option value="<?php echo e($program->id); ?>"><?php echo e($program->name); ?></option>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </select>
             </div>
             <div class="mb-4">
-                <label class="{{ $schLabelClass }}">اسم المجموعة <span class="text-red-500">*</span></label>
+                <label class="<?php echo e($schLabelClass); ?>">اسم المجموعة <span class="text-red-500">*</span></label>
                 <input type="text" name="name" id="scholarshipGroupName" required maxlength="255"
-                       class="{{ $schInputClass }}" placeholder="مثال: مجموعة أ">
+                       class="<?php echo e($schInputClass); ?>" placeholder="مثال: مجموعة أ">
             </div>
             <div class="mb-4">
-                <label class="{{ $schLabelClass }}">الوصف (اختياري)</label>
+                <label class="<?php echo e($schLabelClass); ?>">الوصف (اختياري)</label>
                 <textarea name="description" id="scholarshipGroupDescription" rows="2"
-                          class="{{ $schInputClass }}" placeholder="وصف مختصر..."></textarea>
+                          class="<?php echo e($schInputClass); ?>" placeholder="وصف مختصر..."></textarea>
             </div>
             <div class="mb-4">
                 <div class="flex items-center justify-between mb-2">
@@ -187,22 +190,22 @@
                 </div>
             </div>
             <div class="flex gap-3">
-                <button type="submit" class="flex-1 {{ $schBtnPrimary }}">حفظ</button>
-                <button type="button" onclick="closeScholarshipGroupModal()" class="{{ $schBtnSecondary }}">إلغاء</button>
+                <button type="submit" class="flex-1 <?php echo e($schBtnPrimary); ?>">حفظ</button>
+                <button type="button" onclick="closeScholarshipGroupModal()" class="<?php echo e($schBtnSecondary); ?>">إلغاء</button>
             </div>
         </form>
     </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
-const activatedByProgram = @json(($activatedByProgram ?? collect())->map(fn ($users) => $users->map(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'email' => $u->email ?? ''])->values())->toArray());
+const activatedByProgram = <?php echo json_encode(($activatedByProgram ?? collect())->map(fn ($users) => $users->map(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'email' => $u->email ?? ''])->values())->toArray()) ?>;
 let editingGroupMemberIds = [];
 
 function openScholarshipGroupModal() {
     document.getElementById('scholarshipGroupModalTitle').textContent = 'إنشاء مجموعة';
-    document.getElementById('scholarshipGroupForm').action = @json(route('admin.scholarships.groups.store'));
+    document.getElementById('scholarshipGroupForm').action = <?php echo json_encode(route('admin.scholarships.groups.store'), 15, 512) ?>;
     document.getElementById('scholarshipGroupMethod').value = 'POST';
     document.getElementById('scholarshipGroupProgram').value = '';
     document.getElementById('scholarshipGroupProgram').disabled = false;
@@ -274,4 +277,6 @@ function toggleAllGroupMembers() {
     boxes.forEach(b => { b.checked = !allChecked; });
 }
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
+
+<?php echo $__env->make('layouts.admin', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\mindly tics\Mindlytics\resources\views/admin/scholarships/groups/index.blade.php ENDPATH**/ ?>

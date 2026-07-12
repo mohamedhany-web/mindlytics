@@ -136,13 +136,13 @@
                             </div>
                             <div class="flex gap-2">
                                 <button type="button"
-                                        onclick='editScholarshipGroup(@json([
-                                            "id" => $group->id,
-                                            "name" => $group->name,
-                                            "description" => $group->description,
-                                            "program_id" => $group->scholarship_program_id,
-                                            "member_ids" => $group->members->pluck("id")->values(),
-                                        ]))'
+                                        onclick="editScholarshipGroup({{ \Illuminate\Support\Js::from([
+                                            'id' => $group->id,
+                                            'name' => $group->name,
+                                            'description' => $group->description,
+                                            'program_id' => $group->scholarship_program_id,
+                                            'member_ids' => $group->members->pluck('id')->values()->all(),
+                                        ]) }})"
                                         class="flex-1 px-3 py-1.5 rounded-lg bg-sky-100 hover:bg-sky-200 text-sky-700 text-xs font-semibold transition-colors">
                                     <i class="fas fa-edit ml-1"></i> تعديل
                                 </button>
