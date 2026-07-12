@@ -16,24 +16,43 @@
     ];
 @endphp
 
-<div class="space-y-6">
+<div class="w-full space-y-6">
     @include('admin.scholarships._alerts')
 
     @include('admin.scholarships._header', [
-        'title' => 'إدارة المنح الدراسية',
-        'subtitle' => 'إدارة كاملة للمنح، الكورسات، المدربين، والطلاب — كل البيانات تحت لوحة الأدمن',
-        'icon' => 'fas fa-graduation-cap',
+        'title' => 'لوحة المنح',
+        'subtitle' => 'رقابة شاملة للمنح والكورسات والمدربين والطلاب والمجموعات والوصول',
+        'icon' => 'fas fa-tachometer-alt',
         'actions' => '<a href="' . route('admin.scholarships.programs.create') . '" class="' . $schBtnPrimary . '"><i class="fas fa-plus"></i><span>منحة جديدة</span></a>',
     ])
 
     @include('admin.scholarships._stats-grid', ['cards' => [
         ['label' => 'المنح الدراسية', 'value' => number_format($o['programs_total'] ?? 0), 'icon' => 'fas fa-award', 'description' => number_format($o['programs_active'] ?? 0) . ' منحة نشطة'],
-        ['label' => 'إجمالي المسجّلين', 'value' => number_format($o['registrations_total'] ?? 0), 'icon' => 'fas fa-users', 'description' => 'كل حالات التسجيل في المنح'],
-        ['label' => 'بانتظار التفعيل', 'value' => number_format($o['registered'] ?? 0), 'icon' => 'fas fa-hourglass-half', 'description' => 'يحتاج موافقة الإدارة'],
         ['label' => 'طلاب مفعّلون', 'value' => number_format($o['activated'] ?? 0), 'icon' => 'fas fa-user-check', 'description' => 'لديهم وصول للكورس'],
+        ['label' => 'المجموعات', 'value' => number_format($o['groups_total'] ?? 0), 'icon' => 'fas fa-layer-group', 'description' => 'تقسيم الطلبة'],
+        ['label' => 'محتوى مقيّد', 'value' => number_format(($o['restricted_sections'] ?? 0) + ($o['restricted_items'] ?? 0)), 'icon' => 'fas fa-user-lock', 'description' => (number_format($o['restricted_sections'] ?? 0) . ' أقسام / ' . number_format($o['restricted_items'] ?? 0) . ' عناصر')],
     ]])
 
-    @include('admin.scholarships._nav', ['active' => 'dashboard'])
+    {{-- أقسام الرقابة — صفحات مستقلة --}}
+    <section class="w-full grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        @foreach([
+            ['route' => 'admin.scholarships.programs.index', 'icon' => 'fas fa-award', 'title' => 'المنح الدراسية', 'desc' => 'إنشاء ومتابعة كل المنح وروابط التسجيل'],
+            ['route' => 'admin.scholarships.courses.index', 'icon' => 'fas fa-book', 'title' => 'كورسات المنح', 'desc' => 'رقابة الكورسات المعزولة ووصول المنهج'],
+            ['route' => 'admin.scholarships.instructors.index', 'icon' => 'fas fa-chalkboard-teacher', 'title' => 'مدربو المنح', 'desc' => 'متابعة المدربين وطلاب كل منحة'],
+            ['route' => 'admin.scholarships.students.index', 'icon' => 'fas fa-user-graduate', 'title' => 'طلاب المنح', 'desc' => 'تفعيل ورفض وإلغاء تفعيل المسجّلين'],
+            ['route' => 'admin.scholarships.groups.index', 'icon' => 'fas fa-layer-group', 'title' => 'المجموعات والوصول', 'desc' => 'تقسيم الطلبة ورقابة المحتوى المقيّد'],
+        ] as $link)
+            <a href="{{ route($link['route']) }}" class="sch-card rounded-2xl p-5 flex items-start gap-4 hover:border-blue-300 transition-all">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-md shrink-0">
+                    <i class="{{ $link['icon'] }}"></i>
+                </div>
+                <div class="min-w-0">
+                    <h3 class="font-black text-slate-900">{{ $link['title'] }}</h3>
+                    <p class="text-xs text-slate-600 mt-1 leading-relaxed">{{ $link['desc'] }}</p>
+                </div>
+            </a>
+        @endforeach
+    </section>
 
     {{-- البحث والفلترة --}}
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">

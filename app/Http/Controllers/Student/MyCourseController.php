@@ -86,9 +86,9 @@ class MyCourseController extends Controller
         // جلب الأقسام مع العناصر مرتبة
         $sections = $course->activeSections()
             ->with([
-                'visibleStudents:id',
+                'visibleStudents:id', 'visibleGroups.members:id',
                 'activeItems' => function ($query) {
-                    $query->orderBy('order')->with(['item', 'visibleStudents:id']);
+                    $query->orderBy('order')->with(['item', 'visibleStudents:id', 'visibleGroups.members:id']);
                 },
             ])
             ->orderBy('order')
@@ -196,9 +196,9 @@ class MyCourseController extends Controller
         // جلب كل الأقسام (مسطحة) مع العناصر لاحتساب التقدم وبناء الشجرة
         $allSections = $course->activeSections()
             ->with([
-                'visibleStudents:id',
+                'visibleStudents:id', 'visibleGroups.members:id',
                 'activeItems' => function ($query) {
-                    $query->orderBy('order')->with(['item', 'visibleStudents:id']);
+                    $query->orderBy('order')->with(['item', 'visibleStudents:id', 'visibleGroups.members:id']);
                 },
             ])
             ->orderBy('order')
@@ -458,9 +458,9 @@ class MyCourseController extends Controller
 
         $allSections = $course->activeSections()
             ->with([
-                'visibleStudents:id',
+                'visibleStudents:id', 'visibleGroups.members:id',
                 'activeItems' => function ($q) {
-                    $q->orderBy('order')->with(['item', 'visibleStudents:id']);
+                    $q->orderBy('order')->with(['item', 'visibleStudents:id', 'visibleGroups.members:id']);
                 },
             ])
             ->orderBy('order')
@@ -569,8 +569,8 @@ class MyCourseController extends Controller
 
         $sectionsForProgress = $course->activeSections()
             ->with([
-                'visibleStudents:id',
-                'activeItems' => fn ($q) => $q->with(['item', 'visibleStudents:id']),
+                'visibleStudents:id', 'visibleGroups.members:id',
+                'activeItems' => fn ($q) => $q->with(['item', 'visibleStudents:id', 'visibleGroups.members:id']),
             ])
             ->orderBy('order')
             ->get();
@@ -719,8 +719,8 @@ class MyCourseController extends Controller
         $course = $user->activeCourses()->findOrFail($courseId);
         $sections = $course->activeSections()
             ->with([
-                'visibleStudents:id',
-                'activeItems' => fn ($q) => $q->with(['item', 'visibleStudents:id']),
+                'visibleStudents:id', 'visibleGroups.members:id',
+                'activeItems' => fn ($q) => $q->with(['item', 'visibleStudents:id', 'visibleGroups.members:id']),
             ])
             ->orderBy('order')
             ->get();
@@ -884,8 +884,8 @@ class MyCourseController extends Controller
         $user = \App\Models\User::findOrFail($userId);
         $sections = $course->activeSections()
             ->with([
-                'visibleStudents:id',
-                'activeItems' => fn ($q) => $q->with(['item', 'visibleStudents:id']),
+                'visibleStudents:id', 'visibleGroups.members:id',
+                'activeItems' => fn ($q) => $q->with(['item', 'visibleStudents:id', 'visibleGroups.members:id']),
             ])
             ->orderBy('order')
             ->get();

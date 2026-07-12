@@ -15,7 +15,7 @@
     ];
 @endphp
 
-<div class="space-y-6">
+<div class="w-full space-y-6">
     @include('admin.scholarships._alerts')
 
     @include('admin.scholarships._header', [
@@ -31,7 +31,6 @@
         ['label' => 'مرفوضون', 'value' => number_format($stats['rejected'] ?? 0), 'icon' => 'fas fa-user-times', 'description' => 'تسجيلات مرفوضة'],
     ]])
 
-    @include('admin.scholarships._nav', ['active' => 'students'])
 
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
         <div class="px-6 py-5 border-b border-slate-200 bg-slate-50">

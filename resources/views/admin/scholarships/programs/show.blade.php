@@ -15,9 +15,8 @@
     ];
 @endphp
 
-<div class="space-y-6">
+<div class="w-full space-y-6">
     @include('admin.scholarships._alerts')
-    @include('admin.scholarships._nav', ['active' => 'programs'])
 
     @include('admin.scholarships._header', [
         'title' => $program->name,
@@ -53,7 +52,43 @@
                     <a href="{{ route('admin.scholarships.instructors.show', $program->instructor) }}" class="{{ $schBtnSecondary }}"><i class="fas fa-chalkboard-teacher"></i> المدرب</a>
                 @endif
                 <a href="{{ route('admin.scholarships.students.index', ['program_id' => $program->id]) }}" class="{{ $schBtnSecondary }}"><i class="fas fa-user-graduate"></i> كل الطلاب</a>
+                <a href="{{ route('admin.scholarships.groups.index', ['program_id' => $program->id]) }}" class="{{ $schBtnSecondary }}"><i class="fas fa-layer-group"></i> المجموعات ({{ $program->groups_count ?? ($groups->count() ?? 0) }})</a>
             </div>
+        </div>
+    </section>
+
+    <section class="{{ $schSectionClass }}">
+        <div class="px-6 py-5 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <h3 class="text-lg font-black text-slate-900">مجموعات الطلبة</h3>
+            <a href="{{ route('admin.scholarships.groups.index', ['program_id' => $program->id]) }}" class="{{ $schBtnSecondary }}"><i class="fas fa-external-link-alt"></i> إدارة المجموعات</a>
+        </div>
+        <div class="p-6">
+            @if(($groups ?? collect())->isEmpty())
+                <p class="text-sm text-slate-500 text-center py-6">لا توجد مجموعات لهذه المنحة بعد.</p>
+            @else
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    @foreach($groups as $group)
+                        <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                            <div class="flex items-start justify-between gap-2 mb-2">
+                                <h4 class="font-bold text-slate-800 truncate">{{ $group->name }}</h4>
+                                <span class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-semibold">
+                                    <i class="fas fa-users"></i> {{ $group->members_count }}
+                                </span>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5">
+                                @forelse($group->members->take(6) as $member)
+                                    <span class="inline-flex px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-[11px] text-slate-700">{{ $member->name }}</span>
+                                @empty
+                                    <span class="text-[11px] text-slate-400">لا أعضاء</span>
+                                @endforelse
+                                @if($group->members->count() > 6)
+                                    <span class="text-[11px] text-slate-500">+{{ $group->members->count() - 6 }}</span>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
         </div>
     </section>
 

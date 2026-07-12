@@ -38,6 +38,12 @@ class CourseSection extends Model
             ->withTimestamps();
     }
 
+    public function visibleGroups()
+    {
+        return $this->belongsToMany(ScholarshipGroup::class, 'course_section_visible_groups')
+            ->withTimestamps();
+    }
+
     public function parent()
     {
         return $this->belongsTo(CourseSection::class, 'parent_id');

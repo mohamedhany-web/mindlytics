@@ -68,6 +68,7 @@ class ProgramController extends Controller
             'registrations as activated_count' => fn ($q) => $q->where('status', ScholarshipRegistration::STATUS_ACTIVATED),
             'registrations as pending_count' => fn ($q) => $q->where('status', ScholarshipRegistration::STATUS_REGISTERED),
             'registrations as rejected_count' => fn ($q) => $q->where('status', ScholarshipRegistration::STATUS_REJECTED),
+            'groups',
         ]);
 
         $registrations = ScholarshipRegistration::query()
@@ -76,7 +77,12 @@ class ProgramController extends Controller
             ->orderByDesc('registered_at')
             ->paginate(30);
 
-        return view('admin.scholarships.programs.show', compact('program', 'registrations'));
+        $groups = $program->groups()
+            ->with(['members:id,name'])
+            ->withCount('members')
+            ->get();
+
+        return view('admin.scholarships.programs.show', compact('program', 'registrations', 'groups'));
     }
 
     public function edit(ScholarshipProgram $program): View

@@ -76,9 +76,9 @@ class StudentLearnController extends Controller
 
         $sections = $course->activeSections()
             ->with([
-                'visibleStudents:id',
+                'visibleStudents:id', 'visibleGroups.members:id',
                 'activeItems' => function ($query) {
-                    $query->orderBy('order')->with(['item', 'visibleStudents:id']);
+                    $query->orderBy('order')->with(['item', 'visibleStudents:id', 'visibleGroups.members:id']);
                 },
             ])
             ->orderBy('order')

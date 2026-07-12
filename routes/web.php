@@ -1237,6 +1237,10 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('instructors', [\App\Http\Controllers\Admin\Scholarship\InstructorController::class, 'index'])->name('instructors.index');
             Route::get('instructors/{instructor}', [\App\Http\Controllers\Admin\Scholarship\InstructorController::class, 'show'])->name('instructors.show');
             Route::get('students', [\App\Http\Controllers\Admin\Scholarship\RegistrationController::class, 'index'])->name('students.index');
+            Route::get('groups', [\App\Http\Controllers\Admin\Scholarship\GroupController::class, 'index'])->name('groups.index');
+            Route::post('groups', [\App\Http\Controllers\Admin\Scholarship\GroupController::class, 'store'])->name('groups.store');
+            Route::put('groups/{group}', [\App\Http\Controllers\Admin\Scholarship\GroupController::class, 'update'])->name('groups.update');
+            Route::delete('groups/{group}', [\App\Http\Controllers\Admin\Scholarship\GroupController::class, 'destroy'])->name('groups.destroy');
             Route::post('registrations/{registration}/activate', [\App\Http\Controllers\Admin\Scholarship\RegistrationController::class, 'activate'])->name('registrations.activate');
             Route::post('registrations/{registration}/deactivate', [\App\Http\Controllers\Admin\Scholarship\RegistrationController::class, 'deactivate'])->name('registrations.deactivate');
             Route::post('registrations/{registration}/reject', [\App\Http\Controllers\Admin\Scholarship\RegistrationController::class, 'reject'])->name('registrations.reject');
@@ -2190,6 +2194,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::post('scholarships/registrations/{registration}/activate', [\App\Http\Controllers\Instructor\Scholarship\RegistrationController::class, 'activate'])->name('scholarships.registrations.activate');
         Route::post('scholarships/registrations/{registration}/deactivate', [\App\Http\Controllers\Instructor\Scholarship\RegistrationController::class, 'deactivate'])->name('scholarships.registrations.deactivate');
         Route::post('scholarships/registrations/{registration}/reject', [\App\Http\Controllers\Instructor\Scholarship\RegistrationController::class, 'reject'])->name('scholarships.registrations.reject');
+        Route::post('scholarships/groups', [\App\Http\Controllers\Instructor\Scholarship\GroupController::class, 'store'])->name('scholarships.groups.store');
+        Route::put('scholarships/groups/{group}', [\App\Http\Controllers\Instructor\Scholarship\GroupController::class, 'update'])->name('scholarships.groups.update');
+        Route::delete('scholarships/groups/{group}', [\App\Http\Controllers\Instructor\Scholarship\GroupController::class, 'destroy'])->name('scholarships.groups.destroy');
         Route::get('scholarships/{program}', [\App\Http\Controllers\Instructor\ScholarshipController::class, 'show'])->name('scholarships.show');
         Route::get('courses/{course}/mind-map', [\App\Http\Controllers\Instructor\CourseMindMapController::class, 'edit'])->name('courses.mind-map.edit');
         Route::put('courses/{course}/mind-map', [\App\Http\Controllers\Instructor\CourseMindMapController::class, 'update'])->name('courses.mind-map.update');

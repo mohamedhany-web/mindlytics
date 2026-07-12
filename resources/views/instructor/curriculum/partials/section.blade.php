@@ -19,6 +19,11 @@
                             <i class="fas fa-user-check"></i>
                             {{ $sectionSelectedCount }} طالب
                         </span>
+                    @elseif($isScholarshipCurriculum && $sectionScope === 'groups')
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-semibold" title="ظاهر لمجموعات محددة">
+                            <i class="fas fa-layer-group"></i>
+                            مجموعات
+                        </span>
                     @endif
                 </div>
                 @if($section->description)
@@ -94,9 +99,9 @@
                                             <span>أسئلة فيديو</span>
                                         </span>
                                     @endif
-                                    @if($isScholarshipCurriculum && ($item->visibility_scope ?? 'all') === 'selected')
-                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[10px] shrink-0" title="ظاهر لطلبة محددين">
-                                            <i class="fas fa-user-check"></i>
+                                    @if($isScholarshipCurriculum && in_array(($item->visibility_scope ?? 'all'), ['selected', 'groups'], true))
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[10px] shrink-0" title="وصول مقيّد">
+                                            <i class="fas fa-user-lock"></i>
                                         </span>
                                     @endif
                                 </div>
@@ -112,7 +117,7 @@
                             @elseif($item->item instanceof \App\Models\Assignment)
                                 <i class="fas fa-tasks text-emerald-500 shrink-0"></i>
                                 <span class="font-semibold text-slate-800 truncate">{{ $item->item->title }}</span>
-                                @if($isScholarshipCurriculum && ($item->visibility_scope ?? 'all') === 'selected')
+                                @if($isScholarshipCurriculum && in_array(($item->visibility_scope ?? 'all'), ['selected', 'groups'], true))
                                     <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[10px] shrink-0" title="ظاهر لطلبة محددين">
                                         <i class="fas fa-user-check"></i>
                                     </span>
@@ -128,7 +133,7 @@
                             @elseif($item->item instanceof \App\Models\AdvancedExam || $item->item instanceof \App\Models\Exam)
                                 <i class="fas fa-clipboard-check text-violet-500 shrink-0"></i>
                                 <span class="font-semibold text-slate-800 truncate">{{ $item->item->title }}</span>
-                                @if($isScholarshipCurriculum && ($item->visibility_scope ?? 'all') === 'selected')
+                                @if($isScholarshipCurriculum && in_array(($item->visibility_scope ?? 'all'), ['selected', 'groups'], true))
                                     <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[10px] shrink-0" title="ظاهر لطلبة محددين">
                                         <i class="fas fa-user-check"></i>
                                     </span>
@@ -147,7 +152,7 @@
                                 @php $typeInfo = $item->item->getTypeInfo(); @endphp
                                 <i class="{{ $typeInfo['icon'] ?? 'fas fa-puzzle-piece' }} text-amber-500 shrink-0"></i>
                                 <span class="font-semibold text-slate-800 truncate">{{ $item->item->title }}</span>
-                                @if($isScholarshipCurriculum && ($item->visibility_scope ?? 'all') === 'selected')
+                                @if($isScholarshipCurriculum && in_array(($item->visibility_scope ?? 'all'), ['selected', 'groups'], true))
                                     <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 text-[10px] shrink-0" title="ظاهر لطلبة محددين">
                                         <i class="fas fa-user-check"></i>
                                     </span>

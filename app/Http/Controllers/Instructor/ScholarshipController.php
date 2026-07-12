@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
+use App\Models\ScholarshipGroup;
 use App\Models\ScholarshipProgram;
 use App\Models\ScholarshipRegistration;
 use Illuminate\Http\Request;
@@ -75,7 +76,28 @@ class ScholarshipController extends Controller
                 ->where('status', ScholarshipRegistration::STATUS_REJECTED)->count(),
         ];
 
-        return view('instructor.scholarships.students.index', compact('registrations', 'programs', 'stats'));
+        $groups = ScholarshipGroup::query()
+            ->whereIn('scholarship_program_id', $programIds)
+            ->with(['program:id,name', 'members:id,name,email'])
+            ->withCount('members')
+            ->orderBy('name')
+            ->get();
+
+        $activatedByProgram = ScholarshipRegistration::query()
+            ->whereIn('scholarship_program_id', $programIds)
+            ->activated()
+            ->with('user:id,name,email')
+            ->get()
+            ->groupBy('scholarship_program_id')
+            ->map(fn ($rows) => $rows->pluck('user')->filter()->unique('id')->values());
+
+        return view('instructor.scholarships.students.index', compact(
+            'registrations',
+            'programs',
+            'stats',
+            'groups',
+            'activatedByProgram'
+        ));
     }
 
     public function show(Request $request, ScholarshipProgram $program): View

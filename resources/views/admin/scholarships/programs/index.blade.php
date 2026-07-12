@@ -6,7 +6,7 @@
 @section('content')
 @include('admin.scholarships._styles')
 
-<div class="space-y-6">
+<div class="w-full space-y-6">
     @include('admin.scholarships._alerts')
 
     @include('admin.scholarships._header', [
@@ -19,11 +19,10 @@
     @include('admin.scholarships._stats-grid', ['cards' => [
         ['label' => 'إجمالي المنح', 'value' => number_format($overview['programs_total'] ?? 0), 'icon' => 'fas fa-award', 'description' => number_format($overview['programs_active'] ?? 0) . ' نشطة'],
         ['label' => 'مسجّلون', 'value' => number_format($overview['registrations_total'] ?? 0), 'icon' => 'fas fa-users', 'description' => 'كل التسجيلات'],
-        ['label' => 'بانتظار التفعيل', 'value' => number_format($overview['registered'] ?? 0), 'icon' => 'fas fa-hourglass-half', 'description' => 'طلبات معلّقة'],
-        ['label' => 'مفعّلون', 'value' => number_format($overview['activated'] ?? 0), 'icon' => 'fas fa-user-check', 'description' => 'طلاب نشطون'],
+        ['label' => 'المجموعات', 'value' => number_format($overview['groups_total'] ?? 0), 'icon' => 'fas fa-layer-group', 'description' => 'تقسيم الطلبة'],
+        ['label' => 'محتوى مقيّد', 'value' => number_format(($overview['restricted_sections'] ?? 0) + ($overview['restricted_items'] ?? 0)), 'icon' => 'fas fa-user-lock', 'description' => 'أقسام وعناصر محدودة'],
     ]])
 
-    @include('admin.scholarships._nav', ['active' => 'programs'])
 
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
         <div class="px-6 py-5 border-b border-slate-200 bg-slate-50">

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Scholarship;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdvancedCourse;
+use App\Models\ScholarshipGroup;
 use App\Models\ScholarshipRegistration;
 use App\Services\Scholarship\ScholarshipStatsService;
 use Illuminate\Http\Request;
@@ -63,6 +64,44 @@ class CourseController extends Controller
             ->orderByDesc('activated_at')
             ->paginate(20, ['*'], 'students_page');
 
-        return view('admin.scholarships.courses.show', compact('course', 'registrations'));
+        $groups = ScholarshipGroup::query()
+            ->where('scholarship_program_id', $course->scholarship_program_id)
+            ->with(['members:id,name'])
+            ->withCount('members')
+            ->orderBy('name')
+            ->get();
+
+        $curriculumSections = $course->sections()
+            ->with([
+                'visibleStudents:id,name',
+                'visibleGroups:id,name',
+                'items' => function ($query) {
+                    $query->orderBy('order')->with([
+                        'item',
+                        'visibleStudents:id,name',
+                        'visibleGroups:id,name',
+                    ]);
+                },
+            ])
+            ->orderBy('order')
+            ->get();
+
+        $visibilityStats = [
+            'sections_total' => $curriculumSections->count(),
+            'sections_restricted' => $curriculumSections->whereIn('visibility_scope', ['selected', 'groups'])->count(),
+            'items_total' => $curriculumSections->sum(fn ($s) => $s->items->count()),
+            'items_restricted' => $curriculumSections->sum(
+                fn ($s) => $s->items->whereIn('visibility_scope', ['selected', 'groups'])->count()
+            ),
+            'groups_total' => $groups->count(),
+        ];
+
+        return view('admin.scholarships.courses.show', compact(
+            'course',
+            'registrations',
+            'groups',
+            'curriculumSections',
+            'visibilityStats'
+        ));
     }
 }

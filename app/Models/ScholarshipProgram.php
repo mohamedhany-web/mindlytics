@@ -82,6 +82,11 @@ class ScholarshipProgram extends Model
         return $this->hasMany(ScholarshipRegistration::class, 'scholarship_program_id');
     }
 
+    public function groups(): HasMany
+    {
+        return $this->hasMany(ScholarshipGroup::class, 'scholarship_program_id')->orderBy('name');
+    }
+
     public function isRegistrationOpen(): bool
     {
         if (! $this->is_active) {

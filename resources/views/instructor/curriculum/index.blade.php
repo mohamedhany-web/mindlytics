@@ -213,7 +213,7 @@
 @if(!empty($isScholarshipCurriculum))
 <!-- Modal إعداد الوصول (قسم أو محاضرة/عنصر) -->
 <div id="accessVisibilityModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+    <div class="bg-white rounded-2xl p-6 max-w-lg w-full shadow-xl border border-slate-200 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-xl font-bold text-slate-800" id="accessVisibilityTitle">إعداد الوصول</h3>
             <button type="button" onclick="closeAccessVisibilityModal()" class="p-2 rounded-lg text-slate-500 hover:bg-slate-100">
@@ -224,23 +224,56 @@
         <form id="accessVisibilityForm" onsubmit="saveAccessVisibility(event)">
             <input type="hidden" id="accessTargetType">
             <input type="hidden" id="accessTargetId">
-            <div class="mb-4">
+            <div class="mb-4 space-y-2">
                 <label class="block text-sm font-semibold text-slate-700 mb-2">الظهور</label>
-                <select id="accessVisibilityScope" onchange="toggleAccessStudentSelect()" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 text-slate-800 mb-2">
-                    <option value="all">كل طلبة المنحة</option>
-                    <option value="selected">طلبة محددون فقط</option>
-                </select>
-                <div id="accessVisibleStudentsWrap" class="hidden">
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">اختر الطلبة</label>
-                    <select id="accessVisibleStudents" multiple size="8"
-                            class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 text-slate-800 text-sm">
-                        @foreach(($scholarshipStudents ?? collect()) as $student)
-                            <option value="{{ $student->id }}">{{ $student->name }}@if($student->email) — {{ $student->email }}@endif</option>
-                        @endforeach
-                    </select>
-                    <p class="text-[11px] text-slate-500 mt-1">اضغط Ctrl (أو Cmd) لاختيار أكثر من طالب.</p>
+                <label class="flex items-center gap-2 p-3 rounded-xl border border-slate-200 cursor-pointer hover:border-sky-300 bg-slate-50">
+                    <input type="radio" name="access_scope_radio" value="all" class="access-scope-radio w-4 h-4 text-sky-600" checked onchange="toggleAccessScopePanels()">
+                    <span class="text-sm font-semibold text-slate-800">كل طلبة المنحة</span>
+                </label>
+                <label class="flex items-center gap-2 p-3 rounded-xl border border-slate-200 cursor-pointer hover:border-sky-300 bg-slate-50">
+                    <input type="radio" name="access_scope_radio" value="selected" class="access-scope-radio w-4 h-4 text-sky-600" onchange="toggleAccessScopePanels()">
+                    <span class="text-sm font-semibold text-slate-800">طلبة محددون</span>
+                </label>
+                <label class="flex items-center gap-2 p-3 rounded-xl border border-slate-200 cursor-pointer hover:border-sky-300 bg-slate-50">
+                    <input type="radio" name="access_scope_radio" value="groups" class="access-scope-radio w-4 h-4 text-sky-600" onchange="toggleAccessScopePanels()">
+                    <span class="text-sm font-semibold text-slate-800">مجموعات محددة</span>
+                </label>
+            </div>
+
+            <div id="accessVisibleStudentsWrap" class="hidden mb-4">
+                <div class="flex items-center justify-between mb-2">
+                    <label class="block text-xs font-semibold text-slate-600">اختر الطلبة</label>
+                    <button type="button" onclick="toggleAllAccessCheckboxes('access-student-cb')" class="text-[11px] font-semibold text-sky-600">تحديد الكل / إلغاء</button>
+                </div>
+                <div class="max-h-48 overflow-y-auto rounded-xl border border-slate-200 p-3 space-y-2 bg-slate-50">
+                    @forelse(($scholarshipStudents ?? collect()) as $student)
+                        <label class="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-sky-300">
+                            <input type="checkbox" class="access-student-cb w-4 h-4 text-sky-600 rounded border-slate-300" value="{{ $student->id }}">
+                            <span class="text-sm text-slate-800">{{ $student->name }}@if($student->email) <span class="text-xs text-slate-500">— {{ $student->email }}</span>@endif</span>
+                        </label>
+                    @empty
+                        <p class="text-xs text-slate-500">لا يوجد طلبة مفعّلون بعد.</p>
+                    @endforelse
                 </div>
             </div>
+
+            <div id="accessVisibleGroupsWrap" class="hidden mb-4">
+                <div class="flex items-center justify-between mb-2">
+                    <label class="block text-xs font-semibold text-slate-600">اختر المجموعات</label>
+                    <button type="button" onclick="toggleAllAccessCheckboxes('access-group-cb')" class="text-[11px] font-semibold text-sky-600">تحديد الكل / إلغاء</button>
+                </div>
+                <div class="max-h-48 overflow-y-auto rounded-xl border border-slate-200 p-3 space-y-2 bg-slate-50">
+                    @forelse(($scholarshipGroups ?? collect()) as $group)
+                        <label class="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-indigo-300">
+                            <input type="checkbox" class="access-group-cb w-4 h-4 text-indigo-600 rounded border-slate-300" value="{{ $group->id }}">
+                            <span class="text-sm text-slate-800">{{ $group->name }} <span class="text-xs text-slate-500">({{ $group->members_count ?? $group->members()->count() }} طالب)</span></span>
+                        </label>
+                    @empty
+                        <p class="text-xs text-slate-500">لا توجد مجموعات — أنشئها من صفحة طلاب المنح.</p>
+                    @endforelse
+                </div>
+            </div>
+
             <div class="flex gap-3">
                 <button type="submit" class="flex-1 px-4 py-2.5 bg-sky-500 hover:bg-sky-600 text-white rounded-xl font-semibold transition-colors">حفظ</button>
                 <button type="button" onclick="closeAccessVisibilityModal()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors">إلغاء</button>
@@ -906,26 +939,45 @@ function openAccessVisibilityModal(type, id, label) {
         : 'اختر من يظهر له هذا المحتوى من طلبة المنحة.';
 
     const map = type === 'section' ? sectionVisibilityMap : itemVisibilityMap;
-    const vis = map[id] || { scope: 'all', student_ids: [] };
-    const scopeEl = document.getElementById('accessVisibilityScope');
-    const studentsEl = document.getElementById('accessVisibleStudents');
-    if (scopeEl) scopeEl.value = vis.scope === 'selected' ? 'selected' : 'all';
-    if (studentsEl) {
-        const selected = new Set((vis.student_ids || []).map(String));
-        Array.from(studentsEl.options).forEach(opt => {
-            opt.selected = selected.has(String(opt.value));
-        });
-    }
-    toggleAccessStudentSelect();
+    const vis = map[id] || { scope: 'all', student_ids: [], group_ids: [] };
+    const scope = (vis.scope === 'selected' || vis.scope === 'groups') ? vis.scope : 'all';
+    document.querySelectorAll('.access-scope-radio').forEach(r => {
+        r.checked = r.value === scope;
+    });
+
+    const selectedStudents = new Set((vis.student_ids || []).map(String));
+    document.querySelectorAll('.access-student-cb').forEach(cb => {
+        cb.checked = selectedStudents.has(String(cb.value));
+    });
+    const selectedGroups = new Set((vis.group_ids || []).map(String));
+    document.querySelectorAll('.access-group-cb').forEach(cb => {
+        cb.checked = selectedGroups.has(String(cb.value));
+    });
+
+    toggleAccessScopePanels();
     document.getElementById('accessVisibilityModal').classList.remove('hidden');
     document.getElementById('accessVisibilityModal').classList.add('flex');
 }
 
-function toggleAccessStudentSelect() {
-    const scopeEl = document.getElementById('accessVisibilityScope');
-    const wrap = document.getElementById('accessVisibleStudentsWrap');
-    if (!scopeEl || !wrap) return;
-    wrap.classList.toggle('hidden', scopeEl.value !== 'selected');
+function toggleAccessScopePanels() {
+    const scope = (document.querySelector('.access-scope-radio:checked') || {}).value || 'all';
+    const studentsWrap = document.getElementById('accessVisibleStudentsWrap');
+    const groupsWrap = document.getElementById('accessVisibleGroupsWrap');
+    if (studentsWrap) studentsWrap.classList.toggle('hidden', scope !== 'selected');
+    if (groupsWrap) groupsWrap.classList.toggle('hidden', scope !== 'groups');
+}
+
+function toggleAllAccessCheckboxes(cls) {
+    const boxes = document.querySelectorAll('.' + cls);
+    if (!boxes.length) return;
+    const allChecked = Array.from(boxes).every(b => b.checked);
+    boxes.forEach(b => { b.checked = !allChecked; });
+}
+
+function getCheckedValues(cls) {
+    return Array.from(document.querySelectorAll('.' + cls + ':checked'))
+        .map(el => parseInt(el.value, 10))
+        .filter(Boolean);
 }
 
 function closeAccessVisibilityModal() {
@@ -939,11 +991,11 @@ function saveAccessVisibility(e) {
     e.preventDefault();
     const type = document.getElementById('accessTargetType').value;
     const id = document.getElementById('accessTargetId').value;
-    const scopeEl = document.getElementById('accessVisibilityScope');
-    const scope = scopeEl ? scopeEl.value : 'all';
+    const scope = (document.querySelector('.access-scope-radio:checked') || {}).value || 'all';
     const body = {
         visibility_scope: scope,
-        visible_student_ids: scope === 'selected' ? getSelectedOptions('accessVisibleStudents') : [],
+        visible_student_ids: scope === 'selected' ? getCheckedValues('access-student-cb') : [],
+        visible_group_ids: scope === 'groups' ? getCheckedValues('access-group-cb') : [],
     };
     const url = type === 'section'
         ? `/instructor/sections/${id}/visibility`

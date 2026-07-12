@@ -38,6 +38,12 @@ class CurriculumItem extends Model
             ->withTimestamps();
     }
 
+    public function visibleGroups()
+    {
+        return $this->belongsToMany(ScholarshipGroup::class, 'curriculum_item_visible_groups')
+            ->withTimestamps();
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);

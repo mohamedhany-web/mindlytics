@@ -3,6 +3,9 @@
 namespace App\Services\Scholarship;
 
 use App\Models\AdvancedCourse;
+use App\Models\CourseSection;
+use App\Models\CurriculumItem;
+use App\Models\ScholarshipGroup;
 use App\Models\ScholarshipProgram;
 use App\Models\ScholarshipRegistration;
 use App\Models\User;
@@ -13,6 +16,9 @@ class ScholarshipStatsService
     public function overview(): array
     {
         $instructorIds = ScholarshipProgram::query()->distinct()->pluck('instructor_id')->filter();
+        $scholarshipCourseIds = AdvancedCourse::query()
+            ->where('is_scholarship_only', true)
+            ->pluck('id');
 
         return [
             'programs_total' => ScholarshipProgram::count(),
@@ -25,6 +31,15 @@ class ScholarshipStatsService
             'activated' => ScholarshipRegistration::where('status', ScholarshipRegistration::STATUS_ACTIVATED)->count(),
             'rejected' => ScholarshipRegistration::where('status', ScholarshipRegistration::STATUS_REJECTED)->count(),
             'deactivated' => ScholarshipRegistration::where('status', ScholarshipRegistration::STATUS_DEACTIVATED)->count(),
+            'groups_total' => ScholarshipGroup::count(),
+            'restricted_sections' => CourseSection::query()
+                ->whereIn('advanced_course_id', $scholarshipCourseIds)
+                ->whereIn('visibility_scope', ['selected', 'groups'])
+                ->count(),
+            'restricted_items' => CurriculumItem::query()
+                ->whereHas('section', fn ($q) => $q->whereIn('advanced_course_id', $scholarshipCourseIds))
+                ->whereIn('visibility_scope', ['selected', 'groups'])
+                ->count(),
         ];
     }
 

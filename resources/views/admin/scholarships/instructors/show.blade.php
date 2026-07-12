@@ -6,9 +6,8 @@
 @section('content')
 @include('admin.scholarships._styles')
 
-<div class="space-y-6">
+<div class="w-full space-y-6">
     @include('admin.scholarships._alerts')
-    @include('admin.scholarships._nav', ['active' => 'instructors'])
 
     @include('admin.scholarships._header', [
         'title' => $instructor->name,

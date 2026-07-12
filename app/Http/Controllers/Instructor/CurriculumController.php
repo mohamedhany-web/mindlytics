@@ -38,8 +38,9 @@ class CurriculumController extends Controller
         $allSections = $course->sections()
             ->with([
                 'visibleStudents:id,name,email',
+                'visibleGroups:id,name',
                 'items' => function ($query) {
-                    $query->orderBy('order')->with(['visibleStudents:id,name,email']);
+                    $query->orderBy('order')->with(['visibleStudents:id,name,email', 'visibleGroups:id,name']);
                 },
             ])
             ->orderBy('order')
@@ -54,6 +55,9 @@ class CurriculumController extends Controller
         $scholarshipStudents = $isScholarshipCurriculum
             ? $this->scholarshipVisibility->selectableStudents($course)
             : collect();
+        $scholarshipGroups = $isScholarshipCurriculum
+            ? $this->scholarshipVisibility->selectableGroups($course)
+            : collect();
 
         $sectionVisibilityMap = [];
         $itemVisibilityMap = [];
@@ -61,11 +65,13 @@ class CurriculumController extends Controller
             $sectionVisibilityMap[$section->id] = [
                 'scope' => $section->visibility_scope ?? 'all',
                 'student_ids' => $section->visibleStudents->pluck('id')->values()->all(),
+                'group_ids' => $section->visibleGroups->pluck('id')->values()->all(),
             ];
             foreach ($section->items as $item) {
                 $itemVisibilityMap[$item->id] = [
                     'scope' => $item->visibility_scope ?? 'all',
                     'student_ids' => $item->visibleStudents->pluck('id')->values()->all(),
+                    'group_ids' => $item->visibleGroups->pluck('id')->values()->all(),
                 ];
             }
         }
@@ -105,6 +111,7 @@ class CurriculumController extends Controller
             'availableLearningPatterns',
             'isScholarshipCurriculum',
             'scholarshipStudents',
+            'scholarshipGroups',
             'sectionVisibilityMap',
             'itemVisibilityMap'
         ));
@@ -227,22 +234,25 @@ class CurriculumController extends Controller
         }
 
         $validated = $request->validate([
-            'visibility_scope' => 'required|string|in:all,selected',
+            'visibility_scope' => 'required|string|in:all,selected,groups',
             'visible_student_ids' => 'nullable|array',
             'visible_student_ids.*' => 'integer|exists:users,id',
+            'visible_group_ids' => 'nullable|array',
+            'visible_group_ids.*' => 'integer|exists:scholarship_groups,id',
         ]);
 
         $this->scholarshipVisibility->syncSectionVisibility(
             $section,
             $section->course,
             $validated['visibility_scope'],
-            $validated['visible_student_ids'] ?? []
+            $validated['visible_student_ids'] ?? [],
+            $validated['visible_group_ids'] ?? []
         );
 
         return response()->json([
             'success' => true,
             'message' => 'تم تحديث وصول القسم بنجاح',
-            'section' => $section->fresh(['visibleStudents:id']),
+            'section' => $section->fresh(['visibleStudents:id', 'visibleGroups:id']),
         ]);
     }
 
@@ -258,22 +268,25 @@ class CurriculumController extends Controller
         }
 
         $validated = $request->validate([
-            'visibility_scope' => 'required|string|in:all,selected',
+            'visibility_scope' => 'required|string|in:all,selected,groups',
             'visible_student_ids' => 'nullable|array',
             'visible_student_ids.*' => 'integer|exists:users,id',
+            'visible_group_ids' => 'nullable|array',
+            'visible_group_ids.*' => 'integer|exists:scholarship_groups,id',
         ]);
 
         $this->scholarshipVisibility->syncItemVisibility(
             $item,
             $section->course,
             $validated['visibility_scope'],
-            $validated['visible_student_ids'] ?? []
+            $validated['visible_student_ids'] ?? [],
+            $validated['visible_group_ids'] ?? []
         );
 
         return response()->json([
             'success' => true,
             'message' => 'تم تحديث ظهور العنصر بنجاح',
-            'item' => $item->fresh(['visibleStudents:id']),
+            'item' => $item->fresh(['visibleStudents:id', 'visibleGroups:id']),
         ]);
     }
 

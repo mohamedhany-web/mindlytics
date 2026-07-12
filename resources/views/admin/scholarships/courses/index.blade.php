@@ -6,7 +6,7 @@
 @section('content')
 @include('admin.scholarships._styles')
 
-<div class="space-y-6">
+<div class="w-full space-y-6">
     @include('admin.scholarships._alerts')
     @include('admin.scholarships._header', [
         'title' => 'كورسات المنح',
@@ -15,11 +15,10 @@
     ])
     @include('admin.scholarships._stats-grid', ['cards' => [
         ['label' => 'إجمالي الكورسات', 'value' => number_format($overview['courses_total'] ?? 0), 'icon' => 'fas fa-book', 'description' => number_format($overview['courses_active'] ?? 0) . ' نشطة'],
-        ['label' => 'المنح', 'value' => number_format($overview['programs_total'] ?? 0), 'icon' => 'fas fa-award', 'description' => 'برامج منح'],
-        ['label' => 'طلاب مفعّلون', 'value' => number_format($overview['activated'] ?? 0), 'icon' => 'fas fa-user-check', 'description' => 'وصول نشط'],
-        ['label' => 'بانتظار التفعيل', 'value' => number_format($overview['registered'] ?? 0), 'icon' => 'fas fa-hourglass-half', 'description' => 'طلبات معلّقة'],
+        ['label' => 'أقسام مقيّدة', 'value' => number_format($overview['restricted_sections'] ?? 0), 'icon' => 'fas fa-user-lock', 'description' => 'وصول محدود'],
+        ['label' => 'عناصر مقيّدة', 'value' => number_format($overview['restricted_items'] ?? 0), 'icon' => 'fas fa-lock', 'description' => 'محاضرات/واجبات'],
+        ['label' => 'المجموعات', 'value' => number_format($overview['groups_total'] ?? 0), 'icon' => 'fas fa-layer-group', 'description' => 'تقسيم الطلبة'],
     ]])
-    @include('admin.scholarships._nav', ['active' => 'courses'])
 
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
         <div class="px-6 py-5 border-b border-slate-200 bg-slate-50">
