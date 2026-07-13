@@ -59,7 +59,7 @@ class WhatsAppTemplateService
             'category' => strtoupper((string) ($data['category'] ?? 'UTILITY')),
             'status' => WhatsAppMetaTemplate::STATUS_DRAFT,
             'body_text' => $bodyText,
-            'header_type' => $data['header_type'] ?: null,
+            'header_type' => ($data['header_type'] ?? '') ?: null,
             'header_content' => $data['header_content'] ?? null,
             'footer_text' => $data['footer_text'] ?? null,
             'buttons' => $data['buttons'],
@@ -426,6 +426,8 @@ class WhatsAppTemplateService
             'buttons.*.url' => 'nullable|string|max:500',
             'buttons.*.url_example' => 'nullable|string|max:200',
             'buttons.*.phone' => 'nullable|string|max:30',
+            'example_values' => 'nullable|array|max:20',
+            'example_values.*' => 'nullable|string|max:200',
             'submit_now' => 'nullable|boolean',
         ], [
             'name.required' => 'اسم القالب مطلوب',
@@ -1122,11 +1124,21 @@ class WhatsAppTemplateService
             $inviteExample = $this->inviteCodeFromExampleValue($inviteExample) ?? 'Ld0j8PUAprmCnDi65uUqTC';
         }
 
-        $pool = ['أحمد', 'ورشة Mindlytics', $inviteExample, '201012345678', 'أونلاين', 'القاهرة'];
+        $pool = ['إسراء', 'الفرونت اند', $inviteExample, 'أحمد', 'Mindlytics Academy', 'أونلاين'];
+
+        $custom = $context['example_values'] ?? [];
+        if (! is_array($custom)) {
+            $custom = [];
+        }
 
         $examples = [];
         for ($i = 1; $i <= $count; $i++) {
-            $examples[] = $pool[$i - 1] ?? ('sample_'.$i);
+            $fromCustom = trim((string) ($custom[$i] ?? $custom[(string) $i] ?? ''));
+            if ($fromCustom !== '') {
+                $examples[] = $fromCustom;
+                continue;
+            }
+            $examples[] = $pool[$i - 1] ?? ('مثال_'.$i);
         }
 
         return $examples;

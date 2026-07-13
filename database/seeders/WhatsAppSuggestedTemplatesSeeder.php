@@ -244,6 +244,26 @@ class WhatsAppSuggestedTemplatesSeeder extends Seeder
 
             // ========== Follow-up / No answer ==========
             [
+                'key' => 'sales_workshop_check_f_01',
+                'title' => 'متابعة حضور ورشة — مؤنث (عامية)',
+                'category' => 'followup',
+                'language' => 'ar',
+                'sort_order' => 25,
+                'body' => "ازي حضرتك ايه الاخبار معاكي {{agent}} من مايندليتكس.\nكنت عايزة اعرف حضرتك حضرت الوركشوب بتاعة {{topic}}؟",
+                'help' => "متى تستخدمها:\n- متابعة عميل بعد ورشة/ويبنار (نبرة مؤنث).\n\nمتغيرات:\n- {{agent}} اسم الموظف/ة (مثال: إسراء)\n- {{topic}} موضوع الورشة (مثال: الفرونت اند)\n\nملاحظة:\n- داخل نافذة 24 ساعة أرسل كنص عادي. خارجها حوّل لمسودة Meta من زر «مسودة Meta».",
+                'variables' => ['agent', 'topic'],
+            ],
+            [
+                'key' => 'sales_workshop_check_01',
+                'title' => 'متابعة حضور ورشة — عامية خفيفة',
+                'category' => 'followup',
+                'language' => 'ar',
+                'sort_order' => 26,
+                'body' => "ازيك ايه الاخبار ✨\nمعاك {{agent}} من Mindlytics Academy كنت حابه اعرف حضرتك حضرت ال workshop بتاع ال {{topic}}؟",
+                'help' => "متى تستخدمها:\n- نفس فكرة متابعة الحضور بنبرة أخف.\n\nمتغيرات:\n- {{agent}} مثال: إسراء\n- {{topic}} مثال: frontend / الفرونت اند",
+                'variables' => ['agent', 'topic'],
+            ],
+            [
                 'key' => 'sales_followup_01',
                 'title' => 'متابعة بعد عدم الرد',
                 'category' => 'followup',
