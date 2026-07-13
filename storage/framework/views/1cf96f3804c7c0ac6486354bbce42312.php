@@ -53,6 +53,12 @@
                                    class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm" dir="ltr" placeholder="https://chat.whatsapp.com/XXXX">
                         </div>
                         <div class="md:col-span-2">
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">تسمية القالب (للعرض)</label>
+                            <input type="text" name="display_name" value="<?php echo e(old('display_name')); ?>" maxlength="255"
+                                   class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm" placeholder="مثال: دعوة جروب دفعة مارس">
+                            <p class="text-xs text-slate-500 mt-1">اسم واضح للموظفين — يُملأ تلقائياً من اسم الجروب إن تركته فارغاً.</p>
+                        </div>
+                        <div class="md:col-span-2">
                             <label class="block text-sm font-semibold text-slate-700 mb-1">اسم القالب في Meta (اختياري)</label>
                             <input type="text" name="template_name" value="<?php echo e(old('template_name')); ?>" maxlength="512"
                                    class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-mono" dir="ltr" placeholder="group_invite_....">
@@ -92,7 +98,8 @@
             <div class="p-4 space-y-3 max-h-[28rem] overflow-y-auto">
                 <?php $__empty_1 = true; $__currentLoopData = $recentDrafts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $tpl): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                     <div class="rounded-xl border border-slate-200 p-3 text-sm">
-                        <div class="font-semibold text-slate-800 truncate" dir="ltr"><?php echo e($tpl->name); ?></div>
+                        <div class="font-semibold text-slate-800 truncate"><?php echo e($tpl->displayTitle()); ?></div>
+                        <div class="text-[11px] text-slate-500 font-mono truncate" dir="ltr"><?php echo e($tpl->name); ?></div>
                         <div class="mt-1 flex items-center justify-between gap-2">
                             <span class="text-xs px-2 py-0.5 rounded-full
                                 <?php echo e($tpl->status === 'approved' ? 'bg-emerald-100 text-emerald-700' : ($tpl->status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600')); ?>">
@@ -183,7 +190,8 @@
                             <option value="">اختر قالباً معتمداً من Meta</option>
                             <?php $__currentLoopData = $approvedTemplates; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $tpl): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                 <option value="<?php echo e($tpl->id); ?>" <?php if((string) old('template_id', session('created_template_id')) === (string) $tpl->id): echo 'selected'; endif; ?>>
-                                    <?php echo e($tpl->name); ?> (<?php echo e($tpl->language); ?>)
+                                    <?php echo e($tpl->displayLabel()); ?>
+
                                 </option>
                             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </select>

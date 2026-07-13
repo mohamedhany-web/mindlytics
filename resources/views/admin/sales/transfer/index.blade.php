@@ -6,16 +6,22 @@
 @section('content')
 @php
     $inputClass = 'w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500';
+    $scope = $scope ?? 'all';
+    $groupId = $groupId ?? null;
+    $groups = $groups ?? collect();
 
     $summaryCards = $fromRep && $stats ? [
-        ['label' => 'عملاء محتملون', 'value' => number_format($stats['leads_total'] ?? 0), 'icon' => 'fas fa-user-tag', 'bg' => 'bg-emerald-100', 'text' => 'text-emerald-600', 'description' => 'Leads مسندة'],
-        ['label' => 'أنشطة CRM', 'value' => number_format($stats['activities_total'] ?? 0), 'icon' => 'fas fa-tasks', 'bg' => 'bg-sky-100', 'text' => 'text-sky-600', 'description' => 'سجل الأنشطة'],
-        ['label' => 'سجل المراقبة', 'value' => number_format($stats['audit_total'] ?? 0), 'icon' => 'fas fa-history', 'bg' => 'bg-violet-100', 'text' => 'text-violet-600', 'description' => 'Audit logs'],
-        ['label' => 'أهداف KPI', 'value' => number_format($stats['kpi_targets_total'] ?? 0), 'icon' => 'fas fa-bullseye', 'bg' => 'bg-amber-100', 'text' => 'text-amber-600', 'description' => 'إن وُجدت'],
+        ['label' => 'عملاء محتملون', 'value' => number_format($stats['leads_total'] ?? 0), 'icon' => 'fas fa-user-tag', 'bg' => 'bg-emerald-100', 'text' => 'text-emerald-600', 'description' => ($stats['scope'] ?? 'all') === 'group' ? 'ضمن المجموعة' : 'كل الـ Leads المسندة'],
+        ['label' => 'أنشطة CRM', 'value' => number_format($stats['activities_total'] ?? 0), 'icon' => 'fas fa-tasks', 'bg' => 'bg-sky-100', 'text' => 'text-sky-600', 'description' => ($stats['scope'] ?? 'all') === 'group' ? 'أنشطة عملاء المجموعة' : 'سجل الأنشطة'],
+        ['label' => 'سجل المراقبة', 'value' => number_format($stats['audit_total'] ?? 0), 'icon' => 'fas fa-history', 'bg' => 'bg-violet-100', 'text' => 'text-violet-600', 'description' => ($stats['scope'] ?? 'all') === 'group' ? 'لا يُنقل مع المجموعة' : 'Audit logs'],
+        ['label' => 'أهداف KPI', 'value' => number_format($stats['kpi_targets_total'] ?? 0), 'icon' => 'fas fa-bullseye', 'bg' => 'bg-amber-100', 'text' => 'text-amber-600', 'description' => ($stats['scope'] ?? 'all') === 'group' ? 'لا تُنقل مع المجموعة' : 'إن وُجدت'],
     ] : [];
 @endphp
 
-<div class="space-y-6">
+<div class="space-y-6" x-data="{
+    scope: @js(old('scope', $scope)),
+    groupId: @js((string) old('group_id', $groupId ?? '')),
+}">
     @if(session('success'))
         <div class="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm font-semibold">
             <i class="fas fa-check-circle ml-1"></i>{{ session('success') }}
@@ -37,7 +43,6 @@
         </div>
     @endif
 
-    {{-- الهيدر --}}
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
         <div class="px-4 py-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex items-center gap-3">
@@ -46,21 +51,32 @@
                 </div>
                 <div>
                     <h2 class="text-xl font-black text-slate-900">تحويل بيانات موظف مبيعات</h2>
-                    <p class="text-xs text-slate-600">نقل Leads، الأنشطة، سجل المراقبة، وأهداف KPI من موظف إلى آخر.</p>
+                    <p class="text-xs text-slate-600">نقل كل البيانات أو بيانات مجموعة معيّنة من موظف إلى آخر.</p>
                 </div>
             </div>
-            <a href="{{ route('admin.sales.leads.index') }}" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 rounded-xl border border-slate-300 hover:bg-white">
-                <i class="fas fa-user-tag text-emerald-600"></i>
-                العملاء المحتملون
-            </a>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('admin.sales.groups.index') }}" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 rounded-xl border border-slate-300 hover:bg-white">
+                    <i class="fas fa-layer-group text-teal-600"></i>
+                    المجموعات
+                </a>
+                <a href="{{ route('admin.sales.leads.index') }}" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 rounded-xl border border-slate-300 hover:bg-white">
+                    <i class="fas fa-user-tag text-emerald-600"></i>
+                    العملاء المحتملون
+                </a>
+            </div>
         </div>
 
         @if($fromRep && !empty($summaryCards))
             <div class="px-4 pt-4 pb-2">
                 <p class="text-xs text-slate-600 mb-3">
                     ملخص بيانات: <strong>{{ $fromRep->name }}</strong>
+                    @if(($stats['scope'] ?? 'all') === 'group' && $selectedGroup)
+                        · المجموعة: <strong>{{ $selectedGroup->name }}</strong>
+                    @else
+                        · النطاق: <strong>كل البيانات</strong>
+                        · بدون مجموعة: <strong>{{ number_format($stats['ungrouped_leads'] ?? 0) }}</strong>
+                    @endif
                     · Won معتمد: <strong>{{ number_format($stats['won_confirmed_total'] ?? 0) }}</strong>
-                    · أنشأها: <strong>{{ number_format($stats['created_by_total'] ?? 0) }}</strong>
                 </p>
             </div>
             <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 p-4 pt-0">
@@ -82,27 +98,46 @@
         @endif
     </section>
 
-    {{-- عرض الملخص --}}
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
         <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
             <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
                 <i class="fas fa-search text-sky-600"></i>
                 معاينة بيانات الموظف
             </h3>
-            <p class="text-xs text-slate-600 mt-0.5">اختر موظفاً لعرض ملخص ما سيتم تحويله.</p>
+            <p class="text-xs text-slate-600 mt-0.5">اختر الموظف والنطاق لعرض ما سيتم تحويله.</p>
         </div>
         <div class="p-4">
-            <form method="get" action="{{ route('admin.sales.transfer.index') }}" class="flex flex-col sm:flex-row sm:items-end gap-3">
-                <div class="flex-1 min-w-[200px]">
+            <form method="get" action="{{ route('admin.sales.transfer.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end"
+                  x-data="{ previewScope: @js($scope), previewGroup: @js((string) ($groupId ?? '')) }">
+                <div class="md:col-span-1">
                     <label class="block text-xs font-semibold text-slate-700 mb-1">موظف المصدر (من)</label>
-                    <select name="from_user_id" class="{{ $inputClass }}">
+                    <select name="from_user_id" class="{{ $inputClass }}" required>
                         <option value="">— اختر موظفاً —</option>
                         @foreach($salesReps as $rep)
-                            <option value="{{ $rep->id }}" @selected((string)$fromId === (string)$rep->id)>{{ $rep->name }}</option>
+                            <option value="{{ $rep->id }}" @selected((string) $fromId === (string) $rep->id)>{{ $rep->name }}</option>
                         @endforeach
                     </select>
                 </div>
-                <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-sky-600 hover:bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">نطاق المعاينة</label>
+                    <select name="scope" x-model="previewScope" class="{{ $inputClass }}">
+                        <option value="all">كل البيانات</option>
+                        <option value="group">مجموعة معيّنة</option>
+                    </select>
+                </div>
+                <div x-show="previewScope === 'group'" x-cloak>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">المجموعة</label>
+                    <select name="group_id" x-model="previewGroup" class="{{ $inputClass }}" :disabled="previewScope !== 'group'">
+                        <option value="">— اختر مجموعة —</option>
+                        @foreach($groups as $g)
+                            <option value="{{ $g->id }}">{{ $g->name }} ({{ number_format($g->leads_for_rep_count) }} عميل)</option>
+                        @endforeach
+                    </select>
+                    @if($fromRep && $groups->isEmpty())
+                        <p class="text-[11px] text-amber-700 mt-1">لا توجد مجموعات مرتبطة بهذا الموظف.</p>
+                    @endif
+                </div>
+                <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 hover:bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white">
                     <i class="fas fa-search"></i>
                     عرض الملخص
                 </button>
@@ -111,15 +146,19 @@
     </section>
 
     @if($fromRep && $stats)
-        {{-- تفصيل المراحل --}}
         <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
             <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div>
                     <h3 class="text-base font-black text-slate-900">تفصيل المراحل — {{ $fromRep->name }}</h3>
-                    <p class="text-xs text-slate-600">توزيع Leads حسب مرحلة الصفقة.</p>
+                    <p class="text-xs text-slate-600">
+                        @if(($stats['scope'] ?? 'all') === 'group' && $selectedGroup)
+                            توزيع Leads المجموعة «{{ $selectedGroup->name }}» حسب مرحلة الصفقة.
+                        @else
+                            توزيع كل Leads حسب مرحلة الصفقة.
+                        @endif
+                    </p>
                 </div>
                 @if(session('transfer_summary'))
-                    @php $s = session('transfer_summary'); @endphp
                     <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">آخر تحويل مسجّل</span>
                 @endif
             </div>
@@ -130,12 +169,12 @@
                     <div class="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 text-sm text-emerald-900">
                         <p class="font-bold mb-2"><i class="fas fa-check-double ml-1"></i> ملخص آخر تحويل</p>
                         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
-                            <div><span class="text-emerald-700">Leads:</span> <strong class="tabular-nums">{{ (int)($s['leads_assigned'] ?? 0) }}</strong></div>
-                            <div><span class="text-emerald-700">Activities:</span> <strong class="tabular-nums">{{ (int)($s['activities'] ?? 0) }}</strong></div>
-                            <div><span class="text-emerald-700">Audit:</span> <strong class="tabular-nums">{{ (int)($s['audit_logs'] ?? 0) }}</strong></div>
-                            <div><span class="text-emerald-700">KPI moved:</span> <strong class="tabular-nums">{{ (int)($s['kpi_targets_moved'] ?? 0) }}</strong></div>
-                            <div><span class="text-emerald-700">KPI conflicts:</span> <strong class="tabular-nums">{{ (int)($s['kpi_targets_conflicts'] ?? 0) }}</strong></div>
-                            <div><span class="text-emerald-700">Won confirmed:</span> <strong class="tabular-nums">{{ (int)($s['leads_won_confirmed_by'] ?? 0) }}</strong></div>
+                            <div><span class="text-emerald-700">Leads:</span> <strong class="tabular-nums">{{ (int) ($s['leads_assigned'] ?? 0) }}</strong></div>
+                            <div><span class="text-emerald-700">Activities:</span> <strong class="tabular-nums">{{ (int) ($s['activities'] ?? 0) }}</strong></div>
+                            <div><span class="text-emerald-700">Audit:</span> <strong class="tabular-nums">{{ (int) ($s['audit_logs'] ?? 0) }}</strong></div>
+                            <div><span class="text-emerald-700">KPI moved:</span> <strong class="tabular-nums">{{ (int) ($s['kpi_targets_moved'] ?? 0) }}</strong></div>
+                            <div><span class="text-emerald-700">KPI conflicts:</span> <strong class="tabular-nums">{{ (int) ($s['kpi_targets_conflicts'] ?? 0) }}</strong></div>
+                            <div><span class="text-emerald-700">Won confirmed:</span> <strong class="tabular-nums">{{ (int) ($s['leads_won_confirmed_by'] ?? 0) }}</strong></div>
                         </div>
                     </div>
                 </div>
@@ -150,17 +189,33 @@
                     </div>
                 @endforeach
             </div>
+
+            @if($groups->isNotEmpty() && ($stats['scope'] ?? 'all') === 'all')
+                <div class="px-4 pb-4">
+                    <div class="rounded-xl border border-teal-100 bg-teal-50/40 p-4">
+                        <p class="text-xs font-bold text-teal-900 mb-2"><i class="fas fa-layer-group ml-1"></i> مجموعات الموظف (يمكن تحويل واحدة منها فقط)</p>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach($groups as $g)
+                                <a href="{{ route('admin.sales.transfer.index', ['from_user_id' => $fromId, 'scope' => 'group', 'group_id' => $g->id]) }}"
+                                   class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-teal-200 text-xs font-semibold text-teal-800 hover:bg-teal-50">
+                                    {{ $g->name }}
+                                    <span class="tabular-nums text-teal-600">{{ number_format($g->leads_for_rep_count) }}</span>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @endif
         </section>
     @endif
 
-    {{-- نموذج التحويل --}}
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
         <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
             <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
                 <i class="fas fa-random text-violet-600"></i>
                 تنفيذ التحويل
             </h3>
-            <p class="text-xs text-slate-600 mt-0.5">اختر الموظف المصدر والوجهة، ثم أكّد العملية.</p>
+            <p class="text-xs text-slate-600 mt-0.5">اختر النطاق: كل البيانات أو مجموعة واحدة، ثم أكّد العملية.</p>
         </div>
 
         <form method="post" action="{{ route('admin.sales.transfer.store') }}" class="p-4 sm:p-6 space-y-5">
@@ -172,13 +227,13 @@
                         <i class="fas fa-arrow-right text-rose-500 ml-0.5"></i>
                         من (موظف مبيعات)
                     </label>
-                    <select name="from_user_id" required class="{{ $inputClass }}">
+                    <select name="from_user_id" required class="{{ $inputClass }}"
+                            onchange="window.location='{{ route('admin.sales.transfer.index') }}?from_user_id='+this.value">
                         <option value="">— اختر —</option>
                         @foreach($salesReps as $rep)
                             <option value="{{ $rep->id }}" @selected(old('from_user_id', $fromId) == $rep->id)>{{ $rep->name }}</option>
                         @endforeach
                     </select>
-                    <p class="text-[11px] text-slate-500 mt-2">سيتم نقل كل بيانات المبيعات المرتبطة بهذا الموظف.</p>
                     @error('from_user_id')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
                 </div>
                 <div class="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
@@ -192,8 +247,50 @@
                             <option value="{{ $rep->id }}" @selected(old('to_user_id') == $rep->id)>{{ $rep->name }}</option>
                         @endforeach
                     </select>
-                    <p class="text-[11px] text-slate-500 mt-2">سيصبح المسؤول عن العملاء والأنشطة بعد التحويل.</p>
+                    <p class="text-[11px] text-slate-500 mt-2">سيصبح المسؤول عن العملاء المحددين بعد التحويل.</p>
                     @error('to_user_id')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
+                <p class="text-xs font-bold text-slate-800">ماذا تريد تحويله؟</p>
+                <div class="grid sm:grid-cols-2 gap-3">
+                    <label class="flex items-start gap-3 rounded-xl border p-4 cursor-pointer transition-colors"
+                           :class="scope === 'all' ? 'border-violet-300 bg-violet-50/60' : 'border-slate-200 hover:border-slate-300'">
+                        <input type="radio" name="scope" value="all" class="mt-1 text-violet-600" x-model="scope">
+                        <span>
+                            <span class="block text-sm font-bold text-slate-900">كل البيانات</span>
+                            <span class="block text-[11px] text-slate-500 mt-1">كل الـ Leads + الأنشطة + سجل المراقبة + أهداف KPI.</span>
+                        </span>
+                    </label>
+                    <label class="flex items-start gap-3 rounded-xl border p-4 cursor-pointer transition-colors"
+                           :class="scope === 'group' ? 'border-teal-300 bg-teal-50/60' : 'border-slate-200 hover:border-slate-300'">
+                        <input type="radio" name="scope" value="group" class="mt-1 text-teal-600" x-model="scope">
+                        <span>
+                            <span class="block text-sm font-bold text-slate-900">مجموعة معيّنة فقط</span>
+                            <span class="block text-[11px] text-slate-500 mt-1">عملاء المجموعة وأنشطتهم فقط — دون KPI وسجل المراقبة الكامل.</span>
+                        </span>
+                    </label>
+                </div>
+
+                <div x-show="scope === 'group'" x-cloak class="pt-1">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">اختر المجموعة *</label>
+                    <select name="group_id" x-model="groupId" class="{{ $inputClass }}" :required="scope === 'group'">
+                        <option value="">— اختر مجموعة —</option>
+                        @foreach($groups as $g)
+                            <option value="{{ $g->id }}">{{ $g->name }} — {{ number_format($g->leads_for_rep_count) }} عميل</option>
+                        @endforeach
+                    </select>
+                    @error('group_id')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
+                    @if($fromRep && $groups->isEmpty())
+                        <p class="text-xs text-amber-700 mt-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                            لا توجد مجموعات لهذا الموظف — أنشئ مجموعة من
+                            <a href="{{ route('admin.sales.groups.index') }}" class="font-bold underline">مجموعات العملاء</a>
+                            أو حوّل كل البيانات.
+                        </p>
+                    @elseif(! $fromRep)
+                        <p class="text-[11px] text-slate-500 mt-1">اختر موظف المصدر أولاً لتحميل مجموعاته.</p>
+                    @endif
                 </div>
             </div>
 
@@ -202,13 +299,16 @@
                     <i class="fas fa-exclamation-triangle ml-1"></i>
                     تنبيه مهم
                 </p>
-                <p class="text-sm text-amber-900/90 leading-relaxed">
-                    هذا الإجراء يعدّل بيانات قاعدة البيانات بشكل جماعي ولا يمكن التراجع عنه تلقائياً.
-                    تأكد من اختيار الموظفين بشكل صحيح قبل التنفيذ.
+                <p class="text-sm text-amber-900/90 leading-relaxed" x-show="scope === 'all'">
+                    سيتم نقل <strong>كل</strong> بيانات المبيعات للموظف المصدر إلى الوجهة. لا يمكن التراجع تلقائياً.
+                </p>
+                <p class="text-sm text-amber-900/90 leading-relaxed" x-show="scope === 'group'" x-cloak>
+                    سيتم نقل عملاء المجموعة المحددة وأنشطتهم فقط، وإضافة الموظف الوجهة لأعضاء المجموعة.
+                    باقي بيانات الموظف المصدر تبقى كما هي.
                 </p>
                 <label class="mt-3 inline-flex items-start gap-2 text-sm font-semibold text-amber-900 cursor-pointer">
                     <input type="checkbox" name="confirm" value="1" class="rounded border-amber-300 mt-0.5 text-amber-600 focus:ring-amber-400" @checked(old('confirm'))>
-                    <span>أؤكد أنني أريد تحويل جميع بيانات الموظف المحدد</span>
+                    <span x-text="scope === 'group' ? 'أؤكد تحويل بيانات المجموعة المحددة فقط' : 'أؤكد أنني أريد تحويل جميع بيانات الموظف المحدد'"></span>
                 </label>
                 @error('confirm')<p class="text-rose-600 text-xs mt-2">{{ $message }}</p>@enderror
             </div>

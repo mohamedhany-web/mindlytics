@@ -10,19 +10,42 @@ use App\Services\SalesLeadWhatsAppBatchService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class SalesLeadGroupController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $groups = SalesLeadGroup::query()
+        $query = SalesLeadGroup::query()
             ->with(['assignee:id,name', 'creator:id,name', 'members:id,name'])
-            ->withCount('leads')
-            ->orderByDesc('updated_at')
-            ->paginate(20);
+            ->withCount('leads');
 
-        return view('admin.sales.groups.index', compact('groups'));
+        if (Schema::hasTable('sales_lead_group_members')) {
+            $query->withCount('members');
+        }
+
+        if ($request->filled('search')) {
+            $search = trim((string) $request->search);
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        $groups = $query->orderByDesc('updated_at')->paginate(20)->withQueryString();
+
+        $stats = [
+            'total' => SalesLeadGroup::count(),
+            'leads' => (int) SalesLead::whereNotNull('sales_lead_group_id')->count(),
+            'members' => Schema::hasTable('sales_lead_group_members')
+                ? (int) DB::table('sales_lead_group_members')->distinct()->count('user_id')
+                : (int) SalesLeadGroup::whereNotNull('assigned_to')->distinct()->count('assigned_to'),
+            'empty' => SalesLeadGroup::doesntHave('leads')->count(),
+        ];
+
+        return view('admin.sales.groups.index', compact('groups', 'stats'));
     }
 
     public function create(): View
@@ -78,6 +101,7 @@ class SalesLeadGroupController extends Controller
         $memberIds = $group->memberIds()->all();
 
         $availableLeads = SalesLead::query()
+            ->with('assignee:id,name')
             ->when($memberIds !== [], fn ($q) => $q->whereIn('assigned_to', $memberIds))
             ->orderBy('name')
             ->limit(500)
