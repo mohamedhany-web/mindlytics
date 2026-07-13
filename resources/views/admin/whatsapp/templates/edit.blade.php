@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'تعديل قالب — ' . $template->name)
+@section('title', 'تعديل قالب — ' . $template->displayTitle())
 @section('header', 'قسم الواتساب')
 
 @section('content')
@@ -8,8 +8,8 @@
     @include('admin.whatsapp._alerts')
 
     @include('admin.whatsapp._page-header', [
-        'title' => 'تعديل: ' . $template->name,
-        'subtitle' => $template->language . ' · ' . $template->categoryLabel(),
+        'title' => 'تعديل: ' . $template->displayTitle(),
+        'subtitle' => $template->name . ' · ' . $template->language . ' · ' . $template->categoryLabel(),
         'icon' => 'fas fa-edit',
         'actions' => '<a href="' . route('admin.whatsapp.templates.show', $template) . '" class="' . $waBtnSecondary . '">عرض</a>',
     ])

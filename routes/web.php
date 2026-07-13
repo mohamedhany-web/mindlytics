@@ -1582,6 +1582,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         // إدارة تسجيل الطلاب في الكورسات الأونلاين
         Route::prefix('online-enrollments')->name('online-enrollments.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\StudentEnrollmentController::class, 'index'])->name('index');
+            Route::get('/export', [\App\Http\Controllers\Admin\StudentEnrollmentController::class, 'export'])->name('export');
             Route::get('/create', [\App\Http\Controllers\Admin\StudentEnrollmentController::class, 'create'])->name('create');
             Route::post('/', [\App\Http\Controllers\Admin\StudentEnrollmentController::class, 'store'])->name('store');
             Route::post('/quick-activate', [\App\Http\Controllers\Admin\StudentEnrollmentController::class, 'quickActivate'])->name('quick-activate');
@@ -1797,6 +1798,12 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\WhatsAppController::class, 'index'])->name('index');
             Route::get('/send', [\App\Http\Controllers\Admin\WhatsAppController::class, 'sendForm'])->name('send');
             Route::post('/send', [\App\Http\Controllers\Admin\WhatsAppController::class, 'sendMessage'])->name('send.post');
+            Route::get('/excel-campaign', [\App\Http\Controllers\Admin\ExcelWhatsAppController::class, 'index'])->name('excel-campaign');
+            Route::get('/excel-campaign/sample', [\App\Http\Controllers\Admin\ExcelWhatsAppController::class, 'downloadSample'])->name('excel-campaign.sample');
+            Route::post('/excel-campaign/preview', [\App\Http\Controllers\Admin\ExcelWhatsAppController::class, 'preview'])->name('excel-campaign.preview');
+            Route::post('/excel-campaign/template', [\App\Http\Controllers\Admin\ExcelWhatsAppController::class, 'createTemplate'])->name('excel-campaign.template');
+            Route::post('/excel-campaign/sync', [\App\Http\Controllers\Admin\ExcelWhatsAppController::class, 'syncTemplates'])->name('excel-campaign.sync');
+            Route::post('/excel-campaign/send', [\App\Http\Controllers\Admin\ExcelWhatsAppController::class, 'send'])->name('excel-campaign.send');
             Route::get('/messages', [\App\Http\Controllers\Admin\WhatsAppController::class, 'messages'])->name('messages');
             Route::post('/messages/{message}/resend', [\App\Http\Controllers\Admin\WhatsAppController::class, 'resendMessage'])->name('messages.resend');
             Route::get('/templates', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'index'])->name('templates.index');
@@ -1813,6 +1820,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/templates/{template}', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'show'])->name('templates.show');
             Route::get('/templates/{template}/edit', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'edit'])->name('templates.edit');
             Route::put('/templates/{template}', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'update'])->name('templates.update');
+            Route::put('/templates/{template}/display-name', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'updateDisplayName'])->name('templates.display-name');
             Route::put('/templates/{template}/access', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'updateAccess'])->name('templates.access');
             Route::post('/templates/{template}/submit', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'submit'])->name('templates.submit');
             Route::post('/templates/{template}/duplicate', [\App\Http\Controllers\Admin\WhatsAppTemplateController::class, 'duplicate'])->name('templates.duplicate');

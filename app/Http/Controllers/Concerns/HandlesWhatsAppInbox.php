@@ -93,7 +93,8 @@ trait HandlesWhatsAppInbox
 
         if ($tablesReady) {
             try {
-                $inbox->syncRecentOutboundLogs();
+                $syncLimit = $this->inboxAudience() === 'admin' ? 2000 : 500;
+                $inbox->syncRecentOutboundLogs($syncLimit);
             } catch (\Throwable $e) {
                 report($e);
             }
@@ -115,7 +116,8 @@ trait HandlesWhatsAppInbox
                 });
             }
 
-            $conversations = $query->paginate(30)->withQueryString();
+            $perPage = $this->inboxAudience() === 'admin' ? 50 : 30;
+            $conversations = $query->paginate($perPage)->withQueryString();
 
             $activeId = (int) $request->query('conversation');
             if ($activeId > 0) {
@@ -317,7 +319,7 @@ trait HandlesWhatsAppInbox
         }
 
         $conversations = $conversationsQuery
-            ->limit(50)
+            ->limit($this->inboxAudience() === 'admin' ? 100 : 50)
             ->get()
             ->map(fn ($c) => $inbox->serializeConversation($c, $this->inboxAudience()));
 

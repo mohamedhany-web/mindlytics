@@ -54,6 +54,7 @@ class WhatsAppTemplateService
 
         return WhatsAppMetaTemplate::create([
             'name' => $name,
+            'display_name' => $this->normalizeDisplayName($data['display_name'] ?? null),
             'language' => (string) ($data['language'] ?? 'ar'),
             'category' => strtoupper((string) ($data['category'] ?? 'UTILITY')),
             'status' => WhatsAppMetaTemplate::STATUS_DRAFT,
@@ -92,6 +93,9 @@ class WhatsAppTemplateService
 
         $template->update([
             'name' => $merged['name'],
+            'display_name' => array_key_exists('display_name', $data)
+                ? $this->normalizeDisplayName($data['display_name'])
+                : $template->display_name,
             'language' => (string) ($data['language'] ?? $template->language),
             'category' => strtoupper((string) ($data['category'] ?? $template->category)),
             'body_text' => $bodyText,
@@ -267,8 +271,14 @@ class WhatsAppTemplateService
             $name = $this->normalizeTemplateName($baseName.'_v2');
         }
 
+        $displayName = trim((string) $source->display_name);
+        if ($displayName !== '') {
+            $displayName = $displayName . ' (نسخة)';
+        }
+
         $data = [
             'name' => $name,
+            'display_name' => $displayName !== '' ? $displayName : null,
             'language' => $language,
             'category' => $source->category,
             'body_text' => $source->body_text,
@@ -293,6 +303,22 @@ class WhatsAppTemplateService
         }
 
         return $name;
+    }
+
+    public function normalizeDisplayName(mixed $displayName): ?string
+    {
+        $displayName = trim((string) $displayName);
+
+        return $displayName !== '' ? $displayName : null;
+    }
+
+    public function updateDisplayName(WhatsAppMetaTemplate $template, mixed $displayName): WhatsAppMetaTemplate
+    {
+        $template->update([
+            'display_name' => $this->normalizeDisplayName($displayName),
+        ]);
+
+        return $template->fresh();
     }
 
     public function countBodyVariables(string $body): int
@@ -386,6 +412,7 @@ class WhatsAppTemplateService
     public function validateDraftFromRequest(\Illuminate\Http\Request $request): array
     {
         return $request->validate([
+            'display_name' => 'nullable|string|max:255',
             'name' => 'required|string|max:512',
             'language' => 'required|string|max:20',
             'category' => 'required|in:AUTHENTICATION,UTILITY,MARKETING',

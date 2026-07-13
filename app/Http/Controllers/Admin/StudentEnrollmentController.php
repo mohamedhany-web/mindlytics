@@ -8,6 +8,7 @@ use App\Models\AdvancedCourse;
 use App\Models\StudentCourseEnrollment;
 use App\Models\Wallet;
 use App\Services\InstructorCoursePercentageService;
+use App\Services\OnlineEnrollmentsExcelExportService;
 use App\Support\OnlineEnrollmentProvisioner;
 use App\Mail\CourseEnrollmentActivatedMail;
 use Illuminate\Http\Request;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StudentEnrollmentController extends Controller
 {
@@ -23,30 +25,11 @@ class StudentEnrollmentController extends Controller
      */
     public function index(Request $request)
     {
-        $query = StudentCourseEnrollment::with(['student', 'course.academicYear', 'course.academicSubject', 'activatedBy'])
-            ->nonScholarship();
+        $query = $this->filteredEnrollmentsQuery($request);
 
-        // البحث بالاسم أو رقم الهاتف
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->whereHas('student', function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhere('parent_phone', 'like', "%{$search}%");
-            });
-        }
-
-        // فلترة حسب الحالة
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        // فلترة حسب الكورس
-        if ($request->filled('course_id')) {
-            $query->where('advanced_course_id', $request->course_id);
-        }
-
-        $enrollments = $query->latest('enrolled_at')->paginate(20);
+        $enrollments = $query->with(['student', 'course.academicYear', 'course.academicSubject', 'activatedBy'])
+            ->latest('enrolled_at')
+            ->paginate(20);
 
         // البيانات المساعدة للفلاتر - استخدام الكاش
         $courses = Cache::remember('active_courses_list', now()->addHours(1), function () {
@@ -66,6 +49,60 @@ class StudentEnrollmentController extends Controller
             ->get(['id', 'name', 'type', 'balance']);
 
         return view('admin.online-enrollments.index', compact('enrollments', 'courses', 'stats', 'wallets'));
+    }
+
+    /**
+     * تصدير تسجيلات الأونلاين إلى Excel (بنفس فلاتر الصفحة).
+     */
+    public function export(Request $request, OnlineEnrollmentsExcelExportService $excel): StreamedResponse
+    {
+        $query = $this->filteredEnrollmentsQuery($request);
+        $filterParts = [];
+
+        if ($request->filled('search')) {
+            $filterParts[] = 'بحث: '.$request->search;
+        }
+        if ($request->filled('status')) {
+            $filterParts[] = 'الحالة: '.$request->status;
+        }
+        if ($request->filled('course_id')) {
+            $courseTitle = AdvancedCourse::query()->whereKey($request->course_id)->value('title');
+            $filterParts[] = 'الكورس: '.($courseTitle ?: '#'.$request->course_id);
+        }
+
+        return $excel->streamDownload(
+            $query,
+            implode(' | ', $filterParts),
+            'online-enrollments-'.now()->format('Y-m-d_His').'.xlsx'
+        );
+    }
+
+    /**
+     * Query موحّد للصفحة والتصدير.
+     */
+    private function filteredEnrollmentsQuery(Request $request)
+    {
+        $query = StudentCourseEnrollment::query()->nonScholarship();
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('student', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%")
+                  ->orWhere('parent_phone', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('course_id')) {
+            $query->where('advanced_course_id', $request->course_id);
+        }
+
+        return $query;
     }
 
     /**

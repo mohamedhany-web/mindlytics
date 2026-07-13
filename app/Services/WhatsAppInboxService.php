@@ -261,13 +261,28 @@ class WhatsAppInboxService
             return 0;
         }
 
+        if (! Schema::hasTable('whatsapp_conversation_messages')) {
+            return 0;
+        }
+
         $synced = 0;
 
+        // الأحدث أولاً — فقط الرسائل التي لم تُنسخ بعد إلى المحادثات
         WhatsAppMessage::query()
             ->whereIn('status', ['sent', 'delivered', 'read'])
             ->whereNotNull('phone_number')
             ->where('phone_number', '!=', '')
-            ->orderBy('id')
+            ->whereNotNull('whatsapp_message_id')
+            ->where('whatsapp_message_id', '!=', '')
+            ->whereNotExists(function ($sub) {
+                $sub->selectRaw('1')
+                    ->from('whatsapp_conversation_messages')
+                    ->whereColumn(
+                        'whatsapp_conversation_messages.whatsapp_message_id',
+                        'whats_app_messages.whatsapp_message_id'
+                    );
+            })
+            ->orderByDesc('id')
             ->limit($limit)
             ->get()
             ->each(function (WhatsAppMessage $log) use (&$synced) {

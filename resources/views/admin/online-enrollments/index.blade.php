@@ -245,13 +245,20 @@
 
     <!-- البحث والفلترة -->
     <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <h3 class="text-lg font-semibold text-gray-900">البحث والفلترة</h3>
-            <a href="{{ route('admin.online-enrollments.create') }}" 
-               class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
-                <i class="fas fa-plus mr-2"></i>
-                تسجيل طالب جديد
-            </a>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('admin.online-enrollments.export', request()->query()) }}"
+                   class="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors duration-200">
+                    <i class="fas fa-file-excel mr-2"></i>
+                    استخراج Excel
+                </a>
+                <a href="{{ route('admin.online-enrollments.create') }}"
+                   class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                    <i class="fas fa-plus mr-2"></i>
+                    تسجيل طالب جديد
+                </a>
+            </div>
         </div>
         
         <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">

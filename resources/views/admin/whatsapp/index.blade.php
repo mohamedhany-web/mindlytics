@@ -17,6 +17,7 @@
         'icon' => 'fab fa-whatsapp',
         'actions' => '
             <a href="' . route('admin.whatsapp.templates.index') . '" class="' . $waBtnPrimary . '"><i class="fas fa-file-alt"></i> قوالب Meta</a>
+            <a href="' . route('admin.whatsapp.excel-campaign') . '" class="' . $waBtnSecondary . '"><i class="fas fa-file-excel"></i> دعوة جروب Excel</a>
             <a href="' . route('admin.whatsapp.inbox') . '" class="' . $waBtnSecondary . '"><i class="fas fa-inbox"></i> المحادثات</a>
             <a href="' . route('admin.whatsapp.settings') . '" class="' . $waBtnSecondary . '"><i class="fas fa-plug"></i> إعدادات الربط</a>
             <a href="' . route('admin.whatsapp.send') . '" class="' . $waBtnSecondary . '"><i class="fas fa-paper-plane"></i> إرسال</a>

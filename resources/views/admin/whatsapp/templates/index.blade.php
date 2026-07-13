@@ -283,7 +283,7 @@
         <div class="px-5 py-4 border-b border-slate-200">
             <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-3">
                 <div class="md:col-span-2">
-                    <input type="search" name="search" value="{{ request('search') }}" placeholder="بحث بالاسم أو المحتوى..."
+                    <input type="search" name="search" value="{{ request('search') }}" placeholder="بحث بالتسمية أو كود Meta أو المحتوى..."
                            class="{{ $waInputClass }}">
                 </div>
                 <select name="status" class="{{ $waSelectClass }}">
@@ -334,8 +334,8 @@
                         @endphp
                         <tr class="hover:bg-emerald-50/30">
                             <td class="px-5 py-3.5">
-                                <a href="{{ route('admin.whatsapp.templates.show', $tpl) }}" class="font-bold text-slate-900 hover:text-emerald-700 font-mono dir-ltr text-right block">{{ $tpl->name }}</a>
-                                <span class="text-xs text-slate-500">{{ $tpl->language }}</span>
+                                <a href="{{ route('admin.whatsapp.templates.show', $tpl) }}" class="font-bold text-slate-900 hover:text-emerald-700 block">{{ $tpl->displayTitle() }}</a>
+                                <span class="text-xs text-slate-500 font-mono dir-ltr">{{ $tpl->name }} · {{ $tpl->language }}</span>
                             </td>
                             <td class="px-5 py-3.5 text-xs">{{ $tpl->categoryLabel() }}</td>
                             <td class="px-5 py-3.5">

@@ -109,8 +109,17 @@
     @endif
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="md:col-span-2">
+            <label class="{{ $waLabelClass }}">تسمية القالب (للعرض داخل النظام)</label>
+            <input type="text" name="display_name" maxlength="255"
+                   value="{{ old('display_name', $template?->display_name) }}"
+                   placeholder="مثال: دعوة جروب دفعة مارس"
+                   class="{{ $waInputClass }}">
+            <p class="text-xs text-slate-500 mt-1">اسم واضح للموظفين — منفصل عن كود Meta التقني أدناه</p>
+            @error('display_name')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
+        </div>
         <div>
-            <label class="{{ $waLabelClass }}">اسم القالب (Name) *</label>
+            <label class="{{ $waLabelClass }}">اسم القالب في Meta (Name) *</label>
             @if($lockName)
                 <input type="text" value="{{ $lockedName }}" readonly dir="ltr"
                        class="{{ $waInputClass }} font-mono bg-slate-50 text-slate-600">

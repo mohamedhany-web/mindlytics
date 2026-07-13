@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', $template->name . ' — قالب واتساب')
+@section('title', $template->displayTitle() . ' — قالب واتساب')
 @section('header', 'قسم الواتساب')
 
 @section('content')
@@ -17,8 +17,8 @@
     @include('admin.whatsapp._alerts')
 
     @include('admin.whatsapp._page-header', [
-        'title' => $template->name,
-        'subtitle' => $template->language . ' · ' . $template->categoryLabel(),
+        'title' => $template->displayTitle(),
+        'subtitle' => $template->name . ' · ' . $template->language . ' · ' . $template->categoryLabel(),
         'icon' => 'fas fa-file-alt',
         'actions' => '
             <span class="inline-flex px-3 py-1.5 rounded-full text-xs font-bold border ' . $statusClass . '">' . $template->statusLabel() . '</span>
@@ -112,6 +112,20 @@
 
         <aside class="space-y-4">
             <section class="{{ $waSectionClass }} p-5 text-sm space-y-3">
+                <form method="POST" action="{{ route('admin.whatsapp.templates.display-name', $template) }}" class="space-y-2 pb-3 border-b border-slate-100">
+                    @csrf
+                    @method('PUT')
+                    <label class="block text-xs font-bold text-slate-600">تسمية القالب (للعرض)</label>
+                    <input type="text" name="display_name" maxlength="255"
+                           value="{{ old('display_name', $template->display_name) }}"
+                           placeholder="{{ $template->name }}"
+                           class="{{ $waInputClass }} !text-sm">
+                    <button type="submit" class="{{ $waBtnSecondary }} text-xs w-full justify-center">
+                        <i class="fas fa-tag"></i> حفظ التسمية
+                    </button>
+                    <p class="text-[11px] text-slate-500">يمكن تعديل التسمية في أي وقت — كود Meta يبقى كما هو.</p>
+                </form>
+                <p><span class="text-slate-500">كود Meta:</span> <span class="font-mono text-xs dir-ltr">{{ $template->name }}</span></p>
                 <p><span class="text-slate-500">Meta ID:</span> <span class="font-mono text-xs dir-ltr">{{ $template->meta_template_id ?? '—' }}</span></p>
                 <p><span class="text-slate-500">المتغيرات:</span> <strong>{{ $template->body_variable_count }}</strong></p>
                 <p><span class="text-slate-500">أُرسل إلى Meta:</span> {{ $template->submitted_at?->format('Y-m-d H:i') ?? '—' }}</p>

@@ -44,6 +44,7 @@ class WhatsAppTemplateController extends Controller
             $s = trim((string) $request->search);
             $query->where(function ($q) use ($s) {
                 $q->where('name', 'like', "%{$s}%")
+                    ->orWhere('display_name', 'like', "%{$s}%")
                     ->orWhere('body_text', 'like', "%{$s}%");
             });
         }
@@ -251,6 +252,17 @@ class WhatsAppTemplateController extends Controller
         $label = $access->modeLabels()[$validated['template_access_mode']] ?? $validated['template_access_mode'];
 
         return back()->with('success', 'تم تحديث صلاحيات القوالب: '.$label);
+    }
+
+    public function updateDisplayName(Request $request, WhatsAppMetaTemplate $template, WhatsAppTemplateService $service): RedirectResponse
+    {
+        $validated = $request->validate([
+            'display_name' => 'nullable|string|max:255',
+        ]);
+
+        $service->updateDisplayName($template, $validated['display_name'] ?? null);
+
+        return back()->with('success', 'تم حفظ تسمية القالب.');
     }
 
     public function updateAccess(Request $request, WhatsAppMetaTemplate $template, WhatsAppTemplateAccessService $access): RedirectResponse

@@ -25,6 +25,7 @@ class WhatsAppMetaTemplate extends Model
     protected $fillable = [
         'meta_template_id',
         'name',
+        'display_name',
         'language',
         'category',
         'status',
@@ -119,9 +120,16 @@ class WhatsAppMetaTemplate extends Model
         ], true);
     }
 
+    public function displayTitle(): string
+    {
+        $title = trim((string) $this->display_name);
+
+        return $title !== '' ? $title : $this->name;
+    }
+
     public function displayLabel(): string
     {
-        return $this->name . ' · ' . $this->language;
+        return $this->displayTitle() . ' · ' . $this->language;
     }
 
     /**
