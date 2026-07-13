@@ -69,10 +69,15 @@ class SalesTransferController extends Controller
             'to_user_id' => ['required', 'integer', Rule::exists('users', 'id'), 'different:from_user_id'],
             'scope' => ['required', Rule::in(['all', 'group'])],
             'group_id' => ['nullable', 'integer', Rule::exists('sales_lead_groups', 'id')],
-            'confirm' => ['required', 'accepted'],
+            'confirm' => ['accepted'],
         ], [
-            'confirm.accepted' => 'يرجى تأكيد عملية التحويل.',
+            'from_user_id.required' => 'اختر موظف المصدر.',
+            'to_user_id.required' => 'اختر موظف الوجهة.',
+            'to_user_id.different' => 'يجب أن يكون الموظف الوجهة مختلفاً عن المصدر.',
+            'scope.required' => 'اختر نطاق التحويل.',
             'scope.in' => 'نطاق التحويل غير صالح.',
+            'group_id.exists' => 'المجموعة المحددة غير موجودة.',
+            'confirm.accepted' => 'يجب تأكيد عملية التحويل عبر المربع أسفل التنبيه.',
         ]);
 
         $fromId = (int) $validated['from_user_id'];

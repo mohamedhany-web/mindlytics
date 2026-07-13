@@ -32,16 +32,6 @@
             <i class="fas fa-exclamation-circle ml-1"></i>{{ session('error') }}
         </div>
     @endif
-    @if($errors->any())
-        <div class="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm">
-            <p class="font-semibold mb-1"><i class="fas fa-exclamation-circle ml-1"></i> يوجد أخطاء:</p>
-            <ul class="list-disc list-inside space-y-0.5">
-                @foreach($errors->all() as $e)
-                    <li>{{ $e }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
 
     <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
         <div class="px-4 py-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -275,7 +265,9 @@
 
                 <div x-show="scope === 'group'" x-cloak class="pt-1">
                     <label class="block text-xs font-semibold text-slate-700 mb-1">اختر المجموعة *</label>
-                    <select name="group_id" x-model="groupId" class="{{ $inputClass }}" :required="scope === 'group'">
+                    <select name="group_id" x-model="groupId" class="{{ $inputClass }}"
+                            :required="scope === 'group'"
+                            :disabled="scope !== 'group'">
                         <option value="">— اختر مجموعة —</option>
                         @foreach($groups as $g)
                             <option value="{{ $g->id }}">{{ $g->name }} — {{ number_format($g->leads_for_rep_count) }} عميل</option>
@@ -306,11 +298,16 @@
                     سيتم نقل عملاء المجموعة المحددة وأنشطتهم فقط، وإضافة الموظف الوجهة لأعضاء المجموعة.
                     باقي بيانات الموظف المصدر تبقى كما هي.
                 </p>
-                <label class="mt-3 inline-flex items-start gap-2 text-sm font-semibold text-amber-900 cursor-pointer">
-                    <input type="checkbox" name="confirm" value="1" class="rounded border-amber-300 mt-0.5 text-amber-600 focus:ring-amber-400" @checked(old('confirm'))>
-                    <span x-text="scope === 'group' ? 'أؤكد تحويل بيانات المجموعة المحددة فقط' : 'أؤكد أنني أريد تحويل جميع بيانات الموظف المحدد'"></span>
+                <label class="mt-3 flex items-start gap-3 rounded-xl border-2 border-amber-300 bg-white px-3 py-3 text-sm font-semibold text-amber-950 cursor-pointer">
+                    <input type="checkbox" name="confirm" value="1" required
+                           class="rounded border-amber-400 mt-0.5 text-amber-600 focus:ring-amber-400 w-4 h-4"
+                           @checked(old('confirm'))>
+                    <span>
+                        <span class="block" x-text="scope === 'group' ? 'أؤكد تحويل بيانات المجموعة المحددة فقط' : 'أؤكد أنني أريد تحويل جميع بيانات الموظف المحدد'"></span>
+                        <span class="block text-[11px] font-normal text-amber-800/80 mt-1">مطلوب قبل التنفيذ — لن يعمل التحويل بدون التأكيد.</span>
+                    </span>
                 </label>
-                @error('confirm')<p class="text-rose-600 text-xs mt-2">{{ $message }}</p>@enderror
+                @error('confirm')<p class="text-rose-600 text-xs mt-2 font-semibold">{{ $message }}</p>@enderror
             </div>
 
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2 border-t border-slate-100">
