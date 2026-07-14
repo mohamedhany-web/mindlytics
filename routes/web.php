@@ -997,6 +997,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
                 Route::post('/{conversation}/read', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'markRead'])->name('read');
                 Route::post('/{conversation}/status', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'updateStatus'])->name('status');
                 Route::post('/{conversation}/lead-stage', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'updateLeadStage'])->name('lead-stage');
+                Route::post('/{conversation}/next-follow', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'setNextFollow'])->name('next-follow');
                 Route::post('/{conversation}/notes', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'storeNote'])->name('notes');
                 Route::post('/{conversation}/tags/{tag}', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'syncTag'])->name('tag');
                 Route::get('/{conversation}', [\App\Http\Controllers\Employee\SalesWhatsAppInboxController::class, 'showConversation'])->name('conversation');
@@ -1006,6 +1007,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::middleware('sales.manager')->prefix('sales-manager')->name('sales-manager.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Employee\SalesManagerDashboardController::class, 'index'])->name('dashboard');
             Route::get('team/{employee}', [\App\Http\Controllers\Employee\SalesManagerTeamController::class, 'show'])->name('team.show');
+            Route::get('team/{employee}/report', [\App\Http\Controllers\Employee\SalesManagerTeamController::class, 'report'])->name('team.report');
+            Route::get('team/{employee}/report/pdf', [\App\Http\Controllers\Employee\SalesManagerTeamController::class, 'reportPdf'])->name('team.report.pdf');
             Route::get('leads', [\App\Http\Controllers\Employee\SalesManagerLeadController::class, 'index'])->name('leads.index');
             Route::get('leads/{lead}', [\App\Http\Controllers\Employee\SalesManagerLeadController::class, 'show'])->name('leads.show');
             Route::post('leads/{lead}/transfer', [\App\Http\Controllers\Employee\SalesManagerLeadController::class, 'transfer'])->name('leads.transfer');
@@ -1038,6 +1041,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
                 Route::post('/{conversation}/read', [\App\Http\Controllers\Employee\SalesManagerWhatsAppInboxController::class, 'markRead'])->name('read');
                 Route::post('/{conversation}/status', [\App\Http\Controllers\Employee\SalesManagerWhatsAppInboxController::class, 'updateStatus'])->name('status');
                 Route::post('/{conversation}/lead-stage', [\App\Http\Controllers\Employee\SalesManagerWhatsAppInboxController::class, 'updateLeadStage'])->name('lead-stage');
+                Route::post('/{conversation}/next-follow', [\App\Http\Controllers\Employee\SalesManagerWhatsAppInboxController::class, 'setNextFollow'])->name('next-follow');
                 Route::post('/{conversation}/notes', [\App\Http\Controllers\Employee\SalesManagerWhatsAppInboxController::class, 'storeNote'])->name('notes');
                 Route::post('/{conversation}/tags/{tag}', [\App\Http\Controllers\Employee\SalesManagerWhatsAppInboxController::class, 'syncTag'])->name('tag');
                 Route::get('/{conversation}', [\App\Http\Controllers\Employee\SalesManagerWhatsAppInboxController::class, 'showConversation'])->name('conversation');
@@ -1839,6 +1843,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('/inbox/{conversation}/read', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'markRead'])->name('inbox.read');
             Route::post('/inbox/{conversation}/status', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'updateStatus'])->name('inbox.status');
             Route::post('/inbox/{conversation}/lead-stage', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'updateLeadStage'])->name('inbox.lead-stage');
+            Route::post('/inbox/{conversation}/next-follow', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'setNextFollow'])->name('inbox.next-follow');
             Route::post('/inbox/{conversation}/transfer', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'transfer'])->name('inbox.transfer');
             Route::post('/inbox/{conversation}/assign', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'assign'])->name('inbox.assign');
             Route::post('/inbox/{conversation}/notes', [\App\Http\Controllers\Admin\WhatsAppInboxController::class, 'storeNote'])->name('inbox.notes');

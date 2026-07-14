@@ -184,9 +184,18 @@ class AppServiceProvider extends ServiceProvider
         });
 
         View::composer(['layouts.employee', 'employee.attendance.locked'], function ($view) {
-            $user = auth()->user();
-            if ($user?->isSubjectToWorkSchedule()) {
-                $view->with('employeeAttendance', app(\App\Services\EmployeeAttendanceService::class)->getState($user));
+            try {
+                $user = auth()->user();
+                if ($user?->isSubjectToWorkSchedule()) {
+                    $view->with('employeeAttendance', app(\App\Services\EmployeeAttendanceService::class)->getState($user));
+                }
+            } catch (\Throwable $e) {
+                report($e);
+                $view->with('employeeAttendance', [
+                    'mode' => 'exempt',
+                    'can_access' => true,
+                    'message' => '',
+                ]);
             }
         });
 

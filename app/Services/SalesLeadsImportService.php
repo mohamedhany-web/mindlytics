@@ -12,7 +12,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 class SalesLeadsImportService
 {
     /**
-     * @param  list<int>  $assigneeIds
+     * @param  list<int>  $assigneeIds  فارغ = عملاء بدون إسناد موظف
      * @return array{created: int, skipped: int, errors: list<string>, batch_id: string, per_rep: array<int, int>}
      */
     public function import(
@@ -30,23 +30,25 @@ class SalesLeadsImportService
             if (! $group) {
                 throw new \InvalidArgumentException('المجموعة المحددة غير موجودة.');
             }
-            $assigneeIds = [(int) $group->assigned_to];
         }
 
-        $assigneeIds = array_values(array_unique(array_map('intval', $assigneeIds)));
-        if ($assigneeIds === []) {
-            throw new \InvalidArgumentException('يجب اختيار موظف مبيعات واحد على الأقل.');
-        }
+        $assigneeIds = array_values(array_unique(array_filter(array_map('intval', $assigneeIds))));
 
-        $reps = User::query()->whereIn('id', $assigneeIds)->get();
-        foreach ($reps as $rep) {
-            if (! $rep->isSalesEmployee()) {
-                throw new \InvalidArgumentException('الموظف «'.$rep->name.'» ليس موظف مبيعات.');
+        $reps = collect();
+        if ($assigneeIds !== []) {
+            $reps = User::query()->whereIn('id', $assigneeIds)->get();
+            foreach ($reps as $rep) {
+                if (! $rep->isSalesEmployee()) {
+                    throw new \InvalidArgumentException('الموظف «'.$rep->name.'» ليس موظف مبيعات.');
+                }
+            }
+            if ($reps->count() !== count($assigneeIds)) {
+                throw new \InvalidArgumentException('بعض الموظفين المحددين غير موجودين.');
             }
         }
 
         $category = SalesLeadCategory::query()->whereKey($categoryId)->where('is_active', true)->firstOrFail();
-        $batchId = 'IMP-'.now()->format('Ymd-His');
+        $batchId = 'IMP-'.now()->format('Ymd-His').'-'.strtoupper(substr(bin2hex(random_bytes(3)), 0, 6));
         $path = $file->getRealPath();
         $spreadsheet = IOFactory::load($path);
         $rows = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
@@ -64,6 +66,7 @@ class SalesLeadsImportService
         $perRep = array_fill_keys($assigneeIds, 0);
         $repIndex = 0;
         $repCount = count($assigneeIds);
+        $roundRobin = $repCount > 0;
 
         foreach ($rows as $lineNum => $row) {
             $line = (int) $lineNum + 2;
@@ -72,13 +75,16 @@ class SalesLeadsImportService
                 continue;
             }
 
-            $assignedTo = $assigneeIds[$repIndex % $repCount];
-            $repIndex++;
+            $assignedTo = null;
+            if ($roundRobin) {
+                $assignedTo = $assigneeIds[$repIndex % $repCount];
+                $repIndex++;
+            }
 
             $phone = isset($map['phone']) ? trim((string) ($row[$map['phone']] ?? '')) : null;
             $email = isset($map['email']) ? trim((string) ($row[$map['email']] ?? '')) : null;
 
-            if ($phone && SalesLead::query()->where('assigned_to', $assignedTo)->where('phone', $phone)->exists()) {
+            if ($phone && $this->isDuplicatePhone($phone, $assignedTo)) {
                 $skipped++;
                 $errors[] = "سطر {$line}: تخطي — هاتف مكرر ({$phone})";
 
@@ -105,7 +111,9 @@ class SalesLeadsImportService
                     'next_follow_up_at' => now()->addDay()->setTime(10, 0),
                 ]);
                 $created++;
-                $perRep[$assignedTo] = ($perRep[$assignedTo] ?? 0) + 1;
+                if ($assignedTo !== null) {
+                    $perRep[$assignedTo] = ($perRep[$assignedTo] ?? 0) + 1;
+                }
             } catch (\Throwable $e) {
                 $skipped++;
                 $errors[] = "سطر {$line}: ".$e->getMessage();
@@ -121,6 +129,10 @@ class SalesLeadsImportService
                 }
             }
 
+            $assigneeLabel = $reps->isNotEmpty()
+                ? ' — موظفون: '.implode(', ', $reps->pluck('name')->all())
+                : ' — بدون إسناد موظف';
+
             SalesAuditService::log(
                 'sales_leads_bulk_import',
                 null,
@@ -135,7 +147,7 @@ class SalesLeadsImportService
                 ],
                 "استيراد {$created} عميل — تصنيف: {$category->name}"
                 .($group ? " — مجموعة: {$group->name}" : '')
-                .' — موظفون: '.implode(', ', $reps->pluck('name')->all())
+                .$assigneeLabel
             );
         }
 
@@ -146,6 +158,19 @@ class SalesLeadsImportService
             'batch_id' => $batchId,
             'per_rep' => $perRep,
         ];
+    }
+
+    private function isDuplicatePhone(string $phone, ?int $assignedTo): bool
+    {
+        $query = SalesLead::query()->where('phone', $phone);
+
+        if ($assignedTo !== null) {
+            $query->where('assigned_to', $assignedTo);
+        } else {
+            $query->whereNull('assigned_to');
+        }
+
+        return $query->exists();
     }
 
     /**
@@ -202,4 +227,3 @@ class SalesLeadsImportService
         return $map[$v] ?? $default;
     }
 }
-

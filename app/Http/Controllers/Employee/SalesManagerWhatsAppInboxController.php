@@ -71,6 +71,7 @@ class SalesManagerWhatsAppInboxController extends Controller
             'notes' => route('employee.sales-manager.whatsapp.inbox.notes', $params[0]),
             'tag' => route('employee.sales-manager.whatsapp.inbox.tag', $params[0]),
             'lead-stage' => route('employee.sales-manager.whatsapp.inbox.lead-stage', $params[0]),
+            'next-follow' => route('employee.sales-manager.whatsapp.inbox.next-follow', $params[0]),
             default => route('employee.sales-manager.whatsapp.inbox.index'),
         };
     }
@@ -154,6 +155,11 @@ class SalesManagerWhatsAppInboxController extends Controller
     public function updateLeadStage(Request $request, WhatsAppConversation $conversation): JsonResponse
     {
         return $this->inboxUpdateLeadStage($request, $conversation);
+    }
+
+    public function setNextFollow(Request $request, WhatsAppConversation $conversation): JsonResponse
+    {
+        return $this->inboxSetNextFollow($request, $conversation);
     }
 
     public function storeNote(Request $request, WhatsAppConversation $conversation): JsonResponse

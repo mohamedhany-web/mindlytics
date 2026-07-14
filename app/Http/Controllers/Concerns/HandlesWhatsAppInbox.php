@@ -100,7 +100,7 @@ trait HandlesWhatsAppInbox
             }
 
             $query = WhatsAppConversation::query()
-                ->with(['user:id,name', 'assignee:id,name', 'tags', 'salesLead:id,name,stage,assigned_to'])
+                ->with(['user:id,name', 'assignee:id,name', 'tags', 'salesLead:id,name,stage,assigned_to,next_follow_up_at'])
                 ->orderByDesc('last_message_at')
                 ->orderByDesc('updated_at');
 
@@ -302,7 +302,7 @@ trait HandlesWhatsAppInbox
         $afterId = (int) $request->query('after_id', 0);
 
         $conversationsQuery = WhatsAppConversation::query()
-            ->with(['user:id,name', 'assignee:id,name', 'tags', 'salesLead:id,name,stage'])
+            ->with(['user:id,name', 'assignee:id,name', 'tags', 'salesLead:id,name,stage,assigned_to,next_follow_up_at'])
             ->orderByDesc('last_message_at')
             ->orderByDesc('updated_at');
 
@@ -750,6 +750,42 @@ trait HandlesWhatsAppInbox
         ]);
     }
 
+    public function inboxSetNextFollow(Request $request, WhatsAppConversation $conversation): JsonResponse
+    {
+        [$inbox, , $crm] = $this->inboxServices();
+        $this->authorizeInboxConversation($conversation);
+
+        if (! $conversation->sales_lead_id) {
+            return response()->json([
+                'success' => false,
+                'error' => 'اربط المحادثة بعميل مبيعات أولاً قبل تحديد Next Follow.',
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'next_follow_up_at' => 'required|date|after:now',
+            'note' => 'nullable|string|max:500',
+        ], [
+            'next_follow_up_at.required' => 'حدد موعد المتابعة التالية.',
+            'next_follow_up_at.after' => 'موعد المتابعة يجب أن يكون في المستقبل.',
+        ]);
+
+        $crm->setNextFollow(
+            $conversation,
+            $validated['next_follow_up_at'],
+            $validated['note'] ?? null,
+            auth()->id(),
+            $this->inboxAudience() === 'employee'
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم حفظ موعد المتابعة.',
+            'conversation' => $inbox->serializeConversation($conversation->fresh(['assignee', 'tags', 'contact', 'salesLead']), $this->inboxAudience()),
+            'timeline' => $crm->timeline($conversation->fresh()),
+        ]);
+    }
+
     public function inboxAssign(Request $request, WhatsAppConversation $conversation): JsonResponse
     {
         if ($this->inboxAudience() === 'employee') {
@@ -981,6 +1017,7 @@ trait HandlesWhatsAppInbox
             'notes' => $this->inboxRoute('notes', $conversation),
             'tag' => rtrim($this->inboxRoute('tag', ['conversation' => $conversation->id, 'tag' => 0]), '/0'),
             'lead_stage' => $this->inboxRoute('lead-stage', $conversation),
+            'next_follow' => $this->inboxRoute('next-follow', $conversation),
         ];
 
         if ($this->inboxAudience() === 'admin') {

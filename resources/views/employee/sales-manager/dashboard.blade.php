@@ -103,6 +103,10 @@
                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 text-white text-xs font-bold hover:bg-slate-900">
                                 <i class="fas fa-id-card"></i> عرض الملف
                             </a>
+                            <a href="{{ route('employee.sales-manager.team.report', $uid) }}"
+                               class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700">
+                                <i class="fas fa-chart-line"></i> تقرير الأداء
+                            </a>
                             <a href="{{ route('employee.sales-manager.attendance.employee', $uid) }}"
                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50">
                                 الحضور

@@ -26,29 +26,36 @@ class PreventConcurrentSessions
             return $next($request);
         }
 
-        $user = Auth::user();
-        $sessionId = Session::getId();
-        
-        // المفتاح في الكاش لتخزين معرف الجلسة النشطة
-        $cacheKey = "user_session_{$user->id}";
-        
-        // الحصول على معرف الجلسة المخزن
-        $storedSessionId = Cache::get($cacheKey);
-        
-        // إذا لم تكن هناك جلسة مخزنة أو كانت هذه هي الجلسة النشطة
-        if (!$storedSessionId || $storedSessionId === $sessionId) {
-            // حفظ معرف الجلسة الحالية كجلسة نشطة (مدة أطول لتجنب المشاكل)
-            Cache::put($cacheKey, $sessionId, now()->addDays(7));
+        try {
+            $user = Auth::user();
+            $sessionId = Session::getId();
+
+            // المفتاح في الكاش لتخزين معرف الجلسة النشطة
+            $cacheKey = "user_session_{$user->id}";
+
+            // الحصول على معرف الجلسة المخزن
+            $storedSessionId = Cache::get($cacheKey);
+
+            // إذا لم تكن هناك جلسة مخزنة أو كانت هذه هي الجلسة النشطة
+            if (!$storedSessionId || $storedSessionId === $sessionId) {
+                // حفظ معرف الجلسة الحالية كجلسة نشطة (مدة أطول لتجنب المشاكل)
+                Cache::put($cacheKey, $sessionId, now()->addDays(7));
+                return $next($request);
+            }
+
+            // إذا كانت هناك جلسة نشطة أخرى، تسجيل الخروج من الجلسة الحالية
+            \Log::info('جلسة متزامنة مكتشفة للمستخدم: ' . $user->id . ' - الجلسة الحالية: ' . $sessionId . ' - الجلسة المخزنة: ' . $storedSessionId);
+
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect('/login')->with('error', 'تم تسجيل الدخول من جهاز آخر. تم تسجيل الخروج تلقائياً.');
+        } catch (\Throwable $e) {
+            report($e);
+
+            // عند فشل الكاش/الجلسة لا تقطع دخول المستخدم
             return $next($request);
         }
-        
-        // إذا كانت هناك جلسة نشطة أخرى، تسجيل الخروج من الجلسة الحالية
-        \Log::info('جلسة متزامنة مكتشفة للمستخدم: ' . $user->id . ' - الجلسة الحالية: ' . $sessionId . ' - الجلسة المخزنة: ' . $storedSessionId);
-        
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-        
-        return redirect('/login')->with('error', 'تم تسجيل الدخول من جهاز آخر. تم تسجيل الخروج تلقائياً.');
     }
 }

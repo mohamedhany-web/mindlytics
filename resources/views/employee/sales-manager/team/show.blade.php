@@ -66,6 +66,10 @@
                    class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 rounded-lg border border-slate-300 bg-white hover:bg-slate-50">
                     <i class="fas fa-arrow-right"></i> لوحة الفريق
                 </a>
+                <a href="{{ route('employee.sales-manager.team.report', $employee) }}"
+                   class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white rounded-lg bg-emerald-600 hover:bg-emerald-700">
+                    <i class="fas fa-chart-line"></i> تقرير الأداء
+                </a>
                 <a href="{{ route('employee.sales-manager.attendance.employee', $employee) }}"
                    class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white rounded-lg bg-violet-600 hover:bg-violet-700">
                     <i class="fas fa-clock"></i> الحضور والفتح

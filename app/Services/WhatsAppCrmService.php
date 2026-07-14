@@ -400,12 +400,89 @@ class WhatsAppCrmService
         return $lead->fresh();
     }
 
+    public function setNextFollow(
+        WhatsAppConversation $conversation,
+        string $nextFollowUpAt,
+        ?string $note = null,
+        ?int $userId = null,
+        bool $employeeScope = false
+    ): ?SalesLead {
+        if (! $conversation->sales_lead_id) {
+            return null;
+        }
+
+        $lead = SalesLead::query()->find($conversation->sales_lead_id);
+        if (! $lead) {
+            return null;
+        }
+
+        $actorId = $userId ?? auth()->id();
+        if ($employeeScope && (int) $lead->assigned_to !== (int) $actorId) {
+            // مدير المبيعات يقدر يحدّد متابعة لعملاء فريقه من المحادثة المصرّح بها
+            $isManager = auth()->user() && method_exists(auth()->user(), 'isSalesManager')
+                ? auth()->user()->isSalesManager()
+                : false;
+            if (! $isManager) {
+                abort(403, 'لا يمكنك تحديد متابعة لعميل غير مخصص لك.');
+            }
+        }
+
+        $previous = $lead->next_follow_up_at?->toDateTimeString();
+        $nextAt = \Carbon\Carbon::parse($nextFollowUpAt);
+
+        $lead->update([
+            'next_follow_up_at' => $nextAt,
+        ]);
+
+        $bodyParts = array_filter([
+            trim((string) $note),
+            'موعد المتابعة: '.$nextAt->format('Y-m-d H:i'),
+        ]);
+
+        SalesActivity::create([
+            'sales_lead_id' => $lead->id,
+            'user_id' => $actorId,
+            'type' => 'follow_up',
+            'title' => 'تحديد Next Follow من المحادثات',
+            'body' => implode("\n", $bodyParts),
+            'meta' => [
+                'conversation_id' => $conversation->id,
+                'previous_next_follow_up_at' => $previous,
+                'next_follow_up_at' => $nextAt->toDateTimeString(),
+            ],
+        ]);
+
+        SalesAuditService::log(
+            'sales_next_follow_set',
+            $lead,
+            ['next_follow_up_at' => $previous],
+            ['next_follow_up_at' => $nextAt->toDateTimeString()],
+            'Next Follow (WhatsApp): '.$lead->name.' → '.$nextAt->format('Y-m-d H:i')
+        );
+
+        $this->logEvent(
+            $conversation,
+            WhatsAppConversationEvent::TYPE_NOTE_ADDED,
+            'تحديد Next Follow',
+            'متابعة تالية: '.$nextAt->format('Y-m-d H:i').($note ? ' — '.$note : ''),
+            [
+                'previous_next_follow_up_at' => $previous,
+                'next_follow_up_at' => $nextAt->toDateTimeString(),
+            ],
+            $actorId
+        );
+
+        return $lead->fresh();
+    }
+
     /**
      * @return array<string, mixed>
      */
     public function serializeCrm(WhatsAppConversation $conversation, string $audience = 'admin'): array
     {
         $conversation->loadMissing(['assignee:id,name', 'tags', 'contact', 'salesLead']);
+
+        $nextFollow = $conversation->salesLead?->next_follow_up_at;
 
         return [
             'status' => $conversation->status,
@@ -421,6 +498,12 @@ class WhatsAppCrmService
             'sales_lead_stage_label' => $conversation->salesLead?->stage
                 ? (SalesLead::STAGES[$conversation->salesLead->stage] ?? $conversation->salesLead->stage)
                 : null,
+            'next_follow_up_at' => $nextFollow?->format('Y-m-d\TH:i'),
+            'next_follow_up_label' => $nextFollow?->format('Y-m-d H:i'),
+            'next_follow_up_human' => $nextFollow?->diffForHumans(),
+            'next_follow_overdue' => $conversation->salesLead
+                ? (bool) $conversation->salesLead->isFollowUpOverdue()
+                : false,
             'sales_lead_url' => $conversation->sales_lead_id
                 ? ($audience === 'employee'
                     ? route('employee.sales.leads.show', $conversation->sales_lead_id)

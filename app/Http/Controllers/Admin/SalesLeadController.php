@@ -145,7 +145,7 @@ class SalesLeadController extends Controller
     {
         $validated = $request->validate([
             'file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
-            'assigned_to_ids' => 'required_without:group_id|array|min:1',
+            'assigned_to_ids' => 'nullable|array',
             'assigned_to_ids.*' => 'exists:users,id',
             'category_id' => 'required|exists:sales_lead_categories,id',
             'source' => 'nullable|string|in:'.implode(',', array_keys(SalesLead::SOURCES)),
@@ -154,15 +154,17 @@ class SalesLeadController extends Controller
         ], [
             'file.required' => 'اختر ملف Excel أو CSV.',
             'category_id.required' => 'التصنيف مطلوب لتنظيم البيانات.',
-            'assigned_to_ids.required_without' => 'اختر موظف مبيعات واحد على الأقل، أو حدّد مجموعة.',
         ]);
 
-        $assigneeIds = array_map('intval', $validated['assigned_to_ids'] ?? []);
+        $assigneeIds = array_values(array_unique(array_map('intval', $validated['assigned_to_ids'] ?? [])));
 
         if (! empty($validated['group_id'])) {
             $group = SalesLeadGroup::query()->with('members:id')->findOrFail((int) $validated['group_id']);
             $memberIds = $group->memberIds()->map(fn ($id) => (int) $id)->filter()->values()->all();
 
+            // إن اختيرت مجموعة بموظفين ولم يُحدَّد أحد: وزّع على أعضاء المجموعة.
+            // إن اختير موظفون مع المجموعة: يقتصر التوزيع على تقاطع الاختيار مع أعضاء المجموعة.
+            // مجموعة بلا أعضاء + بلا اختيار موظفين: استيراد بدون إسناد — مسموح.
             if ($assigneeIds === [] && $memberIds !== []) {
                 $assigneeIds = $memberIds;
             } elseif ($assigneeIds !== [] && $memberIds !== []) {
@@ -172,15 +174,7 @@ class SalesLeadController extends Controller
                         ->withInput()
                         ->withErrors(['assigned_to_ids' => 'الموظفون المختارون ليسوا ضمن مجموعة العملاء المحددة.']);
                 }
-            } elseif ($assigneeIds === [] && $group->assigned_to) {
-                $assigneeIds = [(int) $group->assigned_to];
             }
-        }
-
-        if ($assigneeIds === []) {
-            return back()
-                ->withInput()
-                ->withErrors(['assigned_to_ids' => 'اختر موظف مبيعات واحد على الأقل، أو مجموعة تضم موظفين.']);
         }
 
         foreach ($assigneeIds as $repId) {
@@ -206,11 +200,15 @@ class SalesLeadController extends Controller
             ->map(fn ($name, $id) => $name.': '.($result['per_rep'][$id] ?? 0))
             ->implode(' · ');
 
+        $unassignedNote = ($assigneeIds === [] && ($result['created'] ?? 0) > 0)
+            ? ' (بدون إسناد موظف — يمكن التوزيع لاحقاً)'
+            : '';
+
         return redirect()->route('admin.sales.leads.index', array_filter([
             'category_id' => $validated['category_id'],
             'import_batch' => $result['batch_id'],
             'group_id' => $validated['group_id'] ?? null,
-        ]))->with('success', "تم استيراد {$result['created']} عميل — تخطي {$result['skipped']}.".($repSummary ? " ({$repSummary})" : ''))
+        ]))->with('success', "تم استيراد {$result['created']} عميل — تخطي {$result['skipped']}.".($repSummary ? " ({$repSummary})" : '').$unassignedNote)
             ->with('import_errors', $result['errors']);
     }
 

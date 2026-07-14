@@ -191,10 +191,24 @@ class AuthController extends Controller
                 $request->session()->put('login.remember', $request->boolean('remember'));
                 $request->session()->save();
                 $code = (string) random_int(100000, 999999);
-                Cache::put('2fa_code_' . $user->id, $code, now()->addMinutes(10));
+                try {
+                    Cache::put('2fa_code_'.$user->id, $code, now()->addMinutes(10));
+                } catch (\Throwable $e) {
+                    report($e);
+
+                    return back()->withErrors(['email' => 'تعذر تجهيز رمز التحقق حالياً. حاول مرة أخرى بعد قليل.'])->withInput();
+                }
                 try {
                     Mail::to($user->email)->send(new TwoFactorCodeMail($code));
                     \Log::info('تم إرسال رمز 2FA إلى البريد', ['user_id' => $user->id, 'email' => $user->email]);
+                } catch (\Throwable $e) {
+                    report($e);
+                    Cache::forget('2fa_code_'.$user->id);
+                    \Log::error('فشل إرسال رمز 2FA', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+
+                    return back()->withErrors(['email' => 'تعذر إرسال رمز التحقق إلى بريدك. تحقق من إعدادات البريد أو حاول لاحقاً.'])->withInput();
+                }
+                try {
                     TwoFactorLog::create([
                         'user_id' => $user->id,
                         'email' => $user->email,
@@ -204,54 +218,67 @@ class AuthController extends Controller
                     ]);
                 } catch (\Throwable $e) {
                     report($e);
-                    Cache::forget('2fa_code_' . $user->id);
-                    \Log::error('فشل إرسال رمز 2FA', ['user_id' => $user->id, 'error' => $e->getMessage()]);
-                    return back()->withErrors(['email' => 'تعذر إرسال رمز التحقق إلى بريدك. تحقق من إعدادات البريد أو حاول لاحقاً.'])->withInput();
                 }
+
                 return redirect()->route('two-factor.challenge');
             }
-            
+
             // تسجيل الدخول
             Auth::login($user, $request->boolean('remember'));
             $request->session()->regenerate();
-            
-            // حفظ معرف الجلسة الجديد في الكاش
-            $sessionId = $request->session()->getId();
-            $cacheKey = "user_session_{$user->id}";
-            \Cache::put($cacheKey, $sessionId, now()->addDays(7));
-            
-            // تحديث آخر دخول (حماية من SQL Injection باستخدام Eloquent)
-            $user->update(['last_login_at' => now()]);
-            
+
+            // حفظ معرف الجلسة الجديد في الكاش (لا يوقف الدخول عند فشل الكاش)
+            try {
+                $sessionId = $request->session()->getId();
+                \Cache::put("user_session_{$user->id}", $sessionId, now()->addDays(7));
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
+            // تحديث آخر دخول بدون إسقاط الجلسة عند فشل الكتابة
+            try {
+                $user->forceFill(['last_login_at' => now()])->save();
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
             \Log::info('دخول ناجح للمستخدم', [
                 'user_id' => $user->id,
                 'user_name' => $user->name,
                 'ip' => $request->ip(),
             ]);
-            
-            // إرجاع المستخدم للصفحة التي حاول الوصول إليها أو للـ dashboard
-            if ($user->isEmployee()) {
-                return redirect()->intended(route('employee.dashboard'));
-            }
-            
-            if ($user->role === 'super_admin' || $user->role === 'admin') {
-                return redirect()->intended(route('admin.dashboard'));
-            }
 
-            if ($user->isBranchManager()) {
-                return redirect()->intended(route('branch.office.dashboard'));
-            }
+            try {
+                if ($user->isEmployee()) {
+                    return redirect()->intended(route('employee.dashboard'));
+                }
 
-            if ($user->isPlaceManager()) {
-                return redirect()->intended(route('place.office.dashboard'));
-            }
+                if (in_array($user->role, ['super_admin', 'admin'], true)) {
+                    return redirect()->intended(route('admin.dashboard'));
+                }
 
-            if ($user->isInstructor()) {
-                return redirect()->intended(route('instructor.dashboard'));
+                if ($user->isBranchManager()) {
+                    return redirect()->intended(route('branch.office.dashboard'));
+                }
+
+                if ($user->isPlaceManager()) {
+                    return redirect()->intended(route('place.office.dashboard'));
+                }
+
+                if ($user->isInstructor()) {
+                    return redirect()->intended(route('instructor.dashboard'));
+                }
+
+                return redirect()->intended(route('dashboard'));
+            } catch (\Throwable $e) {
+                report($e);
+                \Log::error('فشل توجيه ما بعد الدخول', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+
+                return redirect('/');
             }
-            
-            return redirect()->intended(route('dashboard'));
-            
         } catch (\Illuminate\Database\QueryException $e) {
             \Log::error('خطأ في قاعدة البيانات أثناء تسجيل الدخول', [
                 'error' => $e->getMessage(),

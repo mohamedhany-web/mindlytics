@@ -36,6 +36,47 @@
             </p>
         </div>
 
+        {{-- Next Follow — مباشر من الـ CRM --}}
+        <div class="rounded-xl border border-teal-200 bg-teal-50/70 p-3 space-y-2" x-show="activeConversation?.crm?.sales_lead_id" x-cloak>
+            <div class="flex items-center justify-between gap-2">
+                <p class="text-xs font-bold text-teal-900 flex items-center gap-1.5">
+                    <i class="fas fa-calendar-check"></i> Next Follow
+                </p>
+                <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                      :class="activeConversation?.crm?.next_follow_overdue ? 'bg-rose-100 text-rose-700' : (activeConversation?.crm?.next_follow_up_label ? 'bg-white text-teal-800 border border-teal-200' : 'bg-slate-100 text-slate-500')"
+                      x-text="activeConversation?.crm?.next_follow_up_label || 'بدون موعد'"></span>
+            </div>
+            <p class="text-[10px] text-teal-800/80" x-show="activeConversation?.crm?.next_follow_up_human"
+               x-text="activeConversation?.crm?.next_follow_up_human"></p>
+
+            <div class="grid grid-cols-3 gap-1.5">
+                <button type="button" @click="setNextFollowQuick('2h')" :disabled="crmSaving"
+                        class="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-white border border-teal-200 text-teal-800 hover:bg-teal-100 disabled:opacity-40">
+                    بعد ساعتين
+                </button>
+                <button type="button" @click="setNextFollowQuick('tomorrow10')" :disabled="crmSaving"
+                        class="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-white border border-teal-200 text-teal-800 hover:bg-teal-100 disabled:opacity-40">
+                    بكرة 10ص
+                </button>
+                <button type="button" @click="setNextFollowQuick('tomorrow18')" :disabled="crmSaving"
+                        class="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-white border border-teal-200 text-teal-800 hover:bg-teal-100 disabled:opacity-40">
+                    بكرة 6م
+                </button>
+            </div>
+
+            <div class="flex gap-1.5">
+                <input type="datetime-local" x-model="crmNextFollowAt"
+                       class="flex-1 rounded-lg border-teal-200 text-xs py-1.5 bg-white">
+                <button type="button" @click="saveNextFollow()" :disabled="crmSaving || !crmNextFollowAt"
+                        class="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold disabled:opacity-40">
+                    حفظ
+                </button>
+            </div>
+            <input type="text" x-model="crmNextFollowNote" maxlength="500"
+                   placeholder="ملاحظة المتابعة (اختياري)"
+                   class="w-full rounded-lg border-teal-200 text-xs py-1.5 bg-white">
+        </div>
+
         @if(($inboxAudience ?? 'admin') === 'admin')
         <div class="space-y-2">
             <label class="text-xs font-bold text-slate-600">الموظف المسؤول</label>

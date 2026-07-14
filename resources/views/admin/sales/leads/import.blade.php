@@ -28,7 +28,7 @@
         $memberIds = $g->memberIds()->map(fn ($id) => (int) $id)->values()->all();
         $memberNames = $g->members->isNotEmpty()
             ? $g->members->pluck('name')->implode('، ')
-            : ($g->assignee?->name ?? '—');
+            : ($g->assignee?->name ?? 'بدون موظفين');
 
         return [
             'id' => $g->id,
@@ -66,7 +66,7 @@
                 </div>
                 <div>
                     <h2 class="text-xl font-black text-slate-900">استيراد دفعة عملاء</h2>
-                    <p class="text-xs text-slate-600">رفع Excel/CSV، تصنيف الدفعة، توزيع Round-Robin على موظفي المبيعات، وإشعار فوري.</p>
+                    <p class="text-xs text-slate-600">رفع Excel/CSV وتصنيف الدفعة — إسناد الموظفين اختياري، ويمكن التوزيع لاحقاً أو اختيار مجموعة فقط.</p>
                 </div>
             </div>
             <div class="flex flex-wrap items-center gap-2">
@@ -190,7 +190,7 @@
                                         @php
                                             $groupMemberLabel = $group->members->isNotEmpty()
                                                 ? $group->members->pluck('name')->implode('، ')
-                                                : ($group->assignee?->name ?? '—');
+                                                : ($group->assignee?->name ?? 'بدون موظفين');
                                         @endphp
                                         <option value="{{ $group->id }}" @selected(old('group_id') == $group->id)>
                                             {{ $group->name }} — {{ $groupMemberLabel }}
@@ -201,11 +201,11 @@
                                 @error('group_id')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
                                 <p class="text-xs text-slate-500 mt-1.5 flex items-start gap-1.5" x-show="selectedGroupId">
                                     <i class="fas fa-info-circle text-indigo-500 mt-0.5"></i>
-                                    <span>عند اختيار مجموعة، يُحدَّد موظفوها تلقائياً ويُوزَّع العملاء عليهم بالتناوب داخل نفس المجموعة.</span>
+                                    <span>إن كان للمجموعة موظفون ولم تختر أحداً، يُوزَّع العملاء عليهم تلقائياً. مجموعة بلا موظفين = استيراد بدون إسناد.</span>
                                 </p>
                                 @if($groups->isEmpty())
                                     <p class="text-xs text-amber-700 mt-1">
-                                        <a href="{{ route('admin.sales.groups.create') }}" class="underline">أنشئ مجموعة</a> وخصّصها لموظف مبيعات، ثم ارجع للاستيراد.
+                                        <a href="{{ route('admin.sales.groups.create') }}" class="underline">أنشئ مجموعة</a> إن أردت ربط الدفعة بمجموعة (حتى بدون موظفين).
                                     </p>
                                 @endif
                             </div>
@@ -214,21 +214,28 @@
                         {{-- اختيار الموظفين --}}
                         <div>
                             <div class="flex items-center justify-between gap-2 mb-2">
-                                <label class="text-xs font-semibold text-slate-700">موظفو المبيعات * <span class="font-normal text-slate-500">(Round-Robin)</span></label>
+                                <label class="text-xs font-semibold text-slate-700">
+                                    موظفو المبيعات
+                                    <span class="inline-flex items-center rounded-lg border border-sky-200 bg-sky-50 px-2 py-0.5 text-[11px] font-bold text-sky-700 mr-1">اختياري</span>
+                                    <span class="font-normal text-slate-500">(Round-Robin عند الاختيار)</span>
+                                </label>
                                 @if($salesReps->count() > 1)
-                                    <button type="button" onclick="document.querySelectorAll('.rep-checkbox').forEach(c => c.checked = true)" class="text-xs font-semibold text-violet-600 hover:underline">تحديد الكل</button>
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" onclick="document.querySelectorAll('.rep-checkbox').forEach(c => c.checked = true)" class="text-xs font-semibold text-violet-600 hover:underline">تحديد الكل</button>
+                                        <button type="button" onclick="document.querySelectorAll('.rep-checkbox').forEach(c => c.checked = false)" class="text-xs font-semibold text-slate-500 hover:underline">مسح</button>
+                                    </div>
                                 @endif
                             </div>
                             @if($salesReps->isEmpty())
-                                <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                                    لا يوجد موظفو مبيعات نشطون. أضف موظفاً بدور مبيعات أولاً.
+                                <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                                    لا يوجد موظفو مبيعات نشطون حالياً — يمكنك الاستيراد بدون إسناد ثم التوزيع لاحقاً.
                                 </div>
                             @else
                                 <div class="grid sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto rounded-xl border border-slate-200 p-3 bg-slate-50/50">
                                     @foreach($salesReps as $rep)
                                         <label class="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-violet-300 hover:bg-violet-50/30 cursor-pointer transition-colors has-[:checked]:border-violet-400 has-[:checked]:bg-violet-50 has-[:checked]:ring-1 has-[:checked]:ring-violet-200">
                                             <input type="checkbox" name="assigned_to_ids[]" value="{{ $rep->id }}" class="rep-checkbox rounded border-slate-300 text-violet-600 focus:ring-violet-500"
-                                                   @checked(in_array($rep->id, $oldRepIds, true) || ($salesReps->count() === 1 && empty($oldRepIds)))>
+                                                   @checked(in_array($rep->id, $oldRepIds, true))>
                                             <span class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
                                                 {{ mb_substr($rep->name, 0, 1) }}
                                             </span>
@@ -240,15 +247,15 @@
                             @error('assigned_to_ids')<p class="text-xs text-rose-600 mt-1.5">{{ $message }}</p>@enderror
                             <p class="text-xs text-slate-500 mt-2 flex items-start gap-1.5">
                                 <i class="fas fa-info-circle text-violet-500 mt-0.5"></i>
-                                <span>كل عميل يُسند للموظف التالي بالتناوب. موظف واحد = كل الدفعة له. عدة موظفين = توزيع متساوٍ.</span>
+                                <span>بدون اختيار موظفين تُستورد الدفعة غير مسندة. مع موظفين: توزيع بالتناوب + إشعار لكل موظف.</span>
                             </p>
                         </div>
 
                         <div class="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100">
-                            <button type="submit" @disabled($salesReps->isEmpty() || $categories->isEmpty())
+                            <button type="submit" @disabled($categories->isEmpty())
                                     class="inline-flex items-center gap-2 px-6 py-2.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-semibold shadow-sm">
                                 <i class="fas fa-upload"></i>
-                                استيراد وإرسال إشعار
+                                استيراد الدفعة
                             </button>
                             <a href="{{ route('admin.sales.leads.import.template') }}" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-emerald-700 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100">
                                 <i class="fas fa-download"></i>
@@ -285,15 +292,15 @@
                     </li>
                     <li class="flex gap-3">
                         <span class="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 text-sm"><i class="fas fa-layer-group"></i></span>
-                        <div><p class="text-sm font-bold text-slate-900">مجموعة اختيارية</p><p class="text-xs text-slate-600">أنشئ مجموعة من الإدارة وخصّصها لموظف — العملاء المستوردون ينضمون إليها تلقائياً.</p></div>
+                        <div><p class="text-sm font-bold text-slate-900">مجموعة اختيارية</p><p class="text-xs text-slate-600">يمكن ربط الدفعة بمجموعة حتى بدون موظفين مسندين.</p></div>
                     </li>
                     <li class="flex gap-3">
                         <span class="w-9 h-9 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center flex-shrink-0 text-sm"><i class="fas fa-random"></i></span>
-                        <div><p class="text-sm font-bold text-slate-900">وزّع على الموظفين</p><p class="text-xs text-slate-600">Round-Robin: عميل 1 → أ، عميل 2 → ب، عميل 3 → أ...</p></div>
+                        <div><p class="text-sm font-bold text-slate-900">إسناد الموظفين اختياري</p><p class="text-xs text-slate-600">بدون موظفين = دفعة غير مسندة. مع موظفين = Round-Robin وإشعار.</p></div>
                     </li>
                     <li class="flex gap-3">
                         <span class="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0 text-sm"><i class="fas fa-bell"></i></span>
-                        <div><p class="text-sm font-bold text-slate-900">إشعار تلقائي</p><p class="text-xs text-slate-600">كل موظف يستلم إشعاراً بعدد العملاء المسندين له.</p></div>
+                        <div><p class="text-sm font-bold text-slate-900">إشعار تلقائي</p><p class="text-xs text-slate-600">يُرسل فقط للموظفين الذين استلموا عملاء من الدفعة.</p></div>
                     </li>
                 </ol>
             </section>
@@ -393,9 +400,10 @@ document.addEventListener('alpine:init', function () {
                 }
                 const memberIds = (group.member_ids && group.member_ids.length)
                     ? group.member_ids.map(String)
-                    : [String(group.assigned_to)];
+                    : (group.assigned_to ? [String(group.assigned_to)] : []);
+                // مجموعة بلا موظفين: امسح الاختيار ليبقى الاستيراد بدون إسناد
                 document.querySelectorAll('.rep-checkbox').forEach(function (checkbox) {
-                    checkbox.checked = memberIds.includes(String(checkbox.value));
+                    checkbox.checked = memberIds.length > 0 && memberIds.includes(String(checkbox.value));
                 });
             },
         };

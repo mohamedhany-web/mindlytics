@@ -207,7 +207,58 @@ class DashboardController extends Controller
     private function studentDashboard()
     {
         $user = Auth::user();
-        
+
+        try {
+            return $this->buildStudentDashboard($user);
+        } catch (\Throwable $e) {
+            \Log::error('Student Dashboard Error: '.$e->getMessage(), [
+                'user_id' => $user?->id,
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            $stats = [
+                'active_courses' => 0,
+                'pending_orders' => 0,
+                'completed_courses' => 0,
+                'total_progress' => 0,
+                'total_learning_hours' => 0,
+                'average_score' => 0,
+                'completed_exams' => 0,
+            ];
+            $activeCourses = collect();
+            $recentOrders = collect();
+            $upcomingAssignments = collect();
+            $upcomingExams = collect();
+            $recentExamAttempts = collect();
+            $recentCertificates = collect();
+            $offlineActiveEnrollments = collect();
+            $onlineActiveEnrollments = collect();
+            $visibleOfflineBookingsCount = 0;
+            $visibleOnlineBookingsCount = 0;
+            $pendingScholarshipRegistrations = collect();
+
+            return view(
+                'dashboard.student',
+                compact(
+                    'stats',
+                    'activeCourses',
+                    'recentOrders',
+                    'upcomingAssignments',
+                    'upcomingExams',
+                    'recentExamAttempts',
+                    'recentCertificates',
+                    'offlineActiveEnrollments',
+                    'onlineActiveEnrollments',
+                    'visibleOfflineBookingsCount',
+                    'visibleOnlineBookingsCount',
+                    'pendingScholarshipRegistrations'
+                )
+            );
+        }
+    }
+
+    private function buildStudentDashboard($user)
+    {
         $activeCourses = $user->activeCourses()
             ->with(['academicYear', 'academicSubject', 'teacher'])
             ->get();

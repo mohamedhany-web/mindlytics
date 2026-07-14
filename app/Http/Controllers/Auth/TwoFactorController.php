@@ -69,13 +69,18 @@ class TwoFactorController extends Controller
         }
 
         if (!$valid) {
-            TwoFactorLog::create([
-                'user_id' => $user->id,
-                'email' => $user->email,
-                'event' => TwoFactorLog::EVENT_FAILED,
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-            ]);
+            try {
+                TwoFactorLog::create([
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'event' => TwoFactorLog::EVENT_FAILED,
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                ]);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
             return back()->withErrors(['code' => 'رمز التحقق غير صحيح.']);
         }
 

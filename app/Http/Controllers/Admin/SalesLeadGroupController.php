@@ -60,21 +60,21 @@ class SalesLeadGroupController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:120',
             'description' => 'nullable|string|max:2000',
-            'member_ids' => 'required|array|min:1',
+            'member_ids' => 'nullable|array',
             'member_ids.*' => 'integer|exists:users,id',
             'lead_ids' => 'nullable|array',
             'lead_ids.*' => 'integer|exists:sales_leads,id',
         ]);
 
-        $memberIds = $this->resolveMemberIds($validated['member_ids']);
+        $memberIds = $this->resolveMemberIds($validated['member_ids'] ?? []);
         if ($memberIds === null) {
-            return back()->withErrors(['member_ids' => 'اختر موظفي مبيعات فعّالين.'])->withInput();
+            return back()->withErrors(['member_ids' => 'اختيار الموظفين غير صالح — اختر موظفي مبيعات فعّالين فقط، أو اترك الحقل فارغاً.'])->withInput();
         }
 
         $group = SalesLeadGroup::create([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
-            'assigned_to' => $memberIds[0],
+            'assigned_to' => $memberIds[0] ?? null,
             'created_by' => Auth::id(),
             'is_admin_managed' => true,
         ]);
@@ -82,10 +82,12 @@ class SalesLeadGroupController extends Controller
         $group->syncMembers($memberIds);
         $this->syncGroupLeads($group, $validated['lead_ids'] ?? [], $memberIds);
 
-        $repNames = User::query()->whereIn('id', $memberIds)->orderBy('name')->pluck('name')->implode('، ');
+        $message = $memberIds === []
+            ? 'تم إنشاء المجموعة بدون إسناد موظفين — يمكنك إضافتهم لاحقاً من صفحة المجموعة.'
+            : 'تم إنشاء المجموعة وإسنادها لـ '.User::query()->whereIn('id', $memberIds)->orderBy('name')->pluck('name')->implode('، ');
 
         return redirect()->route('admin.sales.groups.show', $group)
-            ->with('success', 'تم إنشاء المجموعة وإسنادها لـ '.$repNames);
+            ->with('success', $message);
     }
 
     public function show(SalesLeadGroup $group): View
@@ -118,21 +120,21 @@ class SalesLeadGroupController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:120',
             'description' => 'nullable|string|max:2000',
-            'member_ids' => 'required|array|min:1',
+            'member_ids' => 'nullable|array',
             'member_ids.*' => 'integer|exists:users,id',
             'lead_ids' => 'nullable|array',
             'lead_ids.*' => 'integer|exists:sales_leads,id',
         ]);
 
-        $memberIds = $this->resolveMemberIds($validated['member_ids']);
+        $memberIds = $this->resolveMemberIds($validated['member_ids'] ?? []);
         if ($memberIds === null) {
-            return back()->withErrors(['member_ids' => 'اختر موظفي مبيعات فعّالين.'])->withInput();
+            return back()->withErrors(['member_ids' => 'اختيار الموظفين غير صالح — اختر موظفي مبيعات فعّالين فقط، أو اترك الحقل فارغاً.'])->withInput();
         }
 
         $group->update([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
-            'assigned_to' => $memberIds[0],
+            'assigned_to' => $memberIds[0] ?? null,
         ]);
 
         $group->syncMembers($memberIds);
@@ -152,14 +154,14 @@ class SalesLeadGroupController extends Controller
 
     /**
      * @param  list<int|string>  $rawIds
-     * @return list<int>|null
+     * @return list<int>|null null = اختيار غير صالح (وليس فراغ مقصود)
      */
     private function resolveMemberIds(array $rawIds): ?array
     {
         $ids = collect($rawIds)->map(fn ($id) => (int) $id)->unique()->filter()->values();
 
         if ($ids->isEmpty()) {
-            return null;
+            return [];
         }
 
         $valid = User::salesEmployees()
@@ -191,9 +193,13 @@ class SalesLeadGroupController extends Controller
             return;
         }
 
-        SalesLead::query()
-            ->whereIn('id', $ids)
-            ->whereIn('assigned_to', $memberIds)
-            ->update(['sales_lead_group_id' => $group->id]);
+        $query = SalesLead::query()->whereIn('id', $ids);
+
+        // عند وجود موظفين: اربط فقط عملاء محافظهم. بدون موظفين (مجموعة إدارية): اربط أي Lead محدد.
+        if ($memberIds !== []) {
+            $query->whereIn('assigned_to', $memberIds);
+        }
+
+        $query->update(['sales_lead_group_id' => $group->id]);
     }
 }

@@ -1,7 +1,15 @@
 {{-- شات فريق المبيعات — ويدجت عائم --}}
 @php
-    $stcUser = auth()->user();
-    $stcShow = $stcUser && $stcUser->isSalesStaff() && app(\App\Services\SalesTeamService::class)->teamFor($stcUser);
+    $stcShow = false;
+    try {
+        $stcUser = auth()->user();
+        $stcShow = $stcUser
+            && $stcUser->isSalesStaff()
+            && app(\App\Services\SalesTeamService::class)->teamFor($stcUser);
+    } catch (\Throwable $e) {
+        report($e);
+        $stcShow = false;
+    }
 @endphp
 @if($stcShow)
 <div

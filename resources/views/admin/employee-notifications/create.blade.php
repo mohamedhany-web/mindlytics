@@ -170,11 +170,11 @@
                         </li>
                         <li class="flex items-start gap-2">
                             <i class="fas fa-check-circle mt-0.5"></i>
-                            <span>سيظهر الإشعار للموظف في popup عند فتح النظام</span>
+                            <span>سيظهر الإشعار عند الموظف في زر الجرس وصفحة الإشعارات</span>
                         </li>
                         <li class="flex items-start gap-2">
                             <i class="fas fa-check-circle mt-0.5"></i>
-                            <span>إذا أغلق الموظف الـ popup، سيظهر مرة أخرى حتى يقرأه</span>
+                            <span>يظهر عداد غير المقروء حتى يفتح الموظف الإشعار ويقرأه</span>
                         </li>
                     </ul>
                 </section>

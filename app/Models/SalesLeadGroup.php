@@ -84,12 +84,16 @@ class SalesLeadGroup extends Model
     {
         $ids = collect($userIds)->map(fn ($id) => (int) $id)->filter()->unique()->values();
 
-        if ($ids->isEmpty()) {
-            return;
-        }
-
         if (Schema::hasTable('sales_lead_group_members')) {
             $this->members()->sync($ids->all());
+        }
+
+        if ($ids->isEmpty()) {
+            if ($this->assigned_to !== null) {
+                $this->update(['assigned_to' => null]);
+            }
+
+            return;
         }
 
         if (! $ids->contains((int) $this->assigned_to)) {

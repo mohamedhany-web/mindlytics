@@ -1229,6 +1229,8 @@ function whatsappInbox() {
         crmTimeline: cfg.crmTimeline || [],
         crmStatus: '',
         crmLeadStage: '',
+        crmNextFollowAt: '',
+        crmNextFollowNote: '',
         crmAssignee: '',
         crmAssigneePending: '',
         transferReason: '',
@@ -1519,10 +1521,43 @@ function whatsappInbox() {
             if (!conv?.crm) return;
             this.crmStatus = conv.crm.status || 'open';
             this.crmLeadStage = conv.crm.sales_lead_stage || '';
+            this.crmNextFollowAt = conv.crm.next_follow_up_at || '';
             this.crmAssignee = conv.crm.assigned_to ? String(conv.crm.assigned_to) : '';
             this.crmAssigneePending = this.crmAssignee;
             this.transferReasonOpen = false;
             this.transferReason = '';
+        },
+
+        formatLocalDateTime(date) {
+            const pad = (n) => String(n).padStart(2, '0');
+            return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate())
+                + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+        },
+
+        setNextFollowQuick(kind) {
+            const d = new Date();
+            if (kind === '2h') {
+                d.setHours(d.getHours() + 2);
+            } else if (kind === 'tomorrow10') {
+                d.setDate(d.getDate() + 1);
+                d.setHours(10, 0, 0, 0);
+            } else if (kind === 'tomorrow18') {
+                d.setDate(d.getDate() + 1);
+                d.setHours(18, 0, 0, 0);
+            }
+            this.crmNextFollowAt = this.formatLocalDateTime(d);
+            this.saveNextFollow();
+        },
+
+        async saveNextFollow() {
+            if (!this.crmUrls.next_follow || !this.crmNextFollowAt) return;
+            const data = await this.crmPost(this.crmUrls.next_follow, {
+                next_follow_up_at: this.crmNextFollowAt,
+                note: this.crmNextFollowNote || null,
+            });
+            if (data?.success) {
+                this.crmNextFollowNote = '';
+            }
         },
 
         hasTag(tagId) {

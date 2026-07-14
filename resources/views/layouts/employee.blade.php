@@ -153,12 +153,23 @@
                     
                     <div class="flex items-center gap-2 sm:gap-4">
                         @include('components.employee-attendance-bar')
-                        <!-- Notifications -->
-                        <div class="relative">
-                            <button class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
-                                <i class="fas fa-bell text-lg"></i>
-                            </button>
-                        </div>
+                        @php
+                            try {
+                                $navUnreadNotifications = (int) auth()->user()->notifications()->whereNull('read_at')->count();
+                            } catch (\Throwable $e) {
+                                $navUnreadNotifications = 0;
+                            }
+                        @endphp
+                        <a href="{{ route('employee.notifications') }}"
+                           class="relative p-2 text-gray-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                           title="الإشعارات">
+                            <i class="fas fa-bell text-lg"></i>
+                            @if($navUnreadNotifications > 0)
+                                <span class="absolute -top-0.5 -left-0.5 min-w-[1.15rem] h-[1.15rem] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                                    {{ $navUnreadNotifications > 99 ? '99+' : $navUnreadNotifications }}
+                                </span>
+                            @endif
+                        </a>
                         
                         <!-- User Menu -->
                         <div class="relative" x-data="{ open: false }">
@@ -184,6 +195,12 @@
                                  class="absolute left-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
                                 <a href="{{ route('employee.dashboard') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                     <i class="fas fa-home mr-2"></i>لوحة التحكم
+                                </a>
+                                <a href="{{ route('employee.notifications') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i class="fas fa-bell mr-2"></i>الإشعارات
+                                    @if($navUnreadNotifications > 0)
+                                        <span class="inline-flex mr-1 px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[10px] font-bold">{{ $navUnreadNotifications > 99 ? '99+' : $navUnreadNotifications }}</span>
+                                    @endif
                                 </a>
                                 <form method="POST" action="{{ route('logout') }}">
                                     @csrf
@@ -230,160 +247,6 @@
         </div>
     </div>
     </div>
-
-    <!-- Employee Notification Popup -->
-    <div id="employeeNotificationPopup" 
-         x-data="{ 
-             show: false, 
-             notification: null,
-             readNotifications: JSON.parse(localStorage.getItem('readEmployeeNotifications') || '[]'),
-             checkNotifications() {
-                 fetch('{{ route('employee.notifications.unread') }}')
-                     .then(response => response.json())
-                     .then(data => {
-                         if (data.success && data.notifications.length > 0) {
-                             // عرض أول إشعار غير مقروء (لم يتم قراءته من قبل)
-                             const unreadNotification = data.notifications.find(n => 
-                                 !this.readNotifications.includes(n.id.toString())
-                             );
-                             
-                             if (unreadNotification && !this.show) {
-                                 this.notification = unreadNotification;
-                                 this.show = true;
-                             }
-                         } else {
-                             this.show = false;
-                         }
-                     })
-                     .catch(error => console.error('Error fetching notifications:', error));
-             },
-             dismissNotification() {
-                 // إغلاق فقط بدون قراءة - سيظهر مرة أخرى
-                 this.show = false;
-                 setTimeout(() => {
-                     this.checkNotifications();
-                 }, 1000);
-             },
-             markAsRead() {
-                 if (this.notification) {
-                     const notificationId = this.notification.id.toString();
-                     const actionUrl = this.notification.action_url;
-                     
-                     fetch(`/employee/api/notifications/${this.notification.id}/mark-read`, {
-                         method: 'POST',
-                         headers: {
-                             'Content-Type': 'application/json',
-                             'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                             'Accept': 'application/json'
-                         }
-                     })
-                     .then(response => response.json())
-                     .then(data => {
-                         if (data.success) {
-                             // إضافة إلى قائمة المقروءة
-                             if (!this.readNotifications.includes(notificationId)) {
-                                 this.readNotifications.push(notificationId);
-                                 localStorage.setItem('readEmployeeNotifications', JSON.stringify(this.readNotifications));
-                             }
-                             
-                             this.show = false;
-                             this.notification = null;
-                             
-                             // إذا كان هناك رابط إجراء، انتقل إليه
-                             if (actionUrl) {
-                                 setTimeout(() => {
-                                     window.location.href = actionUrl;
-                                 }, 300);
-                             } else {
-                                 // فحص إشعارات جديدة بعد قراءة هذا
-                                 setTimeout(() => {
-                                     this.checkNotifications();
-                                 }, 1000);
-                             }
-                         }
-                     })
-                     .catch(error => {
-                         console.error('Error marking as read:', error);
-                         this.show = false;
-                     });
-                 }
-             }
-         }"
-         x-init="
-             // فحص الإشعارات عند تحميل الصفحة
-             setTimeout(() => {
-                 checkNotifications();
-             }, 1000);
-             
-             // فحص الإشعارات كل 30 ثانية (Real-time)
-             setInterval(() => {
-                 if (!show) {
-                     checkNotifications();
-                 }
-             }, 30000);
-         "
-         x-show="show"
-         x-cloak
-         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-         style="display: none;">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border-2 border-blue-200 animate-scale-in"
-             @click.away="dismissNotification()">
-            <div class="flex items-start justify-between mb-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white"
-                         :class="{
-                             'from-red-500 to-red-600': notification?.priority === 'urgent',
-                             'from-orange-500 to-orange-600': notification?.priority === 'high',
-                             'from-yellow-500 to-yellow-600': notification?.priority === 'normal',
-                             'from-blue-500 to-blue-600': !notification?.priority || notification?.priority === 'low'
-                         }">
-                        <i class="fas fa-bell text-xl"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-lg font-black text-gray-900" x-text="notification?.title"></h3>
-                        <span class="text-xs text-gray-500" x-text="notification?.created_at"></span>
-                    </div>
-                </div>
-                <button @click="dismissNotification()" 
-                        class="text-gray-400 hover:text-gray-600 transition-colors">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            
-            <div class="mb-4">
-                <p class="text-gray-700 leading-relaxed whitespace-pre-wrap" x-text="notification?.message"></p>
-            </div>
-            
-            <div class="flex items-center gap-3">
-                <button @click="markAsRead()" 
-                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-semibold transition-colors">
-                    <i class="fas fa-check ml-2"></i>
-                    قرأت الإشعار
-                </button>
-                <button @click="dismissNotification()" 
-                        class="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors">
-                    إغلاق
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <style>
-        @keyframes scale-in {
-            from {
-                opacity: 0;
-                transform: scale(0.9);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-        .animate-scale-in {
-            animation: scale-in 0.3s ease-out;
-        }
-        [x-cloak] { display: none !important; }
-    </style>
 
     @stack('scripts')
     @include('components.employee-presence-heartbeat')

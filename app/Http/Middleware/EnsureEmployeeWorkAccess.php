@@ -15,41 +15,48 @@ class EnsureEmployeeWorkAccess
 
     public function handle(Request $request, Closure $next): Response
     {
-        $user = $request->user();
+        try {
+            $user = $request->user();
 
-        if (! $user || ! $user->isEmployee()) {
-            return $next($request);
-        }
+            if (! $user || ! $user->isEmployee()) {
+                return $next($request);
+            }
 
-        if (! $user->isSubjectToWorkSchedule()) {
-            return $next($request);
-        }
+            if (! $user->isSubjectToWorkSchedule()) {
+                return $next($request);
+            }
 
-        if ($this->isExemptRoute($request)) {
-            return $next($request);
-        }
+            if ($this->isExemptRoute($request)) {
+                return $next($request);
+            }
 
-        $state = $this->attendance->getState($user);
+            $state = $this->attendance->getState($user);
 
-        if ($state['can_access'] ?? false) {
+            if ($state['can_access'] ?? false) {
+                view()->share('employeeAttendance', $state);
+
+                return $next($request);
+            }
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $state['message'] ?? 'النظام مغلق خارج وقت العمل.',
+                    'attendance' => $this->publicState($state),
+                ], 423);
+            }
+
             view()->share('employeeAttendance', $state);
 
+            return response()->view('employee.attendance.locked', [
+                'state' => $state,
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+
+            // لا تمنع الموظف من النظام لو فشل حساب الحضور
             return $next($request);
         }
-
-        if ($request->expectsJson() || $request->ajax()) {
-            return response()->json([
-                'success' => false,
-                'message' => $state['message'] ?? 'النظام مغلق خارج وقت العمل.',
-                'attendance' => $this->publicState($state),
-            ], 423);
-        }
-
-        view()->share('employeeAttendance', $state);
-
-        return response()->view('employee.attendance.locked', [
-            'state' => $state,
-        ]);
     }
 
     private function isExemptRoute(Request $request): bool

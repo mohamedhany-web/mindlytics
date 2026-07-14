@@ -61,6 +61,7 @@ class WhatsAppInboxController extends Controller
             'notes' => route('admin.whatsapp.inbox.notes', $params[0]),
             'tag' => route('admin.whatsapp.inbox.tag', $params[0]),
             'lead-stage' => route('admin.whatsapp.inbox.lead-stage', $params[0]),
+            'next-follow' => route('admin.whatsapp.inbox.next-follow', $params[0]),
             default => route('admin.whatsapp.inbox'),
         };
     }
@@ -145,6 +146,11 @@ class WhatsAppInboxController extends Controller
     public function updateLeadStage(Request $request, WhatsAppConversation $conversation): JsonResponse
     {
         return $this->inboxUpdateLeadStage($request, $conversation);
+    }
+
+    public function setNextFollow(Request $request, WhatsAppConversation $conversation): JsonResponse
+    {
+        return $this->inboxSetNextFollow($request, $conversation);
     }
 
     public function transfer(Request $request, WhatsAppConversation $conversation): JsonResponse
