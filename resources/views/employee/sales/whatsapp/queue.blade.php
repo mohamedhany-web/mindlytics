@@ -1,7 +1,7 @@
 @extends('layouts.employee')
 
 @section('title', 'طلبات واتساب')
-@section('header', 'طلبات واتساب الجديدة')
+@section('header', 'توزيع طلبات واتساب')
 
 @section('content')
 <div class="w-full space-y-4">
@@ -10,10 +10,10 @@
             <div class="min-w-0 flex-1">
                 <h2 class="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
                     <i class="fab fa-whatsapp text-emerald-600"></i>
-                    طابور الطلبات
+                    طابور الطلبات (للتوزيع)
                 </h2>
                 <p class="text-xs sm:text-sm text-slate-600 mt-0.5 leading-relaxed">
-                    يظهر هنا فقط الأرقام/العملاء <strong>غير المسندين لأي موظف</strong> — لن تظهر leads المسندة لشخص آخر.
+                    يظهر فقط من <strong>ردّ على الواتساب</strong> ولم يُسند بعد — مستلمو دفعات الإرسال بدون رد لا يظهرون هنا. وزّع كل طلب على موظف من فريقك.
                 </p>
             </div>
             <div class="shrink-0 flex items-center gap-3">
@@ -24,7 +24,7 @@
                 <a href="{{ $inboxUrl }}"
                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors">
                     <i class="fas fa-inbox text-emerald-600"></i>
-                    {{ auth()->user()->isSalesManager() ? 'محادثات الفريق' : 'المحادثات' }}
+                    محادثات الفريق
                 </a>
             </div>
         </div>
@@ -33,6 +33,16 @@
     @if(! $queueEnabled)
         <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             طابور الانتظار غير مفعّل حالياً. راجع إعدادات الواتساب (<code class="text-xs">WHATSAPP_ASSIGNMENT_STRATEGY=manual_queue</code>).
+        </div>
+    @endif
+
+    @if(! $hasTeam)
+        <div class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+            لا يوجد فريق مسند لك كمدير مبيعات — لن تتمكن من توزيع الطلبات حتى يُنشأ فريق ويربط بأعضاء.
+        </div>
+    @elseif($teamMembers->isEmpty())
+        <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            فريقك لا يحتوي على موظفي مبيعات حالياً. أضف أعضاء للفريق لتتمكن من التوزيع.
         </div>
     @endif
 
@@ -62,7 +72,7 @@
                     {{ $conversation->last_message_preview ?: '—' }}
                 </p>
 
-                <div class="flex items-center justify-between gap-2 mt-auto pt-1 border-t border-slate-100">
+                <div class="mt-auto pt-1 border-t border-slate-100 space-y-2">
                     <p class="text-[10px] text-slate-400 truncate">
                         @if($conversation->last_message_at)
                             {{ $conversation->last_message_at->diffForHumans() }}
@@ -70,14 +80,27 @@
                             —
                         @endif
                     </p>
-                    <form method="POST" action="{{ route('employee.sales.whatsapp.queue.accept', $conversation) }}" class="shrink-0">
-                        @csrf
-                        <button type="submit"
-                                class="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-colors">
-                            <i class="fas fa-check text-[10px]"></i>
-                            قبول
-                        </button>
-                    </form>
+
+                    @if($hasTeam && $teamMembers->isNotEmpty())
+                        <form method="POST" action="{{ route('employee.sales-manager.whatsapp.queue.assign', $conversation) }}" class="flex flex-col gap-1.5">
+                            @csrf
+                            <select name="assigned_to" required
+                                    class="w-full text-[11px] rounded-md border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 py-1.5">
+                                <option value="">اختر موظف المبيعات…</option>
+                                @foreach($teamMembers as $membership)
+                                    @continue(! $membership->user)
+                                    <option value="{{ $membership->user->id }}">{{ $membership->user->name }}</option>
+                                @endforeach
+                            </select>
+                            <button type="submit"
+                                    class="inline-flex items-center justify-center gap-1 w-full px-2.5 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-colors">
+                                <i class="fas fa-user-check text-[10px]"></i>
+                                توزيع
+                            </button>
+                        </form>
+                    @else
+                        <p class="text-[11px] text-rose-600 font-semibold">تعذّر التوزيع — راجع فريقك</p>
+                    @endif
                 </div>
             </div>
         @empty
@@ -86,7 +109,7 @@
                     <i class="fas fa-inbox text-xl text-slate-400"></i>
                 </div>
                 <p class="font-bold text-slate-900 mb-1">لا توجد طلبات حالياً</p>
-                <p class="text-sm text-slate-500">ستظهر هنا المحادثات الواردة من أرقام جديدة</p>
+                <p class="text-sm text-slate-500">ستظهر هنا فقط المحادثات التي ردّ أصحابها ولم تُوزَّع بعد</p>
             </div>
         @endforelse
     </div>
@@ -101,16 +124,19 @@
 <script>
     setInterval(() => {
         if (document.hidden) return;
-        fetch('{{ route('employee.sales.whatsapp.queue.count') }}', {
+        fetch('{{ route('employee.sales-manager.whatsapp.queue.count') }}', {
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
         })
             .then(r => r.json())
             .then(data => {
                 const badge = document.getElementById('wa-queue-badge');
-                if (!badge) return;
+                const total = document.getElementById('wa-queue-total');
                 const count = data.count || 0;
-                badge.textContent = count;
-                badge.classList.toggle('hidden', count === 0);
+                if (badge) {
+                    badge.textContent = count;
+                    badge.classList.toggle('hidden', count === 0);
+                }
+                if (total) total.textContent = count;
             })
             .catch(() => {});
     }, 15000);

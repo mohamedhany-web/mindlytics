@@ -52,12 +52,12 @@
         </div>
         @endif
 
-        @if(auth()->user()->isSalesStaff())
+        @if(auth()->user()->isSalesManager())
         @php $waQueueCount = app(\App\Services\WhatsAppQueueService::class)->pendingCount(); @endphp
         <div class="border-t border-slate-700/50 my-2 pt-2">
             <p class="px-4 text-xs font-semibold text-amber-400/90 uppercase tracking-wider mb-1">واتساب — طلبات</p>
-            <a href="{{ route('employee.sales.whatsapp.queue.index') }}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.whatsapp.queue.*') ? 'bg-amber-500 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+            <a href="{{ route('employee.sales-manager.whatsapp.queue.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.whatsapp.queue.*') ? 'bg-amber-500 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
                @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
                 <i class="fas fa-bell text-base"></i>
                 <span class="flex-1">طلبات جديدة</span>

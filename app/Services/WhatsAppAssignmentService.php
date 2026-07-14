@@ -41,6 +41,21 @@ class WhatsAppAssignmentService
             ->all();
     }
 
+    /**
+     * مدراء المبيعات فقط (لتبليغات طابور طلبات واتساب).
+     *
+     * @return array<int, User>
+     */
+    public function eligibleSalesManagers(): array
+    {
+        return User::query()
+            ->where('is_active', true)
+            ->salesManagers()
+            ->orderBy('name')
+            ->get(['id', 'name', 'role'])
+            ->all();
+    }
+
     public function autoAssign(WhatsAppConversation $conversation): ?WhatsAppConversation
     {
         if ($conversation->assigned_to) {

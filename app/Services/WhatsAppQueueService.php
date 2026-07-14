@@ -19,12 +19,24 @@ class WhatsAppQueueService
     public function __construct(
         private WhatsAppCrmService $crm,
         private SalesNotificationService $notifications,
+        private SalesTeamService $teams,
     ) {}
 
     public function queueEnabled(): bool
     {
         return (bool) config('whatsapp.inbox_queue.enabled', true)
             && config('whatsapp.assignment.strategy') === 'manual_queue';
+    }
+
+    public function hasCustomerReply(WhatsAppConversation $conversation): bool
+    {
+        if ($conversation->last_message_direction === WhatsAppConversationMessage::DIRECTION_INBOUND) {
+            return true;
+        }
+
+        return $conversation->messages()
+            ->where('direction', WhatsAppConversationMessage::DIRECTION_INBOUND)
+            ->exists();
     }
 
     public function isInQueue(WhatsAppConversation $conversation): bool
@@ -43,6 +55,10 @@ class WhatsAppQueueService
 
         $department = $conversation->department ?? 'sales';
         if ($department !== 'sales') {
+            return false;
+        }
+
+        if (! $this->hasCustomerReply($conversation)) {
             return false;
         }
 
@@ -138,13 +154,25 @@ class WhatsAppQueueService
         }
     }
 
-    public function claim(WhatsAppConversation $conversation, User $user): SalesLead
+    /**
+     * مدير المبيعات يوزّع الطلب على موظف مبيعات من فريقه.
+     */
+    public function assignToSalesRep(WhatsAppConversation $conversation, User $manager, User $assignee): SalesLead
     {
-        if (! $user->isSalesStaff()) {
-            abort(403, 'هذه العملية لموظفي المبيعات فقط.');
+        if (! $manager->isSalesManager()) {
+            abort(403, 'توزيع طلبات واتساب لمديري المبيعات فقط.');
         }
 
-        return DB::transaction(function () use ($conversation, $user) {
+        $team = $this->teams->managedTeamOrFail($manager);
+        $memberIds = $this->teams->memberUserIds($team);
+
+        if (! in_array((int) $assignee->id, $memberIds, true) || ! $assignee->isSalesEmployee()) {
+            throw ValidationException::withMessages([
+                'assigned_to' => 'يجب توزيع الطلب على عضو مبيعات من فريقك.',
+            ]);
+        }
+
+        return DB::transaction(function () use ($conversation, $manager, $assignee) {
             /** @var WhatsAppConversation $locked */
             $locked = WhatsAppConversation::query()
                 ->whereKey($conversation->id)
@@ -152,31 +180,31 @@ class WhatsAppQueueService
                 ->firstOrFail();
 
             if ($locked->assigned_to) {
-                if ((int) $locked->assigned_to === (int) $user->id && $locked->sales_lead_id) {
+                if ((int) $locked->assigned_to === (int) $assignee->id && $locked->sales_lead_id) {
                     return SalesLead::query()->findOrFail($locked->sales_lead_id);
                 }
 
                 throw ValidationException::withMessages([
-                    'conversation' => 'تم قبول هذا الطلب من موظف آخر.',
+                    'conversation' => 'تم توزيع هذا الطلب مسبقاً على موظف آخر.',
                 ]);
             }
 
             if (! $this->isInQueue($locked)) {
                 throw ValidationException::withMessages([
-                    'conversation' => 'هذه المحادثة غير متاحة في قائمة الانتظار.',
+                    'conversation' => 'هذه المحادثة غير متاحة في قائمة الانتظار (يظهر فقط من ردّ على الواتساب).',
                 ]);
             }
 
             $lead = $locked->sales_lead_id
                 ? SalesLead::query()->lockForUpdate()->findOrFail($locked->sales_lead_id)
-                : $this->createLeadFromConversation($locked, $user);
+                : $this->createLeadFromConversation($locked, $assignee, $manager);
 
-            if ((int) $lead->assigned_to !== (int) $user->id) {
-                $lead->update(['assigned_to' => $user->id]);
+            if ((int) $lead->assigned_to !== (int) $assignee->id) {
+                $lead->update(['assigned_to' => $assignee->id]);
             }
 
             $this->linkLead($locked, $lead);
-            $this->crm->assign($locked, (int) $user->id, (int) $user->id);
+            $this->crm->assign($locked, (int) $assignee->id, (int) $manager->id);
 
             if ($locked->status === WhatsAppConversation::STATUS_PENDING) {
                 $locked->update(['status' => WhatsAppConversation::STATUS_OPEN]);
@@ -185,19 +213,26 @@ class WhatsAppQueueService
             $this->crm->logEvent(
                 $locked->fresh(),
                 WhatsAppConversationEvent::TYPE_ASSIGNED,
-                'قبول طلب واتساب',
-                $user->name.' قبل المحادثة',
-                ['lead_id' => $lead->id, 'claimed' => true],
-                (int) $user->id
+                'توزيع طلب واتساب',
+                $manager->name.' وزّع المحادثة على '.$assignee->name,
+                [
+                    'lead_id' => $lead->id,
+                    'assigned_by_manager' => true,
+                    'assignee_id' => $assignee->id,
+                ],
+                (int) $manager->id
             );
 
             SalesActivity::create([
                 'sales_lead_id' => $lead->id,
-                'user_id' => $user->id,
+                'user_id' => $manager->id,
                 'type' => 'whatsapp',
-                'title' => 'قبول محادثة واتساب',
-                'body' => 'تم قبول طلب واتساب من قائمة الانتظار',
-                'meta' => ['conversation_id' => $locked->id],
+                'title' => 'توزيع محادثة واتساب',
+                'body' => 'وزّع المدير الطلب على '.$assignee->name,
+                'meta' => [
+                    'conversation_id' => $locked->id,
+                    'assignee_id' => $assignee->id,
+                ],
             ]);
 
             $this->notifications->notifyLeadAssigned($lead->fresh(['assignee', 'category']));
@@ -206,12 +241,12 @@ class WhatsAppQueueService
         });
     }
 
-    private function createLeadFromConversation(WhatsAppConversation $conversation, User $user): SalesLead
+    private function createLeadFromConversation(WhatsAppConversation $conversation, User $assignee, User $createdBy): SalesLead
     {
         $existing = $this->crm->findLeadByPhone($conversation->phone_number);
         if ($existing) {
             if (! $existing->assigned_to) {
-                $existing->update(['assigned_to' => $user->id]);
+                $existing->update(['assigned_to' => $assignee->id]);
             }
 
             return $existing->fresh();
@@ -223,11 +258,11 @@ class WhatsAppQueueService
             'source' => 'whatsapp',
             'stage' => 'new',
             'priority' => 'normal',
-            'assigned_to' => $user->id,
-            'created_by' => $user->id,
+            'assigned_to' => $assignee->id,
+            'created_by' => $createdBy->id,
             'category_id' => SalesLeadCategory::defaultGeneralId(),
             'last_contacted_at' => $conversation->last_message_at ?? now(),
-            'notes' => 'أُنشئ تلقائياً من طابور واتساب.',
+            'notes' => 'أُنشئ تلقائياً من طابور واتساب (توزيع المدير).',
         ]);
     }
 

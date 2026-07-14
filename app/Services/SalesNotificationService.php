@@ -527,14 +527,14 @@ class SalesNotificationService
 
     public function notifyWhatsAppQueueRequest(WhatsAppConversation $conversation, WhatsAppConversationMessage $message): void
     {
-        $agents = app(WhatsAppAssignmentService::class)->eligibleSalesStaff();
-        $queueUrl = route('employee.sales.whatsapp.queue.index');
+        $managers = app(WhatsAppAssignmentService::class)->eligibleSalesManagers();
+        $queueUrl = route('employee.sales-manager.whatsapp.queue.index');
         $name = $conversation->displayName();
         $preview = mb_substr($message->displayBody() ?: 'رسالة جديدة', 0, 120);
 
-        foreach ($agents as $agent) {
+        foreach ($managers as $manager) {
             $recent = Notification::query()
-                ->where('user_id', $agent->id)
+                ->where('user_id', $manager->id)
                 ->where('data->kind', 'whatsapp_queue')
                 ->where('data->conversation_id', $conversation->id)
                 ->where('created_at', '>=', now()->subMinutes(30))
@@ -545,15 +545,15 @@ class SalesNotificationService
             }
 
             Notification::create([
-                'user_id' => $agent->id,
+                'user_id' => $manager->id,
                 'sender_id' => null,
-                'title' => 'طلب واتساب جديد',
+                'title' => 'طلب واتساب جديد — للتوزيع',
                 'message' => '«'.$name.'» — '.$preview,
                 'type' => 'employee',
                 'priority' => 'high',
                 'audience' => 'employee',
                 'action_url' => $queueUrl,
-                'action_text' => 'عرض الطلبات',
+                'action_text' => 'توزيع الطلب',
                 'data' => [
                     'kind' => 'whatsapp_queue',
                     'conversation_id' => $conversation->id,

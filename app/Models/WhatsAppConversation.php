@@ -177,6 +177,13 @@ class WhatsAppConversation extends Model
             ->where(function (Builder $q) {
                 $q->whereNull('status')
                     ->orWhereIn('status', [self::STATUS_OPEN, self::STATUS_PENDING]);
+            })
+            // دفعات الإرسال لا تدخل الطابور — فقط من أرسل رسالة واردة (رد)
+            ->where(function (Builder $q) {
+                $q->where('last_message_direction', WhatsAppConversationMessage::DIRECTION_INBOUND)
+                    ->orWhereHas('messages', function (Builder $mq) {
+                        $mq->where('direction', WhatsAppConversationMessage::DIRECTION_INBOUND);
+                    });
             });
     }
 

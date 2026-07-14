@@ -957,12 +957,6 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
 
         Route::get('/dashboard', [\App\Http\Controllers\Employee\EmployeeController::class, 'dashboard'])->name('dashboard');
 
-        Route::middleware('sales.staff')->prefix('sales/whatsapp/queue')->name('sales.whatsapp.queue.')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Employee\SalesWhatsAppQueueController::class, 'index'])->name('index');
-            Route::get('/count', [\App\Http\Controllers\Employee\SalesWhatsAppQueueController::class, 'count'])->name('count');
-            Route::post('/{conversation}/accept', [\App\Http\Controllers\Employee\SalesWhatsAppQueueController::class, 'accept'])->name('accept');
-        });
-
         Route::middleware('sales.employee')->prefix('sales')->name('sales.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Employee\SalesDashboardController::class, 'index'])->name('dashboard');
             Route::get('kpi', [\App\Http\Controllers\Employee\SalesKpiController::class, 'index'])->name('kpi.index');
@@ -1027,6 +1021,12 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('team-reports', [\App\Http\Controllers\Employee\SalesManagerDailyReportController::class, 'teamReports'])->name('team-reports.index');
             Route::get('team-reports/edit', [\App\Http\Controllers\Employee\SalesManagerDailyReportController::class, 'editTeamReport'])->name('team-reports.edit');
             Route::post('team-reports', [\App\Http\Controllers\Employee\SalesManagerDailyReportController::class, 'storeTeamReport'])->name('team-reports.store');
+            Route::prefix('whatsapp/queue')->name('whatsapp.queue.')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Employee\SalesWhatsAppQueueController::class, 'index'])->name('index');
+                Route::get('/count', [\App\Http\Controllers\Employee\SalesWhatsAppQueueController::class, 'count'])->name('count');
+                Route::post('/{conversation}/assign', [\App\Http\Controllers\Employee\SalesWhatsAppQueueController::class, 'assign'])->name('assign');
+            });
+
             Route::prefix('whatsapp/inbox')->name('whatsapp.inbox.')->group(function () {
                 Route::get('/', [\App\Http\Controllers\Employee\SalesManagerWhatsAppInboxController::class, 'index'])->name('index');
                 Route::get('/templates', [\App\Http\Controllers\Employee\SalesManagerWhatsAppInboxController::class, 'templates'])->name('templates');
