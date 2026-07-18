@@ -12,17 +12,16 @@
     @include('components.favicon-meta')
 
     <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@400;500;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Alpine.js -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    {{-- Tailwind + Alpine محلي (بدون CDN) --}}
+    <x-frontend-stack />
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="{{ asset('css/mindlytics-los.css') }}?v=4">
+    <link rel="stylesheet" href="{{ asset('css/mindlytics-los.css') }}?v=5">
 
     <style>
         [x-cloak] { display: none !important; }
@@ -506,7 +505,7 @@ x-init="
         sidebarOpen = window.innerWidth >= 1024;
     });
 ">
-    <div class="flex h-screen overflow-hidden">
+    <div class="los-app flex h-screen overflow-hidden">
         @auth
             <!-- Clean Sidebar: always visible on lg+; drawer on mobile (no x-show opacity traps) -->
             <aside class="student-sidebar los-sidebar-bridge flex-shrink-0 fixed lg:static inset-y-0 z-50 lg:z-auto
@@ -521,11 +520,11 @@ x-init="
             <div x-show="sidebarOpen"
                  x-cloak
                  @click="sidebarOpen = false"
-                 class="fixed inset-0 bg-black/50 z-40 lg:hidden"></div>
+                 class="los-overlay fixed inset-0 bg-black/50 z-40 lg:hidden"></div>
         @endauth
 
         <!-- Main Content Area -->
-        <div class="flex flex-col flex-1 min-w-0">
+        <div class="los-app-main flex flex-col flex-1 min-w-0">
             @auth
                 <!-- Learning OS Top Navigation -->
                 <header class="los-topnav student-header los-topnav-bridge flex-shrink-0">

@@ -18,16 +18,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Alpine.js -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    {{-- Tailwind + Alpine محلي (بدون CDN) --}}
+    <x-frontend-stack />
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     {{-- LOS sidebar styles (shared with student-dashboard layout) --}}
-    <link rel="stylesheet" href="{{ asset('css/mindlytics-los.css') }}?v=4">
+    <link rel="stylesheet" href="{{ asset('css/mindlytics-los.css') }}?v=5">
     
     @php
         $showContentProtection = !empty(trim((string) ($__env->yieldContent('enable-content-protection') ?? '')));

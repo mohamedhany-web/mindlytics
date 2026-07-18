@@ -518,6 +518,28 @@ body.los-shell {
   }
 }
 
+/* —— Shell layout (works even if Tailwind fails to load) —— */
+.los-app {
+  display: flex;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  width: 100%;
+}
+.los-app-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+}
+.los-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 40;
+}
+
 /* Legacy student layout bridges */
 .student-sidebar.los-sidebar-bridge {
   width: var(--ml-sidebar-w);
@@ -532,6 +554,25 @@ body.los-shell {
   min-height: 100dvh;
   overflow: hidden;
   background: var(--ml-surface);
+  flex-shrink: 0;
+  z-index: 50;
+  transition: transform 150ms ease-out;
+}
+@media (max-width: 1023px) {
+  .student-sidebar.los-sidebar-bridge {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+  }
+  html[dir="rtl"] .student-sidebar.los-sidebar-bridge { right: 0; left: auto; }
+  html[dir="ltr"] .student-sidebar.los-sidebar-bridge { left: 0; right: auto; }
+}
+@media (min-width: 1024px) {
+  .student-sidebar.los-sidebar-bridge {
+    position: static;
+    transform: none !important;
+  }
+  .los-overlay { display: none !important; }
 }
 .student-header.los-topnav-bridge { min-height: var(--ml-header-h); }
 main.los-main { background: var(--ml-bg) !important; }

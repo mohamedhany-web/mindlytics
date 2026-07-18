@@ -14,12 +14,9 @@
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Alpine.js (نسخة ثابتة لضمان عمل الدروب داون) -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+
+    {{-- Tailwind + Alpine محلي (بدون CDN) --}}
+    <x-frontend-stack />
     
     <!-- Custom Styles -->
     <style>
