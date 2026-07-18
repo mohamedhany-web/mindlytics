@@ -1,198 +1,278 @@
-@extends('layouts.app')
+@extends('layouts.student-dashboard')
 
 @section('title', __('student.notifications_title'))
-@section('header', __('student.notifications_title'))
+
+@push('styles')
+@include('student.offline-courses.partials.los-styles')
+<style>
+    .nt-filters {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        align-items: end;
+    }
+    @media (max-width: 900px) {
+        .nt-filters { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 560px) {
+        .nt-filters { grid-template-columns: 1fr; }
+    }
+    .nt-filters label {
+        display: block; margin-bottom: 4px;
+        font-size: 11px; font-weight: 700; color: var(--ml-muted);
+    }
+    .nt-filters select {
+        width: 100%; min-height: 38px; padding: 0 10px;
+        border-radius: 10px; border: 1px solid var(--ml-line);
+        background: var(--ml-surface); color: var(--ml-ink);
+        font-family: inherit; font-size: 13px;
+    }
+    .nt-filters select:focus {
+        outline: none; border-color: rgba(73, 164, 162, 0.55);
+        box-shadow: 0 0 0 3px rgba(73, 164, 162, 0.12);
+    }
+    .nt-list { display: flex; flex-direction: column; gap: 8px; }
+    .nt-row {
+        display: grid;
+        grid-template-columns: 40px minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: start;
+        padding: 10px 12px;
+        background: var(--ml-surface);
+        border: 1px solid var(--ml-line);
+        border-radius: 12px;
+        transition: border-color var(--ml-fast) ease, background var(--ml-fast) ease;
+    }
+    .nt-row.is-unread {
+        border-inline-start: 3px solid var(--ml-teal);
+        background: rgba(73, 164, 162, 0.04);
+    }
+    .nt-row:hover { border-color: rgba(73, 164, 162, 0.35); }
+    .nt-ico {
+        width: 40px; height: 40px; border-radius: 11px;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0; font-size: 14px;
+        background: var(--ml-well); color: var(--ml-muted);
+    }
+    .nt-ico.c-blue { background: rgba(73, 164, 162, 0.14); color: var(--ml-teal-deep); }
+    .nt-ico.c-green { background: rgba(16, 185, 129, 0.12); color: #047857; }
+    .nt-ico.c-yellow,
+    .nt-ico.c-orange { background: rgba(245, 158, 11, 0.16); color: #92400e; }
+    .nt-ico.c-red { background: rgba(239, 68, 68, 0.12); color: #b91c1c; }
+    .nt-ico.c-purple { background: rgba(100, 116, 139, 0.14); color: #475569; }
+    .nt-body { min-width: 0; }
+    .nt-title-row {
+        display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 2px;
+    }
+    .nt-title-row h3 {
+        margin: 0; font-size: 13px; font-weight: 700; line-height: 1.35; color: var(--ml-ink);
+    }
+    .nt-msg {
+        margin: 0;
+        font-size: 12px; line-height: 1.5; color: var(--ml-muted);
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .nt-meta {
+        display: flex; flex-wrap: wrap; gap: 8px 12px;
+        margin-top: 4px; font-size: 11px; color: var(--ml-muted);
+    }
+    .nt-meta span { display: inline-flex; align-items: center; gap: 4px; }
+    .nt-action {
+        display: inline-flex; align-items: center; gap: 4px;
+        margin-top: 6px; font-size: 12px; font-weight: 700;
+        color: var(--ml-teal-deep); text-decoration: none;
+    }
+    .nt-action:hover { text-decoration: underline; }
+    .nt-actions {
+        display: flex; align-items: center; gap: 2px; flex-shrink: 0;
+    }
+    .nt-actions button,
+    .nt-actions a {
+        width: 32px; height: 32px; border-radius: 8px; border: 0;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: transparent; color: var(--ml-muted); cursor: pointer;
+        text-decoration: none; font-size: 12px;
+        transition: background var(--ml-fast) ease, color var(--ml-fast) ease;
+    }
+    .nt-actions button:hover,
+    .nt-actions a:hover { background: var(--ml-well); color: var(--ml-ink); }
+    .nt-actions .ok:hover { color: #047857; background: rgba(16, 185, 129, 0.1); }
+    .nt-actions .view:hover { color: var(--ml-teal-deep); background: rgba(73, 164, 162, 0.1); }
+    .nt-actions .del:hover { color: #b91c1c; background: rgba(239, 68, 68, 0.1); }
+    @media (max-width: 640px) {
+        .nt-row { grid-template-columns: 36px minmax(0, 1fr); }
+        .nt-actions { grid-column: 1 / -1; justify-content: flex-end; }
+        .nt-ico { width: 36px; height: 36px; border-radius: 10px; }
+    }
+</style>
+@endpush
 
 @section('content')
-<div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-    <!-- الهيدر والإحصائيات -->
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div class="px-4 sm:px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <h1 class="text-xl sm:text-2xl font-bold text-gray-900">{{ __('student.notifications_title') }}</h1>
-            <div class="flex items-center gap-2">
-                @if($stats['unread'] > 0)
-                <button onclick="markAllAsRead()" class="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
-                    <i class="fas fa-check ml-2"></i> {{ __('student.mark_all_read') }}
-                </button>
-                @endif
-                <button onclick="cleanup()" class="inline-flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
-                    <i class="fas fa-broom ml-2"></i> {{ __('student.cleanup_btn') }}
-                </button>
-            </div>
+<div class="oc">
+    <header class="oc-chrome">
+        <div>
+            <nav class="oc-crumb" aria-label="{{ __('student.notifications_title') }}">
+                <a href="{{ route('dashboard') }}">{{ __('student.learning_center') }}</a>
+                <span aria-hidden="true">/</span>
+                <span style="color:var(--ml-ink);font-weight:700">{{ __('student.notifications_title') }}</span>
+            </nav>
+            <h1>{{ __('student.notifications_title') }}</h1>
+            <p class="sub">{{ __('student.notifications_subtitle') }}</p>
         </div>
-        <div class="p-4 sm:p-5">
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                <div class="py-3 px-4 bg-gray-50 rounded-xl border border-gray-100 text-center">
-                    <p class="text-xl sm:text-2xl font-bold text-gray-900">{{ $stats['total'] }}</p>
-                    <p class="text-xs font-medium text-gray-500">{{ __('student.total_notifications') }}</p>
-                </div>
-                <div class="py-3 px-4 bg-sky-50 rounded-xl border border-sky-100 text-center">
-                    <p class="text-xl sm:text-2xl font-bold text-sky-600">{{ $stats['unread'] }}</p>
-                    <p class="text-xs font-medium text-gray-500">{{ __('student.unread_label') }}</p>
-                </div>
-                <div class="py-3 px-4 bg-amber-50 rounded-xl border border-amber-100 text-center">
-                    <p class="text-xl sm:text-2xl font-bold text-amber-600">{{ $stats['today'] }}</p>
-                    <p class="text-xs font-medium text-gray-500">{{ __('student.today_label') }}</p>
-                </div>
-                <div class="py-3 px-4 bg-red-50 rounded-xl border border-red-100 text-center">
-                    <p class="text-xl sm:text-2xl font-bold text-red-600">{{ $stats['urgent'] }}</p>
-                    <p class="text-xs font-medium text-gray-500">{{ __('student.urgent_label') }}</p>
-                </div>
-            </div>
+        <div class="oc-signals">
+            <span class="oc-signal oc-signal-live">{{ $stats['total'] }} {{ __('student.total_notifications') }}</span>
+            @if($stats['unread'] > 0)
+                <span class="oc-signal oc-signal-hot">{{ $stats['unread'] }} {{ __('student.unread_label') }}</span>
+            @endif
+        </div>
+    </header>
+
+    <div class="oc-pulse" aria-label="{{ __('student.notifications_title') }}">
+        <div>
+            <span class="lbl">{{ __('student.total_notifications') }}</span>
+            <span class="val">{{ $stats['total'] }}</span>
+        </div>
+        <div>
+            <span class="lbl">{{ __('student.unread_label') }}</span>
+            <span class="val teal">{{ $stats['unread'] }}</span>
+        </div>
+        <div>
+            <span class="lbl">{{ __('student.today_label') }}</span>
+            <span class="val hot">{{ $stats['today'] }}</span>
+        </div>
+        <div>
+            <span class="lbl">{{ __('student.urgent_label') }}</span>
+            <span class="val">{{ $stats['urgent'] }}</span>
         </div>
     </div>
 
-    <!-- الفلاتر -->
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-5">
-        <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="oc-nav" style="margin-bottom:16px">
+        @if($stats['unread'] > 0)
+            <button type="button" onclick="markAllAsRead()" class="oc-btn">
+                <i class="fas fa-check text-xs"></i> {{ __('student.mark_all_read') }}
+            </button>
+        @endif
+        <button type="button" onclick="cleanup()" class="oc-btn oc-btn-quiet">
+            <i class="fas fa-broom text-xs"></i> {{ __('student.cleanup_btn') }}
+        </button>
+    </div>
+
+    <section class="oc-panel" style="margin-bottom:16px">
+        <form method="GET" class="nt-filters">
             <div>
-                <label for="type" class="block text-sm font-medium text-gray-700 mb-1">{{ __('student.notification_type_label') }}</label>
-                <select name="type" id="type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm">
+                <label for="type">{{ __('student.notification_type_label') }}</label>
+                <select name="type" id="type">
                     <option value="">{{ __('student.all_types') }}</option>
                     @foreach($notificationTypes as $key => $type)
                         <option value="{{ $key }}" {{ request('type') == $key ? 'selected' : '' }}>{{ $type }}</option>
                     @endforeach
                 </select>
             </div>
-
             <div>
-                <label for="status" class="block text-sm font-medium text-gray-700 mb-1">{{ __('common.status') }}</label>
-                <select name="status" id="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm">
+                <label for="status">{{ __('common.status') }}</label>
+                <select name="status" id="status">
                     <option value="">{{ __('student.all_statuses') }}</option>
                     <option value="unread" {{ request('status') == 'unread' ? 'selected' : '' }}>{{ __('student.unread_label') }}</option>
                     <option value="read" {{ request('status') == 'read' ? 'selected' : '' }}>{{ __('student.read_filter') }}</option>
                 </select>
             </div>
-
             <div>
-                <label for="priority" class="block text-sm font-medium text-gray-700 mb-1">{{ __('student.priority_label') }}</label>
-                <select name="priority" id="priority" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm">
+                <label for="priority">{{ __('student.priority_label') }}</label>
+                <select name="priority" id="priority">
                     <option value="">{{ __('student.all_priorities') }}</option>
                     @foreach($priorities as $key => $priority)
                         <option value="{{ $key }}" {{ request('priority') == $key ? 'selected' : '' }}>{{ $priority }}</option>
                     @endforeach
                 </select>
             </div>
-
-            <div class="flex items-end">
-                <button type="submit" class="w-full bg-sky-500 hover:bg-sky-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">
-                    <i class="fas fa-filter ml-2"></i>
-                    {{ __('student.filter_btn') }}
+            <div>
+                <button type="submit" class="oc-btn" style="width:100%">
+                    <i class="fas fa-filter text-xs"></i> {{ __('student.filter_btn') }}
                 </button>
             </div>
         </form>
-    </div>
+    </section>
 
-    <!-- قائمة الإشعارات -->
     @if($notifications->count() > 0)
-        <div class="space-y-3">
+        <div class="nt-list">
             @foreach($notifications as $notification)
-            <div class="bg-white rounded-xl border {{ !$notification->is_read ? 'border-sky-200 border-r-4 border-r-sky-500' : 'border-gray-200' }} shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                <div class="p-6">
-                    <div class="flex items-start justify-between">
-                        <div class="flex items-start gap-4 flex-1 flex-row-reverse">
-                            <!-- أيقونة الإشعار -->
-                            <div class="flex-shrink-0">
-                                <div class="w-12 h-12 rounded-full flex items-center justify-center
-                                    @if($notification->type_color == 'blue') bg-sky-100
-                                    @elseif($notification->type_color == 'green') bg-emerald-100
-                                    @elseif($notification->type_color == 'yellow') bg-amber-100
-                                    @elseif($notification->type_color == 'red') bg-red-100
-                                    @elseif($notification->type_color == 'purple') bg-violet-100
-                                    @elseif($notification->type_color == 'orange') bg-amber-100
-                                    @else bg-gray-100
-                                    @endif">
-                                    <i class="{{ $notification->type_icon }} 
-                                        @if($notification->type_color == 'blue') text-sky-600
-                                        @elseif($notification->type_color == 'green') text-emerald-600
-                                        @elseif($notification->type_color == 'yellow') text-amber-600
-                                        @elseif($notification->type_color == 'red') text-red-600
-                                        @elseif($notification->type_color == 'purple') text-violet-600
-                                        @elseif($notification->type_color == 'orange') text-amber-600
-                                        @else text-gray-600
-                                        @endif"></i>
-                                </div>
-                            </div>
-                            
-                            <!-- محتوى الإشعار -->
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center gap-3 mb-2">
-                                    <h3 class="text-lg font-medium text-gray-900">{{ $notification->title }}</h3>
-                                    
-                                    @if($notification->priority !== 'normal')
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                            @if($notification->priority_color == 'red') bg-red-100 text-red-800
-                                            @elseif($notification->priority_color == 'yellow') bg-amber-100 text-amber-800
-                                            @else bg-gray-100 text-gray-800
-                                            @endif">
-                                            {{ $priorities[$notification->priority] ?? $notification->priority }}
-                                        </span>
-                                    @endif
-
-                                    @if(!$notification->is_read)
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-sky-100 text-sky-800">
-                                            <i class="fas fa-circle text-[6px] ml-1"></i> جديد
-                                        </span>
-                                    @endif
-                                </div>
-                                
-                                <p class="text-gray-600 mb-3">{{ $notification->message }}</p>
-                                
-                                <div class="flex items-center gap-6 text-sm text-gray-500">
-                                    <span class="flex items-center">
-                                        <i class="fas fa-user ml-1"></i>
-                                        من: {{ $notification->sender->name ?? 'النظام' }}
-                                    </span>
-                                    
-                                    <span class="flex items-center">
-                                        <i class="fas fa-clock ml-1"></i>
-                                        {{ $notification->created_at->diffForHumans() }}
-                                    </span>
-
-                                    @if($notification->expires_at)
-                                        <span class="flex items-center">
-                                            <i class="fas fa-hourglass-end ml-1"></i>
-                                            ينتهي {{ $notification->expires_at->diffForHumans() }}
-                                        </span>
-                                    @endif
-                                </div>
-
-                                @if($notification->action_url && $notification->action_text)
-                                    <div class="mt-4">
-                                        <a href="{{ route('notifications.go', $notification) }}" class="inline-flex items-center gap-2 text-sky-600 hover:text-sky-700 text-sm font-semibold transition-colors">
-                                            {{ $notification->action_text }} <i class="fas fa-external-link-alt text-xs"></i>
-                                        </a>
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
-
-                        <div class="flex items-center gap-2 flex-shrink-0">
-                            @if(!$notification->is_read)
-                            <button onclick="markAsRead({{ $notification->id }})" class="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="تحديد كمقروء"><i class="fas fa-check"></i></button>
-                            @endif
-                            <a href="{{ route('notifications.show', $notification) }}" class="p-2 text-sky-600 hover:bg-sky-50 rounded-lg transition-colors" title="عرض"><i class="fas fa-eye"></i></a>
-                            <button onclick="deleteNotification({{ $notification->id }})" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="حذف"><i class="fas fa-trash"></i></button>
-                        </div>
+                @php
+                    $color = $notification->type_color ?? 'gray';
+                    $prioClass = match ($notification->priority_color ?? '') {
+                        'red' => 'oc-badge-bad',
+                        'yellow' => 'oc-badge-warn',
+                        default => 'oc-badge-live',
+                    };
+                @endphp
+                <article class="nt-row {{ $notification->is_read ? '' : 'is-unread' }}">
+                    <div class="nt-ico c-{{ $color }}" aria-hidden="true">
+                        <i class="{{ $notification->type_icon ?? 'fas fa-bell' }}"></i>
                     </div>
-                </div>
-            </div>
+                    <div class="nt-body">
+                        <div class="nt-title-row">
+                            <h3>{{ $notification->title }}</h3>
+                            @if($notification->priority !== 'normal')
+                                <span class="oc-badge {{ $prioClass }}">{{ $priorities[$notification->priority] ?? $notification->priority }}</span>
+                            @endif
+                            @if(! $notification->is_read)
+                                <span class="oc-badge oc-badge-live">{{ __('student.notification_new') }}</span>
+                            @endif
+                        </div>
+                        <p class="nt-msg">{{ $notification->message }}</p>
+                        <div class="nt-meta">
+                            <span>
+                                <i class="fas fa-user"></i>
+                                {{ __('student.notification_from') }}: {{ $notification->sender->name ?? __('student.notification_system') }}
+                            </span>
+                            <span>
+                                <i class="fas fa-clock"></i>
+                                {{ $notification->created_at->diffForHumans() }}
+                            </span>
+                            @if($notification->expires_at)
+                                <span>
+                                    <i class="fas fa-hourglass-end"></i>
+                                    {{ __('student.notification_expires') }} {{ $notification->expires_at->diffForHumans() }}
+                                </span>
+                            @endif
+                        </div>
+                        @if($notification->action_url && $notification->action_text)
+                            <a href="{{ route('notifications.go', $notification) }}" class="nt-action">
+                                {{ $notification->action_text }}
+                                <i class="fas fa-external-link-alt text-[10px]"></i>
+                            </a>
+                        @endif
+                    </div>
+                    <div class="nt-actions">
+                        @if(! $notification->is_read)
+                            <button type="button" class="ok" onclick="markAsRead({{ $notification->id }})" title="{{ __('student.notification_mark_read') }}">
+                                <i class="fas fa-check"></i>
+                            </button>
+                        @endif
+                        <a href="{{ route('notifications.show', $notification) }}" class="view" title="{{ __('student.notification_view') }}">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <button type="button" class="del" onclick="deleteNotification({{ $notification->id }})" title="{{ __('student.notification_delete') }}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </article>
             @endforeach
         </div>
 
         @if($notifications->hasPages())
-        <div class="flex justify-center mt-6">{{ $notifications->appends(request()->query())->links() }}</div>
+            <div style="margin-top:20px;display:flex;justify-content:center">
+                {{ $notifications->appends(request()->query())->links() }}
+            </div>
         @endif
     @else
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-10 sm:p-12 text-center">
-            <div class="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-gray-400">
-                <i class="fas fa-bell-slash text-2xl"></i>
-            </div>
-            <h3 class="text-lg font-bold text-gray-900 mb-2">لا توجد إشعارات</h3>
-            <p class="text-sm text-gray-500">ستظهر هنا آخر التحديثات والرسائل المهمة</p>
+        <div class="oc-empty">
+            <div class="icon"><i class="fas fa-bell-slash"></i></div>
+            <h3>{{ __('student.no_notifications') }}</h3>
+            <p>{{ __('student.no_notifications_desc') }}</p>
         </div>
     @endif
 </div>
+@endsection
 
 @push('scripts')
 <script>
@@ -201,84 +281,68 @@ function markAsRead(notificationId) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => { if (data.success) location.reload(); })
+    .catch(error => console.error('Error:', error));
+}
+
+function markAllAsRead() {
+    if (!confirm(@json(__('student.notification_confirm_mark_all')))) return;
+    fetch('/notifications/mark-all-read', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
         }
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
+            if (data.message) alert(data.message);
             location.reload();
         }
     })
-    .catch(error => {
-        console.error('Error:', error);
-    });
-}
-
-function markAllAsRead() {
-    if (confirm('هل تريد تحديد جميع الإشعارات كمقروءة؟')) {
-        fetch('/notifications/mark-all-read', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                location.reload();
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-    }
+    .catch(error => console.error('Error:', error));
 }
 
 function deleteNotification(notificationId) {
-    if (confirm('هل تريد حذف هذا الإشعار؟')) {
-        fetch(`/notifications/${notificationId}`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-    }
+    if (!confirm(@json(__('student.notification_confirm_delete')))) return;
+    fetch(`/notifications/${notificationId}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => { if (data.success) location.reload(); })
+    .catch(error => console.error('Error:', error));
 }
 
 function cleanup() {
-    if (confirm('هل تريد حذف الإشعارات المقروءة الأقدم من 30 يوم؟')) {
-        fetch('/notifications/cleanup', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                location.reload();
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-    }
+    if (!confirm(@json(__('student.notification_confirm_cleanup')))) return;
+    fetch('/notifications/cleanup', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.message) alert(data.message);
+            location.reload();
+        }
+    })
+    .catch(error => console.error('Error:', error));
 }
 </script>
 @endpush
-@endsection

@@ -2,294 +2,410 @@
 
 @section('title', __('student.my_courses_active_title'))
 
+@php
+    $totalShown = $activeCourses->count();
+    $continueCourse = $activeCourses->getCollection()->first(function ($c) {
+        return (float) ($c->pivot->progress ?? 0) < 100;
+    }) ?? $activeCourses->getCollection()->first();
+    $continueProgress = $continueCourse ? (float) ($continueCourse->pivot->progress ?? 0) : 0;
+@endphp
+
 @push('styles')
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@500;700&display=swap" rel="stylesheet">
 <style>
-    .hero-card {
-        background: #fff;
-        border-radius: 16px;
-        padding: 24px 28px;
+    .mc {
+        --ml-teal: #49A4A2;
+        --ml-teal-deep: #2f7f7d;
+        --ml-yellow: #FFD23F;
+        --ml-yellow-ink: #5c4500;
+        --ml-bg: #F7F9FC;
+        --ml-surface: #FFFFFF;
+        --ml-well: #EEF2F7;
+        --ml-ink: #1A2238;
+        --ml-muted: #475569;
+        --ml-line: rgba(26, 34, 56, 0.08);
+        --ml-r: 14px;
+        --ml-fast: 140ms;
+        --ml-slow: 400ms;
+        --ml-ease: cubic-bezier(0.22, 1, 0.36, 1);
+        font-family: 'IBM Plex Sans Arabic', 'Tajawal', 'Cairo', sans-serif;
+        color: var(--ml-ink);
+        width: 100%;
+        max-width: none;
+        padding-block: 4px 32px;
+    }
+    .mc-reveal { animation: mcRise var(--ml-slow) var(--ml-ease) both; animation-delay: var(--reveal-delay, 0ms); }
+    @keyframes mcRise {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: none; }
+    }
+
+    .mc-chrome {
+        display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
+        gap: 12px; padding: 8px 0 14px; border-bottom: 1px solid var(--ml-line); margin-bottom: 20px;
+    }
+    .mc-crumb { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; color: var(--ml-muted); margin-bottom: 6px; }
+    .mc-crumb a { color: var(--ml-teal-deep); font-weight: 600; text-decoration: none; }
+    .mc-crumb a:hover { text-decoration: underline; }
+    .mc-chrome h1 { margin: 0; font-size: clamp(1.25rem, 2vw, 1.55rem); font-weight: 700; letter-spacing: -0.015em; line-height: 1.3; }
+    .mc-chrome .sub { margin: 4px 0 0; font-size: 13px; color: var(--ml-muted); max-width: 52ch; line-height: 1.55; }
+    .mc-signals { display: flex; flex-wrap: wrap; gap: 8px; }
+    .mc-signal {
+        display: inline-flex; align-items: center; gap: 6px; min-height: 28px;
+        padding: 0 10px; border-radius: 999px; font-size: 11px; font-weight: 700;
+        background: var(--ml-well); color: var(--ml-muted);
+    }
+    .mc-signal-live { background: rgba(73, 164, 162, 0.14); color: var(--ml-teal-deep); }
+    .mc-signal-hot { background: rgba(255, 210, 63, 0.35); color: var(--ml-yellow-ink); }
+
+    .mc-stage {
+        position: relative; display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: end;
+        padding: 18px 20px; margin-bottom: 20px; background: var(--ml-surface);
+        border-radius: calc(var(--ml-r) + 4px); border: 1px solid var(--ml-line);
+        box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset, 0 10px 30px rgba(26, 34, 56, 0.04);
+    }
+    .mc-stage::before {
+        content: ''; position: absolute; inset-block: 16px; inset-inline-start: 0; width: 3px;
+        border-radius: 999px; background: linear-gradient(180deg, var(--ml-teal), rgba(73,164,162,0.2));
+    }
+    .mc-eyebrow {
+        display: inline-flex; align-items: center; gap: 8px; margin-bottom: 8px;
+        font-size: 11px; font-weight: 700; color: var(--ml-teal-deep);
+    }
+    .mc-eyebrow em {
+        font-style: normal; padding: 2px 8px; border-radius: 6px;
+        background: rgba(73, 164, 162, 0.12); color: var(--ml-teal-deep);
+    }
+    .mc-stage h2 {
+        margin: 0 0 6px; font-size: clamp(1.1rem, 1.8vw, 1.35rem); font-weight: 700;
+        line-height: 1.35; letter-spacing: -0.01em; max-width: 36ch;
+    }
+    .mc-copy { margin: 0; font-size: 13px; line-height: 1.65; color: var(--ml-muted); max-width: 48ch; }
+    .mc-meter {
+        height: 4px; width: 100%; max-width: 240px; margin-top: 12px; border-radius: 999px;
+        background: var(--ml-well); overflow: hidden;
+    }
+    .mc-meter > i { display: block; height: 100%; background: var(--ml-teal); border-radius: inherit; }
+    .mc-stage-actions { display: flex; flex-direction: column; gap: 10px; min-width: 160px; }
+    .mc-btn {
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        min-height: 44px; padding: 0 18px; border-radius: 12px; background: var(--ml-teal);
+        color: #fff !important; font-size: 14px; font-weight: 700; text-decoration: none !important;
+        border: 0; cursor: pointer; box-shadow: 0 8px 18px rgba(73, 164, 162, 0.22);
+        transition: background var(--ml-fast) ease, transform var(--ml-fast) var(--ml-ease);
+    }
+    .mc-btn:hover { background: var(--ml-teal-deep); transform: translateY(-1px); }
+    .mc-btn-quiet {
+        background: transparent; color: var(--ml-ink) !important; box-shadow: none;
+        border: 1px solid var(--ml-line);
+    }
+    .mc-btn-quiet:hover { background: var(--ml-well); transform: none; }
+
+    .mc-pulse {
+        display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr));
+        gap: 1px; margin-bottom: 20px; background: var(--ml-line);
+        border: 1px solid var(--ml-line); border-radius: var(--ml-r); overflow: hidden;
+    }
+    .mc-pulse > div {
+        background: var(--ml-surface); padding: 14px 16px;
+        display: flex; flex-direction: column; justify-content: center; gap: 4px;
+    }
+    .mc-pulse .lbl { font-size: 11px; font-weight: 700; color: var(--ml-muted); }
+    .mc-pulse .val { font-size: 1.35rem; font-weight: 700; color: var(--ml-ink); letter-spacing: -0.02em; line-height: 1.1; }
+    .mc-pulse .val.teal { color: var(--ml-teal-deep); }
+    .mc-pulse .hint { font-size: 11px; color: var(--ml-muted); margin-top: 2px; }
+    .mc-pulse-main .track {
+        height: 5px; border-radius: 999px; background: var(--ml-well); overflow: hidden; margin-top: 8px;
+    }
+    .mc-pulse-main .track > i { display: block; height: 100%; background: linear-gradient(90deg, var(--ml-teal), #6bbdbb); border-radius: inherit; }
+
+    .mc-toolbar {
+        position: sticky; top: 0; z-index: 15; margin-bottom: 16px;
+        padding: 12px 14px; background: rgba(247, 249, 252, 0.92); backdrop-filter: blur(10px);
+        border: 1px solid var(--ml-line); border-radius: var(--ml-r);
+    }
+    .mc-toolbar-inner { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+    .mc-search {
+        flex: 1 1 240px; display: flex; align-items: center; gap: 10px;
+        min-height: 42px; padding: 0 12px; background: var(--ml-surface);
+        border: 1px solid var(--ml-line); border-radius: 12px;
+    }
+    .mc-search i { color: var(--ml-muted); font-size: 12px; }
+    .mc-search input {
+        flex: 1; min-width: 0; border: 0; background: transparent; outline: none;
+        font-size: 13px; font-weight: 600; color: var(--ml-ink); font-family: inherit;
+    }
+    .mc-search button {
+        border: 0; background: transparent; font-size: 11px; font-weight: 700;
+        color: var(--ml-muted); cursor: pointer;
+    }
+    .mc-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .mc-chip {
+        display: inline-flex; align-items: center; gap: 6px; min-height: 34px;
+        padding: 0 12px; border-radius: 999px; font-size: 12px; font-weight: 700;
+        border: 1px solid var(--ml-line); background: var(--ml-surface); color: var(--ml-muted);
+        cursor: pointer; user-select: none; transition: background var(--ml-fast) ease, color var(--ml-fast) ease, border-color var(--ml-fast) ease;
+    }
+    .mc-chip input { display: none; }
+    .mc-chip.is-on { background: rgba(73, 164, 162, 0.14); color: var(--ml-teal-deep); border-color: rgba(73, 164, 162, 0.35); }
+    .mc-meta { font-size: 11px; font-weight: 700; color: var(--ml-muted); }
+
+    .mc-library { display: flex; flex-direction: column; gap: 10px; }
+    .mc-row {
+        display: grid; grid-template-columns: 88px minmax(0, 1fr) auto; gap: 14px; align-items: center;
+        padding: 12px; background: var(--ml-surface); border: 1px solid var(--ml-line);
+        border-radius: var(--ml-r); text-decoration: none !important; color: inherit !important;
+        transition: border-color var(--ml-fast) ease, box-shadow var(--ml-fast) ease, transform var(--ml-fast) var(--ml-ease);
+    }
+    .mc-row:hover {
+        border-color: rgba(73, 164, 162, 0.35);
+        box-shadow: 0 10px 28px rgba(26, 34, 56, 0.06);
+        transform: translateY(-1px);
+    }
+    .mc-row:focus-visible { outline: 2px solid var(--ml-teal); outline-offset: 2px; }
+    .mc-thumb {
+        width: 88px; height: 72px; border-radius: 10px; overflow: hidden; flex-shrink: 0;
+        background: linear-gradient(145deg, rgba(73,164,162,0.16), var(--ml-well));
+        display: flex; align-items: center; justify-content: center; color: var(--ml-teal-deep);
         position: relative;
-        overflow: hidden;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-        border: 1px solid rgb(226 232 240);
-        transition: box-shadow 0.2s ease, border-color 0.2s ease;
     }
-    .hero-card:hover {
-        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.1);
-        border-color: rgb(186 230 253);
+    .mc-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .mc-thumb .ph { text-align: center; padding: 6px; }
+    .mc-thumb .ph i { font-size: 18px; display: block; margin-bottom: 4px; }
+    .mc-thumb .ph span { font-size: 9px; font-weight: 700; line-height: 1.2; display: block; }
+    .mc-body { min-width: 0; }
+    .mc-body h3 {
+        margin: 0 0 4px; font-size: 15px; font-weight: 700; line-height: 1.35;
+        letter-spacing: -0.01em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
     }
-    .hero-card-accent {
-        position: absolute;
-        top: 0;
-        right: 0;
-        width: 4px;
-        height: 100%;
-        background: linear-gradient(180deg, rgb(14 165 233), rgb(37 99 235));
-        border-radius: 0 16px 16px 0;
+    .mc-body .meta { margin: 0 0 8px; font-size: 12px; color: var(--ml-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mc-prog { display: flex; align-items: center; gap: 10px; }
+    .mc-prog .bar { flex: 1; height: 4px; border-radius: 999px; background: var(--ml-well); overflow: hidden; max-width: 200px; }
+    .mc-prog .bar > i { display: block; height: 100%; background: var(--ml-teal); border-radius: inherit; }
+    .mc-prog .pct { font-size: 12px; font-weight: 700; color: var(--ml-teal-deep); min-width: 2.5rem; }
+    .mc-side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; padding-inline-end: 4px; }
+    .mc-badge {
+        display: inline-flex; align-items: center; gap: 4px; min-height: 24px; padding: 0 8px;
+        border-radius: 6px; font-size: 11px; font-weight: 700;
+    }
+    .mc-badge-live { background: rgba(73, 164, 162, 0.14); color: var(--ml-teal-deep); }
+    .mc-badge-done { background: rgba(16, 185, 129, 0.12); color: #047857; }
+    .mc-pts { font-size: 11px; font-weight: 700; color: var(--ml-yellow-ink); }
+    .mc-cta {
+        display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px;
+        border-radius: 10px; background: var(--ml-teal); color: #fff !important;
+        font-size: 12px; font-weight: 700; white-space: nowrap;
+    }
+    .mc-row:hover .mc-cta { background: var(--ml-teal-deep); }
+
+    .mc-empty {
+        text-align: center; padding: 48px 24px; background: var(--ml-surface);
+        border: 1px dashed rgba(26, 34, 56, 0.14); border-radius: calc(var(--ml-r) + 4px);
+    }
+    .mc-empty .icon {
+        width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(73, 164, 162, 0.12); color: var(--ml-teal-deep); font-size: 22px;
+    }
+    .mc-empty h3 { margin: 0 0 6px; font-size: 1.1rem; font-weight: 700; }
+    .mc-empty p { margin: 0 auto 18px; max-width: 36ch; font-size: 13px; color: var(--ml-muted); line-height: 1.6; }
+
+    .mc-pager { margin-top: 20px; display: flex; justify-content: center; }
+    .mc-pager nav { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+    .mc-pager a, .mc-pager span {
+        min-width: 36px; min-height: 36px; padding: 0 10px; border-radius: 10px;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 13px; font-weight: 700; text-decoration: none !important;
+        border: 1px solid var(--ml-line); background: var(--ml-surface); color: var(--ml-ink) !important;
+    }
+    .mc-pager .active span, .mc-pager [aria-current="page"] span {
+        background: var(--ml-teal); color: #fff !important; border-color: var(--ml-teal);
     }
 
-    .chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        border-radius: 9999px;
-        padding: 6px 10px;
-        font-weight: 800;
-        font-size: 11px;
-        line-height: 1;
-        border: 1px solid rgb(226 232 240);
-        background: #fff;
-        color: rgb(51 65 85);
-        white-space: nowrap;
-        max-width: 100%;
+    @media (max-width: 900px) {
+        .mc-stage { grid-template-columns: 1fr; }
+        .mc-stage-actions { align-items: stretch; min-width: 0; }
+        .mc-pulse { grid-template-columns: 1fr 1fr; }
+        .mc-pulse-main { grid-column: 1 / -1; }
     }
-    .chip i { opacity: .85; }
-
-    .stats-card {
-        background: #fff;
-        border: 1px solid rgb(226 232 240);
-        border-radius: 14px;
-        padding: 16px 18px;
-        transition: all 0.2s ease;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    @media (max-width: 640px) {
+        .mc-row { grid-template-columns: 72px minmax(0, 1fr); }
+        .mc-side { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: space-between; padding: 0; }
+        .mc-thumb { width: 72px; height: 60px; }
+        .mc-pulse { grid-template-columns: 1fr 1fr; }
     }
-    .stats-card:hover {
-        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.08);
-        border-color: rgb(186 230 253);
-    }
-
-    .course-card {
-        transition: all 0.2s ease;
-        background: #fff;
-        border: 1px solid rgb(226 232 240);
-        position: relative;
-        overflow: hidden;
-        border-radius: 16px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    }
-    .course-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 24px rgba(14, 165, 233, 0.12);
-        border-color: rgb(186 230 253);
-    }
-    .course-card::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background: radial-gradient(900px 260px at 95% 0%, rgba(14, 165, 233, 0.10), transparent 60%),
-                    radial-gradient(700px 220px at 5% 100%, rgba(99, 102, 241, 0.06), transparent 55%);
-        pointer-events: none;
-        opacity: 0;
-        transition: opacity 160ms ease;
-    }
-    .course-card:hover::before { opacity: 1; }
-
-    .course-thumb {
-        position: relative;
-        overflow: hidden;
-        border-bottom: 1px solid rgb(241 245 249);
-        background: linear-gradient(135deg, rgba(14,165,233,0.12), rgba(99,102,241,0.06));
-    }
-    .empty-state {
-        background: #f8fafc;
-        border: 1px dashed #cbd5e1;
+    @media (prefers-reduced-motion: reduce) {
+        .mc-reveal, .mc-row, .mc-btn { animation: none !important; transition: none !important; }
     }
 </style>
 @endpush
 
 @section('content')
-@php
-    $totalShown = $activeCourses->count();
-@endphp
-<div class="w-full max-w-full space-y-6" x-data="window.__myCoursesPage({{ (int) $totalShown }})">
-    <nav class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-500" aria-label="مسار التنقل">
-        <a href="{{ route('dashboard') }}" class="font-medium hover:text-sky-600">لوحة التحكم</a>
-        <span class="text-slate-300" aria-hidden="true">/</span>
-        <span class="font-semibold text-slate-800">{{ __('student.my_courses_active_title') }}</span>
-    </nav>
+<div class="mc" x-data="window.__myCoursesPage({{ (int) $totalShown }})">
 
-    <div class="hero-card">
-        <div class="hero-card-accent" aria-hidden="true"></div>
-        <div class="relative pr-2 sm:pr-3">
-            <p class="mb-1 text-xs font-bold uppercase tracking-wide text-sky-600">مسارك · كورساتك المفعلة</p>
-            <h1 class="text-2xl font-black leading-tight text-gray-900 sm:text-3xl">{{ __('student.my_courses_active_title') }}</h1>
-            <p class="mt-2 max-w-3xl text-sm leading-relaxed text-gray-600 sm:text-base">
-                {{ __('student.my_courses_subtitle') }}
-            </p>
-            <div class="mt-4 flex flex-wrap gap-2">
-                <a href="{{ route('academic-years') }}" class="inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm font-bold text-sky-800 transition-colors hover:bg-sky-100">
-                    <i class="fas fa-search"></i>
+    <header class="mc-chrome mc-reveal">
+        <div>
+            <nav class="mc-crumb" aria-label="مسار التنقل">
+                <a href="{{ route('dashboard') }}">مساحة التعلّم</a>
+                <span aria-hidden="true">/</span>
+                <span style="color:var(--ml-ink);font-weight:700">{{ __('student.my_courses_active_title') }}</span>
+            </nav>
+            <h1>{{ __('student.my_courses_active_title') }}</h1>
+            <p class="sub">{{ __('student.my_courses_subtitle') }}</p>
+        </div>
+        <div class="mc-signals" aria-label="ملخص سريع">
+            <span class="mc-signal mc-signal-live">{{ $stats['total_active'] }} نشط</span>
+            <span class="mc-signal">{{ $stats['total_completed'] }} مكتمل</span>
+            <span class="mc-signal mc-signal-hot">{{ $stats['avg_progress'] }}٪ متوسط</span>
+        </div>
+    </header>
+
+    @if($continueCourse)
+        <section class="mc-stage mc-reveal" style="--reveal-delay:60ms" aria-label="تابع من حيث توقفت">
+            <div>
+                <div class="mc-eyebrow">
+                    واصل التعلّم
+                    <em>{{ $continueProgress >= 100 ? __('student.completed_badge') : __('student.active_badge') }}</em>
+                </div>
+                <h2>{{ $continueCourse->localized('title') }}</h2>
+                <p class="mc-copy">
+                    {{ collect([
+                        $continueCourse->teacher->name ?? null,
+                        $continueCourse->lessons->count() ? $continueCourse->lessons->count().' '.__('student.lesson_singular') : null,
+                    ])->filter()->implode(' · ') }}
+                </p>
+                <div class="mc-meter" role="progressbar" aria-valuenow="{{ (int) $continueProgress }}" aria-valuemin="0" aria-valuemax="100">
+                    <i style="width:{{ min(100, $continueProgress) }}%"></i>
+                </div>
+            </div>
+            <div class="mc-stage-actions">
+                <a class="mc-btn" href="{{ route('my-courses.show', $continueCourse) }}">
+                    <i class="fas fa-play text-xs"></i>
+                    {{ __('student.continue_learning') }}
+                </a>
+                <a class="mc-btn mc-btn-quiet" href="{{ route('academic-years') }}">
                     {{ __('student.browse_new_courses') }}
                 </a>
             </div>
-        </div>
-    </div>
+        </section>
+    @else
+        <section class="mc-stage mc-reveal" style="--reveal-delay:60ms" aria-label="ابدأ التعلّم">
+            <div>
+                <div class="mc-eyebrow">مكتبتك <em>فارغة</em></div>
+                <h2>{{ __('student.no_active_courses_my') }}</h2>
+                <p class="mc-copy">{{ __('student.no_active_courses_desc') }}</p>
+            </div>
+            <div class="mc-stage-actions">
+                <a class="mc-btn" href="{{ route('academic-years') }}">
+                    <i class="fas fa-compass text-xs"></i>
+                    {{ __('student.browse_courses_btn') }}
+                </a>
+            </div>
+        </section>
+    @endif
 
-    <!-- الإحصائيات -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div class="stats-card">
-            <div class="flex items-center justify-between gap-3">
-                <div class="min-w-0">
-                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">{{ __('student.active_label') }}</p>
-                    <p class="text-2xl font-bold text-sky-600 leading-none">{{ $stats['total_active'] }}</p>
-                </div>
-                <div class="w-10 h-10 rounded-lg bg-sky-100 flex items-center justify-center text-sky-600 flex-shrink-0">
-                    <i class="fas fa-book-open"></i>
-                </div>
+    @if($activeCourses->count() > 0)
+        <div class="mc-pulse mc-reveal" style="--reveal-delay:100ms" aria-label="نبض التعلّم">
+            <div class="mc-pulse-main">
+                <span class="lbl">{{ __('student.avg_progress_label') }}</span>
+                <span class="val teal">{{ $stats['avg_progress'] }}٪</span>
+                <div class="track" aria-hidden="true"><i style="width:{{ min(100, (float) $stats['avg_progress']) }}%"></i></div>
+                <span class="hint">متوسط تقدّمك عبر المقررات النشطة</span>
+            </div>
+            <div>
+                <span class="lbl">{{ __('student.active_label') }}</span>
+                <span class="val">{{ $stats['total_active'] }}</span>
+            </div>
+            <div>
+                <span class="lbl">{{ __('student.completed') }}</span>
+                <span class="val">{{ $stats['total_completed'] }}</span>
+            </div>
+            <div>
+                <span class="lbl">{{ __('student.hours_label') }}</span>
+                <span class="val">{{ $stats['total_hours'] }}</span>
             </div>
         </div>
-        <div class="stats-card">
-            <div class="flex items-center justify-between gap-3">
-                <div class="min-w-0">
-                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">{{ __('student.completed') }}</p>
-                    <p class="text-2xl font-bold text-emerald-600 leading-none">{{ $stats['total_completed'] }}</p>
-                </div>
-                <div class="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0">
-                    <i class="fas fa-check-circle"></i>
-                </div>
-            </div>
-        </div>
-        <div class="stats-card">
-            <div class="flex items-center justify-between gap-3">
-                <div class="min-w-0">
-                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">{{ __('student.hours_label') }}</p>
-                    <p class="text-2xl font-bold text-gray-700 leading-none">{{ $stats['total_hours'] }}</p>
-                </div>
-                <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600 flex-shrink-0">
-                    <i class="fas fa-clock"></i>
-                </div>
-            </div>
-        </div>
-        <div class="stats-card">
-            <div class="flex items-center justify-between gap-3">
-                <div class="min-w-0">
-                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">{{ __('student.avg_progress_label') }}</p>
-                    <p class="text-2xl font-bold text-amber-600 leading-none">{{ $stats['avg_progress'] }}%</p>
-                </div>
-                <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0">
-                    <i class="fas fa-chart-line"></i>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <div class="sticky top-[64px] z-20 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3 bg-gray-50/95 backdrop-blur border-y border-slate-200">
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
-                    <i class="fas fa-search text-slate-400"></i>
+        <div class="mc-toolbar mc-reveal" style="--reveal-delay:140ms">
+            <div class="mc-toolbar-inner">
+                <div class="mc-search">
+                    <i class="fas fa-search" aria-hidden="true"></i>
                     <input
                         x-model.trim="q"
-                        type="text"
-                        placeholder="ابحث باسم الكورس أو اسم المدرّب أو المادة…"
-                        class="w-full min-w-0 border-0 bg-transparent p-0 text-sm font-semibold text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-0"
-                    />
-                    <button type="button" class="text-xs font-black text-slate-500 hover:text-slate-800" x-show="q.length" @click="q=''">
-                        مسح
-                    </button>
+                        type="search"
+                        placeholder="ابحث باسم المقرر أو المدرّب…"
+                        aria-label="بحث في مقرراتي"
+                    >
+                    <button type="button" x-show="q.length" @click="q=''" x-cloak>مسح</button>
                 </div>
-                <div class="mt-2 flex flex-wrap items-center gap-2 text-xs font-bold text-slate-500">
-                    <span class="chip">
-                        <i class="fas fa-filter text-[10px] text-slate-400"></i>
-                        عرض: <span class="text-slate-700" x-text="visibleCount"></span> / {{ $totalShown }}
+                <div class="mc-filters">
+                    <label class="mc-chip" :class="onlyInProgress && 'is-on'">
+                        <input type="checkbox" x-model="onlyInProgress">
+                        قيد التعلّم
+                    </label>
+                    <label class="mc-chip" :class="onlyCompleted && 'is-on'">
+                        <input type="checkbox" x-model="onlyCompleted">
+                        مكتملة
+                    </label>
+                    <span class="mc-meta">
+                        عرض <span x-text="visibleCount"></span> / {{ $totalShown }}
                     </span>
-                    <span class="chip" x-show="q.length">نتائج البحث</span>
                 </div>
-            </div>
-
-            <div class="flex flex-wrap items-center gap-2">
-                <label class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm cursor-pointer hover:bg-slate-50">
-                    <input type="checkbox" class="rounded border-slate-300 text-sky-600 focus:ring-sky-500" x-model="onlyInProgress">
-                    قيد التعلم
-                </label>
-                <label class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm cursor-pointer hover:bg-slate-50">
-                    <input type="checkbox" class="rounded border-slate-300 text-sky-600 focus:ring-sky-500" x-model="onlyCompleted">
-                    مكتملة
-                </label>
             </div>
         </div>
-    </div>
 
-    <!-- الكورسات -->
-    @if($activeCourses->count() > 0)
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" x-ref="grid">
+        <div class="mc-library mc-reveal" style="--reveal-delay:180ms" x-ref="grid" role="list">
             @foreach($activeCourses as $course)
-            @php
-                $progress = $course->pivot->progress ?? 0;
-                $isCompleted = $progress >= 100;
-                $subjectName = $course->academicSubject->name ?? __('student.course_fallback');
-                $teacherName = $course->teacher->name ?? '—';
-            @endphp
-            <a href="{{ route('my-courses.show', $course) }}"
-               class="course-card block"
-               data-title="{{ mb_strtolower((string) $course->localized('title')) }}"
-               data-teacher="{{ mb_strtolower((string) $teacherName) }}"
-               data-subject="{{ mb_strtolower((string) $subjectName) }}"
-               data-progress="{{ (int) $progress }}"
-               x-show="matches($el)"
-               x-transition.opacity.duration.150ms
-            >
-                <div class="course-thumb h-36 flex items-center justify-center relative">
-                    @if($course->thumbnail)
-                        <img src="{{ asset('storage/' . $course->thumbnail) }}" alt="{{ $course->localized('title') }}" class="w-full h-full object-cover">
-                    @else
-                        <div class="text-sky-600">
-                            <i class="fas fa-graduation-cap text-3xl"></i>
-                            <p class="text-xs font-medium mt-1 text-sky-700">{{ $subjectName }}</p>
+                @php
+                    $progress = (float) ($course->pivot->progress ?? 0);
+                    $isCompleted = $progress >= 100;
+                    $teacherName = $course->teacher->name ?? '—';
+                @endphp
+                <a href="{{ route('my-courses.show', $course) }}"
+                   class="mc-row course-card"
+                   role="listitem"
+                   data-title="{{ mb_strtolower((string) $course->localized('title')) }}"
+                   data-teacher="{{ mb_strtolower((string) $teacherName) }}"
+                   data-progress="{{ (int) $progress }}"
+                   x-show="matches($el)"
+                   x-transition.opacity.duration.150ms
+                >
+                    <div class="mc-thumb" aria-hidden="true">
+                        @if($course->thumbnail)
+                            <img src="{{ asset('storage/' . $course->thumbnail) }}" alt="">
+                        @else
+                            <div class="ph">
+                                <i class="fas fa-graduation-cap"></i>
+                                <span>مقرر</span>
+                            </div>
+                        @endif
+                    </div>
+                    <div class="mc-body">
+                        <h3>{{ $course->localized('title') }}</h3>
+                        <p class="meta">{{ $teacherName }} · {{ $course->lessons->count() }} {{ __('student.lesson_singular') }}</p>
+                        <div class="mc-prog">
+                            <div class="bar" role="presentation"><i style="width:{{ min(100, $progress) }}%"></i></div>
+                            <span class="pct">{{ (int) $progress }}٪</span>
                         </div>
-                    @endif
-                    @if($isCompleted)
-                        <span class="absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-1 rounded-xl text-xs font-black bg-emerald-500 text-white shadow-sm">
-                            <i class="fas fa-check-circle"></i> {{ __('student.completed_badge') }}
+                    </div>
+                    <div class="mc-side">
+                        @if($isCompleted)
+                            <span class="mc-badge mc-badge-done"><i class="fas fa-check"></i> {{ __('student.completed_badge') }}</span>
+                        @else
+                            <span class="mc-badge mc-badge-live"><i class="fas fa-play"></i> {{ __('student.active_badge') }}</span>
+                        @endif
+                        <span class="mc-pts"><i class="fas fa-star" style="opacity:.7"></i> {{ number_format((float) ($course->student_points ?? 0), 0) }}</span>
+                        <span class="mc-cta">
+                            {{ $isCompleted ? __('student.completed_badge') : __('student.continue_learning') }}
+                            <i class="fas fa-arrow-left text-[10px]" aria-hidden="true"></i>
                         </span>
-                    @else
-                        <span class="absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-1 rounded-xl text-xs font-black bg-sky-500 text-white shadow-sm">
-                            <i class="fas fa-play-circle"></i> {{ __('student.active_badge') }}
-                        </span>
-                    @endif
-                </div>
-
-                <div class="relative p-4">
-                    <h3 class="text-base font-bold text-gray-900 line-clamp-2 mb-2 leading-snug">{{ $course->localized('title') }}</h3>
-                    <p class="text-xs text-gray-500 mb-3">
-                        {{ $subjectName }} · {{ $teacherName }} · {{ $course->lessons->count() }} {{ __('student.lesson_singular') }}
-                    </p>
-
-                    <div class="flex items-center justify-between gap-2 mb-2">
-                        <span class="text-xs font-medium text-gray-600">{{ __('student.progress') }}</span>
-                        <span class="text-sm font-bold text-sky-600">{{ $progress }}%</span>
                     </div>
-                    <div class="flex items-center justify-between gap-2 mb-3">
-                        <span class="text-xs font-medium text-gray-600">النقاط</span>
-                        <span class="text-sm font-bold text-amber-600"><i class="fas fa-star text-amber-500 ml-1"></i>{{ number_format((float)($course->student_points ?? 0), 0) }}</span>
-                    </div>
-                    <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                        <div class="h-full bg-sky-500 rounded-full transition-all duration-500" style="width: {{ min($progress, 100) }}%;"></div>
-                    </div>
-
-                    <span class="mt-3 inline-flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-black transition-colors shadow-sm">
-                        <i class="fas fa-play text-xs"></i>
-                        {{ __('student.continue_learning') }}
-                    </span>
-                </div>
-            </a>
+                </a>
             @endforeach
         </div>
 
-        <div class="mt-6 flex justify-center">
+        <div class="mc-pager">
             {{ $activeCourses->links() }}
-        </div>
-    @else
-        <div class="empty-state rounded-xl p-10 sm:p-12 text-center">
-            <div class="w-16 h-16 bg-sky-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-sky-600">
-                <i class="fas fa-graduation-cap text-2xl"></i>
-            </div>
-            <h3 class="text-lg font-bold text-gray-900 mb-2">{{ __('student.no_active_courses_my') }}</h3>
-            <p class="text-sm text-gray-500 mb-6 max-w-sm mx-auto">{{ __('student.no_active_courses_desc') }}</p>
-            <a href="{{ route('academic-years') }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold rounded-lg transition-colors">
-                <i class="fas fa-search"></i>
-                {{ __('student.browse_courses_btn') }}
-            </a>
         </div>
     @endif
 </div>
@@ -308,17 +424,14 @@ window.__myCoursesPage = function (initialCount) {
         },
         matches(el) {
             if (!el) return true;
-
             const progress = Number(el.dataset.progress || 0);
             if (this.onlyInProgress && progress >= 100) return false;
             if (this.onlyCompleted && progress < 100) return false;
-
             const q = this.normalize(this.q);
             if (!q) return true;
             const hay = [
                 el.dataset.title || '',
-                el.dataset.teacher || '',
-                el.dataset.subject || ''
+                el.dataset.teacher || ''
             ].join(' ');
             return hay.includes(q);
         },

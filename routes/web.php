@@ -747,6 +747,15 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('/my-courses/{course}/learn', [\App\Http\Controllers\Student\MyCourseController::class, 'learn'])
             ->middleware(['ownership:course,course'])
             ->name('my-courses.learn');
+        Route::get('/my-courses/{course}/learn-discussions', [\App\Http\Controllers\Student\LearnDiscussionController::class, 'index'])
+            ->middleware(['ownership:course,course'])
+            ->name('my-courses.learn-discussions.index');
+        Route::post('/my-courses/{course}/learn-discussions', [\App\Http\Controllers\Student\LearnDiscussionController::class, 'store'])
+            ->middleware(['ownership:course,course'])
+            ->name('my-courses.learn-discussions.store');
+        Route::delete('/my-courses/{course}/learn-discussions/{discussion}', [\App\Http\Controllers\Student\LearnDiscussionController::class, 'destroy'])
+            ->middleware(['ownership:course,course'])
+            ->name('my-courses.learn-discussions.destroy');
         Route::get('/my-courses/{course}/lectures/{lecture}', [\App\Http\Controllers\Student\MyCourseController::class, 'getLectureData'])
             ->middleware(['ownership:course,course'])
             ->name('my-courses.lectures.show');
@@ -912,14 +921,14 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('/notifications/{notification}/go', [\App\Http\Controllers\Student\NotificationController::class, 'go'])
             ->name('notifications.go');
         Route::get('/notifications/{notification}', [\App\Http\Controllers\Student\NotificationController::class, 'show'])
-            ->middleware(['ownership:user,user'])
+            ->middleware(['ownership:notification,notification'])
             ->name('notifications.show');
         Route::post('/notifications/{notification}/mark-read', [\App\Http\Controllers\Student\NotificationController::class, 'markAsRead'])
-            ->middleware(['ownership:user,user'])
+            ->middleware(['ownership:notification,notification'])
             ->name('notifications.mark-read');
         Route::post('/notifications/mark-all-read', [\App\Http\Controllers\Student\NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
         Route::delete('/notifications/{notification}', [\App\Http\Controllers\Student\NotificationController::class, 'destroy'])
-            ->middleware(['ownership:user,user'])
+            ->middleware(['ownership:notification,notification'])
             ->name('notifications.destroy');
         Route::post('/notifications/cleanup', [\App\Http\Controllers\Student\NotificationController::class, 'cleanup'])->name('notifications.cleanup');
         Route::get('/api/notifications/unread-count', [\App\Http\Controllers\Student\NotificationController::class, 'getUnreadCount'])->name('notifications.unread-count');
@@ -930,7 +939,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::prefix('my-portfolio')->name('student.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Student\PortfolioProjectController::class, 'index'])->name('portfolio.index');
             Route::get('/create', [\App\Http\Controllers\Student\PortfolioProjectController::class, 'create'])->name('portfolio.create');
-            Route::post('/', [\App\Http\Controllers\Student\PortfolioProjectController::class, 'store'])->name('portfolio.store');
+            Route::post('/', [\App\Http\Controllers\Student\PortfolioProjectController::class, 'store'])
+                ->middleware('throttle:portfolio-upload')
+                ->name('portfolio.store');
         });
     });
 
@@ -2202,6 +2213,10 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::post('/personal-branding/submit', [\App\Http\Controllers\Instructor\PersonalBrandingController::class, 'submit'])->name('personal-branding.submit');
 
         Route::resource('courses', \App\Http\Controllers\Instructor\CourseController::class)->only(['index', 'show']);
+        Route::get('learn-discussions', [\App\Http\Controllers\Instructor\LearnDiscussionController::class, 'index'])->name('learn-discussions.index');
+        Route::get('learn-discussions/{discussion}', [\App\Http\Controllers\Instructor\LearnDiscussionController::class, 'show'])->name('learn-discussions.show');
+        Route::post('learn-discussions/{discussion}/reply', [\App\Http\Controllers\Instructor\LearnDiscussionController::class, 'reply'])->name('learn-discussions.reply');
+        Route::post('courses/{course}/learn-discussions', [\App\Http\Controllers\Instructor\LearnDiscussionController::class, 'store'])->name('courses.learn-discussions.store');
         Route::get('scholarships', [\App\Http\Controllers\Instructor\ScholarshipController::class, 'index'])->name('scholarships.index');
         Route::get('scholarships/students', [\App\Http\Controllers\Instructor\ScholarshipController::class, 'students'])->name('scholarships.students.index');
         Route::post('scholarships/registrations/{registration}/activate', [\App\Http\Controllers\Instructor\Scholarship\RegistrationController::class, 'activate'])->name('scholarships.registrations.activate');

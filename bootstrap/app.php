@@ -127,6 +127,13 @@ return Application::configure(basePath: dirname(__DIR__))
                     ]);
             }
 
+            // رفع مشروع البورتفوليو: ارجع للنموذج بدل صفحة 429
+            if ($request->is('my-portfolio') && $request->isMethod('POST')) {
+                return redirect()->route('student.portfolio.create')
+                    ->withInput()
+                    ->with('error', __('student.portfolio_rate_limited'));
+            }
+
             return response()->view('errors.429', ['retry_after' => $retryAfter], 429)
                 ->withHeaders(['Retry-After' => $retryAfter]);
         });

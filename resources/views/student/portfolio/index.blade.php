@@ -1,79 +1,137 @@
-@extends('layouts.app')
+@extends('layouts.student-dashboard')
 
-@section('title', 'مشاريعي - البورتفوليو')
-@section('header', 'مشاريعي')
+@section('title', __('student.my_projects_title'))
+
+@php
+    $pendingCount = $pendingTotal ?? $projects->getCollection()->where('status', 'pending_review')->count();
+    $statusMap = [
+        'pending_review' => ['label' => __('student.portfolio_status_pending'), 'class' => 'oc-badge-warn'],
+        'approved' => ['label' => __('student.portfolio_status_approved'), 'class' => 'oc-badge-live'],
+        'rejected' => ['label' => __('student.portfolio_status_rejected'), 'class' => 'oc-badge-bad'],
+        'published' => ['label' => __('student.portfolio_status_published'), 'class' => 'oc-badge-ok'],
+    ];
+@endphp
+
+@push('styles')
+@include('student.offline-courses.partials.los-styles')
+<style>
+    .pf-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+        gap: 12px;
+    }
+    .pf-card {
+        display: flex; flex-direction: column;
+        background: var(--ml-surface); border: 1px solid var(--ml-line);
+        border-radius: var(--ml-r); overflow: hidden;
+        transition: border-color var(--ml-fast) ease, box-shadow var(--ml-fast) ease;
+    }
+    .pf-card:hover {
+        border-color: rgba(73, 164, 162, 0.35);
+        box-shadow: 0 10px 28px rgba(26, 34, 56, 0.06);
+    }
+    .pf-thumb {
+        aspect-ratio: 16 / 9; background: var(--ml-well);
+        display: flex; align-items: center; justify-content: center;
+        color: var(--ml-teal-deep); font-size: 1.75rem;
+    }
+    .pf-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .pf-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+    .pf-body h3 {
+        margin: 0; font-size: 15px; font-weight: 700; line-height: 1.35;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .pf-body .desc {
+        margin: 0; font-size: 12px; color: var(--ml-muted); line-height: 1.5;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .pf-body .meta { margin: 0; font-size: 11px; color: var(--ml-muted); }
+</style>
+@endpush
 
 @section('content')
-<div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+<div class="oc">
     @if(session('success'))
-    <div class="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 flex items-center gap-3">
-        <i class="fas fa-check-circle text-emerald-600"></i>
-        <span class="font-semibold text-emerald-800">{{ session('success') }}</span>
-    </div>
+        <div class="oc-panel" style="border-color:rgba(16,185,129,0.35);background:rgba(16,185,129,0.08);margin-bottom:16px;color:#047857;font-size:13px;font-weight:600">
+            {{ session('success') }}
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="oc-panel" style="border-color:rgba(239,68,68,0.35);background:rgba(239,68,68,0.08);margin-bottom:16px;color:#b91c1c;font-size:13px;font-weight:600">
+            {{ session('error') }}
+        </div>
     @endif
 
-    <!-- الهيدر -->
-    <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-                <h1 class="text-xl sm:text-2xl font-bold text-gray-900 mb-1">مشاريعي</h1>
-                <p class="text-sm text-gray-500">ارفع مشاريعك بعد إتمام الكورسات ليعرضها المدرب ثم تنشر في معرض Mindlytics Portfolio.</p>
-            </div>
-            <a href="{{ route('student.portfolio.create') }}" class="inline-flex items-center gap-2 bg-sky-500 hover:bg-sky-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">
-                <i class="fas fa-plus"></i>
-                رفع مشروع جديد
+    <header class="oc-chrome">
+        <div>
+            <nav class="oc-crumb" aria-label="{{ __('student.my_projects_title') }}">
+                <a href="{{ route('dashboard') }}">{{ __('student.learning_center') }}</a>
+                <span aria-hidden="true">/</span>
+                <span style="color:var(--ml-ink);font-weight:700">{{ __('student.my_projects_title') }}</span>
+            </nav>
+            <h1>{{ __('student.my_projects_title') }}</h1>
+            <p class="sub">{{ __('student.my_projects_subtitle') }}</p>
+        </div>
+        <div class="oc-signals">
+            <span class="oc-signal oc-signal-live">{{ $projects->total() }} {{ __('student.portfolio_projects_count') }}</span>
+            @if($pendingCount > 0)
+                <span class="oc-signal oc-signal-hot">{{ $pendingCount }} {{ __('student.portfolio_pending_count') }}</span>
+            @endif
+        </div>
+    </header>
+
+    <section class="oc-stage">
+        <div class="oc-eyebrow">{{ __('student.portfolio') }}</div>
+        <h2>{{ __('student.my_projects_title') }}</h2>
+        <p class="oc-copy">{{ __('student.my_projects_subtitle') }}</p>
+        <div class="oc-nav">
+            <a class="oc-btn" href="{{ route('student.portfolio.create') }}">
+                <i class="fas fa-plus text-xs"></i> {{ __('student.portfolio_upload_new') }}
             </a>
         </div>
-    </div>
+    </section>
 
     @if($projects->count() > 0)
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        @foreach($projects as $project)
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-            @if($project->image_path)
-            <div class="aspect-video bg-gray-100">
-                <img src="{{ asset($project->image_path) }}" alt="{{ $project->title }}" class="w-full h-full object-cover">
-            </div>
-            @else
-            <div class="aspect-video bg-sky-50 flex items-center justify-center">
-                <i class="fas fa-code text-3xl text-sky-300"></i>
-            </div>
-            @endif
-            <div class="p-4">
-                <h3 class="text-base font-bold text-gray-900 mb-2 line-clamp-2">{{ $project->title }}</h3>
-                <p class="text-sm text-gray-600 mb-3 line-clamp-2">{{ Str::limit($project->description, 80) }}</p>
-                @php
-                    $statusLabels = [
-                        'pending_review' => ['label' => 'قيد المراجعة', 'class' => 'bg-amber-100 text-amber-800'],
-                        'approved' => ['label' => 'معتمد', 'class' => 'bg-sky-100 text-sky-800'],
-                        'rejected' => ['label' => 'مرفوض', 'class' => 'bg-red-100 text-red-800'],
-                        'published' => ['label' => 'منشور', 'class' => 'bg-emerald-100 text-emerald-800'],
-                    ];
-                    $s = $statusLabels[$project->status] ?? ['label' => $project->status, 'class' => 'bg-gray-100 text-gray-800'];
-                @endphp
-                <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold {{ $s['class'] }}">{{ $s['label'] }}</span>
-                @if($project->academicYear)
-                <p class="text-xs text-gray-500 mt-2">{{ $project->academicYear->name }}</p>
-                @endif
-            </div>
+        <div class="pf-grid">
+            @foreach($projects as $project)
+                @php $s = $statusMap[$project->status] ?? ['label' => $project->status, 'class' => 'oc-badge-warn']; @endphp
+                <article class="pf-card">
+                    <div class="pf-thumb">
+                        @if($project->image_path)
+                            <img src="{{ asset($project->image_path) }}" alt="{{ $project->title }}">
+                        @else
+                            <i class="fas fa-code" aria-hidden="true"></i>
+                        @endif
+                    </div>
+                    <div class="pf-body">
+                        <h3>{{ $project->title }}</h3>
+                        @if($project->description)
+                            <p class="desc">{{ \Illuminate\Support\Str::limit($project->description, 90) }}</p>
+                        @endif
+                        <span class="oc-badge {{ $s['class'] }}">{{ $s['label'] }}</span>
+                        @if($project->academicYear)
+                            <p class="meta">{{ $project->academicYear->name }}</p>
+                        @endif
+                    </div>
+                </article>
+            @endforeach
         </div>
-        @endforeach
-    </div>
-    @if($projects->hasPages())
-    <div class="flex justify-center mt-6">{{ $projects->links() }}</div>
-    @endif
+        @if($projects->hasPages())
+            <div style="margin-top:20px;display:flex;justify-content:center">
+                {{ $projects->links() }}
+            </div>
+        @endif
     @else
-    <div class="bg-white rounded-xl border border-dashed border-gray-200 p-10 sm:p-12 text-center">
-        <div class="w-16 h-16 bg-sky-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-sky-600">
-            <i class="fas fa-briefcase text-2xl"></i>
+        <div class="oc-empty">
+            <div class="icon"><i class="fas fa-briefcase"></i></div>
+            <h3>{{ __('student.portfolio_no_projects') }}</h3>
+            <p>{{ __('student.portfolio_no_projects_desc') }}</p>
+            <div style="margin-top:16px">
+                <a href="{{ route('student.portfolio.create') }}" class="oc-btn">
+                    <i class="fas fa-plus text-xs"></i> {{ __('student.portfolio_upload') }}
+                </a>
+            </div>
         </div>
-        <h3 class="text-lg font-bold text-gray-900 mb-2">لا توجد مشاريع بعد</h3>
-        <p class="text-sm text-gray-500 mb-6 max-w-sm mx-auto">ارفع مشروعك الأول بعد إتمام أي كورس، وسيراجعه المدرب ثم ينشر في المعرض.</p>
-        <a href="{{ route('student.portfolio.create') }}" class="inline-flex items-center gap-2 bg-sky-500 hover:bg-sky-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors">
-            <i class="fas fa-plus"></i>
-            رفع مشروع
-        </a>
-    </div>
     @endif
 </div>
 @endsection

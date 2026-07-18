@@ -289,5 +289,10 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('password-reset', function (Request $request) {
             return Limit::perMinutes(8, 15)->by($request->ip());
         });
+
+        // رفع مشروع بورتفوليو — حد معتدل لكل مستخدم (لا يقيّد صفحات العرض)
+        RateLimiter::for('portfolio-upload', function (Request $request) {
+            return Limit::perMinutes(10, 8)->by(optional($request->user())->id ?: $request->ip());
+        });
     }
 }

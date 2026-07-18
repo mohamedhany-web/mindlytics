@@ -17,12 +17,20 @@ class OrderController extends Controller
      */
     public function index()
     {
-        $orders = Order::where('user_id', auth()->id())
+        $userId = auth()->id();
+        $orders = Order::where('user_id', $userId)
             ->with(['course.academicSubject', 'course.academicYear', 'learningPath'])
             ->orderBy('created_at', 'desc')
             ->paginate(10);
 
-        return view('student.orders.index', compact('orders'));
+        $stats = [
+            'total' => Order::where('user_id', $userId)->count(),
+            'pending' => Order::where('user_id', $userId)->where('status', Order::STATUS_PENDING)->count(),
+            'approved' => Order::where('user_id', $userId)->where('status', Order::STATUS_APPROVED)->count(),
+            'rejected' => Order::where('user_id', $userId)->where('status', Order::STATUS_REJECTED)->count(),
+        ];
+
+        return view('student.orders.index', compact('orders', 'stats'));
     }
 
     /**

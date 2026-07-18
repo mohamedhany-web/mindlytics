@@ -12,7 +12,7 @@
     @include('components.favicon-meta')
 
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@400;500;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -22,15 +22,28 @@
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ asset('css/mindlytics-los.css') }}?v=4">
 
     <style>
+        [x-cloak] { display: none !important; }
+
+        :root {
+            --ml-teal: #49A4A2;
+            --ml-yellow: #FFD23F;
+            --ml-bg: #F7F9FC;
+            --ml-surface: #FFFFFF;
+            --ml-ink: #1A2238;
+            --ml-ink-muted: #475569;
+        }
+
         * {
-            font-family: 'Cairo', 'Noto Sans Arabic', sans-serif;
+            font-family: 'IBM Plex Sans Arabic', 'Tajawal', 'Cairo', sans-serif;
         }
 
         body {
-            background: #f9fafb;
+            background: var(--ml-bg);
             overflow-x: hidden;
+            color: var(--ml-ink);
         }
 
         /* Sidebar - يتناسب مع لوحة التحكم */
@@ -59,7 +72,7 @@
             top: 0;
             bottom: 0;
             width: 3px;
-            background: rgb(14 165 233);
+            background: var(--ml-teal);
             opacity: 0;
             border-radius: 0 3px 3px 0;
             transition: opacity 0.2s;
@@ -70,7 +83,7 @@
         }
 
         .nav-card.active {
-            background: rgb(224 242 254);
+            background: rgba(73, 164, 162, 0.12);
             box-shadow: none;
         }
 
@@ -80,11 +93,11 @@
 
         .nav-card.active .nav-icon {
             transform: scale(1.02);
-            box-shadow: 0 2px 8px rgba(14, 165, 233, 0.2);
+            box-shadow: 0 2px 8px rgba(73, 164, 162, 0.2);
         }
 
-        .nav-card.active .font-black { color: rgb(17 24 39); }
-        .nav-card.active .text-xs { color: rgb(75 85 99); }
+        .nav-card.active .font-black { color: var(--ml-ink); }
+        .nav-card.active .text-xs { color: var(--ml-ink-muted); }
 
         .nav-icon {
             width: 36px;
@@ -109,12 +122,16 @@
         }
         .nav-card:hover .nav-icon { transform: scale(1.05); }
 
-        /* Navbar - يتناسب مع لوحة التحكم */
+        /* Navbar - sticky Learning OS chrome */
         .student-header {
-            background: #ffffff;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(12px);
             border-bottom: 1px solid rgb(226 232 240);
             min-height: 64px;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+            position: sticky;
+            top: 0;
+            z-index: 40;
         }
         @media (max-width: 640px) {
             .student-header {
@@ -276,7 +293,7 @@
             vertical-align: middle;
         }
 
-        /* Scrollbar */
+        /* Scrollbar — brand teal */
         .sidebar-scroll::-webkit-scrollbar {
             width: 6px;
         }
@@ -286,12 +303,17 @@
         }
 
         .sidebar-scroll::-webkit-scrollbar-thumb {
-            background: linear-gradient(to bottom, rgb(14 165 233), rgb(2 132 199));
+            background: linear-gradient(to bottom, var(--ml-teal, #49A4A2), var(--ml-teal-deep, #2f7f7d));
             border-radius: 3px;
         }
 
         .sidebar-scroll::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(to bottom, rgb(2 132 199), rgb(14 165 233));
+            background: linear-gradient(to bottom, var(--ml-teal-deep, #2f7f7d), #246663);
+        }
+
+        .sidebar-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: var(--ml-teal, #49A4A2) transparent;
         }
 
         .logo-section {
@@ -455,7 +477,7 @@
 
     @stack('styles')
 </head>
-<body x-data="{ 
+<body class="los-shell" x-data="{ 
     sidebarOpen: window.innerWidth >= 1024
 }" 
 x-init="
@@ -486,195 +508,122 @@ x-init="
 ">
     <div class="flex h-screen overflow-hidden">
         @auth
-            <!-- Clean Sidebar -->
-            <aside x-show="sidebarOpen || window.innerWidth >= 1024"
-                   x-transition:enter="transition ease-out duration-150"
-                   x-transition:enter-start="opacity-0 translate-x-full"
-                   x-transition:enter-end="opacity-100 translate-x-0"
-                   x-transition:leave="transition ease-in duration-100"
-                   x-transition:leave-start="opacity-100 translate-x-0"
-                   x-transition:leave-end="opacity-0 translate-x-full"
-                   class="student-sidebar flex-shrink-0 fixed lg:static inset-y-0 right-0 z-50 lg:z-auto"
-                   style="will-change: transform, opacity;">
+            <!-- Clean Sidebar: always visible on lg+; drawer on mobile (no x-show opacity traps) -->
+            <aside class="student-sidebar los-sidebar-bridge flex-shrink-0 fixed lg:static inset-y-0 z-50 lg:z-auto
+                          {{ $studentRtl ? 'right-0' : 'left-0' }}
+                          transition-transform duration-150 ease-out lg:!translate-x-0
+                          {{ $studentRtl ? 'translate-x-full' : '-translate-x-full' }}"
+                   :class="sidebarOpen ? 'translate-x-0' : '{{ $studentRtl ? 'translate-x-full' : '-translate-x-full' }}'">
                 @include('layouts.student-sidebar')
             </aside>
 
             <!-- Mobile Overlay -->
-            <div x-show="sidebarOpen && window.innerWidth < 1024"
+            <div x-show="sidebarOpen"
+                 x-cloak
                  @click="sidebarOpen = false"
-                 x-transition:enter="transition ease-out duration-150"
-                 x-transition:enter-start="opacity-0"
-                 x-transition:enter-end="opacity-100"
-                 x-transition:leave="transition ease-in duration-100"
-                 x-transition:leave-start="opacity-100"
-                 x-transition:leave-end="opacity-0"
-                 class="fixed inset-0 bg-black/50 z-40 lg:hidden"
-                 style="will-change: opacity;"></div>
+                 class="fixed inset-0 bg-black/50 z-40 lg:hidden"></div>
         @endauth
 
         <!-- Main Content Area -->
         <div class="flex flex-col flex-1 min-w-0">
             @auth
-                <!-- Enhanced Header -->
-                <header class="student-header flex items-center justify-between px-4 sm:px-6 lg:px-8 flex-shrink-0 sticky top-0 z-30">
-                    <div class="flex items-center gap-2 sm:gap-3 md:gap-5 flex-1 min-w-0">
-                        <!-- Sidebar Toggle -->
-                        <button @click="sidebarOpen = !sidebarOpen"
-                                class="lg:hidden p-2 sm:p-2.5 rounded-xl bg-gradient-to-br from-sky-500/10 to-sky-400/10 hover:from-sky-500/20 hover:to-sky-400/20 transition-all duration-300 flex-shrink-0 flex items-center justify-center">
-                            <i class="fas fa-bars text-sky-500 text-sm sm:text-base"></i>
+                <!-- Learning OS Top Navigation -->
+                <header class="los-topnav student-header los-topnav-bridge flex-shrink-0">
+                    <div class="flex items-center gap-2 flex-1 min-w-0">
+                        <button type="button" @click="sidebarOpen = !sidebarOpen"
+                                class="lg:hidden los-icon-btn flex-shrink-0" aria-label="{{ __('common.menu') }}">
+                            <i class="fas fa-bars text-sm"></i>
                         </button>
 
-                        <!-- Enhanced Search - Mobile -->
-                        <div class="flex md:hidden items-center flex-1 min-w-0 ml-2">
-                            <div class="search-command flex items-center gap-2 w-full">
-                                <i class="fas fa-search text-sky-500 text-xs sm:text-sm flex-shrink-0"></i>
-                                <input type="text" 
-                                       placeholder="{{ __('common.nav_search_placeholder') }}" 
-                                       class="flex-1 bg-transparent border-none outline-none text-xs sm:text-sm text-gray-700 placeholder-gray-400 font-medium min-w-0">
-                            </div>
-                        </div>
-
-                        <!-- Enhanced Search - Desktop -->
-                        <div class="hidden md:flex items-center flex-1 max-w-2xl min-w-0">
-                            <div class="search-command flex items-center gap-3 w-full">
-                                <i class="fas fa-search text-sky-500 text-sm flex-shrink-0"></i>
-                                <input type="text" 
-                                       placeholder="{{ __('common.nav_search_placeholder_long') }}" 
-                                       class="flex-1 bg-transparent border-none outline-none text-sm text-gray-700 placeholder-gray-400 font-medium min-w-0">
-                                <kbd class="hidden lg:flex items-center gap-1 px-2.5 py-1 bg-gradient-to-br from-sky-500/10 to-sky-400/10 rounded text-xs font-bold text-sky-500 border border-sky-500/20 flex-shrink-0">
-                                    <span>Ctrl</span>
-                                    <span>K</span>
-                                </kbd>
-                            </div>
-                        </div>
+                        <button type="button" data-los-open-palette class="los-topnav-search flex-1" aria-label="{{ __('common.quick_search') }}">
+                            <i class="fas fa-magnifying-glass text-xs" style="color:var(--ml-teal)"></i>
+                            <span class="truncate hidden sm:inline">{{ __('common.search_or_jump') }}</span>
+                            <span class="truncate sm:hidden">{{ __('common.search') }}</span>
+                            <kbd class="hidden md:inline">Ctrl K</kbd>
+                        </button>
                     </div>
 
-                    <div class="flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-shrink-0">
-                        <x-language-switcher class="hidden sm:inline-flex" />
-                        <!-- Quick Actions - Desktop Only -->
-                        <div class="hidden lg:flex items-center gap-2">
-                            <a href="{{ route('academic-years') }}" class="quick-action-btn" title="{{ __('landing.nav.courses') }}">
-                                <i class="fas fa-search text-sm"></i>
-                            </a>
-                            <a href="{{ route('my-courses.index') }}" class="quick-action-btn" title="{{ __('common.my_courses_title') }}">
-                                <i class="fas fa-book-open text-sm"></i>
-                            </a>
+                    <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                        @php
+                            $navProgress = 0;
+                            try {
+                                $navEnroll = auth()->user()->courseEnrollments()->whereIn('status', ['active','completed'])->get();
+                                $navProgress = $navEnroll->isEmpty() ? 0 : (int) round($navEnroll->avg('progress') ?? 0);
+                            } catch (\Throwable $e) { $navProgress = 0; }
+                        @endphp
+                        <div class="los-progress-pill" title="{{ __('common.learning_progress') }}">
+                            <span>{{ $navProgress }}{{ $studentRtl ? '٪' : '%' }}</span>
+                            <span class="bar" aria-hidden="true"><i style="width:{{ min(100,$navProgress) }}%"></i></span>
                         </div>
 
-                        <!-- Notifications -->
+                        <a href="{{ route('dashboard') }}#los-ai" class="los-icon-btn is-ai" title="{{ __('common.ai_guide') }}" aria-label="{{ __('common.ai_guide') }}">
+                            <i class="fas fa-wand-magic-sparkles text-sm"></i>
+                        </a>
+                        <a href="{{ route('calendar') }}" class="los-icon-btn hidden sm:inline-flex" title="{{ __('student.calendar') }}" aria-label="{{ __('student.calendar') }}">
+                            <i class="fas fa-calendar-days text-sm"></i>
+                        </a>
+
+                        <x-language-switcher class="hidden sm:inline-flex" />
+
                         <div class="relative" x-data="window.__navNotifications()">
-                            <button @click="toggle()"
-                                    class="quick-action-btn relative"
-                                    aria-label="الإشعارات">
-                                <i class="fas fa-bell text-xs sm:text-sm"></i>
+                            <button type="button" @click="toggle()" class="los-icon-btn relative" aria-label="{{ __('student.notifications') }}">
+                                <i class="fas fa-bell text-sm"></i>
                                 <template x-if="unreadCount > 0">
-                                    <span class="notification-badge text-[9px] sm:text-[10px]" x-text="unreadCount > 99 ? '99+' : unreadCount"></span>
+                                    <span class="los-badge" x-text="unreadCount > 99 ? '99+' : unreadCount"></span>
                                 </template>
                             </button>
-                            <div x-show="open"
-                                 @click.away="open = false"
-                                 x-transition
-                                 class="absolute left-0 mt-3 w-72 sm:w-80 md:w-96 dropdown-menu z-50 overflow-hidden">
-                                <div class="p-3 sm:p-4 border-b border-gray-200 bg-gradient-to-r from-sky-400/10 to-sky-500/10 flex items-center justify-between gap-3">
-                                    <h3 class="font-bold text-gray-900 text-xs sm:text-sm flex items-center gap-2">
-                                        <i class="fas fa-bell text-sky-500 flex items-center justify-center"></i>
-                                        <span>الإشعارات</span>
-                                    </h3>
-                                    <button type="button" class="text-xs font-bold text-sky-700 hover:text-sky-900"
-                                            @click="markAllRead()" x-show="unreadCount > 0">
-                                        تحديد الكل كمقروء
-                                    </button>
+                            <div x-show="open" @click.away="open = false" x-transition
+                                 class="absolute end-0 mt-2 w-80 sm:w-96 dropdown-menu z-50 overflow-hidden text-start">
+                                <div class="p-3 border-b border-gray-100 flex items-center justify-between gap-2" style="background:rgba(73,164,162,0.08)">
+                                    <h3 class="font-bold text-sm text-gray-900">{{ __('student.notifications') }}</h3>
+                                    <button type="button" class="text-xs font-bold" style="color:var(--ml-teal-deep)"
+                                            @click="markAllRead()" x-show="unreadCount > 0">{{ __('student.mark_all_read') }}</button>
                                 </div>
-                                <div class="max-h-96 overflow-y-auto">
-                                    <template x-if="loading">
-                                        <div class="p-4 sm:p-6 text-center text-gray-500 text-xs sm:text-sm">جاري التحميل…</div>
-                                    </template>
+                                <div class="max-h-80 overflow-y-auto">
+                                    <template x-if="loading"><div class="p-5 text-center text-sm text-gray-500">{{ __('common.loading') }}</div></template>
                                     <template x-if="!loading && items.length === 0">
-                                        <div class="p-4 sm:p-6 text-center text-gray-500 text-xs sm:text-sm">
-                                            <i class="fas fa-bell-slash text-xl sm:text-2xl mb-2 opacity-30 inline-flex items-center justify-center"></i>
-                                            <p>لا توجد إشعارات</p>
-                                        </div>
+                                        <div class="p-6 text-center text-sm text-gray-500">{{ __('student.no_notifications') }}</div>
                                     </template>
                                     <div x-show="!loading && items.length > 0" class="divide-y divide-gray-100">
                                         <template x-for="n in items" :key="n.id">
-                                            <a :href="n.action_url || '#'"
-                                               @click.prevent="onClickItem(n)"
-                                               class="block px-4 sm:px-5 py-3 hover:bg-gray-50/60 transition-colors">
-                                                <div class="flex items-start gap-3">
-                                                    <div class="w-9 h-9 rounded-xl bg-sky-50 border border-sky-100 text-sky-600 flex items-center justify-center flex-shrink-0">
-                                                        <i :class="n.type_icon"></i>
-                                                    </div>
-                                                    <div class="min-w-0 flex-1">
-                                                        <div class="flex items-center gap-2">
-                                                            <div class="font-bold text-gray-900 text-sm truncate" x-text="n.title"></div>
-                                                            <div class="w-2 h-2 rounded-full bg-sky-500 flex-shrink-0" x-show="!n.is_read"></div>
-                                                        </div>
-                                                        <div class="text-xs text-gray-600 mt-0.5 line-clamp-2" x-text="n.message"></div>
-                                                        <div class="text-[11px] text-gray-400 mt-1" x-text="n.created_human"></div>
-                                                    </div>
-                                                </div>
+                                            <a :href="n.action_url || '#'" @click.prevent="onClickItem(n)" class="block px-4 py-3 hover:bg-gray-50">
+                                                <div class="font-bold text-sm text-gray-900 truncate" x-text="n.title"></div>
+                                                <div class="text-xs text-gray-600 mt-0.5 line-clamp-2" x-text="n.message"></div>
+                                                <div class="text-[11px] text-gray-400 mt-1" x-text="n.created_human"></div>
                                             </a>
                                         </template>
                                     </div>
                                 </div>
-                                <div class="p-3 border-t border-gray-200 bg-white">
-                                    <a href="{{ url('/dashboard') }}" class="text-xs font-bold text-slate-700 hover:text-slate-900">الذهاب للوحة التحكم</a>
+                                <div class="p-3 border-t border-gray-100">
+                                    <a href="{{ route('notifications') }}" class="text-xs font-bold" style="color:var(--ml-teal-deep)">{{ __('common.all_notifications') }}</a>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Enhanced User Profile -->
                         <div class="relative" x-data="{ open: false }">
-                            <button @click="open = !open"
-                                    class="user-menu-btn flex items-center gap-1.5 sm:gap-2 md:gap-3 p-1 sm:p-1.5 md:p-2 rounded-xl">
-                                <div class="user-avatar flex-shrink-0">
+                            <button type="button" @click="open = !open" class="los-icon-btn" style="width:auto;padding:0 8px;gap:8px" aria-label="{{ __('common.account') }}">
+                                <span class="user-avatar" style="width:28px;height:28px;font-size:11px;background:var(--ml-teal);box-shadow:none">
                                     @if(auth()->user()->profile_image)
                                         <img src="{{ auth()->user()->profile_image_url }}" alt="" class="w-full h-full rounded-lg object-cover">
                                     @else
-                                        {{ substr(auth()->user()->name, 0, 1) }}
+                                        {{ mb_substr(auth()->user()->name, 0, 1) }}
                                     @endif
-                                </div>
-                                <div class="hidden sm:block md:hidden lg:block text-right min-w-0">
-                                    <div class="text-xs sm:text-sm font-bold text-gray-900 truncate">{{ auth()->user()->name }}</div>
-                                    <div class="text-[10px] sm:text-xs text-gray-500">طالب</div>
-                                </div>
-                                <i class="fas fa-chevron-down text-[10px] sm:text-xs text-gray-400 hidden sm:block transition-transform flex-shrink-0" :class="{ 'rotate-180': open }"></i>
+                                </span>
+                                <i class="fas fa-chevron-down text-[10px] hidden sm:inline"></i>
                             </button>
-                            <div x-show="open"
-                                 @click.away="open = false"
-                                 x-transition
-                                 class="absolute left-0 mt-3 w-56 sm:w-64 dropdown-menu z-50 overflow-hidden">
-                                <div class="p-3 sm:p-4 border-b border-gray-200 bg-gradient-to-r from-sky-400/10 to-sky-500/10">
-                                    <div class="flex items-center gap-2 sm:gap-3">
-                                        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-sky-500 to-sky-400 flex items-center justify-center text-white font-bold text-sm sm:text-base shadow-lg flex-shrink-0">
-                                            @if(auth()->user()->profile_image)
-                                                <img src="{{ auth()->user()->profile_image_url }}" alt="" class="w-full h-full rounded-xl object-cover">
-                                            @else
-                                                {{ substr(auth()->user()->name, 0, 1) }}
-                                            @endif
-                                        </div>
-                                        <div class="min-w-0 flex-1">
-                                            <div class="font-bold text-gray-900 text-xs sm:text-sm truncate">{{ auth()->user()->name }}</div>
-                                            <div class="text-[10px] sm:text-xs text-gray-600 truncate">{{ auth()->user()->email }}</div>
-                                        </div>
-                                    </div>
+                            <div x-show="open" @click.away="open = false" x-transition
+                                 class="absolute end-0 mt-2 w-56 dropdown-menu z-50 overflow-hidden text-start">
+                                <div class="p-3 border-b border-gray-100">
+                                    <div class="font-bold text-sm truncate">{{ auth()->user()->name }}</div>
+                                    <div class="text-xs text-gray-500 truncate">{{ auth()->user()->email }}</div>
                                 </div>
-                                <div class="p-1.5 sm:p-2">
-                                    <a href="{{ route('profile') }}" class="dropdown-item flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm text-gray-700 font-medium">
-                                        <i class="fas fa-user w-4 sm:w-5 text-sky-500 flex-shrink-0"></i>
-                                        <span>الملف الشخصي</span>
-                                    </a>
-                                    <a href="{{ route('settings') }}" class="dropdown-item flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm text-gray-700 font-medium">
-                                        <i class="fas fa-cog w-4 sm:w-5 text-gray-500 flex-shrink-0"></i>
-                                        <span>الإعدادات</span>
-                                    </a>
-                                    <hr class="my-1.5 sm:my-2 border-gray-200">
+                                <div class="p-1.5">
+                                    <a href="{{ route('profile') }}" class="dropdown-item gap-2 px-3 py-2 rounded-lg text-sm">{{ __('student.profile') }}</a>
+                                    <a href="{{ route('settings') }}" class="dropdown-item gap-2 px-3 py-2 rounded-lg text-sm">{{ __('student.settings') }}</a>
+                                    <hr class="my-1 border-gray-100">
                                     <form method="POST" action="{{ route('logout') }}">
                                         @csrf
-                                        <button type="submit" class="w-full dropdown-item flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm text-red-600 font-medium">
-                                            <i class="fas fa-sign-out-alt w-4 sm:w-5 flex-shrink-0"></i>
-                                            <span>تسجيل الخروج</span>
-                                        </button>
+                                        <button type="submit" class="w-full dropdown-item gap-2 px-3 py-2 rounded-lg text-sm text-red-600 text-start">{{ __('auth.logout') }}</button>
                                     </form>
                                 </div>
                             </div>
@@ -684,8 +633,8 @@ x-init="
             @endauth
 
             <!-- Main Content -->
-            <main class="flex-1 overflow-auto bg-gray-50 min-w-0 w-full">
-                <div class="w-full max-w-full p-4 sm:p-6 lg:p-8">
+            <main class="flex-1 overflow-auto los-main min-w-0 w-full">
+                <div class="w-full max-w-none p-3 sm:p-4 lg:p-5 xl:p-6">
                     @if(session('workshop_promo_welcome_modal'))
                         @include('components.workshop-promo-welcome-modal')
                     @endif
@@ -708,6 +657,14 @@ x-init="
         </div>
     </div>
 
+    @auth
+        @include('components.learning-os.command-palette')
+        <button type="button" class="los-fab-ai" data-los-open-palette aria-label="{{ __('common.command_palette_fab') }}" title="Ctrl K">
+            <i class="fas fa-wand-magic-sparkles"></i>
+        </button>
+    @endauth
+
+    <script src="{{ asset('js/mindlytics-los.js') }}?v=1"></script>
     @stack('scripts')
     
     <script>

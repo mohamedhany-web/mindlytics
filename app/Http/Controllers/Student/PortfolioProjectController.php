@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
 use App\Models\AcademicYear;
-use App\Models\AdvancedCourse;
 use App\Models\PortfolioProject;
 use App\Models\PortfolioProjectImage;
 use Illuminate\Http\Request;
@@ -15,18 +14,20 @@ class PortfolioProjectController extends Controller
 {
     public function index()
     {
-        $projects = auth()->user()->portfolioProjects()->with(['academicYear', 'advancedCourse'])->latest()->paginate(10);
-        return view('student.portfolio.index', compact('projects'));
+        $user = auth()->user();
+        $projects = $user->portfolioProjects()->with(['academicYear', 'advancedCourse'])->latest()->paginate(10);
+        $pendingTotal = $user->portfolioProjects()->where('status', PortfolioProject::STATUS_PENDING_REVIEW)->count();
+
+        return view('student.portfolio.index', compact('projects', 'pendingTotal'));
     }
 
     public function create()
     {
         $user = auth()->user();
-        // المسارات التعليمية التي التحق بها الطالب فقط
         $pathIds = $user->learningPathEnrollments()->where('status', 'active')->pluck('academic_year_id')->unique()->filter();
         $learningPaths = AcademicYear::where('is_active', true)->whereIn('id', $pathIds)->ordered()->get(['id', 'name']);
-        // الكورسات التي اشتراها/سجّل فيها الطالب فقط (تحديد الجدول لتجنب ambiguous id)
         $courses = $user->activeCourses()->select('advanced_courses.id', 'advanced_courses.title')->get();
+
         return view('student.portfolio.create', compact('learningPaths', 'courses'));
     }
 
@@ -43,12 +44,12 @@ class PortfolioProjectController extends Controller
             'images' => 'nullable|array|max:5',
             'images.*' => 'image|max:2048',
         ], [
-            'title.required' => 'عنوان المشروع مطلوب',
-            'project_url.url' => 'رابط المشروع يجب أن يكون رابطاً صحيحاً',
-            'github_url.url' => 'رابط GitHub يجب أن يكون رابطاً صحيحاً',
-            'images.max' => 'حد أقصى 5 صور للمشروع',
-            'images.*.image' => 'يجب أن يكون الملف صورة',
-            'images.*.max' => 'كل صورة حد أقصى 2 ميجابايت',
+            'title.required' => __('student.portfolio_title_required'),
+            'project_url.url' => __('student.portfolio_url_invalid'),
+            'github_url.url' => __('student.portfolio_github_invalid'),
+            'images.max' => __('student.portfolio_images_max'),
+            'images.*.image' => __('student.portfolio_images_type'),
+            'images.*.max' => __('student.portfolio_images_size'),
         ]);
 
         $data = [
@@ -66,7 +67,7 @@ class PortfolioProjectController extends Controller
         $project = PortfolioProject::create($data);
 
         $dir = public_path('portfolio-images');
-        if (!File::isDirectory($dir)) {
+        if (! File::isDirectory($dir)) {
             File::makeDirectory($dir, 0755, true);
         }
 
@@ -74,9 +75,9 @@ class PortfolioProjectController extends Controller
             $sortOrder = 0;
             foreach ($request->file('images') as $file) {
                 if ($file && $file->isValid()) {
-                    $name = Str::uuid() . '.' . $file->getClientOriginalExtension();
+                    $name = Str::uuid().'.'.$file->getClientOriginalExtension();
                     $file->move($dir, $name);
-                    $path = 'portfolio-images/' . $name;
+                    $path = 'portfolio-images/'.$name;
                     PortfolioProjectImage::create([
                         'portfolio_project_id' => $project->id,
                         'image_path' => $path,
@@ -89,6 +90,6 @@ class PortfolioProjectController extends Controller
             }
         }
 
-        return redirect()->route('student.portfolio.index')->with('success', 'تم رفع المشروع بنجاح. سيتم مراجعته من المدرب ثم النشر في البورتفوليو.');
+        return redirect()->route('student.portfolio.index')->with('success', __('student.portfolio_success'));
     }
 }

@@ -1,135 +1,206 @@
-@extends('layouts.app')
+@extends('layouts.student-dashboard')
 
 @section('title', __('student.orders_page_title'))
-@section('header', __('student.orders_page_title'))
+
+@push('styles')
+@include('student.offline-courses.partials.los-styles')
+<style>
+    .od-list { display: flex; flex-direction: column; gap: 10px; }
+    .od-card {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 14px;
+        align-items: start;
+        padding: 14px 16px;
+        background: var(--ml-surface);
+        border: 1px solid var(--ml-line);
+        border-radius: var(--ml-r);
+        transition: border-color var(--ml-fast) ease, box-shadow var(--ml-fast) ease;
+    }
+    .od-card:hover {
+        border-color: rgba(73, 164, 162, 0.35);
+        box-shadow: 0 10px 28px rgba(26, 34, 56, 0.06);
+    }
+    .od-head {
+        display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+        margin-bottom: 6px;
+    }
+    .od-head h3 { margin: 0; font-size: 15px; font-weight: 700; line-height: 1.35; }
+    .od-meta { margin: 0 0 10px; font-size: 12px; color: var(--ml-muted); line-height: 1.5; }
+    .od-facts {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+        gap: 8px;
+    }
+    .od-facts > div {
+        padding: 8px 10px; border-radius: 10px; background: var(--ml-well);
+    }
+    .od-facts .k { display: block; font-size: 10px; font-weight: 700; color: var(--ml-muted); margin-bottom: 2px; }
+    .od-facts .v { font-size: 13px; font-weight: 700; color: var(--ml-ink); }
+    .od-notes {
+        margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+        background: rgba(73, 164, 162, 0.08); border: 1px solid rgba(73, 164, 162, 0.2);
+        font-size: 12px; color: var(--ml-ink); line-height: 1.55; white-space: pre-wrap;
+    }
+    .od-notes .lbl { display: block; font-size: 10px; font-weight: 700; color: var(--ml-muted); margin-bottom: 4px; }
+    .od-side {
+        display: flex; flex-direction: column; gap: 8px; min-width: 140px;
+    }
+    .od-side .oc-btn { width: 100%; justify-content: center; }
+    @media (max-width: 720px) {
+        .od-card { grid-template-columns: 1fr; }
+        .od-side { flex-direction: row; min-width: 0; width: 100%; }
+        .od-side .oc-btn { flex: 1; }
+    }
+</style>
+@endpush
 
 @section('content')
-<div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-    <!-- الهيدر -->
-    <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
-        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-                <h1 class="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{{ __('student.orders_page_title') }}</h1>
-                <p class="text-sm text-gray-500">{{ __('student.orders_subtitle') }}</p>
-            </div>
-            <a href="{{ route('academic-years') }}" class="inline-flex items-center gap-2 bg-sky-500 hover:bg-sky-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">
-                <i class="fas fa-search"></i>
-                {{ __('student.browse_courses_btn') }}
+<div class="oc">
+    <header class="oc-chrome">
+        <div>
+            <nav class="oc-crumb" aria-label="{{ __('student.orders_page_title') }}">
+                <a href="{{ route('dashboard') }}">{{ __('student.learning_center') }}</a>
+                <span aria-hidden="true">/</span>
+                <span style="color:var(--ml-ink);font-weight:700">{{ __('student.orders_page_title') }}</span>
+            </nav>
+            <h1>{{ __('student.orders_page_title') }}</h1>
+            <p class="sub">{{ __('student.orders_subtitle') }}</p>
+        </div>
+        <div class="oc-signals">
+            <span class="oc-signal oc-signal-live">{{ $stats['total'] ?? $orders->total() }} {{ __('student.orders_count_label') }}</span>
+            @if(($stats['pending'] ?? 0) > 0)
+                <span class="oc-signal oc-signal-hot">{{ $stats['pending'] }} {{ __('student.orders_pending_label') }}</span>
+            @endif
+        </div>
+    </header>
+
+    <section class="oc-stage">
+        <div class="oc-eyebrow">{{ __('student.orders_tracking') }}</div>
+        <h2>{{ __('student.orders_page_title') }}</h2>
+        <p class="oc-copy">{{ __('student.orders_subtitle') }}</p>
+        <div class="oc-nav">
+            <a class="oc-btn" href="{{ route('academic-years') }}">
+                <i class="fas fa-search text-xs"></i> {{ __('student.browse_courses_btn') }}
             </a>
         </div>
-    </div>
+    </section>
+
+    @if(isset($stats))
+        <div class="oc-pulse" aria-label="{{ __('student.orders_page_title') }}">
+            <div>
+                <span class="lbl">{{ __('student.orders_count_label') }}</span>
+                <span class="val teal">{{ $stats['total'] }}</span>
+            </div>
+            <div>
+                <span class="lbl">{{ __('student.orders_pending_label') }}</span>
+                <span class="val hot">{{ $stats['pending'] }}</span>
+            </div>
+            <div>
+                <span class="lbl">{{ __('student.orders_approved_label') }}</span>
+                <span class="val">{{ $stats['approved'] }}</span>
+            </div>
+            <div>
+                <span class="lbl">{{ __('student.orders_rejected_label') }}</span>
+                <span class="val">{{ $stats['rejected'] }}</span>
+            </div>
+        </div>
+    @endif
 
     @if($orders->count() > 0)
-        <div class="space-y-4">
+        <div class="od-list">
             @foreach($orders as $order)
-            <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                <div class="p-4 sm:p-5">
-                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                        <div class="flex-1 min-w-0">
-                            <div class="flex flex-wrap items-center gap-2 mb-3">
-                                <h3 class="text-base sm:text-lg font-bold text-gray-900">
-                                    @if($order->academic_year_id && $order->learningPath)
-                                        {{ $order->learningPath->name ?? __('student.learning_path_label') }}
-                                    @elseif($order->course)
-                                        {{ $order->course->title ?? __('student.course_undefined') }}
-                                    @else
-                                        {{ \Illuminate\Support\Str::before($order->notes ?? __('student.course_undefined'), "\n") ?: __('student.course_undefined') }}
-                                    @endif
-                                </h3>
-                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold {{ $order->status == 'pending' ? 'bg-amber-100 text-amber-800' : ($order->status == 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800') }}">
-                                    @if($order->status == 'pending')<i class="fas fa-clock"></i>
-                                    @elseif($order->status == 'approved')<i class="fas fa-check-circle"></i>
-                                    @else<i class="fas fa-times-circle"></i>
-                                    @endif
-                                    {{ $order->status_text }}
-                                </span>
-                            </div>
-
-                            <div class="flex flex-wrap items-center gap-2 text-sm text-gray-500 mb-3">
-                                @if($order->academic_year_id && $order->learningPath)
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 text-xs font-medium">{{ __('student.learning_path_label') }}</span>
-                                    @if($order->learningPath->price)
-                                        <span>{{ number_format($order->learningPath->price, 2) }} {{ __('public.currency_egp') }}</span>
-                                    @endif
-                                @elseif($order->course && ($order->course->academicYear || $order->course->academicSubject))
-                                    @if($order->course->academicYear)
-                                        <span>{{ $order->course->academicYear->name }}</span>
-                                    @endif
-                                    @if($order->course->academicSubject)
-                                        <span>· {{ $order->course->academicSubject->name }}</span>
-                                    @endif
+                @php
+                    $title = $order->academic_year_id && $order->learningPath
+                        ? ($order->learningPath->name ?? __('student.learning_path_label'))
+                        : ($order->course->title ?? (\Illuminate\Support\Str::before($order->notes ?? __('student.course_undefined'), "\n") ?: __('student.course_undefined')));
+                    $badge = match ($order->status) {
+                        'approved' => 'oc-badge-ok',
+                        'rejected' => 'oc-badge-bad',
+                        default => 'oc-badge-warn',
+                    };
+                    $pay = match ($order->payment_method) {
+                        'bank_transfer' => __('student.bank_transfer'),
+                        'cash' => __('student.cash_label'),
+                        default => __('student.other_label'),
+                    };
+                @endphp
+                <article class="od-card">
+                    <div class="min-w-0">
+                        <div class="od-head">
+                            <h3>{{ $title }}</h3>
+                            <span class="oc-badge {{ $badge }}">{{ $order->status_text }}</span>
+                        </div>
+                        <p class="od-meta">
+                            @if($order->academic_year_id && $order->learningPath)
+                                {{ __('student.learning_path_label') }}
+                                @if($order->learningPath->price)
+                                    · {{ number_format($order->learningPath->price, 2) }} {{ __('public.currency_egp') }}
                                 @endif
-                                <span>· {{ $order->created_at->diffForHumans() }}</span>
-                            </div>
-
-                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-3">
-                                <div class="py-2 px-3 bg-gray-50 rounded-lg border border-gray-100">
-                                    <p class="text-xs font-medium text-gray-500">{{ __('student.amount_label') }}</p>
-                                    <p class="text-sm font-bold text-gray-900">{{ number_format($order->amount, 2) }} {{ __('public.currency_egp') }}</p>
-                                </div>
-                                <div class="py-2 px-3 bg-gray-50 rounded-lg border border-gray-100">
-                                    <p class="text-xs font-medium text-gray-500">{{ __('student.payment_method_label') }}</p>
-                                    <p class="text-xs font-semibold text-gray-900">
-                                        @if($order->payment_method == 'bank_transfer') {{ __('student.bank_transfer') }}
-                                        @elseif($order->payment_method == 'cash') {{ __('student.cash_label') }}
-                                        @else {{ __('student.other_label') }}
-                                        @endif
-                                    </p>
-                                </div>
-                                <div class="py-2 px-3 bg-gray-50 rounded-lg border border-gray-100">
-                                    <p class="text-xs font-medium text-gray-500">{{ __('student.order_date_label') }}</p>
-                                    <p class="text-sm font-semibold text-gray-900">{{ $order->created_at->format('d/m/Y') }}</p>
-                                </div>
-                                @if($order->approved_at)
-                                <div class="py-2 px-3 bg-emerald-50 rounded-lg border border-emerald-100">
-                                    <p class="text-xs font-medium text-gray-500">{{ __('student.approved_date_label') }}</p>
-                                    <p class="text-sm font-semibold text-gray-900">{{ $order->approved_at->format('d/m/Y') }}</p>
-                                </div>
+                            @elseif($order->course && ($order->course->academicYear || $order->course->academicSubject))
+                                @if($order->course->academicYear){{ $order->course->academicYear->name }}@endif
+                                @if($order->course->academicSubject)
+                                    @if($order->course->academicYear) · @endif{{ $order->course->academicSubject->name }}
                                 @endif
+                            @endif
+                            · {{ $order->created_at->diffForHumans() }}
+                        </p>
+                        <div class="od-facts">
+                            <div>
+                                <span class="k">{{ __('student.amount_label') }}</span>
+                                <span class="v">{{ number_format($order->amount, 2) }} {{ __('public.currency_egp') }}</span>
                             </div>
-
-                            @if($order->notes)
-                                <div class="p-3 bg-sky-50 rounded-lg border border-sky-100 mb-3">
-                                    <p class="text-xs font-medium text-gray-500 mb-1">{{ __('student.your_notes') }}</p>
-                                    <p class="text-sm text-gray-700">{{ $order->notes }}</p>
+                            <div>
+                                <span class="k">{{ __('student.payment_method_label') }}</span>
+                                <span class="v">{{ $pay }}</span>
+                            </div>
+                            <div>
+                                <span class="k">{{ __('student.order_date_label') }}</span>
+                                <span class="v">{{ $order->created_at->format('d/m/Y') }}</span>
+                            </div>
+                            @if($order->approved_at)
+                                <div>
+                                    <span class="k">{{ __('student.approved_date_label') }}</span>
+                                    <span class="v">{{ $order->approved_at->format('d/m/Y') }}</span>
                                 </div>
                             @endif
                         </div>
-
-                        <div class="flex flex-row sm:flex-col gap-2 flex-shrink-0 w-full sm:w-auto">
-                            <a href="{{ route('orders.show', $order) }}" class="inline-flex items-center justify-center gap-2 flex-1 sm:flex-none bg-sky-500 hover:bg-sky-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">
-                                <i class="fas fa-eye"></i>
-                                {{ __('student.view_details') }}
-                            </a>
-                            @if($order->status == 'approved' && $order->course)
-                                <a href="{{ route('courses.show', $order->course) }}" class="inline-flex items-center justify-center gap-2 flex-1 sm:flex-none bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">
-                                    <i class="fas fa-play"></i>
-                                    {{ __('student.enter_course') }}
-                                </a>
-                            @endif
-                        </div>
+                        @if($order->notes)
+                            <div class="od-notes">
+                                <span class="lbl">{{ __('student.your_notes') }}</span>
+                                {{ \Illuminate\Support\Str::limit($order->notes, 180) }}
+                            </div>
+                        @endif
                     </div>
-                </div>
-            </div>
+                    <div class="od-side">
+                        <a href="{{ route('orders.show', $order) }}" class="oc-btn">
+                            <i class="fas fa-eye text-xs"></i> {{ __('student.view_details') }}
+                        </a>
+                        @if($order->status == 'approved' && $order->course)
+                            <a href="{{ route('courses.show', $order->course) }}" class="oc-btn oc-btn-quiet">
+                                <i class="fas fa-play text-xs"></i> {{ __('student.enter_course') }}
+                            </a>
+                        @endif
+                    </div>
+                </article>
             @endforeach
         </div>
 
         @if($orders->hasPages())
-            <div class="flex justify-center mt-6">
+            <div style="margin-top:20px;display:flex;justify-content:center">
                 {{ $orders->links() }}
             </div>
         @endif
     @else
-        <div class="rounded-xl p-10 sm:p-12 text-center bg-gray-50 border border-dashed border-gray-200">
-            <div class="w-16 h-16 bg-sky-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-sky-600">
-                <i class="fas fa-shopping-cart text-2xl"></i>
+        <div class="oc-empty">
+            <div class="icon"><i class="fas fa-shopping-cart"></i></div>
+            <h3>{{ __('student.no_orders') }}</h3>
+            <p>{{ __('student.no_orders_desc') }}</p>
+            <div style="margin-top:16px">
+                <a href="{{ route('academic-years') }}" class="oc-btn">
+                    <i class="fas fa-plus text-xs"></i> {{ __('student.browse_courses_btn') }}
+                </a>
             </div>
-            <h3 class="text-lg font-bold text-gray-900 mb-2">{{ __('student.no_orders') }}</h3>
-            <p class="text-sm text-gray-500 mb-6 max-w-sm mx-auto">{{ __('student.no_orders_desc') }}</p>
-            <a href="{{ route('academic-years') }}" class="inline-flex items-center gap-2 bg-sky-500 hover:bg-sky-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors">
-                <i class="fas fa-plus"></i>
-                {{ __('student.browse_courses_btn') }}
-            </a>
         </div>
     @endif
 </div>

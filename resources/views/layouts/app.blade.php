@@ -26,6 +26,8 @@
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {{-- LOS sidebar styles (shared with student-dashboard layout) --}}
+    <link rel="stylesheet" href="{{ asset('css/mindlytics-los.css') }}?v=4">
     
     @php
         $showContentProtection = !empty(trim((string) ($__env->yieldContent('enable-content-protection') ?? '')));
@@ -42,6 +44,8 @@
     @endif
 
     <style>
+        [x-cloak] { display: none !important; }
+
         * {
             font-family: 'Cairo', 'Noto Sans Arabic', sans-serif;
         }
@@ -51,12 +55,24 @@
             overflow-x: hidden;
         }
 
-        /* Clean Sidebar */
+        /* Clean Sidebar shell — inner content uses .los-sidebar from mindlytics-los.css */
         .student-sidebar {
-            background: linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%);
-            border-left: 2px solid #e2e8f0;
+            background: #ffffff;
+            border-left: 1px solid #e2e8f0;
             width: 280px;
-            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.03);
+            max-width: 280px;
+            box-shadow: -1px 0 6px rgba(0, 0, 0, 0.04);
+            display: flex;
+            flex-direction: column;
+            align-self: stretch;
+            height: 100%;
+            min-height: 100vh;
+            min-height: 100dvh;
+            overflow: hidden;
+        }
+        .student-sidebar.los-sidebar-bridge {
+            width: var(--ml-sidebar-w, 280px);
+            max-width: var(--ml-sidebar-w, 280px);
         }
 
         .nav-card {
@@ -255,7 +271,7 @@
             box-shadow: 0 4px 12px rgba(44, 169, 189, 0.2);
         }
 
-        /* Scrollbar */
+        /* Scrollbar — brand teal */
         .sidebar-scroll::-webkit-scrollbar {
             width: 6px;
         }
@@ -265,12 +281,17 @@
         }
 
         .sidebar-scroll::-webkit-scrollbar-thumb {
-            background: linear-gradient(to bottom, #2CA9BD, #65DBE4);
+            background: linear-gradient(to bottom, var(--ml-teal, #49A4A2), var(--ml-teal-deep, #2f7f7d));
             border-radius: 3px;
         }
 
         .sidebar-scroll::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(to bottom, #1F3A56, #2CA9BD);
+            background: linear-gradient(to bottom, var(--ml-teal-deep, #2f7f7d), #246663);
+        }
+
+        .sidebar-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: var(--ml-teal, #49A4A2) transparent;
         }
 
         /* Animations */
@@ -324,16 +345,12 @@ x-init="
 ">
     <div class="flex h-screen overflow-hidden">
         @auth
-            <!-- Clean Sidebar -->
-            <aside x-show="sidebarOpen || window.innerWidth >= 1024"
-                   x-transition:enter="transition ease-out duration-150"
-                   x-transition:enter-start="opacity-0 translate-x-full"
-                   x-transition:enter-end="opacity-100 translate-x-0"
-                   x-transition:leave="transition ease-in duration-100"
-                   x-transition:leave-start="opacity-100 translate-x-0"
-                   x-transition:leave-end="opacity-0 translate-x-full"
-                   class="student-sidebar flex-shrink-0 fixed lg:static inset-y-0 right-0 z-50 lg:z-auto"
-                   style="will-change: transform, opacity;">
+            <!-- Clean Sidebar: always visible on lg+; drawer on mobile (no x-show opacity traps) -->
+            <aside class="student-sidebar los-sidebar-bridge flex-shrink-0 fixed lg:static inset-y-0 z-50 lg:z-auto
+                          {{ $appRtl ? 'right-0' : 'left-0' }}
+                          transition-transform duration-150 ease-out lg:!translate-x-0
+                          {{ $appRtl ? 'translate-x-full' : '-translate-x-full' }}"
+                   :class="sidebarOpen ? 'translate-x-0' : '{{ $appRtl ? 'translate-x-full' : '-translate-x-full' }}'">
                 @if(auth()->user()->isInstructor() || auth()->user()->isTeacher())
                     @include('layouts.instructor-sidebar')
                 @else
@@ -342,16 +359,10 @@ x-init="
             </aside>
 
             <!-- Mobile Overlay -->
-            <div x-show="sidebarOpen && window.innerWidth < 1024"
+            <div x-show="sidebarOpen"
+                 x-cloak
                  @click="sidebarOpen = false"
-                 x-transition:enter="transition ease-out duration-150"
-                 x-transition:enter-start="opacity-0"
-                 x-transition:enter-end="opacity-100"
-                 x-transition:leave="transition ease-in duration-100"
-                 x-transition:leave-start="opacity-100"
-                 x-transition:leave-end="opacity-0"
-                 class="fixed inset-0 bg-black/50 z-40 lg:hidden"
-                 style="will-change: opacity;"></div>
+                 class="fixed inset-0 bg-black/50 z-40 lg:hidden"></div>
         @endauth
 
         <!-- Main Content Area -->
@@ -401,7 +412,7 @@ x-init="
                         <div class="relative" x-data="window.__navNotifications()">
                             <button @click="toggle()"
                                     class="quick-action-btn relative"
-                                    aria-label="الإشعارات">
+                                    aria-label="{{ __('student.notifications') }}">
                                 <i class="fas fa-bell text-xs sm:text-sm"></i>
                                 <template x-if="unreadCount > 0">
                                     <span class="notification-badge text-[9px] sm:text-[10px]" x-text="unreadCount > 99 ? '99+' : unreadCount"></span>
@@ -410,25 +421,25 @@ x-init="
                             <div x-show="open"
                                  @click.away="open = false"
                                  x-transition
-                                 class="absolute left-0 mt-3 w-72 sm:w-80 md:w-96 dropdown-menu z-50 overflow-hidden">
+                                 class="absolute end-0 mt-3 w-72 sm:w-80 md:w-96 dropdown-menu z-50 overflow-hidden text-start">
                                 <div class="p-3 sm:p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-3">
                                     <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
                                         <i class="fas fa-bell text-sky-500"></i>
-                                        <span>الإشعارات</span>
+                                        <span>{{ __('student.notifications') }}</span>
                                     </h3>
                                     <button type="button" class="text-xs font-bold text-sky-700 hover:text-sky-900"
                                             @click="markAllRead()" x-show="unreadCount > 0">
-                                        تحديد الكل كمقروء
+                                        {{ __('student.mark_all_read') }}
                                     </button>
                                 </div>
                                 <div class="max-h-96 overflow-y-auto">
                                     <template x-if="loading">
-                                        <div class="p-4 sm:p-6 text-center text-slate-500 text-sm">جاري التحميل…</div>
+                                        <div class="p-4 sm:p-6 text-center text-slate-500 text-sm">{{ __('common.loading') }}</div>
                                     </template>
                                     <template x-if="!loading && items.length === 0">
                                         <div class="p-4 sm:p-6 text-center text-slate-500 text-sm">
                                             <i class="fas fa-bell-slash text-2xl mb-2 text-slate-300 inline-block"></i>
-                                            <p>لا توجد إشعارات</p>
+                                            <p>{{ __('student.no_notifications') }}</p>
                                         </div>
                                     </template>
                                     <div x-show="!loading && items.length > 0" class="divide-y divide-slate-100">
@@ -459,19 +470,22 @@ x-init="
                         <!-- Enhanced User Profile -->
                         <div class="relative" x-data="{ open: false }">
                             <button @click="open = !open"
-                                    class="user-menu-btn flex items-center gap-1.5 sm:gap-2 md:gap-3 p-1 sm:p-1.5 md:p-2 rounded-xl">
+                                    class="user-menu-btn flex items-center gap-1.5 sm:gap-2 md:gap-3 p-1 sm:p-1.5 md:p-2 rounded-xl"
+                                    aria-label="{{ __('common.account') }}">
                                 <div class="user-avatar flex-shrink-0">
                                     @if(auth()->user()->profile_image)
                                         <img src="{{ auth()->user()->profile_image_url }}" alt="" class="w-full h-full rounded-lg object-cover">
                                     @else
-                                        {{ substr(auth()->user()->name, 0, 1) }}
+                                        {{ mb_substr(auth()->user()->name, 0, 1) }}
                                     @endif
                                 </div>
-                                <div class="hidden sm:block md:hidden lg:block text-right min-w-0">
+                                <div class="hidden sm:block md:hidden lg:block text-start min-w-0">
                                     <div class="text-xs sm:text-sm font-bold text-slate-800 truncate">{{ auth()->user()->name }}</div>
                                     <div class="text-[10px] sm:text-xs text-slate-500">
-                                        @if(auth()->user()->isInstructor() || auth()->user()->isTeacher() || in_array(strtolower(auth()->user()->role ?? ''), ['instructor', 'teacher'])) مدرب
-                                        @else طالب
+                                        @if(auth()->user()->isInstructor() || auth()->user()->isTeacher() || in_array(strtolower(auth()->user()->role ?? ''), ['instructor', 'teacher']))
+                                            {{ __('student.instructor_role') }}
+                                        @else
+                                            {{ __('student.student_role') }}
                                         @endif
                                     </div>
                                 </div>
@@ -480,14 +494,14 @@ x-init="
                             <div x-show="open"
                                  @click.away="open = false"
                                  x-transition
-                                 class="absolute left-0 mt-3 w-56 sm:w-64 dropdown-menu z-50 overflow-hidden">
+                                 class="absolute end-0 mt-3 w-56 sm:w-64 dropdown-menu z-50 overflow-hidden text-start">
                                 <div class="p-3 sm:p-4 border-b border-slate-200 bg-slate-50">
                                     <div class="flex items-center gap-3">
                                         <div class="user-avatar w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
                                             @if(auth()->user()->profile_image)
                                                 <img src="{{ auth()->user()->profile_image_url }}" alt="" class="w-full h-full rounded-xl object-cover">
                                             @else
-                                                {{ substr(auth()->user()->name, 0, 1) }}
+                                                {{ mb_substr(auth()->user()->name, 0, 1) }}
                                             @endif
                                         </div>
                                         <div class="flex-1 min-w-0">
@@ -501,19 +515,19 @@ x-init="
                                         $profileRoute = (auth()->user()->isInstructor() || auth()->user()->isTeacher() || in_array(strtolower(auth()->user()->role ?? ''), ['instructor', 'teacher'])) ? route('instructor.profile') : route('profile');
                                     @endphp
                                     <a href="{{ $profileRoute }}" class="dropdown-item px-3 py-2.5 rounded-lg text-sm font-medium text-slate-700">
-                                        <i class="fas fa-user w-5 text-slate-400 mr-2"></i>
-                                        الملف الشخصي
+                                        <i class="fas fa-user w-5 text-slate-400 me-2"></i>
+                                        {{ __('student.profile') }}
                                     </a>
                                     <a href="{{ route('settings') }}" class="dropdown-item px-3 py-2.5 rounded-lg text-sm font-medium text-slate-700">
-                                        <i class="fas fa-cog w-5 text-slate-400 mr-2"></i>
-                                        الإعدادات
+                                        <i class="fas fa-cog w-5 text-slate-400 me-2"></i>
+                                        {{ __('student.settings') }}
                                     </a>
                                     <hr class="my-2 border-slate-200">
                                     <form method="POST" action="{{ route('logout') }}">
                                         @csrf
-                                        <button type="submit" class="w-full dropdown-item px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 text-right">
-                                            <i class="fas fa-sign-out-alt w-5 mr-2"></i>
-                                            تسجيل الخروج
+                                        <button type="submit" class="w-full dropdown-item px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 text-start">
+                                            <i class="fas fa-sign-out-alt w-5 me-2"></i>
+                                            {{ __('auth.logout') }}
                                         </button>
                                     </form>
                                 </div>

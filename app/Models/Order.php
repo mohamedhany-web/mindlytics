@@ -112,13 +112,12 @@ class Order extends Model
 
     public function getStatusTextAttribute()
     {
-        $statuses = [
-            self::STATUS_PENDING => 'في الانتظار',
-            self::STATUS_APPROVED => 'مقبول',
-            self::STATUS_REJECTED => 'مرفوض',
-        ];
-
-        return $statuses[$this->status] ?? 'غير محدد';
+        return match ($this->status) {
+            self::STATUS_PENDING => __('student.order_status_pending'),
+            self::STATUS_APPROVED => __('student.order_status_approved'),
+            self::STATUS_REJECTED => __('student.order_status_rejected'),
+            default => __('student.not_specified_short'),
+        };
     }
 
     public function getStatusColorAttribute()

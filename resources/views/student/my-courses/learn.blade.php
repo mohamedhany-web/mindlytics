@@ -110,6 +110,7 @@
     }
 })();
 </script>
+@include('student.my-courses.partials.learn-thread-script')
 @include('student.my-courses.partials.learn-alpine-premium')
 <script>
 function courseFocusMode() {

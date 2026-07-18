@@ -1,240 +1,272 @@
-@extends('layouts.app')
+@extends('layouts.student-dashboard')
 
 @section('title', __('student.calendar_title'))
 
+@php
+    $locale = app()->getLocale();
+    $isRtl = $locale === 'ar';
+    $upcoming = $events->where('start_date', '>=', now())->take(10);
+@endphp
+
 @push('styles')
-<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.css' rel='stylesheet' />
+@include('student.offline-courses.partials.los-styles')
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.css" rel="stylesheet" />
 <style>
-    .fc {
-        direction: rtl;
+    .cal-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 280px;
+        gap: 20px;
+        align-items: start;
     }
-    .fc-toolbar {
-        flex-direction: row-reverse;
+    @media (max-width: 1099px) {
+        .cal-layout { grid-template-columns: 1fr; }
     }
-    .fc-button-group {
-        flex-direction: row-reverse;
+    .cal-aside { display: flex; flex-direction: column; gap: 12px; }
+    @media (min-width: 1100px) {
+        .cal-aside-sticky { position: sticky; top: 12px; }
     }
-    .fc-event {
-        cursor: pointer;
-        border-radius: 4px;
-        padding: 2px 4px;
+    .cal-board {
+        background: var(--ml-surface);
+        border: 1px solid var(--ml-line);
+        border-radius: var(--ml-r);
+        padding: 14px 16px 18px;
     }
-    .fc-daygrid-event {
-        white-space: normal;
-        font-size: 0.85rem;
+    .cal-legend {
+        display: flex; flex-wrap: wrap; gap: 12px 16px;
+        margin-top: 14px; padding-top: 14px;
+        border-top: 1px solid var(--ml-line);
+        font-size: 12px; color: var(--ml-muted); font-weight: 600;
     }
-    .event-legend {
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-        margin-top: 1rem;
+    .cal-legend span {
+        display: inline-flex; align-items: center; gap: 6px;
     }
-    .legend-item {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 0.875rem;
+    .cal-legend i {
+        width: 12px; height: 12px; border-radius: 4px; display: inline-block;
     }
-    .legend-color {
-        width: 16px;
-        height: 16px;
-        border-radius: 4px;
+    .cal-event {
+        display: flex; gap: 10px; padding: 10px 12px;
+        border: 1px solid var(--ml-line); border-radius: 10px;
+        text-decoration: none !important; color: inherit !important;
+        transition: border-color var(--ml-fast) ease, background var(--ml-fast) ease;
+        cursor: pointer; background: var(--ml-surface);
     }
+    .cal-event:hover {
+        border-color: rgba(73, 164, 162, 0.4);
+        background: rgba(73, 164, 162, 0.06);
+    }
+    .cal-event .dot {
+        width: 10px; height: 10px; border-radius: 999px; margin-top: 5px; flex-shrink: 0;
+    }
+    .cal-event strong {
+        display: block; font-size: 13px; font-weight: 700; line-height: 1.35;
+        margin-bottom: 2px;
+    }
+    .cal-event .when { font-size: 11px; color: var(--ml-muted); }
+    .cal-event .kind {
+        margin-top: 4px; font-size: 11px; font-weight: 700; color: var(--ml-teal-deep);
+    }
+    .cal-stat-row {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 8px; padding: 10px 12px; border-radius: 10px;
+        background: var(--ml-well); margin-bottom: 8px;
+        font-size: 13px; font-weight: 600; color: var(--ml-ink);
+    }
+    .cal-stat-row:last-child { margin-bottom: 0; }
+    .cal-stat-row .n { font-weight: 700; color: var(--ml-teal-deep); font-size: 1rem; }
+
+    /* FullCalendar LOS theme */
+    .oc .fc { font-family: inherit; color: var(--ml-ink); }
+    .oc .fc-theme-standard td, .oc .fc-theme-standard th,
+    .oc .fc-theme-standard .fc-scrollgrid {
+        border-color: var(--ml-line);
+    }
+    .oc .fc-col-header-cell-cushion,
+    .oc .fc-daygrid-day-number {
+        color: var(--ml-ink); text-decoration: none !important; font-weight: 600;
+    }
+    .oc .fc-toolbar-title { font-size: 1.05rem; font-weight: 700; }
+    .oc .fc-button-primary {
+        background: var(--ml-teal) !important;
+        border-color: var(--ml-teal) !important;
+        box-shadow: none !important;
+        font-weight: 700;
+        text-transform: none;
+    }
+    .oc .fc-button-primary:not(:disabled):hover,
+    .oc .fc-button-primary:not(:disabled).fc-button-active {
+        background: var(--ml-teal-deep) !important;
+        border-color: var(--ml-teal-deep) !important;
+    }
+    .oc .fc-day-today { background: rgba(73, 164, 162, 0.08) !important; }
+    .oc .fc-event {
+        border-radius: 6px; border: 0; padding: 2px 4px; cursor: pointer;
+    }
+    .oc .fc-daygrid-event { white-space: normal; font-size: 0.8rem; }
 </style>
 @endpush
 
 @section('content')
-<div class="min-h-screen bg-gray-50 py-6">
-    <div class="w-full px-4 sm:px-6 lg:px-8">
-        <!-- الهيدر -->
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm mb-6 p-5 sm:p-6">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 class="text-xl sm:text-2xl font-bold text-gray-900">{{ __('student.calendar_title') }}</h1>
-                    <p class="text-sm text-gray-500 mt-1">{{ __('student.calendar_subtitle') }}</p>
-                </div>
-                <div class="text-sm text-gray-600 flex items-center gap-2">
-                    <i class="fas fa-calendar-alt text-sky-500"></i>
-                    <span>{{ __('student.total_events') }}: <strong>{{ $stats['total'] ?? 0 }}</strong></span>
-                </div>
+<div class="oc">
+    <header class="oc-chrome">
+        <div>
+            <nav class="oc-crumb" aria-label="{{ __('student.calendar_title') }}">
+                <a href="{{ route('dashboard') }}">{{ __('student.learning_center') }}</a>
+                <span aria-hidden="true">/</span>
+                <span style="color:var(--ml-ink);font-weight:700">{{ __('student.calendar_title') }}</span>
+            </nav>
+            <h1>{{ __('student.calendar_title') }}</h1>
+            <p class="sub">{{ __('student.calendar_subtitle') }}</p>
+        </div>
+        <div class="oc-signals">
+            <span class="oc-signal oc-signal-live">{{ __('student.total_events') }}: {{ $stats['total'] ?? 0 }}</span>
+            <span class="oc-signal oc-signal-hot">{{ __('student.calendar_upcoming_count') }}: {{ $stats['upcoming'] ?? 0 }}</span>
+        </div>
+    </header>
+
+    <div class="oc-pulse" aria-label="{{ __('student.calendar_stats') }}">
+        <div>
+            <span class="lbl">{{ __('student.legend_exams') }}</span>
+            <span class="val teal">{{ $stats['exams'] ?? 0 }}</span>
+        </div>
+        <div>
+            <span class="lbl">{{ __('student.legend_lectures') }}</span>
+            <span class="val">{{ $stats['lectures'] ?? 0 }}</span>
+        </div>
+        <div>
+            <span class="lbl">{{ __('student.legend_assignments') }}</span>
+            <span class="val hot">{{ $stats['assignments'] ?? 0 }}</span>
+        </div>
+        <div>
+            <span class="lbl">{{ __('student.calendar_upcoming_count') }}</span>
+            <span class="val">{{ $stats['upcoming'] ?? 0 }}</span>
+        </div>
+    </div>
+
+    <div class="cal-layout">
+        <div class="cal-board">
+            <div id="calendar"></div>
+            <div class="cal-legend">
+                <span><i style="background:#ef4444"></i> {{ __('student.legend_exams') }}</span>
+                <span><i style="background:#49A4A2"></i> {{ __('student.legend_lectures') }}</span>
+                <span><i style="background:#f59e0b"></i> {{ __('student.legend_assignments') }}</span>
+                <span><i style="background:#10b981"></i> {{ __('student.other_events') }}</span>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <!-- التقويم الرئيسي -->
-            <div class="lg:col-span-3">
-                <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 md:p-6">
-                    <div id="calendar" class="calendar-container"></div>
-                    
-                    <!-- مفتاح الألوان -->
-                    <div class="event-legend mt-4 pt-4 border-t border-gray-200">
-                        <div class="legend-item">
-                            <div class="legend-color bg-red-500"></div>
-                            <span>{{ __('student.legend_exams') }}</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color bg-sky-500"></div>
-                            <span>{{ __('student.legend_lectures') }}</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color bg-amber-500"></div>
-                            <span>{{ __('student.legend_assignments') }}</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color bg-emerald-500"></div>
-                            <span>{{ __('student.other_events') }}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- الشريط الجانبي -->
-            <div class="lg:col-span-1 space-y-6">
-                <!-- الأحداث القادمة -->
-                <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 md:p-6">
-                    <h3 class="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <i class="fas fa-clock text-sky-500"></i>
-                        <span>الأحداث القادمة</span>
-                    </h3>
-                    
-                    <div class="space-y-3 max-h-96 overflow-y-auto">
-                        @forelse($events->where('start_date', '>=', now())->take(10) as $event)
-                            <div class="p-3 rounded-lg border border-gray-200 hover:border-sky-500 transition-colors cursor-pointer"
-                                 onclick="window.location.href='{{ $event->url ?? '#' }}'">
-                                <div class="flex items-start gap-2 mb-2">
-                                    <div class="w-3 h-3 rounded-full mt-1.5 flex-shrink-0" 
-                                         style="background-color: {{ $event->color ?? '#6B7280' }}"></div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="text-sm font-bold text-gray-900 truncate">{{ $event->title }}</div>
-                                        <div class="text-xs text-gray-500 mt-1">
-                                            <i class="fas fa-calendar text-sky-500"></i>
-                                            {{ $event->start_date->format('d/m/Y') }}
-                                            @if(!$event->is_all_day)
-                                                {{ $event->start_date->format('h:i A') }}
-                                            @endif
-                                        </div>
-                                        <div class="text-xs mt-1 
-                                            @if($event->type == 'exam') text-red-600
-                                            @elseif($event->type == 'lecture') text-blue-600
-                                            @elseif($event->type == 'assignment') text-yellow-600
-                                            @else text-gray-600
-                                            @endif font-semibold">
-                                            @if($event->type == 'exam') 
-                                                <i class="fas fa-clipboard-check"></i> امتحان
-                                            @elseif($event->type == 'lecture') 
-                                                <i class="fas fa-chalkboard-teacher"></i> محاضرة
-                                            @elseif($event->type == 'assignment') 
-                                                <i class="fas fa-tasks"></i> واجب
-                                            @else 
-                                                <i class="fas fa-calendar-alt"></i> حدث
-                                            @endif
-                                        </div>
-                                    </div>
+        <aside class="cal-aside">
+            <div class="oc-panel cal-aside-sticky">
+                <p class="oc-label">{{ __('student.upcoming_events') }}</p>
+                <div style="display:flex;flex-direction:column;gap:8px;max-height:28rem;overflow:auto">
+                    @forelse($upcoming as $event)
+                        @php
+                            $typeLabel = match ($event->type ?? '') {
+                                'exam' => __('student.event_type_exam'),
+                                'lecture' => __('student.event_type_lecture'),
+                                'assignment' => __('student.event_type_assignment'),
+                                default => __('student.event_type_event'),
+                            };
+                            $typeIcon = match ($event->type ?? '') {
+                                'exam' => 'fa-clipboard-check',
+                                'lecture' => 'fa-chalkboard-teacher',
+                                'assignment' => 'fa-tasks',
+                                default => 'fa-calendar-alt',
+                            };
+                        @endphp
+                        <a class="cal-event" href="{{ $event->url ?? '#' }}">
+                            <span class="dot" style="background:{{ $event->color ?? '#49A4A2' }}"></span>
+                            <div class="min-w-0">
+                                <strong>{{ $event->title }}</strong>
+                                <div class="when">
+                                    {{ $event->start_date->format('d/m/Y') }}
+                                    @if(!($event->is_all_day ?? false))
+                                        · {{ $event->start_date->format('H:i') }}
+                                    @endif
                                 </div>
+                                <div class="kind"><i class="fas {{ $typeIcon }}"></i> {{ $typeLabel }}</div>
                             </div>
-                        @empty
-                            <div class="text-center py-8 text-gray-500">
-                                <i class="fas fa-calendar-times text-3xl mb-2 opacity-30"></i>
-                                <p class="text-sm">لا توجد أحداث قادمة</p>
-                            </div>
-                        @endforelse
-                    </div>
-                </div>
-
-                <!-- إحصائيات -->
-                <div class="bg-sky-500 rounded-xl p-4 md:p-6 text-white border border-sky-600">
-                    <h3 class="text-lg font-black mb-4 flex items-center gap-2">
-                        <i class="fas fa-chart-pie"></i>
-                        <span>إحصائيات</span>
-                    </h3>
-                    
-                    <div class="space-y-3">
-                        <div class="flex items-center justify-between bg-white/20 rounded-lg p-3">
-                            <div class="flex items-center gap-2">
-                                <i class="fas fa-clipboard-check"></i>
-                                <span class="text-sm font-semibold">الامتحانات</span>
-                            </div>
-                            <span class="text-lg font-black">{{ $stats['exams'] ?? 0 }}</span>
+                        </a>
+                    @empty
+                        <div class="oc-empty" style="padding:24px 12px">
+                            <div class="icon" style="width:44px;height:44px;font-size:18px"><i class="fas fa-calendar-times"></i></div>
+                            <p style="margin:0">{{ __('student.no_upcoming_events') }}</p>
                         </div>
-                        <div class="flex items-center justify-between bg-white/20 rounded-lg p-3">
-                            <div class="flex items-center gap-2">
-                                <i class="fas fa-chalkboard-teacher"></i>
-                                <span class="text-sm font-semibold">المحاضرات</span>
-                            </div>
-                            <span class="text-lg font-black">{{ $stats['lectures'] ?? 0 }}</span>
-                        </div>
-                        <div class="flex items-center justify-between bg-white/20 rounded-lg p-3">
-                            <div class="flex items-center gap-2">
-                                <i class="fas fa-tasks"></i>
-                                <span class="text-sm font-semibold">الواجبات</span>
-                            </div>
-                            <span class="text-lg font-black">{{ $stats['assignments'] ?? 0 }}</span>
-                        </div>
-                        <div class="flex items-center justify-between bg-white/20 rounded-lg p-3">
-                            <div class="flex items-center gap-2">
-                                <i class="fas fa-arrow-up"></i>
-                                <span class="text-sm font-semibold">القادمة</span>
-                            </div>
-                            <span class="text-lg font-black">{{ $stats['upcoming'] ?? 0 }}</span>
-                        </div>
-                    </div>
+                    @endforelse
                 </div>
             </div>
-        </div>
+
+            <div class="oc-panel">
+                <p class="oc-label">{{ __('student.calendar_stats') }}</p>
+                <div class="cal-stat-row">
+                    <span><i class="fas fa-clipboard-check text-xs" style="color:var(--ml-teal-deep);margin-inline-end:6px"></i>{{ __('student.legend_exams') }}</span>
+                    <span class="n">{{ $stats['exams'] ?? 0 }}</span>
+                </div>
+                <div class="cal-stat-row">
+                    <span><i class="fas fa-chalkboard-teacher text-xs" style="color:var(--ml-teal-deep);margin-inline-end:6px"></i>{{ __('student.legend_lectures') }}</span>
+                    <span class="n">{{ $stats['lectures'] ?? 0 }}</span>
+                </div>
+                <div class="cal-stat-row">
+                    <span><i class="fas fa-tasks text-xs" style="color:var(--ml-teal-deep);margin-inline-end:6px"></i>{{ __('student.legend_assignments') }}</span>
+                    <span class="n">{{ $stats['assignments'] ?? 0 }}</span>
+                </div>
+                <div class="cal-stat-row">
+                    <span><i class="fas fa-arrow-up text-xs" style="color:var(--ml-teal-deep);margin-inline-end:6px"></i>{{ __('student.calendar_upcoming_count') }}</span>
+                    <span class="n">{{ $stats['upcoming'] ?? 0 }}</span>
+                </div>
+            </div>
+        </aside>
     </div>
 </div>
 @endsection
 
 @push('scripts')
-<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.js'></script>
-<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/locales/ar.js'></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.js"></script>
+@if($isRtl)
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/locales/ar.js"></script>
+@endif
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     var calendarEl = document.getElementById('calendar');
+    if (!calendarEl || typeof FullCalendar === 'undefined') return;
+
     var calendar = new FullCalendar.Calendar(calendarEl, {
-        locale: 'ar',
-        direction: 'rtl',
+        locale: @json($isRtl ? 'ar' : 'en'),
+        direction: @json($isRtl ? 'rtl' : 'ltr'),
         initialView: 'dayGridMonth',
         headerToolbar: {
-            right: 'prev,next today',
+            start: 'prev,next today',
             center: 'title',
-            left: 'dayGridMonth,timeGridWeek,timeGridDay'
+            end: 'dayGridMonth,timeGridWeek,timeGridDay'
         },
         buttonText: {
-            today: 'اليوم',
-            month: 'شهر',
-            week: 'أسبوع',
-            day: 'يوم'
+            today: @json(__('student.calendar_today')),
+            month: @json(__('student.calendar_month')),
+            week: @json(__('student.calendar_week')),
+            day: @json(__('student.calendar_day'))
         },
         events: {
-            url: '{{ route("calendar.events") }}',
-            failure: function() {
-                alert('حدث خطأ في تحميل الأحداث');
+            url: @json(route('calendar.events')),
+            failure: function () {
+                alert(@json(__('student.calendar_load_error')));
             }
         },
-        eventClick: function(info) {
+        eventClick: function (info) {
             if (info.event.url) {
                 window.open(info.event.url, '_self');
                 info.jsEvent.preventDefault();
             }
         },
-        eventMouseEnter: function(info) {
-            info.el.style.cursor = 'pointer';
-        },
-        eventContent: function(arg) {
-            return {
-                html: '<div class="fc-event-title">' + arg.event.title + '</div>'
-            };
+        eventContent: function (arg) {
+            return { html: '<div class="fc-event-title">' + arg.event.title + '</div>' };
         },
         height: 'auto',
         contentHeight: 600,
-        firstDay: 6, // السبت كأول يوم
+        firstDay: 6,
         weekends: true,
         navLinks: true,
         dayMaxEvents: 3,
         moreLinkClick: 'popover'
     });
-    
+
     calendar.render();
 });
 </script>

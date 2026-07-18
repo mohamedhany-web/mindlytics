@@ -1,126 +1,189 @@
-@extends('layouts.app')
+@extends('layouts.student-dashboard')
 
 @section('title', __('student.wallet_title'))
-@section('header', __('student.wallet_title'))
+
+@push('styles')
+@include('student.offline-courses.partials.los-styles')
+<style>
+    .wl-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+    .wl-card {
+        display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        padding: 16px; background: var(--ml-surface);
+        border: 1px solid var(--ml-line); border-radius: var(--ml-r);
+    }
+    .wl-card .lbl { display: block; font-size: 12px; font-weight: 700; color: var(--ml-muted); margin-bottom: 4px; }
+    .wl-card .bal { font-size: 1.35rem; font-weight: 700; color: var(--ml-teal-deep); letter-spacing: -0.02em; }
+    .wl-card .ico {
+        width: 48px; height: 48px; border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(73,164,162,0.12); color: var(--ml-teal-deep); font-size: 1.1rem;
+    }
+    .wl-form label {
+        display: block; margin-bottom: 6px; font-size: 12px; font-weight: 700; color: var(--ml-ink);
+    }
+    .wl-form select, .wl-form input {
+        width: 100%; min-height: 40px; padding: 0 12px;
+        border-radius: 12px; border: 1px solid var(--ml-line);
+        background: var(--ml-surface); color: var(--ml-ink); font-family: inherit; font-size: 13px;
+    }
+    .wl-form select:focus, .wl-form input:focus {
+        outline: none; border-color: rgba(73,164,162,0.55);
+        box-shadow: 0 0 0 3px rgba(73,164,162,0.12);
+    }
+    .wl-form .grid {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;
+    }
+    @media (max-width: 640px) {
+        .wl-form .grid { grid-template-columns: 1fr; }
+    }
+    .wl-tx {
+        display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        padding: 12px 0; border-bottom: 1px solid var(--ml-line);
+    }
+    .wl-tx:last-child { border-bottom: 0; }
+    .wl-tx strong { display: block; font-size: 13px; font-weight: 700; line-height: 1.35; }
+    .wl-tx .when { font-size: 11px; color: var(--ml-muted); margin-top: 2px; }
+    .wl-tx .amt { font-size: 14px; font-weight: 700; white-space: nowrap; }
+    .wl-tx .amt.plus { color: #047857; }
+    .wl-tx .amt.minus { color: #b91c1c; }
+</style>
+@endpush
 
 @section('content')
-<div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+<div class="oc">
     @if(session('success'))
-    <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-sm">
-        {{ session('success') }}
-    </div>
+        <div class="oc-panel" style="border-color:rgba(16,185,129,0.35);background:rgba(16,185,129,0.08);margin-bottom:16px;color:#047857;font-size:13px;font-weight:600">
+            {{ session('success') }}
+        </div>
     @endif
-
     @if($errors->any())
-    <div class="p-4 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm">
-        <ul class="space-y-1">
-            @foreach($errors->all() as $error)
-            <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    </div>
+        <div class="oc-panel" style="border-color:rgba(239,68,68,0.35);background:rgba(239,68,68,0.08);margin-bottom:16px;color:#b91c1c;font-size:13px">
+            <ul style="margin:0;padding-inline-start:18px">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
     @endif
 
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div class="p-5 sm:p-6">
-            <h1 class="text-xl sm:text-2xl font-bold text-gray-900 mb-4">{{ __('student.wallet_title') }}</h1>
-            @if(isset($wallets) && $wallets->count() > 0)
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                @foreach($wallets as $wallet)
-                <div class="flex items-center justify-between gap-4 p-4 sm:p-5 bg-sky-50 rounded-xl border border-sky-100">
+    <header class="oc-chrome">
+        <div>
+            <nav class="oc-crumb" aria-label="{{ __('student.wallet_title') }}">
+                <a href="{{ route('dashboard') }}">{{ __('student.learning_center') }}</a>
+                <span aria-hidden="true">/</span>
+                <span style="color:var(--ml-ink);font-weight:700">{{ __('student.wallet_title') }}</span>
+            </nav>
+            <h1>{{ __('student.wallet_title') }}</h1>
+            <p class="sub">{{ __('student.wallet_financial') }}</p>
+        </div>
+        @if(isset($wallets) && $wallets->count() > 0)
+            <div class="oc-signals">
+                <span class="oc-signal oc-signal-live">{{ $wallets->count() }}</span>
+                <span class="oc-signal oc-signal-hot">
+                    {{ number_format($wallets->sum('balance'), 2) }} {{ __('public.currency_egp') }}
+                </span>
+            </div>
+        @endif
+    </header>
+
+    @if(isset($wallets) && $wallets->count() > 0)
+        <div class="wl-grid">
+            @foreach($wallets as $wallet)
+                <div class="wl-card">
                     <div>
-                        <p class="text-sm font-medium text-gray-500 mb-1">{{ $wallet->name ?: ('#' . $wallet->id) }}</p>
-                        <p class="text-2xl sm:text-3xl font-bold text-sky-600">{{ number_format($wallet->balance ?? 0, 2) }} {{ __('public.currency_egp') }}</p>
+                        <span class="lbl">{{ $wallet->name ?: ('#' . $wallet->id) }}</span>
+                        <span class="bal">{{ number_format($wallet->balance ?? 0, 2) }} {{ __('public.currency_egp') }}</span>
                     </div>
-                    <div class="w-12 h-12 rounded-xl bg-sky-100 flex items-center justify-center text-sky-600">
-                        <i class="fas fa-wallet text-xl"></i>
-                    </div>
+                    <div class="ico" aria-hidden="true"><i class="fas fa-wallet"></i></div>
                 </div>
-                @endforeach
-            </div>
-            @if($wallets->count() > 1)
-            <div class="mt-6 border-t border-gray-100 pt-6">
-                <h2 class="text-base font-bold text-gray-900 mb-4">{{ __('student.wallet_transfer_title') }}</h2>
-                <form action="{{ route('student.wallet.transfer') }}" method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            @endforeach
+        </div>
+
+        @if($wallets->count() > 1)
+            <section class="oc-panel">
+                <p class="oc-label">{{ __('student.wallet_transfer_title') }}</p>
+                <form action="{{ route('student.wallet.transfer') }}" method="POST" class="wl-form">
                     @csrf
-                    <div>
-                        <label for="from_wallet_id" class="block text-sm font-medium text-gray-700 mb-1">{{ __('student.wallet_transfer_from') }}</label>
-                        <select id="from_wallet_id" name="from_wallet_id" class="w-full rounded-lg border-gray-300 focus:border-sky-500 focus:ring-sky-500" required>
-                            <option value="">{{ __('student.wallet_transfer_select_wallet') }}</option>
-                            @foreach($wallets as $wallet)
-                            <option value="{{ $wallet->id }}" @selected(old('from_wallet_id') == $wallet->id)>
-                                {{ $wallet->name ?: ('#' . $wallet->id) }} - {{ number_format($wallet->balance ?? 0, 2) }} {{ __('public.currency_egp') }}
-                            </option>
-                            @endforeach
-                        </select>
+                    <div class="grid">
+                        <div>
+                            <label for="from_wallet_id">{{ __('student.wallet_transfer_from') }}</label>
+                            <select id="from_wallet_id" name="from_wallet_id" required>
+                                <option value="">{{ __('student.wallet_transfer_select_wallet') }}</option>
+                                @foreach($wallets as $wallet)
+                                    <option value="{{ $wallet->id }}" @selected(old('from_wallet_id') == $wallet->id)>
+                                        {{ $wallet->name ?: ('#' . $wallet->id) }} — {{ number_format($wallet->balance ?? 0, 2) }} {{ __('public.currency_egp') }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label for="to_wallet_id">{{ __('student.wallet_transfer_to') }}</label>
+                            <select id="to_wallet_id" name="to_wallet_id" required>
+                                <option value="">{{ __('student.wallet_transfer_select_wallet') }}</option>
+                                @foreach($wallets as $wallet)
+                                    <option value="{{ $wallet->id }}" @selected(old('to_wallet_id') == $wallet->id)>
+                                        {{ $wallet->name ?: ('#' . $wallet->id) }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label for="amount">{{ __('student.amount_label') }}</label>
+                            <input id="amount" name="amount" type="number" min="0.01" step="0.01" value="{{ old('amount') }}" required>
+                        </div>
+                        <div>
+                            <label for="notes">{{ __('student.your_notes') }}</label>
+                            <input id="notes" name="notes" type="text" value="{{ old('notes') }}" maxlength="500">
+                        </div>
                     </div>
-                    <div>
-                        <label for="to_wallet_id" class="block text-sm font-medium text-gray-700 mb-1">{{ __('student.wallet_transfer_to') }}</label>
-                        <select id="to_wallet_id" name="to_wallet_id" class="w-full rounded-lg border-gray-300 focus:border-sky-500 focus:ring-sky-500" required>
-                            <option value="">{{ __('student.wallet_transfer_select_wallet') }}</option>
-                            @foreach($wallets as $wallet)
-                            <option value="{{ $wallet->id }}" @selected(old('to_wallet_id') == $wallet->id)>
-                                {{ $wallet->name ?: ('#' . $wallet->id) }}
-                            </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">{{ __('student.amount_label') }}</label>
-                        <input id="amount" name="amount" type="number" min="0.01" step="0.01" value="{{ old('amount') }}" class="w-full rounded-lg border-gray-300 focus:border-sky-500 focus:ring-sky-500" required>
-                    </div>
-                    <div>
-                        <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">{{ __('student.your_notes') }}</label>
-                        <input id="notes" name="notes" type="text" value="{{ old('notes') }}" maxlength="500" class="w-full rounded-lg border-gray-300 focus:border-sky-500 focus:ring-sky-500">
-                    </div>
-                    <div class="md:col-span-2">
-                        <button type="submit" class="inline-flex items-center justify-center rounded-lg px-4 py-2.5 bg-sky-600 text-white font-semibold hover:bg-sky-700 transition-colors">
-                            <i class="fas fa-right-left mr-2"></i>
-                            {{ __('student.wallet_transfer_button') }}
-                        </button>
-                    </div>
+                    <button type="submit" class="oc-btn">
+                        <i class="fas fa-right-left text-xs"></i>
+                        {{ __('student.wallet_transfer_button') }}
+                    </button>
                 </form>
-            </div>
-            @else
-            <div class="mt-6 p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 text-sm">
+            </section>
+        @else
+            <div class="oc-panel" style="border-color:rgba(245,158,11,0.35);background:rgba(245,158,11,0.1);color:#92400e;font-size:13px">
                 {{ __('student.wallet_transfer_need_two_wallets') }}
             </div>
-            @endif
-            @else
-            <div class="p-4 bg-gray-50 rounded-xl border border-gray-100 text-gray-600 text-sm">{{ __('student.no_wallet_message') }}</div>
-            @endif
-        </div>
-    </div>
-
-    @if(isset($transactions) && $transactions->count() > 0)
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div class="px-4 sm:px-5 py-4 border-b border-gray-100">
-            <h2 class="text-base font-bold text-gray-900">{{ __('student.transactions_log') }}</h2>
-        </div>
-        <div class="divide-y divide-gray-100">
-            @foreach($transactions as $transaction)
-            <div class="flex justify-between items-center p-4 sm:p-5 hover:bg-gray-50/50 transition-colors">
-                <div class="min-w-0">
-                    <p class="font-medium text-gray-900 truncate">{{ $transaction->description ?? __('student.transaction_default') }}</p>
-                    <p class="text-sm text-gray-500 mt-0.5">{{ $transaction->created_at ? $transaction->created_at->format('Y-m-d H:i') : '—' }}</p>
-                </div>
-                <p class="text-lg font-bold flex-shrink-0 {{ ($transaction->type == 'deposit' || $transaction->type == 'إيداع') ? 'text-emerald-600' : 'text-red-600' }}">
-                    {{ ($transaction->type == 'deposit' || $transaction->type == 'إيداع') ? '+' : '−' }}{{ number_format($transaction->amount ?? 0, 2) }} {{ __('public.currency_egp') }}
-                </p>
-            </div>
-            @endforeach
-        </div>
-        @if($transactions->hasPages())
-        <div class="p-4 border-t border-gray-100">{{ $transactions->links() }}</div>
         @endif
-    </div>
     @else
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-8 text-center">
-        <div class="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3 text-gray-400">
-            <i class="fas fa-exchange-alt text-xl"></i>
+        <div class="oc-empty">
+            <div class="icon"><i class="fas fa-wallet"></i></div>
+            <h3>{{ __('student.wallet_title') }}</h3>
+            <p>{{ __('student.no_wallet_message') }}</p>
         </div>
-        <p class="text-sm text-gray-500">{{ __('student.no_transactions') }}</p>
-    </div>
     @endif
+
+    <section class="oc-panel" style="margin-top:16px">
+        <p class="oc-label">{{ __('student.transactions_log') }}</p>
+        @if(isset($transactions) && $transactions->count() > 0)
+            @foreach($transactions as $transaction)
+                @php $isDeposit = in_array($transaction->type, ['deposit', 'إيداع'], true); @endphp
+                <div class="wl-tx">
+                    <div class="min-w-0">
+                        <strong>{{ $transaction->description ?? __('student.transaction_default') }}</strong>
+                        <div class="when">{{ $transaction->created_at?->format('Y-m-d H:i') ?? '—' }}</div>
+                    </div>
+                    <div class="amt {{ $isDeposit ? 'plus' : 'minus' }}">
+                        {{ $isDeposit ? '+' : '−' }}{{ number_format($transaction->amount ?? 0, 2) }} {{ __('public.currency_egp') }}
+                    </div>
+                </div>
+            @endforeach
+            @if($transactions->hasPages())
+                <div style="margin-top:16px;display:flex;justify-content:center">{{ $transactions->links() }}</div>
+            @endif
+        @else
+            <div class="oc-empty" style="padding:28px 12px;border:0;background:transparent">
+                <div class="icon" style="width:44px;height:44px;font-size:18px"><i class="fas fa-exchange-alt"></i></div>
+                <p style="margin:0">{{ __('student.no_transactions') }}</p>
+            </div>
+        @endif
+    </section>
 </div>
 @endsection
