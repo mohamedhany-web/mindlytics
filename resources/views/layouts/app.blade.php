@@ -23,8 +23,6 @@
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    {{-- LOS sidebar styles (shared with student-dashboard layout) --}}
-    <link rel="stylesheet" href="{{ asset('css/mindlytics-los.css') }}?v=5">
     
     @php
         $showContentProtection = !empty(trim((string) ($__env->yieldContent('enable-content-protection') ?? '')));

@@ -16,12 +16,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@400;500;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
 
-    {{-- Tailwind + Alpine محلي (بدون CDN) --}}
+    {{-- Tailwind + Alpine + LOS CSS (production-safe paths) --}}
     <x-frontend-stack />
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="{{ asset('css/mindlytics-los.css') }}?v=5">
 
     <style>
         [x-cloak] { display: none !important; }
@@ -505,14 +504,11 @@ x-init="
         sidebarOpen = window.innerWidth >= 1024;
     });
 ">
-    <div class="los-app flex h-screen overflow-hidden">
+    <div class="los-app">
         @auth
-            <!-- Clean Sidebar: always visible on lg+; drawer on mobile (no x-show opacity traps) -->
-            <aside class="student-sidebar los-sidebar-bridge flex-shrink-0 fixed lg:static inset-y-0 z-50 lg:z-auto
-                          {{ $studentRtl ? 'right-0' : 'left-0' }}
-                          transition-transform duration-150 ease-out lg:!translate-x-0
-                          {{ $studentRtl ? 'translate-x-full' : '-translate-x-full' }}"
-                   :class="sidebarOpen ? 'translate-x-0' : '{{ $studentRtl ? 'translate-x-full' : '-translate-x-full' }}'">
+            <!-- Clean Sidebar: CSS shell (works without Tailwind); Alpine toggles is-open on mobile -->
+            <aside class="student-sidebar los-sidebar-bridge"
+                   :class="sidebarOpen ? 'is-open' : 'is-closed'">
                 @include('layouts.student-sidebar')
             </aside>
 
@@ -520,29 +516,29 @@ x-init="
             <div x-show="sidebarOpen"
                  x-cloak
                  @click="sidebarOpen = false"
-                 class="los-overlay fixed inset-0 bg-black/50 z-40 lg:hidden"></div>
+                 class="los-overlay los-overlay-mobile"></div>
         @endauth
 
         <!-- Main Content Area -->
-        <div class="los-app-main flex flex-col flex-1 min-w-0">
+        <div class="los-app-main">
             @auth
                 <!-- Learning OS Top Navigation -->
-                <header class="los-topnav student-header los-topnav-bridge flex-shrink-0">
-                    <div class="flex items-center gap-2 flex-1 min-w-0">
+                <header class="los-topnav student-header los-topnav-bridge">
+                    <div class="los-topnav-start">
                         <button type="button" @click="sidebarOpen = !sidebarOpen"
-                                class="lg:hidden los-icon-btn flex-shrink-0" aria-label="{{ __('common.menu') }}">
+                                class="los-icon-btn los-menu-toggle" aria-label="{{ __('common.menu') }}">
                             <i class="fas fa-bars text-sm"></i>
                         </button>
 
-                        <button type="button" data-los-open-palette class="los-topnav-search flex-1" aria-label="{{ __('common.quick_search') }}">
+                        <button type="button" data-los-open-palette class="los-topnav-search" aria-label="{{ __('common.quick_search') }}">
                             <i class="fas fa-magnifying-glass text-xs" style="color:var(--ml-teal)"></i>
-                            <span class="truncate hidden sm:inline">{{ __('common.search_or_jump') }}</span>
-                            <span class="truncate sm:hidden">{{ __('common.search') }}</span>
-                            <kbd class="hidden md:inline">Ctrl K</kbd>
+                            <span class="los-search-label-lg">{{ __('common.search_or_jump') }}</span>
+                            <span class="los-search-label-sm">{{ __('common.search') }}</span>
+                            <kbd class="los-kbd-hint">Ctrl K</kbd>
                         </button>
                     </div>
 
-                    <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                    <div class="los-topnav-end">
                         @php
                             $navProgress = 0;
                             try {

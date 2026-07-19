@@ -532,12 +532,44 @@ body.los-shell {
   flex: 1 1 auto;
   min-width: 0;
   width: 100%;
+  overflow: hidden;
 }
 .los-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 40;
+}
+.los-topnav-start {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.los-topnav-end {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.los-topnav .los-topnav-search {
+  flex: 1 1 auto;
+}
+.los-menu-toggle { display: inline-flex; }
+.los-search-label-lg { display: none; }
+.los-search-label-sm { display: inline; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.los-kbd-hint { display: none; }
+@media (min-width: 640px) {
+  .los-search-label-lg { display: inline; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .los-search-label-sm { display: none; }
+  .los-topnav-end { gap: 8px; }
+}
+@media (min-width: 768px) {
+  .los-kbd-hint { display: inline; }
+}
+@media (min-width: 1024px) {
+  .los-menu-toggle { display: none !important; }
 }
 
 /* Legacy student layout bridges */
@@ -566,13 +598,32 @@ body.los-shell {
   }
   html[dir="rtl"] .student-sidebar.los-sidebar-bridge { right: 0; left: auto; }
   html[dir="ltr"] .student-sidebar.los-sidebar-bridge { left: 0; right: auto; }
+
+  html[dir="rtl"] .student-sidebar.los-sidebar-bridge.is-closed {
+    transform: translateX(110%);
+  }
+  html[dir="ltr"] .student-sidebar.los-sidebar-bridge.is-closed {
+    transform: translateX(-110%);
+  }
+  .student-sidebar.los-sidebar-bridge.is-open {
+    transform: translateX(0);
+  }
 }
 @media (min-width: 1024px) {
-  .student-sidebar.los-sidebar-bridge {
+  .student-sidebar.los-sidebar-bridge,
+  .student-sidebar.los-sidebar-bridge.is-open,
+  .student-sidebar.los-sidebar-bridge.is-closed {
     position: static;
     transform: none !important;
   }
-  .los-overlay { display: none !important; }
+  .los-overlay,
+  .los-overlay-mobile { display: none !important; }
 }
 .student-header.los-topnav-bridge { min-height: var(--ml-header-h); }
-main.los-main { background: var(--ml-bg) !important; }
+main.los-main {
+  background: var(--ml-bg) !important;
+  flex: 1 1 auto;
+  overflow: auto;
+  min-width: 0;
+  width: 100%;
+}
