@@ -209,22 +209,18 @@
                         <p class="text-xs text-[#64748B] mt-2"><i class="fas fa-save ml-1"></i> الحفظ التلقائي مفعّل</p>
                     </div>
 
-                    <div class="learn-tab-panel" x-show="getPanelTab('{{ $panelType }}', {{ $item->id }}) === 'discussion'" x-cloak>
-                        @include('student.my-courses.partials.learn-thread-panel', [
-                            'kind' => 'discussion',
-                            'panelType' => $panelType,
-                            'item' => $item,
-                            'course' => $course,
-                        ])
+                    <div class="learn-tab-panel" x-show="getPanelTab('{{ $panelType }}', {{ $item->id }}) === 'discussion'">
+                        <div class="learn-discussion-placeholder">
+                            <i class="fas fa-comments text-3xl text-[#CBD5E1] mb-3 block"></i>
+                            <p>انضم للنقاش مع زملائك — قريباً</p>
+                        </div>
                     </div>
 
-                    <div class="learn-tab-panel" x-show="getPanelTab('{{ $panelType }}', {{ $item->id }}) === 'qa'" x-cloak>
-                        @include('student.my-courses.partials.learn-thread-panel', [
-                            'kind' => 'qa',
-                            'panelType' => $panelType,
-                            'item' => $item,
-                            'course' => $course,
-                        ])
+                    <div class="learn-tab-panel" x-show="getPanelTab('{{ $panelType }}', {{ $item->id }}) === 'qa'">
+                        <div class="learn-discussion-placeholder">
+                            <i class="fas fa-question-circle text-3xl text-[#CBD5E1] mb-3 block"></i>
+                            <p>اطرح سؤالاً على المدرب — قريباً</p>
+                        </div>
                     </div>
                 </div>
             </section>

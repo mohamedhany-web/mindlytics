@@ -249,7 +249,7 @@ class CalendarController extends Controller
     {
         return match($type) {
             'exam' => '#EF4444',
-            'lecture' => '#49A4A2',
+            'lecture' => '#3B82F6',
             'assignment' => '#F59E0B',
             'meeting' => '#8B5CF6',
             'deadline' => '#DC2626',

@@ -1,44 +1,14 @@
-@extends('layouts.student-dashboard')
+@extends('layouts.app')
 
-@section('title', __('student.oc_resources_page_title', ['title' => $offlineCourse->title]))
-
-@php
-    $sg = $studentRouteGroup ?? 'student.offline-courses';
-    $isOnline = ($channel ?? 'offline') === 'online';
-    $channelLabel = $isOnline ? __('student.online_badge') : __('student.offline_badge');
-    $listTitle = $isOnline ? __('student.my_online_courses') : __('student.offline_courses_title');
-@endphp
-
-@push('styles')
-@include('student.offline-courses.partials.los-styles')
-@endpush
+@section('title', 'موارد الكورس - ' . $offlineCourse->title)
+@section('header', 'موارد الكورس الأوفلاين')
 
 @section('content')
-<div class="oc">
-    <header class="oc-chrome">
-        <div>
-            <nav class="oc-crumb" aria-label="{{ __('student.oc_breadcrumb') }}">
-                <a href="{{ route('dashboard') }}">{{ __('los.page_title') }}</a>
-                <span aria-hidden="true">/</span>
-                <a href="{{ route($sg . '.index') }}">{{ $listTitle }}</a>
-                <span aria-hidden="true">/</span>
-                <a href="{{ route($sg . '.show', $offlineCourse) }}">{{ \Illuminate\Support\Str::limit($offlineCourse->title, 28) }}</a>
-                <span aria-hidden="true">/</span>
-                <span style="color:var(--ml-ink);font-weight:700">{{ __('student.oc_resources') }}</span>
-            </nav>
-            <h1>{{ __('student.oc_resources') }}</h1>
-            <p class="sub">{{ $offlineCourse->title }} · {{ $channelLabel }}</p>
-        </div>
-        <div class="oc-signals">
-            <span class="oc-signal oc-signal-live">{{ $channelLabel }}</span>
-        </div>
-    </header>
-
-<div class="space-y-6">
-    <div class="mb-0">
-        <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.show', $offlineCourse) }}" class="oc-btn oc-btn-quiet" style="min-height:36px">
-            <i class="fas fa-arrow-right text-xs"></i>
-            {{ __('student.oc_back_to_course') }}
+<div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div class="mb-4">
+        <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.show', $offlineCourse) }}" class="inline-flex items-center text-sky-600 hover:text-sky-700 text-sm font-medium">
+            <i class="fas fa-arrow-right ml-2"></i>
+            العودة لصفحة الكورس
         </a>
     </div>
 
@@ -47,11 +17,11 @@
             <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div class="min-w-0">
                     <h1 class="text-xl font-bold text-gray-900 flex items-center gap-2">
-                        <i class="fas fa-file-alt text-[#49A4A2]"></i>
-                        {{ __('student.oc_resources_heading', ['channel' => $channelLabel, 'title' => $offlineCourse->title]) }}
+                        <i class="fas fa-file-alt text-sky-500"></i>
+                        موارد الكورس (أوفلاين) — {{ $offlineCourse->title }}
                     </h1>
                     <p class="text-sm text-gray-500 mt-1">
-                        {{ __('student.oc_resources_intro') }}
+                        اعرض الموارد حسب <span class="font-semibold text-gray-700">المحاضرات</span>، مع قسم للموارد العامة.
                     </p>
                 </div>
                 <form method="GET" class="flex flex-col sm:flex-row gap-2 sm:items-center">
@@ -61,8 +31,8 @@
                             type="text"
                             name="q"
                             value="{{ $search ?? '' }}"
-                            placeholder="{{ __('student.oc_search_resources_placeholder') }}"
-                            class="w-full sm:w-80 pr-9 pl-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+                            placeholder="ابحث بالعنوان أو الوصف أو اسم الملف..."
+                            class="w-full sm:w-80 pr-9 pl-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm"
                         />
                     </div>
                     <select name="per_page" class="w-full sm:w-auto px-3 py-2 rounded-lg border border-gray-200 text-sm">
@@ -72,13 +42,13 @@
                         <option value="15" {{ $pp === 15 ? 'selected' : '' }}>15</option>
                         <option value="25" {{ $pp === 25 ? 'selected' : '' }}>25</option>
                     </select>
-                    <button class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#2f7f7d] text-white text-sm font-semibold hover:bg-[#2f7f7d]">
+                    <button class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-sky-600 text-white text-sm font-semibold hover:bg-sky-700">
                         <i class="fas fa-filter"></i>
-                        {{ __('student.oc_apply') }}
+                        تطبيق
                     </button>
                     @if(!empty($search))
                         <a href="{{ url()->current() }}?per_page={{ $pp }}" class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200">
-                            {{ __('student.oc_clear') }}
+                            مسح
                         </a>
                     @endif
                 </form>
@@ -92,16 +62,16 @@
         @if(! $hasGeneral && ! $hasLectures)
             <div class="p-12 text-center text-gray-500">
                 <i class="fas fa-folder-open text-4xl mb-3 opacity-50"></i>
-                <p>{{ __('student.oc_no_resources') }}</p>
+                <p>لا توجد موارد متاحة حالياً.</p>
             </div>
         @else
             @if($hasGeneral)
                 <div class="p-4 sm:p-5 border-b border-gray-100 bg-gray-50/40">
                     <h2 class="font-bold text-gray-900 flex items-center gap-2">
                         <i class="fas fa-layer-group text-slate-500"></i>
-                        {{ __('student.oc_general_resources') }}
+                        موارد عامة
                     </h2>
-                    <p class="text-sm text-gray-600 mt-1">{{ __('student.oc_general_resources_desc') }}</p>
+                    <p class="text-sm text-gray-600 mt-1">موارد غير مرتبطة بمحاضرة محددة.</p>
                 </div>
                 <div class="p-4 sm:p-5">
                     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -117,9 +87,9 @@
                                 <div class="mt-3">
                                     @if($resource->type === 'link' && $resource->url)
                                         <a href="{{ $resource->url }}" target="_blank" rel="noopener"
-                                           class="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-[#2f7f7d] text-white rounded-xl font-semibold hover:bg-[#2f7f7d]">
+                                           class="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-sky-600 text-white rounded-xl font-semibold hover:bg-sky-700">
                                             <i class="fas fa-external-link-alt"></i>
-                                            {{ __('student.oc_open_link') }}
+                                            فتح الرابط
                                         </a>
                                     @else
                                         @php $files = $resource->getAllFiles(); @endphp
@@ -127,9 +97,9 @@
                                             @foreach($files as $file)
                                                 <a href="{{ offline_course_resource_file_url($file) }}"
                                                    download="{{ $file['name'] ?? 'download' }}"
-                                                   class="group inline-flex items-center gap-2 w-full max-w-full px-3 py-2 rounded-xl bg-teal-50 text-teal-800 text-sm font-semibold hover:bg-teal-100 border border-teal-100">
+                                                   class="group inline-flex items-center gap-2 w-full max-w-full px-3 py-2 rounded-xl bg-sky-50 text-sky-700 text-sm font-semibold hover:bg-sky-100 border border-sky-100">
                                                     <i class="fas fa-download flex-shrink-0"></i>
-                                                    <span class="truncate min-w-0">{{ $file['name'] ?? __('student.oc_download') }}</span>
+                                                    <span class="truncate min-w-0">{{ $file['name'] ?? 'تحميل' }}</span>
                                                 </a>
                                             @endforeach
                                         </div>
@@ -144,10 +114,10 @@
             @if($hasLectures)
                 <div class="p-4 sm:p-5 border-t border-gray-100 bg-white">
                     <h2 class="font-bold text-gray-900 flex items-center gap-2">
-                        <i class="fas fa-chalkboard-teacher text-[#49A4A2]"></i>
-                        {{ __('student.oc_by_lectures') }}
+                        <i class="fas fa-chalkboard-teacher text-sky-500"></i>
+                        المحاضرات
                     </h2>
-                    <p class="text-sm text-gray-600 mt-1">{{ __('student.oc_lectures_pick_resources') }}</p>
+                    <p class="text-sm text-gray-600 mt-1">اختر محاضرة لتحميل مواردها.</p>
                 </div>
 
                 <div class="divide-y divide-gray-100">
@@ -170,8 +140,8 @@
                                         @if($groupLabel)
                                             <span class="text-xs px-2 py-1 rounded-full bg-amber-50 text-amber-700">{{ $groupLabel }}</span>
                                         @endif
-                                        <span class="text-xs px-2 py-1 rounded-full bg-teal-50 text-teal-800">
-                                            {{ __('student.oc_resource_count', ['count' => $resourcesForLecture->count()]) }}
+                                        <span class="text-xs px-2 py-1 rounded-full bg-sky-50 text-sky-700">
+                                            {{ $resourcesForLecture->count() }} مورد
                                         </span>
                                     </div>
                                     @if($lec->description)
@@ -184,7 +154,7 @@
                             </summary>
                             <div class="px-4 sm:px-5 pb-5">
                                 @if($resourcesForLecture->isEmpty())
-                                    <div class="text-sm text-gray-500 py-3">{{ __('student.oc_no_lecture_resources') }}</div>
+                                    <div class="text-sm text-gray-500 py-3">لا توجد موارد مرتبطة بهذه المحاضرة.</div>
                                 @else
                                     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                         @foreach($resourcesForLecture as $resource)
@@ -198,9 +168,9 @@
                                                 <div class="mt-3">
                                                     @if($resource->type === 'link' && $resource->url)
                                                         <a href="{{ $resource->url }}" target="_blank" rel="noopener"
-                                                           class="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-[#2f7f7d] text-white rounded-xl font-semibold hover:bg-[#2f7f7d]">
+                                                           class="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-sky-600 text-white rounded-xl font-semibold hover:bg-sky-700">
                                                             <i class="fas fa-external-link-alt"></i>
-                                                            {{ __('student.oc_open_link') }}
+                                                            فتح الرابط
                                                         </a>
                                                     @else
                                                         @php $files = $resource->getAllFiles(); @endphp
@@ -208,9 +178,9 @@
                                                             @foreach($files as $file)
                                                                 <a href="{{ offline_course_resource_file_url($file) }}"
                                                                    download="{{ $file['name'] ?? 'download' }}"
-                                                                   class="group inline-flex items-center gap-2 w-full max-w-full px-3 py-2 rounded-xl bg-teal-50 text-teal-800 text-sm font-semibold hover:bg-teal-100 border border-teal-100">
+                                                                   class="group inline-flex items-center gap-2 w-full max-w-full px-3 py-2 rounded-xl bg-sky-50 text-sky-700 text-sm font-semibold hover:bg-sky-100 border border-sky-100">
                                                                     <i class="fas fa-download flex-shrink-0"></i>
-                                                                    <span class="truncate min-w-0">{{ $file['name'] ?? __('student.oc_download') }}</span>
+                                                                    <span class="truncate min-w-0">{{ $file['name'] ?? 'تحميل' }}</span>
                                                                 </a>
                                                             @endforeach
                                                         </div>
@@ -231,6 +201,5 @@
             @endif
         @endif
     </div>
-</div>
 </div>
 @endsection

@@ -1,134 +1,84 @@
-@extends('layouts.student-dashboard')
+@extends('layouts.app')
 
 @section('title', __('student.my_certificates_title'))
-
-@push('styles')
-@include('student.offline-courses.partials.los-styles')
-<style>
-    .cert-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
-        gap: 12px;
-    }
-    .cert-card {
-        display: flex; flex-direction: column; gap: 10px;
-        padding: 16px; background: var(--ml-surface);
-        border: 1px solid var(--ml-line); border-radius: var(--ml-r);
-        text-decoration: none !important; color: inherit !important;
-        transition: border-color var(--ml-fast) ease, box-shadow var(--ml-fast) ease, transform var(--ml-fast) var(--ml-ease);
-    }
-    .cert-card:hover {
-        border-color: rgba(73, 164, 162, 0.35);
-        box-shadow: 0 10px 28px rgba(26, 34, 56, 0.06);
-        transform: translateY(-1px);
-    }
-    .cert-card .ico {
-        width: 48px; height: 48px; border-radius: 14px;
-        display: flex; align-items: center; justify-content: center;
-        background: rgba(73, 164, 162, 0.12); color: var(--ml-teal-deep); font-size: 1.15rem;
-    }
-    .cert-card h3 {
-        margin: 0; font-size: 15px; font-weight: 700; line-height: 1.35;
-        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-    }
-    .cert-card .course {
-        margin: 0; font-size: 12px; color: var(--ml-muted); line-height: 1.45;
-        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-    }
-    .cert-meta {
-        display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
-        font-size: 11px; color: var(--ml-muted);
-    }
-    .cert-meta .num {
-        font-family: ui-monospace, monospace; padding: 2px 7px; border-radius: 6px;
-        background: var(--ml-well); font-weight: 700; color: var(--ml-ink);
-    }
-    .cert-go {
-        margin-top: auto; padding-top: 4px;
-        font-size: 12px; font-weight: 700; color: var(--ml-teal-deep);
-        display: inline-flex; align-items: center; gap: 6px;
-    }
-</style>
-@endpush
+@section('header', __('student.my_certificates_title'))
 
 @section('content')
-<div class="oc">
-    <header class="oc-chrome">
-        <div>
-            <nav class="oc-crumb" aria-label="{{ __('student.my_certificates_title') }}">
-                <a href="{{ route('dashboard') }}">{{ __('student.learning_center') }}</a>
-                <span aria-hidden="true">/</span>
-                <span style="color:var(--ml-ink);font-weight:700">{{ __('student.my_certificates_title') }}</span>
-            </nav>
-            <h1>{{ __('student.my_certificates_title') }}</h1>
-            <p class="sub">{{ __('student.certificates_subtitle') }}</p>
-        </div>
-        @if(isset($stats))
-            <div class="oc-signals">
-                <span class="oc-signal oc-signal-live">{{ __('student.total_certificates') }}: {{ $stats['total'] ?? 0 }}</span>
-                <span class="oc-signal oc-signal-hot">{{ __('student.issued_label') }}: {{ $stats['issued'] ?? 0 }}</span>
-            </div>
-        @endif
-    </header>
+<div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <!-- الهيدر -->
+    <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{{ __('student.my_certificates_title') }}</h1>
+        <p class="text-sm text-gray-500">{{ __('student.certificates_subtitle') }}</p>
+    </div>
 
     @if(isset($stats))
-        <div class="oc-pulse" aria-label="{{ __('student.my_certificates_title') }}">
-            <div>
-                <span class="lbl">{{ __('student.total_certificates') }}</span>
-                <span class="val teal">{{ $stats['total'] ?? 0 }}</span>
-            </div>
-            <div>
-                <span class="lbl">{{ __('student.issued_label') }}</span>
-                <span class="val">{{ $stats['issued'] ?? 0 }}</span>
+    <div class="grid grid-cols-2 gap-3 sm:gap-4">
+        <div class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+            <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">{{ __('student.total_certificates') }}</p>
+                    <p class="text-2xl font-bold text-sky-600 leading-none">{{ $stats['total'] ?? 0 }}</p>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-sky-100 flex items-center justify-center text-sky-600 flex-shrink-0">
+                    <i class="fas fa-certificate"></i>
+                </div>
             </div>
         </div>
+        <div class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+            <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">{{ __('student.issued_label') }}</p>
+                    <p class="text-2xl font-bold text-emerald-600 leading-none">{{ $stats['issued'] ?? 0 }}</p>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
     @endif
 
     @if(isset($certificates) && $certificates->count() > 0)
-        <p class="oc-section-title">{{ __('student.issued_certificates') }}</p>
-        <div class="cert-grid">
-            @foreach($certificates as $certificate)
-                <a href="{{ route('student.certificates.show', $certificate) }}" class="cert-card">
-                    <div class="ico" aria-hidden="true"><i class="fas fa-certificate"></i></div>
-                    <h3>{{ $certificate->title ?? $certificate->course_name ?? __('student.completion_certificate') }}</h3>
-                    @if($certificate->course)
-                        <p class="course">{{ $certificate->course->title }}</p>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        @foreach($certificates as $certificate)
+        <a href="{{ route('student.certificates.show', $certificate) }}" class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md hover:border-sky-200 transition-all block">
+            <div class="p-4 sm:p-5">
+                <div class="w-12 h-12 rounded-xl bg-sky-100 flex items-center justify-center text-sky-600 mb-3">
+                    <i class="fas fa-certificate text-xl"></i>
+                </div>
+                <h3 class="text-base font-bold text-gray-900 mb-2 line-clamp-2 leading-snug">
+                    {{ $certificate->title ?? $certificate->course_name ?? __('student.completion_certificate') }}
+                </h3>
+                @if($certificate->course)
+                <p class="text-sm text-gray-600 mb-3 line-clamp-2">{{ $certificate->course->title }}</p>
+                @endif
+                <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500 mb-3">
+                    <span><i class="fas fa-calendar text-sky-500 ml-1"></i>{{ ($certificate->issued_at ? $certificate->issued_at->format('Y-m-d') : ($certificate->issue_date ? $certificate->issue_date->format('Y-m-d') : '-')) }}</span>
+                    @if($certificate->certificate_number)
+                    <span class="font-mono bg-gray-100 px-2 py-0.5 rounded">#{{ substr($certificate->certificate_number, -6) }}</span>
                     @endif
-                    <div class="cert-meta">
-                        <span>
-                            <i class="fas fa-calendar" style="color:var(--ml-teal-deep);margin-inline-end:4px"></i>
-                            {{ $certificate->issued_at?->format('Y-m-d')
-                                ?? $certificate->issue_date?->format('Y-m-d')
-                                ?? '—' }}
-                        </span>
-                        @if($certificate->certificate_number)
-                            <span class="num">#{{ substr($certificate->certificate_number, -6) }}</span>
-                        @endif
-                    </div>
-                    <span class="cert-go">
-                        {{ __('student.view_certificate') }}
-                        <i class="fas fa-arrow-left text-[10px]"></i>
-                    </span>
-                </a>
-            @endforeach
-        </div>
-        @if($certificates->hasPages())
-            <div style="margin-top:20px;display:flex;justify-content:center">
-                {{ $certificates->links() }}
+                </div>
+                <span class="inline-flex items-center gap-2 text-sky-600 font-semibold text-sm">
+                    {{ __('student.view_certificate') }} <i class="fas fa-arrow-left"></i>
+                </span>
             </div>
-        @endif
+        </a>
+        @endforeach
+    </div>
+    @if($certificates->hasPages())
+    <div class="flex justify-center">{{ $certificates->links() }}</div>
+    @endif
     @else
-        <div class="oc-empty">
-            <div class="icon"><i class="fas fa-certificate"></i></div>
-            <h3>{{ __('student.no_certificates') }}</h3>
-            <p>{{ __('student.no_certificates_desc') }}</p>
-            <div style="margin-top:16px">
-                <a href="{{ route('my-courses.index') }}" class="oc-btn">
-                    <i class="fas fa-book-open text-xs"></i>
-                    {{ __('student.view_my_courses') }}
-                </a>
-            </div>
+    <div class="rounded-xl p-10 sm:p-12 text-center bg-gray-50 border border-dashed border-gray-200">
+        <div class="w-16 h-16 bg-sky-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-sky-600">
+            <i class="fas fa-certificate text-2xl"></i>
         </div>
+        <h3 class="text-lg font-bold text-gray-900 mb-2">{{ __('student.no_certificates') }}</h3>
+        <p class="text-sm text-gray-500 mb-6 max-w-sm mx-auto">{{ __('student.no_certificates_desc') }}</p>
+        <a href="{{ route('my-courses.index') }}" class="inline-flex items-center gap-2 bg-sky-500 hover:bg-sky-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors">
+            <i class="fas fa-book-open"></i> {{ __('student.view_my_courses') }}
+        </a>
+    </div>
     @endif
 </div>
 @endsection

@@ -125,15 +125,6 @@ class EnsureOwnership
                 }
                 break;
 
-            case 'notification':
-                $notification = $param instanceof \App\Models\Notification
-                    ? $param
-                    : \App\Models\Notification::findOrFail($resourceId);
-                if ((int) $notification->user_id !== (int) $user->id) {
-                    abort(403, 'غير مسموح لك بالوصول إلى هذا الإشعار');
-                }
-                break;
-
             default:
                 // للموارد المخصصة، يمكن تمديد هذا
                 break;

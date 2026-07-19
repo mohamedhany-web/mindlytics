@@ -1,889 +1,690 @@
 @extends('layouts.student-dashboard')
 
-@section('title', __('los.page_title'))
-
-@php
-    $losRtl = app()->getLocale() === 'ar';
-    $os = $os ?? [];
-    $stage = $os['stage'] ?? ['mode' => 'empty', 'type_label' => '', 'title' => '', 'parent' => '', 'why' => '', 'cta_label' => __('los.continue'), 'cta_url' => route('my-courses.index')];
-    $mission = $os['mission'] ?? ['title' => '', 'state' => 'open', 'state_label' => '', 'hint' => ''];
-    $ai = $os['ai'] ?? ['insight' => '', 'why' => '', 'action_label' => '', 'action_url' => '#', 'recommendations' => []];
-    $journey = $os['journey'] ?? ['past' => '', 'present' => '', 'next' => '', 'recovery' => null];
-    $skillTree = $os['skill_tree'] ?? [];
-    $planning = $os['planning'] ?? [];
-    $calendar = $os['calendar'] ?? [];
-    $mastery = $os['mastery'] ?? ['progress' => 0, 'whisper' => '', 'achievement_url' => route('student.certificates.index')];
-    $heatmap = $os['heatmap'] ?? [];
-    $timeline = $os['timeline'] ?? [];
-    $courses = $os['courses'] ?? [];
-    $notes = $os['notes'] ?? [];
-    $streak = (int) ($os['streak_days'] ?? 0);
-    $goals = $os['goals'] ?? null;
-@endphp
+@section('title', __('student.dashboard_title'))
 
 @push('styles')
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@500;700&display=swap" rel="stylesheet">
 <style>
-    :root {
-        --ml-teal: #49A4A2;
-        --ml-teal-deep: #2f7f7d;
-        --ml-yellow: #FFD23F;
-        --ml-yellow-ink: #5c4500;
-        --ml-bg: #F7F9FC;
-        --ml-surface: #FFFFFF;
-        --ml-well: #EEF2F7;
-        --ml-ink: #1A2238;
-        --ml-muted: #475569;
-        --ml-line: rgba(26, 34, 56, 0.07);
-        --ml-r: 14px;
-        --ml-fast: 140ms;
-        --ml-base: 220ms;
-        --ml-slow: 420ms;
-        --ml-ease: cubic-bezier(0.22, 1, 0.36, 1);
-        --ml-space-1: 8px;
-        --ml-space-2: 16px;
-        --ml-space-3: 24px;
-        --ml-space-4: 32px;
+    /* Global Icon Alignment Fix */
+    .card-icon,
+    .section-icon,
+    .course-icon {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        line-height: 1 !important;
     }
-
-    .los {
-        --reveal-delay: 0ms;
-        font-family: 'IBM Plex Sans Arabic', 'Tajawal', sans-serif;
-        color: var(--ml-ink);
-        width: 100%;
-        max-width: none;
-        margin-inline: 0;
-        padding-block: 4px 28px;
+    
+    .card-icon i,
+    .section-icon i,
+    .course-icon i {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        line-height: 1 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        vertical-align: middle !important;
     }
-
-    .los-reveal {
-        animation: losRise var(--ml-slow) var(--ml-ease) both;
-        animation-delay: var(--reveal-delay);
-    }
-    @keyframes losRise {
-        from { opacity: 0; transform: translateY(8px); }
-        to { opacity: 1; transform: none; }
-    }
-
-    .los-chrome {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--ml-space-2);
-        padding: 10px 0 14px;
-        border-bottom: 1px solid var(--ml-line);
-        margin-bottom: var(--ml-space-3);
-    }
-    .los-chrome h1 {
-        margin: 0;
-        font-size: 1.05rem;
-        font-weight: 700;
-        letter-spacing: -0.01em;
-        line-height: 1.35;
-    }
-    .los-chrome .sub {
-        margin: 2px 0 0;
-        font-size: 12px;
-        color: var(--ml-muted);
-    }
-    .los-signals {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        align-items: center;
-    }
-    .los-signal {
-        display: inline-flex;
-        align-items: center;
-        min-height: 28px;
-        padding: 0 10px;
-        border-radius: 999px;
-        font-size: 11px;
-        font-weight: 700;
-        background: var(--ml-well);
-        color: var(--ml-muted);
-    }
-    .los-signal-hot {
-        background: rgba(255, 210, 63, 0.35);
-        color: var(--ml-yellow-ink);
-    }
-    .los-signal-live {
-        background: rgba(73, 164, 162, 0.14);
-        color: var(--ml-teal-deep);
-    }
-
-    /* ZONE A — editorial stage (not a twin card) */
-    .los-stage {
+    
+    /* Welcome Section - أنيق ومتسق */
+    .welcome-section {
+        background: white;
+        border-radius: 16px;
+        padding: 24px 28px;
         position: relative;
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: var(--ml-space-3);
-        align-items: end;
-        padding: 18px 20px 18px 20px;
-        margin-bottom: var(--ml-space-3);
-        background: var(--ml-surface);
-        border-radius: calc(var(--ml-r) + 4px);
-        border: 1px solid var(--ml-line);
-        box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset, 0 10px 30px rgba(26, 34, 56, 0.04);
-    }
-    .los-stage::before {
-        content: '';
-        position: absolute;
-        inset-block: 16px;
-        inset-inline-start: 0;
-        width: 3px;
-        border-radius: 999px;
-        background: linear-gradient(180deg, var(--ml-teal), rgba(73,164,162,0.2));
-    }
-    .los-eyebrow {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 8px;
-        font-size: 11px;
-        font-weight: 700;
-        color: var(--ml-teal-deep);
-    }
-    .los-eyebrow em {
-        font-style: normal;
-        padding: 2px 8px;
-        border-radius: 6px;
-        background: rgba(73, 164, 162, 0.12);
-        color: var(--ml-teal-deep);
-    }
-    .los-stage h2 {
-        margin: 0 0 6px;
-        font-size: clamp(1.2rem, 2vw, 1.55rem);
-        font-weight: 700;
-        line-height: 1.35;
-        letter-spacing: -0.015em;
-        max-width: 34ch;
-    }
-    .los-copy {
-        margin: 0;
-        font-size: 13px;
-        line-height: 1.65;
-        color: var(--ml-muted);
-        max-width: 48ch;
-    }
-    .los-urgency {
-        margin-top: 8px;
-        font-size: 12px;
-        font-weight: 700;
-        color: var(--ml-yellow-ink);
-    }
-    .los-stage-actions {
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 10px;
-        min-width: 160px;
-    }
-    .los-meter {
-        height: 4px;
-        width: 100%;
-        max-width: 220px;
-        margin-top: 12px;
-        border-radius: 999px;
-        background: var(--ml-well);
         overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        border: 1px solid rgb(226 232 240);
+        transition: box-shadow 0.2s ease, border-color 0.2s ease;
     }
-    .los-meter > i {
-        display: block;
+    .welcome-section:hover {
+        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.1);
+        border-color: rgb(186 230 253);
+    }
+    .welcome-section .welcome-accent {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 4px;
         height: 100%;
-        background: var(--ml-teal);
-        border-radius: inherit;
-        transform-origin: inline-start center;
-        animation: losGrow var(--ml-slow) var(--ml-ease) both;
-    }
-    @keyframes losGrow {
-        from { transform: scaleX(0); }
-        to { transform: scaleX(1); }
+        background: linear-gradient(180deg, rgb(14 165 233), rgb(2 132 199));
+        border-radius: 0 16px 16px 0;
     }
 
-    .los-btn {
+    .welcome-section .progress-ring-svg {
+        transform: rotate(-90deg);
+    }
+
+    .welcome-section .progress-ring-bg {
+        fill: none;
+        stroke: rgb(224 242 254);
+        stroke-width: 6;
+    }
+
+    .welcome-section .progress-ring-fill {
+        fill: none;
+        stroke: url(#welcomeProgressGradient);
+        stroke-width: 6;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Dashboard Cards - Like Admin */
+    .dashboard-card {
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgb(226 232 240);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .dashboard-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(14, 165, 233, 0.12);
+        border-color: rgb(186 230 253);
+    }
+
+    .dashboard-card.blue { border-color: rgba(14, 165, 233, 0.25); }
+    .dashboard-card.green { border-color: rgba(16, 185, 129, 0.25); }
+    .dashboard-card.purple { border-color: rgba(139, 92, 246, 0.25); }
+    .dashboard-card.amber { border-color: rgba(245, 158, 11, 0.25); }
+
+    .card-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        transition: all 0.3s ease;
+        line-height: 1;
+        text-align: center;
+    }
+    .card-icon i {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-height: 44px;
-        padding: 0 18px;
-        border-radius: 12px;
-        background: var(--ml-teal);
-        color: #fff !important;
-        font-size: 14px;
-        font-weight: 700;
-        text-decoration: none !important;
-        border: 0;
-        cursor: pointer;
-        transition: background var(--ml-fast) ease, transform var(--ml-fast) var(--ml-ease), box-shadow var(--ml-fast) ease;
-        box-shadow: 0 8px 18px rgba(73, 164, 162, 0.22);
-    }
-    .los-btn:hover { background: var(--ml-teal-deep); transform: translateY(-1px); }
-    .los-btn:active { transform: translateY(0) scale(0.985); }
-    .los-btn:focus-visible {
-        outline: 2px solid var(--ml-yellow);
-        outline-offset: 3px;
-    }
-    .los-btn-quiet {
-        background: transparent;
-        color: var(--ml-teal-deep) !important;
-        box-shadow: none;
-        min-height: 36px;
-        font-size: 13px;
-        border: 1px solid transparent;
-    }
-    .los-btn-quiet:hover {
-        background: rgba(73, 164, 162, 0.08);
-        border-color: rgba(73, 164, 162, 0.2);
-        transform: none;
-    }
-    .los-btn-ghost {
-        background: var(--ml-ink);
-        box-shadow: none;
-        min-height: 40px;
-        font-size: 13px;
-    }
-    .los-btn-ghost:hover { background: #0f1628; }
-
-    /* B + D — differentiated surfaces */
-    .los-pair {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: var(--ml-space-2);
-        margin-bottom: var(--ml-space-3);
-    }
-    .los-mission {
-        padding: 16px 16px 14px;
-        border-radius: var(--ml-r);
-        background: var(--ml-surface);
-        border: 1px solid var(--ml-line);
-        border-inline-start: 3px solid var(--ml-yellow);
-    }
-    .los-mission h3 {
-        margin: 6px 0 0;
-        font-size: 14px;
-        font-weight: 700;
-        line-height: 1.45;
-    }
-    .los-ai {
-        padding: 16px;
-        border-radius: var(--ml-r);
-        background: rgba(73, 164, 162, 0.07);
-        border: 1px solid rgba(73, 164, 162, 0.16);
-    }
-    .los-ai h3 {
-        margin: 6px 0 0;
-        font-size: 14px;
-        font-weight: 700;
-        line-height: 1.5;
-    }
-    .los-label {
+        line-height: 1;
         margin: 0;
-        font-size: 11px;
-        font-weight: 700;
-        color: var(--ml-muted);
-        letter-spacing: 0.02em;
+        padding: 0;
+        vertical-align: middle;
     }
-    .los-hint {
-        margin: 8px 0 0;
-        font-size: 12px;
-        line-height: 1.55;
-        color: var(--ml-muted);
+    .dashboard-card:hover .card-icon { transform: scale(1.05); }
+    .dashboard-card.blue .card-icon { background: linear-gradient(135deg, rgb(14 165 233), rgb(2 132 199)); color: white; }
+    .dashboard-card.green .card-icon { background: linear-gradient(135deg, rgb(16 185 129), rgb(5 150 105)); color: white; }
+    .dashboard-card.purple .card-icon { background: linear-gradient(135deg, rgb(139 92 246), rgb(99 102 241)); color: white; }
+    .dashboard-card.amber .card-icon { background: linear-gradient(135deg, rgb(245 158 11), rgb(217 119 6)); color: white; }
+
+    /* Section Cards */
+    .section-card {
+        background: white;
+        border: 1px solid rgb(226 232 240);
+        border-radius: 16px;
+        padding: 24px;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        position: relative;
+        overflow: hidden;
     }
-    .los-recs {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-top: 10px;
-    }
-    .los-recs span {
-        font-size: 11px;
-        font-weight: 600;
-        color: var(--ml-teal-deep);
-        background: rgba(255,255,255,0.7);
-        border: 1px solid rgba(73, 164, 162, 0.18);
-        border-radius: 8px;
-        padding: 4px 8px;
+    .section-card:hover {
+        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.08);
+        border-color: rgb(186 230 253);
     }
 
-    /* C — continuous journey rail */
-    .los-journey-block {
-        margin-bottom: var(--ml-space-3);
-        padding: 16px 18px 14px;
-        border-radius: var(--ml-r);
-        background: var(--ml-surface);
-        border: 1px solid var(--ml-line);
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid rgba(243, 244, 246, 0.8);
     }
-    .los-path {
-        position: relative;
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
+
+    .section-title {
+        display: flex;
+        align-items: center;
         gap: 12px;
-        margin-top: 14px;
+        font-size: 17px;
+        font-weight: 700;
+        color: rgb(17 24 39);
     }
-    .los-path::before {
-        content: '';
-        position: absolute;
-        top: 11px;
-        inset-inline: 12%;
-        height: 2px;
-        background: linear-gradient(90deg, transparent, var(--ml-well) 12%, var(--ml-well) 88%, transparent);
-        z-index: 0;
-    }
-    .los-node {
-        position: relative;
-        z-index: 1;
+
+    .section-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        line-height: 1;
         text-align: center;
     }
-    .los-dot {
-        width: 12px;
-        height: 12px;
-        margin-inline: auto;
-        border-radius: 50%;
-        background: var(--ml-well);
-        border: 2px solid #fff;
-        box-shadow: 0 0 0 1px var(--ml-line);
-    }
-    .los-node.is-now .los-dot {
-        background: var(--ml-teal);
-        box-shadow: 0 0 0 4px rgba(73, 164, 162, 0.18);
-        animation: losPulse 1.8s var(--ml-ease) infinite;
-    }
-    @keyframes losPulse {
-        0%, 100% { box-shadow: 0 0 0 4px rgba(73, 164, 162, 0.18); }
-        50% { box-shadow: 0 0 0 7px rgba(73, 164, 162, 0.08); }
-    }
-    .los-node small {
-        display: block;
-        margin-top: 8px;
-        font-size: 11px;
-        color: var(--ml-muted);
-        font-weight: 600;
-    }
-    .los-node strong {
-        display: block;
-        margin-top: 2px;
-        font-size: 13px;
-        font-weight: 700;
-        line-height: 1.35;
-    }
-    .los-skills {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 8px;
-        margin-top: 14px;
-        padding-top: 12px;
-        border-top: 1px dashed var(--ml-line);
-    }
-    .los-skill {
-        padding: 10px;
-        border-radius: 10px;
-        background: var(--ml-bg);
-        transition: background var(--ml-fast) ease, transform var(--ml-fast) ease;
-    }
-    .los-skill:hover { background: rgba(73, 164, 162, 0.08); transform: translateY(-1px); }
-    .los-skill b {
-        display: block;
-        font-size: 10px;
-        color: var(--ml-teal-deep);
-        font-weight: 700;
-    }
-    .los-skill span {
-        display: block;
-        margin-top: 2px;
-        font-size: 12px;
-        font-weight: 600;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .los-skill i {
-        display: block;
-        height: 3px;
-        margin-top: 8px;
-        border-radius: 999px;
-        background: var(--ml-well);
-        overflow: hidden;
-    }
-    .los-skill i em {
-        display: block;
-        height: 100%;
-        background: var(--ml-teal);
-        font-style: normal;
-        transform-origin: inline-start center;
-        animation: losGrow var(--ml-slow) var(--ml-ease) both;
-    }
-
-    /* F + E */
-    .los-split {
-        display: grid;
-        grid-template-columns: 1.4fr 0.9fr;
-        gap: var(--ml-space-2);
-        margin-bottom: var(--ml-space-3);
-    }
-    .los-plane {
-        padding: 14px 16px;
-        border-radius: var(--ml-r);
-        background: var(--ml-surface);
-        border: 1px solid var(--ml-line);
-    }
-    .los-plane-head {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: 8px;
-        margin-bottom: 10px;
-    }
-    .los-plane-head h3 {
-        margin: 2px 0 0;
-        font-size: 14px;
-        font-weight: 700;
-    }
-    .los-week {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 4px;
-        margin-bottom: 8px;
-    }
-    .los-day {
-        text-align: center;
-        padding: 6px 2px;
-        border-radius: 8px;
-        background: var(--ml-bg);
-        font-size: 10px;
-        color: var(--ml-muted);
-        font-weight: 600;
-    }
-    .los-day strong {
-        display: block;
-        margin-top: 2px;
-        font-size: 12px;
-        color: var(--ml-ink);
-    }
-    .los-day.is-today {
-        background: rgba(73, 164, 162, 0.14);
-        color: var(--ml-teal-deep);
-    }
-    .los-day.is-today strong { color: var(--ml-teal-deep); }
-    .los-day.has-event strong::after {
-        content: '';
-        display: block;
-        width: 4px;
-        height: 4px;
-        margin: 4px auto 0;
-        border-radius: 50%;
-        background: var(--ml-yellow);
-    }
-    .los-rows { list-style: none; margin: 0; padding: 0; }
-    .los-rows li {
-        display: flex;
-        justify-content: space-between;
-        gap: 10px;
-        padding: 8px 0;
-        border-bottom: 1px solid var(--ml-line);
-        font-size: 13px;
-    }
-    .los-rows li:last-child { border-bottom: 0; }
-    .los-rows a {
-        color: var(--ml-ink);
-        font-weight: 600;
-        text-decoration: none;
-    }
-    .los-rows a:hover { color: var(--ml-teal-deep); }
-    .los-rows a:focus-visible {
-        outline: 2px solid var(--ml-teal);
-        outline-offset: 2px;
-        border-radius: 4px;
-    }
-    .los-rows time {
-        flex-shrink: 0;
-        font-size: 11px;
-        color: var(--ml-muted);
-        font-weight: 600;
-    }
-    .los-link {
-        font-size: 12px;
-        font-weight: 700;
-        color: var(--ml-teal-deep);
-        text-decoration: none;
-    }
-    .los-link:hover { text-decoration: underline; }
-    .los-link:focus-visible {
-        outline: 2px solid var(--ml-yellow);
-        outline-offset: 2px;
-    }
-
-    .los-heat {
-        display: grid;
-        grid-template-columns: repeat(14, 1fr);
-        gap: 3px;
-        margin-top: 10px;
-    }
-    .los-heat span {
-        display: block;
-        aspect-ratio: 1;
-        border-radius: 2px;
-        background: var(--ml-well);
-    }
-    .los-heat span[data-l="1"] { background: rgba(73, 164, 162, 0.28); }
-    .los-heat span[data-l="2"] { background: rgba(73, 164, 162, 0.55); }
-    .los-heat span[data-l="3"] { background: var(--ml-teal); }
-
-    /* H — dense dock, not another fat card stack */
-    .los-dock {
-        border-radius: var(--ml-r);
-        background: var(--ml-ink);
-        color: #fff;
-        padding: 14px 16px 12px;
-    }
-    .los-dock .los-label { color: rgba(255,255,255,0.55); }
-    .los-dock-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-top: 8px;
-        margin-bottom: 12px;
-    }
-    .los-dock a.chip {
+    
+    .section-icon i {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        min-height: 32px;
-        padding: 0 10px;
-        border-radius: 999px;
-        background: rgba(255,255,255,0.08);
-        color: #fff !important;
-        text-decoration: none !important;
-        font-size: 12px;
-        font-weight: 600;
-        border: 1px solid rgba(255,255,255,0.06);
-        transition: background var(--ml-fast) ease, transform var(--ml-fast) ease;
-    }
-    .los-dock a.chip:hover { background: rgba(73, 164, 162, 0.35); transform: translateY(-1px); }
-    .los-dock a.chip:focus-visible {
-        outline: 2px solid var(--ml-yellow);
-        outline-offset: 2px;
-    }
-    .los-dock a.chip em {
-        font-style: normal;
-        opacity: 0.55;
-        font-size: 11px;
-    }
-    .los-dock-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-        padding-top: 4px;
-        border-top: 1px solid rgba(255,255,255,0.08);
-    }
-    .los-dock-grid ul {
-        list-style: none;
-        margin: 6px 0 0;
+        justify-content: center;
+        line-height: 1;
+        margin: 0;
         padding: 0;
-    }
-    .los-dock-grid li {
-        padding: 5px 0;
-        font-size: 12px;
-        color: rgba(255,255,255,0.78);
-        border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
-    .los-dock-grid li:last-child { border-bottom: 0; }
-    .los-dock-grid a {
-        color: #fff !important;
-        text-decoration: none !important;
-        font-weight: 600;
-    }
-    .los-dock-grid a:hover { color: var(--ml-yellow) !important; }
-    .los-dock-grid time {
-        display: block;
-        font-size: 10px;
-        opacity: 0.45;
-        margin-top: 2px;
+        vertical-align: middle;
     }
 
-    .los-alert {
-        margin-bottom: var(--ml-space-2);
-        padding: 12px 14px;
-        border-radius: var(--ml-r);
-        background: rgba(255, 210, 63, 0.18);
-        border: 1px solid rgba(255, 210, 63, 0.45);
+    .section-card:hover .section-icon {
+        transform: scale(1.1) rotate(5deg);
     }
-    .los-alert .los-label { color: var(--ml-yellow-ink); }
 
-    .los-skip {
-        position: absolute;
-        width: 1px;
-        height: 1px;
+    /* Course Cards */
+    .course-card {
+        background: white;
+        border: 1px solid rgb(226 232 240);
+        border-radius: 12px;
+        padding: 16px;
+        transition: all 0.2s ease;
+        position: relative;
         overflow: hidden;
-        clip: rect(0 0 0 0);
     }
-    .los-skip:focus {
-        position: static;
-        width: auto;
-        height: auto;
-        clip: auto;
+    .course-card:hover {
+        border-color: rgb(186 230 253);
+        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.1);
+        background: rgb(248 250 252);
+    }
+    .course-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        background: rgb(224 242 254);
+        color: rgb(14 165 233);
+        transition: all 0.2s;
+        line-height: 1;
+        text-align: center;
+    }
+    .course-icon i {
         display: inline-flex;
-        margin-bottom: 8px;
-        padding: 8px 12px;
-        background: var(--ml-teal);
-        color: #fff;
-        border-radius: 8px;
-        font-weight: 700;
-        font-size: 13px;
-        text-decoration: none;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        margin: 0;
+        padding: 0;
+        vertical-align: middle;
+    }
+    .course-card:hover .course-icon {
+        background: rgb(14 165 233);
+        color: white;
+        transform: scale(1.05);
     }
 
-    @media (max-width: 900px) {
-        .los-stage { grid-template-columns: 1fr; }
-        .los-stage-actions { align-items: start; }
-        .los-pair, .los-split, .los-dock-grid, .los-skills { grid-template-columns: 1fr 1fr; }
+    /* Progress Bar */
+    .progress-container {
+        position: relative;
+        height: 8px;
+        background: rgb(243 244 246);
+        border-radius: 4px;
+        overflow: hidden;
     }
-    @media (max-width: 640px) {
-        .los-pair, .los-split, .los-dock-grid { grid-template-columns: 1fr; }
-        .los-skills { grid-template-columns: 1fr 1fr; }
-        .los-path::before { display: none; }
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, rgb(14 165 233), rgb(2 132 199));
+        border-radius: 4px;
+        transition: width 0.5s ease;
+        position: relative;
+        overflow: hidden;
     }
 
-    @media (prefers-reduced-motion: reduce) {
-        .los-reveal, .los-meter > i, .los-skill i em, .los-node.is-now .los-dot {
-            animation: none !important;
-        }
-        .los-btn, .los-skill, .los-dock a.chip { transition: none !important; }
+    .progress-fill::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    /* Item Cards */
+    .item-card {
+        background: rgb(249 250 251);
+        border: 1px solid rgb(229 231 235);
+        border-radius: 10px;
+        padding: 14px;
+        transition: all 0.2s;
+    }
+    .item-card:hover {
+        background: white;
+        border-color: rgb(203 213 225);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    /* Badge */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
     }
 </style>
 @endpush
 
 @section('content')
-<a class="los-skip" href="#los-stage">{{ __('los.skip_to_next') }}</a>
-
-<div class="los" dir="{{ $losRtl ? 'rtl' : 'ltr' }}">
-
-    {{-- BAND 0 --}}
-    <header class="los-chrome los-reveal" style="--reveal-delay:0ms">
-        <div>
-            <h1>{{ $os['greeting'] ?? __('los.greeting_evening') }}{{ $losRtl ? '،' : ',' }} {{ $os['student_name'] ?? auth()->user()->name }}</h1>
-            <p class="sub">{{ __('los.learning_space') }} · {{ $os['date_label'] ?? now()->format('Y-m-d') }}</p>
-        </div>
-        <div class="los-signals" aria-label="{{ __('los.today_signals') }}">
-            @if($streak > 0)
-                <span class="los-signal los-signal-hot">{{ __('los.streak_label', ['count' => $streak, 'unit' => $streak === 1 ? __('los.streak_day') : __('los.streak_days')]) }}</span>
-            @endif
-            <span class="los-signal los-signal-live">{{ __('los.progress_pct', ['pct' => (int) ($mastery['progress'] ?? 0)]) }}</span>
-        </div>
-    </header>
-
-    @if(!empty($pendingScholarshipRegistrations) && $pendingScholarshipRegistrations->isNotEmpty() && ($stage['mode'] ?? '') !== 'blocking')
-        <aside class="los-alert los-reveal" style="--reveal-delay:40ms" aria-label="{{ __('los.scholarships_pending') }}">
-            <p class="los-label">{{ __('los.scholarships_pending') }}</p>
-            <ul class="los-rows">
-                @foreach($pendingScholarshipRegistrations as $scholarshipRegistration)
-                    <li>
-                        <span style="font-weight:700;color:var(--ml-ink)">{{ $scholarshipRegistration->program?->name }}</span>
-                        <time>{{ __('los.pending') }}</time>
-                    </li>
-                @endforeach
-            </ul>
-        </aside>
-    @endif
-
-    {{-- ZONE A --}}
-    <section id="los-stage" class="los-stage los-reveal" style="--reveal-delay:60ms" aria-label="{{ __('los.what_now') }}">
-        <div>
-            <div class="los-eyebrow">
-                {{ __('los.next_step') }}
-                <em>{{ $stage['type_label'] ?? '' }}</em>
+<div class="w-full max-w-full space-y-6">
+    <!-- Welcome Section -->
+    @php
+        $progress = min((int) $stats['total_progress'], 100);
+        $circumference = 2 * 3.14159 * 42;
+        $strokeDashoffset = $circumference - ($progress / 100) * $circumference;
+    @endphp
+    <div class="welcome-section relative">
+        <div class="welcome-accent" aria-hidden="true"></div>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+            <div class="flex-1 min-w-0">
+                <p class="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-2">{{ __('student.your_dashboard') }}</p>
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 leading-tight">
+                    {{ __('student.welcome_name', ['name' => auth()->user()->name]) }}
+                </h1>
+                <p class="text-gray-600 text-sm sm:text-base max-w-xl leading-relaxed">
+                    {{ __('student.dashboard_subtitle') }}
+                </p>
             </div>
-            <h2>{{ $stage['title'] ?? '' }}</h2>
-            <p class="los-copy">{{ $stage['parent'] ?? '' }} — {{ $stage['why'] ?? '' }}</p>
-            @if(!empty($stage['urgency']))
-                <p class="los-urgency">{{ __('los.deadline', ['when' => $stage['urgency']]) }}</p>
-            @endif
-            @if(isset($stage['progress']))
-                <div class="los-meter" role="progressbar" aria-valuenow="{{ (int) $stage['progress'] }}" aria-valuemin="0" aria-valuemax="100" aria-label="{{ __('los.course_progress') }}">
-                    <i style="width: {{ min(100, (float) $stage['progress']) }}%"></i>
+            <div class="flex items-center gap-5 flex-shrink-0">
+                <div class="relative flex items-center justify-center">
+                    <svg class="progress-ring-svg w-24 h-24" viewBox="0 0 96 96" aria-hidden="true">
+                        <defs>
+                            <linearGradient id="welcomeProgressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#0ea5e9"/>
+                                <stop offset="100%" stop-color="#0284c7"/>
+                            </linearGradient>
+                        </defs>
+                        <circle class="progress-ring-bg" cx="48" cy="48" r="42"/>
+                        <circle class="progress-ring-fill" cx="48" cy="48" r="42"
+                            stroke-dasharray="{{ $circumference }}"
+                            stroke-dashoffset="{{ $strokeDashoffset }}"/>
+                    </svg>
+                    <span class="absolute inset-0 flex items-center justify-center text-lg font-bold text-sky-700">{{ $stats['total_progress'] }}%</span>
                 </div>
-            @endif
-        </div>
-        <div class="los-stage-actions">
-            <a class="los-btn" href="{{ $stage['cta_url'] ?? '#' }}">{{ $stage['cta_label'] ?? __('los.continue') }}</a>
-            @if(!empty($stage['secondary_url']))
-                <a class="los-btn los-btn-quiet" href="{{ $stage['secondary_url'] }}">{{ $stage['secondary_label'] ?? __('los.other_options') }}</a>
-            @endif
-        </div>
-    </section>
-
-    {{-- ZONE B + D --}}
-    <div class="los-pair los-reveal" style="--reveal-delay:110ms">
-        <section class="los-mission" aria-label="{{ __('los.mission_today') }}">
-            <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
-                <p class="los-label">{{ __('los.mission_today') }}</p>
-                <span class="los-signal {{ ($mission['state'] ?? '') === 'open' ? 'los-signal-live' : '' }}">{{ $mission['state_label'] ?? '' }}</span>
-            </div>
-            <h3>{{ $mission['title'] ?? '' }}</h3>
-            <p class="los-hint">{{ $mission['hint'] ?? '' }}</p>
-        </section>
-
-        <section class="los-ai" id="los-ai" aria-label="{{ __('los.ai_guide') }}">
-            <p class="los-label">{{ __('los.ai_guide') }}</p>
-            <h3>{{ $ai['insight'] ?? '' }}</h3>
-            <p class="los-hint">{{ $ai['why'] ?? '' }}</p>
-            <div style="margin-top:12px">
-                <a class="los-btn los-btn-ghost" href="{{ $ai['action_url'] ?? '#' }}">{{ $ai['action_label'] ?? __('los.start') }}</a>
-            </div>
-            @if(!empty($ai['recommendations']))
-                <div class="los-recs" aria-label="{{ __('los.recommendations') }}">
-                    @foreach($ai['recommendations'] as $rec)
-                        <span>{{ $rec }}</span>
-                    @endforeach
+                <div class="text-right">
+<p class="text-sm font-semibold text-gray-700">{{ __('student.total_progress') }}</p>
+                <p class="text-xs text-gray-500 mt-0.5">{{ __('student.from_course_completion') }}</p>
                 </div>
-            @endif
-        </section>
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-100 to-sky-50 flex items-center justify-center text-sky-600 border border-sky-100 shadow-sm hidden sm:flex">
+                    <i class="fas fa-graduation-cap text-xl"></i>
+                </div>
+            </div>
+        </div>
     </div>
 
-    {{-- ZONE C --}}
-    <section class="los-journey-block los-reveal" style="--reveal-delay:160ms" aria-label="{{ __('los.learning_journey') }}">
-        <p class="los-label">{{ __('los.learning_journey') }}</p>
-        <h3 style="margin:4px 0 0;font-size:14px;font-weight:700">{{ __('los.journey_subtitle') }}</h3>
-
-        <div class="los-path">
-            <div class="los-node">
-                <div class="los-dot" aria-hidden="true"></div>
-                <small>{{ __('los.past') }}</small>
-                <strong>{{ $journey['past'] ?? '' }}</strong>
-            </div>
-            <div class="los-node is-now">
-                <div class="los-dot" aria-hidden="true"></div>
-                <small>{{ __('los.now') }}</small>
-                <strong>{{ $journey['present'] ?? '' }}</strong>
-            </div>
-            <div class="los-node">
-                <div class="los-dot" aria-hidden="true"></div>
-                <small>{{ __('los.next') }}</small>
-                <strong>{{ $journey['next'] ?? '' }}</strong>
+    @if(!empty($pendingScholarshipRegistrations) && $pendingScholarshipRegistrations->isNotEmpty())
+        <div class="rounded-2xl border border-amber-200 bg-amber-50 p-5 space-y-3">
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-hourglass-half"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h2 class="text-lg font-bold text-amber-900">منح دراسية بانتظار التفعيل</h2>
+                    <p class="text-sm text-amber-800 mt-1">تم تسجيلك في المنح التالية. سيظهر الكورس في مسارك التعليمي بعد موافقة الإدارة.</p>
+                    <ul class="mt-3 space-y-2">
+                        @foreach($pendingScholarshipRegistrations as $scholarshipRegistration)
+                            <li class="rounded-xl bg-white border border-amber-100 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <div>
+                                    <p class="font-semibold text-slate-900">{{ $scholarshipRegistration->program?->name }}</p>
+                                    <p class="text-xs text-slate-500 mt-0.5">تاريخ التسجيل: {{ $scholarshipRegistration->registered_at?->format('Y-m-d H:i') }}</p>
+                                </div>
+                                <span class="inline-flex items-center px-3 py-1 rounded-lg bg-amber-100 text-amber-800 text-xs font-semibold">بانتظار التفعيل</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
             </div>
         </div>
+    @endif
 
-        @if(!empty($journey['recovery']))
-            <p class="los-hint">{{ $journey['recovery'] }}</p>
-        @endif
-
-        <p class="los-label" style="margin-top:8px">{{ __('los.skill_map') }}</p>
-        <div class="los-skills">
-            @foreach($skillTree as $node)
-                <div class="los-skill">
-                    <b>{{ $node['level'] }}</b>
-                    <span title="{{ $node['label'] }}">{{ $node['label'] }}</span>
-                    <i aria-hidden="true"><em style="width: {{ min(100, (float)($node['progress'] ?? 0)) }}%"></em></i>
-                </div>
-            @endforeach
-        </div>
-    </section>
-
-    {{-- ZONE F + E --}}
-    <div class="los-split los-reveal" style="--reveal-delay:210ms">
-        <section class="los-plane" aria-label="{{ __('los.planning') }}">
-            <div class="los-plane-head">
-                <div>
-                    <p class="los-label">{{ __('los.this_week') }}</p>
-                    <h3>{{ __('los.your_schedule') }}</h3>
-                </div>
-                <a class="los-link" href="{{ route('calendar') }}">{{ __('los.open_calendar') }}</a>
-            </div>
-            <div class="los-week" aria-label="{{ __('los.week_days') }}">
-                @foreach($calendar as $day)
-                    <div class="los-day {{ !empty($day['today']) ? 'is-today' : '' }} {{ !empty($day['has_event']) ? 'has-event' : '' }}">
-                        {{ $day['label'] }}
-                        <strong>{{ $day['num'] }}</strong>
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        <!-- Active Courses -->
+        <a href="{{ route('my-courses.index') }}" class="dashboard-card blue group">
+            <div class="relative z-10">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold text-sky-700 mb-2">{{ __('student.my_active_courses') }}</p>
+                        <p class="text-4xl font-black text-sky-600">{{ $stats['active_courses'] }}</p>
                     </div>
-                @endforeach
+                    <div class="card-icon flex-shrink-0">
+                        <i class="fas fa-book-open"></i>
+                    </div>
+                </div>
+                <p class="text-xs font-medium text-gray-600">{{ __('student.active_courses_now') }}</p>
             </div>
-            <ul class="los-rows">
-                @forelse($planning as $item)
-                    <li>
-                        <a href="{{ $item['url'] }}">{{ $item['title'] }}</a>
-                        <time>{{ $item['when'] }}</time>
-                    </li>
-                @empty
-                    <li><span class="los-hint" style="margin:0">{{ __('los.no_critical_dates') }}</span></li>
-                @endforelse
-            </ul>
-        </section>
+        </a>
 
-        <section class="los-plane" aria-label="{{ __('los.insights_achievements') }}">
-            <p class="los-label">{{ __('los.what_you_achieved') }}</p>
-            <h3 style="margin:4px 0 0;font-size:14px;font-weight:700;line-height:1.45">{{ $mastery['whisper'] ?? '' }}</h3>
-            <p class="los-hint">{{ __('los.completed_avg', ['count' => (int) ($mastery['completed_courses'] ?? 0), 'pct' => (int) ($mastery['progress'] ?? 0)]) }}</p>
-            <a class="los-link" href="{{ $mastery['achievement_url'] ?? route('student.certificates.index') }}" style="display:inline-block;margin-top:8px">{{ __('los.certs_achievements') }}</a>
-
-            <p class="los-label" style="margin-top:14px">{{ __('los.rhythm_14') }}</p>
-            <div class="los-heat" role="img" aria-label="{{ __('los.activity_heatmap') }}">
-                @foreach($heatmap as $cell)
-                    <span data-l="{{ (int)($cell['level'] ?? 0) }}" title="{{ $cell['date'] ?? '' }}"></span>
-                @endforeach
+        <!-- Completed Courses -->
+        <a href="{{ route('student.certificates.index') }}" class="dashboard-card green group">
+            <div class="relative z-10">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold text-emerald-700 mb-2">{{ __('student.completed') }}</p>
+                        <p class="text-4xl font-black text-emerald-600">{{ $stats['completed_courses'] }}</p>
+                    </div>
+                    <div class="card-icon flex-shrink-0">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                </div>
+                <p class="text-xs font-medium text-gray-600">{{ __('student.completed_courses') }}</p>
             </div>
-        </section>
-    </div>
+        </a>
 
-    @if($goals)
-    <div class="los-split los-reveal" style="--reveal-delay:230ms;margin-bottom:24px">
-        <section class="los-plane" aria-label="{{ __('los.your_goals') }}">
-            <p class="los-label">{{ $goals['weekly']['label'] ?? __('los.goal_week') }}</p>
-            <h3 style="margin:4px 0 0;font-size:14px;font-weight:700">{{ $goals['weekly']['title'] ?? '' }}</h3>
-            <div class="los-meter" style="max-width:100%;margin-top:10px" role="progressbar" aria-valuenow="{{ (int)($goals['weekly']['percent'] ?? 0) }}" aria-valuemin="0" aria-valuemax="100">
-                <i style="width:{{ min(100, (int)($goals['weekly']['percent'] ?? 0)) }}%"></i>
+        <!-- Progress -->
+        <div class="dashboard-card purple group">
+            <div class="relative z-10">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold text-sky-700 mb-2">{{ __('student.total_progress') }}</p>
+                        <p class="text-4xl font-black text-sky-600">{{ $stats['total_progress'] }}%</p>
+                    </div>
+                    <div class="card-icon flex-shrink-0">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+                <div class="progress-container mt-3">
+                    <div class="progress-fill" style="width: {{ $stats['total_progress'] }}%"></div>
+                </div>
             </div>
-            <p class="los-hint">{{ (int)($goals['weekly']['done'] ?? 0) }} / {{ (int)($goals['weekly']['target'] ?? 3) }} {{ __('los.sessions') }}</p>
-            <p class="los-label" style="margin-top:14px">{{ $goals['monthly']['label'] ?? __('los.goal_month') }}</p>
-            <h3 style="margin:4px 0 0;font-size:13px;font-weight:700;line-height:1.45">{{ $goals['monthly']['title'] ?? '' }}</h3>
-            <div class="los-meter" style="max-width:100%;margin-top:8px"><i style="width:{{ min(100, (int)($goals['monthly']['percent'] ?? 0)) }}%"></i></div>
-        </section>
-        <section class="los-plane" aria-label="{{ __('los.career_progress') }}">
-            <p class="los-label">{{ $goals['career']['label'] ?? __('los.career_path') }}</p>
-            <h3 style="margin:4px 0 0;font-size:14px;font-weight:700;line-height:1.45">{{ $goals['career']['title'] ?? '' }}</h3>
-            <a class="los-link" href="{{ $goals['career']['url'] ?? route('student.certificates.index') }}" style="display:inline-block;margin-top:12px">{{ __('los.certs_record') }}</a>
-            <p class="los-hint" style="margin-top:10px">{{ __('los.next_achievement_hint') }}</p>
-        </section>
-    </div>
-    @endif
-
-    {{-- ZONE H — dense dark dock (signature, not pill spam / not quick-action nav clone) --}}
-    <section class="los-dock los-reveal" style="--reveal-delay:260ms" aria-label="{{ __('los.library_activity') }}">
-        <p class="los-label">{{ __('los.active_courses') }}</p>
-        <div class="los-dock-row">
-            @forelse($courses as $course)
-                <a class="chip" href="{{ $course['url'] }}">
-                    {{ \Illuminate\Support\Str::limit($course['title'], 28) }}
-                    <em>{{ $course['meta'] }}</em>
-                </a>
-            @empty
-                <span style="font-size:12px;opacity:.65">{{ __('los.no_active_courses') }}</span>
-            @endforelse
         </div>
 
-        <div class="los-dock-grid">
-            <div>
-                <p class="los-label">{{ __('los.quick_review') }}</p>
-                <ul>
-                    @foreach(array_slice($notes, 0, 3) as $note)
-                        <li><a href="{{ $note['url'] }}">{{ $note['label'] }}</a></li>
-                    @endforeach
-                </ul>
+        <!-- Pending Orders -->
+        <a href="{{ route('orders.index') }}" class="dashboard-card amber group">
+            <div class="relative z-10">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold text-amber-700 mb-2">{{ __('student.pending_orders') }}</p>
+                        <p class="text-4xl font-black text-amber-600">{{ $stats['pending_orders'] }}</p>
+                    </div>
+                    <div class="card-icon flex-shrink-0">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+                <p class="text-xs font-medium text-gray-600">{{ __('student.orders_in_processing') }}</p>
             </div>
-            <div>
-                <p class="los-label">{{ __('los.recent_activity') }}</p>
-                <ul>
-                    @forelse(array_slice($timeline, 0, 3) as $event)
-                        <li>
-                            {{ $event['label'] }}
-                            <time>{{ $event['when'] }}</time>
-                        </li>
+        </a>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 w-full">
+        <!-- My Courses -->
+        <div class="lg:col-span-2 min-w-0">
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">
+                        <div class="section-icon bg-sky-100 text-sky-600 border-2 border-sky-200">
+                            <i class="fas fa-book-open"></i>
+                        </div>
+                        <span>{{ __('student.my_active_courses') }}</span>
+                    </div>
+                    <a href="{{ route('my-courses.index') }}" class="text-sm text-sky-600 hover:text-sky-700 font-semibold transition-colors flex items-center gap-1">
+                        {{ __('student.view_all') }} <i class="fas fa-arrow-left text-xs"></i>
+                    </a>
+                </div>
+                <div class="space-y-4">
+                    @forelse($activeCourses->take(5) as $course)
+                        @php
+                            $progress = (float) ($course->pivot->progress ?? optional($course->enrollment ?? null)->progress ?? 0);
+                        @endphp
+                        <a href="{{ route('my-courses.show', $course->id) }}" class="course-card block">
+                            <div class="flex items-center gap-4">
+                                <div class="course-icon flex-shrink-0">
+                                    <i class="fas fa-book"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-bold text-gray-900 mb-1.5 truncate text-base">{{ $course->title }}</h3>
+                                    <p class="text-sm text-gray-600 mb-3 truncate">
+                                        {{ $course->academicSubject->name ?? __('student.not_specified') }} - {{ $course->academicYear->name ?? __('student.not_specified') }}
+                                    </p>
+                                    <div class="flex items-center gap-3 flex-wrap">
+                                        <div class="flex-1 progress-container min-w-0">
+                                            <div class="progress-fill" style="width: {{ $progress }}%"></div>
+                                        </div>
+                                        <span class="text-sm font-semibold text-gray-700 min-w-[45px] text-left">{{ $progress }}%</span>
+                                        <span class="text-xs font-semibold text-amber-600"><i class="fas fa-star text-amber-500 ml-0.5"></i> {{ number_format((float)($course->student_points ?? 0), 0) }} نقطة</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
                     @empty
-                        <li>{{ __('los.activity_placeholder') }}</li>
+                        @php
+                            $hasOfflineOrOnline = (($offlineActiveEnrollments ?? collect())->count() + ($onlineActiveEnrollments ?? collect())->count() + (int)($visibleOfflineBookingsCount ?? 0) + (int)($visibleOnlineBookingsCount ?? 0)) > 0;
+                        @endphp
+                        @if($hasOfflineOrOnline)
+                            <div class="space-y-3">
+                                <div class="rounded-xl border border-sky-200 bg-sky-50 p-4">
+                                    <h3 class="text-sm font-bold text-sky-800 mb-2">كورساتك غير العادية متاحة</h3>
+                                    <p class="text-xs text-sky-700 mb-3">لا توجد كورسات عادية مفعلة حالياً، لكن لديك كورسات أوفلاين/أونلاين أو حجوزات مرتبطة.</p>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                        <a href="{{ route('student.offline-courses.index') }}" class="px-3 py-2 rounded-lg bg-white border border-sky-200 text-sky-800 hover:bg-sky-100">
+                                            أوفلاين مفعّل: {{ ($offlineActiveEnrollments ?? collect())->count() }}
+                                        </a>
+                                        <a href="{{ route('student.online-courses.index') }}" class="px-3 py-2 rounded-lg bg-white border border-indigo-200 text-indigo-800 hover:bg-indigo-50">
+                                            أونلاين مفعّل: {{ ($onlineActiveEnrollments ?? collect())->count() }}
+                                        </a>
+                                        <a href="{{ route('student.offline-courses.index') }}" class="px-3 py-2 rounded-lg bg-white border border-amber-200 text-amber-800 hover:bg-amber-50">
+                                            حجوزات أوفلاين: {{ (int)($visibleOfflineBookingsCount ?? 0) }}
+                                        </a>
+                                        <a href="{{ route('student.online-courses.index') }}" class="px-3 py-2 rounded-lg bg-white border border-violet-200 text-violet-800 hover:bg-violet-50">
+                                            حجوزات أونلاين: {{ (int)($visibleOnlineBookingsCount ?? 0) }}
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        @else
+                        <div class="text-center py-12 text-gray-500">
+                            <div class="w-20 h-20 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-book-open text-3xl text-gray-400"></i>
+                            </div>
+                            <p class="text-base font-semibold mb-2 text-gray-700">{{ __('student.no_active_courses') }}</p>
+                            <p class="text-sm text-gray-600 mb-6">{{ __('student.start_journey_now') }}</p>
+                            <a href="{{ route('academic-years') }}" class="inline-flex items-center gap-2 px-6 py-3 bg-sky-500 hover:bg-sky-600 text-white rounded-xl text-sm font-semibold transition-all shadow-md hover:shadow-lg">
+                                <i class="fas fa-search"></i>
+                                <span>{{ __('student.explore_courses') }}</span>
+                            </a>
+                        </div>
+                        @endif
                     @endforelse
-                </ul>
+                </div>
             </div>
         </div>
-    </section>
+
+        <!-- Sidebar -->
+        <div class="space-y-4 sm:space-y-6 min-w-0">
+            <!-- Upcoming Assignments -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">
+                        <div class="section-icon bg-amber-100 text-amber-600 border-2 border-amber-200">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                        <span>{{ __('student.assignments') }}</span>
+                        @if($upcomingAssignments->count() > 0)
+                            <span class="bg-amber-100 text-amber-700 status-badge mr-auto">
+                                {{ $upcomingAssignments->count() }}
+                            </span>
+                        @endif
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    @forelse($upcomingAssignments->take(3) as $assignment)
+                        @php
+                            $lecture = $assignment->lecture;
+                            $course = optional($lecture)->course;
+                            $dueDate = optional($assignment->due_date);
+                            $isOverdue = $dueDate && $dueDate->isPast();
+                        @endphp
+                        <div class="item-card">
+                            <div class="font-semibold text-gray-900 text-sm mb-1.5 truncate">{{ $assignment->title }}</div>
+                            @if($course)
+                                <div class="text-xs text-gray-600 mb-2.5 truncate">{{ $course->title }}</div>
+                            @endif
+                            @if($dueDate)
+                                <span class="status-badge {{ $isOverdue ? 'bg-red-100 text-red-700' : 'bg-sky-100 text-sky-700' }}">
+                                    {{ $dueDate->translatedFormat('d M') }}
+                                </span>
+                            @endif
+                        </div>
+                    @empty
+                        <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-clipboard-check text-3xl mb-3 opacity-30"></i>
+                            <p class="text-sm font-medium">{{ __('student.no_assignments') }}</p>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+
+            <!-- Upcoming Exams -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">
+                        <div class="section-icon bg-sky-100 text-sky-600 border-2 border-sky-200">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <span>{{ __('student.exams') }}</span>
+                        @if($upcomingExams->count() > 0)
+                            <span class="bg-sky-100 text-sky-700 status-badge mr-auto">
+                                {{ $upcomingExams->count() }}
+                            </span>
+                        @endif
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    @forelse($upcomingExams->take(3) as $exam)
+                        @php
+                            $course = $exam->course;
+                            $startAt = $exam->start_time ?? ($exam->start_date ? $exam->start_date->copy()->startOfDay() : null);
+                            $isAvailableNow = $startAt ? $startAt->isPast() : true;
+                        @endphp
+                        <a href="{{ route('student.exams.show', $exam) }}" class="item-card block hover:border-sky-200">
+                            <div class="font-semibold text-gray-900 text-sm mb-1.5 truncate">{{ $exam->title }}</div>
+                            @if($course)
+                                <div class="text-xs text-gray-600 mb-2.5 truncate">{{ $course->title }}</div>
+                            @endif
+                            <span class="status-badge {{ $isAvailableNow ? 'bg-emerald-100 text-emerald-700' : 'bg-sky-100 text-sky-700' }}">
+                                {{ $isAvailableNow ? __('student.available') : __('student.coming_soon') }}
+                            </span>
+                        </a>
+                    @empty
+                        <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-file-alt text-3xl mb-3 opacity-30"></i>
+                            <p class="text-sm font-medium">{{ __('student.no_exams') }}</p>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exam Results & Certificates -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 w-full">
+        <!-- Exam Results -->
+        <div class="section-card min-w-0">
+            <div class="section-header">
+                <div class="section-title">
+                    <div class="section-icon bg-emerald-100 text-emerald-600 border-2 border-emerald-200">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <span>{{ __('student.exam_results') }}</span>
+                </div>
+            </div>
+            <div class="space-y-3">
+                @forelse($recentExamAttempts->take(4) as $attempt)
+                    @php
+                        $exam = $attempt->exam;
+                        $course = optional($exam)->course;
+                    @endphp
+                    <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200 hover:border-emerald-200 transition-colors">
+                        <div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-award text-emerald-600 text-lg"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold text-gray-900 text-sm mb-1 truncate">{{ $exam->title ?? __('student.exam_deleted') }}</div>
+                            @if($course)
+                                <div class="text-xs text-gray-600 mb-2 truncate">{{ $course->title }}</div>
+                            @endif
+                            <div class="flex items-center gap-2">
+                                <span class="status-badge bg-emerald-100 text-emerald-700">
+                                    {{ $attempt->result_status }}
+                                </span>
+                                @if(!is_null($attempt->percentage))
+                                    <span class="text-sm font-semibold text-gray-700">{{ number_format($attempt->percentage, 1) }}%</span>
+                                @endif
+                            </div>
+                        </div>
+                        @if($exam)
+                            <a href="{{ route('student.exams.result', [$exam, $attempt]) }}" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700 transition-colors shadow-sm">
+                                {{ __('common.view') }}
+                            </a>
+                        @endif
+                    </div>
+                @empty
+                    <div class="text-center py-10 text-gray-500">
+                        <i class="fas fa-poll text-4xl mb-3 opacity-30"></i>
+                        <p class="text-sm font-medium">{{ __('student.no_results_yet') }}</p>
+                    </div>
+                @endforelse
+            </div>
+        </div>
+
+        <!-- Certificates -->
+        <div class="section-card min-w-0">
+            <div class="section-header">
+                <div class="section-title">
+<div class="section-icon bg-amber-100 text-amber-600 border-2 border-amber-200">
+                            <i class="fas fa-certificate"></i>
+                        </div>
+                        <span>{{ __('student.issued_certificates') }}</span>
+                </div>
+            </div>
+            <div class="space-y-3">
+                @forelse($recentCertificates->take(4) as $certificate)
+                    <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200 hover:border-amber-300 transition-colors">
+                        <div class="w-12 h-12 bg-sky-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-ribbon text-sky-600 text-lg"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold text-gray-900 text-sm mb-1 truncate">
+                                {{ $certificate->title ?? $certificate->course_name ?? __('student.certificate_untitled') }}
+                            </div>
+                            @if($certificate->course)
+                                <div class="text-xs text-gray-600 mb-2 truncate">{{ $certificate->course->title }}</div>
+                            @endif
+                            @if($certificate->certificate_number)
+                                <span class="status-badge bg-sky-100 text-sky-700">
+                                    {{ __('student.certificate_number_label') }}: {{ $certificate->certificate_number }}
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+                @empty
+                    <div class="text-center py-10 text-gray-500">
+                        <i class="fas fa-certificate text-4xl mb-3 opacity-30"></i>
+                        <p class="text-sm font-medium">{{ __('student.no_certificates_yet') }}</p>
+                    </div>
+                @endforelse
+            </div>
+        </div>
+    </div>
 </div>
 @endsection

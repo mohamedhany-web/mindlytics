@@ -1,122 +1,182 @@
-@extends('layouts.student-dashboard')
+@extends('layouts.app')
 
 @section('title', ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : __('student.offline_courses_title'))
-
-@php
-    $isOnline = ($channel ?? 'offline') === 'online';
-    $sg = $studentRouteGroup ?? 'student.offline-courses';
-    $pageTitle = $isOnline ? 'كورساتي الأونلاين' : __('student.offline_courses_title');
-    $pageSub = $isOnline
-        ? 'تظهر هنا فقط الكورسات الأونلاين المفعّلة في بوابة الطالب.'
-        : __('student.offline_courses_subtitle');
-    $badgeLabel = $isOnline ? 'أونلاين' : __('student.offline_badge');
-@endphp
+@section('header', ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : __('student.offline_courses_title'))
 
 @push('styles')
-@include('student.offline-courses.partials.los-styles')
+<style>
+    .offline-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        transition: all 0.25s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .offline-card:hover {
+        box-shadow: 0 8px 20px rgba(14, 165, 233, 0.12);
+        border-color: #bae6fd;
+    }
+    .stats-card-offline {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .stats-card-offline:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+</style>
 @endpush
 
 @section('content')
-<div class="oc">
-    <header class="oc-chrome">
-        <div>
-            <nav class="oc-crumb" aria-label="مسار التنقل">
-                <a href="{{ route('dashboard') }}">مساحة التعلّم</a>
-                <span aria-hidden="true">/</span>
-                <span style="color:var(--ml-ink);font-weight:700">{{ $pageTitle }}</span>
-            </nav>
-            <h1>{{ $pageTitle }}</h1>
-            <p class="sub">{{ $pageSub }}</p>
-        </div>
-        <div class="oc-signals">
-            <span class="oc-signal oc-signal-live">{{ $stats['total_offline'] }} {{ __('student.courses_count_label') }}</span>
-            <span class="oc-signal oc-signal-hot">{{ $stats['total_activities'] }} {{ __('student.activities_label') }}</span>
-        </div>
-    </header>
-
-    <div class="oc-pulse" aria-label="ملخص">
-        <div>
-            <span class="lbl">{{ __('student.courses_count_label') }}</span>
-            <span class="val teal">{{ $stats['total_offline'] }}</span>
-        </div>
-        <div>
-            <span class="lbl">{{ __('student.activities_label') }}</span>
-            <span class="val hot">{{ $stats['total_activities'] }}</span>
-        </div>
-        @if(($bookings ?? collect())->isNotEmpty())
-            <div>
-                <span class="lbl">حجوزات معلّقة</span>
-                <span class="val">{{ ($bookings ?? collect())->count() }}</span>
-            </div>
-        @endif
+<div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <!-- الهيدر -->
+    <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{{ ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : __('student.offline_courses_title') }}</h1>
+        <p class="text-sm text-gray-500">{{ ($channel ?? 'offline') === 'online' ? 'تظهر هنا فقط الكورسات الأونلاين التي فعّلتها الإدارة في «بوابة الطالب للأونلاين».' : __('student.offline_courses_subtitle') }}</p>
     </div>
 
-    <div class="oc-list" role="list">
-        @forelse($enrollments as $enrollment)
-            @php $course = $enrollment->course; @endphp
-            <a href="{{ route($sg . '.show', $course->id) }}" class="oc-row" role="listitem">
-                <div class="oc-ico" aria-hidden="true">
-                    <i class="fas {{ $isOnline ? 'fa-laptop-house' : 'fa-chalkboard-teacher' }}"></i>
+    <!-- الإحصائيات -->
+    <div class="grid grid-cols-2 gap-3 sm:gap-4">
+        <div class="stats-card-offline p-4">
+            <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">{{ __('student.courses_count_label') }}</p>
+                    <p class="text-2xl font-bold text-sky-600 leading-none">{{ $stats['total_offline'] }}</p>
                 </div>
-                <div class="oc-body">
-                    <h3>{{ $course->title }}</h3>
-                    <p class="meta">
+                <div class="w-10 h-10 rounded-lg bg-sky-100 flex items-center justify-center text-sky-600 flex-shrink-0">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                </div>
+            </div>
+        </div>
+        <div class="stats-card-offline p-4">
+            <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">{{ __('student.activities_label') }}</p>
+                    <p class="text-2xl font-bold text-amber-600 leading-none">{{ $stats['total_activities'] }}</p>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0">
+                    <i class="fas fa-tasks"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- قائمة الكورسات -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        @forelse($enrollments as $enrollment)
+            @php
+                $course = $enrollment->course;
+            @endphp
+            <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.show', $course->id) }}" class="offline-card block overflow-hidden">
+                <div class="h-32 bg-sky-100 flex items-center justify-center text-sky-600 flex-shrink-0">
+                    <i class="fas fa-chalkboard-teacher text-3xl"></i>
+                </div>
+                <div class="p-4">
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                        <h3 class="text-base font-bold text-gray-900 line-clamp-2 leading-snug flex-1 min-w-0">{{ $course->title }}</h3>
+                        <span class="px-2 py-0.5 rounded-md text-xs font-semibold {{ ($channel ?? 'offline') === 'online' ? 'bg-indigo-100 text-indigo-700' : 'bg-sky-100 text-sky-700' }} flex-shrink-0">
+                            {{ ($channel ?? 'offline') === 'online' ? 'أونلاين' : __('student.offline_badge') }}
+                        </span>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-2">
                         {{ $course->instructor->name ?? '—' }}
                         @if($course->locationModel || $course->location)
                             · {{ $course->locationModel->name ?? $course->location ?? '—' }}
                         @endif
-                        @if($enrollment->group)
-                            · {{ $enrollment->group->name }}
-                        @endif
                     </p>
-                    <div class="oc-prog">
-                        <div class="bar"><i style="width:{{ min(100, (float) $enrollment->progress) }}%"></i></div>
-                        <span class="pct">{{ number_format($enrollment->progress, 0) }}٪</span>
-                        <span class="oc-badge oc-badge-live">{{ $badgeLabel }}</span>
-                        @if((float) $enrollment->total_amount > 0)
-                            @php
-                                $pMap = ['paid' => 'oc-badge-ok', 'partial' => 'oc-badge-warn', 'unpaid' => 'oc-badge-bad'];
-                                $pLabels = ['paid' => 'مدفوع', 'partial' => 'جزئي', 'unpaid' => 'غير مدفوع'];
-                            @endphp
-                            <span class="oc-badge {{ $pMap[$enrollment->payment_status] ?? 'oc-badge-warn' }}">
-                                {{ $pLabels[$enrollment->payment_status] ?? '' }}
-                            </span>
+                    @if($course->description)
+                        <p class="text-xs text-gray-600 line-clamp-2 mb-3">{{ Str::limit($course->description, 80) }}</p>
+                    @endif
+                    <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500 mb-2">
+                        @if($enrollment->group)
+                            <span class="truncate max-w-[120px]" title="{{ $enrollment->group->name }}"><i class="fas fa-users-cog ml-1"></i>{{ $enrollment->group->name }}</span>
                         @endif
                     </div>
+                    @if($enrollment->group?->start_date)
+                    <div class="text-xs text-indigo-600 font-medium mb-2">
+                        <i class="fas fa-calendar-check ml-1"></i>يبدأ: {{ $enrollment->group->start_date->format('Y-m-d') }}
+                    </div>
+                    @endif
+                    @if((float)$enrollment->total_amount > 0)
+                    <div class="flex items-center gap-2 text-xs mb-2">
+                        @php
+                            $pColors = ['paid' => 'bg-green-100 text-green-700', 'partial' => 'bg-amber-100 text-amber-700', 'unpaid' => 'bg-red-100 text-red-700'];
+                            $pLabels = ['paid' => 'مدفوع', 'partial' => 'جزئي', 'unpaid' => 'غير مدفوع'];
+                        @endphp
+                        <span class="px-2 py-0.5 rounded-full font-semibold {{ $pColors[$enrollment->payment_status] ?? '' }}">
+                            {{ $pLabels[$enrollment->payment_status] ?? '' }}
+                        </span>
+                        @if($enrollment->payment_status !== 'paid')
+                            <span class="text-red-500">متبقي: {{ number_format($enrollment->remaining_amount, 0) }} ج.م</span>
+                        @endif
+                    </div>
+                    @endif
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <span class="text-xs font-medium text-gray-600">التقدم</span>
+                        <span class="text-sm font-bold text-sky-600">{{ number_format($enrollment->progress, 0) }}%</span>
+                    </div>
+                    <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div class="h-full bg-sky-500 rounded-full transition-all duration-500" style="width: {{ min($enrollment->progress, 100) }}%;"></div>
+                    </div>
+                    <span class="mt-3 inline-flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold transition-colors">
+                        <i class="fas fa-eye text-xs"></i>
+                        عرض التفاصيل
+                    </span>
                 </div>
-                <span class="oc-side">عرض <i class="fas fa-arrow-left text-[10px]"></i></span>
             </a>
         @empty
             @if(($bookings ?? collect())->isEmpty())
-                <div class="oc-empty">
-                    <div class="icon"><i class="fas {{ $isOnline ? 'fa-laptop-house' : 'fa-chalkboard-teacher' }}"></i></div>
-                    <h3>{{ __('student.no_offline_courses') }}</h3>
-                    <p>{{ __('student.no_offline_courses_desc') }}</p>
+            <div class="col-span-full rounded-xl p-10 sm:p-12 text-center bg-gray-50 border border-dashed border-gray-200">
+                <div class="w-16 h-16 bg-sky-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-sky-600">
+                    <i class="fas fa-chalkboard-teacher text-2xl"></i>
                 </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">{{ __('student.no_offline_courses') }}</h3>
+                <p class="text-sm text-gray-500">{{ __('student.no_offline_courses_desc') }}</p>
+            </div>
             @endif
         @endforelse
 
         @foreach(($bookings ?? collect()) as $booking)
             @php
                 $course = $booking->course;
-                $bookingOk = $booking->status === 'approved';
+                $bookingStatusClass = $booking->status === 'approved'
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-amber-100 text-amber-700';
+                $bookingStatusText = $booking->status === 'approved' ? 'حجز مقبول' : 'حجز قيد المراجعة';
             @endphp
             @if($course)
-                <div class="oc-row is-static" role="listitem">
-                    <div class="oc-ico warn" aria-hidden="true"><i class="fas fa-hourglass-half"></i></div>
-                    <div class="oc-body">
-                        <h3>{{ $course->title }}</h3>
-                        <p class="meta">
+                <div class="offline-card block overflow-hidden border-dashed border-2">
+                    <div class="h-32 bg-amber-50 flex items-center justify-center text-amber-600 flex-shrink-0">
+                        <i class="fas fa-hourglass-half text-3xl"></i>
+                    </div>
+                    <div class="p-4">
+                        <div class="flex items-start justify-between gap-2 mb-2">
+                            <h3 class="text-base font-bold text-gray-900 line-clamp-2 leading-snug flex-1 min-w-0">{{ $course->title }}</h3>
+                            <span class="px-2 py-0.5 rounded-md text-xs font-semibold {{ $bookingStatusClass }} flex-shrink-0">
+                                {{ $bookingStatusText }}
+                            </span>
+                        </div>
+                        <p class="text-xs text-gray-500 mb-2">
                             {{ $course->instructor->name ?? '—' }}
-                            · تاريخ الحجز: {{ optional($booking->created_at)->format('Y-m-d') }}
-                            @if($booking->assignedGroup || $booking->requestedGroup)
-                                · {{ $booking->assignedGroup->name ?? $booking->requestedGroup->name }}
+                            @if($course->locationModel || $course->location)
+                                · {{ $course->locationModel->name ?? $course->location ?? '—' }}
                             @endif
                         </p>
-                        <span class="oc-badge {{ $bookingOk ? 'oc-badge-ok' : 'oc-badge-warn' }}">
-                            {{ $bookingOk ? 'حجز مقبول' : 'حجز قيد المراجعة' }}
-                        </span>
-                        <p class="meta" style="margin-top:8px">سيظهر الكورس كمفعّل بعد اعتماد التسجيل النهائي من الإدارة.</p>
+                        <div class="text-xs text-gray-600 mb-2">
+                            <i class="fas fa-calendar-alt ml-1"></i>تاريخ الحجز: {{ optional($booking->created_at)->format('Y-m-d') }}
+                        </div>
+                        @if($booking->requestedGroup || $booking->assignedGroup)
+                            <div class="text-xs text-gray-600 mb-2">
+                                <i class="fas fa-users-cog ml-1"></i>
+                                المجموعة:
+                                {{ $booking->assignedGroup->name ?? $booking->requestedGroup->name ?? '—' }}
+                            </div>
+                        @endif
+                        <div class="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-md px-2 py-1">
+                            سيظهر الكورس كـ "مفعّل" بعد اعتماد التسجيل النهائي من الإدارة.
+                        </div>
                     </div>
                 </div>
             @endif
@@ -124,7 +184,7 @@
     </div>
 
     @if($enrollments->hasPages())
-        <div style="margin-top:20px;display:flex;justify-content:center">
+        <div class="flex justify-center">
             {{ $enrollments->links() }}
         </div>
     @endif

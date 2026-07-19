@@ -184,6 +184,30 @@
 
             {{-- المحتوى — العمود الأيسر في RTL --}}
             <main class="learn-main" id="learn-main-scroll">
+                {{-- Gamification strip --}}
+                <div class="learn-achievements">
+                    <div class="learn-achievement-card">
+                        <div class="learn-achievement-icon" style="background:#EFF6FF;color:#2563EB"><i class="fas fa-chart-line"></i></div>
+                        <div class="learn-achievement-value learn-progress-pct">{{ number_format($progressPct, 0) }}%</div>
+                        <div class="learn-achievement-label">إكمال الكورس</div>
+                    </div>
+                    <div class="learn-achievement-card">
+                        <div class="learn-achievement-icon" style="background:#ECFDF5;color:#10B981"><i class="fas fa-check-double"></i></div>
+                        <div class="learn-achievement-value learn-progress-count">{{ $completedLessons ?? 0 }}/{{ $totalLessons ?? 0 }}</div>
+                        <div class="learn-achievement-label">دروس مكتملة</div>
+                    </div>
+                    <div class="learn-achievement-card">
+                        <div class="learn-achievement-icon" style="background:#FFF7ED;color:#F59E0B"><i class="fas fa-fire"></i></div>
+                        <div class="learn-achievement-value" x-text="streakDays">0</div>
+                        <div class="learn-achievement-label">أيام متتالية</div>
+                    </div>
+                    <div class="learn-achievement-card">
+                        <div class="learn-achievement-icon" style="background:#F0FDFA;color:#06B6D4"><i class="fas fa-star"></i></div>
+                        <div class="learn-achievement-value" x-text="xpPoints">{{ (int)(($completedLessons ?? 0) * 50) }}</div>
+                        <div class="learn-achievement-label">نقاط XP</div>
+                    </div>
+                </div>
+
                 <div x-show="currentSectionDescription" x-transition class="mb-4 p-4 rounded-2xl border border-[#E2E8F0] bg-white text-sm text-[#64748B] leading-relaxed">
                     <p class="whitespace-pre-wrap" x-text="currentSectionDescription"></p>
                 </div>
@@ -192,23 +216,24 @@
                 <div x-show="(selectedLesson && showVideoPlayer) || (selectedLecture && showVideoPlayer)"
                      class="learn-video-hero learn-video-hero-main lesson-video-viewer mb-5">
                     <div class="learn-video-progress-bar flex-shrink-0" id="learn-watch-percent-bar">
-                        <div class="learn-video-progress-meta">
-                            <span class="learn-video-progress-label">نسبة المشاهدة</span>
+                        <div class="flex items-center justify-between gap-2 mb-1.5">
+                            <span class="text-sm font-semibold text-sky-300">نسبة المشاهدة</span>
                             <template x-if="selectedLecture">
-                                <span id="lecture-watch-pct-text" class="learn-video-progress-value tabular-nums">0.0%</span>
+                                <span id="lecture-watch-pct-text" class="text-sm font-bold text-white tabular-nums">0.0%</span>
                             </template>
                             <span x-show="selectedLesson && showVideoPlayer"
                                   x-text="(Math.round((videoProgressPercent || 0) * 10) / 10).toFixed(1) + '%'"
-                                  class="learn-video-progress-value tabular-nums">0.0%</span>
+                                  class="text-sm font-bold text-white tabular-nums">0.0%</span>
                         </div>
-                        <div class="learn-video-progress-track">
+                        <div class="h-2.5 bg-white/10 rounded-full overflow-hidden">
                             <template x-if="selectedLecture">
                                 <div id="lecture-watch-pct-fill"
-                                     class="learn-video-progress-fill"
-                                     style="width: 0%"></div>
+                                     class="h-full rounded-full transition-all duration-300 min-w-[2px]"
+                                     style="width: 0%; background: linear-gradient(270deg,#38bdf8,#0ea5e9);"></div>
                             </template>
                             <div x-show="selectedLesson && showVideoPlayer"
-                                 class="learn-video-progress-fill"
+                                 class="h-full rounded-full transition-all duration-300 min-w-[2px]"
+                                 style="background: linear-gradient(270deg,#38bdf8,#0ea5e9);"
                                  :style="'width: ' + Math.min(100, Math.max(0, videoProgressPercent || 0)) + '%'"></div>
                         </div>
                     </div>

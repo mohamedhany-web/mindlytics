@@ -1,275 +1,183 @@
-@extends('layouts.student-dashboard')
+@extends('layouts.app')
 
-@section('title', __('student.portfolio_create_title'))
-
-@php
-    $types = [
-        'web_app' => ['label' => __('student.portfolio_type_web_app'), 'icon' => 'fa-globe'],
-        'mobile_app' => ['label' => __('student.portfolio_type_mobile_app'), 'icon' => 'fa-mobile-alt'],
-        'api' => ['label' => __('student.portfolio_type_api'), 'icon' => 'fa-plug'],
-        'library' => ['label' => __('student.portfolio_type_library'), 'icon' => 'fa-book'],
-        'script' => ['label' => __('student.portfolio_type_script'), 'icon' => 'fa-file-code'],
-        'design' => ['label' => __('student.portfolio_type_design'), 'icon' => 'fa-palette'],
-        'game' => ['label' => __('student.portfolio_type_game'), 'icon' => 'fa-gamepad'],
-        'desktop' => ['label' => __('student.portfolio_type_desktop'), 'icon' => 'fa-desktop'],
-        'cli' => ['label' => __('student.portfolio_type_cli'), 'icon' => 'fa-terminal'],
-        'other' => ['label' => __('student.portfolio_type_other'), 'icon' => 'fa-folder'],
-    ];
-    $ideas = [
-        __('student.portfolio_idea_web'),
-        __('student.portfolio_idea_api'),
-        __('student.portfolio_idea_lib'),
-        __('student.portfolio_idea_game'),
-        __('student.portfolio_idea_script'),
-        __('student.portfolio_idea_ui'),
-        __('student.portfolio_idea_mobile'),
-        __('student.portfolio_idea_cli'),
-        __('student.portfolio_idea_fullstack'),
-    ];
-@endphp
-
-@push('styles')
-@include('student.offline-courses.partials.los-styles')
-<style>
-    .pf-form label {
-        display: block; margin-bottom: 6px;
-        font-size: 12px; font-weight: 700; color: var(--ml-ink);
-    }
-    .pf-form .req { color: #b91c1c; }
-    .pf-form .hint { font-weight: 500; color: var(--ml-muted); font-size: 11px; }
-    .pf-form input[type="text"],
-    .pf-form input[type="url"],
-    .pf-form textarea,
-    .pf-form select {
-        width: 100%; padding: 11px 14px; border-radius: 12px;
-        border: 1px solid var(--ml-line); background: var(--ml-surface);
-        color: var(--ml-ink); font-family: inherit; font-size: 13px;
-    }
-    .pf-form textarea { min-height: 100px; resize: vertical; line-height: 1.6; }
-    .pf-form input:focus,
-    .pf-form textarea:focus,
-    .pf-form select:focus {
-        outline: none; border-color: rgba(73, 164, 162, 0.55);
-        box-shadow: 0 0 0 3px rgba(73, 164, 162, 0.15);
-    }
-    .pf-form .field { margin-bottom: 14px; }
-    .pf-grid-2 {
-        display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
-    }
-    .pf-grid-4 {
-        display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;
-    }
-    @media (max-width: 900px) {
-        .pf-grid-4 { grid-template-columns: 1fr 1fr; }
-    }
-    @media (max-width: 560px) {
-        .pf-grid-2, .pf-grid-4 { grid-template-columns: 1fr; }
-    }
-    .pf-types {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-        gap: 8px;
-    }
-    .pf-type {
-        position: relative; display: block; cursor: pointer; user-select: none;
-    }
-    .pf-type input {
-        position: absolute; inset: 0; opacity: 0; cursor: pointer; z-index: 2; margin: 0;
-    }
-    .pf-type .box {
-        display: flex; align-items: center; gap: 8px; min-height: 48px;
-        padding: 8px 10px; border-radius: 12px; border: 1px solid var(--ml-line);
-        background: var(--ml-well); transition: border-color var(--ml-fast) ease, background var(--ml-fast) ease;
-    }
-    .pf-type .box i {
-        width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
-        display: flex; align-items: center; justify-content: center;
-        background: rgba(73, 164, 162, 0.14); color: var(--ml-teal-deep); font-size: 12px;
-    }
-    .pf-type .box span { font-size: 12px; font-weight: 700; color: var(--ml-ink); }
-    .pf-type input:checked + .box {
-        border-color: rgba(73, 164, 162, 0.55);
-        background: rgba(73, 164, 162, 0.1);
-        box-shadow: 0 0 0 2px rgba(73, 164, 162, 0.15);
-    }
-    .pf-ideas {
-        display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
-    }
-    .pf-ideas span {
-        display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px;
-        border-radius: 8px; font-size: 11px; font-weight: 700;
-        background: var(--ml-well); color: var(--ml-muted); border: 1px solid var(--ml-line);
-    }
-    .pf-drop {
-        border: 1px dashed rgba(73, 164, 162, 0.4); border-radius: 12px;
-        padding: 14px; background: rgba(73, 164, 162, 0.04);
-    }
-    .pf-drop input[type="file"] { width: 100%; font-size: 12px; color: var(--ml-muted); }
-    .pf-actions {
-        display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end;
-        margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--ml-line);
-    }
-</style>
-@endpush
+@section('title', 'رفع مشروع - البورتفوليو')
+@section('header', 'رفع مشروع جديد')
 
 @section('content')
-<div class="oc">
-    <header class="oc-chrome">
-        <div>
-            <nav class="oc-crumb" aria-label="{{ __('student.portfolio_create_title') }}">
-                <a href="{{ route('dashboard') }}">{{ __('student.learning_center') }}</a>
-                <span aria-hidden="true">/</span>
-                <a href="{{ route('student.portfolio.index') }}">{{ __('student.my_projects_title') }}</a>
-                <span aria-hidden="true">/</span>
-                <span style="color:var(--ml-ink);font-weight:700">{{ __('student.portfolio_create_title') }}</span>
-            </nav>
-            <h1>{{ __('student.portfolio_create_title') }}</h1>
-            <p class="sub">{{ __('student.portfolio_create_subtitle') }}</p>
+<div class="w-full max-w-7xl mx-auto">
+    {{-- أفكار سريعة --}}
+    <div class="mb-6 p-4 rounded-2xl bg-gradient-to-r from-[#2CA9BD]/10 to-[#65DBE4]/10 border border-[#2CA9BD]/20">
+        <h3 class="text-sm font-bold text-[#1F3A56] mb-3 flex items-center gap-2">
+            <i class="fas fa-lightbulb text-[#2CA9BD]"></i>
+            أفكار لمشاريعك
+        </h3>
+        <p class="text-xs text-gray-600 mb-2">مثلاً: تطبيق ويب، API، لعبة، مكتبة، سكربت أتمتة، واجهة تصميم، تطبيق موبايل، أداة سطر أوامر...</p>
+        <div class="flex flex-wrap gap-2">
+            @foreach(['تطبيق ويب', 'API', 'مكتبة برمجية', 'لعبة', 'سكربت أتمتة', 'تصميم واجهة', 'تطبيق موبايل', 'أداة CLI', 'مشروع full-stack'] as $idea)
+                <span class="inline-block px-3 py-1 rounded-full text-xs font-medium bg-white/80 text-[#1F3A56] border border-[#2CA9BD]/30">{{ $idea }}</span>
+            @endforeach
         </div>
-    </header>
+    </div>
 
     @if($errors->any())
-        <div class="oc-panel" style="border-color:rgba(239,68,68,0.35);background:rgba(239,68,68,0.08);margin-bottom:16px;color:#b91c1c;font-size:13px">
-            <ul style="margin:0;padding-inline-start:18px">
+        <div class="rounded-2xl bg-red-50 border-2 border-red-200 px-6 py-4 mb-6">
+            <ul class="list-disc list-inside text-red-800 text-sm">
                 @foreach($errors->all() as $e)
                     <li>{{ $e }}</li>
                 @endforeach
             </ul>
         </div>
     @endif
-    @if(session('error'))
-        <div class="oc-panel" style="border-color:rgba(239,68,68,0.35);background:rgba(239,68,68,0.08);margin-bottom:16px;color:#b91c1c;font-size:13px;font-weight:600">
-            {{ session('error') }}
-        </div>
-    @endif
 
-    <section class="oc-panel" style="margin-bottom:16px">
-        <p class="oc-label"><i class="fas fa-lightbulb" style="color:var(--ml-teal-deep);margin-inline-end:6px"></i>{{ __('student.portfolio_ideas_title') }}</p>
-        <p style="margin:0;font-size:12px;color:var(--ml-muted);line-height:1.55">{{ __('student.portfolio_ideas_hint') }}</p>
-        <div class="pf-ideas">
-            @foreach($ideas as $idea)
-                <span>{{ $idea }}</span>
-            @endforeach
+    <div class="bg-white rounded-2xl border-2 border-gray-200 shadow-xl overflow-hidden">
+        <div class="bg-gradient-to-r from-[#2CA9BD] to-[#65DBE4] px-6 py-4">
+            <h2 class="text-lg font-black text-white flex items-center gap-2">
+                <i class="fas fa-plus-circle"></i>
+                إضافة مشروع للبورتفوليو
+            </h2>
+            <p class="text-white/90 text-sm mt-1">أضف مشروعك بعد إتمام كورس أو مسار. سيُراجع من المدرب ثم يُنشر في المعرض. يكفي اختيار المسار التعليمي أو الكورس (أحدهما أو كلاهما).</p>
         </div>
-    </section>
 
-    <section class="oc-panel">
-        <p class="oc-label">{{ __('student.portfolio_form_heading') }}</p>
-        <form action="{{ route('student.portfolio.store') }}" method="POST" enctype="multipart/form-data" class="pf-form">
+        <form action="{{ route('student.portfolio.store') }}" method="POST" enctype="multipart/form-data" class="p-6 md:p-8">
             @csrf
 
-            <div class="field">
-                <label for="pf-title">{{ __('student.portfolio_title_label') }} <span class="req">*</span></label>
-                <input id="pf-title" type="text" name="title" value="{{ old('title') }}" required
-                       placeholder="{{ __('student.portfolio_title_placeholder') }}">
-            </div>
-
-            <div class="field">
-                <label>{{ __('student.portfolio_type_label') }}</label>
-                <div class="pf-types">
-                    @foreach($types as $value => $meta)
-                        <label class="pf-type">
-                            <input type="radio" name="project_type" value="{{ $value }}" {{ old('project_type') == $value ? 'checked' : '' }}>
-                            <span class="box">
-                                <i class="fas {{ $meta['icon'] }}"></i>
-                                <span>{{ $meta['label'] }}</span>
-                            </span>
-                        </label>
-                    @endforeach
+            {{-- صف واحد بعرض الصفحة: عنوان + نوع المشروع --}}
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+                <div class="lg:col-span-5">
+                    <label class="block text-sm font-bold text-gray-900 mb-2">عنوان المشروع <span class="text-red-500">*</span></label>
+                    <input type="text" name="title" value="{{ old('title') }}" required
+                           placeholder="مثال: نظام إدارة مهام بلارافيل"
+                           class="w-full rounded-xl border-2 border-[#2CA9BD]/20 px-4 py-3 focus:border-[#2CA9BD] focus:ring-2 focus:ring-[#2CA9BD]/20">
+                </div>
+                <div class="lg:col-span-7">
+                    <label class="block text-sm font-bold text-gray-900 mb-3">نوع المشروع</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2">
+                        @php
+                            $types = [
+                                'web_app' => ['تطبيق ويب', 'fa-globe', 'from-blue-500 to-blue-600'],
+                                'mobile_app' => ['موبايل', 'fa-mobile-alt', 'from-green-500 to-green-600'],
+                                'api' => ['API', 'fa-plug', 'from-purple-500 to-purple-600'],
+                                'library' => ['مكتبة', 'fa-book', 'from-amber-500 to-amber-600'],
+                                'script' => ['سكربت', 'fa-file-code', 'from-teal-500 to-teal-600'],
+                                'design' => ['تصميم', 'fa-palette', 'from-pink-500 to-pink-600'],
+                                'game' => ['لعبة', 'fa-gamepad', 'from-red-500 to-red-600'],
+                                'desktop' => ['سطح مكتب', 'fa-desktop', 'from-indigo-500 to-indigo-600'],
+                                'cli' => ['CLI', 'fa-terminal', 'from-gray-600 to-gray-700'],
+                                'other' => ['أخرى', 'fa-folder', 'from-gray-400 to-gray-500'],
+                            ];
+                        @endphp
+                        @foreach($types as $value => $label)
+                            <label class="relative block cursor-pointer select-none min-h-[3.5rem]">
+                                <input type="radio" name="project_type" value="{{ $value }}"
+                                       {{ old('project_type') == $value ? 'checked' : '' }}
+                                       class="peer absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                                <span class="flex items-center gap-2 p-2.5 rounded-xl border-2 transition-all border-gray-200 hover:border-[#2CA9BD]/50 hover:bg-gray-50 flex h-full pointer-events-none peer-checked:border-[#2CA9BD] peer-checked:bg-[#2CA9BD]/10 peer-checked:ring-2 peer-checked:ring-[#2CA9BD]/30">
+                                    <span class="w-7 h-7 rounded-lg bg-gradient-to-br {{ $label[2] }} flex items-center justify-center text-white text-xs flex-shrink-0">
+                                        <i class="fas {{ $label[1] }}"></i>
+                                    </span>
+                                    <span class="text-xs font-semibold text-gray-800 truncate">{{ $label[0] }}</span>
+                                </span>
+                            </label>
+                        @endforeach
+                    </div>
                 </div>
             </div>
 
-            <div class="field">
-                <label for="pf-desc">{{ __('student.portfolio_desc_label') }}</label>
-                <textarea id="pf-desc" name="description" rows="3"
-                          placeholder="{{ __('student.portfolio_desc_placeholder') }}">{{ old('description') }}</textarea>
+            {{-- صف: الوصف بعرض كامل --}}
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-gray-900 mb-2">الوصف (اختياري)</label>
+                <textarea name="description" rows="3" placeholder="اشرح فكرة المشروع، التقنيات المستخدمة، وما تعلمته..."
+                          class="w-full rounded-xl border-2 border-[#2CA9BD]/20 px-4 py-3 focus:border-[#2CA9BD] focus:ring-2 focus:ring-[#2CA9BD]/20">{{ old('description') }}</textarea>
             </div>
 
-            <div class="pf-grid-4" style="margin-bottom:14px">
-                <div class="field" style="margin:0">
-                    <label for="pf-github"><i class="fab fa-github" style="margin-inline-end:4px"></i>{{ __('student.portfolio_github_label') }}</label>
-                    <input id="pf-github" type="url" name="github_url" value="{{ old('github_url') }}" placeholder="https://github.com/...">
-                </div>
-                <div class="field" style="margin:0">
-                    <label for="pf-live">{{ __('student.portfolio_live_url_label') }}</label>
-                    <input id="pf-live" type="url" name="project_url" value="{{ old('project_url') }}" placeholder="https://demo.example.com">
-                </div>
-                <div class="field" style="margin:0">
-                    <label for="pf-path">
-                        {{ __('student.portfolio_path_label') }}
-                        <span class="hint">{{ __('student.portfolio_path_hint') }}</span>
+            {{-- صف بعرض الصفحة: GitHub + رابط حي + المسار + الكورس --}}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm font-bold text-gray-900 mb-2">
+                        <i class="fab fa-github text-gray-700 ml-1"></i>
+                        رابط GitHub
                     </label>
-                    <select id="pf-path" name="academic_year_id">
-                        <option value="">{{ __('student.portfolio_path_placeholder') }}</option>
+                    <input type="url" name="github_url" value="{{ old('github_url') }}"
+                           placeholder="https://github.com/..."
+                           class="w-full rounded-xl border-2 border-[#2CA9BD]/20 px-4 py-3 focus:border-[#2CA9BD] focus:ring-2 focus:ring-[#2CA9BD]/20">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-900 mb-2">رابط المشروع الحي</label>
+                    <input type="url" name="project_url" value="{{ old('project_url') }}"
+                           placeholder="https://demo.example.com"
+                           class="w-full rounded-xl border-2 border-[#2CA9BD]/20 px-4 py-3 focus:border-[#2CA9BD] focus:ring-2 focus:ring-[#2CA9BD]/20">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-900 mb-2">المسار التعليمي <span class="text-gray-500 font-normal text-xs">(أحدهما أو كلاهما)</span></label>
+                    <select name="academic_year_id" class="w-full rounded-xl border-2 border-[#2CA9BD]/20 px-4 py-3 focus:border-[#2CA9BD] focus:ring-2 focus:ring-[#2CA9BD]/20">
+                        <option value="">-- اختر المسار --</option>
                         @forelse($learningPaths as $path)
                             <option value="{{ $path->id }}" {{ old('academic_year_id') == $path->id ? 'selected' : '' }}>{{ $path->name }}</option>
                         @empty
-                            <option value="" disabled>{{ __('student.portfolio_path_empty') }}</option>
+                            <option value="" disabled>لا يوجد مسارات مسجّل فيها</option>
                         @endforelse
                     </select>
                 </div>
-                <div class="field" style="margin:0">
-                    <label for="pf-course">
-                        {{ __('student.portfolio_course_label') }}
-                        <span class="hint">{{ __('student.portfolio_path_hint') }}</span>
-                    </label>
-                    <select id="pf-course" name="advanced_course_id">
-                        <option value="">{{ __('student.portfolio_course_placeholder') }}</option>
+                <div>
+                    <label class="block text-sm font-bold text-gray-900 mb-2">الكورس <span class="text-gray-500 font-normal text-xs">(أحدهما أو كلاهما)</span></label>
+                    <select name="advanced_course_id" class="w-full rounded-xl border-2 border-[#2CA9BD]/20 px-4 py-3 focus:border-[#2CA9BD] focus:ring-2 focus:ring-[#2CA9BD]/20">
+                        <option value="">-- اختر الكورس --</option>
                         @forelse($courses as $course)
                             <option value="{{ $course->id }}" {{ old('advanced_course_id') == $course->id ? 'selected' : '' }}>{{ $course->title }}</option>
                         @empty
-                            <option value="" disabled>{{ __('student.portfolio_course_empty') }}</option>
+                            <option value="" disabled>لا يوجد كورسات مشتراة</option>
                         @endforelse
                     </select>
                 </div>
             </div>
 
-            <div class="field">
-                <label for="portfolio-images">
-                    {{ __('student.portfolio_images_label') }}
-                    <span class="hint">{{ __('student.portfolio_images_hint') }}</span>
-                </label>
-                <div class="pf-drop">
-                    <input type="file" name="images[]" accept="image/*" multiple id="portfolio-images" data-max="5">
-                    <p class="hint" style="margin:8px 0 0" id="images-hint">{{ __('student.portfolio_images_select') }}</p>
+            {{-- صف: صور المشروع (حد أقصى 5) + أزرار --}}
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end pt-4 border-t border-gray-200">
+                <div class="lg:col-span-6">
+                    <label class="block text-sm font-bold text-gray-900 mb-2">صور من المشروع <span class="text-gray-500 font-normal">(اختياري، حد أقصى 5 صور، كل صورة 2 ميجابايت)</span></label>
+                    <div class="border-2 border-dashed border-[#2CA9BD]/30 rounded-xl px-4 py-3 bg-gray-50/50 hover:bg-gray-50 transition-colors">
+                        <input type="file" name="images[]" accept="image/*" multiple
+                               data-max="5" id="portfolio-images"
+                               class="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:font-semibold file:bg-[#2CA9BD]/10 file:text-[#2CA9BD] hover:file:bg-[#2CA9BD]/20">
+                        <p class="text-xs text-gray-500 mt-2" id="images-hint">يمكنك اختيار أكثر من صورة (حد أقصى 5)</p>
+                    </div>
+                </div>
+                <div class="lg:col-span-6 flex flex-col sm:flex-row gap-3 justify-end">
+                    <a href="{{ route('student.portfolio.index') }}" class="inline-flex items-center justify-center gap-2 border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-xl font-bold hover:bg-gray-50 transition-all order-2 sm:order-1">
+                        <i class="fas fa-arrow-right"></i>
+                        إلغاء والعودة
+                    </a>
+                    <button type="submit" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-[#2CA9BD] to-[#65DBE4] text-white px-6 py-3 rounded-xl font-bold hover:shadow-lg transition-all order-1 sm:order-2">
+                        <i class="fas fa-upload"></i>
+                        رفع المشروع
+                    </button>
                 </div>
             </div>
-
-            <div class="pf-actions">
-                <a href="{{ route('student.portfolio.index') }}" class="oc-btn oc-btn-quiet">{{ __('student.portfolio_cancel') }}</a>
-                <button type="submit" class="oc-btn">
-                    <i class="fas fa-upload text-xs"></i> {{ __('student.portfolio_submit') }}
-                </button>
-            </div>
         </form>
-    </section>
+    </div>
 </div>
-@endsection
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function() {
     var input = document.getElementById('portfolio-images');
     var hint = document.getElementById('images-hint');
-    if (!input || !hint) return;
-
-    var msgSelect = @json(__('student.portfolio_images_select'));
-    var msgSelected = @json(__('student.portfolio_images_selected'));
-    var msgTrimmed = @json(__('student.portfolio_images_trimmed'));
-
-    input.addEventListener('change', function () {
-        var files = this.files;
-        if (files.length > 5) {
-            hint.textContent = msgTrimmed.replace(':count', files.length);
-            var dt = new DataTransfer();
-            for (var i = 0; i < 5; i++) dt.items.add(files[i]);
-            this.files = dt.files;
-        } else if (files.length > 0) {
-            hint.textContent = msgSelected.replace(':count', files.length);
-        } else {
-            hint.textContent = msgSelect;
-        }
-    });
+    if (input && hint) {
+        input.addEventListener('change', function() {
+            var files = this.files;
+            if (files.length > 5) {
+                hint.textContent = 'تم تحديد ' + files.length + ' صور. سيتم أخذ أول 5 صور فقط.';
+                var dt = new DataTransfer();
+                for (var i = 0; i < 5; i++) dt.items.add(files[i]);
+                this.files = dt.files;
+            } else if (files.length > 0) {
+                hint.textContent = 'تم اختيار ' + files.length + ' صورة (حد أقصى 5).';
+            } else {
+                hint.textContent = 'يمكنك اختيار أكثر من صورة (حد أقصى 5)';
+            }
+        });
+    }
 });
 </script>
 @endpush
+@endsection

@@ -1,252 +1,37 @@
-@extends('layouts.student-dashboard')
+@extends('layouts.app')
 
 @section('title', $course->localized('title') . ' - ' . __('student.my_courses'))
-
-@php
-    $nextLessonId = null;
-    $nextLessonTitle = null;
-    if (isset($sections) && $sections->count() > 0) {
-        foreach ($sections as $section) {
-            foreach ($section->activeItems as $curriculumItem) {
-                $entity = $curriculumItem->item;
-                if (! $entity instanceof \App\Models\CourseLesson) {
-                    continue;
-                }
-                $lp = $entity->progress->first();
-                if (! $lp || ! $lp->is_completed) {
-                    $nextLessonId = $entity->id;
-                    $nextLessonTitle = $entity->title;
-                    break 2;
-                }
-            }
-        }
-    } else {
-        foreach ($course->lessons->sortBy('order') as $lesson) {
-            $lp = $lesson->progress->first();
-            if (! $lp || ! $lp->is_completed) {
-                $nextLessonId = $lesson->id;
-                $nextLessonTitle = $lesson->title;
-                break;
-            }
-        }
-    }
-    $learnUrl = $nextLessonId
-        ? route('my-courses.learn', $course).'?lesson='.$nextLessonId
-        : route('my-courses.learn', $course);
-@endphp
+@section('header', $course->localized('title'))
 
 @push('styles')
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@500;700&display=swap" rel="stylesheet">
 <style>
-    .cs {
-        --ml-teal: #49A4A2;
-        --ml-teal-deep: #2f7f7d;
-        --ml-yellow: #FFD23F;
-        --ml-yellow-ink: #5c4500;
-        --ml-bg: #F7F9FC;
-        --ml-surface: #FFFFFF;
-        --ml-well: #EEF2F7;
-        --ml-ink: #1A2238;
-        --ml-muted: #475569;
-        --ml-line: rgba(26, 34, 56, 0.08);
-        --ml-r: 14px;
-        --ml-fast: 140ms;
-        --ml-slow: 400ms;
-        --ml-ease: cubic-bezier(0.22, 1, 0.36, 1);
-        font-family: 'IBM Plex Sans Arabic', 'Tajawal', 'Cairo', sans-serif;
-        color: var(--ml-ink);
-        width: 100%;
-        max-width: none;
-        padding-block: 4px 32px;
-    }
-    .cs-reveal { animation: csRise var(--ml-slow) var(--ml-ease) both; animation-delay: var(--reveal-delay, 0ms); }
-    @keyframes csRise {
-        from { opacity: 0; transform: translateY(8px); }
-        to { opacity: 1; transform: none; }
-    }
-    .cs-chrome {
-        display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
-        gap: 12px; padding: 8px 0 14px; border-bottom: 1px solid var(--ml-line); margin-bottom: 20px;
-    }
-    .cs-crumb { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; color: var(--ml-muted); margin-bottom: 6px; }
-    .cs-crumb a { color: var(--ml-teal-deep); font-weight: 600; text-decoration: none; }
-    .cs-crumb a:hover { text-decoration: underline; }
-    .cs-chrome h1 { margin: 0; font-size: clamp(1.2rem, 2vw, 1.5rem); font-weight: 700; letter-spacing: -0.015em; line-height: 1.3; max-width: 28ch; }
-    .cs-chrome .sub { margin: 4px 0 0; font-size: 13px; color: var(--ml-muted); }
-    .cs-signals { display: flex; flex-wrap: wrap; gap: 8px; }
-    .cs-signal {
-        display: inline-flex; align-items: center; gap: 6px; min-height: 28px;
-        padding: 0 10px; border-radius: 999px; font-size: 11px; font-weight: 700;
-        background: var(--ml-well); color: var(--ml-muted);
-    }
-    .cs-signal-live { background: rgba(73, 164, 162, 0.14); color: var(--ml-teal-deep); }
-    .cs-signal-hot { background: rgba(255, 210, 63, 0.35); color: var(--ml-yellow-ink); }
-
-    .cs-stage {
-        position: relative; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(180px, 0.55fr);
-        gap: 20px; align-items: stretch; padding: 0; margin-bottom: 20px;
-        background: var(--ml-surface); border-radius: calc(var(--ml-r) + 4px);
-        border: 1px solid var(--ml-line);
-        box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset, 0 10px 30px rgba(26, 34, 56, 0.04);
-        overflow: hidden;
-    }
-    .cs-stage::before {
-        content: ''; position: absolute; inset-block: 16px; inset-inline-start: 0; width: 3px; z-index: 2;
-        border-radius: 999px; background: linear-gradient(180deg, var(--ml-teal), rgba(73,164,162,0.2));
-    }
-    .cs-stage-body { padding: 20px 22px; min-width: 0; }
-    .cs-eyebrow {
-        display: inline-flex; align-items: center; gap: 8px; margin-bottom: 8px;
-        font-size: 11px; font-weight: 700; color: var(--ml-teal-deep);
-    }
-    .cs-eyebrow em {
-        font-style: normal; padding: 2px 8px; border-radius: 6px;
-        background: rgba(73, 164, 162, 0.12); color: var(--ml-teal-deep);
-    }
-    .cs-stage h2 {
-        margin: 0 0 6px; font-size: clamp(1.15rem, 1.8vw, 1.4rem); font-weight: 700;
-        line-height: 1.35; letter-spacing: -0.01em;
-    }
-    .cs-copy { margin: 0; font-size: 13px; line-height: 1.65; color: var(--ml-muted); max-width: 52ch; }
-    .cs-meter {
-        height: 4px; width: 100%; max-width: 260px; margin-top: 14px; border-radius: 999px;
-        background: var(--ml-well); overflow: hidden;
-    }
-    .cs-meter > i { display: block; height: 100%; background: var(--ml-teal); border-radius: inherit; }
-    .cs-stage-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
-    .cs-btn {
-        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-        min-height: 44px; padding: 0 18px; border-radius: 12px; background: var(--ml-teal);
-        color: #fff !important; font-size: 14px; font-weight: 700; text-decoration: none !important;
-        border: 0; box-shadow: 0 8px 18px rgba(73, 164, 162, 0.22);
-        transition: background var(--ml-fast) ease, transform var(--ml-fast) var(--ml-ease);
-    }
-    .cs-btn:hover { background: var(--ml-teal-deep); transform: translateY(-1px); }
-    .cs-btn-quiet {
-        background: transparent; color: var(--ml-ink) !important; box-shadow: none;
-        border: 1px solid var(--ml-line);
-    }
-    .cs-btn-quiet:hover { background: var(--ml-well); transform: none; }
-    .cs-cover {
-        position: relative; min-height: 180px;
-        background: linear-gradient(145deg, rgba(73,164,162,0.18), var(--ml-well));
-        display: flex; align-items: center; justify-content: center; color: var(--ml-teal-deep);
-    }
-    .cs-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-    .cs-cover .ph { position: relative; z-index: 1; text-align: center; padding: 16px; }
-    .cs-cover .ph i { font-size: 2rem; display: block; margin-bottom: 8px; }
-    .cs-cover .pct {
-        position: absolute; z-index: 2; top: 12px; inset-inline-start: 12px;
-        min-height: 28px; padding: 0 10px; border-radius: 8px;
-        background: rgba(255,255,255,0.92); border: 1px solid var(--ml-line);
-        font-size: 12px; font-weight: 700; color: var(--ml-teal-deep);
-        display: inline-flex; align-items: center;
-    }
-
-    .cs-pulse {
-        display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 1px; margin-bottom: 20px; background: var(--ml-line);
-        border: 1px solid var(--ml-line); border-radius: var(--ml-r); overflow: hidden;
-    }
-    .cs-pulse > div {
-        background: var(--ml-surface); padding: 14px 16px;
-        display: flex; flex-direction: column; gap: 4px;
-    }
-    .cs-pulse .lbl { font-size: 11px; font-weight: 700; color: var(--ml-muted); }
-    .cs-pulse .val { font-size: 1.25rem; font-weight: 700; color: var(--ml-ink); letter-spacing: -0.02em; }
-    .cs-pulse .val.teal { color: var(--ml-teal-deep); }
-    .cs-pulse .val.hot { color: var(--ml-yellow-ink); }
-
-    .cs-split {
-        display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.85fr);
-        gap: 16px; margin-bottom: 20px; align-items: start;
-    }
-    .cs-panel {
-        background: var(--ml-surface); border: 1px solid var(--ml-line);
-        border-radius: var(--ml-r); padding: 16px 18px;
-    }
-    .cs-label {
-        margin: 0 0 10px; font-size: 11px; font-weight: 700; color: var(--ml-muted);
-        letter-spacing: 0.02em;
-    }
-    .cs-panel p.body {
-        margin: 0; font-size: 13px; line-height: 1.7; color: var(--ml-ink);
-    }
-    .cs-facts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-    .cs-facts li {
-        display: flex; align-items: center; justify-content: space-between; gap: 12px;
-        padding: 10px 12px; border-radius: 10px; background: var(--ml-well);
-        font-size: 13px;
-    }
-    .cs-facts .k { color: var(--ml-muted); font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
-    .cs-facts .k i { color: var(--ml-teal-deep); width: 1rem; text-align: center; }
-    .cs-facts .v { font-weight: 700; color: var(--ml-ink); }
-
-    .cs-curriculum { margin-top: 4px; }
-    .cs-curriculum > .cs-label { margin-bottom: 12px; font-size: 12px; color: var(--ml-ink); }
-    .cs-section {
-        margin-bottom: 12px; background: var(--ml-surface); border: 1px solid var(--ml-line);
-        border-radius: var(--ml-r); overflow: hidden;
-    }
-    .cs-section-h {
-        display: flex; align-items: center; justify-content: space-between; gap: 10px;
-        padding: 12px 14px; background: var(--ml-well); border-bottom: 1px solid var(--ml-line);
-    }
-    .cs-section-h strong { font-size: 13px; font-weight: 700; }
-    .cs-section-h span { font-size: 11px; font-weight: 700; color: var(--ml-muted); }
-    .cs-section-d { margin: 0; padding: 8px 14px 0; font-size: 12px; color: var(--ml-muted); line-height: 1.5; }
-    .cs-items { list-style: none; margin: 0; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
-    .cs-item {
-        display: flex; align-items: center; gap: 12px; padding: 10px 12px;
-        border-radius: 10px; text-decoration: none !important; color: inherit !important;
-        border: 1px solid transparent; transition: background var(--ml-fast) ease, border-color var(--ml-fast) ease;
-    }
-    .cs-item:hover { background: rgba(73, 164, 162, 0.08); border-color: rgba(73, 164, 162, 0.2); }
-    .cs-item.is-locked { opacity: 0.55; pointer-events: none; }
-    .cs-item.is-done { background: rgba(16, 185, 129, 0.06); }
-    .cs-item.is-now { border-color: rgba(73, 164, 162, 0.35); background: rgba(73, 164, 162, 0.1); }
-    .cs-ico {
-        width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
-        display: flex; align-items: center; justify-content: center; font-size: 12px; color: #fff;
-        background: #94a3b8;
-    }
-    .cs-ico.done { background: #10b981; }
-    .cs-ico.now { background: var(--ml-teal); }
-    .cs-ico.lock { background: #64748b; }
-    .cs-ico.task { background: #8b5cf6; }
-    .cs-ico.exam { background: #6366f1; }
-    .cs-item .t { flex: 1; min-width: 0; }
-    .cs-item .t strong { display: block; font-size: 13px; font-weight: 700; line-height: 1.35; }
-    .cs-item .t small { display: block; margin-top: 2px; font-size: 11px; color: var(--ml-muted); font-weight: 600; }
-    .cs-item .go { font-size: 11px; font-weight: 700; color: var(--ml-teal-deep); white-space: nowrap; }
-
-    .cs-empty {
-        text-align: center; padding: 36px 20px; border: 1px dashed rgba(26,34,56,0.14);
-        border-radius: var(--ml-r); background: var(--ml-surface); color: var(--ml-muted); font-size: 13px;
-    }
-
-    @media (max-width: 900px) {
-        .cs-stage { grid-template-columns: 1fr; }
-        .cs-cover { min-height: 160px; order: -1; }
-        .cs-split { grid-template-columns: 1fr; }
-        .cs-pulse { grid-template-columns: 1fr; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-        .cs-reveal, .cs-btn, .cs-item { animation: none !important; transition: none !important; }
-    }
-
-    /* —— Focus mode (preserved) —— */
     @keyframes shimmer {
         0% { transform: translateX(-100%); }
         100% { transform: translateX(100%); }
     }
-    .animate-shimmer { animation: shimmer 2s infinite; }
-    .border-b-3 { border-bottom-width: 3px; }
-    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    
+    .animate-shimmer {
+        animation: shimmer 2s infinite;
+    }
+    
+    .border-b-3 {
+        border-bottom-width: 3px;
+    }
+    
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+    
+    /* تحسينات إضافية */
     .lesson-item, .lecture-item {
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
+    
     .lesson-item:hover, .lecture-item:hover {
         transform: translateX(-5px);
     }
@@ -1030,277 +815,126 @@
 @endpush
 
 @section('content')
-<div class="cs"
+<div class="min-h-screen bg-gray-50 py-6" 
      x-data="courseFocusMode()"
      @scroll.window="updateProgressBar()">
-
-    <header class="cs-chrome cs-reveal">
-        <div>
-            <nav class="cs-crumb" aria-label="{{ __('student.mc_breadcrumb') }}">
-                <a href="{{ route('dashboard') }}">{{ __('los.page_title') }}</a>
-                <span aria-hidden="true">/</span>
-                <a href="{{ route('my-courses.index') }}">{{ __('student.my_courses') }}</a>
-                <span aria-hidden="true">/</span>
-                <span style="color:var(--ml-ink);font-weight:700">{{ \Illuminate\Support\Str::limit($course->localized('title'), 40) }}</span>
-            </nav>
-            <h1>{{ $course->localized('title') }}</h1>
-            <p class="sub">
-                {{ collect([
-                    $course->academicYear->name ?? null,
-                    $course->teacher->name ?? null,
-                ])->filter()->implode(' · ') ?: __('student.mc_active_course') }}
-            </p>
+    <div class="w-full px-4 sm:px-6 lg:px-8">
+        <!-- العودة -->
+        <div class="mb-4">
+            <a href="{{ route('my-courses.index') }}" class="inline-flex items-center text-sky-600 hover:text-sky-700 text-sm font-medium">
+                <i class="fas fa-arrow-right ml-2"></i>
+                العودة إلى كورساتي
+            </a>
         </div>
-        <div class="cs-signals" aria-label="{{ __('student.mc_course_status') }}">
-            <span class="cs-signal cs-signal-live">{{ __('student.mc_active') }}</span>
-            <span class="cs-signal">{{ __('student.mc_completed_of', ['done' => $completedLessons, 'total' => $totalLessons]) }}</span>
-            <span class="cs-signal cs-signal-hot">{{ __('student.mc_points', ['count' => number_format((float) ($coursePoints ?? 0), 0)]) }}</span>
-        </div>
-    </header>
 
-    <section class="cs-stage cs-reveal" style="--reveal-delay:50ms" aria-label="{{ __('student.mc_continue_aria') }}">
-        <div class="cs-stage-body">
-            <div class="cs-eyebrow">
-                {{ __('student.mc_next_step') }}
-                <em>{{ $nextLessonTitle ? __('student.mc_kind_lesson') : __('student.mc_kind_curriculum') }}</em>
-            </div>
-            <h2>{{ $nextLessonTitle ?? __('student.mc_start_journey') }}</h2>
-            <p class="cs-copy">
-                @if($nextLessonTitle)
-                    {{ __('student.mc_resume_progress', ['pct' => $progress]) }}
-                @else
-                    {{ $course->description ? \Illuminate\Support\Str::limit(strip_tags($course->description), 140) : __('student.mc_curriculum_ready') }}
-                @endif
-            </p>
-            <div class="cs-meter" role="progressbar" aria-valuenow="{{ (int) $progress }}" aria-valuemin="0" aria-valuemax="100" aria-label="{{ __('student.mc_course_progress') }}">
-                <i style="width:{{ min(100, (float) $progress) }}%"></i>
-            </div>
-            <div class="cs-stage-actions">
-                <a class="cs-btn" href="{{ $learnUrl }}">
-                    <i class="fas fa-play text-xs"></i>
-                    {{ $progress > 0 ? __('student.continue_learning') : __('student.mc_start_learning') }}
-                </a>
-                <a class="cs-btn cs-btn-quiet" href="{{ route('my-courses.index') }}">{{ __('student.mc_back_to_courses') }}</a>
-            </div>
-        </div>
-        <div class="cs-cover" aria-hidden="true">
-            @if($course->thumbnail)
-                <img src="{{ asset('storage/' . $course->thumbnail) }}" alt="">
-            @else
-                <div class="ph">
-                    <i class="fas fa-graduation-cap"></i>
-                    <span style="font-size:12px;font-weight:700">{{ __('student.mc_course_label') }}</span>
-                </div>
-            @endif
-            <span class="pct">{{ $progress }}{{ app()->getLocale() === 'ar' ? '٪' : '%' }}</span>
-        </div>
-    </section>
-
-    <div class="cs-pulse cs-reveal" style="--reveal-delay:90ms" aria-label="{{ __('student.mc_progress_summary') }}">
-        <div>
-            <span class="lbl">{{ __('student.mc_progress') }}</span>
-            <span class="val teal">{{ $progress }}{{ app()->getLocale() === 'ar' ? '٪' : '%' }}</span>
-        </div>
-        <div>
-            <span class="lbl">{{ __('student.mc_lessons_done') }}</span>
-            <span class="val">{{ $completedLessons }} / {{ $totalLessons }}</span>
-        </div>
-        <div>
-            <span class="lbl">{{ __('student.mc_points_label') }}</span>
-            <span class="val hot">{{ number_format((float) ($coursePoints ?? 0), 0) }}</span>
-        </div>
-    </div>
-
-    <div class="cs-split cs-reveal" style="--reveal-delay:120ms">
-        <section class="cs-panel" aria-label="{{ __('student.mc_about_aria') }}">
-            <p class="cs-label">{{ __('student.mc_about') }}</p>
-            <p class="body">{{ $course->description ?: __('student.mc_no_description') }}</p>
-        </section>
-        <aside class="cs-panel" aria-label="{{ __('student.mc_info_aria') }}">
-            <p class="cs-label">{{ __('student.mc_details') }}</p>
-            <ul class="cs-facts">
-                <li>
-                    <span class="k"><i class="fas fa-layer-group"></i> {{ __('student.mc_level') }}</span>
-                    <span class="v">{{ $course->level ?? '—' }}</span>
-                </li>
-                <li>
-                    <span class="k"><i class="fas fa-clock"></i> {{ __('student.mc_duration') }}</span>
-                    <span class="v">{{ __('student.mc_hours', ['count' => $course->duration_hours ?? '—']) }}</span>
-                </li>
-                <li>
-                    <span class="k"><i class="fas fa-user-tie"></i> {{ __('student.mc_instructor') }}</span>
-                    <span class="v">{{ $course->teacher->name ?? '—' }}</span>
-                </li>
-            </ul>
-        </aside>
-    </div>
-
-    <section class="cs-curriculum cs-reveal" style="--reveal-delay:160ms" aria-label="{{ __('student.mc_curriculum_aria') }}">
-        <p class="cs-label">{{ __('student.mc_curriculum') }}</p>
-
-        @if(isset($sections) && $sections->count() > 0)
-            @foreach($sections as $section)
-                @php
-                    $visibleItems = $section->activeItems->filter(function ($curriculumItem) {
-                        $item = $curriculumItem->item;
-                        if (! $item) {
-                            return false;
-                        }
-                        if ($item instanceof \App\Models\Lecture) {
-                            return false;
-                        }
-
-                        return true;
-                    });
-                @endphp
-                @if($visibleItems->isEmpty())
-                    @continue
-                @endif
-                <div class="cs-section">
-                    <div class="cs-section-h">
-                        <strong>{{ $section->title }}</strong>
-                        <span>{{ __('student.mc_items_count', ['count' => $visibleItems->count()]) }}</span>
-                    </div>
-                    @if($section->description)
-                        <p class="cs-section-d">{{ $section->description }}</p>
+        <!-- معلومات الكورس - عرض كامل -->
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm mb-6 overflow-hidden">
+            <div class="flex flex-col lg:flex-row">
+                <!-- صورة الكورس -->
+                <div class="lg:w-2/5 h-52 lg:h-72 bg-sky-100 flex items-center justify-center relative overflow-hidden flex-shrink-0">
+                    @if($course->thumbnail)
+                        <img src="{{ asset('storage/' . $course->thumbnail) }}" alt="{{ $course->localized('title') }}" class="w-full h-full object-cover">
+                    @else
+                        <div class="text-sky-600 text-center">
+                            <i class="fas fa-graduation-cap text-4xl"></i>
+                            <p class="text-sm font-medium mt-2 text-sky-700">{{ $course->academicSubject->name ?? 'كورس' }}</p>
+                        </div>
                     @endif
-                    <ul class="cs-items">
-                        @foreach($visibleItems as $curriculumItem)
-                            @php
-                                $item = $curriculumItem->item;
-                                $isCompleted = false;
-                                $isCurrent = false;
-                                $isLocked = false;
-                                $href = null;
-                                $kind = __('student.mc_kind_item');
-                                $ico = 'lock';
+                    <div class="absolute top-3 left-3 bg-white rounded-lg px-3 py-1.5 shadow-sm border border-gray-100">
+                        <span class="text-sm font-bold text-sky-600">{{ $progress }}%</span>
+                    </div>
+                </div>
 
-                                if ($item instanceof \App\Models\CourseLesson) {
-                                    $kind = __('student.mc_kind_lesson');
-                                    $lessonProgress = $item->progress->first();
-                                    $isCompleted = $lessonProgress && $lessonProgress->is_completed;
-                                    $previousItems = $section->activeItems->where('order', '<', $curriculumItem->order);
-                                    $allPreviousCompleted = true;
-                                    foreach ($previousItems as $prevItem) {
-                                        if ($prevItem->item instanceof \App\Models\CourseLesson) {
-                                            $prevProgress = $prevItem->item->progress->first();
-                                            if (! $prevProgress || ! $prevProgress->is_completed) {
-                                                $allPreviousCompleted = false;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                    $isCurrent = ! $isCompleted && ($curriculumItem->order == 1 || $allPreviousCompleted);
-                                    $isLocked = ! $isCurrent && ! $isCompleted;
-                                    $ico = $isCompleted ? 'done' : ($isCurrent ? 'now' : 'lock');
-                                    if (! $isLocked) {
-                                        $href = route('my-courses.learn', $course).'?lesson='.$item->id;
-                                    }
-                                } elseif ($item instanceof \App\Models\Assignment) {
-                                    $kind = __('student.mc_kind_assignment');
-                                    $ico = 'task';
-                                    $href = route('my-courses.learn', $course);
-                                } elseif ($item instanceof \App\Models\AdvancedExam || $item instanceof \App\Models\Exam) {
-                                    $kind = __('student.mc_kind_exam');
-                                    $ico = 'exam';
-                                    $href = route('my-courses.learn', $course);
-                                }
-                                $rowClass = trim(($isCompleted ? 'is-done ' : '').($isCurrent ? 'is-now ' : '').($isLocked ? 'is-locked' : ''));
-                            @endphp
-                            @if($href)
-                                <li>
-                                    <a class="cs-item {{ $rowClass }}" href="{{ $href }}">
-                                        <span class="cs-ico {{ $ico }}">
-                                            @if($ico === 'done')
-                                                <i class="fas fa-check"></i>
-                                            @elseif($ico === 'now')
-                                                <i class="fas fa-play"></i>
-                                            @elseif($ico === 'task')
-                                                <i class="fas fa-tasks"></i>
-                                            @elseif($ico === 'exam')
-                                                <i class="fas fa-clipboard-check"></i>
-                                            @else
-                                                <i class="fas fa-lock"></i>
-                                            @endif
-                                        </span>
-                                        <span class="t">
-                                            <strong>{{ $item->title }}</strong>
-                                            <small>
-                                                {{ $kind }}
-                                                @if($item instanceof \App\Models\CourseLesson && $item->duration_minutes)
-                                                    · {{ __('student.mc_minutes', ['count' => $item->duration_minutes]) }}
-                                                @endif
-                                            </small>
-                                        </span>
-                                        <span class="go">{{ $isCompleted ? __('student.mc_review') : __('student.mc_open') }}</span>
-                                    </a>
-                                </li>
-                            @else
-                                <li>
-                                    <div class="cs-item {{ $rowClass }}">
-                                        <span class="cs-ico {{ $ico }}"><i class="fas fa-lock"></i></span>
-                                        <span class="t">
-                                            <strong>{{ $item->title }}</strong>
-                                            <small>{{ __('student.mc_locked_until_prev', ['kind' => $kind]) }}</small>
-                                        </span>
-                                    </div>
-                                </li>
-                            @endif
-                        @endforeach
-                    </ul>
+                <!-- تفاصيل الكورس -->
+                <div class="lg:flex-1 p-5 sm:p-6 lg:p-8">
+                    <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+                        <div class="min-w-0 flex-1">
+                            <h1 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2 leading-tight">{{ $course->localized('title') }}</h1>
+                            <p class="text-sm text-gray-500">
+                                {{ $course->academicYear->name ?? '—' }} · {{ $course->academicSubject->name ?? '—' }} · {{ $course->teacher->name ?? '—' }}
+                            </p>
+                        </div>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500 text-white">
+                            <i class="fas fa-check-circle"></i> مفعل
+                        </span>
+                    </div>
+
+                    @if($course->description)
+                        <p class="text-sm text-gray-600 mb-4 leading-relaxed line-clamp-2">{{ Str::limit($course->description, 180) }}</p>
+                    @endif
+
+                    <!-- التقدم والإحصائيات -->
+                    <div class="flex flex-wrap items-center gap-4 sm:gap-6 mb-5">
+                        <div class="flex-1 min-w-[200px]">
+                            <div class="flex items-center justify-between text-sm mb-1.5">
+                                <span class="font-medium text-gray-600">التقدم</span>
+                                <span class="font-bold text-sky-600">{{ $progress }}%</span>
+                            </div>
+                            <div class="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                                <div class="h-full bg-sky-500 rounded-full transition-all duration-500" style="width: {{ min($progress, 100) }}%;"></div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">{{ $progress }}% مكتمل</p>
+                        </div>
+                        <div class="flex gap-4">
+                            <div class="text-center px-4 py-2 bg-amber-50 rounded-lg border border-amber-100">
+                                <span class="text-lg font-bold text-amber-600 block"><i class="fas fa-star text-amber-500 ml-1"></i>{{ number_format((float)($coursePoints ?? 0), 0) }}</span>
+                                <span class="text-xs text-gray-600">نقاط</span>
+                            </div>
+                            <div class="text-center px-4 py-2 bg-emerald-50 rounded-lg border border-emerald-100">
+                                <span class="text-lg font-bold text-emerald-600 block">{{ $completedLessons }}</span>
+                                <span class="text-xs text-gray-600">مكتمل</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <a href="{{ route('my-courses.learn', $course) }}" 
+                       class="inline-flex items-center justify-center gap-2 bg-sky-500 hover:bg-sky-600 text-white px-6 py-3 rounded-lg font-semibold text-sm transition-colors">
+                        <i class="fas fa-play"></i>
+                        ابدأ التعلم
+                    </a>
                 </div>
-            @endforeach
-        @elseif($course->lessons->count() > 0)
-            <div class="cs-section">
-                <div class="cs-section-h">
-                    <strong>{{ __('student.mc_lessons') }}</strong>
-                    <span>{{ $totalLessons }}</span>
-                </div>
-                <ul class="cs-items">
-                    @foreach($course->lessons->sortBy('order') as $index => $lesson)
-                        @php
-                            $lessonProgress = $lesson->progress->first();
-                            $isCompleted = $lessonProgress && $lessonProgress->is_completed;
-                            $isCurrentLesson = ! $isCompleted && ($index == 0 || $course->lessons->take($index)->every(function ($prevLesson) {
-                                return $prevLesson->progress->isNotEmpty() && $prevLesson->progress->first()->is_completed;
-                            }));
-                            $isLocked = ! $isCurrentLesson && ! $isCompleted;
-                            $ico = $isCompleted ? 'done' : ($isCurrentLesson ? 'now' : 'lock');
-                            $rowClass = trim(($isCompleted ? 'is-done ' : '').($isCurrentLesson ? 'is-now ' : '').($isLocked ? 'is-locked' : ''));
-                        @endphp
-                        @if(! $isLocked)
-                            <li>
-                                <a class="cs-item {{ $rowClass }}" href="{{ route('my-courses.learn', $course) }}?lesson={{ $lesson->id }}">
-                                    <span class="cs-ico {{ $ico }}">
-                                        <i class="fas {{ $isCompleted ? 'fa-check' : 'fa-play' }}"></i>
-                                    </span>
-                                    <span class="t">
-                                        <strong>{{ $lesson->title }}</strong>
-                                        <small>{{ __('student.mc_lesson_minutes', ['count' => $lesson->duration_minutes ?? 0]) }}</small>
-                                    </span>
-                                    <span class="go">{{ $isCompleted ? __('student.mc_review') : __('student.mc_open') }}</span>
-                                </a>
-                            </li>
-                        @else
-                            <li>
-                                <div class="cs-item {{ $rowClass }}">
-                                    <span class="cs-ico lock"><i class="fas fa-lock"></i></span>
-                                    <span class="t">
-                                        <strong>{{ $lesson->title }}</strong>
-                                        <small>{{ __('student.mc_lesson_locked') }}</small>
-                                    </span>
-                                </div>
-                            </li>
-                        @endif
-                    @endforeach
-                </ul>
             </div>
-        @else
-            <div class="cs-empty">{{ __('student.mc_no_curriculum') }}</div>
-        @endif
-    </section>
+        </div>
 
-    {{-- Focus Mode overlay (preserved; dormant unless focusMode=true) --}}
+        <!-- نظرة عامة -->
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm mb-6 overflow-hidden">
+            <div class="px-3 py-5 sm:px-6 sm:py-6 lg:p-8 border-b border-gray-100">
+                <h2 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                    <i class="fas fa-info-circle text-sky-500"></i>
+                    نظرة عامة
+                </h2>
+            </div>
+            <div class="px-3 py-5 sm:px-6 sm:py-6 lg:p-8">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                        <h3 class="text-base font-bold text-gray-900 mb-3 flex items-center gap-2">
+                            <i class="fas fa-info-circle text-sky-500"></i>
+                            وصف الكورس
+                        </h3>
+                        <p class="text-sm text-gray-700 leading-relaxed">{{ $course->description ?? 'لا يوجد وصف متاح' }}</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                        <h3 class="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <i class="fas fa-list-ul text-sky-500"></i>
+                            معلومات الكورس
+                        </h3>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between py-2.5 px-3 bg-white rounded-lg border border-gray-100">
+                                <span class="text-sm text-gray-600 flex items-center gap-2"><i class="fas fa-layer-group text-sky-500 w-4"></i> المستوى</span>
+                                <span class="text-sm font-semibold text-gray-900">{{ $course->level ?? '—' }}</span>
+                            </div>
+                            <div class="flex items-center justify-between py-2.5 px-3 bg-white rounded-lg border border-gray-100">
+                                <span class="text-sm text-gray-600 flex items-center gap-2"><i class="fas fa-clock text-sky-500 w-4"></i> المدة</span>
+                                <span class="text-sm font-semibold text-gray-900">{{ $course->duration_hours }} ساعة</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Focus Mode Modal - وضع التركيز المتقدم -->
     <div x-show="focusMode" 
          x-cloak
          class="focus-mode"
@@ -1339,7 +973,7 @@
                         <div class="flex items-center gap-3">
                             <h1 class="text-xl font-black text-gray-900">{{ $course->localized('title') }}</h1>
                             <span class="text-sm text-gray-500">|</span>
-                            <span class="text-sm text-gray-600">{{ $course->academicYear->name ?? __('student.mc_unspecified') }}</span>
+                            <span class="text-sm text-gray-600">{{ $course->academicYear->name ?? 'غير محدد' }} - {{ $course->academicSubject->name ?? 'غير محدد' }}</span>
                         </div>
                     </div>
                     
@@ -1348,17 +982,17 @@
                         <button @click="showSettings = !showSettings" 
                                 :class="showSettings ? 'active' : ''"
                                 class="btn-control"
-                                title="{{ __('student.mc_settings_title') }}">
+                                title="إعدادات (Ctrl+,)">
                             <i class="fas fa-cog"></i>
-                            <span class="hidden md:inline">{{ __('student.mc_settings') }}</span>
+                            <span class="hidden md:inline">إعدادات</span>
                         </button>
                         <button @click="toggleFullscreen()" class="btn-control">
                             <i class="fas fa-expand"></i>
-                            <span class="hidden md:inline">{{ __('student.mc_fullscreen') }}</span>
+                            <span class="hidden md:inline">ملء الشاشة</span>
                         </button>
                         <button @click="focusMode = false" class="btn-control btn-close">
                             <i class="fas fa-times"></i>
-                            <span class="hidden md:inline">{{ __('student.mc_close') }}</span>
+                            <span class="hidden md:inline">إغلاق</span>
                         </button>
                     </div>
                 </div>
@@ -1378,8 +1012,8 @@
                         <!-- حالة فارغة -->
                         <div x-show="!selectedLesson" class="empty-content-state">
                             <i class="fas fa-graduation-cap"></i>
-                            <h3 class="text-xl font-black text-gray-900 mb-2 mt-4">{{ __('student.mc_welcome_to', ['title' => $course->localized('title')]) }}</h3>
-                            <p class="text-sm text-gray-600">{{ __('student.mc_pick_lesson') }}</p>
+                            <h3 class="text-xl font-black text-gray-900 mb-2 mt-4">مرحباً في {{ $course->localized('title') }}</h3>
+                            <p class="text-sm text-gray-600">اختر درساً من القائمة الجانبية أو استخدم «ابدأ التعلم» من الصفحة الرئيسية للكورس</p>
                         </div>
                         
                         <div x-show="selectedLesson" x-transition class="lesson-content-viewer">
@@ -1390,12 +1024,12 @@
                 
                 <!-- السايدبار - المنهج الكامل على اليمين -->
                 <div class="focus-sidebar" :class="{ 'closed': sidebarClosed, 'open': sidebarOpen }">
-                    <button @click="sidebarClosed = true" class="sidebar-close-btn" title="{{ __('student.mc_close_sidebar') }}">
+                    <button @click="sidebarClosed = true" class="sidebar-close-btn" title="إغلاق السايدبار">
                         <i class="fas fa-times"></i>
                     </button>
                     <div class="focus-sidebar-header">
                         <div class="flex items-center justify-between mb-3">
-                            <h3 class="text-white font-black text-lg">{{ __('student.mc_full_curriculum') }}</h3>
+                            <h3 class="text-white font-black text-lg">المنهج الكامل</h3>
                             <button @click="sidebarOpen = false" class="lg:hidden text-gray-400 hover:text-white">
                                 <i class="fas fa-times"></i>
                             </button>
@@ -1404,10 +1038,10 @@
                         <div class="search-box relative">
                             <input type="text" 
                                    x-model="searchQuery"
-                                   placeholder="{{ __('student.mc_search_lessons') }}"
+                                   placeholder="ابحث في الدروس..."
                                    class="w-full bg-white/10 border border-white/20 text-white placeholder-gray-400 px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-[#2CA9BD] focus:bg-white/20"
                                    @keydown.escape="searchQuery = ''">
-                            <div class="absolute {{ app()->getLocale() === 'ar' ? 'left-2' : 'right-2' }} top-1/2 transform -translate-y-1/2 text-gray-400">
+                            <div class="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400">
                                 <i class="fas fa-search"></i>
                             </div>
                         </div>
@@ -1497,19 +1131,19 @@
                                                     <div class="curriculum-item-title">{{ $item->title }}</div>
                                                     <div class="curriculum-item-meta">
                                                         @if($item instanceof \App\Models\CourseLesson)
-                                                            <span><i class="fas fa-video me-1"></i> {{ __('student.mc_kind_lesson') }}</span>
+                                                            <span><i class="fas fa-video ml-1"></i> درس</span>
                                                             @if($item->duration_minutes)
-                                                                <span><i class="fas fa-clock me-1"></i> {{ __('student.mc_minutes', ['count' => $item->duration_minutes]) }}</span>
+                                                                <span><i class="fas fa-clock ml-1"></i> {{ $item->duration_minutes }} دقيقة</span>
                                                             @endif
                                                         @elseif($item instanceof \App\Models\Assignment)
-                                                            <span><i class="fas fa-tasks me-1"></i> {{ __('student.mc_kind_assignment') }}</span>
+                                                            <span><i class="fas fa-tasks ml-1"></i> واجب</span>
                                                             @if($item->due_date)
-                                                                <span><i class="fas fa-calendar me-1"></i> {{ $item->due_date->format('Y/m/d') }}</span>
+                                                                <span><i class="fas fa-calendar ml-1"></i> {{ $item->due_date->format('Y/m/d') }}</span>
                                                             @endif
                                                         @elseif($item instanceof \App\Models\AdvancedExam || $item instanceof \App\Models\Exam)
-                                                            <span><i class="fas fa-clipboard-check me-1"></i> {{ __('student.mc_kind_exam') }}</span>
+                                                            <span><i class="fas fa-clipboard-check ml-1"></i> امتحان</span>
                                                             @if($item->start_date)
-                                                                <span><i class="fas fa-calendar me-1"></i> {{ $item->start_date->format('Y/m/d') }}</span>
+                                                                <span><i class="fas fa-calendar ml-1"></i> {{ $item->start_date->format('Y/m/d') }}</span>
                                                             @endif
                                                         @endif
                                                     </div>
@@ -1523,7 +1157,7 @@
                             <!-- عرض الدروس القديمة (للتوافق) -->
                             <div class="curriculum-section-header">
                                 <i class="fas fa-book ml-2"></i>
-                                {{ __('student.mc_lessons_count', ['count' => $totalLessons]) }}
+                                الدروس ({{ $totalLessons }})
                             </div>
                             @foreach($course->lessons->sortBy('order') as $index => $lesson)
                                 @php
@@ -1555,9 +1189,9 @@
                                         <div class="flex-1 min-w-0">
                                             <div class="curriculum-item-title">{{ $lesson->title }}</div>
                                             <div class="curriculum-item-meta">
-                                                <span><i class="fas fa-clock me-1"></i> {{ __('student.mc_minutes', ['count' => $lesson->duration_minutes ?? 0]) }}</span>
+                                                <span><i class="fas fa-clock ml-1"></i> {{ $lesson->duration_minutes ?? 0 }} دقيقة</span>
                                                 @if($lesson->video_url)
-                                                    <span><i class="fas fa-video me-1"></i> {{ __('student.mc_video') }}</span>
+                                                    <span><i class="fas fa-video ml-1"></i> فيديو</span>
                                                 @endif
                                             </div>
                                         </div>
@@ -1574,53 +1208,53 @@
         <div class="focus-settings-panel" :class="{ 'active': showSettings }">
             <div class="mb-4 pb-4 border-b border-gray-700">
                 <h3 class="text-white font-bold text-lg mb-2">
-                    <i class="fas fa-cog me-2"></i>
-                    {{ __('student.mc_display_settings') }}
+                    <i class="fas fa-cog ml-2"></i>
+                    إعدادات العرض
                 </h3>
             </div>
             <div class="space-y-4">
                 <div>
                     <label class="text-gray-300 text-sm mb-2 block flex items-center gap-2">
                         <i class="fas fa-font"></i>
-                        {{ __('student.mc_font_size') }}
+                        حجم الخط
                     </label>
                     <div class="flex gap-2">
                         <button @click="fontSize = 'small'" 
                                 :class="fontSize === 'small' ? 'bg-blue-600 border-blue-400' : 'bg-gray-700 border-gray-600'"
-                                class="px-3 py-1.5 rounded text-white text-sm border transition-all">{{ __('student.mc_font_small') }}</button>
+                                class="px-3 py-1.5 rounded text-white text-sm border transition-all">صغير</button>
                         <button @click="fontSize = 'medium'" 
                                 :class="fontSize === 'medium' ? 'bg-blue-600 border-blue-400' : 'bg-gray-700 border-gray-600'"
-                                class="px-3 py-1.5 rounded text-white text-sm border transition-all">{{ __('student.mc_font_medium') }}</button>
+                                class="px-3 py-1.5 rounded text-white text-sm border transition-all">متوسط</button>
                         <button @click="fontSize = 'large'" 
                                 :class="fontSize === 'large' ? 'bg-blue-600 border-blue-400' : 'bg-gray-700 border-gray-600'"
-                                class="px-3 py-1.5 rounded text-white text-sm border transition-all">{{ __('student.mc_font_large') }}</button>
+                                class="px-3 py-1.5 rounded text-white text-sm border transition-all">كبير</button>
                     </div>
                 </div>
                 <div class="pt-4 border-t border-gray-700">
-                    <p class="text-gray-400 text-xs mb-2">{{ __('student.mc_keyboard_shortcuts') }}</p>
+                    <p class="text-gray-400 text-xs mb-2">اختصارات لوحة المفاتيح:</p>
                     <div class="space-y-1 text-xs text-gray-400">
                         <div class="flex justify-between">
-                            <span>{{ __('student.mc_shortcut_search') }}</span>
+                            <span>البحث:</span>
                             <kbd class="px-2 py-0.5 bg-gray-700 rounded text-gray-300">Ctrl+F</kbd>
                         </div>
                         <div class="flex justify-between">
-                            <span>{{ __('student.mc_shortcut_print') }}</span>
+                            <span>الطباعة:</span>
                             <kbd class="px-2 py-0.5 bg-gray-700 rounded text-gray-300">Ctrl+P</kbd>
                         </div>
                         <div class="flex justify-between">
-                            <span>{{ __('student.mc_shortcut_settings') }}</span>
+                            <span>الإعدادات:</span>
                             <kbd class="px-2 py-0.5 bg-gray-700 rounded text-gray-300">Ctrl+,</kbd>
                         </div>
                         <div class="flex justify-between">
-                            <span>{{ __('student.mc_shortcut_close') }}</span>
+                            <span>إغلاق:</span>
                             <kbd class="px-2 py-0.5 bg-gray-700 rounded text-gray-300">ESC</kbd>
                         </div>
                     </div>
                 </div>
                 <button @click="showSettings = false" 
                         class="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded mt-4">
-                    <i class="fas fa-times me-2"></i>
-                    {{ __('student.mc_close') }}
+                    <i class="fas fa-times ml-2"></i>
+                    إغلاق
                 </button>
             </div>
         </div>

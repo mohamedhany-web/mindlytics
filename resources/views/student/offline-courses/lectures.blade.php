@@ -1,9 +1,8 @@
 @extends('layouts.student-dashboard')
 
-@section('title', __('student.oc_lectures_page_title', ['title' => $offlineCourse->title]))
+@section('title', 'محاضرات الكورس — ' . $offlineCourse->title)
 
 @push('styles')
-@include('student.offline-courses.partials.los-styles')
 <style>
     .lectures-hero {
         background: #fff;
@@ -16,8 +15,8 @@
         transition: box-shadow 0.2s ease, border-color 0.2s ease;
     }
     .lectures-hero:hover {
-        box-shadow: 0 4px 12px rgba(73, 164, 162, 0.1);
-        border-color: rgba(73,164,162,0.35);
+        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.1);
+        border-color: rgb(186 230 253);
     }
     .lectures-hero .lectures-hero-accent {
         position: absolute;
@@ -65,7 +64,7 @@
         position: absolute;
         inset: 0;
         background: radial-gradient(900px 260px at 95% 0%, rgba(124, 58, 237, 0.08), transparent 60%),
-                    radial-gradient(700px 220px at 5% 100%, rgba(73, 164, 162, 0.06), transparent 55%);
+                    radial-gradient(700px 220px at 5% 100%, rgba(14, 165, 233, 0.06), transparent 55%);
         pointer-events: none;
         opacity: 0;
         transition: opacity 180ms ease;
@@ -94,47 +93,44 @@
 @section('content')
 @php
     $sg = $studentRouteGroup ?? 'student.offline-courses';
-    $isOnline = ($channel ?? 'offline') === 'online';
-    $chLabel = $isOnline ? __('student.online_badge') : __('student.offline_badge');
-    $listTitle = $isOnline ? __('student.my_online_courses') : __('student.offline_courses_title');
+    $chLabel = ($channel ?? 'offline') === 'online' ? 'أونلاين' : 'أوفلاين';
     $lectureCount = $lectures->count();
-    $dateLocale = app()->getLocale();
 @endphp
 <div class="w-full max-w-full space-y-6" x-data="window.__offlineLecturesPage()">
-    <nav class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-500" aria-label="{{ __('student.oc_breadcrumb') }}">
-        <a href="{{ route('dashboard') }}" class="font-medium hover:text-teal-700">{{ __('los.page_title') }}</a>
+    <nav class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-500" aria-label="مسار التنقل">
+        <a href="{{ route('dashboard') }}" class="font-medium hover:text-sky-600">لوحة التحكم</a>
         <span class="text-slate-300" aria-hidden="true">/</span>
-        <a href="{{ route($sg . '.index') }}" class="font-medium hover:text-teal-700">{{ $listTitle }}</a>
+        <a href="{{ route($sg . '.index') }}" class="font-medium hover:text-sky-600">{{ ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : 'كورساتي الأوفلاين' }}</a>
         <span class="text-slate-300" aria-hidden="true">/</span>
-        <a href="{{ route($sg . '.show', $offlineCourse) }}" class="max-w-[10rem] truncate font-medium hover:text-teal-700 sm:max-w-xs">{{ \Illuminate\Support\Str::limit($offlineCourse->title, 40) }}</a>
+        <a href="{{ route($sg . '.show', $offlineCourse) }}" class="max-w-[10rem] truncate font-medium hover:text-sky-600 sm:max-w-xs">{{ \Illuminate\Support\Str::limit($offlineCourse->title, 40) }}</a>
         <span class="text-slate-300" aria-hidden="true">/</span>
-        <span class="font-semibold text-slate-800">{{ __('student.oc_lectures') }}</span>
+        <span class="font-semibold text-slate-800">المحاضرات</span>
     </nav>
 
     <div class="lectures-hero">
         <div class="lectures-hero-accent" aria-hidden="true"></div>
         <div class="relative pr-2 sm:pr-3">
-            <p class="mb-1 text-xs font-bold uppercase tracking-wide text-violet-600">{{ __('student.oc_lectures_eyebrow', ['channel' => $chLabel]) }}</p>
-            <h1 class="text-2xl font-black leading-tight text-gray-900 sm:text-3xl">{{ __('student.oc_lectures_list') }}</h1>
+            <p class="mb-1 text-xs font-bold uppercase tracking-wide text-violet-600">محاضرات الكورس · {{ $chLabel }}</p>
+            <h1 class="text-2xl font-black leading-tight text-gray-900 sm:text-3xl">قائمة المحاضرات</h1>
             <p class="mt-2 max-w-3xl text-sm leading-relaxed text-gray-600 sm:text-base">
-                {{ __('student.oc_lectures_intro', ['title' => $offlineCourse->title]) }}
+                {{ $offlineCourse->title }} — جلساتك، نقاط اليوم، التسجيلات والمرفقات حسب ما جهّزه المدرب لمجموعتك.
             </p>
             <div class="mt-4 flex flex-wrap gap-2">
                 <a href="{{ route($sg . '.show', $offlineCourse) }}" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-800 transition-colors hover:bg-slate-200">
                     <i class="fas fa-arrow-right text-slate-500"></i>
-                    {{ __('student.oc_course_page') }}
+                    صفحة الكورس
                 </a>
-                <a href="{{ route($sg . '.curriculum', $offlineCourse) }}" class="inline-flex items-center gap-2 rounded-xl border border-teal-200 bg-teal-50 px-4 py-2.5 text-sm font-bold text-sky-800 transition-colors hover:bg-teal-100">
+                <a href="{{ route($sg . '.curriculum', $offlineCourse) }}" class="inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm font-bold text-sky-800 transition-colors hover:bg-sky-100">
                     <i class="fas fa-sitemap"></i>
-                    {{ __('student.oc_curriculum') }}
+                    المنهج
                 </a>
                 <a href="{{ route($sg . '.schedule', $offlineCourse) }}" class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-800 transition-colors hover:bg-indigo-100">
                     <i class="fas fa-calendar-alt"></i>
-                    {{ __('student.oc_schedule') }}
+                    التقويم
                 </a>
                 <a href="{{ route($sg . '.resources', $offlineCourse) }}" class="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-violet-700">
                     <i class="fas fa-file-alt"></i>
-                    {{ __('student.oc_resources') }}
+                    الموارد
                 </a>
             </div>
         </div>
@@ -142,15 +138,15 @@
 
     <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
         <div class="lectures-stat text-center sm:text-start">
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('student.oc_lecture_count') }}</p>
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">عدد المحاضرات</p>
             <p class="mt-1 text-2xl font-black text-violet-600">{{ $lectureCount }}</p>
         </div>
         <div class="lectures-stat text-center sm:text-start">
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('student.oc_learning_type') }}</p>
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">نوع التعلم</p>
             <p class="mt-1 text-lg font-black text-slate-800">{{ $chLabel }}</p>
         </div>
         <div class="lectures-stat hidden text-center sm:text-start lg:block">
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('student.oc_group') }}</p>
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">المجموعة</p>
             <p class="mt-1 truncate text-lg font-bold text-slate-800" title="{{ $enrollment->group->name ?? '—' }}">{{ $enrollment->group->name ?? '—' }}</p>
         </div>
     </div>
@@ -163,42 +159,42 @@
                     <input
                         x-model.trim="q"
                         type="text"
-                        placeholder="{{ __('student.oc_search_lectures_placeholder') }}"
+                        placeholder="ابحث باسم المحاضرة أو الوصف أو برنامج اليوم…"
                         class="w-full min-w-0 border-0 bg-transparent p-0 text-sm font-semibold text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-0"
                     />
                     <button type="button" class="text-xs font-black text-slate-500 hover:text-slate-800" x-show="q.length" @click="q=''">
-                        {{ __('student.oc_clear') }}
+                        مسح
                     </button>
                 </div>
                 <div class="mt-2 flex flex-wrap items-center gap-2 text-xs font-bold text-slate-500">
                     <span class="chip">
                         <i class="fas fa-filter text-[10px] text-slate-400"></i>
-                        {{ __('student.oc_showing') }}: <span class="text-slate-700" x-text="visibleCount"></span> / {{ $lectureCount }}
+                        عرض: <span class="text-slate-700" x-text="visibleCount"></span> / {{ $lectureCount }}
                     </span>
                     <span class="chip" x-show="q.length">
-                        {{ __('student.oc_search_results') }}
+                        نتائج البحث
                     </span>
                 </div>
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
                 <label class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm cursor-pointer hover:bg-slate-50">
-                    <input type="checkbox" class="rounded border-slate-300 text-teal-700 focus:ring-teal-500" x-model="onlyWithMaterials">
-                    {{ __('student.oc_materials_only') }}
+                    <input type="checkbox" class="rounded border-slate-300 text-sky-600 focus:ring-sky-500" x-model="onlyWithMaterials">
+                    مواد فقط
                 </label>
                 <label class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm cursor-pointer hover:bg-slate-50">
-                    <input type="checkbox" class="rounded border-slate-300 text-teal-700 focus:ring-teal-500" x-model="onlyUpcoming">
-                    {{ __('student.oc_upcoming_filter') }}
+                    <input type="checkbox" class="rounded border-slate-300 text-sky-600 focus:ring-sky-500" x-model="onlyUpcoming">
+                    القادمة
                 </label>
                 <label class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm cursor-pointer hover:bg-slate-50">
-                    <input type="checkbox" class="rounded border-slate-300 text-teal-700 focus:ring-teal-500" x-model="onlyPast">
-                    {{ __('student.oc_past_filter') }}
+                    <input type="checkbox" class="rounded border-slate-300 text-sky-600 focus:ring-sky-500" x-model="onlyPast">
+                    السابقة
                 </label>
                 <button type="button"
                         class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
                         @click="toggleAll()">
                     <i class="fas" :class="allExpanded ? 'fa-compress-alt' : 'fa-expand-alt'"></i>
-                    <span x-text="allExpanded ? @json(__('student.oc_collapse_all')) : @json(__('student.oc_expand_all'))"></span>
+                    <span x-text="allExpanded ? 'طي الكل' : 'فتح الكل'"></span>
                 </button>
             </div>
         </div>
@@ -210,16 +206,16 @@
                 <i class="fas fa-chalkboard-teacher text-sm"></i>
             </span>
             <div class="min-w-0 text-start">
-                <p class="text-xs font-bold uppercase tracking-wide text-slate-500">{{ __('student.oc_content') }}</p>
-                <p class="text-sm font-black text-slate-900">{{ __('student.oc_all_lectures_in_course') }}</p>
+                <p class="text-xs font-bold uppercase tracking-wide text-slate-500">المحتوى</p>
+                <p class="text-sm font-black text-slate-900">كل المحاضرات المتاحة لك في هذا الكورس</p>
             </div>
         </div>
 
         @if($lectures->isEmpty())
             <div class="px-6 py-16 text-center">
                 <i class="fas fa-chalkboard-teacher mb-3 block text-5xl text-slate-300" aria-hidden="true"></i>
-                <p class="font-bold text-slate-700">{{ __('student.oc_no_lectures') }}</p>
-                <p class="mt-2 text-sm text-slate-500">{{ __('student.oc_no_lectures_desc') }}</p>
+                <p class="font-bold text-slate-700">لا توجد محاضرات متاحة حالياً.</p>
+                <p class="mt-2 text-sm text-slate-500">عند نشر المحاضرات من المدرب ستظهر هنا.</p>
             </div>
         @else
             <ul class="divide-y divide-slate-100" role="list" x-ref="list">
@@ -234,10 +230,10 @@
                         $whenText = null;
                         $whenISO = null;
                         if ($lecture->relationLoaded('groupSession') && $lecture->groupSession) {
-                            $whenText = $lecture->groupSession->session_date->locale($dateLocale)->translatedFormat('l j F Y');
+                            $whenText = $lecture->groupSession->session_date->translatedFormat('l j F Y');
                             $whenISO = optional($lecture->groupSession->session_date)->toDateString();
                         } elseif ($lecture->scheduled_at) {
-                            $whenText = $lecture->scheduled_at->locale($dateLocale)->translatedFormat('l j F Y — H:i');
+                            $whenText = $lecture->scheduled_at->translatedFormat('l j F Y — H:i');
                             $whenISO = optional($lecture->scheduled_at)->toIso8601String();
                         }
                     @endphp
@@ -246,14 +242,14 @@
                         $statusClasses = 'bg-slate-100 text-slate-700 border-slate-200';
                         if ($lecture->relationLoaded('groupSession') && $lecture->groupSession && $lecture->groupSession->session_date) {
                             $d = $lecture->groupSession->session_date;
-                            if ($d->isToday()) { $statusLabel = __('student.oc_today'); $statusClasses = 'bg-amber-50 text-amber-800 border-amber-200'; }
-                            elseif ($d->isFuture()) { $statusLabel = __('student.oc_status_upcoming'); $statusClasses = 'bg-emerald-50 text-emerald-800 border-emerald-200'; }
-                            else { $statusLabel = __('student.oc_status_past'); $statusClasses = 'bg-slate-100 text-slate-700 border-slate-200'; }
+                            if ($d->isToday()) { $statusLabel = 'اليوم'; $statusClasses = 'bg-amber-50 text-amber-800 border-amber-200'; }
+                            elseif ($d->isFuture()) { $statusLabel = 'قادمة'; $statusClasses = 'bg-emerald-50 text-emerald-800 border-emerald-200'; }
+                            else { $statusLabel = 'سابقة'; $statusClasses = 'bg-slate-100 text-slate-700 border-slate-200'; }
                         } elseif ($lecture->scheduled_at) {
                             $d = $lecture->scheduled_at;
-                            if ($d->isToday()) { $statusLabel = __('student.oc_today'); $statusClasses = 'bg-amber-50 text-amber-800 border-amber-200'; }
-                            elseif ($d->isFuture()) { $statusLabel = __('student.oc_status_upcoming'); $statusClasses = 'bg-emerald-50 text-emerald-800 border-emerald-200'; }
-                            else { $statusLabel = __('student.oc_status_past'); $statusClasses = 'bg-slate-100 text-slate-700 border-slate-200'; }
+                            if ($d->isToday()) { $statusLabel = 'اليوم'; $statusClasses = 'bg-amber-50 text-amber-800 border-amber-200'; }
+                            elseif ($d->isFuture()) { $statusLabel = 'قادمة'; $statusClasses = 'bg-emerald-50 text-emerald-800 border-emerald-200'; }
+                            else { $statusLabel = 'سابقة'; $statusClasses = 'bg-slate-100 text-slate-700 border-slate-200'; }
                         }
                     @endphp
                     <li id="offline-lecture-{{ $lecture->id }}"
@@ -266,7 +262,7 @@
                         x-show="matches($el)"
                         x-transition.opacity.duration.150ms
                     >
-                        <details class="lecture-card group rounded-2xl border border-slate-200 bg-white shadow-sm hover:border-teal-200 hover:shadow-md transition-all"
+                        <details class="lecture-card group rounded-2xl border border-slate-200 bg-white shadow-sm hover:border-sky-200 hover:shadow-md transition-all"
                                  :open="allExpanded"
                                  @toggle="onToggle($event)">
                             <summary class="cursor-pointer list-none p-4 sm:p-5 select-none">
@@ -287,7 +283,7 @@
                                             @endif
                                             <span class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-black text-slate-700">
                                                 <i class="fas fa-paperclip text-slate-400 text-[10px]"></i>
-                                                {{ __('student.oc_materials_count', ['count' => $hasMaterials]) }}
+                                                {{ $hasMaterials }} مواد
                                             </span>
                                         </div>
                                         @if($whenText)
@@ -320,7 +316,7 @@
                                     </div>
                                     <div class="flex items-center gap-2 text-slate-400 flex-shrink-0">
                                         <span class="inline-flex items-center gap-1 text-xs font-black">
-                                            <span class="hidden sm:inline">{{ __('student.oc_details') }}</span>
+                                            <span class="hidden sm:inline">تفاصيل</span>
                                         </span>
                                         <i class="fas fa-chevron-down text-sm transition-transform duration-200 group-open:rotate-180"></i>
                                     </div>
@@ -333,8 +329,8 @@
                                         @if(count($agendaLines))
                                             <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
                                                 <div class="flex items-center justify-between gap-3">
-                                                    <p class="text-xs font-black text-slate-700">{{ __('student.oc_session_agenda') }}</p>
-                                                    <span class="text-[11px] font-black text-slate-500">{{ __('student.oc_agenda_points', ['count' => count($agendaLines)]) }}</span>
+                                                    <p class="text-xs font-black text-slate-700">برنامج اليوم</p>
+                                                    <span class="text-[11px] font-black text-slate-500">{{ count($agendaLines) }} نقاط</span>
                                                 </div>
                                                 <ul class="mt-3 space-y-2 text-sm text-slate-700 max-h-56 overflow-auto pr-1">
                                                     @foreach($agendaLines as $line)
@@ -353,7 +349,7 @@
                                     <div class="space-y-3">
                                         <div class="rounded-2xl border border-slate-200 bg-white p-4">
                                             <div class="flex items-center justify-between gap-3">
-                                                <p class="text-xs font-black text-slate-800">{{ __('student.oc_materials_and_attachments') }}</p>
+                                                <p class="text-xs font-black text-slate-800">المواد والمرفقات</p>
                                                 <span class="text-[11px] font-black text-slate-500">{{ $hasMaterials }}</span>
                                             </div>
 
@@ -362,7 +358,7 @@
                                                     <a href="{{ $lecture->meeting_url }}" target="_blank" rel="noopener"
                                                        class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-3.5 py-2.5 text-xs font-black text-white hover:bg-indigo-700 justify-center">
                                                         <i class="fas fa-video"></i>
-                                                        {{ __('student.oc_live_stream') }}
+                                                        بث مباشر
                                                     </a>
                                                 @endif
 
@@ -370,20 +366,20 @@
                                                     <a href="{{ route($studentRouteGroup . '.lectures.watch', [$offlineCourse, $lecture]) }}"
                                                        class="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3.5 py-2.5 text-xs font-black text-violet-800 hover:bg-violet-100 justify-center">
                                                         <i class="fas fa-play"></i>
-                                                        {{ __('student.oc_recording') }}
+                                                        التسجيل
                                                     </a>
                                                 @endif
                                             </div>
 
                                             @if($linksCount > 0)
                                                 <div class="mt-3">
-                                                    <p class="text-[11px] font-black text-slate-500 mb-2">{{ __('student.oc_download_links') }}</p>
+                                                    <p class="text-[11px] font-black text-slate-500 mb-2">روابط التحميل</p>
                                                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
                                                         @foreach($lecture->download_links as $link)
                                                             <a href="{{ $link['url'] ?? '#' }}" target="_blank" rel="noopener"
-                                                               class="group inline-flex items-center gap-2 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2.5 text-xs font-black text-sky-800 hover:bg-teal-100">
+                                                               class="group inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-xs font-black text-sky-800 hover:bg-sky-100">
                                                                 <i class="fas fa-download flex-shrink-0"></i>
-                                                                <span class="truncate min-w-0">{{ $link['label'] ?? __('student.oc_download') }}</span>
+                                                                <span class="truncate min-w-0">{{ $link['label'] ?? 'تحميل' }}</span>
                                                             </a>
                                                         @endforeach
                                                     </div>
@@ -392,11 +388,11 @@
 
                                             @if($filesCount > 0)
                                                 <div class="mt-3">
-                                                    <p class="text-[11px] font-black text-slate-500 mb-2">{{ __('student.oc_attachments') }}</p>
+                                                    <p class="text-[11px] font-black text-slate-500 mb-2">مرفقات</p>
                                                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
                                                         @foreach($lecture->attachments as $att)
                                                             @php
-                                                                $name = (string) ($att['name'] ?? __('student.oc_file'));
+                                                                $name = (string) ($att['name'] ?? 'ملف');
                                                                 $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
                                                                 $icon = 'fa-file';
                                                                 if (in_array($ext, ['pdf'])) $icon = 'fa-file-pdf';
@@ -451,6 +447,7 @@ window.__offlineLecturesPage = function () {
             const d = this.parseWhen(el);
             if (!d) return false;
             const now = new Date();
+            // اعتبر اليوم بالكامل "قادماً" إن لم يمر
             return d.getTime() >= now.getTime() - (1000 * 60 * 60 * 12);
         },
         isPast(el) {

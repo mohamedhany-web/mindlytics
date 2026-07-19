@@ -37,22 +37,22 @@ class ProfileController extends Controller
             'password' => 'nullable|string|min:8|confirmed',
             'profile_image' => 'nullable|image|max:2048',
         ], [
-            'name.required' => __('student.profile_name_required'),
-            'phone.required' => __('student.profile_phone_required'),
-            'phone.unique' => __('student.profile_phone_unique'),
-            'email.email' => __('student.profile_email_invalid'),
-            'email.unique' => __('student.profile_email_unique'),
-            'current_password.required' => __('student.profile_current_password_required'),
-            'password.min' => __('student.profile_password_min'),
-            'password.confirmed' => __('student.profile_password_confirmed'),
-            'profile_image.image' => __('student.profile_image_type'),
-            'profile_image.max' => __('student.profile_image_max'),
+            'name.required' => 'الاسم مطلوب',
+            'phone.required' => 'رقم الهاتف مطلوب',
+            'phone.unique' => 'رقم الهاتف مستخدم من قبل',
+            'email.email' => 'صيغة البريد الإلكتروني غير صحيحة',
+            'email.unique' => 'البريد الإلكتروني مستخدم من قبل',
+            'current_password.required' => 'كلمة المرور الحالية مطلوبة',
+            'password.min' => 'كلمة المرور يجب أن تكون 8 أحرف على الأقل',
+            'password.confirmed' => 'تأكيد كلمة المرور غير متطابق',
+            'profile_image.image' => 'الملف الذي تم رفعه يجب أن يكون صورة',
+            'profile_image.max' => 'حجم الصورة يجب ألا يتجاوز 2 ميجابايت',
         ]);
 
         // التحقق من كلمة المرور الحالية عند تغيير كلمة المرور
         if ($request->filled('password')) {
             if (!$request->filled('current_password') || !Hash::check($request->current_password, $user->password)) {
-                return back()->withErrors(['current_password' => __('student.profile_current_password_wrong')]);
+                return back()->withErrors(['current_password' => 'كلمة المرور الحالية غير صحيحة']);
             }
         }
 
@@ -83,6 +83,6 @@ class ProfileController extends Controller
 
         $user->update($data);
 
-        return back()->with('success', __('student.profile_update_success'));
+        return back()->with('success', 'تم تحديث البروفايل بنجاح');
     }
 }

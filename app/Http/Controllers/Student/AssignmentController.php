@@ -57,7 +57,7 @@ class AssignmentController extends Controller
     {
         $user = Auth::user();
         if (!$user->isEnrolledIn($assignment->advanced_course_id)) {
-            abort(403, __('student.assignment_forbidden_view'));
+            abort(403, 'غير مسموح لك بعرض هذا الواجب');
         }
 
         $assignment->load(['course', 'lesson', 'teacher']);
@@ -94,11 +94,11 @@ class AssignmentController extends Controller
     {
         $user = Auth::user();
         if (!$user->isEnrolledIn($assignment->advanced_course_id)) {
-            abort(403, __('student.assignment_forbidden_submit'));
+            abort(403, 'غير مسموح لك بتسليم هذا الواجب');
         }
 
         if (!$assignment->allow_late_submission && $assignment->due_date && now()->greaterThan($assignment->due_date)) {
-            return back()->with('error', __('student.assignment_deadline_passed'));
+            return back()->with('error', 'انتهى موعد التسليم لهذا الواجب');
         }
 
         $validated = $request->validate([
@@ -147,7 +147,7 @@ class AssignmentController extends Controller
         ]);
         $submission->save();
 
-        return back()->with('success', __('student.assignment_submit_success'));
+        return back()->with('success', 'تم تسليم الواجب بنجاح');
     }
 
     /**

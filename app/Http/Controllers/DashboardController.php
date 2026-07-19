@@ -237,19 +237,6 @@ class DashboardController extends Controller
             $visibleOnlineBookingsCount = 0;
             $pendingScholarshipRegistrations = collect();
 
-            $os = $this->makeLearningOs(
-                $user,
-                $activeCourses,
-                $upcomingAssignments,
-                $upcomingExams,
-                $recentExamAttempts,
-                $recentCertificates,
-                $offlineActiveEnrollments,
-                $onlineActiveEnrollments,
-                $pendingScholarshipRegistrations,
-                $stats
-            );
-
             return view(
                 'dashboard.student',
                 compact(
@@ -264,8 +251,7 @@ class DashboardController extends Controller
                     'onlineActiveEnrollments',
                     'visibleOfflineBookingsCount',
                     'visibleOnlineBookingsCount',
-                    'pendingScholarshipRegistrations',
-                    'os'
+                    'pendingScholarshipRegistrations'
                 )
             );
         }
@@ -415,19 +401,6 @@ class DashboardController extends Controller
             ->orderByDesc('registered_at')
             ->get();
 
-        $os = $this->makeLearningOs(
-            $user,
-            $activeCourses,
-            $upcomingAssignments,
-            $upcomingExams,
-            $recentExamAttempts,
-            $recentCertificates,
-            $offlineActiveEnrollments,
-            $onlineActiveEnrollments,
-            $pendingScholarshipRegistrations,
-            $stats
-        );
-
         return view(
             'dashboard.student',
             compact(
@@ -442,35 +415,8 @@ class DashboardController extends Controller
                 'onlineActiveEnrollments',
                 'visibleOfflineBookingsCount',
                 'visibleOnlineBookingsCount',
-                'pendingScholarshipRegistrations',
-                'os'
+                'pendingScholarshipRegistrations'
             )
-        );
-    }
-
-    private function makeLearningOs(
-        $user,
-        $activeCourses,
-        $upcomingAssignments,
-        $upcomingExams,
-        $recentExamAttempts,
-        $recentCertificates,
-        $offlineActiveEnrollments,
-        $onlineActiveEnrollments,
-        $pendingScholarshipRegistrations,
-        array $stats
-    ): array {
-        return app(\App\Support\StudentLearningOsBuilder::class)->build(
-            $user,
-            $activeCourses,
-            $upcomingAssignments,
-            $upcomingExams,
-            $recentExamAttempts,
-            $recentCertificates,
-            $offlineActiveEnrollments,
-            $onlineActiveEnrollments,
-            $pendingScholarshipRegistrations,
-            $stats
         );
     }
 

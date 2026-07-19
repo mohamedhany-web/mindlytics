@@ -20,10 +20,6 @@ window.__learnPremiumMixin = {
     },
     setPanelTab(type, id, tab) {
         this.panelTabs[this.panelTabKey(type, id)] = tab;
-        this.$dispatch('learn-panel-tab', { type: String(type), id: id, tab: tab });
-        if (tab === 'discussion' || tab === 'qa') {
-            this.$dispatch('learn-load-thread', { key: String(tab) + '-' + String(type) + '-' + String(id) });
-        }
     },
 
     syncActivePanel(type, id, title, options) {
