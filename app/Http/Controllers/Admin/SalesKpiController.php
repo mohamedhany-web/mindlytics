@@ -183,12 +183,23 @@ class SalesKpiController extends Controller
             ? app(SalesKpiService::class)->mergedTargets($rep, \Carbon\Carbon::createFromFormat('Y-m-d', $yearMonth.'-01'))
             : config('sales_kpi.defaults');
 
+        $agreements = $rep
+            ? $rep->salesCourseCommissionAgreements()
+                ->with(['advancedCourse:id,title,price', 'offlineCourse:id,title,price', 'legacyCourse:id,title,price'])
+                ->orderByDesc('id')
+                ->get()
+            : collect();
+
+        $defaultTiers = \App\Services\SalesCommissionTierService::defaultTiers();
+
         return view('admin.sales.kpi.targets', [
             'salesReps' => $salesReps,
             'userId' => $rep?->id,
             'yearMonth' => $yearMonth,
             'targets' => $merged,
             'rep' => $rep,
+            'agreements' => $agreements,
+            'defaultTiers' => $defaultTiers,
         ]);
     }
 
@@ -197,8 +208,19 @@ class SalesKpiController extends Controller
         $validated = $request->validate([
             'user_id' => ['required', 'integer', Rule::exists('users', 'id')],
             'year_month' => ['required', 'regex:/^\d{4}-\d{2}$/'],
-            'sales_commission_mode' => ['nullable', Rule::in(['none', 'percent', 'fixed'])],
+            'sales_commission_mode' => ['nullable', Rule::in(['none', 'percent', 'fixed', 'tier'])],
             'sales_commission_value' => ['nullable', 'numeric', 'min:0'],
+            'sales_commission_tier_period' => ['nullable', Rule::in(['month', 'all'])],
+            'tier_min' => ['nullable', 'array'],
+            'tier_min.*' => ['nullable', 'integer', 'min:1'],
+            'tier_max' => ['nullable', 'array'],
+            'tier_max.*' => ['nullable', 'integer', 'min:1'],
+            'tier_rate' => ['nullable', 'array'],
+            'tier_rate.*' => ['nullable', 'numeric', 'min:0'],
+            'tier_bonus' => ['nullable', 'array'],
+            'tier_bonus.*' => ['nullable', 'numeric', 'min:0'],
+            'tier_bonus_at' => ['nullable', 'array'],
+            'tier_bonus_at.*' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $rep = User::query()->findOrFail($validated['user_id']);
@@ -231,10 +253,36 @@ class SalesKpiController extends Controller
         if ($request->has('sales_commission_mode')) {
             $mode = (string) ($validated['sales_commission_mode'] ?? 'none');
             $val = $validated['sales_commission_value'] ?? null;
-            $rep->forceFill([
+            $payloadUser = [
                 'sales_commission_mode' => $mode,
-                'sales_commission_value' => $mode === 'none' ? null : (float) ($val ?? 0),
-            ])->save();
+                'sales_commission_value' => in_array($mode, ['none', 'tier'], true) ? null : (float) ($val ?? 0),
+            ];
+
+            if ($mode === 'tier') {
+                $tiers = [];
+                $mins = $request->input('tier_min', []);
+                $maxs = $request->input('tier_max', []);
+                $rates = $request->input('tier_rate', []);
+                $bonuses = $request->input('tier_bonus', []);
+                $bonusAts = $request->input('tier_bonus_at', []);
+                $count = max(count($mins), count($rates));
+                for ($i = 0; $i < $count; $i++) {
+                    if (! isset($mins[$i]) || $mins[$i] === '' || $mins[$i] === null) {
+                        continue;
+                    }
+                    $tiers[] = [
+                        'min' => (int) $mins[$i],
+                        'max' => (isset($maxs[$i]) && $maxs[$i] !== '' && $maxs[$i] !== null) ? (int) $maxs[$i] : null,
+                        'rate' => (float) ($rates[$i] ?? 0),
+                        'bonus' => (float) ($bonuses[$i] ?? 0),
+                        'bonus_at' => (isset($bonusAts[$i]) && $bonusAts[$i] !== '' && $bonusAts[$i] !== null) ? (int) $bonusAts[$i] : null,
+                    ];
+                }
+                $payloadUser['sales_commission_tiers'] = \App\Services\SalesCommissionTierService::normalizeTiers($tiers);
+                $payloadUser['sales_commission_tier_period'] = (string) ($validated['sales_commission_tier_period'] ?? 'month');
+            }
+
+            $rep->forceFill($payloadUser)->save();
         }
 
         \App\Services\SalesAuditService::log(

@@ -22,11 +22,13 @@ class EmployeeDailyReport extends Model
         'status',
         'submitted_at',
         'auto_deduction_id',
+        'penalty_waived_at',
     ];
 
     protected $casts = [
         'report_date' => 'date',
         'submitted_at' => 'datetime',
+        'penalty_waived_at' => 'datetime',
         'hours_worked' => 'decimal:1',
     ];
 

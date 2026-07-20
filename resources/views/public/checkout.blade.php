@@ -533,6 +533,85 @@
                                 <i class="fas fa-credit-card text-blue-600"></i>
                                 طرق الدفع المتاحة
                             </h2>
+
+                            @if(isset($course) && auth()->guest())
+                                @php
+                                    $phoneCountries = $phoneCountries ?? config('phone_countries.countries', []);
+                                    $defaultCountry = $defaultCountry ?? collect($phoneCountries)->firstWhere('code', config('phone_countries.default_country', 'SA'));
+                                @endphp
+                                <div
+                                    id="checkout-quick-register"
+                                    x-data="checkoutQuickRegister('{{ route('public.course.checkout.quick-register', $course->id) }}')"
+                                    x-init="init()"
+                                    class="mb-6 p-5 bg-gradient-to-br from-blue-50 to-green-50 rounded-2xl border-2 border-blue-200"
+                                >
+                                    <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+                                        <div>
+                                            <h3 class="text-lg font-black text-gray-900 flex items-center gap-2">
+                                                <i class="fas fa-user-plus text-blue-600"></i>
+                                                أنشئ حسابك لإتمام الشراء
+                                            </h3>
+                                            <p class="text-xs text-gray-600 mt-1">خطوة واحدة سريعة — ثم ادفع مباشرة بدون مغادرة الصفحة.</p>
+                                        </div>
+                                        <a href="{{ route('login', ['redirect' => route('public.course.checkout', $course->id)]) }}"
+                                           class="text-xs font-bold text-blue-700 hover:text-blue-900 underline">
+                                            لديك حساب؟ سجّل دخول
+                                        </a>
+                                    </div>
+
+                                    <div x-show="registered" x-cloak class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold flex items-center gap-2">
+                                        <i class="fas fa-check-circle"></i>
+                                        تم إنشاء الحساب — يمكنك المتابعة للدفع الآن.
+                                    </div>
+
+                                    <form x-show="!registered" @submit.prevent="register()" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div class="sm:col-span-2">
+                                            <label class="block text-xs font-bold text-gray-700 mb-1">الاسم الكامل</label>
+                                            <input type="text" x-model="form.name" required autocomplete="name"
+                                                   class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                   placeholder="اسمك كما سيظهر في الحساب">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-gray-700 mb-1">كود الدولة</label>
+                                            <select x-model="form.country_code" required class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm" dir="ltr">
+                                                @foreach($phoneCountries as $c)
+                                                    <option value="{{ $c['dial_code'] }}" @selected(($defaultCountry['dial_code'] ?? '+20') === $c['dial_code'])>
+                                                        {{ $c['dial_code'] }} {{ $c['name_ar'] ?? '' }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-gray-700 mb-1">رقم الموبايل</label>
+                                            <input type="tel" x-model="form.phone" required autocomplete="tel" dir="ltr"
+                                                   class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                   placeholder="1xxxxxxxxx">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-gray-700 mb-1">البريد الإلكتروني</label>
+                                            <input type="email" x-model="form.email" required autocomplete="email" dir="ltr"
+                                                   class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                   placeholder="you@email.com">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-gray-700 mb-1">كلمة المرور</label>
+                                            <input type="password" x-model="form.password" required autocomplete="new-password" minlength="8"
+                                                   class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                   placeholder="8 أحرف على الأقل">
+                                        </div>
+                                        <div class="sm:col-span-2">
+                                            <button type="submit"
+                                                    :disabled="isSubmitting"
+                                                    class="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-5 py-3 rounded-full font-bold text-sm shadow-md hover:shadow-lg disabled:opacity-50">
+                                                <i class="fas fa-bolt" x-show="!isSubmitting"></i>
+                                                <i class="fas fa-spinner fa-spin" x-show="isSubmitting" x-cloak></i>
+                                                <span x-text="isSubmitting ? 'جاري إنشاء الحساب...' : 'إنشاء الحساب والمتابعة'"></span>
+                                            </button>
+                                            <p x-show="error" x-text="error" class="mt-2 text-xs text-red-600 text-center" x-cloak></p>
+                                        </div>
+                                    </form>
+                                </div>
+                            @endif
                             
                             @if(session('error'))
                                 <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl fade-in-up">
@@ -601,7 +680,20 @@
                                     </div>
                                 @endif
 
-                                <form method="post" action="{{ $__completeUrl }}" enctype="multipart/form-data" class="space-y-5">
+                                <form method="post" action="{{ $__completeUrl }}" enctype="multipart/form-data" class="space-y-5"
+                                      @if(isset($course) && auth()->guest())
+                                      x-data="{
+                                        async submitManual(e) {
+                                          if (typeof window.ensureCheckoutAccount === 'function') {
+                                            const ok = await window.ensureCheckoutAccount();
+                                            if (!ok) return;
+                                          }
+                                          e.target.submit();
+                                        }
+                                      }"
+                                      @submit.prevent="submitManual($event)"
+                                      @endif
+                                >
                                     @csrf
                                     <div>
                                         <label class="block text-sm font-bold text-gray-800 mb-2">طريقة الدفع</label>
@@ -681,7 +773,7 @@
                             </div>
                             <div
                                 x-data="checkoutFawaterakHandler('{{ route('public.course.checkout.fawaterak.prepare', $course->id) }}')"
-                                x-init="boot()"
+                                @auth x-init="boot()" @endauth
                                 class="mt-6 space-y-4"
                             >
                                 <form @submit.prevent="startPayment">
@@ -843,6 +935,95 @@
     @include('components.unified-footer')
 
     <script>
+        window.__checkoutRegistered = {{ auth()->check() ? 'true' : 'false' }};
+
+        async function ensureCheckoutAccount() {
+            if (window.__checkoutRegistered) {
+                return true;
+            }
+            if (window.__checkoutQuickRegister && typeof window.__checkoutQuickRegister.register === 'function') {
+                return await window.__checkoutQuickRegister.register();
+            }
+            return true;
+        }
+
+        function checkoutQuickRegister(registerUrl) {
+            return {
+                registerUrl,
+                isSubmitting: false,
+                registered: false,
+                error: '',
+                form: {
+                    name: '',
+                    country_code: @json(data_get($defaultCountry ?? [], 'dial_code', '+20')),
+                    phone: '',
+                    email: '',
+                    password: '',
+                },
+                init() {
+                    window.__checkoutQuickRegister = this;
+                },
+                async register() {
+                    if (this.registered || window.__checkoutRegistered) {
+                        this.registered = true;
+                        window.__checkoutRegistered = true;
+                        return true;
+                    }
+                    this.isSubmitting = true;
+                    this.error = '';
+                    try {
+                        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+                        const token = csrfMeta ? csrfMeta.getAttribute('content') : (document.querySelector('input[name="_token"]')?.value || '');
+                        const response = await fetch(this.registerUrl, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': token,
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            body: JSON.stringify({
+                                name: this.form.name,
+                                country_code: this.form.country_code,
+                                phone: this.form.phone,
+                                email: this.form.email,
+                                password: this.form.password,
+                                password_confirmation: this.form.password,
+                            }),
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok || !data.success) {
+                            let msg = data.message || 'تعذر إنشاء الحساب. تحقق من البيانات.';
+                            if (data.errors && typeof data.errors === 'object') {
+                                const first = Object.values(data.errors)[0];
+                                if (Array.isArray(first) && first[0]) {
+                                    msg = first[0];
+                                }
+                            }
+                            throw new Error(msg);
+                        }
+                        this.registered = true;
+                        window.__checkoutRegistered = true;
+                        if (data.csrf_token) {
+                            const meta = document.querySelector('meta[name="csrf-token"]');
+                            if (meta) {
+                                meta.setAttribute('content', data.csrf_token);
+                            }
+                            document.querySelectorAll('input[name="_token"]').forEach((el) => {
+                                el.value = data.csrf_token;
+                            });
+                        }
+                        return true;
+                    } catch (e) {
+                        this.error = e.message || 'حدث خطأ أثناء إنشاء الحساب.';
+                        return false;
+                    } finally {
+                        this.isSubmitting = false;
+                    }
+                },
+            };
+        }
+
         function checkoutFawaterakHandler(prepareUrl) {
             const hideWaitingHint = () => {
                 const el = document.getElementById('fawaterk-waiting-hint');
@@ -881,6 +1062,12 @@
                     this.error = '';
                     this.pluginLoadError = false;
                     try {
+                        if (typeof window.ensureCheckoutAccount === 'function') {
+                            const accountOk = await window.ensureCheckoutAccount();
+                            if (!accountOk) {
+                                return;
+                            }
+                        }
                         if (typeof fawaterkCheckout !== 'function') {
                             const ok = await this.waitForFawaterkPlugin(40, 100);
                             if (!ok) {
@@ -950,6 +1137,12 @@
                     this.error = '';
                     this.sessionUrl = '';
                     try {
+                        if (typeof window.ensureCheckoutAccount === 'function') {
+                            const accountOk = await window.ensureCheckoutAccount();
+                            if (!accountOk) {
+                                return;
+                            }
+                        }
                         const csrfMeta = document.querySelector('meta[name=\"csrf-token\"]');
                         const token = csrfMeta ? csrfMeta.getAttribute('content') : (document.querySelector('input[name=\"_token\"]')?.value || '');
                         const response = await fetch(endpoint, {

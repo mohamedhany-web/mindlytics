@@ -479,10 +479,12 @@ Route::post('/course/{courseId}/reviews', [\App\Http\Controllers\Public\PublicRe
     ->middleware('auth')
     ->name('public.course.reviews.store');
 
-// صفحة إتمام الطلب (Checkout)
+// صفحة إتمام الطلب (Checkout) — متاحة للزائر مع تسجيل سريع داخل الصفحة
 Route::get('/course/{courseId}/checkout', [\App\Http\Controllers\Public\CheckoutController::class, 'show'])
-    ->middleware('auth')
     ->name('public.course.checkout');
+
+Route::post('/course/{courseId}/checkout/quick-register', [\App\Http\Controllers\Public\CheckoutController::class, 'quickRegister'])
+    ->name('public.course.checkout.quick-register');
 
 Route::post('/course/{courseId}/checkout/complete', [\App\Http\Controllers\Public\CheckoutController::class, 'complete'])
     ->middleware('auth')
@@ -961,6 +963,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/', [\App\Http\Controllers\Employee\SalesDashboardController::class, 'index'])->name('dashboard');
             Route::get('kpi', [\App\Http\Controllers\Employee\SalesKpiController::class, 'index'])->name('kpi.index');
             Route::get('commissions', [\App\Http\Controllers\Employee\SalesCommissionController::class, 'index'])->name('commissions.index');
+            Route::get('courses', [\App\Http\Controllers\Employee\SalesCourseCatalogController::class, 'index'])->name('courses.index');
             Route::get('reports', [\App\Http\Controllers\Employee\SalesReportController::class, 'index'])->name('reports.index');
             Route::get('daily-reports', [\App\Http\Controllers\Employee\SalesDailyReportController::class, 'index'])->name('daily-reports.index');
             Route::get('daily-reports/edit', [\App\Http\Controllers\Employee\SalesDailyReportController::class, 'edit'])->name('daily-reports.edit');
@@ -1018,6 +1021,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('presence/violations/{violation}/acknowledge', [\App\Http\Controllers\Employee\SalesManagerPresenceController::class, 'acknowledge'])->name('presence.acknowledge');
             Route::get('daily-reports', [\App\Http\Controllers\Employee\SalesManagerDailyReportController::class, 'index'])->name('daily-reports.index');
             Route::get('daily-reports/{report}', [\App\Http\Controllers\Employee\SalesManagerDailyReportController::class, 'show'])->name('daily-reports.show');
+            Route::get('commissions', [\App\Http\Controllers\Employee\SalesManagerCommissionController::class, 'index'])->name('commissions.index');
+            Route::get('commissions/{employee}', [\App\Http\Controllers\Employee\SalesManagerCommissionController::class, 'show'])->name('commissions.show')->whereNumber('employee');
             Route::get('team-reports', [\App\Http\Controllers\Employee\SalesManagerDailyReportController::class, 'teamReports'])->name('team-reports.index');
             Route::get('team-reports/edit', [\App\Http\Controllers\Employee\SalesManagerDailyReportController::class, 'editTeamReport'])->name('team-reports.edit');
             Route::post('team-reports', [\App\Http\Controllers\Employee\SalesManagerDailyReportController::class, 'storeTeamReport'])->name('team-reports.store');
@@ -1198,8 +1203,13 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('kpi', [\App\Http\Controllers\Admin\SalesKpiController::class, 'index'])->name('kpi.index');
             Route::get('kpi/targets', [\App\Http\Controllers\Admin\SalesKpiController::class, 'targets'])->name('kpi.targets');
             Route::put('kpi/targets', [\App\Http\Controllers\Admin\SalesKpiController::class, 'updateTargets'])->name('kpi.targets.update');
+            Route::get('course-commission-courses', [\App\Http\Controllers\Admin\SalesCourseCommissionAgreementController::class, 'courses'])->name('course-commission.courses');
+            Route::post('course-commission-agreements', [\App\Http\Controllers\Admin\SalesCourseCommissionAgreementController::class, 'store'])->name('course-commission-agreements.store');
+            Route::put('course-commission-agreements/{agreement}', [\App\Http\Controllers\Admin\SalesCourseCommissionAgreementController::class, 'update'])->name('course-commission-agreements.update');
+            Route::delete('course-commission-agreements/{agreement}', [\App\Http\Controllers\Admin\SalesCourseCommissionAgreementController::class, 'destroy'])->name('course-commission-agreements.destroy');
             Route::get('insights', [\App\Http\Controllers\Admin\SalesInsightsController::class, 'index'])->name('insights.index');
             Route::get('commissions', [\App\Http\Controllers\Admin\SalesCommissionController::class, 'index'])->name('commissions.index');
+            Route::get('commissions/{user}', [\App\Http\Controllers\Admin\SalesCommissionController::class, 'show'])->name('commissions.show')->whereNumber('user');
             Route::get('win-approvals', [\App\Http\Controllers\Admin\SalesWinApprovalController::class, 'index'])->name('win-approvals.index');
             Route::post('win-approvals/{lead}/approve', [\App\Http\Controllers\Admin\SalesWinApprovalController::class, 'approve'])->name('win-approvals.approve');
             Route::post('win-approvals/{lead}/reject', [\App\Http\Controllers\Admin\SalesWinApprovalController::class, 'reject'])->name('win-approvals.reject');

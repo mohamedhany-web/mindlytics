@@ -71,6 +71,12 @@
         <input type="number" step="0.01" min="0" name="expected_value" value="{{ old('expected_value', $lead->expected_value ?? '') }}" class="{{ $inputClass }}">
         @error('expected_value')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
     </div>
+    @include('sales._course_picker', [
+        'lead' => $lead ?? null,
+        'coursesCatalogUrl' => route('admin.sales.course-commission.courses'),
+        'inputClass' => $inputClass,
+        'labelClass' => $labelClass,
+    ])
     <div>
         <label class="{{ $labelClass }}">متابعة تالية</label>
         <input type="datetime-local" name="next_follow_up_at"

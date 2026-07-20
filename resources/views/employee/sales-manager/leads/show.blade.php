@@ -25,9 +25,9 @@
     };
     $infoCards = [
         ['label' => 'قيمة متوقعة', 'value' => $lead->expected_value !== null ? number_format($lead->expected_value, 2).' ج.م' : '—', 'icon' => 'fas fa-coins', 'bg' => 'bg-emerald-100', 'text' => 'text-emerald-600'],
+        ['label' => 'الكورس', 'value' => $lead->linkedCourseTitle() ? ($lead->linkedCourseTypeLabel().': '.$lead->linkedCourseTitle()) : '—', 'icon' => 'fas fa-graduation-cap', 'bg' => 'bg-violet-100', 'text' => 'text-violet-600'],
         ['label' => 'متابعة تالية', 'value' => $lead->next_follow_up_at?->format('Y-m-d H:i') ?? '—', 'icon' => 'fas fa-calendar-check', 'bg' => $lead->isFollowUpOverdue() ? 'bg-rose-100' : 'bg-sky-100', 'text' => $lead->isFollowUpOverdue() ? 'text-rose-600' : 'text-sky-600'],
         ['label' => 'آخر تواصل', 'value' => $lead->last_contacted_at?->format('Y-m-d H:i') ?? '—', 'icon' => 'fas fa-phone', 'bg' => 'bg-violet-100', 'text' => 'text-violet-600'],
-        ['label' => 'الأنشطة', 'value' => number_format($actCount), 'icon' => 'fas fa-list', 'bg' => 'bg-amber-100', 'text' => 'text-amber-600'],
     ];
 @endphp
 

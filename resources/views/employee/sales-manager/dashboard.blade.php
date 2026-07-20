@@ -30,6 +30,7 @@
         </div>
         <div class="flex flex-wrap gap-2 shrink-0">
             <a href="{{ route('employee.sales-manager.leads.index') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold"><i class="fas fa-user-plus"></i> عملاء الفريق</a>
+            <a href="{{ route('employee.sales-manager.commissions.index') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 text-sm font-semibold hover:bg-amber-100"><i class="fas fa-coins"></i> كوميشن الفريق</a>
             <a href="{{ route('employee.sales-manager.team-reports.edit') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50"><i class="fas fa-clipboard-check"></i> تقرير الفريق</a>
         </div>
     </div>
@@ -124,6 +125,7 @@
                 <a href="{{ route('employee.sales-manager.whatsapp.inbox.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm font-medium text-slate-700"><i class="fab fa-whatsapp text-emerald-600"></i> محادثات الفريق</a>
                 <a href="{{ route('employee.sales-manager.follow-ups.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm font-medium text-slate-700"><i class="fas fa-clipboard-list text-teal-600"></i> رقابة المتابعات</a>
                 <a href="{{ route('employee.sales-manager.daily-reports.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm font-medium text-slate-700"><i class="fas fa-clipboard-list text-sky-600"></i> تقارير الأعضاء</a>
+                <a href="{{ route('employee.sales-manager.commissions.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm font-medium text-slate-700"><i class="fas fa-coins text-amber-600"></i> كوميشن الفريق</a>
                 <a href="{{ route('employee.sales-manager.presence.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm font-medium text-slate-700"><i class="fas fa-satellite-dish text-rose-600"></i> مراقبة التواجد (Live)</a>
                 <a href="{{ route('employee.sales-manager.transfer.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm font-medium text-slate-700"><i class="fas fa-exchange-alt text-amber-600"></i> تحويل Leads</a>
                 <a href="{{ route('employee.sales-manager.attendance.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm font-medium text-slate-700"><i class="fas fa-clock text-violet-600"></i> حضور الفريق</a>

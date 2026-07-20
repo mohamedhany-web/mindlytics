@@ -78,6 +78,10 @@
                    class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 rounded-lg border border-slate-300 bg-white hover:bg-slate-50">
                     <i class="fas fa-users"></i> عملاؤه
                 </a>
+                <a href="{{ route('employee.sales-manager.commissions.show', $employee) }}"
+                   class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-amber-800 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100">
+                    <i class="fas fa-coins"></i> الكوميشن
+                </a>
             </div>
         </div>
 

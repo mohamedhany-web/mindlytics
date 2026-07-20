@@ -266,8 +266,10 @@ class EmployeeDeductionController extends Controller
 
         $deleted = 0;
         (clone $query)->orderBy('id')->chunkById(200, function ($chunk) use (&$deleted) {
-            $deleted += $chunk->count();
-            EmployeeSalaryDeduction::query()->whereIn('id', $chunk->pluck('id'))->delete();
+            foreach ($chunk as $deduction) {
+                $deduction->delete();
+                $deleted++;
+            }
         });
 
         return redirect()->route('admin.employee-deductions.index')

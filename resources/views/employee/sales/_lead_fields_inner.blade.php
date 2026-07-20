@@ -58,6 +58,12 @@
     <input type="number" step="0.01" min="0" name="expected_value" value="{{ old('expected_value', $lead->expected_value ?? '') }}" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
     @error('expected_value')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
 </div>
+@include('sales._course_picker', [
+    'lead' => $lead ?? null,
+    'coursesCatalogUrl' => route('employee.sales.courses.index'),
+    'inputClass' => 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500',
+    'labelClass' => 'block text-sm font-medium text-gray-700 mb-1',
+])
 <div>
     <label class="block text-sm font-medium text-gray-700 mb-1">متابعة تالية</label>
     <input type="datetime-local" name="next_follow_up_at" value="{{ old('next_follow_up_at', ($lead && $lead->next_follow_up_at) ? $lead->next_follow_up_at->format('Y-m-d\TH:i') : '') }}" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">

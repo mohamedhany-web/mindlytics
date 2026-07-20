@@ -7,6 +7,7 @@ use App\Models\AdvancedCourse;
 use App\Models\AcademicYear;
 use App\Models\StudentCourseEnrollment;
 use App\Models\LearningPathEnrollment;
+use App\Models\User;
 use App\Services\InstructorCoursePercentageService;
 use App\Models\Order;
 use App\Models\Invoice;
@@ -16,14 +17,19 @@ use App\Services\FawaterakService;
 use App\Services\GatewayFeeCalculator;
 use App\Services\KashierService;
 use App\Services\PaymentGatewaySettings;
+use App\Support\BranchContext;
 use App\Support\PlatformSettings;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules;
 
 class CheckoutController extends Controller
 {
@@ -32,53 +38,47 @@ class CheckoutController extends Controller
      */
     public function show($courseId)
     {
-        // التحقق من تسجيل الدخول - سيتم حفظ URL الحالي تلقائياً
-        if (!Auth::check()) {
-            return redirect()->guest(route('login'))->with('info', 'يرجى تسجيل الدخول أولاً لإتمام عملية الشراء');
-        }
-
         $course = AdvancedCourse::where('id', $courseId)
             ->where('is_active', true)
             ->publicCatalog()
             ->with(['academicSubject', 'academicYear'])
             ->firstOrFail();
 
-        // التحقق من التسجيل السابق
-        $isEnrolled = StudentCourseEnrollment::where('user_id', Auth::id())
-            ->where('advanced_course_id', $course->id)
-            ->where('status', 'active')
-            ->exists();
+        if (Auth::check()) {
+            $isEnrolled = StudentCourseEnrollment::where('user_id', Auth::id())
+                ->where('advanced_course_id', $course->id)
+                ->where('status', 'active')
+                ->exists();
 
-        if ($isEnrolled) {
-            return redirect()->route('public.course.show', $course->id)
-                ->with('info', 'أنت مسجل بالفعل في هذا الكورس');
-        }
-
-        // التحقق من وجود طلب قيد الانتظار (السماح بإعادة الدفع الإلكتروني لنفس الطلب)
-        $existingOrder = Order::where('user_id', Auth::id())
-            ->where('advanced_course_id', $course->id)
-            ->where('status', Order::STATUS_PENDING)
-            ->first();
-
-        if ($existingOrder) {
-            $payMode = PlatformSettings::paymentMode();
-            $canOnlineRetry = $existingOrder->payment_method === 'online'
-                && $existingOrder->payment_proof === null
-                && in_array($payMode, ['kashier', 'fawaterak'], true);
-            if (! $canOnlineRetry) {
+            if ($isEnrolled) {
                 return redirect()->route('public.course.show', $course->id)
-                    ->with('info', 'لديك طلب قيد الانتظار لهذا الكورس');
+                    ->with('info', 'أنت مسجل بالفعل في هذا الكورس');
+            }
+
+            $existingOrder = Order::where('user_id', Auth::id())
+                ->where('advanced_course_id', $course->id)
+                ->where('status', Order::STATUS_PENDING)
+                ->first();
+
+            if ($existingOrder) {
+                $payMode = PlatformSettings::paymentMode();
+                $canOnlineRetry = $existingOrder->payment_method === 'online'
+                    && $existingOrder->payment_proof === null
+                    && in_array($payMode, ['kashier', 'fawaterak'], true);
+                if (! $canOnlineRetry) {
+                    return redirect()->route('public.course.show', $course->id)
+                        ->with('info', 'لديك طلب قيد الانتظار لهذا الكورس');
+                }
             }
         }
 
-        // جلب المحافظ الإلكترونية النشطة
         $wallets = \App\Models\Wallet::academyWallets()
             ->where('is_active', true)
             ->whereNotNull('type')
             ->whereIn('type', ['vodafone_cash', 'instapay', 'bank_transfer'])
-            ->where(function($query) {
+            ->where(function ($query) {
                 $query->whereNotNull('account_number')
-                      ->orWhereNotNull('name');
+                    ->orWhereNotNull('name');
             })
             ->orderBy('type')
             ->orderBy('name')
@@ -86,8 +86,119 @@ class CheckoutController extends Controller
 
         $platformPaymentMode = PlatformSettings::paymentMode();
         $fawaterakCheckoutReady = PaymentGatewaySettings::isFawaterakEnabled();
+        $phoneCountries = config('phone_countries.countries', []);
+        $defaultCountry = collect($phoneCountries)->firstWhere('code', config('phone_countries.default_country', 'SA'));
 
-        return view('public.checkout', compact('course', 'wallets', 'platformPaymentMode', 'fawaterakCheckoutReady'));
+        return view('public.checkout', compact(
+            'course',
+            'wallets',
+            'platformPaymentMode',
+            'fawaterakCheckoutReady',
+            'phoneCountries',
+            'defaultCountry'
+        ));
+    }
+
+    /**
+     * تسجيل سريع أثناء الدفع (JSON) — ينشئ حساب طالب ويسجّل الدخول فوراً.
+     */
+    public function quickRegister(Request $request, $courseId): JsonResponse
+    {
+        if (Auth::check()) {
+            return response()->json(['success' => true, 'already_authenticated' => true]);
+        }
+
+        AdvancedCourse::where('id', $courseId)
+            ->where('is_active', true)
+            ->publicCatalog()
+            ->firstOrFail();
+
+        if (! $request->filled('password_confirmation') && $request->filled('password')) {
+            $request->merge(['password_confirmation' => $request->input('password')]);
+        }
+
+        $countries = config('phone_countries.countries', []);
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'country_code' => 'required|string|max:10',
+            'phone' => 'required|string|max:20',
+            'email' => 'required|email|unique:users',
+            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+        ], [
+            'name.required' => 'الاسم مطلوب',
+            'country_code.required' => 'كود الدولة مطلوب',
+            'phone.required' => 'رقم الهاتف مطلوب',
+            'email.required' => 'البريد الإلكتروني مطلوب',
+            'email.email' => 'البريد الإلكتروني غير صحيح',
+            'email.unique' => 'البريد الإلكتروني مسجل مسبقاً',
+            'password.required' => 'كلمة المرور مطلوبة',
+            'password.confirmed' => 'تأكيد كلمة المرور غير متطابق',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $country = collect($countries)->firstWhere('dial_code', $request->country_code);
+        if (! $country || ! isset($country['validation']['regex'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'كود الدولة غير مدعوم.',
+                'errors' => ['country_code' => ['كود الدولة غير مدعوم.']],
+            ], 422);
+        }
+
+        $nationalNumber = preg_replace('/\D/', '', (string) $request->phone);
+        $nationalNumber = ltrim($nationalNumber, '0');
+        if (! preg_match($country['validation']['regex'], $nationalNumber)) {
+            $example = $country['example'] ?? $country['placeholder'] ?? '';
+
+            return response()->json([
+                'success' => false,
+                'message' => 'رقم الهاتف غير صحيح لهذه الدولة. مثال: '.$example,
+                'errors' => ['phone' => ['رقم الهاتف غير صحيح لهذه الدولة. مثال: '.$example]],
+            ], 422);
+        }
+
+        $dial = $country['dial_code'] ?? '';
+        $fullPhone = ($dial === '' || $dial === 'OTHER') ? ('OTHER_'.$nationalNumber) : ($dial.$nationalNumber);
+        if (User::where('phone', $fullPhone)->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'رقم الهاتف مسجل مسبقاً',
+                'errors' => ['phone' => ['رقم الهاتف مسجل مسبقاً']],
+            ], 422);
+        }
+
+        $branchId = app(BranchContext::class)->id();
+
+        $user = User::create([
+            'name' => $request->name,
+            'phone' => $fullPhone,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'role' => 'student',
+            'is_active' => true,
+            'branch_id' => $branchId,
+        ]);
+
+        Auth::login($user);
+        $request->session()->regenerate();
+
+        return response()->json([
+            'success' => true,
+            'csrf_token' => csrf_token(),
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ],
+        ]);
     }
 
     /**

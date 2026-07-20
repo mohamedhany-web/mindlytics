@@ -163,17 +163,31 @@
                     </div>
                     <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">{{ $rep?->name ?? '—' }}</span>
                 </div>
-                <div class="p-4">
+                <div class="p-4 space-y-4">
+                    @php
+                        $commMode = old('sales_commission_mode', $rep?->sales_commission_mode ?? 'none');
+                        $tierRows = old('tier_min')
+                            ? collect(old('tier_min', []))->keys()->map(fn ($i) => [
+                                'min' => old('tier_min.'.$i),
+                                'max' => old('tier_max.'.$i),
+                                'rate' => old('tier_rate.'.$i),
+                                'bonus' => old('tier_bonus.'.$i),
+                                'bonus_at' => old('tier_bonus_at.'.$i),
+                            ])->all()
+                            : \App\Services\SalesCommissionTierService::normalizeTiers($rep?->sales_commission_tiers);
+                        $tierPeriod = old('sales_commission_tier_period', $rep?->sales_commission_tier_period ?? 'month');
+                    @endphp
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">النظام</label>
-                            <select name="sales_commission_mode" class="{{ $inputClass }}">
-                                <option value="none" @selected(old('sales_commission_mode', $rep?->sales_commission_mode ?? 'none') === 'none')>بدون</option>
-                                <option value="percent" @selected(old('sales_commission_mode', $rep?->sales_commission_mode) === 'percent')>نسبة % من expected value</option>
-                                <option value="fixed" @selected(old('sales_commission_mode', $rep?->sales_commission_mode) === 'fixed')>مبلغ ثابت لكل win</option>
+                            <select name="sales_commission_mode" id="sales_commission_mode" class="{{ $inputClass }}">
+                                <option value="none" @selected($commMode === 'none')>بدون</option>
+                                <option value="percent" @selected($commMode === 'percent')>نسبة % من expected value</option>
+                                <option value="fixed" @selected($commMode === 'fixed')>مبلغ ثابت لكل win</option>
+                                <option value="tier" @selected($commMode === 'tier')>Tier System (شرائح + بونص)</option>
                             </select>
                         </div>
-                        <div>
+                        <div id="commission_value_wrap">
                             <label class="block text-xs font-semibold text-slate-700 mb-1">القيمة</label>
                             <input type="number" step="0.01" min="0" name="sales_commission_value"
                                    value="{{ old('sales_commission_value', $rep?->sales_commission_value) }}"
@@ -182,6 +196,55 @@
                         <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                             <p class="text-xs font-semibold text-slate-600">الإعداد الحالي</p>
                             <p class="text-sm font-black text-emerald-700 mt-0.5">{{ $rep?->salesCommissionLabel() ?? '—' }}</p>
+                        </div>
+                    </div>
+
+                    <div id="tier_system_wrap" class="space-y-3 {{ $commMode === 'tier' ? '' : 'hidden' }}">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">فترة عدّ الـ Wins</label>
+                                <select name="sales_commission_tier_period" class="{{ $inputClass }}">
+                                    <option value="month" @selected($tierPeriod === 'month')>شهري (يُعاد من أول كل شهر)</option>
+                                    <option value="all" @selected($tierPeriod === 'all')>تراكمي (كل الوقت)</option>
+                                </select>
+                            </div>
+                            <p class="text-xs text-slate-600">
+                                البيع رقم N يأخذ عمولة شريحته، والبونص يُصرف مرة عند الوصول لـ 10 / 20 / 30 / 40.
+                            </p>
+                        </div>
+                        <div class="overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="min-w-full text-sm">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-700 border-b border-slate-200">
+                                        <th class="px-3 py-2 text-right font-semibold">من (بيع #)</th>
+                                        <th class="px-3 py-2 text-right font-semibold">إلى</th>
+                                        <th class="px-3 py-2 text-right font-semibold">عمولة / كورس</th>
+                                        <th class="px-3 py-2 text-right font-semibold">بونص عند الوصول</th>
+                                        <th class="px-3 py-2 text-right font-semibold">عند بيع #</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    @foreach($tierRows as $i => $tier)
+                                        <tr>
+                                            <td class="px-3 py-2">
+                                                <input type="number" min="1" name="tier_min[]" value="{{ $tier['min'] ?? '' }}" class="{{ $inputClass }}">
+                                            </td>
+                                            <td class="px-3 py-2">
+                                                <input type="number" min="1" name="tier_max[]" value="{{ $tier['max'] ?? '' }}" placeholder="∞" class="{{ $inputClass }}">
+                                            </td>
+                                            <td class="px-3 py-2">
+                                                <input type="number" step="0.01" min="0" name="tier_rate[]" value="{{ $tier['rate'] ?? '' }}" class="{{ $inputClass }}">
+                                            </td>
+                                            <td class="px-3 py-2">
+                                                <input type="number" step="0.01" min="0" name="tier_bonus[]" value="{{ $tier['bonus'] ?? 0 }}" class="{{ $inputClass }}">
+                                            </td>
+                                            <td class="px-3 py-2">
+                                                <input type="number" min="1" name="tier_bonus_at[]" value="{{ $tier['bonus_at'] ?? '' }}" placeholder="—" class="{{ $inputClass }}">
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -222,6 +285,219 @@
                 </div>
             </section>
         </form>
+
+            {{-- اتفاقيات كوميشن حسب الكورس --}}
+            @php
+                $agreements = $agreements ?? collect();
+                $defaultTiers = $defaultTiers ?? \App\Services\SalesCommissionTierService::defaultTiers();
+            @endphp
+            <section class="rounded-2xl bg-white border border-violet-200 shadow-lg overflow-hidden">
+                <div class="px-4 py-3 border-b border-violet-200 bg-violet-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div>
+                        <h3 class="text-base font-black text-violet-950 flex items-center gap-2">
+                            <i class="fas fa-file-contract text-violet-600"></i>
+                            اتفاقيات كوميشن حسب الكورس
+                        </h3>
+                        <p class="text-xs text-violet-800">لكل موظف × كورس: اختر وضع الحساب (Tier كورس / ثابت / نسبة / Tier عام…).</p>
+                    </div>
+                    <span class="text-xs font-semibold text-violet-800 bg-white px-2.5 py-1 rounded-lg border border-violet-200">{{ $agreements->count() }} اتفاقية</span>
+                </div>
+                <div class="p-4 space-y-4">
+                    @if($agreements->isNotEmpty())
+                        <div class="overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="min-w-full text-sm">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-700 border-b border-slate-200">
+                                        <th class="px-3 py-2 text-right">النوع</th>
+                                        <th class="px-3 py-2 text-right">الكورس</th>
+                                        <th class="px-3 py-2 text-center">السعر</th>
+                                        <th class="px-3 py-2 text-right">وضع الحساب</th>
+                                        <th class="px-3 py-2 text-center">حالة</th>
+                                        <th class="px-3 py-2 text-center">حذف</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    @foreach($agreements as $agr)
+                                        <tr>
+                                            <td class="px-3 py-2">{{ $agr->courseTypeLabel() }}</td>
+                                            <td class="px-3 py-2 font-semibold">{{ $agr->courseTitle() }}</td>
+                                            <td class="px-3 py-2 text-center tabular-nums">{{ $agr->coursePrice() !== null ? number_format($agr->coursePrice(), 2) : '—' }}</td>
+                                            <td class="px-3 py-2 text-xs">{{ $agr->calcModeLabel() }}</td>
+                                            <td class="px-3 py-2 text-center">
+                                                <span class="text-[11px] font-bold {{ $agr->is_active ? 'text-emerald-700' : 'text-slate-500' }}">
+                                                    {{ $agr->is_active ? 'نشطة' : 'موقوفة' }}
+                                                </span>
+                                            </td>
+                                            <td class="px-3 py-2 text-center">
+                                                <form method="post" action="{{ route('admin.sales.course-commission-agreements.destroy', $agr) }}" onsubmit="return confirm('حذف الاتفاقية؟');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <input type="hidden" name="year_month" value="{{ $yearMonth }}">
+                                                    <button type="submit" class="text-rose-600 hover:text-rose-800 text-xs font-semibold">حذف</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <p class="text-sm text-slate-600">لا اتفاقيات بعد — أضف كورساً أدناه.</p>
+                    @endif
+
+                    <form method="post" action="{{ route('admin.sales.course-commission-agreements.store') }}" class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3" id="agr_create_form">
+                        @csrf
+                        <input type="hidden" name="user_id" value="{{ $userId }}">
+                        <input type="hidden" name="year_month" value="{{ $yearMonth }}">
+                        <p class="text-sm font-black text-slate-900">إضافة اتفاقية جديدة</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">نوع الكورس</label>
+                                <select name="course_type" id="agr_course_type" class="{{ $inputClass }}" required>
+                                    @foreach(\App\Models\SalesCourseCommissionAgreement::COURSE_TYPES as $k => $label)
+                                        <option value="{{ $k }}">{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="xl:col-span-2">
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">الكورس</label>
+                                <select name="course_ref_id" id="agr_course_ref" class="{{ $inputClass }}" required>
+                                    <option value="">— اختر —</option>
+                                </select>
+                                <p class="text-[11px] text-slate-500 mt-1" id="agr_course_price_hint"></p>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">وضع الحساب</label>
+                                <select name="calc_mode" id="agr_calc_mode" class="{{ $inputClass }}" required>
+                                    @foreach(\App\Models\SalesCourseCommissionAgreement::CALC_MODES as $k => $label)
+                                        <option value="{{ $k }}">{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3" id="agr_value_wrap">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">القيمة (ثابت أو %)</label>
+                                <input type="number" step="0.01" min="0" name="commission_value" class="{{ $inputClass }}" value="0">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">فترة الـ Tier</label>
+                                <select name="tier_period" class="{{ $inputClass }}">
+                                    <option value="month">شهري</option>
+                                    <option value="all">تراكمي</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="agr_tiers_wrap" class="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                            <table class="min-w-full text-sm">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b border-slate-200">
+                                        <th class="px-3 py-2 text-right">من</th>
+                                        <th class="px-3 py-2 text-right">إلى</th>
+                                        <th class="px-3 py-2 text-right">عمولة</th>
+                                        <th class="px-3 py-2 text-right">بونص</th>
+                                        <th class="px-3 py-2 text-right">عند #</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($defaultTiers as $tier)
+                                        <tr>
+                                            <td class="px-2 py-1"><input type="number" name="agr_tier_min[]" value="{{ $tier['min'] }}" class="{{ $inputClass }}"></td>
+                                            <td class="px-2 py-1"><input type="number" name="agr_tier_max[]" value="{{ $tier['max'] ?? '' }}" placeholder="∞" class="{{ $inputClass }}"></td>
+                                            <td class="px-2 py-1"><input type="number" step="0.01" name="agr_tier_rate[]" value="{{ $tier['rate'] }}" class="{{ $inputClass }}"></td>
+                                            <td class="px-2 py-1"><input type="number" step="0.01" name="agr_tier_bonus[]" value="{{ $tier['bonus'] }}" class="{{ $inputClass }}"></td>
+                                            <td class="px-2 py-1"><input type="number" name="agr_tier_bonus_at[]" value="{{ $tier['bonus_at'] ?? '' }}" class="{{ $inputClass }}"></td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                        <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-700 px-4 py-2 text-sm font-semibold text-white">
+                            <i class="fas fa-plus"></i>
+                            إضافة الاتفاقية
+                        </button>
+                    </form>
+                </div>
+            </section>
     @endif
 </div>
+
+@push('scripts')
+<script>
+(function () {
+    const modeSel = document.getElementById('sales_commission_mode');
+    const valueWrap = document.getElementById('commission_value_wrap');
+    const tierWrap = document.getElementById('tier_system_wrap');
+    if (modeSel) {
+        function sync() {
+            const isTier = modeSel.value === 'tier';
+            const hideValue = modeSel.value === 'none' || isTier;
+            if (valueWrap) valueWrap.classList.toggle('hidden', hideValue);
+            if (tierWrap) tierWrap.classList.toggle('hidden', !isTier);
+        }
+        modeSel.addEventListener('change', sync);
+        sync();
+    }
+
+    const typeSel = document.getElementById('agr_course_type');
+    const courseSel = document.getElementById('agr_course_ref');
+    const priceHint = document.getElementById('agr_course_price_hint');
+    const calcMode = document.getElementById('agr_calc_mode');
+    const agrValueWrap = document.getElementById('agr_value_wrap');
+    const agrTiersWrap = document.getElementById('agr_tiers_wrap');
+    const coursesUrl = @json(route('admin.sales.course-commission.courses'));
+    let coursesCache = {};
+
+    async function loadCourses() {
+        if (!typeSel || !courseSel) return;
+        const type = typeSel.value;
+        courseSel.innerHTML = '<option value="">… جاري التحميل</option>';
+        try {
+            if (!coursesCache[type]) {
+                const res = await fetch(coursesUrl + '?type=' + encodeURIComponent(type), { headers: { 'Accept': 'application/json' } });
+                const json = await res.json();
+                coursesCache[type] = json.data || [];
+            }
+            const list = coursesCache[type];
+            courseSel.innerHTML = '<option value="">— اختر —</option>';
+            list.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.title + ' (' + Number(c.price).toFixed(2) + ' ج.م)';
+                opt.dataset.price = c.price;
+                courseSel.appendChild(opt);
+            });
+        } catch (e) {
+            courseSel.innerHTML = '<option value="">تعذّر التحميل</option>';
+        }
+        if (priceHint) priceHint.textContent = '';
+    }
+
+    function syncAgrMode() {
+        if (!calcMode) return;
+        const mode = calcMode.value;
+        const needsValue = mode === 'fixed' || mode === 'percent';
+        const needsTiers = mode === 'tier_course' || mode === 'tier_course_global_count';
+        if (agrValueWrap) agrValueWrap.classList.toggle('hidden', !needsValue && mode === 'tier_global');
+        if (agrTiersWrap) agrTiersWrap.classList.toggle('hidden', !needsTiers);
+    }
+
+    function syncPriceHint() {
+        if (!courseSel || !priceHint) return;
+        const opt = courseSel.selectedOptions[0];
+        priceHint.textContent = opt && opt.dataset.price ? ('سعر الكورس في النظام: ' + Number(opt.dataset.price).toFixed(2) + ' ج.م') : '';
+    }
+
+    if (typeSel) {
+        typeSel.addEventListener('change', loadCourses);
+        loadCourses();
+    }
+    if (courseSel) courseSel.addEventListener('change', syncPriceHint);
+    if (calcMode) {
+        calcMode.addEventListener('change', syncAgrMode);
+        syncAgrMode();
+    }
+})();
+</script>
+@endpush
 @endsection

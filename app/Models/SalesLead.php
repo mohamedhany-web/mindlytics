@@ -51,6 +51,12 @@ class SalesLead extends Model
     /** بعد كم يوم بلا تواصل نعتبر العميل «يحتاج متابعة» في التقارير */
     public const STALE_CONTACT_DAYS = 10;
 
+    public const COURSE_TYPES = [
+        'advanced' => 'أونلاين',
+        'offline' => 'أوفلاين',
+        'legacy' => 'مسجّل / قديم',
+    ];
+
     protected $fillable = [
         'assigned_to',
         'created_by',
@@ -65,6 +71,10 @@ class SalesLead extends Model
         'stage',
         'priority',
         'interest',
+        'course_type',
+        'advanced_course_id',
+        'offline_course_id',
+        'course_id',
         'expected_value',
         'notes',
         'next_follow_up_at',
@@ -112,6 +122,56 @@ class SalesLead extends Model
     public function group(): BelongsTo
     {
         return $this->belongsTo(SalesLeadGroup::class, 'sales_lead_group_id');
+    }
+
+    public function advancedCourse(): BelongsTo
+    {
+        return $this->belongsTo(AdvancedCourse::class, 'advanced_course_id');
+    }
+
+    public function offlineCourse(): BelongsTo
+    {
+        return $this->belongsTo(OfflineCourse::class, 'offline_course_id');
+    }
+
+    public function legacyCourse(): BelongsTo
+    {
+        return $this->belongsTo(Course::class, 'course_id');
+    }
+
+    public function linkedCourseId(): ?int
+    {
+        return match ($this->course_type) {
+            'advanced' => $this->advanced_course_id ? (int) $this->advanced_course_id : null,
+            'offline' => $this->offline_course_id ? (int) $this->offline_course_id : null,
+            'legacy' => $this->course_id ? (int) $this->course_id : null,
+            default => null,
+        };
+    }
+
+    public function linkedCourseTitle(): ?string
+    {
+        $title = match ($this->course_type) {
+            'advanced' => $this->advancedCourse?->title,
+            'offline' => $this->offlineCourse?->title,
+            'legacy' => $this->legacyCourse?->title,
+            default => null,
+        };
+
+        return $title !== null && $title !== '' ? (string) $title : null;
+    }
+
+    public function linkedCourseTypeLabel(): string
+    {
+        return self::COURSE_TYPES[$this->course_type] ?? '—';
+    }
+
+    public function applyCourseSelection(?string $type, ?int $courseId): void
+    {
+        $this->course_type = $type;
+        $this->advanced_course_id = $type === 'advanced' ? $courseId : null;
+        $this->offline_course_id = $type === 'offline' ? $courseId : null;
+        $this->course_id = $type === 'legacy' ? $courseId : null;
     }
 
     public function activities(): HasMany

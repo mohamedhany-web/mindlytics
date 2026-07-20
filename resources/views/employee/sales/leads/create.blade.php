@@ -161,6 +161,12 @@
                     <label class="block text-sm font-medium text-slate-700 mb-1">قيمة متوقعة (ج.م)</label>
                     <input type="number" step="0.01" min="0" name="expected_value" value="{{ old('expected_value') }}" class="w-full px-3 py-2.5 text-sm">
                 </div>
+                @include('sales._course_picker', [
+                    'lead' => null,
+                    'coursesCatalogUrl' => route('employee.sales.courses.index'),
+                    'inputClass' => 'w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg',
+                    'labelClass' => 'block text-sm font-medium text-slate-700 mb-1',
+                ])
                 <div class="md:col-span-2 xl:col-span-4">
                     <label class="block text-sm font-medium text-slate-700 mb-1">ملاحظات</label>
                     <textarea name="notes" rows="2" class="w-full px-3 py-2.5 text-sm">{{ old('notes') }}</textarea>

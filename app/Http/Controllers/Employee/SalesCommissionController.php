@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Employee;
 use App\Http\Controllers\Controller;
 use App\Models\SalesLead;
 use App\Models\Transaction;
+use App\Services\SalesCourseCommissionResolver;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -56,19 +57,24 @@ class SalesCommissionController extends Controller
             ->where('assigned_to', $user->id)
             ->where('stage', 'won')
             ->whereNull('won_confirmed_at')
+            ->with(['advancedCourse:id,title', 'offlineCourse:id,title', 'legacyCourse:id,title'])
             ->orderByDesc('updated_at')
-            ->get(['id', 'name', 'expected_value', 'closed_at']);
+            ->get();
 
+        $resolver = app(SalesCourseCommissionResolver::class);
         $pendingEst = 0.0;
+        $pendingEstimates = [];
         foreach ($pendingLeads as $pl) {
-            $pendingEst += $user->calculateSalesCommissionAmount((float) ($pl->expected_value ?? 0));
+            $est = (float) $resolver->quoteForLead($user, $pl)['total'];
+            $pendingEstimates[$pl->id] = $est;
+            $pendingEst += $est;
         }
 
         $confirmedLeads = SalesLead::query()
             ->where('assigned_to', $user->id)
             ->whereNotNull('won_confirmed_at')
             ->when($rangeStart && $rangeEnd, fn ($q) => $q->whereBetween('won_confirmed_at', [$rangeStart, $rangeEnd]))
-            ->with('category')
+            ->with(['category', 'advancedCourse:id,title', 'offlineCourse:id,title', 'legacyCourse:id,title'])
             ->orderByDesc('won_confirmed_at')
             ->limit(50)
             ->get();
@@ -80,6 +86,12 @@ class SalesCommissionController extends Controller
             ->when($rangeStart && $rangeEnd, fn ($q) => $q->whereBetween('created_at', [$rangeStart, $rangeEnd]))
             ->orderByDesc('created_at')
             ->limit(20)
+            ->get();
+
+        $agreements = $user->salesCourseCommissionAgreements()
+            ->where('is_active', true)
+            ->with(['advancedCourse:id,title,price', 'offlineCourse:id,title,price', 'legacyCourse:id,title,price'])
+            ->orderByDesc('id')
             ->get();
 
         $periodLabel = $view === 'all'
@@ -101,9 +113,11 @@ class SalesCommissionController extends Controller
             'txnSum',
             'pendingLeads',
             'pendingEst',
+            'pendingEstimates',
             'confirmedLeads',
             'recentTxns',
-            'commissionRatePct'
+            'commissionRatePct',
+            'agreements'
         ));
     }
 }

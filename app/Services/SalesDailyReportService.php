@@ -663,6 +663,10 @@ class SalesDailyReportService
             return null;
         }
 
+        if ($report?->penalty_waived_at) {
+            return null;
+        }
+
         if ($report?->auto_deduction_id) {
             return $report->autoDeduction;
         }

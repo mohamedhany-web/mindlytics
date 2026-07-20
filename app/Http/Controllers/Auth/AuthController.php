@@ -20,8 +20,15 @@ use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
-    public function showLogin()
+    public function showLogin(Request $request)
     {
+        if ($request->filled('redirect')) {
+            $redirectUrl = $request->input('redirect');
+            if (filter_var($redirectUrl, FILTER_VALIDATE_URL) || str_starts_with((string) $redirectUrl, '/')) {
+                session(['url.intended' => $redirectUrl]);
+            }
+        }
+
         $authBackgroundUrl = \Illuminate\Support\Facades\Storage::disk('public')->exists(\App\Providers\AppServiceProvider::AUTH_BACKGROUND_STORAGE_PATH)
             ? asset('storage/' . \App\Providers\AppServiceProvider::AUTH_BACKGROUND_STORAGE_PATH)
             : asset('images/brainstorm-meeting.jpg');

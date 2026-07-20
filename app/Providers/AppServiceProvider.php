@@ -220,6 +220,7 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Lecture::observe(\App\Observers\LectureObserver::class);
         \App\Models\Assignment::observe(\App\Observers\AssignmentObserver::class);
         \App\Models\LectureAssignment::observe(\App\Observers\LectureAssignmentObserver::class);
+        \App\Models\EmployeeSalaryDeduction::observe(\App\Observers\EmployeeSalaryDeductionObserver::class);
 
         // تفعيل Event Listeners لتسجيل النشاطات
         \Illuminate\Support\Facades\Event::listen(

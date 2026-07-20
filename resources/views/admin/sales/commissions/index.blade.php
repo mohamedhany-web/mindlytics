@@ -142,7 +142,7 @@
             <span class="text-xs font-semibold text-sky-700 bg-sky-50 px-2.5 py-1 rounded-lg border border-sky-200">{{ $repCount }} موظف</span>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-[1100px] w-full text-sm">
+            <table class="min-w-[1200px] w-full text-sm">
                 <thead>
                     <tr class="bg-slate-50 text-slate-700 border-b border-slate-200">
                         <th class="px-4 py-3 text-right font-semibold">الموظف</th>
@@ -155,13 +155,19 @@
                         <th class="px-4 py-3 text-center font-semibold">wins معلّقة</th>
                         <th class="px-4 py-3 text-center font-semibold">تقدير معلّق</th>
                         <th class="px-4 py-3 text-center font-semibold">ملاحظة</th>
+                        <th class="px-4 py-3 text-center font-semibold">تفاصيل</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     @forelse($rows as $r)
                         @php $u = $r['rep']; @endphp
                         <tr class="hover:bg-slate-50">
-                            <td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ $u->name }}</td>
+                            <td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">
+                                <a href="{{ route('admin.sales.commissions.show', array_merge(['user' => $u->id], request()->only(['view', 'year_month']))) }}"
+                                   class="text-sky-700 hover:text-sky-900 hover:underline">
+                                    {{ $u->name }}
+                                </a>
+                            </td>
                             <td class="px-4 py-3 text-center">
                                 <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
                                     {{ $u->salesCommissionLabel() }}
@@ -202,10 +208,17 @@
                                     <span class="text-emerald-600 text-xs font-semibold">—</span>
                                 @endif
                             </td>
+                            <td class="px-4 py-3 text-center">
+                                <a href="{{ route('admin.sales.commissions.show', array_merge(['user' => $u->id], request()->only(['view', 'year_month']))) }}"
+                                   class="inline-flex items-center gap-1 rounded-lg bg-sky-600 hover:bg-sky-700 px-3 py-1.5 text-xs font-semibold text-white">
+                                    <i class="fas fa-users"></i>
+                                    العملاء
+                                </a>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="px-4 py-12 text-center">
+                            <td colspan="11" class="px-4 py-12 text-center">
                                 <div class="w-14 h-14 mx-auto mb-3 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
                                     <i class="fas fa-users text-xl"></i>
                                 </div>
@@ -227,6 +240,7 @@
                             <td class="px-4 py-3 text-center tabular-nums">{{ number_format($totals['txn_commission'], 2) }}</td>
                             <td class="px-4 py-3 text-center tabular-nums text-amber-700">{{ $totals['pending_wins'] }}</td>
                             <td class="px-4 py-3 text-center tabular-nums text-amber-800">{{ number_format($totals['pending_estimated'], 2) }}</td>
+                            <td class="px-4 py-3"></td>
                             <td class="px-4 py-3"></td>
                         </tr>
                     </tfoot>

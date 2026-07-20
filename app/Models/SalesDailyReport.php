@@ -29,6 +29,7 @@ class SalesDailyReport extends Model
         'productivity_notes',
         'missing_fields',
         'auto_deduction_id',
+        'penalty_waived_at',
         'manager_reviewed_at',
         'manager_reviewed_by',
         'sales_team_id',
@@ -37,6 +38,7 @@ class SalesDailyReport extends Model
     protected $casts = [
         'report_date' => 'date',
         'submitted_at' => 'datetime',
+        'penalty_waived_at' => 'datetime',
         'manager_reviewed_at' => 'datetime',
         'missing_fields' => 'array',
     ];

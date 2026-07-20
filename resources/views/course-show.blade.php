@@ -1147,7 +1147,7 @@
                         @endauth
                         @guest
                             @if(($course->price ?? 0) > 0 && !($course->is_free ?? false))
-                                <a href="{{ route('register', ['redirect' => route('public.course.checkout', $course->id)]) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                                <a href="{{ route('public.course.checkout', $course->id) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
                                     <i class="fas fa-shopping-cart"></i>
                                     {{ __('public.buy_now') }}
                                 </a>
@@ -1493,7 +1493,7 @@
                                 @endauth
                                 @guest
                                         @if(($course->effectivePrice() ?? 0) > 0 && !($course->is_free ?? false))
-                                            <a href="{{ route('register', ['redirect' => route('public.course.checkout', $course->id)]) }}" class="group/btn relative inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-6 py-4 rounded-xl font-bold text-base shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 w-full overflow-hidden">
+                                            <a href="{{ route('public.course.checkout', $course->id) }}" class="group/btn relative inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-6 py-4 rounded-xl font-bold text-base shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 w-full overflow-hidden">
                                                 <div class="absolute inset-0 bg-gradient-to-r from-green-500 to-blue-500 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
                                                 <i class="fas fa-shopping-cart relative z-10"></i>
                                                 <span class="relative z-10">{{ __('public.buy_now') }}</span>

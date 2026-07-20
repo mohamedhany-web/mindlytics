@@ -535,6 +535,8 @@ class SalesLeadController extends Controller
             'stage' => 'required|string|in:' . implode(',', array_keys(SalesLead::STAGES)),
             'priority' => 'required|string|in:' . implode(',', array_keys(SalesLead::PRIORITIES)),
             'interest' => 'nullable|string|max:2000',
+            'course_type' => 'nullable|string|in:' . implode(',', array_keys(SalesLead::COURSE_TYPES)),
+            'course_ref_id' => 'nullable|integer|min:1',
             'expected_value' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string|max:5000',
             'next_follow_up_at' => 'nullable|date',
@@ -543,6 +545,8 @@ class SalesLeadController extends Controller
             'lost_reason_code' => 'nullable|string|in:' . implode(',', array_keys(SalesLead::LOSS_REASONS)),
             'lost_reason_custom' => 'nullable|string|max:500',
         ]);
+
+        $validated = $this->normalizeCourseFields($validated);
 
         if (($validated['stage'] ?? null) === 'lost') {
             $code = (string) ($validated['lost_reason_code'] ?? '');
@@ -582,6 +586,47 @@ class SalesLeadController extends Controller
         } else {
             unset($validated['sales_lead_group_id']);
         }
+
+        return $validated;
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function normalizeCourseFields(array $validated): array
+    {
+        $type = $validated['course_type'] ?? null;
+        $refId = isset($validated['course_ref_id']) && $validated['course_ref_id'] !== ''
+            ? (int) $validated['course_ref_id']
+            : null;
+        unset($validated['course_ref_id']);
+
+        if (! $type || ! $refId || ! array_key_exists($type, SalesLead::COURSE_TYPES)) {
+            $validated['course_type'] = null;
+            $validated['advanced_course_id'] = null;
+            $validated['offline_course_id'] = null;
+            $validated['course_id'] = null;
+
+            return $validated;
+        }
+
+        $exists = match ($type) {
+            'advanced' => \App\Models\AdvancedCourse::query()->whereKey($refId)->exists(),
+            'offline' => \App\Models\OfflineCourse::query()->whereKey($refId)->exists(),
+            'legacy' => \App\Models\Course::query()->whereKey($refId)->exists(),
+            default => false,
+        };
+        if (! $exists) {
+            throw ValidationException::withMessages([
+                'course_ref_id' => ['الكورس المحدد غير موجود.'],
+            ]);
+        }
+
+        $validated['course_type'] = $type;
+        $validated['advanced_course_id'] = $type === 'advanced' ? $refId : null;
+        $validated['offline_course_id'] = $type === 'offline' ? $refId : null;
+        $validated['course_id'] = $type === 'legacy' ? $refId : null;
 
         return $validated;
     }

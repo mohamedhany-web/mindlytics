@@ -54,6 +54,8 @@ class User extends Authenticatable
         'employee_notes',
         'sales_commission_mode',
         'sales_commission_value',
+        'sales_commission_tiers',
+        'sales_commission_tier_period',
         'bank_name',
         'bank_branch',
         'bank_account_number',
@@ -115,6 +117,7 @@ class User extends Authenticatable
             'salary' => 'decimal:2',
             'is_employee' => 'boolean',
             'sales_commission_value' => 'decimal:2',
+            'sales_commission_tiers' => 'array',
             'two_factor_confirmed_at' => 'datetime',
             'two_factor_recovery_codes' => 'array',
             'skills' => 'array',
@@ -127,16 +130,22 @@ class User extends Authenticatable
         $val = (float) ($this->sales_commission_value ?? 0);
 
         return match ($mode) {
-            'percent' => rtrim(rtrim(number_format($val, 2), '0'), '.') . '%',
-            'fixed' => number_format($val, 2) . ' ج.م',
+            'percent' => rtrim(rtrim(number_format($val, 2), '0'), '.').'%',
+            'fixed' => number_format($val, 2).' ج.م',
+            'tier' => 'Tier System',
             default => 'بدون',
         };
     }
 
     public function calculateSalesCommissionAmount(?float $baseAmount): float
     {
-        $base = max(0, (float) ($baseAmount ?? 0));
         $mode = (string) ($this->sales_commission_mode ?? 'none');
+
+        if ($mode === 'tier') {
+            return \App\Services\SalesCommissionTierService::quoteNextWin($this)['commission'];
+        }
+
+        $base = max(0, (float) ($baseAmount ?? 0));
         $val = (float) ($this->sales_commission_value ?? 0);
 
         return match ($mode) {
@@ -918,6 +927,11 @@ class User extends Authenticatable
     public function salesTeamMembership()
     {
         return $this->hasOne(SalesTeamMember::class, 'user_id');
+    }
+
+    public function salesCourseCommissionAgreements()
+    {
+        return $this->hasMany(SalesCourseCommissionAgreement::class, 'user_id');
     }
 
     /**

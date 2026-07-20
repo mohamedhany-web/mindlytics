@@ -59,6 +59,34 @@
         <button type="submit" class="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm">تطبيق</button>
     </form>
 
+    @if(($agreements ?? collect())->isNotEmpty())
+    <section class="rounded-xl bg-white border border-violet-200 overflow-hidden">
+        <div class="px-4 py-3 bg-violet-50 border-b border-violet-200">
+            <h3 class="font-bold text-violet-900">اتفاقيات الكوميشن حسب الكورس</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50"><tr>
+                    <th class="text-right py-2 px-4">النوع</th>
+                    <th class="text-right py-2 px-4">الكورس</th>
+                    <th class="text-right py-2 px-4">وضع الحساب</th>
+                    <th class="text-right py-2 px-4">السعر</th>
+                </tr></thead>
+                <tbody class="divide-y">
+                    @foreach($agreements as $agr)
+                    <tr>
+                        <td class="py-2 px-4">{{ $agr->courseTypeLabel() }}</td>
+                        <td class="py-2 px-4 font-medium">{{ $agr->courseTitle() }}</td>
+                        <td class="py-2 px-4 text-xs">{{ $agr->calcModeLabel() }}</td>
+                        <td class="py-2 px-4">{{ $agr->coursePrice() !== null ? number_format($agr->coursePrice(), 2).' ج.م' : '—' }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </section>
+    @endif
+
     @if($pendingLeads->isNotEmpty())
     <section class="rounded-xl bg-white border border-amber-200 overflow-hidden">
         <div class="px-4 py-3 bg-amber-50 border-b border-amber-200">
@@ -77,7 +105,7 @@
                     <tr>
                         <td class="py-2 px-4 font-medium">{{ $pl->name }}</td>
                         <td class="py-2 px-4">{{ number_format((float) ($pl->expected_value ?? 0), 2) }} ج.م</td>
-                        <td class="py-2 px-4 text-amber-700 font-semibold">{{ number_format($user->calculateSalesCommissionAmount((float) ($pl->expected_value ?? 0)), 2) }} ج.م</td>
+                        <td class="py-2 px-4 text-amber-700 font-semibold">{{ number_format($pendingEstimates[$pl->id] ?? 0, 2) }} ج.م</td>
                         <td class="py-2 px-4"><a href="{{ route('employee.sales.leads.show', $pl) }}" class="text-emerald-600 hover:underline">عرض</a></td>
                     </tr>
                     @endforeach
@@ -96,6 +124,7 @@
             <table class="w-full text-sm">
                 <thead class="bg-gray-50"><tr>
                     <th class="text-right py-2 px-4">العميل</th>
+                    <th class="text-right py-2 px-4">الكورس</th>
                     <th class="text-right py-2 px-4">التصنيف</th>
                     <th class="text-right py-2 px-4">القيمة</th>
                     <th class="text-right py-2 px-4">العمولة</th>
@@ -105,6 +134,7 @@
                     @foreach($confirmedLeads as $cl)
                     <tr>
                         <td class="py-2 px-4"><a href="{{ route('employee.sales.leads.show', $cl) }}" class="font-medium text-emerald-700 hover:underline">{{ $cl->name }}</a></td>
+                        <td class="py-2 px-4 text-xs">{{ $cl->linkedCourseTitle() ?? '—' }}</td>
                         <td class="py-2 px-4">{{ $cl->category?->name ?? '—' }}</td>
                         <td class="py-2 px-4">{{ number_format((float) ($cl->expected_value ?? 0), 2) }} ج.م</td>
                         <td class="py-2 px-4 font-semibold text-emerald-700">{{ number_format((float) ($cl->commission_amount ?? 0), 2) }} ج.م</td>
