@@ -14,6 +14,7 @@ use App\Models\WhatsAppConversation;
 use App\Models\WhatsAppConversationMessage;
 use App\Models\Workshop;
 use App\Support\SalesDailyReportSettings;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
 
 class SalesNotificationService
@@ -354,32 +355,62 @@ class SalesNotificationService
 
     public function notifyDataTransferred(User $fromRep, User $toRep, array $summary): void
     {
-        $leadsCount = (int) ($summary['leads_assigned'] ?? 0);
+        $this->notifyDataTransferredMulti($fromRep, collect([$toRep]), $summary);
+    }
 
-        Notification::create([
-            'user_id' => $toRep->id,
-            'sender_id' => auth()->id(),
-            'title' => 'بيانات مبيعات منقولة إليك',
-            'message' => 'نُقلت إليك '.$leadsCount.' عميلاً محتملاً من «'.$fromRep->name.'». راجع قائمتك وابدأ المتابعة.',
-            'type' => 'employee',
-            'priority' => 'high',
-            'audience' => 'employee',
-            'action_url' => route('employee.sales.leads.index'),
-            'action_text' => 'عرض العملاء',
-            'data' => ['kind' => 'sales_data_transferred_in', 'from_user_id' => $fromRep->id, 'summary' => $summary],
-        ]);
+    /**
+     * @param  Collection<int, User>|iterable<int, User>  $toReps
+     * @param  array<string, mixed>  $summary
+     */
+    public function notifyDataTransferredMulti(User $fromRep, iterable $toReps, array $summary): void
+    {
+        $toReps = collect($toReps)->filter()->values();
+        if ($toReps->isEmpty()) {
+            return;
+        }
+
+        $totalLeads = (int) ($summary['leads_assigned'] ?? 0);
+        $perRep = $summary['per_rep'] ?? [];
+        $names = $toReps->pluck('name')->implode('، ');
+
+        foreach ($toReps as $toRep) {
+            $leadsCount = (int) ($perRep[$toRep->id]['leads'] ?? ($toReps->count() === 1 ? $totalLeads : 0));
+
+            Notification::create([
+                'user_id' => $toRep->id,
+                'sender_id' => auth()->id(),
+                'title' => 'بيانات مبيعات منقولة إليك',
+                'message' => 'نُقلت إليك '.$leadsCount.' عميلاً محتملاً من «'.$fromRep->name.'»'
+                    .($toReps->count() > 1 ? ' (توزيع بين عدة موظفين).' : '. راجع قائمتك وابدأ المتابعة.'),
+                'type' => 'employee',
+                'priority' => 'high',
+                'audience' => 'employee',
+                'action_url' => route('employee.sales.leads.index'),
+                'action_text' => 'عرض العملاء',
+                'data' => [
+                    'kind' => 'sales_data_transferred_in',
+                    'from_user_id' => $fromRep->id,
+                    'summary' => $summary,
+                    'my_leads' => $leadsCount,
+                ],
+            ]);
+        }
 
         Notification::create([
             'user_id' => $fromRep->id,
             'sender_id' => auth()->id(),
             'title' => 'تم نقل بيانات مبيعاتك',
-            'message' => 'نُقلت بياناتك ('.$leadsCount.' عميل) إلى «'.$toRep->name.'» بقرار من الإدارة.',
+            'message' => 'نُقلت بياناتك ('.$totalLeads.' عميل) إلى: '.$names.' بقرار من الإدارة.',
             'type' => 'employee',
             'priority' => 'normal',
             'audience' => 'employee',
             'action_url' => route('employee.sales.dashboard'),
             'action_text' => 'مركز المبيعات',
-            'data' => ['kind' => 'sales_data_transferred_out', 'to_user_id' => $toRep->id, 'summary' => $summary],
+            'data' => [
+                'kind' => 'sales_data_transferred_out',
+                'to_user_ids' => $toReps->pluck('id')->all(),
+                'summary' => $summary,
+            ],
         ]);
     }
 

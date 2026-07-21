@@ -41,7 +41,7 @@
                 </div>
                 <div>
                     <h2 class="text-xl font-black text-slate-900">تحويل بيانات موظف مبيعات</h2>
-                    <p class="text-xs text-slate-600">نقل كل البيانات أو بيانات مجموعة معيّنة من موظف إلى آخر.</p>
+                    <p class="text-xs text-slate-600">نقل كل البيانات أو بيانات مجموعة معيّنة من موظف إلى موظف أو أكثر مع التوزيع بالتناوب.</p>
                 </div>
             </div>
             <div class="flex flex-wrap gap-2">
@@ -154,7 +154,11 @@
             </div>
 
             @if(session('transfer_summary'))
-                @php $s = session('transfer_summary'); @endphp
+                @php
+                    $s = session('transfer_summary');
+                    $perRep = $s['per_rep'] ?? [];
+                    $repNames = ($salesReps ?? collect())->keyBy('id');
+                @endphp
                 <div class="px-4 pt-4">
                     <div class="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 text-sm text-emerald-900">
                         <p class="font-bold mb-2"><i class="fas fa-check-double ml-1"></i> ملخص آخر تحويل</p>
@@ -166,6 +170,20 @@
                             <div><span class="text-emerald-700">KPI conflicts:</span> <strong class="tabular-nums">{{ (int) ($s['kpi_targets_conflicts'] ?? 0) }}</strong></div>
                             <div><span class="text-emerald-700">Won confirmed:</span> <strong class="tabular-nums">{{ (int) ($s['leads_won_confirmed_by'] ?? 0) }}</strong></div>
                         </div>
+                        @if(!empty($perRep))
+                            <div class="mt-3 pt-3 border-t border-emerald-200">
+                                <p class="text-xs font-bold text-emerald-800 mb-2">التوزيع لكل موظف</p>
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach($perRep as $uid => $row)
+                                        <span class="inline-flex items-center gap-2 rounded-lg bg-white border border-emerald-200 px-2.5 py-1 text-[11px] font-semibold text-emerald-900">
+                                            {{ $repNames[$uid]->name ?? ('#'.$uid) }}
+                                            <span class="tabular-nums text-emerald-700">{{ (int) ($row['leads'] ?? 0) }} عميل</span>
+                                            <span class="tabular-nums text-slate-500">{{ (int) ($row['activities'] ?? 0) }} نشاط</span>
+                                        </span>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
                     </div>
                 </div>
             @endif
@@ -205,13 +223,36 @@
                 <i class="fas fa-random text-violet-600"></i>
                 تنفيذ التحويل
             </h3>
-            <p class="text-xs text-slate-600 mt-0.5">اختر النطاق: كل البيانات أو مجموعة واحدة، ثم أكّد العملية.</p>
+            <p class="text-xs text-slate-600 mt-0.5">يمكنك اختيار عدة موظفين — تتوزع الـ Leads عليهم بالتناوب (Round-robin)، سواء لكل البيانات أو لمجموعة.</p>
         </div>
 
-        <form method="post" action="{{ route('admin.sales.transfer.store') }}" class="p-4 sm:p-6 space-y-5">
+        <form method="post" action="{{ route('admin.sales.transfer.store') }}" class="p-4 sm:p-6 space-y-5"
+              x-data="{
+                  scope: @js(old('scope', $scope)),
+                  groupId: @js((string) old('group_id', $groupId ?? '')),
+                  selectedTo: @js(array_map('strval', old('to_user_ids', []))),
+                  leadsTotal: {{ (int) ($stats['leads_total'] ?? 0) }},
+                  selectAll() {
+                      this.selectedTo = [
+                          @foreach($salesReps as $rep)
+                              @if((string)$rep->id !== (string)$fromId)
+                                  '{{ $rep->id }}',
+                              @endif
+                          @endforeach
+                      ].filter(Boolean);
+                  },
+                  clearAll() { this.selectedTo = []; },
+                  shareFor(index) {
+                      const n = this.selectedTo.length;
+                      if (n === 0 || index < 0) return 0;
+                      const base = Math.floor(this.leadsTotal / n);
+                      const rem = this.leadsTotal % n;
+                      return base + (index < rem ? 1 : 0);
+                  }
+              }">
             @csrf
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div class="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
                     <label class="block text-xs font-semibold text-slate-700 mb-1.5">
                         <i class="fas fa-arrow-right text-rose-500 ml-0.5"></i>
@@ -226,19 +267,43 @@
                     </select>
                     @error('from_user_id')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
                 </div>
+
                 <div class="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">
-                        <i class="fas fa-arrow-left text-emerald-500 ml-0.5"></i>
-                        إلى (موظف مبيعات)
-                    </label>
-                    <select name="to_user_id" required class="{{ $inputClass }}">
-                        <option value="">— اختر —</option>
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <label class="block text-xs font-semibold text-slate-700">
+                            <i class="fas fa-users text-emerald-500 ml-0.5"></i>
+                            إلى (موظف أو أكثر)
+                        </label>
+                        <div class="flex gap-2 text-[11px]">
+                            <button type="button" @click="selectAll()" class="text-emerald-700 font-semibold hover:underline">تحديد الكل</button>
+                            <button type="button" @click="clearAll()" class="text-slate-500 font-semibold hover:underline">مسح</button>
+                        </div>
+                    </div>
+                    <div class="max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white divide-y divide-slate-100">
                         @foreach($salesReps as $rep)
-                            <option value="{{ $rep->id }}" @selected(old('to_user_id') == $rep->id)>{{ $rep->name }}</option>
+                            @if((string) $rep->id === (string) $fromId)
+                                @continue
+                            @endif
+                            <label class="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-emerald-50/50"
+                                   :class="selectedTo.includes('{{ $rep->id }}') && 'bg-emerald-50'">
+                                <input type="checkbox"
+                                       name="to_user_ids[]"
+                                       value="{{ $rep->id }}"
+                                       class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                       x-model="selectedTo">
+                                <span class="text-sm font-semibold text-slate-800 flex-1">{{ $rep->name }}</span>
+                                <span class="text-[11px] tabular-nums text-emerald-700 font-bold"
+                                      x-show="selectedTo.includes('{{ $rep->id }}')"
+                                      x-text="'≈ ' + shareFor(selectedTo.indexOf('{{ $rep->id }}')) + ' عميل'"></span>
+                            </label>
                         @endforeach
-                    </select>
-                    <p class="text-[11px] text-slate-500 mt-2">سيصبح المسؤول عن العملاء المحددين بعد التحويل.</p>
-                    @error('to_user_id')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
+                    </div>
+                    <p class="text-[11px] text-slate-500 mt-2">
+                        المحدد: <strong x-text="selectedTo.length"></strong> موظف
+                        <span x-show="selectedTo.length > 1"> · التوزيع بالتناوب على العملاء المحتملين</span>
+                    </p>
+                    @error('to_user_ids')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
+                    @error('to_user_ids.*')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
                 </div>
             </div>
 
@@ -250,7 +315,7 @@
                         <input type="radio" name="scope" value="all" class="mt-1 text-violet-600" x-model="scope">
                         <span>
                             <span class="block text-sm font-bold text-slate-900">كل البيانات</span>
-                            <span class="block text-[11px] text-slate-500 mt-1">كل الـ Leads + الأنشطة + سجل المراقبة + أهداف KPI.</span>
+                            <span class="block text-[11px] text-slate-500 mt-1">كل الـ Leads + الأنشطة. سجل المراقبة وأهداف KPI تذهب لأول موظف محدد.</span>
                         </span>
                     </label>
                     <label class="flex items-start gap-3 rounded-xl border p-4 cursor-pointer transition-colors"
@@ -258,7 +323,7 @@
                         <input type="radio" name="scope" value="group" class="mt-1 text-teal-600" x-model="scope">
                         <span>
                             <span class="block text-sm font-bold text-slate-900">مجموعة معيّنة فقط</span>
-                            <span class="block text-[11px] text-slate-500 mt-1">عملاء المجموعة وأنشطتهم فقط — دون KPI وسجل المراقبة الكامل.</span>
+                            <span class="block text-[11px] text-slate-500 mt-1">عملاء المجموعة وأنشطتهم فقط — يُوزَّعون على الموظفين المحددين ويُضافون لأعضاء المجموعة.</span>
                         </span>
                     </label>
                 </div>
@@ -292,10 +357,10 @@
                     تنبيه مهم
                 </p>
                 <p class="text-sm text-amber-900/90 leading-relaxed" x-show="scope === 'all'">
-                    سيتم نقل <strong>كل</strong> بيانات المبيعات للموظف المصدر إلى الوجهة. لا يمكن التراجع تلقائياً.
+                    سيتم <strong>توزيع</strong> كل بيانات المبيعات للموظف المصدر على الموظفين المحددين بالتناوب. لا يمكن التراجع تلقائياً.
                 </p>
                 <p class="text-sm text-amber-900/90 leading-relaxed" x-show="scope === 'group'" x-cloak>
-                    سيتم نقل عملاء المجموعة المحددة وأنشطتهم فقط، وإضافة الموظف الوجهة لأعضاء المجموعة.
+                    سيتم توزيع عملاء المجموعة المحددة وأنشطتهم على الموظفين المحددين، وإضافتهم لأعضاء المجموعة.
                     باقي بيانات الموظف المصدر تبقى كما هي.
                 </p>
                 <label class="mt-3 flex items-start gap-3 rounded-xl border-2 border-amber-300 bg-white px-3 py-3 text-sm font-semibold text-amber-950 cursor-pointer">
@@ -303,7 +368,7 @@
                            class="rounded border-amber-400 mt-0.5 text-amber-600 focus:ring-amber-400 w-4 h-4"
                            @checked(old('confirm'))>
                     <span>
-                        <span class="block" x-text="scope === 'group' ? 'أؤكد تحويل بيانات المجموعة المحددة فقط' : 'أؤكد أنني أريد تحويل جميع بيانات الموظف المحدد'"></span>
+                        <span class="block" x-text="scope === 'group' ? 'أؤكد توزيع بيانات المجموعة على الموظفين المحددين' : 'أؤكد توزيع جميع بيانات الموظف على الموظفين المحددين'"></span>
                         <span class="block text-[11px] font-normal text-amber-800/80 mt-1">مطلوب قبل التنفيذ — لن يعمل التحويل بدون التأكيد.</span>
                     </span>
                 </label>
@@ -315,9 +380,11 @@
                     <i class="fas fa-shield-alt text-violet-600 ml-0.5"></i>
                     يُسجَّل التحويل في سجل مراقبة المبيعات.
                 </p>
-                <button type="submit" class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-semibold">
+                <button type="submit"
+                        class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50"
+                        :disabled="selectedTo.length === 0">
                     <i class="fas fa-random"></i>
-                    تحويل البيانات الآن
+                    <span x-text="selectedTo.length > 1 ? 'توزيع البيانات الآن' : 'تحويل البيانات الآن'"></span>
                 </button>
             </div>
         </form>

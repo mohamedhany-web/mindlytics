@@ -64,16 +64,23 @@ class SalesTransferController extends Controller
 
     public function store(Request $request)
     {
+        // Backward compatible: single to_user_id → to_user_ids[]
+        if (! $request->filled('to_user_ids') && $request->filled('to_user_id')) {
+            $request->merge(['to_user_ids' => [(int) $request->input('to_user_id')]]);
+        }
+
         $validated = $request->validate([
             'from_user_id' => ['required', 'integer', Rule::exists('users', 'id')],
-            'to_user_id' => ['required', 'integer', Rule::exists('users', 'id'), 'different:from_user_id'],
+            'to_user_ids' => ['required', 'array', 'min:1'],
+            'to_user_ids.*' => ['integer', Rule::exists('users', 'id'), 'different:from_user_id'],
             'scope' => ['required', Rule::in(['all', 'group'])],
             'group_id' => ['nullable', 'integer', Rule::exists('sales_lead_groups', 'id')],
             'confirm' => ['accepted'],
         ], [
             'from_user_id.required' => 'اختر موظف المصدر.',
-            'to_user_id.required' => 'اختر موظف الوجهة.',
-            'to_user_id.different' => 'يجب أن يكون الموظف الوجهة مختلفاً عن المصدر.',
+            'to_user_ids.required' => 'اختر موظفاً واحداً على الأقل كوجهة.',
+            'to_user_ids.min' => 'اختر موظفاً واحداً على الأقل كوجهة.',
+            'to_user_ids.*.different' => 'لا يمكن أن يكون الموظف المصدر ضمن الوجهات.',
             'scope.required' => 'اختر نطاق التحويل.',
             'scope.in' => 'نطاق التحويل غير صالح.',
             'group_id.exists' => 'المجموعة المحددة غير موجودة.',
@@ -81,9 +88,16 @@ class SalesTransferController extends Controller
         ]);
 
         $fromId = (int) $validated['from_user_id'];
-        $toId = (int) $validated['to_user_id'];
+        $toIds = array_values(array_unique(array_map('intval', $validated['to_user_ids'])));
+        $toIds = array_values(array_filter($toIds, fn (int $id) => $id !== $fromId));
         $scope = (string) $validated['scope'];
         $groupId = isset($validated['group_id']) ? (int) $validated['group_id'] : null;
+
+        if ($toIds === []) {
+            throw ValidationException::withMessages([
+                'to_user_ids' => 'اختر موظفاً واحداً على الأقل مختلفاً عن المصدر.',
+            ]);
+        }
 
         if ($scope === 'group' && ! $groupId) {
             throw ValidationException::withMessages([
@@ -91,12 +105,19 @@ class SalesTransferController extends Controller
             ]);
         }
 
-        if (! User::salesEmployees()->where('is_active', true)->whereKey($fromId)->exists()) {
+        $activeSales = User::salesEmployees()->where('is_active', true);
+
+        if (! (clone $activeSales)->whereKey($fromId)->exists()) {
             return back()->withInput()->with('error', 'يرجى اختيار موظف مبيعات (من) فعّال.');
         }
-        if (! User::salesEmployees()->where('is_active', true)->whereKey($toId)->exists()) {
-            return back()->withInput()->with('error', 'يرجى اختيار موظف مبيعات (إلى) فعّال.');
+
+        $toReps = (clone $activeSales)->whereIn('id', $toIds)->orderBy('name')->get(['id', 'name']);
+        if ($toReps->count() !== count($toIds)) {
+            return back()->withInput()->with('error', 'بعض موظفي الوجهة غير فعّالين أو ليسوا موظفي مبيعات.');
         }
+
+        // Preserve selected order as submitted
+        $toReps = collect($toIds)->map(fn (int $id) => $toReps->firstWhere('id', $id))->filter();
 
         $group = null;
         if ($scope === 'group') {
@@ -107,25 +128,25 @@ class SalesTransferController extends Controller
         }
 
         $fromRep = User::salesEmployees()->whereKey($fromId)->first();
-        $toRep = User::salesEmployees()->whereKey($toId)->first();
 
-        $summary = DB::transaction(function () use ($fromId, $toId, $scope, $group) {
+        $summary = DB::transaction(function () use ($fromId, $toIds, $scope, $group) {
             return $scope === 'group'
-                ? $this->transferGroupData($fromId, $toId, $group)
-                : $this->transferAllData($fromId, $toId);
+                ? $this->transferGroupData($fromId, $toIds, $group)
+                : $this->transferAllData($fromId, $toIds);
         });
 
-        if ($fromRep && $toRep) {
+        if ($fromRep && $toReps->isNotEmpty()) {
             try {
-                app(SalesNotificationService::class)->notifyDataTransferred($fromRep, $toRep, $summary);
+                app(SalesNotificationService::class)->notifyDataTransferredMulti($fromRep, $toReps, $summary);
             } catch (\Throwable $e) {
                 report($e);
             }
         }
 
+        $destNames = $toReps->pluck('name')->implode('، ');
         $successMsg = $scope === 'group' && $group
-            ? 'تم تحويل بيانات المجموعة «'.$group->name.'» بنجاح.'
-            : 'تم تحويل كل بيانات الموظف بنجاح.';
+            ? 'تم توزيع بيانات المجموعة «'.$group->name.'» على: '.$destNames
+            : 'تم توزيع بيانات الموظف على: '.$destNames;
 
         return redirect()
             ->route('admin.sales.transfer.index', array_filter([
@@ -230,106 +251,201 @@ class SalesTransferController extends Controller
     }
 
     /**
-     * @return array<string, int>
+     * @param  list<int>  $toIds
+     * @return array<string, mixed>
      */
-    private function transferAllData(int $fromId, int $toId): array
+    private function transferAllData(int $fromId, array $toIds): array
     {
-        $moved = $this->emptySummary();
+        $moved = $this->emptySummary($toIds);
 
-        $moved['leads_assigned'] = (int) SalesLead::query()
+        $leadIds = SalesLead::query()
             ->withTrashed()
             ->where('assigned_to', $fromId)
-            ->update(['assigned_to' => $toId]);
+            ->orderBy('id')
+            ->pluck('id');
 
-        $moved['leads_created_by'] = (int) SalesLead::query()
-            ->withTrashed()
-            ->where('created_by', $fromId)
-            ->update(['created_by' => $toId]);
+        $assignment = $this->roundRobinAssign($leadIds->all(), $toIds);
+        $moved = $this->applyLeadAssignments($assignment, $fromId, $moved);
 
-        $moved['leads_won_confirmed_by'] = (int) SalesLead::query()
-            ->withTrashed()
-            ->where('won_confirmed_by', $fromId)
-            ->update(['won_confirmed_by' => $toId]);
-
-        $moved['activities'] = (int) SalesActivity::query()
+        // Activities not yet moved with leads (orphans / null lead)
+        $remainingActivityIds = SalesActivity::query()
             ->where('user_id', $fromId)
-            ->update(['user_id' => $toId]);
+            ->orderBy('id')
+            ->pluck('id')
+            ->all();
 
+        if ($remainingActivityIds !== []) {
+            $actAssign = $this->roundRobinAssign($remainingActivityIds, $toIds);
+            foreach ($actAssign as $toId => $ids) {
+                if ($ids === []) {
+                    continue;
+                }
+                $n = (int) SalesActivity::query()->whereIn('id', $ids)->update(['user_id' => $toId]);
+                $moved['activities'] += $n;
+                $moved['per_rep'][$toId]['activities'] = ($moved['per_rep'][$toId]['activities'] ?? 0) + $n;
+            }
+        }
+
+        // created_by / won_confirmed_by still pointing at source (leads not in assigned_to set)
+        $createdIds = SalesLead::query()->withTrashed()->where('created_by', $fromId)->orderBy('id')->pluck('id')->all();
+        if ($createdIds !== []) {
+            $createdAssign = $this->roundRobinAssign($createdIds, $toIds);
+            foreach ($createdAssign as $toId => $ids) {
+                if ($ids === []) {
+                    continue;
+                }
+                $n = (int) SalesLead::query()->withTrashed()->whereIn('id', $ids)->update(['created_by' => $toId]);
+                $moved['leads_created_by'] += $n;
+            }
+        }
+
+        $wonIds = SalesLead::query()->withTrashed()->where('won_confirmed_by', $fromId)->orderBy('id')->pluck('id')->all();
+        if ($wonIds !== []) {
+            $wonAssign = $this->roundRobinAssign($wonIds, $toIds);
+            foreach ($wonAssign as $toId => $ids) {
+                if ($ids === []) {
+                    continue;
+                }
+                $n = (int) SalesLead::query()->withTrashed()->whereIn('id', $ids)->update(['won_confirmed_by' => $toId]);
+                $moved['leads_won_confirmed_by'] += $n;
+            }
+        }
+
+        // Audit + KPI go to the first destination (cannot fairly split monthly KPI rows)
+        $primaryTo = $toIds[0];
         $moved['audit_logs'] = (int) ActivityLog::query()
             ->whereIn('action', self::SALES_AUDIT_ACTIONS)
             ->where('user_id', $fromId)
-            ->update(['user_id' => $toId]);
+            ->update(['user_id' => $primaryTo]);
 
-        $this->transferKpiTargets($fromId, $toId, $moved);
+        $this->transferKpiTargets($fromId, $primaryTo, $moved);
 
         SalesAuditService::log(
             'sales_data_transferred',
             null,
             ['from_user_id' => $fromId, 'scope' => 'all'],
-            ['to_user_id' => $toId],
-            'تحويل كل بيانات المبيعات من موظف #'.$fromId.' إلى موظف #'.$toId
+            ['to_user_ids' => $toIds, 'per_rep' => $moved['per_rep']],
+            'توزيع كل بيانات المبيعات من موظف #'.$fromId.' على موظفين: '.implode(',', $toIds)
         );
 
         return $moved;
     }
 
     /**
-     * @return array<string, int>
+     * @param  list<int>  $toIds
+     * @return array<string, mixed>
      */
-    private function transferGroupData(int $fromId, int $toId, SalesLeadGroup $group): array
+    private function transferGroupData(int $fromId, array $toIds, SalesLeadGroup $group): array
     {
-        $moved = $this->emptySummary();
+        $moved = $this->emptySummary($toIds);
         $moved['scope_group_id'] = (int) $group->id;
 
         $leadIds = SalesLead::query()
             ->withTrashed()
             ->where('assigned_to', $fromId)
             ->where('sales_lead_group_id', $group->id)
+            ->orderBy('id')
             ->pluck('id');
 
-        if ($leadIds->isNotEmpty()) {
-            $moved['leads_assigned'] = (int) SalesLead::query()
-                ->withTrashed()
-                ->whereIn('id', $leadIds)
-                ->update(['assigned_to' => $toId]);
+        $assignment = $this->roundRobinAssign($leadIds->all(), $toIds);
+        $moved = $this->applyLeadAssignments($assignment, $fromId, $moved);
 
-            $moved['leads_created_by'] = (int) SalesLead::query()
-                ->withTrashed()
-                ->whereIn('id', $leadIds)
-                ->where('created_by', $fromId)
-                ->update(['created_by' => $toId]);
-
-            $moved['leads_won_confirmed_by'] = (int) SalesLead::query()
-                ->withTrashed()
-                ->whereIn('id', $leadIds)
-                ->where('won_confirmed_by', $fromId)
-                ->update(['won_confirmed_by' => $toId]);
-
-            $moved['activities'] = (int) SalesActivity::query()
-                ->where('user_id', $fromId)
-                ->whereIn('sales_lead_id', $leadIds)
-                ->update(['user_id' => $toId]);
-        }
-
-        $this->syncGroupMembershipAfterTransfer($group, $fromId, $toId);
+        $this->syncGroupMembershipAfterTransfer($group, $fromId, $toIds);
 
         SalesAuditService::log(
             'sales_data_transferred',
             null,
             ['from_user_id' => $fromId, 'scope' => 'group', 'group_id' => $group->id],
-            ['to_user_id' => $toId],
-            'تحويل بيانات مجموعة المبيعات «'.$group->name.'» من موظف #'.$fromId.' إلى موظف #'.$toId
+            ['to_user_ids' => $toIds, 'per_rep' => $moved['per_rep']],
+            'توزيع بيانات مجموعة «'.$group->name.'» من موظف #'.$fromId.' على: '.implode(',', $toIds)
         );
 
         return $moved;
     }
 
-    private function syncGroupMembershipAfterTransfer(SalesLeadGroup $group, int $fromId, int $toId): void
+    /**
+     * Apply per-lead assignee map and move matching CRM activities.
+     *
+     * @param  array<int, list<int>>  $assignment  toUserId => leadIds
+     * @param  array<string, mixed>  $moved
+     * @return array<string, mixed>
+     */
+    private function applyLeadAssignments(array $assignment, int $fromId, array $moved): array
+    {
+        foreach ($assignment as $toId => $ids) {
+            if ($ids === []) {
+                continue;
+            }
+
+            $n = (int) SalesLead::query()
+                ->withTrashed()
+                ->whereIn('id', $ids)
+                ->update(['assigned_to' => $toId]);
+
+            $moved['leads_assigned'] += $n;
+            $moved['per_rep'][$toId]['leads'] = ($moved['per_rep'][$toId]['leads'] ?? 0) + $n;
+
+            $created = (int) SalesLead::query()
+                ->withTrashed()
+                ->whereIn('id', $ids)
+                ->where('created_by', $fromId)
+                ->update(['created_by' => $toId]);
+            $moved['leads_created_by'] += $created;
+
+            $won = (int) SalesLead::query()
+                ->withTrashed()
+                ->whereIn('id', $ids)
+                ->where('won_confirmed_by', $fromId)
+                ->update(['won_confirmed_by' => $toId]);
+            $moved['leads_won_confirmed_by'] += $won;
+
+            $acts = (int) SalesActivity::query()
+                ->where('user_id', $fromId)
+                ->whereIn('sales_lead_id', $ids)
+                ->update(['user_id' => $toId]);
+            $moved['activities'] += $acts;
+            $moved['per_rep'][$toId]['activities'] = ($moved['per_rep'][$toId]['activities'] ?? 0) + $acts;
+        }
+
+        return $moved;
+    }
+
+    /**
+     * @param  list<int>  $itemIds
+     * @param  list<int>  $toIds
+     * @return array<int, list<int>>
+     */
+    private function roundRobinAssign(array $itemIds, array $toIds): array
+    {
+        $buckets = [];
+        foreach ($toIds as $id) {
+            $buckets[$id] = [];
+        }
+
+        $count = count($toIds);
+        if ($count === 0) {
+            return $buckets;
+        }
+
+        foreach (array_values($itemIds) as $i => $itemId) {
+            $toId = $toIds[$i % $count];
+            $buckets[$toId][] = (int) $itemId;
+        }
+
+        return $buckets;
+    }
+
+    /**
+     * @param  list<int>  $toIds
+     */
+    private function syncGroupMembershipAfterTransfer(SalesLeadGroup $group, int $fromId, array $toIds): void
     {
         $memberIds = $group->memberIds()->map(fn ($id) => (int) $id)->values();
 
-        if (! $memberIds->contains($toId)) {
-            $memberIds->push($toId);
+        foreach ($toIds as $toId) {
+            if (! $memberIds->contains($toId)) {
+                $memberIds->push($toId);
+            }
         }
 
         $fromStillHasLeads = SalesLead::query()
@@ -343,14 +459,14 @@ class SalesTransferController extends Controller
         }
 
         if ($memberIds->isEmpty()) {
-            $memberIds = collect([$toId]);
+            $memberIds = collect($toIds);
         }
 
-        $group->syncMembers($memberIds->all());
+        $group->syncMembers($memberIds->unique()->values()->all());
     }
 
     /**
-     * @param  array<string, int>  $moved
+     * @param  array<string, mixed>  $moved
      */
     private function transferKpiTargets(int $fromId, int $toId, array &$moved): void
     {
@@ -385,10 +501,16 @@ class SalesTransferController extends Controller
     }
 
     /**
-     * @return array<string, int>
+     * @param  list<int>  $toIds
+     * @return array<string, mixed>
      */
-    private function emptySummary(): array
+    private function emptySummary(array $toIds = []): array
     {
+        $perRep = [];
+        foreach ($toIds as $id) {
+            $perRep[$id] = ['leads' => 0, 'activities' => 0];
+        }
+
         return [
             'leads_assigned' => 0,
             'leads_created_by' => 0,
@@ -397,6 +519,8 @@ class SalesTransferController extends Controller
             'audit_logs' => 0,
             'kpi_targets_moved' => 0,
             'kpi_targets_conflicts' => 0,
+            'to_user_ids' => $toIds,
+            'per_rep' => $perRep,
         ];
     }
 }
