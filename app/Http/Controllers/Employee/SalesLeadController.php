@@ -622,7 +622,7 @@ class SalesLeadController extends Controller
                     });
             })->exists(),
             'offline' => \App\Models\OfflineCourse::query()->whereKey($refId)->where(function ($q) {
-                $q->where('online_only', false)->orWhereNull('online_only');
+                $q->where('is_active', true)->orWhere('status', 'active');
             })->exists(),
             'legacy' => \App\Models\Course::query()->whereKey($refId)->exists(),
             default => false,

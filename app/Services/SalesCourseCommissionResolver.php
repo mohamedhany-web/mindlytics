@@ -275,7 +275,9 @@ class SalesCourseCommissionResolver
                 ->all(),
             // أونلاين = كورسات المجموعات الأونلاين (نفس نطاق إدارة الأونلاين/الجروبات)
             'online' => OfflineCourse::query()
-                ->where('is_active', true)
+                ->where(function ($q) {
+                    $q->where('is_active', true)->orWhere('status', 'active');
+                })
                 ->where(function ($q) {
                     $q->where('online_only', true)
                         ->orWhereHas('groups', function ($g) {
@@ -288,16 +290,35 @@ class SalesCourseCommissionResolver
                 ->get(['id', 'title', 'price'])
                 ->map($map)
                 ->all(),
-            // أوفلاين = كورسات الحضور الفعلي
-            'offline' => OfflineCourse::query()
-                ->where('is_active', true)
-                ->where(function ($q) {
-                    $q->where('online_only', false)->orWhereNull('online_only');
-                })
-                ->orderBy('title')
-                ->get(['id', 'title', 'price'])
-                ->map($map)
-                ->all(),
+            // أوفلاين = قائمة كورسات الأوفلاين (مثل /admin/offline-courses)
+            // نستبعد فقط الكورسات المعلّمة «أونلاين فقط» بدون أي مجموعة أوفلاين.
+            'offline' => (function () use ($map) {
+                $q = OfflineCourse::query()
+                    ->where(function ($qq) {
+                        $qq->where('is_active', true)->orWhere('status', 'active');
+                    })
+                    ->where(function ($qq) {
+                        $qq->where('online_only', false)
+                            ->orWhereNull('online_only')
+                            ->orWhereHas('groups', function ($g) {
+                                $g->where('is_active', true);
+                            });
+                    });
+
+                $rows = $q->orderBy('title')->get(['id', 'title', 'price', 'online_only']);
+
+                // لو كله اتعلّم online_only بالخطأ، نرجّع كل الكورسات النشطة عشان القائمة ما تفضاش
+                if ($rows->isEmpty()) {
+                    $rows = OfflineCourse::query()
+                        ->where(function ($qq) {
+                            $qq->where('is_active', true)->orWhere('status', 'active');
+                        })
+                        ->orderBy('title')
+                        ->get(['id', 'title', 'price']);
+                }
+
+                return $rows->map($map)->all();
+            })(),
             // توافق قديم إن وُجد
             'legacy' => Course::query()
                 ->orderBy('title')
@@ -321,7 +342,7 @@ class SalesCourseCommissionResolver
                     });
             })->value('price'),
             'offline' => OfflineCourse::query()->whereKey($courseId)->where(function ($q) {
-                $q->where('online_only', false)->orWhereNull('online_only');
+                $q->where('is_active', true)->orWhere('status', 'active');
             })->value('price'),
             'legacy' => Course::query()->whereKey($courseId)->value('price'),
             default => null,
