@@ -1293,9 +1293,15 @@
                                         @php
                                             $isLocked = $idx >= $previewUnlockedCount;
                                             $isUnlocked = !$isLocked;
-                                            $hasVideo = filled($lesson->video_url);
+                                            $hasVideo = filled($lesson->recording_url ?? null) || filled($lesson->video_url ?? null);
                                         @endphp
-                                        <div class="rounded-xl border-2 {{ $isLocked ? 'border-slate-200 bg-slate-50' : 'border-gray-200 bg-gray-50 hover:border-blue-300' }} overflow-hidden transition-all duration-300">
+                                        <div class="rounded-xl border-2 {{ $isLocked ? 'border-slate-200 bg-slate-50' : 'border-gray-200 bg-gray-50 hover:border-blue-300' }} overflow-hidden transition-all duration-300 {{ $isUnlocked && $hasVideo ? 'cursor-pointer' : '' }}"
+                                             @if($isUnlocked && $hasVideo)
+                                                 role="button"
+                                                 tabindex="0"
+                                                 @click="openPreview({{ (int) $lesson->id }}, @js($lesson->title))"
+                                                 @keydown.enter.prevent="openPreview({{ (int) $lesson->id }}, @js($lesson->title))"
+                                             @endif>
                                             <div class="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                                                 <div class="flex items-center gap-3 flex-1 min-w-0">
                                                     <div class="flex-shrink-0 w-10 h-10 {{ $isLocked ? 'bg-slate-400' : 'bg-blue-600' }} text-white rounded-lg flex items-center justify-center">
@@ -1314,7 +1320,7 @@
                                                 @if($isUnlocked && $hasVideo)
                                                     <div class="flex-shrink-0">
                                                         <button type="button"
-                                                                @click="openPreview({{ (int) $lesson->id }}, @js($lesson->title))"
+                                                                @click.stop="openPreview({{ (int) $lesson->id }}, @js($lesson->title))"
                                                                 :disabled="loading"
                                                                 class="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white rounded-xl text-sm font-semibold transition-colors shadow-md hover:shadow-lg">
                                                             <i class="fas" :class="loading && activeLessonId === {{ (int) $lesson->id }} ? 'fa-spinner fa-spin' : 'fa-play'"></i>
@@ -1331,6 +1337,7 @@
                                                 @elseif($isLocked)
                                                     <div class="flex-shrink-0">
                                                         <a href="{{ $previewUnlockCta }}"
+                                                           @click.stop
                                                            class="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-700 hover:bg-slate-800 text-white rounded-xl text-sm font-semibold transition-colors shadow-md">
                                                             <i class="fas fa-unlock-alt"></i>
                                                             <span>فتح بالشراء</span>
