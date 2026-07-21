@@ -8,6 +8,7 @@ use App\Models\AdvancedCourse;
 use App\Helpers\VideoHelper;
 use App\Support\LectureRecordingResolver;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Http\RedirectResponse;
@@ -26,7 +27,7 @@ class ProtectedVideoController extends Controller
     /**
      * عرض الفيديو عبر رابط موقّع (معاينة أو طالب مسجّل).
      */
-    public function watch(Request $request): RedirectResponse|StreamedResponse|JsonResponse
+    public function watch(Request $request): RedirectResponse|StreamedResponse|JsonResponse|Response
     {
         $request->validate([
             'course_id' => 'required|integer',
@@ -154,7 +155,7 @@ class ProtectedVideoController extends Controller
             ->get(['id', 'title', 'duration_minutes', 'recording_url', 'video_platform', 'scheduled_at']);
     }
 
-    private function watchLecture(int $courseId, int $lectureId, bool $isPreview): RedirectResponse|StreamedResponse|JsonResponse
+    private function watchLecture(int $courseId, int $lectureId, bool $isPreview): RedirectResponse|StreamedResponse|JsonResponse|Response
     {
         $lecture = Lecture::where('id', $lectureId)
             ->where('course_id', $courseId)
@@ -181,7 +182,7 @@ class ProtectedVideoController extends Controller
         return $this->playVideoUrl($videoUrl, $lecture->video_platform, $lecture->title ?: 'Video');
     }
 
-    private function watchLesson(int $courseId, int $lessonId, bool $isPreview): RedirectResponse|StreamedResponse|JsonResponse
+    private function watchLesson(int $courseId, int $lessonId, bool $isPreview): RedirectResponse|StreamedResponse|JsonResponse|Response
     {
         $lesson = CourseLesson::where('id', $lessonId)
             ->where('advanced_course_id', $courseId)
@@ -210,7 +211,7 @@ class ProtectedVideoController extends Controller
         return $this->playVideoUrl($videoUrl, null, $lesson->title ?: 'Video');
     }
 
-    private function playVideoUrl(string $videoUrl, ?string $platform, string $title): RedirectResponse|StreamedResponse|JsonResponse
+    private function playVideoUrl(string $videoUrl, ?string $platform, string $title): RedirectResponse|StreamedResponse|JsonResponse|Response
     {
         $embedUrl = VideoHelper::getEmbedUrl($videoUrl);
         $source = $platform ? strtolower(trim($platform)) : VideoHelper::getVideoSource($videoUrl);

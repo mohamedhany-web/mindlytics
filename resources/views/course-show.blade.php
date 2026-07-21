@@ -30,6 +30,8 @@
                 font-family: 'Cairo', 'Noto Sans Arabic', sans-serif;
             }
 
+            [x-cloak] { display: none !important; }
+
             body {
                 overflow-x: hidden;
                 background: #f8fafc;
@@ -1349,40 +1351,60 @@
                                     @endforeach
                                 </div>
 
-                                <!-- بلاير المعاينة عبر رابط موقّع (بدون كشف رابط Bunny الحقيقي في الصفحة) -->
-                                <div x-show="open" x-cloak class="fixed inset-0 z-[9999] flex items-center justify-center p-4" style="background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);"
-                                     x-transition:enter="transition ease-out duration-200"
-                                     x-transition:enter-start="opacity-0"
-                                     x-transition:enter-end="opacity-100"
-                                     x-transition:leave="transition ease-in duration-150"
-                                     x-transition:leave-start="opacity-100"
-                                     x-transition:leave-end="opacity-0"
-                                     @keydown.escape.window="closePopup()"
-                                     @click.self="closePopup()">
-                                    <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+                                <!-- بوب أب معاينة الفيديو -->
+                                <template x-teleport="body">
+                                    <div x-show="open"
+                                         x-cloak
+                                         class="fixed inset-0 z-[100000] flex items-center justify-center p-3 sm:p-6"
+                                         style="background: rgba(15, 23, 42, 0.82); backdrop-filter: blur(6px);"
                                          x-transition:enter="transition ease-out duration-200"
-                                         x-transition:enter-start="opacity-0 scale-95"
-                                         x-transition:enter-end="opacity-100 scale-100">
-                                        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
-                                            <h4 class="text-lg font-bold text-gray-900" x-text="title"></h4>
-                                            <button type="button" @click="closePopup()" class="p-2 rounded-xl text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors">
-                                                <i class="fas fa-times text-xl"></i>
-                                            </button>
-                                        </div>
-                                        <div class="flex-1 min-h-0 p-4">
-                                            <div x-show="error" class="rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-semibold p-4" x-text="error"></div>
-                                            <div x-show="loading && !watchUrl" class="aspect-video w-full bg-black rounded-xl flex items-center justify-center text-white">
-                                                <div class="text-center">
-                                                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
-                                                    <p class="text-sm font-semibold">جاري تحميل المشغّل...</p>
+                                         x-transition:enter-start="opacity-0"
+                                         x-transition:enter-end="opacity-100"
+                                         x-transition:leave="transition ease-in duration-150"
+                                         x-transition:leave-start="opacity-100"
+                                         x-transition:leave-end="opacity-0"
+                                         @keydown.escape.window="closePopup()"
+                                         @click.self="closePopup()"
+                                         role="dialog"
+                                         aria-modal="true">
+                                        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden"
+                                             @click.stop
+                                             x-transition:enter="transition ease-out duration-200"
+                                             x-transition:enter-start="opacity-0 translate-y-3 scale-95"
+                                             x-transition:enter-end="opacity-100 translate-y-0 scale-100">
+                                            <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-200 bg-gradient-to-l from-slate-50 to-white">
+                                                <div class="min-w-0 flex items-center gap-3">
+                                                    <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center flex-shrink-0">
+                                                        <i class="fas fa-play"></i>
+                                                    </div>
+                                                    <div class="min-w-0">
+                                                        <p class="text-xs font-bold text-blue-600 mb-0.5">معاينة مجانية</p>
+                                                        <h4 class="text-base sm:text-lg font-black text-gray-900 truncate" x-text="title"></h4>
+                                                    </div>
                                                 </div>
+                                                <button type="button" @click="closePopup()" class="p-2.5 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-colors" aria-label="إغلاق">
+                                                    <i class="fas fa-times text-xl"></i>
+                                                </button>
                                             </div>
-                                            <div class="aspect-video w-full bg-black rounded-xl overflow-hidden" x-show="watchUrl">
-                                                <iframe :src="watchUrl" class="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="no-referrer"></iframe>
+                                            <div class="flex-1 min-h-0 p-4 bg-slate-900">
+                                                <div x-show="error" class="rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-semibold p-4 mb-3" x-text="error"></div>
+                                                <div x-show="loading && !watchUrl" class="aspect-video w-full bg-black rounded-xl flex items-center justify-center text-white">
+                                                    <div class="text-center">
+                                                        <i class="fas fa-spinner fa-spin text-3xl mb-3 text-blue-400"></i>
+                                                        <p class="text-sm font-semibold">جاري فتح المشغّل...</p>
+                                                    </div>
+                                                </div>
+                                                <div class="aspect-video w-full bg-black rounded-xl overflow-hidden shadow-inner" x-show="watchUrl">
+                                                    <iframe :src="watchUrl"
+                                                            class="w-full h-full border-0"
+                                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                                                            allowfullscreen
+                                                            referrerpolicy="strict-origin-when-cross-origin"></iframe>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                </template>
                             </div>
                             <script>
                                 function coursePreviewPopup(courseId) {
