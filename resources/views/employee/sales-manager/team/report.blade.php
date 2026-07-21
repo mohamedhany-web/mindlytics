@@ -46,7 +46,7 @@
                    class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 rounded-lg border border-slate-300 bg-white hover:bg-slate-50">
                     <i class="fas fa-user"></i> ملف الموظف
                 </a>
-                <a href="{{ route('employee.sales-manager.team.report.pdf', array_merge(['employee' => $employee->id], $filters)) }}"
+                <a href="{{ route('employee.sales-manager.team.report.pdf', array_filter(array_merge(['employee' => $employee->id], $filters), fn ($v) => $v !== null && $v !== '')) }}"
                    class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white rounded-lg bg-rose-600 hover:bg-rose-700">
                     <i class="fas fa-file-pdf"></i> تحميل PDF
                 </a>
@@ -164,23 +164,48 @@
     <section class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
         <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
             <h2 class="text-base font-black text-slate-900">رسوم بيانية</h2>
+            <p class="text-xs text-slate-600">نفس مقاييس Insights — ارتفاع موحّد لكل رسم.</p>
         </div>
-        <div class="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div class="rounded-xl border border-slate-100 p-3">
-                <p class="text-xs font-bold text-slate-700 mb-2">النشاط اليومي</p>
-                <canvas id="chartRepDaily" height="160"></canvas>
+        <div class="p-4 grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <div class="rounded-xl border border-slate-100 overflow-hidden xl:col-span-2">
+                <div class="px-3 py-2 border-b border-slate-100 bg-slate-50/80">
+                    <p class="text-xs font-bold text-slate-700">النشاط اليومي</p>
+                </div>
+                <div class="p-3">
+                    <div class="relative w-full" style="height: 280px;">
+                        <canvas id="chartRepDaily"></canvas>
+                    </div>
+                </div>
             </div>
-            <div class="rounded-xl border border-slate-100 p-3">
-                <p class="text-xs font-bold text-slate-700 mb-2">توزيع المراحل</p>
-                <canvas id="chartRepStages" height="160"></canvas>
+            <div class="rounded-xl border border-slate-100 overflow-hidden">
+                <div class="px-3 py-2 border-b border-slate-100 bg-slate-50/80">
+                    <p class="text-xs font-bold text-slate-700">توزيع المراحل</p>
+                </div>
+                <div class="p-3">
+                    <div class="relative w-full" style="height: 260px;">
+                        <canvas id="chartRepStages"></canvas>
+                    </div>
+                </div>
             </div>
-            <div class="rounded-xl border border-slate-100 p-3">
-                <p class="text-xs font-bold text-slate-700 mb-2">أنواع الأنشطة</p>
-                <canvas id="chartRepActivities" height="160"></canvas>
+            <div class="rounded-xl border border-slate-100 overflow-hidden">
+                <div class="px-3 py-2 border-b border-slate-100 bg-slate-50/80">
+                    <p class="text-xs font-bold text-slate-700">أنواع الأنشطة</p>
+                </div>
+                <div class="p-3">
+                    <div class="relative w-full" style="height: 260px;">
+                        <canvas id="chartRepActivities"></canvas>
+                    </div>
+                </div>
             </div>
-            <div class="rounded-xl border border-slate-100 p-3">
-                <p class="text-xs font-bold text-slate-700 mb-2">أركان KPI</p>
-                <canvas id="chartRepPillars" height="160"></canvas>
+            <div class="rounded-xl border border-slate-100 overflow-hidden xl:col-span-2">
+                <div class="px-3 py-2 border-b border-slate-100 bg-slate-50/80">
+                    <p class="text-xs font-bold text-slate-700">أركان KPI</p>
+                </div>
+                <div class="p-3">
+                    <div class="relative w-full" style="height: 260px;">
+                        <canvas id="chartRepPillars"></canvas>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -441,7 +466,7 @@
                         <tr>
                             <td class="px-3 py-2 tabular-nums whitespace-nowrap">{{ $log->created_at?->format('Y-m-d H:i') }}</td>
                             <td class="px-3 py-2 text-center font-mono text-[10px]">{{ $log->action }}</td>
-                            <td class="px-3 py-2 text-slate-700">{{ $log->action_description }}</td>
+                            <td class="px-3 py-2 text-slate-700">{{ $log->description ?? $log->action_description ?? '—' }}</td>
                             <td class="px-3 py-2 text-center font-mono dir-ltr">{{ $log->ip_address ?? '—' }}</td>
                         </tr>
                     @empty
@@ -464,10 +489,32 @@
 <script>
 (() => {
     const charts = @json($charts);
-    const palette = { sky: '#0ea5e9', indigo: '#6366f1', emerald: '#10b981', amber: '#f59e0b', rose: '#f43f5e', violet: '#8b5cf6' };
-    const doughnutColors = [palette.sky, palette.indigo, palette.emerald, palette.amber, palette.rose, palette.violet, '#64748b'];
-    const baseOptions = { responsive: true, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } } };
+    const palette = {
+        sky: 'rgb(14, 165, 233)',
+        indigo: 'rgb(99, 102, 241)',
+        emerald: 'rgb(16, 185, 129)',
+        amber: 'rgb(245, 158, 11)',
+        rose: 'rgb(244, 63, 94)',
+        violet: 'rgb(139, 92, 246)',
+        slate: 'rgb(100, 116, 139)',
+    };
+    const doughnutColors = [
+        palette.emerald, palette.sky, palette.indigo, palette.amber,
+        palette.rose, palette.violet, palette.slate, '#0ea5e9', '#84cc16', '#f97316',
+    ];
+    const baseOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+        },
+    };
     const hasData = (arr) => Array.isArray(arr) && arr.some(v => Number(v) > 0);
+    const emptyChartMessage = (canvasId, msg) => {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        canvas.parentElement.innerHTML = '<p class="text-sm text-slate-500 text-center py-16">' + msg + '</p>';
+    };
 
     const daily = charts.daily || {};
     if (hasData(daily.leads) || hasData(daily.activities) || hasData(daily.wins)) {
@@ -476,13 +523,15 @@
             data: {
                 labels: daily.labels || [],
                 datasets: [
-                    { label: 'Leads', data: daily.leads || [], borderColor: palette.sky, tension: 0.3 },
-                    { label: 'أنشطة', data: daily.activities || [], borderColor: palette.indigo, tension: 0.3 },
-                    { label: 'فوز', data: daily.wins || [], borderColor: palette.emerald, tension: 0.3 },
+                    { label: 'Leads', data: daily.leads || [], borderColor: palette.sky, tension: 0.3, fill: false },
+                    { label: 'أنشطة', data: daily.activities || [], borderColor: palette.indigo, tension: 0.3, fill: false },
+                    { label: 'فوز', data: daily.wins || [], borderColor: palette.emerald, tension: 0.3, fill: false },
                 ],
             },
             options: { ...baseOptions, scales: { y: { beginAtZero: true } } },
         });
+    } else {
+        emptyChartMessage('chartRepDaily', 'لا نشاط يومي في الفترة المحددة.');
     }
 
     const stages = charts.stages || {};
@@ -492,6 +541,8 @@
             data: { labels: stages.labels || [], datasets: [{ data: stages.values || [], backgroundColor: doughnutColors, borderWidth: 2 }] },
             options: baseOptions,
         });
+    } else {
+        emptyChartMessage('chartRepStages', 'لا leads لهذا الموظف.');
     }
 
     const act = charts.activities_by_type || {};
@@ -501,18 +552,25 @@
             data: { labels: act.labels || [], datasets: [{ data: act.values || [], backgroundColor: doughnutColors, borderWidth: 2 }] },
             options: baseOptions,
         });
+    } else {
+        emptyChartMessage('chartRepActivities', 'لا أنشطة CRM في الفترة.');
     }
 
     const pillars = charts.pillars || {};
-    if (hasData(pillars.scores || pillars.values)) {
+    if ((pillars.labels || []).length > 0) {
         new Chart(document.getElementById('chartRepPillars'), {
             type: 'bar',
             data: {
                 labels: pillars.labels || [],
-                datasets: [{ label: 'درجة', data: pillars.scores || pillars.values || [], backgroundColor: palette.indigo }],
+                datasets: [
+                    { label: 'النتيجة', data: pillars.scores || pillars.values || [], backgroundColor: 'rgba(14, 165, 233, 0.75)', borderRadius: 6 },
+                    { label: 'معيار 70', data: pillars.targets || [], type: 'line', borderColor: palette.amber, borderDash: [4, 4], pointRadius: 0, fill: false },
+                ],
             },
             options: { ...baseOptions, scales: { y: { beginAtZero: true, max: 100 } } },
         });
+    } else {
+        emptyChartMessage('chartRepPillars', 'لا محاور KPI.');
     }
 })();
 </script>

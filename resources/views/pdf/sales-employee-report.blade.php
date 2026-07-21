@@ -108,16 +108,17 @@
 @php
     $rep = $report['rep'];
     $summary = $report['summary'];
-    $periodReport = $report['period_report'];
-    $logo = \App\Support\SiteBranding::logoDataUri();
+    $periodReport = $report['period_report'] ?? [];
+    $logoPath = $report['pdf_logo_path'] ?? null;
+    $pdfLimits = $report['pdf_limits'] ?? null;
 @endphp
 
 <div class="header">
     <table class="header-table">
         <tr>
             <td style="width: 22%;">
-                @if($logo)
-                    <img src="{{ $logo }}" alt="Logo" class="logo">
+                @if($logoPath)
+                    <img src="{{ $logoPath }}" alt="Logo" class="logo">
                 @endif
             </td>
             <td style="width: 53%;">
@@ -212,6 +213,9 @@
         @endforeach
     </tbody>
 </table>
+@if($pdfLimits && ($pdfLimits['daily_total'] ?? 0) > ($pdfLimits['daily_shown'] ?? 0))
+    <p class="subtitle">يُعرض {{ $pdfLimits['daily_shown'] }} يوماً من أصل {{ $pdfLimits['daily_total'] }} — راجع التقرير على المنصة للتفاصيل الكاملة.</p>
+@endif
 
 <div class="page-break"></div>
 
@@ -252,7 +256,10 @@
     </tbody>
 </table>
 
-<h2>العملاء المحتملون (Leads) — {{ $report['leads']->count() }} سجل</h2>
+<h2>العملاء المحتملون (Leads) — {{ $pdfLimits['leads_shown'] ?? ($report['leads']->count() ?? 0) }} سجل</h2>
+@if($pdfLimits && ($pdfLimits['leads_total'] ?? 0) > ($pdfLimits['leads_shown'] ?? 0))
+    <p class="subtitle">يُعرض أحدث {{ $pdfLimits['leads_shown'] }} من أصل {{ $pdfLimits['leads_total'] }} — راجع التقرير على المنصة للباقي.</p>
+@endif
 <table class="data">
     <thead>
         <tr>
@@ -290,7 +297,10 @@
 
 <div class="page-break"></div>
 
-<h2>سجل الأنشطة التفصيلي — {{ $report['activities']->count() }} نشاط</h2>
+<h2>سجل الأنشطة التفصيلي — {{ $pdfLimits['activities_shown'] ?? ($report['activities']->count() ?? 0) }} نشاط</h2>
+@if($pdfLimits && ($pdfLimits['activities_total'] ?? 0) > ($pdfLimits['activities_shown'] ?? 0))
+    <p class="subtitle">يُعرض أحدث {{ $pdfLimits['activities_shown'] }} من أصل {{ $pdfLimits['activities_total'] }} — راجع التقرير على المنصة للباقي.</p>
+@endif
 <table class="data">
     <thead>
         <tr>

@@ -11,7 +11,7 @@ $html = <<<'HTML'
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head><meta charset="utf-8">
-<style>body{font-family:cairo,sans-serif;direction:rtl;text-align:right;font-size:14pt;}</style>
+<style>body{font-family:xbriyaz,dejavusans,sans-serif;direction:rtl;text-align:right;font-size:14pt;}</style>
 </head>
 <body>
 <h1>تقرير أداء موظف المبيعات</h1>

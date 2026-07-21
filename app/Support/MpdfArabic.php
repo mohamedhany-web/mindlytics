@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Mpdf\Config\ConfigVariables;
+use Mpdf\Config\FontVariables;
 use Mpdf\Mpdf;
 
 class MpdfArabic
@@ -18,6 +19,13 @@ class MpdfArabic
         }
 
         $defaultConfig = (new ConfigVariables)->getDefaults();
+        $defaultFontConfig = (new FontVariables)->getDefaults();
+
+        // Prefer built-in Arabic-capable fonts shipped with mPDF (avoid custom cairo OTFs that break TT parsing).
+        $font = 'xbriyaz';
+        if (! isset($defaultFontConfig['fontdata'][$font])) {
+            $font = 'dejavusans';
+        }
 
         $config = array_merge([
             'mode' => 'utf-8',
@@ -31,10 +39,12 @@ class MpdfArabic
             'margin_footer' => 6,
             'tempDir' => $tempDir,
             'fontDir' => $defaultConfig['fontDir'],
-            'default_font' => 'xbriyaz',
+            'fontdata' => $defaultFontConfig['fontdata'],
+            'default_font' => $font,
             'directionality' => 'rtl',
-            'autoScriptToLang' => true,
-            'autoLangToFont' => true,
+            // Keep language auto-detection off so mPDF does not try to load broken custom fonts (e.g. cairo).
+            'autoScriptToLang' => false,
+            'autoLangToFont' => false,
         ], $overrides);
 
         return new Mpdf($config);

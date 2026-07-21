@@ -87,7 +87,7 @@ class SalesLeadController extends Controller
     public function show(SalesLead $lead)
     {
         $this->authorizeOwn($lead);
-        $lead->load(['activities.user', 'creator', 'category']);
+        $lead->load(['activities.user', 'creator', 'category', 'advancedCourse', 'offlineCourse', 'legacyCourse']);
 
         SalesAuditService::log(
             'sales_lead_viewed',

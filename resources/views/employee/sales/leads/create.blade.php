@@ -36,7 +36,7 @@
 <div class="space-y-4" x-data="fastLeadCreate({
     followPreset: @json($defaultFollow),
     customFollow: @json(old('next_follow_up_at', '')),
-    showDetails: {{ old('email') || old('company') || old('notes') || old('expected_value') ? 'true' : 'false' }},
+    showDetails: {{ old('email') || old('company') || old('notes') ? 'true' : 'false' }},
 })">
 
     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -142,6 +142,24 @@
             @error('next_follow_up_at')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
         </div>
 
+        <div class="border-t border-slate-100 pt-5 space-y-4">
+            <p class="text-sm font-semibold text-slate-800">الكورس والقيمة</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">قيمة متوقعة (ج.م)</label>
+                    <input type="number" step="0.01" min="0" name="expected_value" value="{{ old('expected_value') }}" class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg">
+                    @error('expected_value')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
+                </div>
+                @include('sales._course_picker', [
+                    'lead' => null,
+                    'coursesCatalogUrl' => route('employee.sales.courses.index'),
+                    'inputClass' => 'w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg',
+                    'labelClass' => 'block text-sm font-medium text-slate-700 mb-1',
+                ])
+            </div>
+            <p class="text-xs text-slate-500">مسجّل = كورسات المنصة · أونلاين = مجموعات أونلاين · أوفلاين = حضور فعلي — والسعر يُملأ تلقائياً من بيانات الكورس.</p>
+        </div>
+
         <div class="border-t border-slate-100 pt-4">
             <button type="button" @click="showDetails = !showDetails"
                     class="text-sm font-medium text-slate-700 flex items-center gap-2">
@@ -157,16 +175,6 @@
                     <label class="block text-sm font-medium text-slate-700 mb-1">الشركة</label>
                     <input type="text" name="company" value="{{ old('company') }}" class="w-full px-3 py-2.5 text-sm">
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">قيمة متوقعة (ج.م)</label>
-                    <input type="number" step="0.01" min="0" name="expected_value" value="{{ old('expected_value') }}" class="w-full px-3 py-2.5 text-sm">
-                </div>
-                @include('sales._course_picker', [
-                    'lead' => null,
-                    'coursesCatalogUrl' => route('employee.sales.courses.index'),
-                    'inputClass' => 'w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg',
-                    'labelClass' => 'block text-sm font-medium text-slate-700 mb-1',
-                ])
                 <div class="md:col-span-2 xl:col-span-4">
                     <label class="block text-sm font-medium text-slate-700 mb-1">ملاحظات</label>
                     <textarea name="notes" rows="2" class="w-full px-3 py-2.5 text-sm">{{ old('notes') }}</textarea>

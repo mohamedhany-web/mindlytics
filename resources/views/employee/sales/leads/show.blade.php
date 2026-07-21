@@ -193,6 +193,8 @@
                     <div class="flex justify-between gap-2"><dt class="text-gray-500 shrink-0">الهاتف</dt><dd class="font-medium text-gray-900 text-left sm:text-right break-all">{{ $lead->phone ?? '—' }}</dd></div>
                     <div class="flex justify-between gap-2"><dt class="text-gray-500 shrink-0">البريد</dt><dd class="font-medium text-gray-900 text-left sm:text-right break-all">{{ $lead->email ?? '—' }}</dd></div>
                     <div class="flex justify-between gap-2"><dt class="text-gray-500 shrink-0">الشركة</dt><dd class="font-medium text-gray-900">{{ $lead->company ?? '—' }}</dd></div>
+                    <div class="flex justify-between gap-2"><dt class="text-gray-500 shrink-0">نوع الكورس</dt><dd class="font-medium text-gray-900">{{ $lead->linkedCourseTypeLabel() }}</dd></div>
+                    <div class="flex justify-between gap-2"><dt class="text-gray-500 shrink-0">الكورس</dt><dd class="font-medium text-gray-900 text-left sm:text-right">{{ $lead->linkedCourseTitle() ?? '—' }}</dd></div>
                     <div class="flex justify-between gap-2"><dt class="text-gray-500 shrink-0">قيمة متوقعة</dt><dd class="font-medium text-gray-900">{{ $lead->expected_value !== null ? number_format($lead->expected_value, 2) . ' ج.م' : '—' }}</dd></div>
                     <div>
                         <dt class="text-gray-500 mb-1">متابعة تالية</dt>

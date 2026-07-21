@@ -51,11 +51,7 @@ class SalesLead extends Model
     /** بعد كم يوم بلا تواصل نعتبر العميل «يحتاج متابعة» في التقارير */
     public const STALE_CONTACT_DAYS = 10;
 
-    public const COURSE_TYPES = [
-        'advanced' => 'مسجّل',
-        'online' => 'أونلاين (مجموعات)',
-        'offline' => 'أوفلاين',
-    ];
+    public const COURSE_TYPES = SalesCourseCommissionAgreement::COURSE_TYPES;
 
     protected $fillable = [
         'assigned_to',
