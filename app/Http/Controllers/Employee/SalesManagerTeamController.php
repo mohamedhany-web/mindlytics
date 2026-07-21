@@ -163,7 +163,7 @@ class SalesManagerTeamController extends Controller
         $memberIds = $this->teamService->memberUserIds($team);
 
         abort_unless(in_array((int) $employee->id, $memberIds, true), 403);
-        abort_unless($employee->isSalesEmployee(), 422, 'المستخدم ليس موظف مبيعات.');
+        // عضوية الفريق كافية — لا نمنع التقرير لو كود الوظيفة غير مضبوط على sales
     }
 
     /**
@@ -177,7 +177,7 @@ class SalesManagerTeamController extends Controller
             'lead_scope' => 'touched',
         ]);
 
-        $validated = $request->validate([
+    $validated = $request->validate([
             'date_from' => ['required', 'date'],
             'date_to' => ['required', 'date', 'after_or_equal:date_from'],
             'lead_scope' => ['required', 'string', Rule::in(['touched', 'new', 'transferred_from_admin', 'in_groups'])],
@@ -187,6 +187,11 @@ class SalesManagerTeamController extends Controller
             'date_to.required' => 'حدد تاريخ النهاية.',
             'date_to.after_or_equal' => 'تاريخ النهاية يجب أن يكون بعد أو يساوي البداية.',
         ]);
+
+        // Normalize empty query values like group_id=
+        if ($request->input('group_id') === '' || $request->input('group_id') === null) {
+            $validated['group_id'] = null;
+        }
 
         if (! empty($validated['group_id'])) {
             $group = SalesLeadGroup::query()->findOrFail((int) $validated['group_id']);

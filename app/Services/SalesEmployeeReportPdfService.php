@@ -3,18 +3,17 @@
 namespace App\Services;
 
 use App\Support\MpdfArabic;
-use App\Support\SiteBranding;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
 class SalesEmployeeReportPdfService
 {
-    private const MAX_LEADS = 250;
+    private const MAX_LEADS = 200;
 
-    private const MAX_ACTIVITIES = 400;
+    private const MAX_ACTIVITIES = 300;
 
-    private const MAX_DAILY_ROWS = 120;
+    private const MAX_DAILY_ROWS = 93;
 
     /**
      * @param  array<string, mixed>  $report
@@ -26,7 +25,7 @@ class SalesEmployeeReportPdfService
         }
 
         @ini_set('memory_limit', '512M');
-        @set_time_limit(120);
+        @set_time_limit(180);
 
         $rep = $report['rep'];
         $filename = sprintf(
@@ -37,23 +36,41 @@ class SalesEmployeeReportPdfService
         );
 
         $pdfReport = $this->prepareForPdf($report);
+        $binary = null;
+        $lastError = null;
 
         try {
             $html = view('pdf.sales-employee-report', ['report' => $pdfReport])->render();
-            $mpdf = MpdfArabic::make();
-            $mpdf->SetTitle('تقرير مبيعات — '.($rep->name ?? ''));
-            $mpdf->SetAuthor(config('app.name', 'Mindlytics'));
-            $mpdf->WriteHTML($html);
-            $binary = $mpdf->Output('', 'S');
+            $binary = $this->renderHtmlToPdf($html, (string) ($rep->name ?? ''));
         } catch (Throwable $e) {
-            Log::error('Sales employee report PDF failed', [
+            $lastError = $e;
+            Log::warning('Sales report PDF full render failed, trying compact', [
                 'employee_id' => $rep->id ?? null,
                 'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
             ]);
+        }
 
-            abort(500, 'تعذّر إنشاء ملف PDF حالياً. جرّب فترة أقصر أو تواصل مع الدعم.');
+        if ($binary === null || $binary === '') {
+            try {
+                $compact = $this->prepareForPdf($report, true);
+                $html = view('pdf.sales-employee-report', ['report' => $compact])->render();
+                $binary = $this->renderHtmlToPdf($html, (string) ($rep->name ?? ''));
+            } catch (Throwable $e) {
+                $lastError = $e;
+                Log::error('Sales employee report PDF failed', [
+                    'employee_id' => $rep->id ?? null,
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ]);
+            }
+        }
+
+        if ($binary === null || $binary === '') {
+            $hint = config('app.debug') && $lastError
+                ? ' ('.$lastError->getMessage().')'
+                : '';
+            abort(500, 'تعذّر إنشاء ملف PDF حالياً. جرّب فترة أقصر أو تواصل مع الدعم.'.$hint);
         }
 
         return response()->streamDownload(
@@ -65,35 +82,54 @@ class SalesEmployeeReportPdfService
         );
     }
 
+    private function renderHtmlToPdf(string $html, string $title): string
+    {
+        // Force a safe Arabic-capable bundled font in CSS regardless of blade template.
+        $html = preg_replace(
+            '/font-family\s*:\s*[^;]+;/i',
+            'font-family: dejavusans, sans-serif;',
+            $html
+        ) ?? $html;
+
+        // Strip any images that might trip open_basedir / missing files on production.
+        $html = preg_replace('/<img\b[^>]*>/i', '', $html) ?? $html;
+
+        $mpdf = MpdfArabic::make(['default_font' => 'dejavusans']);
+        $mpdf->SetTitle('تقرير مبيعات — '.$title);
+        $mpdf->SetAuthor(config('app.name', 'Mindlytics'));
+        $mpdf->WriteHTML($html);
+
+        return (string) $mpdf->Output('', 'S');
+    }
+
     /**
-     * Trim oversized collections and attach a filesystem logo path for mPDF.
-     *
      * @param  array<string, mixed>  $report
      * @return array<string, mixed>
      */
-    private function prepareForPdf(array $report): array
+    private function prepareForPdf(array $report, bool $compact = false): array
     {
+        $maxLeads = $compact ? 50 : self::MAX_LEADS;
+        $maxActivities = $compact ? 80 : self::MAX_ACTIVITIES;
+        $maxDaily = $compact ? 62 : self::MAX_DAILY_ROWS;
+
         $leads = collect($report['leads_with_contact'] ?? $report['leads'] ?? []);
         $activities = collect($report['activities'] ?? []);
         $dailyRows = collect($report['daily_rows'] ?? []);
 
         $report['pdf_limits'] = [
             'leads_total' => $leads->count(),
-            'leads_shown' => min($leads->count(), self::MAX_LEADS),
+            'leads_shown' => min($leads->count(), $maxLeads),
             'activities_total' => $activities->count(),
-            'activities_shown' => min($activities->count(), self::MAX_ACTIVITIES),
+            'activities_shown' => min($activities->count(), $maxActivities),
             'daily_total' => $dailyRows->count(),
-            'daily_shown' => min($dailyRows->count(), self::MAX_DAILY_ROWS),
+            'daily_shown' => min($dailyRows->count(), $maxDaily),
         ];
 
-        $report['leads_with_contact'] = $leads->take(self::MAX_LEADS)->values();
-        $report['activities'] = $activities->take(self::MAX_ACTIVITIES)->values();
-        $report['daily_rows'] = $dailyRows->take(self::MAX_DAILY_ROWS)->values()->all();
-
-        $logoPath = SiteBranding::logoLocalPath();
-        $report['pdf_logo_path'] = ($logoPath && is_readable($logoPath) && ! str_ends_with(strtolower($logoPath), '.svg'))
-            ? $logoPath
-            : null;
+        $report['leads_with_contact'] = $leads->take($maxLeads)->values();
+        $report['activities'] = $activities->take($maxActivities)->values();
+        $report['daily_rows'] = $dailyRows->take($maxDaily)->values()->all();
+        // Never embed logo paths on production (open_basedir / SVG / huge PNG often break mPDF).
+        $report['pdf_logo_path'] = null;
 
         return $report;
     }

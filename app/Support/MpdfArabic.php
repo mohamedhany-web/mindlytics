@@ -5,6 +5,7 @@ namespace App\Support;
 use Mpdf\Config\ConfigVariables;
 use Mpdf\Config\FontVariables;
 use Mpdf\Mpdf;
+use Throwable;
 
 class MpdfArabic
 {
@@ -15,16 +16,20 @@ class MpdfArabic
     {
         $tempDir = storage_path('app/mpdf-temp');
         if (! is_dir($tempDir)) {
-            mkdir($tempDir, 0755, true);
+            @mkdir($tempDir, 0755, true);
         }
 
         $defaultConfig = (new ConfigVariables)->getDefaults();
         $defaultFontConfig = (new FontVariables)->getDefaults();
 
-        // Prefer built-in Arabic-capable fonts shipped with mPDF (avoid custom cairo OTFs that break TT parsing).
-        $font = 'xbriyaz';
-        if (! isset($defaultFontConfig['fontdata'][$font])) {
-            $font = 'dejavusans';
+        // DejaVu is always shipped with mPDF and supports Arabic; avoid custom/broken TTFs (e.g. cairo).
+        $preferred = ['dejavusans', 'xbriyaz', 'freesans'];
+        $font = 'dejavusans';
+        foreach ($preferred as $candidate) {
+            if (isset($defaultFontConfig['fontdata'][$candidate])) {
+                $font = $candidate;
+                break;
+            }
         }
 
         $config = array_merge([
@@ -42,11 +47,23 @@ class MpdfArabic
             'fontdata' => $defaultFontConfig['fontdata'],
             'default_font' => $font,
             'directionality' => 'rtl',
-            // Keep language auto-detection off so mPDF does not try to load broken custom fonts (e.g. cairo).
             'autoScriptToLang' => false,
             'autoLangToFont' => false,
         ], $overrides);
 
-        return new Mpdf($config);
+        try {
+            return new Mpdf($config);
+        } catch (Throwable $e) {
+            // Last resort: minimal config without custom fontDir overrides.
+            return new Mpdf([
+                'mode' => 'utf-8',
+                'format' => 'A4',
+                'tempDir' => $tempDir,
+                'default_font' => 'dejavusans',
+                'directionality' => 'rtl',
+                'autoScriptToLang' => false,
+                'autoLangToFont' => false,
+            ]);
+        }
     }
 }

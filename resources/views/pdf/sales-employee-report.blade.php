@@ -5,7 +5,7 @@
     <title>تقرير أداء مبيعات — {{ $report['rep']->name }}</title>
     <style>
         body {
-            font-family: xbriyaz, sans-serif;
+            font-family: dejavusans, sans-serif;
             font-size: 10pt;
             color: #1e293b;
             line-height: 1.5;
@@ -13,7 +13,7 @@
             text-align: right;
         }
         table, th, td, p, h2, span, div {
-            font-family: xbriyaz, sans-serif;
+            font-family: dejavusans, sans-serif;
         }
         .header {
             border-bottom: 3px solid #059669;

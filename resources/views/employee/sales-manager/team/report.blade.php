@@ -46,7 +46,18 @@
                    class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 rounded-lg border border-slate-300 bg-white hover:bg-slate-50">
                     <i class="fas fa-user"></i> ملف الموظف
                 </a>
-                <a href="{{ route('employee.sales-manager.team.report.pdf', array_filter(array_merge(['employee' => $employee->id], $filters), fn ($v) => $v !== null && $v !== '')) }}"
+@php
+    $pdfQuery = array_filter([
+        'employee' => $employee->id,
+        'date_from' => $filters['date_from'] ?? null,
+        'date_to' => $filters['date_to'] ?? null,
+        'lead_scope' => $filters['lead_scope'] ?? null,
+        'group_id' => $filters['group_id'] ?? null,
+    ], static function ($v) {
+        return $v !== null && $v !== '';
+    });
+@endphp
+                <a href="{{ route('employee.sales-manager.team.report.pdf', $pdfQuery) }}"
                    class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white rounded-lg bg-rose-600 hover:bg-rose-700">
                     <i class="fas fa-file-pdf"></i> تحميل PDF
                 </a>
@@ -489,6 +500,10 @@
 <script>
 (() => {
     const charts = @json($charts);
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js failed to load');
+        return;
+    }
     const palette = {
         sky: 'rgb(14, 165, 233)',
         indigo: 'rgb(99, 102, 241)',
