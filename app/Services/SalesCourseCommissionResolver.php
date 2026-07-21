@@ -16,7 +16,7 @@ class SalesCourseCommissionResolver
     {
         $type = (string) ($lead->course_type ?? '');
         $courseId = $lead->linkedCourseId();
-        if (! in_array($type, ['advanced', 'offline', 'legacy'], true) || ! $courseId) {
+        if (! in_array($type, ['advanced', 'online', 'offline', 'legacy'], true) || ! $courseId) {
             return null;
         }
 
@@ -207,7 +207,7 @@ class SalesCourseCommissionResolver
             $q->where('course_type', $type);
             match ($type) {
                 'advanced' => $q->where('advanced_course_id', $courseId),
-                'offline' => $q->where('offline_course_id', $courseId),
+                'online', 'offline' => $q->where('offline_course_id', $courseId),
                 'legacy' => $q->where('course_id', $courseId),
                 default => null,
             };
@@ -259,23 +259,50 @@ class SalesCourseCommissionResolver
      */
     public static function listCourses(string $type): array
     {
+        $map = fn ($c) => [
+            'id' => (int) $c->id,
+            'title' => (string) $c->title,
+            'price' => (float) ($c->price ?? 0),
+        ];
+
         return match ($type) {
+            // مسجّل = كورسات الـ LMS (advanced_courses)
             'advanced' => AdvancedCourse::query()
                 ->where('is_active', true)
                 ->orderBy('title')
                 ->get(['id', 'title', 'price'])
-                ->map(fn ($c) => ['id' => (int) $c->id, 'title' => (string) $c->title, 'price' => (float) ($c->price ?? 0)])
+                ->map($map)
                 ->all(),
-            'offline' => OfflineCourse::query()
+            // أونلاين = كورسات المجموعات الأونلاين (نفس نطاق إدارة الأونلاين/الجروبات)
+            'online' => OfflineCourse::query()
                 ->where('is_active', true)
+                ->where(function ($q) {
+                    $q->where('online_only', true)
+                        ->orWhereHas('groups', function ($g) {
+                            $g->where('online_booking_enabled', true)
+                                ->where('is_active', true)
+                                ->where('status', 'active');
+                        });
+                })
                 ->orderBy('title')
                 ->get(['id', 'title', 'price'])
-                ->map(fn ($c) => ['id' => (int) $c->id, 'title' => (string) $c->title, 'price' => (float) ($c->price ?? 0)])
+                ->map($map)
                 ->all(),
+            // أوفلاين = كورسات الحضور الفعلي
+            'offline' => OfflineCourse::query()
+                ->where('is_active', true)
+                ->where(function ($q) {
+                    $q->where('online_only', false)->orWhereNull('online_only');
+                })
+                ->orderBy('title')
+                ->get(['id', 'title', 'price'])
+                ->map($map)
+                ->all(),
+            // توافق قديم إن وُجد
             'legacy' => Course::query()
                 ->orderBy('title')
                 ->get(['id', 'title', 'price'])
-                ->map(fn ($c) => ['id' => (int) $c->id, 'title' => (string) $c->title, 'price' => (float) ($c->price ?? 0)])
+                ->map($map)
                 ->all(),
             default => [],
         };
@@ -285,7 +312,17 @@ class SalesCourseCommissionResolver
     {
         $price = match ($type) {
             'advanced' => AdvancedCourse::query()->whereKey($courseId)->value('price'),
-            'offline' => OfflineCourse::query()->whereKey($courseId)->value('price'),
+            'online' => OfflineCourse::query()->whereKey($courseId)->where(function ($q) {
+                $q->where('online_only', true)
+                    ->orWhereHas('groups', function ($g) {
+                        $g->where('online_booking_enabled', true)
+                            ->where('is_active', true)
+                            ->where('status', 'active');
+                    });
+            })->value('price'),
+            'offline' => OfflineCourse::query()->whereKey($courseId)->where(function ($q) {
+                $q->where('online_only', false)->orWhereNull('online_only');
+            })->value('price'),
             'legacy' => Course::query()->whereKey($courseId)->value('price'),
             default => null,
         };

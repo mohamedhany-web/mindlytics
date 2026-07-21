@@ -613,7 +613,17 @@ class SalesLeadController extends Controller
 
         $exists = match ($type) {
             'advanced' => \App\Models\AdvancedCourse::query()->whereKey($refId)->exists(),
-            'offline' => \App\Models\OfflineCourse::query()->whereKey($refId)->exists(),
+            'online' => \App\Models\OfflineCourse::query()->whereKey($refId)->where(function ($q) {
+                $q->where('online_only', true)
+                    ->orWhereHas('groups', function ($g) {
+                        $g->where('online_booking_enabled', true)
+                            ->where('is_active', true)
+                            ->where('status', 'active');
+                    });
+            })->exists(),
+            'offline' => \App\Models\OfflineCourse::query()->whereKey($refId)->where(function ($q) {
+                $q->where('online_only', false)->orWhereNull('online_only');
+            })->exists(),
             'legacy' => \App\Models\Course::query()->whereKey($refId)->exists(),
             default => false,
         };
@@ -625,7 +635,7 @@ class SalesLeadController extends Controller
 
         $validated['course_type'] = $type;
         $validated['advanced_course_id'] = $type === 'advanced' ? $refId : null;
-        $validated['offline_course_id'] = $type === 'offline' ? $refId : null;
+        $validated['offline_course_id'] = in_array($type, ['online', 'offline'], true) ? $refId : null;
         $validated['course_id'] = $type === 'legacy' ? $refId : null;
 
         return $validated;

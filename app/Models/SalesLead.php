@@ -52,9 +52,9 @@ class SalesLead extends Model
     public const STALE_CONTACT_DAYS = 10;
 
     public const COURSE_TYPES = [
-        'advanced' => 'أونلاين',
+        'advanced' => 'مسجّل',
+        'online' => 'أونلاين (مجموعات)',
         'offline' => 'أوفلاين',
-        'legacy' => 'مسجّل / قديم',
     ];
 
     protected $fillable = [
@@ -143,7 +143,7 @@ class SalesLead extends Model
     {
         return match ($this->course_type) {
             'advanced' => $this->advanced_course_id ? (int) $this->advanced_course_id : null,
-            'offline' => $this->offline_course_id ? (int) $this->offline_course_id : null,
+            'online', 'offline' => $this->offline_course_id ? (int) $this->offline_course_id : null,
             'legacy' => $this->course_id ? (int) $this->course_id : null,
             default => null,
         };
@@ -153,7 +153,7 @@ class SalesLead extends Model
     {
         $title = match ($this->course_type) {
             'advanced' => $this->advancedCourse?->title,
-            'offline' => $this->offlineCourse?->title,
+            'online', 'offline' => $this->offlineCourse?->title,
             'legacy' => $this->legacyCourse?->title,
             default => null,
         };
@@ -170,7 +170,7 @@ class SalesLead extends Model
     {
         $this->course_type = $type;
         $this->advanced_course_id = $type === 'advanced' ? $courseId : null;
-        $this->offline_course_id = $type === 'offline' ? $courseId : null;
+        $this->offline_course_id = in_array($type, ['online', 'offline'], true) ? $courseId : null;
         $this->course_id = $type === 'legacy' ? $courseId : null;
     }
 

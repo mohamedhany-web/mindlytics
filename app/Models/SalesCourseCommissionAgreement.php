@@ -9,9 +9,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class SalesCourseCommissionAgreement extends Model
 {
     public const COURSE_TYPES = [
-        'advanced' => 'أونلاين',
+        'advanced' => 'مسجّل',
+        'online' => 'أونلاين (مجموعات)',
         'offline' => 'أوفلاين',
-        'legacy' => 'مسجّل / قديم',
     ];
 
     public const CALC_MODES = [
@@ -69,7 +69,7 @@ class SalesCourseCommissionAgreement extends Model
     {
         return match ($this->course_type) {
             'advanced' => $this->advanced_course_id ? (int) $this->advanced_course_id : null,
-            'offline' => $this->offline_course_id ? (int) $this->offline_course_id : null,
+            'online', 'offline' => $this->offline_course_id ? (int) $this->offline_course_id : null,
             'legacy' => $this->course_id ? (int) $this->course_id : null,
             default => null,
         };
@@ -79,7 +79,7 @@ class SalesCourseCommissionAgreement extends Model
     {
         return match ($this->course_type) {
             'advanced' => (string) ($this->advancedCourse?->title ?? '—'),
-            'offline' => (string) ($this->offlineCourse?->title ?? '—'),
+            'online', 'offline' => (string) ($this->offlineCourse?->title ?? '—'),
             'legacy' => (string) ($this->legacyCourse?->title ?? '—'),
             default => '—',
         };
@@ -89,7 +89,7 @@ class SalesCourseCommissionAgreement extends Model
     {
         $price = match ($this->course_type) {
             'advanced' => $this->advancedCourse?->price,
-            'offline' => $this->offlineCourse?->price,
+            'online', 'offline' => $this->offlineCourse?->price,
             'legacy' => $this->legacyCourse?->price,
             default => null,
         };
@@ -125,7 +125,7 @@ class SalesCourseCommissionAgreement extends Model
         $agreement->course_type = $type;
         $agreement->course_key = self::makeCourseKey($type, $courseId);
         $agreement->advanced_course_id = $type === 'advanced' ? $courseId : null;
-        $agreement->offline_course_id = $type === 'offline' ? $courseId : null;
+        $agreement->offline_course_id = in_array($type, ['online', 'offline'], true) ? $courseId : null;
         $agreement->course_id = $type === 'legacy' ? $courseId : null;
     }
 }
