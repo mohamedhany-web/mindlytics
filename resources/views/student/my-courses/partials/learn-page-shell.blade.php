@@ -244,6 +244,7 @@
                         <div x-show="selectedLesson && showVideoPlayer" class="absolute inset-0 w-full h-full">
                             @include('student.my-courses.partials.video-player')
                         </div>
+                        @include('student.my-courses.partials.learn-video-shield')
                     </div>
                 </div>
 

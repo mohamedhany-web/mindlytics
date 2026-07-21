@@ -7,6 +7,7 @@ use App\Models\AdvancedCourse;
 use App\Helpers\VideoHelper;
 use App\Support\LectureRecordingResolver;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
@@ -15,6 +16,12 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProtectedVideoController extends Controller
 {
+    /** عدد فيديوهات المعاينة المعروضة في قائمة الكورس */
+    public const PREVIEW_LIST_COUNT = 3;
+
+    /** عدد فيديوهات المعاينة المفتوحة للتشغيل (الباقي مقفول) */
+    public const PREVIEW_UNLOCKED_COUNT = 2;
+
     /**
      * عرض الفيديو عبر رابط موقّع (معاينة أو طالب مسجّل).
      * التحقق من التوقيع ثم إما إعادة التوجيه إلى رابط التضمين أو بث الفيديو المحلي.
@@ -107,30 +114,50 @@ class ProtectedVideoController extends Controller
             return response()->json(['error' => 'غير مسموح بمعاينة هذا الفيديو.'], 403);
         }
 
-        $watchUrl = URL::temporarySignedRoute('video.protected.watch', now()->addMinutes(15), [
-            'course_id' => $courseId,
-            'lesson_id' => $lessonId,
-            'preview' => 1,
-        ]);
+        // كاش رابط موقّع ~90 دقيقة ضمن صلاحية التوكن — يقلّل إعادة التوقيع ويحسّن ضربات كاش Bunny CDN
+        $expiresMinutes = 120;
+        $cacheKey = 'preview_watch_url_v2:'.$courseId.':'.$lessonId;
+        $payload = Cache::remember($cacheKey, now()->addMinutes(90), function () use ($courseId, $lessonId, $expiresMinutes, $lesson) {
+            // تجهيز توقيع Bunny مسبقاً داخل كاش LectureRecordingResolver (55 دقيقة)
+            if ($lesson->video_url) {
+                $source = VideoHelper::getVideoSource(trim($lesson->video_url));
+                if ($source === 'bunny') {
+                    LectureRecordingResolver::resolve(trim($lesson->video_url), 'bunny');
+                }
+            }
 
-        return response()->json([
-            'watch_url' => $watchUrl,
-            'expires_in_minutes' => 15,
-        ]);
+            return [
+                'watch_url' => URL::temporarySignedRoute('video.protected.watch', now()->addMinutes($expiresMinutes), [
+                    'course_id' => $courseId,
+                    'lesson_id' => $lessonId,
+                    'preview' => 1,
+                ]),
+                'expires_in_minutes' => $expiresMinutes,
+            ];
+        });
+
+        return response()->json($payload);
     }
 
     /**
-     * التحقق من أن الدرس من ضمن أول 3 فيديوهات معاينة في الكورس
+     * التحقق من أن الدرس من ضمن أول فيديوهات المعاينة المفتوحة في الكورس
      */
     private function isPreviewLesson(int $courseId, int $lessonId): bool
     {
-        $previewIds = CourseLesson::where('advanced_course_id', $courseId)
-            ->where('is_active', true)
-            ->where('type', 'video')
-            ->orderBy('order')
-            ->limit(3)
-            ->pluck('id')
-            ->toArray();
+        $previewIds = Cache::remember(
+            'preview_unlocked_lesson_ids_v2:'.$courseId,
+            now()->addMinutes(30),
+            function () use ($courseId) {
+                return CourseLesson::where('advanced_course_id', $courseId)
+                    ->where('is_active', true)
+                    ->where('type', 'video')
+                    ->orderBy('order')
+                    ->orderBy('id')
+                    ->limit(self::PREVIEW_UNLOCKED_COUNT)
+                    ->pluck('id')
+                    ->all();
+            }
+        );
 
         return in_array($lessonId, $previewIds, true);
     }

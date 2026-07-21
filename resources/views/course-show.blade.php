@@ -1261,16 +1261,29 @@
                     </div>
                     @endif
 
-                    <!-- محتوى الكورس: التقسيمات + معاينة أول 3 فيديوهات (للتجربة قبل الشراء) -->
+                    <!-- محتوى الكورس: التقسيمات + معاينة فيديوهات (أول 2 مفتوحان، الثالث مقفول) -->
                     <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 lg:p-8 border border-gray-200 fade-in-up" style="animation-delay: 0.25s;">
                         <h2 class="text-2xl lg:text-3xl font-black text-gray-900 mb-6 flex items-center gap-3">
                             <i class="fas fa-play-circle text-blue-600"></i>
                             محتوى الكورس — معاينة
                         </h2>
-                        <p class="text-gray-600 mb-6">اطّلع على أول 3 فيديوهات وتقسيمات الكورس قبل الشراء.</p>
+                        <p class="text-gray-600 mb-6">شاهد أول فيديوهين مجاناً، والثالث يُفتح بعد شراء الكورس.</p>
 
                         @if(isset($previewVideoLessons) && $previewVideoLessons->count() > 0)
-                            <div x-data="coursePreviewPopup()">
+                            @php
+                                $previewUnlockedCount = (int) ($previewUnlockedCount ?? 2);
+                                $previewUnlockCta = null;
+                                if ($isEnrolled ?? false) {
+                                    $previewUnlockCta = route('courses.show', $course->id);
+                                } elseif (($course->effectivePrice() ?? $course->price ?? 0) > 0 && !($course->is_free ?? false)) {
+                                    $previewUnlockCta = route('public.course.checkout', $course->id);
+                                } elseif (auth()->check()) {
+                                    $previewUnlockCta = route('public.course.enroll.free', $course->id);
+                                } else {
+                                    $previewUnlockCta = route('register', ['redirect' => route('public.course.enroll.free', $course->id)]);
+                                }
+                            @endphp
+                            <div x-data="coursePreviewPopup({{ $course->id }})">
                                 <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                                     <i class="fas fa-video text-green-600"></i>
                                     معاينة أول {{ $previewVideoLessons->count() }} فيديو
@@ -1278,35 +1291,50 @@
                                 <div class="space-y-4">
                                     @foreach($previewVideoLessons as $idx => $lesson)
                                         @php
-                                            $embedUrl = null;
-                                            if ($lesson->video_url) {
-                                                $embedUrl = \App\Helpers\VideoHelper::getEmbedUrl(trim($lesson->video_url));
-                                            }
-                                            $encodedSrc = $embedUrl ? base64_encode($embedUrl) : '';
+                                            $isLocked = $idx >= $previewUnlockedCount;
+                                            $isUnlocked = !$isLocked;
+                                            $hasVideo = filled($lesson->video_url);
                                         @endphp
-                                        <div class="rounded-xl border-2 border-gray-200 overflow-hidden bg-gray-50 hover:border-blue-300 transition-all duration-300">
+                                        <div class="rounded-xl border-2 {{ $isLocked ? 'border-slate-200 bg-slate-50' : 'border-gray-200 bg-gray-50 hover:border-blue-300' }} overflow-hidden transition-all duration-300">
                                             <div class="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                                                 <div class="flex items-center gap-3 flex-1 min-w-0">
-                                                    <div class="flex-shrink-0 w-10 h-10 bg-blue-600 text-white rounded-lg flex items-center justify-center">
-                                                        <i class="fas fa-play text-sm"></i>
+                                                    <div class="flex-shrink-0 w-10 h-10 {{ $isLocked ? 'bg-slate-400' : 'bg-blue-600' }} text-white rounded-lg flex items-center justify-center">
+                                                        <i class="fas {{ $isLocked ? 'fa-lock' : 'fa-play' }} text-sm"></i>
                                                     </div>
                                                     <div class="min-w-0">
                                                         <div class="font-semibold text-gray-900">{{ $lesson->title }}</div>
                                                         @if($lesson->duration_minutes)
                                                             <div class="text-sm text-gray-500"><i class="fas fa-clock ml-1"></i> {{ $lesson->duration_minutes }} دقيقة</div>
                                                         @endif
+                                                        @if($isLocked)
+                                                            <div class="text-xs font-semibold text-amber-700 mt-1">مقفل — يُفتح بعد شراء الكورس</div>
+                                                        @endif
                                                     </div>
                                                 </div>
-                                                @if($encodedSrc)
+                                                @if($isUnlocked && $hasVideo)
                                                     <div class="flex-shrink-0">
                                                         <button type="button"
-                                                                data-video-src="{{ $encodedSrc }}"
-                                                                data-title="{{ e($lesson->title) }}"
-                                                                @click="openPreview($event.currentTarget.dataset.videoSrc, $event.currentTarget.dataset.title)"
-                                                                class="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-semibold transition-colors shadow-md hover:shadow-lg">
-                                                            <i class="fas fa-eye"></i>
-                                                            <span>معاينة</span>
+                                                                @click="openPreview({{ (int) $lesson->id }}, @js($lesson->title))"
+                                                                :disabled="loading"
+                                                                class="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white rounded-xl text-sm font-semibold transition-colors shadow-md hover:shadow-lg">
+                                                            <i class="fas" :class="loading && activeLessonId === {{ (int) $lesson->id }} ? 'fa-spinner fa-spin' : 'fa-play'"></i>
+                                                            <span x-text="loading && activeLessonId === {{ (int) $lesson->id }} ? 'جاري الفتح...' : 'معاينة'"></span>
                                                         </button>
+                                                    </div>
+                                                @elseif($isUnlocked && !$hasVideo)
+                                                    <div class="flex-shrink-0">
+                                                        <span class="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-200 text-slate-600 rounded-xl text-sm font-semibold">
+                                                            <i class="fas fa-video-slash"></i>
+                                                            <span>قريباً</span>
+                                                        </span>
+                                                    </div>
+                                                @elseif($isLocked)
+                                                    <div class="flex-shrink-0">
+                                                        <a href="{{ $previewUnlockCta }}"
+                                                           class="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-700 hover:bg-slate-800 text-white rounded-xl text-sm font-semibold transition-colors shadow-md">
+                                                            <i class="fas fa-unlock-alt"></i>
+                                                            <span>فتح بالشراء</span>
+                                                        </a>
                                                     </div>
                                                 @endif
                                             </div>
@@ -1314,7 +1342,7 @@
                                     @endforeach
                                 </div>
 
-                                <!-- بوب أب المعاينة (الرابط مخزّن مشفّراً base64 فلا يظهر جلياً في مصدر الصفحة) -->
+                                <!-- بلاير المعاينة عبر رابط موقّع (بدون كشف رابط Bunny الحقيقي في الصفحة) -->
                                 <div x-show="open" x-cloak class="fixed inset-0 z-[9999] flex items-center justify-center p-4" style="background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);"
                                      x-transition:enter="transition ease-out duration-200"
                                      x-transition:enter-start="opacity-0"
@@ -1322,6 +1350,7 @@
                                      x-transition:leave="transition ease-in duration-150"
                                      x-transition:leave-start="opacity-100"
                                      x-transition:leave-end="opacity-0"
+                                     @keydown.escape.window="closePopup()"
                                      @click.self="closePopup()">
                                     <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden"
                                          x-transition:enter="transition ease-out duration-200"
@@ -1333,33 +1362,70 @@
                                                 <i class="fas fa-times text-xl"></i>
                                             </button>
                                         </div>
-                                        <div class="flex-1 min-h-0 p-4 overflow-auto" x-show="embedUrl">
-                                            <div class="aspect-video w-full bg-black rounded-xl overflow-hidden" x-show="embedUrl">
-                                                <iframe :src="embedUrl" class="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                        <div class="flex-1 min-h-0 p-4">
+                                            <div x-show="error" class="rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-semibold p-4" x-text="error"></div>
+                                            <div x-show="loading && !watchUrl" class="aspect-video w-full bg-black rounded-xl flex items-center justify-center text-white">
+                                                <div class="text-center">
+                                                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                                                    <p class="text-sm font-semibold">جاري تحميل المشغّل...</p>
+                                                </div>
+                                            </div>
+                                            <div class="aspect-video w-full bg-black rounded-xl overflow-hidden" x-show="watchUrl">
+                                                <iframe :src="watchUrl" class="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="no-referrer"></iframe>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             <script>
-                                function coursePreviewPopup() {
+                                function coursePreviewPopup(courseId) {
                                     return {
                                         open: false,
-                                        embedUrl: '',
+                                        loading: false,
+                                        watchUrl: '',
                                         title: '',
-                                        openPreview(encodedSrc, title) {
+                                        error: '',
+                                        activeLessonId: null,
+                                        urlCache: {},
+                                        async openPreview(lessonId, title) {
+                                            this.title = title || 'معاينة';
+                                            this.error = '';
+                                            this.activeLessonId = lessonId;
+                                            this.open = true;
+                                            document.body.style.overflow = 'hidden';
+
+                                            if (this.urlCache[lessonId]) {
+                                                this.watchUrl = this.urlCache[lessonId];
+                                                this.loading = false;
+                                                return;
+                                            }
+
+                                            this.loading = true;
+                                            this.watchUrl = '';
                                             try {
-                                                this.title = title || 'معاينة';
-                                                this.embedUrl = encodedSrc ? (typeof atob !== 'undefined' ? atob(encodedSrc) : '') : '';
-                                                this.open = true;
-                                                document.body.style.overflow = 'hidden';
+                                                const res = await fetch('/course/' + courseId + '/preview-watch-url/' + lessonId, {
+                                                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                                                    credentials: 'same-origin'
+                                                });
+                                                const data = await res.json().catch(function () { return {}; });
+                                                if (!res.ok || !data.watch_url) {
+                                                    throw new Error(data.error || 'تعذر فتح المعاينة.');
+                                                }
+                                                this.urlCache[lessonId] = data.watch_url;
+                                                this.watchUrl = data.watch_url;
                                             } catch (e) {
-                                                this.embedUrl = '';
+                                                this.error = (e && e.message) ? e.message : 'تعذر فتح المعاينة.';
+                                                this.watchUrl = '';
+                                            } finally {
+                                                this.loading = false;
                                             }
                                         },
                                         closePopup() {
                                             this.open = false;
-                                            this.embedUrl = '';
+                                            this.watchUrl = '';
+                                            this.error = '';
+                                            this.activeLessonId = null;
+                                            this.loading = false;
                                             document.body.style.overflow = '';
                                         }
                                     };

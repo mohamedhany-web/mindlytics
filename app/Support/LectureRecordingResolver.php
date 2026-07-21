@@ -11,11 +11,11 @@ use Illuminate\Support\Facades\Cache;
  */
 final class LectureRecordingResolver
 {
-    /** مدة الكاش — أقل قليلاً من صلاحية توكن Bunny */
-    private const CACHE_MINUTES = 55;
+    /** مدة الكاش — أقل قليلاً من صلاحية توكن Bunny (يقلّل إعادة التوقيع وتكلفة CDN) */
+    private const CACHE_MINUTES = 110;
 
     /** صلاحية توكن Bunny بالدقائق */
-    private const TOKEN_MINUTES = 60;
+    private const TOKEN_MINUTES = 120;
 
     /**
      * @return array{recording_url: string, video_platform: ?string}

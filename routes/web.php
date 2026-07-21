@@ -405,12 +405,15 @@ Route::get('/course/{id}', function ($id) {
         ->orderBy('order')
         ->get(['id', 'title', 'order']);
 
-    // أول 3 فيديوهات للمعاينة (رابط التضمين يُمرَّر مشفّراً base64 لعدم ظهور الرابط الحقيقي في المصدر)
+    // أول 3 فيديوهات للمعاينة: أول 2 مفتوحان عبر بلاير موقّع، الثالث مقفول (بدون تمرير روابط الفيديو في الصفحة)
+    $previewListCount = \App\Http\Controllers\ProtectedVideoController::PREVIEW_LIST_COUNT;
+    $previewUnlockedCount = \App\Http\Controllers\ProtectedVideoController::PREVIEW_UNLOCKED_COUNT;
     $previewVideoLessons = \App\Models\CourseLesson::where('advanced_course_id', $course->id)
         ->where('is_active', true)
         ->where('type', 'video')
         ->orderBy('order')
-        ->limit(3)
+        ->orderBy('id')
+        ->limit($previewListCount)
         ->get(['id', 'title', 'duration_minutes', 'video_url', 'order']);
 
     // التحقق من التسجيل في الكورس
@@ -465,6 +468,7 @@ Route::get('/course/{id}', function ($id) {
         'isEnrolled',
         'sections',
         'previewVideoLessons',
+        'previewUnlockedCount',
         'approvedReviews',
         'reviewsAvg',
         'reviewsCount',
