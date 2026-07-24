@@ -35,6 +35,8 @@ class Certificate extends Model
         'academy_signature',
         'academy_signature_name',
         'academy_signature_title',
+        'logo_path',
+        'stamp_path',
         'instructor_id',
         'instructor_signature',
         'instructor_signature_name',
@@ -92,6 +94,63 @@ class Certificate extends Model
         } while ($exists);
         
         return $serial;
+    }
+
+    /**
+     * Available certificate templates (achievement family only).
+     */
+    public static function availableTemplates(): array
+    {
+        return [
+            'achievement' => [
+                'name' => 'Certificate of Achievement',
+                'description' => 'التصميم الأساسي — Navy / Teal / Gold',
+                'theme' => 'navy',
+            ],
+            'achievement-teal' => [
+                'name' => 'Achievement Teal',
+                'description' => 'نفس التصميم بلمسة Teal أوضح',
+                'theme' => 'teal',
+            ],
+            'achievement-navy' => [
+                'name' => 'Achievement Navy',
+                'description' => 'نفس التصميم بنسخة Navy أغمق',
+                'theme' => 'deep',
+            ],
+        ];
+    }
+
+    /**
+     * Resolve public URL for certificate asset path.
+     */
+    public function assetUrl(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '/')) {
+            return $path;
+        }
+
+        return asset('storage/' . ltrim($path, '/'));
+    }
+
+    public function logoUrl(?\App\Models\CertificateBranding $branding = null): ?string
+    {
+        return $this->assetUrl($this->logo_path)
+            ?: ($branding?->logoUrl());
+    }
+
+    public function signatureImageUrl(?\App\Models\CertificateBranding $branding = null): ?string
+    {
+        return $this->assetUrl($this->academy_signature)
+            ?: ($branding?->signatureUrl());
+    }
+
+    public function stampUrl(?\App\Models\CertificateBranding $branding = null): ?string
+    {
+        return $this->assetUrl($this->stamp_path)
+            ?: ($branding?->stampUrl());
     }
 
     /**

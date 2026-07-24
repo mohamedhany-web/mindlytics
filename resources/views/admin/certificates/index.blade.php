@@ -102,7 +102,12 @@
                 <p class="text-gray-600 mt-1">إدارة شهادات الطلاب وتصميمات الشهادات</p>
             </div>
             <div class="flex gap-3">
-            <a href="{{ route('admin.certificates.create') }}" 
+                <a href="{{ route('admin.certificates.branding') }}"
+                   class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center gap-2">
+                    <i class="fas fa-image"></i>
+                    <span>هوية الشهادات</span>
+                </a>
+                <a href="{{ route('admin.certificates.create') }}"
                    class="bg-gradient-to-r from-sky-600 to-sky-700 hover:from-sky-700 hover:to-sky-800 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-lg shadow-sky-500/30 inline-flex items-center gap-2">
                     <i class="fas fa-plus"></i>
                     <span>إصدار شهادة جديدة</span>
@@ -181,6 +186,7 @@
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">رقم الشهادة</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">السيريال</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الطالب</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">العنوان</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الكورس</th>
@@ -193,6 +199,7 @@
                     @foreach($certificates as $certificate)
                                 <tr class="hover:bg-gray-50 transition-colors">
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 font-mono">{{ $certificate->certificate_number }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-700 font-mono">{{ $certificate->serial_number ?? '—' }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ $certificate->user->name ?? 'غير معروف' }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ $certificate->title ?? $certificate->course_name ?? '-' }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ $certificate->course->title ?? ($certificate->course_name ?? '-') }}</td>
@@ -248,181 +255,58 @@
 
             <!-- تبويب تصميمات الشهادات -->
             <div x-show="activeTab === 'templates'" x-transition class="p-6">
-                <div class="mb-6">
-                    <h2 class="text-xl font-bold text-gray-900 mb-2">قوالب الشهادات المتاحة</h2>
-                    <p class="text-gray-600">اختر من بين التصميمات الاحترافية المتاحة للشهادات</p>
+                <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900 mb-2">قوالب Certificate of Achievement</h2>
+                        <p class="text-gray-600">التصاميم القديمة اتشالت — المتاح نفس تصميم الإنجاز بألوان مختلفة. ارفع اللوجو والإمضاء والختم من هوية الشهادات.</p>
+                    </div>
+                    <a href="{{ route('admin.certificates.branding') }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold">
+                        <i class="fas fa-image"></i>
+                        رفع اللوجو / الإمضاء / الختم
+                    </a>
                 </div>
 
                 <div class="template-gallery">
-                    <!-- Econev Achievement (exact design) -->
-                    <div class="template-card" onclick="previewTemplate('econev')" style="border-color:#00334E">
-                        <div class="template-preview-container preview-econev">
-                            <div class="preview-demo" style="color:#00334E;text-shadow:none;">Certificate of Achievement</div>
-                        </div>
-                        <div class="template-info">
-                            <div class="template-name">Certificate of Achievement</div>
-                            <div class="template-description">تصميم هندسي احترافي — Navy / Teal / Gold</div>
-                            <div class="template-badge" style="background:#e6f7f6;color:#0f766e;">
-                                <i class="fas fa-check-circle"></i>
-                                <span>تصميم جديد</span>
+                    @foreach($templates as $key => $tpl)
+                        <div class="template-card" onclick="previewTemplate('{{ $key }}')" style="border-color:#00334E">
+                            <div class="template-preview-container preview-{{ $key }}">
+                                <div class="preview-demo" style="color:#00334E;text-shadow:none;">{{ $tpl['name'] }}</div>
+                            </div>
+                            <div class="template-info">
+                                <div class="template-name">{{ $tpl['name'] }}</div>
+                                <div class="template-description">{{ $tpl['description'] }}</div>
+                                <div class="template-badge" style="background:#e6f7f6;color:#0f766e;">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>تصميم معتمد</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Template 1: Classic -->
-                    <div class="template-card" onclick="previewTemplate('classic')">
-                        <div class="template-preview-container preview-classic">
-                            <div class="preview-demo">كلاسيكي أنيق</div>
-                        </div>
-                        <div class="template-info">
-                            <div class="template-name">كلاسيكي أنيق</div>
-                            <div class="template-description">تصميم تقليدي أنيق بحدود زرقاء وتدرجات خفيفة</div>
-                            <div class="template-badge">
-                                <i class="fas fa-star"></i>
-                                <span>الأكثر استخداماً</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Template 2: Modern -->
-                    <div class="template-card" onclick="previewTemplate('modern')">
-                        <div class="template-preview-container preview-modern">
-                            <div class="preview-demo">حديث متدرج</div>
-                        </div>
-                        <div class="template-info">
-                            <div class="template-name">حديث متدرج</div>
-                            <div class="template-description">خلفية متدرجة متحركة بألوان زاهية وجذابة</div>
-                            <div class="template-badge" style="background: #fef3c7; color: #92400e;">
-                                <i class="fas fa-palette"></i>
-                                <span>تصميم عصري</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Template 3: Premium -->
-                    <div class="template-card" onclick="previewTemplate('premium')">
-                        <div class="template-preview-container preview-premium">
-                            <div class="preview-demo">بريميوم ذهبي</div>
-                        </div>
-                        <div class="template-info">
-                            <div class="template-name">بريميوم ذهبي</div>
-                            <div class="template-description">تصميم فاخر بحدود ذهبية متدرجة وأنماط زخرفية</div>
-                            <div class="template-badge" style="background: #fef3c7; color: #92400e;">
-                                <i class="fas fa-crown"></i>
-                                <span>بريميوم</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Template 4: Tech -->
-                    <div class="template-card" onclick="previewTemplate('tech')">
-                        <div class="template-preview-container preview-tech">
-                            <div class="preview-demo">تقني أزرق</div>
-                        </div>
-                        <div class="template-info">
-                            <div class="template-name">تقني أزرق</div>
-                            <div class="template-description">تصميم داكن بخلفية شبكية تقنية وحدود زرقاء متوهجة</div>
-                            <div class="template-badge" style="background: #dbeafe; color: #1e40af;">
-                                <i class="fas fa-code"></i>
-                                <span>تقني</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Template 5: Minimal -->
-                    <div class="template-card" onclick="previewTemplate('minimal')">
-                        <div class="template-preview-container preview-minimal">
-                            <div class="preview-demo" style="color: #1f2937;">بسيط نظيف</div>
-                        </div>
-                        <div class="template-info">
-                            <div class="template-name">بسيط نظيف</div>
-                            <div class="template-description">تصميم بسيط وأنيق بخلفية بيضاء وحدود داكنة</div>
-                            <div class="template-badge" style="background: #f3f4f6; color: #374151;">
-                                <i class="fas fa-minimize"></i>
-                                <span>بسيط</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Template 6: Royal -->
-                    <div class="template-card" onclick="previewTemplate('royal')">
-                        <div class="template-preview-container preview-royal">
-                            <div class="preview-demo">ملكي بنفسجي</div>
-                        </div>
-                        <div class="template-info">
-                            <div class="template-name">ملكي بنفسجي</div>
-                            <div class="template-description">تصميم ملكي فاخر بألوان بنفسجية متوهجة</div>
-                            <div class="template-badge" style="background: #ede9fe; color: #6d28d9;">
-                                <i class="fas fa-crown"></i>
-                                <span>ملكي</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Template 7: Ocean -->
-                    <div class="template-card" onclick="previewTemplate('ocean')">
-                        <div class="template-preview-container preview-ocean">
-                            <div class="preview-demo">أزرق محيطي</div>
-                        </div>
-                        <div class="template-info">
-                            <div class="template-name">أزرق محيطي</div>
-                            <div class="template-description">تدرجات زرقاء متحركة تشبه المحيط</div>
-                            <div class="template-badge" style="background: #dbeafe; color: #1e40af;">
-                                <i class="fas fa-water"></i>
-                                <span>محيطي</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Template 8: Elegant -->
-                    <div class="template-card" onclick="previewTemplate('elegant')">
-                        <div class="template-preview-container preview-elegant">
-                            <div class="preview-demo">أنيق داكن</div>
-                        </div>
-                        <div class="template-info">
-                            <div class="template-name">أنيق داكن</div>
-                            <div class="template-description">تصميم داكن أنيق بحدود ذهبية متوهجة</div>
-                            <div class="template-badge" style="background: #fef3c7; color: #92400e;">
-                                <i class="fas fa-gem"></i>
-                                <span>أنيق</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Template 9: Nature -->
-                    <div class="template-card" onclick="previewTemplate('nature')">
-                        <div class="template-preview-container preview-nature">
-                            <div class="preview-demo" style="color: #065f46;">طبيعي أخضر</div>
-                        </div>
-                        <div class="template-info">
-                            <div class="template-name">طبيعي أخضر</div>
-                            <div class="template-description">تصميم طبيعي بألوان خضراء هادئة</div>
-                            <div class="template-badge" style="background: #d1fae5; color: #065f46;">
-                                <i class="fas fa-leaf"></i>
-                                <span>طبيعي</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Template 10: Sunset -->
-                    <div class="template-card" onclick="previewTemplate('sunset')">
-                        <div class="template-preview-container preview-sunset">
-                            <div class="preview-demo" style="color: #92400e;">غروب برتقالي</div>
-                        </div>
-                        <div class="template-info">
-                            <div class="template-name">غروب برتقالي</div>
-                            <div class="template-description">تصميم دافئ بألوان غروب الشمس البرتقالية</div>
-                            <div class="template-badge" style="background: #fed7aa; color: #9a3412;">
-                                <i class="fas fa-sun"></i>
-                                <span>دافئ</span>
-                            </div>
-                        </div>
-                    </div>
+                    @endforeach
                 </div>
 
-                <!-- معاينة القالب -->
+                <div class="mt-8 hidden">
+                    @foreach($templates as $key => $tpl)
+                        <div id="preview-source-{{ $key }}">
+                            @include('components.certificate-templates', [
+                                'certificate' => null,
+                                'branding' => $branding,
+                                'template' => $key,
+                                'templateDomId' => 'preview-dom-' . $key,
+                                'studentName' => 'Ahmed Mohamed',
+                                'courseTitle' => 'Full Stack Development',
+                                'courseName' => 'Full Stack Development',
+                                'description' => 'For outstanding achievement and successful completion of the program.',
+                                'serialNumber' => 'MIND-2026-DEMO0001-0001',
+                                'certificateNumber' => 'CERT-00000001',
+                                'issueDate' => now()->format('Y-m-d'),
+                                'academySignatureName' => $branding->signature_name,
+                            ])
+                        </div>
+                    @endforeach
+                </div>
+
                 <div id="template-preview-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onclick="closePreview()">
-                    <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-auto" onclick="event.stopPropagation()">
+                    <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-auto" onclick="event.stopPropagation()">
                         <div class="sticky top-0 bg-white border-b border-gray-200 p-4 flex justify-between items-center z-10">
                             <h3 class="text-xl font-bold text-gray-900">معاينة القالب</h3>
                             <button onclick="closePreview()" class="text-gray-400 hover:text-gray-600 transition-colors">
@@ -430,9 +314,7 @@
                             </button>
                         </div>
                         <div class="p-6">
-                            <div id="template-preview-content" class="certificate-container">
-                                <!-- سيتم إضافة معاينة القالب هنا -->
-                            </div>
+                            <div id="template-preview-content" class="certificate-container"></div>
                         </div>
                     </div>
                 </div>
@@ -443,146 +325,11 @@
 
 @push('scripts')
 <script>
-    // معاينة القالب
     function previewTemplate(templateName) {
         const modal = document.getElementById('template-preview-modal');
         const content = document.getElementById('template-preview-content');
-
-        if (templateName === 'econev') {
-            content.innerHTML = `
-                <div class="certificate-container flex justify-center">
-                    ${document.getElementById('econev-preview-source')?.innerHTML || '<p class="text-center text-gray-500">جاري التحميل...</p>'}
-                </div>`;
-            // Build live HTML preview matching the component
-            content.innerHTML = `
-            <div class="certificate-template template-econev certificate-print relative mx-auto"
-                 style="width:100%;max-width:900px;aspect-ratio:297/210;margin:0 auto;">
-                <svg class="econev-art" viewBox="0 0 1123 794" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="none">
-                    <path d="M0 0 H210 L140 95 H0 Z" fill="#D7DEE6" opacity="0.55"/>
-                    <path d="M1123 0 H920 L980 78 H1123 Z" fill="#00334E"/>
-                    <path d="M0 210 L95 320 L0 430 Z" fill="#00334E"/>
-                    <path d="M70 360 L175 455 L70 520 Z" fill="#C9D2DB" opacity="0.45"/>
-                    <polygon points="155,390 195,415 195,465 155,490 115,465 115,415" fill="none" stroke="#00A9A5" stroke-width="7"/>
-                    <path d="M0 794 V620 L130 720 V794 Z" fill="#00A9A5"/>
-                    <path d="M1123 300 L980 400 L1123 500 Z" fill="#00334E"/>
-                    <path d="M1123 794 V680 L980 760 V794 Z" fill="#00A9A5"/>
-                    <path d="M510 794 L561.5 700 L613 794" fill="none" stroke="#00334E" stroke-width="10"/>
-                </svg>
-                <div class="econev-logo">
-                    <div class="econev-logo-mark"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
-                    <div class="econev-logo-text"><strong>LOGO</strong><span>MINDLYTICS</span></div>
-                </div>
-                <div class="econev-seal">
-                    <svg viewBox="0 0 160 175" xmlns="http://www.w3.org/2000/svg">
-                        <defs><linearGradient id="econevGoldPrev" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#E0C07A"/><stop offset="100%" stop-color="#C5A059"/></linearGradient></defs>
-                        <g fill="none" stroke="#00334E" stroke-width="3.2" stroke-linecap="round">
-                            <path d="M42 118 C22 98 22 62 48 42"/><path d="M118 118 C138 98 138 62 112 42"/>
-                        </g>
-                        <g fill="#C5A059"><circle cx="80" cy="48" r="3"/><circle cx="64" cy="52" r="2.5"/><circle cx="96" cy="52" r="2.5"/></g>
-                        <text x="80" y="78" text-anchor="middle" font-family="Montserrat,Arial" font-size="11" font-weight="800" fill="#00334E">PREMIUM</text>
-                        <text x="80" y="92" text-anchor="middle" font-family="Montserrat,Arial" font-size="11" font-weight="800" fill="#00334E">QUALITY</text>
-                        <path d="M28 128 L48 118 H112 L132 128 L120 148 H40 Z" fill="url(#econevGoldPrev)"/>
-                        <text x="80" y="138" text-anchor="middle" font-family="Montserrat,Arial" font-size="9" font-weight="700" fill="#fff">CERTIFICATION</text>
-                        <text x="80" y="162" text-anchor="middle" font-family="Montserrat,Arial" font-size="8" font-weight="700" fill="#00334E">SINCE 1980</text>
-                    </svg>
-                </div>
-                <div class="econev-content">
-                    <h1 class="econev-title">CERTIFICATE</h1>
-                    <h2 class="econev-subtitle">Of Achievement</h2>
-                    <p class="econev-presented">This Certificate is Proudly Presented to</p>
-                    <div class="econev-name">Ahmed Mohamed</div>
-                    <div class="econev-name-line"></div>
-                    <p class="econev-body">For outstanding achievement, dedication, and successful completion of the Full Stack Development program.</p>
-                </div>
-                <div class="econev-footer">
-                    <div class="econev-meta"><div class="econev-meta-value">2026-07-23</div><div class="econev-meta-line"></div><div class="econev-meta-label">DATE</div></div>
-                    <div class="econev-meta"><div class="econev-meta-value econev-sig-script">Mindlytics</div><div class="econev-meta-line"></div><div class="econev-meta-label">SIGNATURE</div></div>
-                </div>
-            </div>`;
-            modal.classList.remove('hidden');
-            return;
-        }
-        
-        // بيانات تجريبية للمعاينة
-        const demoData = {
-            studentName: 'أحمد محمد علي',
-            courseTitle: 'دورة البرمجة المتقدمة',
-            courseName: 'Full Stack Development',
-            certificateNumber: 'CERT-00000001',
-            serialNumber: 'MIND-2024-ABC12345-0001',
-            issueDate: '2024-01-15',
-            verificationCode: 'CERT123456',
-            description: 'هذه شهادة معاينة لعرض تصميم القالب'
-        };
-
-        // إنشاء HTML للشهادة
-        content.innerHTML = `
-            <div class="certificate-template template-${templateName} relative mx-auto" style="max-width: 900px; aspect-ratio: 1.414; padding: 60px; margin: 0 auto;">
-                <div class="certificate-watermark">MINDLYTICS</div>
-                <div class="certificate-corner corner-top-left" style="border-color: currentColor;"></div>
-                <div class="certificate-corner corner-top-right" style="border-color: currentColor;"></div>
-                <div class="certificate-corner corner-bottom-left" style="border-color: currentColor;"></div>
-                <div class="certificate-corner corner-bottom-right" style="border-color: currentColor;"></div>
-                <div class="certificate-seal" style="top: 40px; right: 40px;">
-                    <i class="fas fa-certificate text-white text-4xl relative z-10"></i>
-                </div>
-                <div class="relative z-20 text-center h-full flex flex-col justify-center">
-                    <div class="mb-8">
-                        <div class="inline-flex items-center justify-center w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 text-white shadow-2xl mb-6">
-                            <span class="text-4xl font-black">M</span>
-                        </div>
-                        <h3 class="text-2xl font-black text-gray-800 mb-2" style="color: inherit;">Mindlytics</h3>
-                        <p class="text-sm font-semibold text-gray-600" style="color: inherit;">أكاديمية البرمجة</p>
-                    </div>
-                    <div class="mb-12">
-                        <h1 class="text-5xl md:text-6xl font-black mb-6" style="color: inherit; text-shadow: 2px 2px 4px rgba(0,0,0,0.1);">شهادة إتمام</h1>
-                        <div class="w-32 h-1 mx-auto mb-6" style="background: linear-gradient(90deg, transparent, currentColor, transparent);"></div>
-                    </div>
-                    <div class="mb-10">
-                        <p class="text-lg font-medium text-gray-600 mb-4" style="color: inherit;">هذه الشهادة تمنح إلى</p>
-                        <h2 class="text-4xl md:text-5xl font-black mb-4" style="color: inherit; text-shadow: 2px 2px 4px rgba(0,0,0,0.1);">${demoData.studentName}</h2>
-                    </div>
-                    <div class="mb-10">
-                        <p class="text-xl font-semibold text-gray-700 mb-2" style="color: inherit;">لإتمامه بنجاح</p>
-                        <h3 class="text-3xl md:text-4xl font-bold mb-4" style="color: inherit;">${demoData.courseTitle}</h3>
-                        <p class="text-lg text-gray-600" style="color: inherit;">في: ${demoData.courseName}</p>
-                    </div>
-                    <div class="mt-auto pt-8 border-t-2" style="border-color: rgba(0,0,0,0.1);">
-                        <div class="grid grid-cols-2 gap-6 text-sm">
-                            <div>
-                                <p class="font-semibold text-gray-700 mb-1" style="color: inherit;">رقم الشهادة</p>
-                                <p class="text-gray-600 font-mono" style="color: inherit;">${demoData.certificateNumber}</p>
-                            </div>
-                            <div>
-                                <p class="font-semibold text-gray-700 mb-1" style="color: inherit;">تاريخ الإصدار</p>
-                                <p class="text-gray-600" style="color: inherit;">${demoData.issueDate}</p>
-                            </div>
-                        </div>
-                        ${demoData.serialNumber ? `
-                        <div class="mt-4">
-                            <p class="text-xs text-gray-500" style="color: inherit;">
-                                السيريال: <span class="font-mono font-semibold">${demoData.serialNumber}</span>
-                            </p>
-                        </div>
-                        ` : ''}
-                    </div>
-                    <div class="mt-12 grid grid-cols-2 gap-12">
-                        <div>
-                            <div class="signature-line"></div>
-                            <p class="text-sm font-semibold text-gray-700 mt-2" style="color: inherit;">المدير العام</p>
-                            <p class="text-xs text-gray-500" style="color: inherit;">Mindlytics Academy</p>
-                        </div>
-                        <div>
-                            <div class="signature-line"></div>
-                            <p class="text-sm font-semibold text-gray-700 mt-2" style="color: inherit;">رئيس الأكاديمية</p>
-                            <p class="text-xs text-gray-500" style="color: inherit;">Mindlytics Academy</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="absolute inset-0 shimmer-effect pointer-events-none opacity-30"></div>
-            </div>
-        `;
-
+        const source = document.getElementById('preview-source-' + templateName);
+        content.innerHTML = source ? source.innerHTML : '<p class="text-center text-gray-500">لا توجد معاينة</p>';
         modal.classList.remove('hidden');
     }
 
@@ -590,11 +337,8 @@
         document.getElementById('template-preview-modal').classList.add('hidden');
     }
 
-    // إغلاق المعاينة عند الضغط على ESC
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closePreview();
-        }
+        if (e.key === 'Escape') closePreview();
     });
 </script>
 @endpush

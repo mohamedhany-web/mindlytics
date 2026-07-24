@@ -2166,6 +2166,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
 
         // إدارة الشهادات والإنجازات
         Route::resource('certificates', \App\Http\Controllers\Admin\CertificateController::class);
+        Route::get('certificates-branding', [\App\Http\Controllers\Admin\CertificateController::class, 'branding'])->name('certificates.branding');
+        Route::put('certificates-branding', [\App\Http\Controllers\Admin\CertificateController::class, 'updateBranding'])->name('certificates.branding.update');
         Route::resource('achievements', \App\Http\Controllers\Admin\AchievementController::class);
         Route::resource('badges', \App\Http\Controllers\Admin\BadgeController::class);
         Route::resource('reviews', \App\Http\Controllers\Admin\ReviewController::class);

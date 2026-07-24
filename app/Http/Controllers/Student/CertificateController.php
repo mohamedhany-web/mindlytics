@@ -36,6 +36,12 @@ class CertificateController extends Controller
         }
 
         $certificate->load(['course']);
-        return view('student.certificates.show', compact('certificate'));
+        if (! $certificate->serial_number) {
+            $certificate->serial_number = Certificate::generateSerialNumber();
+            $certificate->save();
+        }
+        $branding = \App\Models\CertificateBranding::current();
+
+        return view('student.certificates.show', compact('certificate', 'branding'));
     }
 }

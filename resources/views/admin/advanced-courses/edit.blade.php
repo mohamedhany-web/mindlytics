@@ -337,10 +337,10 @@
                                               placeholder="ما الذي يجب أن يعرفه الطالب قبل بدء الكورس؟">{{ old('prerequisites', $advancedCourse->prerequisites) }}</textarea>
                                 </div>
                                 <div class="space-y-2">
-                                    <label class="block text-sm font-semibold text-gray-700">ما الذي سيتعلمه الطالب؟</label>
+                                    <label class="block text-sm font-semibold text-gray-700">هتطلع من الكورس بإيه؟</label>
                                     <textarea name="what_you_learn" rows="3"
                                               class="w-full rounded-2xl border border-gray-200 bg-white/70 px-4 py-3 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition"
-                                              placeholder="المخرجات التعليمية والمهارات المكتسبة">{{ old('what_you_learn', $advancedCourse->what_you_learn) }}</textarea>
+                                              placeholder="كل نقطة في سطر — المهارات والمخرجات بعد إنهاء الكورس">{{ old('what_you_learn', $advancedCourse->what_you_learn) }}</textarea>
                                 </div>
                             </div>
 
@@ -349,6 +349,45 @@
                                 <textarea name="requirements" rows="3"
                                           class="w-full rounded-2xl border border-gray-200 bg-white/70 px-4 py-3 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition"
                                           placeholder="أدوات أو برامج يحتاجها الطلاب خلال الدراسة.">{{ old('requirements', $advancedCourse->requirements) }}</textarea>
+                            </div>
+
+                            <div class="md:col-span-2 rounded-2xl border border-sky-100 bg-sky-50/50 p-5 space-y-4">
+                                <p class="text-sm font-bold text-sky-900 flex items-center gap-2">
+                                    <i class="fas fa-circle-info"></i>
+                                    معلومات صفحة الكورس العامة
+                                </p>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-semibold text-gray-700">مناسب لمين؟</label>
+                                        <textarea name="suitable_for" rows="3"
+                                                  class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-gray-900 shadow-sm focus:border-sky-500 focus:ring-4 focus:ring-sky-500/20 transition"
+                                                  placeholder="مثال: المبتدئين، طلاب ثانوي، خريجي هندسة...">{{ old('suitable_for', $advancedCourse->suitable_for) }}</textarea>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-semibold text-gray-700">مناسب لحد سن كام؟ ولمين؟</label>
+                                        <textarea name="age_suitability" rows="3"
+                                                  class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-gray-900 shadow-sm focus:border-sky-500 focus:ring-4 focus:ring-sky-500/20 transition"
+                                                  placeholder="مثال: من 15 إلى 25 سنة — طلاب ومبتدئين في البرمجة">{{ old('age_suitability', $advancedCourse->age_suitability) }}</textarea>
+                                    </div>
+                                    <div class="space-y-2 md:col-span-2">
+                                        <label class="block text-sm font-semibold text-gray-700">معلومات عن المحاضر</label>
+                                        <textarea name="instructor_info" rows="3"
+                                                  class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-gray-900 shadow-sm focus:border-sky-500 focus:ring-4 focus:ring-sky-500/20 transition"
+                                                  placeholder="نبذة عن المحاضر وخبراته في هذا الكورس">{{ old('instructor_info', $advancedCourse->instructor_info) }}</textarea>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-semibold text-gray-700">الكورس متاح لإمتى؟</label>
+                                        <textarea name="available_until_info" rows="3"
+                                                  class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-gray-900 shadow-sm focus:border-sky-500 focus:ring-4 focus:ring-sky-500/20 transition"
+                                                  placeholder="مثال: متاح مدى الحياة بعد الشراء / حتى نهاية الترم">{{ old('available_until_info', $advancedCourse->available_until_info) }}</textarea>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-semibold text-gray-700">المتابعة إزاي؟</label>
+                                        <textarea name="follow_up_info" rows="3"
+                                                  class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-gray-900 shadow-sm focus:border-sky-500 focus:ring-4 focus:ring-sky-500/20 transition"
+                                                  placeholder="مثال: جروب واتساب + جلسات أسئلة أسبوعية">{{ old('follow_up_info', $advancedCourse->follow_up_info) }}</textarea>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -1232,7 +1232,7 @@
                     <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 lg:p-8 border border-gray-200 fade-in-up" style="animation-delay: 0.1s;">
                         <h2 class="text-2xl lg:text-3xl font-black text-gray-900 mb-6 flex items-center gap-3">
                             <i class="fas fa-graduation-cap text-blue-600"></i>
-                            {{ __('public.what_you_learn') }}
+                            هتطلع من الكورس بإيه؟
                         </h2>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             @php
@@ -1245,6 +1245,66 @@
                                         <span class="text-gray-700">{{ trim($point) }}</span>
                                     </div>
                                 @endif
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+
+                    @php
+                        $infoBlocks = array_filter([
+                            [
+                                'title' => 'مناسب لمين؟',
+                                'icon' => 'fa-user-check',
+                                'content' => $course->suitable_for,
+                                'tone' => 'from-sky-50 to-blue-50 border-sky-100',
+                                'iconColor' => 'text-sky-600',
+                            ],
+                            [
+                                'title' => 'مناسب لحد سن كام؟ ولمين؟',
+                                'icon' => 'fa-people-group',
+                                'content' => $course->age_suitability,
+                                'tone' => 'from-violet-50 to-indigo-50 border-violet-100',
+                                'iconColor' => 'text-violet-600',
+                            ],
+                            [
+                                'title' => 'معلومات عن المحاضر',
+                                'icon' => 'fa-chalkboard-teacher',
+                                'content' => $course->instructor_info,
+                                'tone' => 'from-amber-50 to-orange-50 border-amber-100',
+                                'iconColor' => 'text-amber-600',
+                            ],
+                            [
+                                'title' => 'الكورس متاح لإمتى؟',
+                                'icon' => 'fa-calendar-check',
+                                'content' => $course->available_until_info,
+                                'tone' => 'from-emerald-50 to-teal-50 border-emerald-100',
+                                'iconColor' => 'text-emerald-600',
+                            ],
+                            [
+                                'title' => 'المتابعة إزاي؟',
+                                'icon' => 'fa-comments',
+                                'content' => $course->follow_up_info,
+                                'tone' => 'from-rose-50 to-pink-50 border-rose-100',
+                                'iconColor' => 'text-rose-600',
+                            ],
+                        ], fn ($block) => filled(trim((string) ($block['content'] ?? ''))));
+                    @endphp
+
+                    @if(count($infoBlocks))
+                    <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 lg:p-8 border border-gray-200 fade-in-up" style="animation-delay: 0.15s;">
+                        <h2 class="text-2xl lg:text-3xl font-black text-gray-900 mb-6 flex items-center gap-3">
+                            <i class="fas fa-circle-info text-blue-600"></i>
+                            معلومات مهمة عن الكورس
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            @foreach($infoBlocks as $block)
+                                <div class="rounded-xl border bg-gradient-to-br {{ $block['tone'] }} p-5">
+                                    <h3 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                                        <i class="fas {{ $block['icon'] }} {{ $block['iconColor'] }}"></i>
+                                        {{ $block['title'] }}
+                                    </h3>
+                                    <p class="text-gray-700 whitespace-pre-line leading-relaxed">{{ $block['content'] }}</p>
+                                </div>
                             @endforeach
                         </div>
                     </div>

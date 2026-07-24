@@ -39,6 +39,7 @@ class CertificateVerificationController extends Controller
 
         return view('public.certificates.verify', [
             'certificate' => $certificate,
+            'branding' => \App\Models\CertificateBranding::current(),
             'isValid' => $isValid,
             'error' => $isValid ? null : 'تم اكتشاف تلاعب في الشهادة'
         ]);

@@ -55,6 +55,18 @@
                         <option value="revoked" {{ $currentStatus == 'revoked' ? 'selected' : '' }}>ملغاة</option>
                     </select>
                 </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">قالب الشهادة</label>
+                    <select name="template" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
+                        @foreach(($templates ?? []) as $key => $tpl)
+                            <option value="{{ $key }}" @selected(old('template', $certificate->template ?: 'achievement') === $key)>
+                                {{ $tpl['name'] }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1 font-mono">السيريال: {{ $certificate->serial_number ?? '—' }}</p>
+                </div>
             </div>
 
             <div>

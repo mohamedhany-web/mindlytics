@@ -86,7 +86,8 @@
                             <div class="certificate-container">
                                 @include('components.certificate-templates', [
                                     'certificate' => $certificate,
-                                    'template' => $certificate->template ?? 'classic'
+                                    'branding' => $branding ?? null,
+                                    'template' => $certificate->template ?? 'achievement'
                                 ])
                             </div>
                         </div>
