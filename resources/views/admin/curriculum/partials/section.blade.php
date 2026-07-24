@@ -93,6 +93,14 @@
                                 <i class="fas fa-chalkboard-teacher text-sky-500 shrink-0"></i>
                                 <div class="flex items-center gap-2 min-w-0">
                                     <span class="font-semibold text-slate-800 truncate">{{ $item->item->title }}</span>
+                                    @php
+                                        $watchPct = $item->item->min_watch_percent_to_unlock_next;
+                                        $watchLabel = $watchPct !== null ? ((int) $watchPct . '%') : '90% (افتراضي)';
+                                    @endphp
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] shrink-0" title="نسبة المشاهدة لفتح التالي">
+                                        <i class="fas fa-percentage"></i>
+                                        <span>{{ $watchLabel }}</span>
+                                    </span>
                                     @if($item->item->videoQuestions()->exists())
                                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] shrink-0" title="توجد أسئلة مرتبطة بالفيديو">
                                             <i class="fas fa-question-circle"></i>
@@ -106,6 +114,18 @@
                                     @endif
                                 </div>
                                 <span class="text-xs text-slate-500 shrink-0">(محاضرة)</span>
+                                <form method="POST" action="{{ route('admin.lectures.watch-percent', $item->item) }}"
+                                      class="flex items-center gap-1 shrink-0" onclick="event.stopPropagation()" title="تعديل نسبة فتح التالي">
+                                    @csrf
+                                    @method('PUT')
+                                    <input type="number" name="min_watch_percent_to_unlock_next" min="0" max="100"
+                                           value="{{ $watchPct !== null ? (int) $watchPct : '' }}"
+                                           placeholder="%"
+                                           class="w-14 px-1.5 py-1 text-xs border border-slate-200 rounded-lg text-center">
+                                    <button type="submit" class="p-1.5 rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-xs" title="حفظ النسبة">
+                                        <i class="fas fa-save"></i>
+                                    </button>
+                                </form>
                                 <div class="flex items-center gap-1 shrink-0">
                                     @if($isScholarshipCurriculum)
                                         <button type="button" onclick="openAccessVisibilityModal('item', {{ $item->id }}, '{{ addslashes($item->item->title ?? 'عنصر') }}')" class="p-1.5 rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-xs" title="إعداد الوصول"><i class="fas fa-user-lock"></i></button>

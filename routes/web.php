@@ -1347,6 +1347,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('/curriculum', [\App\Http\Controllers\Admin\CurriculumController::class, 'hub'])->name('curriculum.hub');
         Route::get('/advanced-courses/{course}/curriculum', [\App\Http\Controllers\Admin\CurriculumController::class, 'index'])->name('advanced-courses.curriculum');
         Route::put('/advanced-courses/{course}/unlock-policy', [\App\Http\Controllers\Admin\CurriculumController::class, 'updateUnlockPolicy'])->name('advanced-courses.unlock-policy');
+        Route::put('/advanced-courses/{course}/watch-percent', [\App\Http\Controllers\Admin\CurriculumController::class, 'applyWatchPercent'])->name('advanced-courses.watch-percent');
+        Route::put('/lectures/{lecture}/watch-percent', [\App\Http\Controllers\Admin\CurriculumController::class, 'updateLectureWatchPercent'])->name('lectures.watch-percent');
         Route::post('/advanced-courses/{course}/curriculum/exams', [\App\Http\Controllers\Admin\CurriculumController::class, 'storeExamFromCurriculum'])->name('advanced-courses.curriculum.exams.store');
         Route::post('/advanced-courses/{course}/curriculum/assignments', [\App\Http\Controllers\Admin\CurriculumController::class, 'storeAssignmentFromCurriculum'])->name('advanced-courses.curriculum.assignments.store');
         Route::post('/advanced-courses/{course}/sections', [\App\Http\Controllers\Admin\CurriculumController::class, 'storeSection'])->name('advanced-courses.sections.store');

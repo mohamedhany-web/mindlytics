@@ -24,7 +24,7 @@
 <div class="space-y-6">
 
     <!-- سياسة فتح الفيديوهات (أدمن) -->
-    <div class="rounded-2xl p-5 bg-white border border-slate-200 shadow-sm">
+    <div class="rounded-2xl p-5 bg-white border border-slate-200 shadow-sm space-y-5">
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
                 <h2 class="text-lg font-bold text-slate-800">قيود الفيديوهات للطلاب</h2>
@@ -44,6 +44,34 @@
                     {{ !empty($course->admin_unlock_all_videos) ? 'الوضع الحالي: مفتوح بالكامل' : 'الوضع الحالي: قيود عادية' }}
                 </span>
             </form>
+        </div>
+
+        <div class="border-t border-slate-100 pt-4 {{ !empty($course->admin_unlock_all_videos) ? 'opacity-50 pointer-events-none' : '' }}">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+                <div>
+                    <h3 class="text-sm font-bold text-slate-800">نسبة إكمال المشاهدة لفتح الفيديو التالي</h3>
+                    <p class="text-xs text-slate-500 mt-1">طبّق نسبة موحّدة على كل محاضرات الكورس، أو عدّل كل محاضرة من البطاقة أو من مودال التعديل. الافتراضي للطالب عند الفراغ: 90%.</p>
+                </div>
+                <form method="POST" action="{{ route('admin.advanced-courses.watch-percent', $course) }}" class="flex flex-wrap items-end gap-2">
+                    @csrf
+                    @method('PUT')
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">النسبة %</label>
+                        <input type="number" name="min_watch_percent_to_unlock_next" min="0" max="100" placeholder="مثال: 80"
+                               class="w-28 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+                               value="{{ old('min_watch_percent_to_unlock_next') }}">
+                    </div>
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-sm font-semibold">
+                        <i class="fas fa-percentage"></i>
+                        تطبيق على كل المحاضرات
+                    </button>
+                    <button type="submit" name="min_watch_percent_to_unlock_next" value=""
+                            class="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold"
+                            onclick="return confirm('مسح النسبة من كل المحاضرات؟ سيُستخدم الافتراضي 90%.')">
+                        مسح النسب
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -350,8 +378,9 @@
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 mb-1">نسبة المشاهدة لفتح التالي %</label>
-                                <input type="number" name="min_watch_percent_to_unlock_next" id="lectureMinWatchPercent" min="0" max="100" placeholder="مثال: 80 (اختياري)"
+                                <input type="number" name="min_watch_percent_to_unlock_next" id="lectureMinWatchPercent" min="0" max="100" placeholder="مثال: 80 — فارغ = 90%"
                                        class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 text-slate-800 bg-white text-sm">
+                                <p class="text-[11px] text-slate-500 mt-1">الطالب لازم يشوف على الأقل النسبة دي قبل ما يتفتح الفيديو التالي.</p>
                             </div>
                         </div>
                         <div>
