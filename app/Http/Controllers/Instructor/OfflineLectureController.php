@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Instructor;
 
+use App\Helpers\VideoHelper;
 use App\Http\Controllers\Controller;
 use App\Models\OfflineCourse;
 use App\Models\OfflineCourseSection;
 use App\Models\OfflineCurriculumItem;
 use App\Models\OfflineGroupSession;
 use App\Models\OfflineLecture;
+use App\Support\LectureRecordingResolver;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -109,6 +111,11 @@ class OfflineLectureController extends Controller
             'meeting_url' => 'nullable|url',
             'duration_minutes' => 'nullable|integer|min:0|max:600',
             'recording_url' => 'nullable|url',
+            'recording_path' => 'nullable|string|max:500',
+            'recording_disk' => 'nullable|string|max:32',
+            'recording_original_name' => 'nullable|string|max:255',
+            'recording_mime' => 'nullable|string|max:100',
+            'recording_size' => 'nullable|integer|min:0',
             'notes' => 'nullable|string',
             'group_id' => 'nullable|exists:offline_course_groups,id',
             'download_links' => 'nullable|array',
@@ -178,6 +185,8 @@ class OfflineLectureController extends Controller
             }
         }
         $validated['attachments'] = $attachments;
+
+        $this->applyRecordingUploadFields($validated, $request, $offlineCourse);
 
         unset($validated['download_links.*.label'], $validated['download_links.*.url']);
 
@@ -265,6 +274,12 @@ class OfflineLectureController extends Controller
             'meeting_url' => 'nullable|url',
             'duration_minutes' => 'nullable|integer|min:0|max:600',
             'recording_url' => 'nullable|url',
+            'recording_path' => 'nullable|string|max:500',
+            'recording_disk' => 'nullable|string|max:32',
+            'recording_original_name' => 'nullable|string|max:255',
+            'recording_mime' => 'nullable|string|max:100',
+            'recording_size' => 'nullable|integer|min:0',
+            'remove_recording_file' => 'nullable|boolean',
             'notes' => 'nullable|string',
             'group_id' => 'nullable|exists:offline_course_groups,id',
             'is_active' => 'boolean',
@@ -288,7 +303,6 @@ class OfflineLectureController extends Controller
         $lecture->session_agenda = $validated['session_agenda'] ?? null;
         $lecture->offline_attendee_mindmap = $validated['offline_attendee_mindmap'] ?? null;
         $lecture->meeting_url = $validated['meeting_url'] ?? null;
-        $lecture->recording_url = $validated['recording_url'] ?? null;
         $lecture->notes = $validated['notes'] ?? null;
         $lecture->is_active = $request->boolean('is_active');
 
@@ -332,11 +346,248 @@ class OfflineLectureController extends Controller
             $lecture->attachments = $current;
         }
 
+        $recordingPayload = [];
+        $this->applyRecordingUploadFields($recordingPayload, $request, $offlineCourse, $lecture);
+        foreach ($recordingPayload as $key => $value) {
+            $lecture->{$key} = $value;
+        }
+
         $lecture->save();
 
         return redirect()
             ->route('instructor.offline-courses.lectures.index', ['offlineCourse' => $offlineCourse, 'channel' => $channel])
             ->with('success', 'تم تحديث المحاضرة بنجاح');
+    }
+
+    /**
+     * إنشاء رابط رفع موقّع إلى Cloudflare R2 (أو تفعيل الرفع عبر السيرفر كبديل).
+     */
+    public function createRecordingUploadUrl(Request $request, OfflineCourse $offlineCourse)
+    {
+        $this->authorizeInstructor($offlineCourse);
+
+        $maxBytes = offline_lecture_recording_max_bytes();
+        $validated = $request->validate([
+            'filename' => 'required|string|max:255',
+            'content_type' => 'required|string|max:100',
+            'size' => 'required|integer|min:1|max:'.$maxBytes,
+        ]);
+
+        $mime = strtolower($validated['content_type']);
+        $allowed = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska', 'application/octet-stream'];
+        if (! in_array($mime, $allowed, true) && ! str_starts_with($mime, 'video/')) {
+            return response()->json(['message' => 'نوع الملف غير مدعوم. ارفع فيديو (mp4/webm/mov).'], 422);
+        }
+
+        $disk = offline_lecture_recordings_disk();
+        $ext = pathinfo($validated['filename'], PATHINFO_EXTENSION) ?: 'mp4';
+        $ext = preg_replace('/[^a-zA-Z0-9]/', '', $ext) ?: 'mp4';
+        $path = 'offline-lecture-recordings/'.$offlineCourse->id.'/'.now()->format('Y/m').'/'.uniqid('rec_', true).'.'.$ext;
+
+        $headers = [
+            'Content-Type' => $mime,
+        ];
+
+        $allowDirect = (bool) config('filesystems.offline_lecture_recording_direct_upload', false);
+
+        if ($allowDirect) {
+            try {
+                $driver = Storage::disk($disk);
+                if (method_exists($driver, 'temporaryUploadUrl') && $disk === 'r2') {
+                    $upload = $driver->temporaryUploadUrl($path, now()->addMinutes(60), $headers);
+
+                    return response()->json([
+                        'mode' => 'direct',
+                        'upload_url' => is_array($upload) ? ($upload['url'] ?? null) : $upload,
+                        'headers' => is_array($upload) ? ($upload['headers'] ?? $headers) : $headers,
+                        'path' => $path,
+                        'disk' => $disk,
+                        'public_url' => $this->publicRecordingUrl($disk, $path),
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
+        return response()->json([
+            'mode' => 'server',
+            'upload_url' => route('instructor.offline-courses.lectures.recording-upload', $offlineCourse),
+            'path' => $path,
+            'disk' => $disk,
+            'max_bytes' => $maxBytes,
+        ]);
+    }
+
+    /**
+     * رفع الفيديو عبر السيرفر ثم إلى R2/public (بديل عند تعذر الرفع المباشر).
+     */
+    public function uploadRecording(Request $request, OfflineCourse $offlineCourse)
+    {
+        $this->authorizeInstructor($offlineCourse);
+
+        $maxKb = (int) ceil(offline_lecture_recording_max_bytes() / 1024);
+        $validated = $request->validate([
+            'video' => 'required|file|max:'.$maxKb,
+            'path' => 'nullable|string|max:500',
+        ]);
+
+        $file = $request->file('video');
+        $disk = offline_lecture_recordings_disk();
+        $path = $validated['path'] ?? null;
+        if (! $path) {
+            $ext = $file->getClientOriginalExtension() ?: 'mp4';
+            $path = 'offline-lecture-recordings/'.$offlineCourse->id.'/'.now()->format('Y/m').'/'.uniqid('rec_', true).'.'.$ext;
+        }
+
+        try {
+            Storage::disk($disk)->put($path, fopen($file->getRealPath(), 'r'), [
+                'visibility' => 'private',
+                'ContentType' => $file->getMimeType() ?: 'video/mp4',
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+            $disk = 'public';
+            Storage::disk($disk)->put($path, fopen($file->getRealPath(), 'r'));
+        }
+
+        return response()->json([
+            'success' => true,
+            'path' => $path,
+            'disk' => $disk,
+            'original_name' => $file->getClientOriginalName(),
+            'mime' => $file->getMimeType(),
+            'size' => $file->getSize(),
+            'public_url' => $this->publicRecordingUrl($disk, $path),
+        ]);
+    }
+
+    private function applyRecordingUploadFields(array &$validated, Request $request, OfflineCourse $offlineCourse, ?OfflineLecture $existing = null): void
+    {
+        $removing = $request->boolean('remove_recording_file');
+        if ($removing && $existing && $existing->recording_path) {
+            try {
+                Storage::disk($existing->recording_disk ?: offline_lecture_recordings_disk())->delete($existing->recording_path);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+            $validated['recording_path'] = null;
+            $validated['recording_disk'] = null;
+            $validated['recording_original_name'] = null;
+            $validated['recording_mime'] = null;
+            $validated['recording_size'] = null;
+            if (! $request->filled('recording_url')) {
+                $validated['recording_url'] = null;
+            }
+        }
+
+        $path = trim((string) $request->input('recording_path', ''));
+        // عند الحذف: تجاهل المسار القديم في الحقول المخفية ما لم يُرفع ملف جديد
+        if ($removing && $existing && $path !== '' && $path === (string) $existing->recording_path) {
+            $path = '';
+        }
+        if ($path !== '') {
+            // استبدال ملف قديم إن وُجد
+            if ($existing && $existing->recording_path && $existing->recording_path !== $path) {
+                try {
+                    Storage::disk($existing->recording_disk ?: offline_lecture_recordings_disk())->delete($existing->recording_path);
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            }
+
+            $disk = $request->input('recording_disk') ?: offline_lecture_recordings_disk();
+            $validated['recording_path'] = $path;
+            $validated['recording_disk'] = $disk;
+            $validated['recording_original_name'] = $request->input('recording_original_name');
+            $validated['recording_mime'] = $request->input('recording_mime');
+            $validated['recording_size'] = $request->filled('recording_size') ? (int) $request->input('recording_size') : null;
+
+            $public = $this->publicRecordingUrl($disk, $path);
+            if ($public) {
+                $validated['recording_url'] = $public;
+            } elseif (! $request->filled('recording_url')) {
+                // بدون CDN عام: التشغيل عبر رابط موقّع مؤقت (playbackUrl)
+                $validated['recording_url'] = null;
+            }
+        } elseif ($request->filled('recording_url')) {
+            $validated['recording_url'] = $request->input('recording_url');
+        } elseif ($existing && ! $removing) {
+            $validated['recording_url'] = $existing->recording_url;
+        } elseif (! array_key_exists('recording_url', $validated)) {
+            $validated['recording_url'] = null;
+        }
+    }
+
+    private function publicRecordingUrl(string $disk, string $path): ?string
+    {
+        $cdnBase = rtrim((string) config('filesystems.disks.'.$disk.'.url', ''), '/');
+        if ($cdnBase === '' || str_contains($cdnBase, 'r2.cloudflarestorage.com')) {
+            if ($disk === 'public') {
+                return asset('storage/'.ltrim($path, '/'));
+            }
+
+            return null;
+        }
+
+        return $cdnBase.'/'.ltrim($path, '/');
+    }
+
+    /**
+     * مشاهدة تسجيل المحاضرة داخل المنصة (للمدرب — iframe/بوب أب).
+     */
+    public function watchRecording(OfflineCourse $offlineCourse, OfflineLecture $lecture)
+    {
+        $this->authorizeInstructor($offlineCourse);
+        if ($lecture->offline_course_id !== $offlineCourse->id) {
+            abort(404);
+        }
+
+        $raw = $lecture->playbackUrl() ?: ($lecture->recording_url ? trim((string) $lecture->recording_url) : '');
+        if ($raw === '') {
+            abort(404, 'لا يوجد تسجيل لهذه المحاضرة');
+        }
+
+        if ($lecture->hasStoredRecording()) {
+            return response()
+                ->view('video.protected-embed', [
+                    'type' => 'html5',
+                    'src' => $raw,
+                    'mime' => $lecture->recording_mime ?: 'video/mp4',
+                    'title' => $lecture->title ?: 'التسجيل',
+                ])
+                ->header('Cache-Control', 'private, no-store, no-cache, must-revalidate')
+                ->header('Pragma', 'no-cache');
+        }
+
+        $source = VideoHelper::getVideoSource($raw);
+        $embed = VideoHelper::getEmbedUrl($raw) ?: $raw;
+
+        if ($source === 'bunny') {
+            $resolved = LectureRecordingResolver::resolve($raw, 'bunny');
+            $embed = $resolved['recording_url'] ?: $embed;
+        }
+
+        if ($source === 'direct' || ($lecture->recording_mime && str_starts_with((string) $lecture->recording_mime, 'video/'))) {
+            return response()
+                ->view('video.protected-embed', [
+                    'type' => 'html5',
+                    'src' => $embed,
+                    'mime' => $lecture->recording_mime ?: 'video/mp4',
+                    'title' => $lecture->title ?: 'التسجيل',
+                ])
+                ->header('Cache-Control', 'private, no-store, no-cache, must-revalidate')
+                ->header('Pragma', 'no-cache');
+        }
+
+        return response()
+            ->view('video.protected-embed', [
+                'type' => 'iframe',
+                'src' => $embed,
+                'title' => $lecture->title ?: 'التسجيل',
+            ])
+            ->header('Cache-Control', 'private, no-store, no-cache, must-revalidate')
+            ->header('Pragma', 'no-cache');
     }
 
     /**
@@ -355,6 +606,13 @@ class OfflineLectureController extends Controller
                 if (!empty($att['path'])) {
                     Storage::disk('public')->delete($att['path']);
                 }
+            }
+        }
+        if ($lecture->recording_path) {
+            try {
+                Storage::disk($lecture->recording_disk ?: offline_lecture_recordings_disk())->delete($lecture->recording_path);
+            } catch (\Throwable $e) {
+                report($e);
             }
         }
         $lecture->delete();

@@ -65,10 +65,20 @@
                 <a href="{{ $lecture->meeting_url }}" target="_blank" rel="noopener" class="text-indigo-600 hover:underline font-medium">{{ $lecture->meeting_url }}</a>
             </div>
         @endif
-        @if($lecture->recording_url)
+        @if($lecture->hasPlayableRecording())
             <div>
                 <h3 class="text-sm font-bold text-slate-600 mb-2">تسجيل المحاضرة</h3>
-                <a href="{{ $lecture->recording_url }}" target="_blank" rel="noopener" class="text-violet-600 hover:underline font-medium">{{ $lecture->recording_url }}</a>
+                @if($lecture->hasStoredRecording())
+                    <p class="text-sm text-slate-700 mb-1">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">Cloudflare R2</span>
+                        {{ $lecture->recording_original_name ?: basename($lecture->recording_path) }}
+                    </p>
+                @endif
+                @if(filled($lecture->recording_url))
+                    <a href="{{ $lecture->recording_url }}" target="_blank" rel="noopener" class="text-violet-600 hover:underline font-medium break-all">{{ $lecture->recording_url }}</a>
+                @else
+                    <p class="text-xs text-slate-500">يُعرض للطالب داخل المنصة بمشغّل HTML5.</p>
+                @endif
             </div>
         @endif
         @if($lecture->download_links && count($lecture->download_links) > 0)

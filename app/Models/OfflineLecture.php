@@ -22,6 +22,11 @@ class OfflineLecture extends Model
         'meeting_url',
         'duration_minutes',
         'recording_url',
+        'recording_path',
+        'recording_disk',
+        'recording_original_name',
+        'recording_mime',
+        'recording_size',
         'download_links',
         'attachments',
         'notes',
@@ -34,7 +39,43 @@ class OfflineLecture extends Model
         'download_links' => 'array',
         'attachments' => 'array',
         'is_active' => 'boolean',
+        'recording_size' => 'integer',
     ];
+
+    public function hasStoredRecording(): bool
+    {
+        return filled($this->recording_path);
+    }
+
+    public function hasPlayableRecording(): bool
+    {
+        return $this->hasStoredRecording() || filled($this->recording_url);
+    }
+
+    /**
+     * رابط تشغيل HTML5 (CDN عام أو رابط موقّع مؤقت من R2).
+     */
+    public function playbackUrl(?\DateTimeInterface $expires = null): ?string
+    {
+        if ($this->hasStoredRecording()) {
+            $disk = $this->recording_disk ?: offline_lecture_recordings_disk();
+            $cdnBase = rtrim((string) config('filesystems.disks.'.$disk.'.url', ''), '/');
+
+            // إذا وُجد دومين CDN عام (مثل cdn.yourdomain.com) استخدمه مباشرة
+            if ($cdnBase !== '' && ! str_contains($cdnBase, 'r2.cloudflarestorage.com')) {
+                return $cdnBase.'/'.ltrim($this->recording_path, '/');
+            }
+
+            $url = storage_inline_media_url($disk, $this->recording_path, $expires ?? now()->addHours(4));
+            if ($url !== '') {
+                return $url;
+            }
+        }
+
+        $external = trim((string) ($this->recording_url ?? ''));
+
+        return $external !== '' ? $external : null;
+    }
 
     public function course(): BelongsTo
     {

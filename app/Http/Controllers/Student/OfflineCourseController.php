@@ -530,9 +530,22 @@ class OfflineCourseController extends Controller
             abort(403, 'هذا التسجيل غير متاح لمجموعتك');
         }
 
-        $raw = $lecture->recording_url ? trim((string) $lecture->recording_url) : '';
+        $raw = $lecture->playbackUrl() ?: ($lecture->recording_url ? trim((string) $lecture->recording_url) : '');
         if ($raw === '') {
             abort(404, 'لا يوجد تسجيل لهذه المحاضرة');
+        }
+
+        // فيديو مخزّن على R2/المنصة → HTML5 داخل المنصة
+        if ($lecture->hasStoredRecording()) {
+            return response()
+                ->view('video.protected-embed', [
+                    'type' => 'html5',
+                    'src' => $raw,
+                    'mime' => $lecture->recording_mime ?: 'video/mp4',
+                    'title' => $lecture->title ?: 'التسجيل',
+                ])
+                ->header('Cache-Control', 'private, no-store, no-cache, must-revalidate')
+                ->header('Pragma', 'no-cache');
         }
 
         $source = VideoHelper::getVideoSource($raw);

@@ -86,10 +86,7 @@
                     <input type="url" name="meeting_url" value="{{ old('meeting_url') }}" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-violet-500" placeholder="https://meet.google.com/...">
                     @error('meeting_url')<p class="text-red-500 text-sm mt-1">{{ $message }}</p>@enderror
                 </div>
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-1">رابط تسجيل المحاضرة</label>
-                    <input type="url" name="recording_url" value="{{ old('recording_url') }}" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 focus:ring-2 focus:ring-violet-500" placeholder="https://...">
-                </div>
+                @include('instructor.offline-courses.lectures.partials.recording-uploader', ['offlineCourse' => $offlineCourse, 'lecture' => null])
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1">روابط تحميل (اختياري)</label>
                     <div id="downloadLinks">

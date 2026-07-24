@@ -2268,6 +2268,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::prefix('offline-courses/{offlineCourse}')->name('offline-courses.')->group(function () {
             Route::resource('resources', \App\Http\Controllers\Instructor\OfflineResourceController::class)->except(['show'])->parameters(['resource' => 'resource']);
             Route::get('lectures/sessions/{session}', [\App\Http\Controllers\Instructor\OfflineLectureController::class, 'showGroupSession'])->name('lectures.sessions.show');
+            Route::post('lectures/recording-upload-url', [\App\Http\Controllers\Instructor\OfflineLectureController::class, 'createRecordingUploadUrl'])->name('lectures.recording-upload-url');
+            Route::post('lectures/recording-upload', [\App\Http\Controllers\Instructor\OfflineLectureController::class, 'uploadRecording'])->name('lectures.recording-upload');
+            Route::get('lectures/{lecture}/watch', [\App\Http\Controllers\Instructor\OfflineLectureController::class, 'watchRecording'])->name('lectures.watch');
             Route::resource('lectures', \App\Http\Controllers\Instructor\OfflineLectureController::class)->parameters(['lecture' => 'lecture']);
             Route::resource('activities', \App\Http\Controllers\Instructor\OfflineActivityController::class)->parameters(['activity' => 'activity']);
             Route::post('activities/{activity}/submissions/{submission}/grade', [\App\Http\Controllers\Instructor\OfflineActivityController::class, 'gradeSubmission'])->name('activities.submissions.grade');

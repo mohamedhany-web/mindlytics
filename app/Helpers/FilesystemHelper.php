@@ -19,6 +19,32 @@ if (!function_exists('offline_course_resources_disk')) {
     }
 }
 
+if (!function_exists('offline_lecture_recordings_disk')) {
+    /**
+     * قرص تخزين فيديوهات تسجيل المحاضرات (أوفلاين/أونلاين) — يُفضّل Cloudflare R2.
+     *
+     * @return string 'r2' أو 'public'
+     */
+    function offline_lecture_recordings_disk(): string
+    {
+        $envDisk = env('FILESYSTEM_DISK_OFFLINE_LECTURE_RECORDINGS');
+        if ($envDisk !== null && $envDisk !== '' && in_array($envDisk, ['r2', 'public'], true)) {
+            return $envDisk;
+        }
+
+        return config('filesystems.offline_lecture_recordings_disk', 'r2');
+    }
+}
+
+if (!function_exists('offline_lecture_recording_max_bytes')) {
+    function offline_lecture_recording_max_bytes(): int
+    {
+        $mb = (int) config('filesystems.offline_lecture_recording_max_mb', 2048);
+
+        return max(1, $mb) * 1024 * 1024;
+    }
+}
+
 if (!function_exists('stored_upload_file_url')) {
     /**
      * رابط تحميل/عرض ملف مرفوع (موارد، مرفقات نشاط، تسليمات) — public محلي أو R2/S3.

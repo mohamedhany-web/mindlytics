@@ -69,4 +69,66 @@
         </div>
     </div>
 </div>
+
+{{-- بوب أب مشاهدة تسجيل المحاضرة داخل المنصة --}}
+<div id="curriculumRecordingModal" class="fixed inset-0 z-[100] hidden" aria-hidden="true">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close-recording-modal></div>
+    <div class="relative z-10 flex min-h-full items-center justify-center p-3 sm:p-6">
+        <div class="w-full max-w-4xl rounded-2xl bg-white shadow-2xl overflow-hidden border border-slate-200">
+            <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 bg-slate-50">
+                <h3 id="curriculumRecordingModalTitle" class="text-sm sm:text-base font-bold text-slate-800 truncate">تسجيل المحاضرة</h3>
+                <button type="button" data-close-recording-modal class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-100" aria-label="إغلاق">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="bg-black aspect-video w-full">
+                <iframe id="curriculumRecordingFrame" src="about:blank" class="w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
+
+@push('scripts')
+<script>
+(function () {
+    const modal = document.getElementById('curriculumRecordingModal');
+    const frame = document.getElementById('curriculumRecordingFrame');
+    const titleEl = document.getElementById('curriculumRecordingModalTitle');
+    if (!modal || !frame) return;
+
+    function openModal(url, title) {
+        titleEl.textContent = title || 'تسجيل المحاضرة';
+        frame.src = url;
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('overflow-hidden');
+    }
+
+    function closeModal() {
+        frame.src = 'about:blank';
+        modal.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('.js-open-recording-modal');
+        if (btn) {
+            e.preventDefault();
+            openModal(btn.getAttribute('data-watch-url'), btn.getAttribute('data-title'));
+            return;
+        }
+        if (e.target.closest('[data-close-recording-modal]')) {
+            closeModal();
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+            closeModal();
+        }
+    });
+})();
+</script>
+@endpush
