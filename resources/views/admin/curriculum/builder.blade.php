@@ -25,25 +25,50 @@
 
     <!-- سياسة فتح الفيديوهات (أدمن) -->
     <div class="rounded-2xl p-5 bg-white border border-slate-200 shadow-sm space-y-5">
+        @if(session('success'))
+            <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm font-medium">{{ session('success') }}</div>
+        @endif
+
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
                 <h2 class="text-lg font-bold text-slate-800">قيود الفيديوهات للطلاب</h2>
-                <p class="text-sm text-slate-500 mt-1">تحكم في فتح كل محاضرات الكورس بدون قيود التسلسل، أو الإبقاء على إعدادات المدرب العادية.</p>
+                <p class="text-sm text-slate-500 mt-1">اضغط الزر لفتح كل محاضرات الكورس للطلاب بدون أي شروط (تسلسل أو نسبة مشاهدة).</p>
+                <p class="text-xs font-semibold mt-2 {{ !empty($course->admin_unlock_all_videos) ? 'text-teal-700' : 'text-slate-500' }}">
+                    الوضع الحالي:
+                    {{ !empty($course->admin_unlock_all_videos) ? 'مفتوح بالكامل بدون شروط' : 'قيود عادية مفعّلة' }}
+                </p>
             </div>
-            <form method="POST" action="{{ route('admin.advanced-courses.unlock-policy', $course) }}" class="flex flex-wrap items-center gap-3">
-                @csrf
-                @method('PUT')
-                <input type="hidden" name="admin_unlock_all_videos" value="0">
-                <label class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer">
-                    <input type="checkbox" name="admin_unlock_all_videos" value="1" class="rounded text-teal-600"
-                           {{ !empty($course->admin_unlock_all_videos) ? 'checked' : '' }}
-                           onchange="this.form.submit()">
-                    <span class="text-sm font-semibold text-slate-700">فتح كل الفيديوهات بدون قيود</span>
-                </label>
-                <span class="text-xs font-medium {{ !empty($course->admin_unlock_all_videos) ? 'text-teal-700' : 'text-slate-500' }}">
-                    {{ !empty($course->admin_unlock_all_videos) ? 'الوضع الحالي: مفتوح بالكامل' : 'الوضع الحالي: قيود عادية' }}
-                </span>
-            </form>
+            <div class="flex flex-wrap items-center gap-2">
+                @if(empty($course->admin_unlock_all_videos))
+                    <form method="POST" action="{{ route('admin.advanced-courses.unlock-policy', $course) }}">
+                        @csrf
+                        @method('PUT')
+                        <input type="hidden" name="admin_unlock_all_videos" value="1">
+                        <button type="submit"
+                                onclick="return confirm('فتح كل محاضرات هذا الكورس للطلاب بدون أي شروط؟')"
+                                class="inline-flex items-center gap-2 px-5 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-bold shadow-sm">
+                            <i class="fas fa-unlock-alt"></i>
+                            فتح كل المحاضرات بدون شروط
+                        </button>
+                    </form>
+                @else
+                    <form method="POST" action="{{ route('admin.advanced-courses.unlock-policy', $course) }}">
+                        @csrf
+                        @method('PUT')
+                        <input type="hidden" name="admin_unlock_all_videos" value="0">
+                        <button type="submit"
+                                onclick="return confirm('إعادة تفعيل القيود العادية على المحاضرات؟')"
+                                class="inline-flex items-center gap-2 px-5 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-bold shadow-sm">
+                            <i class="fas fa-lock"></i>
+                            إعادة القيود العادية
+                        </button>
+                    </form>
+                    <span class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-teal-50 text-teal-800 text-xs font-bold border border-teal-200">
+                        <i class="fas fa-check-circle"></i>
+                        كل المحاضرات مفتوحة الآن
+                    </span>
+                @endif
+            </div>
         </div>
 
         <div class="border-t border-slate-100 pt-4 {{ !empty($course->admin_unlock_all_videos) ? 'opacity-50 pointer-events-none' : '' }}">

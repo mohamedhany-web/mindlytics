@@ -46,20 +46,31 @@
                             <td class="px-4 py-4 text-center text-sm font-semibold text-slate-700">{{ $course->sections_count }}</td>
                             <td class="px-4 py-4 text-center text-sm font-semibold text-slate-700">{{ $course->lectures_count }}</td>
                             <td class="px-4 py-4 text-center">
-                                <form method="POST" action="{{ route('admin.advanced-courses.unlock-policy', $course) }}" class="inline-flex items-center justify-center">
-                                    @csrf
-                                    @method('PUT')
-                                    <input type="hidden" name="admin_unlock_all_videos" value="0">
-                                    <label class="inline-flex items-center gap-2 cursor-pointer">
-                                        <input type="checkbox" name="admin_unlock_all_videos" value="1"
-                                               class="rounded text-teal-600"
-                                               {{ $course->admin_unlock_all_videos ? 'checked' : '' }}
-                                               onchange="this.form.submit()">
-                                        <span class="text-xs font-bold {{ $course->admin_unlock_all_videos ? 'text-teal-700' : 'text-slate-500' }}">
-                                            {{ $course->admin_unlock_all_videos ? 'مفتوح بالكامل' : 'عادي' }}
+                                @if($course->admin_unlock_all_videos)
+                                    <form method="POST" action="{{ route('admin.advanced-courses.unlock-policy', $course) }}" class="inline-flex flex-col items-center gap-2">
+                                        @csrf
+                                        @method('PUT')
+                                        <input type="hidden" name="admin_unlock_all_videos" value="0">
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-teal-50 text-teal-700 text-xs font-bold">
+                                            <i class="fas fa-unlock"></i> مفتوح بالكامل
                                         </span>
-                                    </label>
-                                </form>
+                                        <button type="submit" class="text-xs font-semibold text-amber-700 hover:text-amber-800 underline">
+                                            إعادة القيود
+                                        </button>
+                                    </form>
+                                @else
+                                    <form method="POST" action="{{ route('admin.advanced-courses.unlock-policy', $course) }}" class="inline-flex">
+                                        @csrf
+                                        @method('PUT')
+                                        <input type="hidden" name="admin_unlock_all_videos" value="1">
+                                        <button type="submit"
+                                                onclick="return confirm('فتح كل محاضرات هذا الكورس بدون شروط؟')"
+                                                class="inline-flex items-center gap-1.5 px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold">
+                                            <i class="fas fa-unlock-alt"></i>
+                                            فتح الكل بدون شروط
+                                        </button>
+                                    </form>
+                                @endif
                             </td>
                             <td class="px-4 py-4 text-center">
                                 <a href="{{ route('admin.advanced-courses.curriculum', $course) }}"
