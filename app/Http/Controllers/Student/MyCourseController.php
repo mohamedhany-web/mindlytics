@@ -236,7 +236,7 @@ class MyCourseController extends Controller
             $section->setRelation('children', $allSections->where('parent_id', $section->id)->values());
         }
         $sections = $allSections->whereNull('parent_id')->values();
-        $this->computeSectionLockState($user, $allSections);
+        $this->computeSectionLockState($user, $allSections, (bool) ($course->admin_unlock_all_videos ?? false));
         $sectionDescriptions = $allSections->pluck('description', 'id')->map(fn ($d) => $d ?? '')->toArray();
 
         // بناء خريطة "العنصر التالي" لكل محاضرة (للفتح التلقائي عند بلوغ النسبة)
@@ -487,11 +487,14 @@ class MyCourseController extends Controller
         }
 
         // نفس قفل الأقسام المستخدم في learn()
-        $this->computeSectionLockState($user, $allSections);
+        $this->computeSectionLockState($user, $allSections, (bool) ($course->admin_unlock_all_videos ?? false));
+
+        // سياسة الأدمن: فتح كل فيديوهات الكورس بدون قيود التسلسل
+        $unlockAll = (bool) ($course->admin_unlock_all_videos ?? false);
 
         $itemLocks = [];
         foreach ($allSections as $section) {
-            $isSectionLocked = (bool) ($section->is_locked ?? false);
+            $isSectionLocked = $unlockAll ? false : (bool) ($section->is_locked ?? false);
             $items = $section->activeItems->sortBy('order')->values();
 
             for ($i = 0; $i < $items->count(); $i++) {
@@ -502,7 +505,9 @@ class MyCourseController extends Controller
 
                 $isLocked = $isSectionLocked;
 
-                if ($item instanceof Lecture) {
+                if ($unlockAll) {
+                    $isLocked = false;
+                } elseif ($item instanceof Lecture) {
                     // قفل المحاضرة يعتمد على آخر محاضرة سابقة في نفس القسم
                     $prevLecture = null;
                     for ($j = $i - 1; $j >= 0; $j--) {
@@ -754,7 +759,7 @@ class MyCourseController extends Controller
     /**
      * حساب قفل كل قسم بناءً على إعدادات فتح القسم (unlock_rule) وتقدم القسم السابق
      */
-    private function computeSectionLockState($user, $allSections)
+    private function computeSectionLockState($user, $allSections, bool $unlockAll = false)
     {
         foreach ($allSections as $section) {
             $total = 0;
@@ -791,6 +796,10 @@ class MyCourseController extends Controller
             $section->all_items_completed = $total > 0 && $completed >= $total;
         }
         foreach ($allSections as $section) {
+            if ($unlockAll) {
+                $section->is_locked = false;
+                continue;
+            }
             $prev = $allSections->where('parent_id', $section->parent_id)->where('order', '<', $section->order)->sortByDesc('order')->first();
             if (!$prev) {
                 $section->is_locked = false;

@@ -1,6 +1,10 @@
 {{-- Certificate Styles Component --}}
 {{-- Include this in the head section: @include('components.certificate-styles') --}}
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
+
 <style>
     @media print {
         @page {
@@ -441,4 +445,234 @@
     .preview-elegant { background: linear-gradient(135deg, #1e293b, #0f172a); border: 3px solid #fbbf24; }
     .preview-nature { background: linear-gradient(135deg, #ecfdf5, #a7f3d0); border: 3px solid #10b981; }
     .preview-sunset { background: linear-gradient(135deg, #fef3c7, #fcd34d); border: 3px solid #f59e0b; }
+    .preview-econev {
+        background: #fff;
+        border: 3px solid #00334E;
+        background-image:
+            linear-gradient(135deg, #00334E 0 18%, transparent 18%),
+            linear-gradient(225deg, #00A9A5 0 14%, transparent 14%);
+    }
+
+    /* —— Certificate of Achievement (HTML/CSS recreation) —— */
+    .template-econev {
+        position: relative;
+        background: #ffffff !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: 0 18px 50px rgba(0, 51, 78, 0.16);
+        padding: 0 !important;
+        color: #00334E;
+        font-family: 'Montserrat', 'Segoe UI', sans-serif;
+        overflow: hidden;
+    }
+
+    .template-econev .certificate-watermark,
+    .template-econev .certificate-corner,
+    .template-econev .certificate-seal {
+        display: none !important;
+    }
+
+    .econev-art {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+        pointer-events: none;
+    }
+
+    .econev-logo {
+        position: absolute;
+        top: 6.5%;
+        left: 5.5%;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .econev-logo-mark {
+        position: relative;
+        width: 42px;
+        height: 42px;
+        flex-shrink: 0;
+    }
+
+    .econev-logo-mark span {
+        position: absolute;
+        width: 22px;
+        height: 22px;
+        transform: rotate(45deg);
+        border-radius: 2px;
+    }
+
+    .econev-logo-mark .d1 { top: 2px; left: 0; background: #9AA3AD; }
+    .econev-logo-mark .d2 { top: 10px; left: 12px; background: #00334E; }
+    .econev-logo-mark .d3 { top: 0; left: 14px; background: #B7BFC8; width: 14px; height: 14px; opacity: 0.9; }
+
+    .econev-logo-text {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.05;
+        color: #00334E;
+    }
+
+    .econev-logo-text strong {
+        font-size: 18px;
+        font-weight: 800;
+        letter-spacing: 0.4px;
+    }
+
+    .econev-logo-text span {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.6px;
+        margin-top: 2px;
+    }
+
+    .econev-seal {
+        position: absolute;
+        top: 3.5%;
+        right: 4.5%;
+        z-index: 2;
+        width: 118px;
+        height: auto;
+    }
+
+    .econev-seal svg { width: 100%; height: auto; display: block; }
+
+    .econev-content {
+        position: absolute;
+        left: 50%;
+        top: 18%;
+        transform: translateX(-50%);
+        z-index: 2;
+        width: 68%;
+        text-align: center;
+    }
+
+    .econev-title {
+        margin: 0;
+        font-size: 58px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        color: #00334E;
+        line-height: 1;
+    }
+
+    .econev-subtitle {
+        margin: 8px 0 0;
+        font-size: 28px;
+        font-weight: 500;
+        color: #00334E;
+        line-height: 1.15;
+    }
+
+    .econev-presented {
+        margin: 22px 0 0;
+        font-size: 13px;
+        font-weight: 500;
+        color: #7A8088;
+    }
+
+    .econev-name {
+        margin-top: 10px;
+        font-family: 'Great Vibes', cursive;
+        font-size: 56px;
+        line-height: 1.15;
+        color: #00334E;
+        font-weight: 400;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .econev-name-line {
+        width: 72%;
+        max-width: 420px;
+        height: 1px;
+        background: #CFD4DA;
+        margin: 4px auto 0;
+    }
+
+    .econev-body {
+        margin: 16px auto 0;
+        max-width: 520px;
+        font-size: 12px;
+        line-height: 1.55;
+        color: #6B7280;
+        font-weight: 500;
+    }
+
+    .econev-footer {
+        position: absolute;
+        left: 14%;
+        right: 14%;
+        bottom: 10%;
+        z-index: 2;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 40px;
+    }
+
+    .econev-meta {
+        width: 180px;
+        text-align: center;
+    }
+
+    .econev-meta-value {
+        min-height: 28px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #00334E;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+    }
+
+    .econev-sig-script {
+        font-family: 'Great Vibes', cursive;
+        font-size: 28px;
+        font-weight: 400;
+        line-height: 1;
+    }
+
+    .econev-sig-img {
+        height: 36px;
+        max-width: 160px;
+        object-fit: contain;
+    }
+
+    .econev-meta-line {
+        height: 1px;
+        background: #CFD4DA;
+        margin: 6px 0 8px;
+    }
+
+    .econev-meta-label {
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 1.6px;
+        color: #00334E;
+    }
+
+    .econev-serial {
+        position: absolute;
+        bottom: 3%;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 2;
+        font-size: 9px;
+        font-family: ui-monospace, monospace;
+        color: #9CA3AF;
+    }
+
+    @media print {
+        .template-econev {
+            box-shadow: none !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+    }
 </style>

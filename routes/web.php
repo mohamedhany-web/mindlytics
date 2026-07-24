@@ -1343,6 +1343,26 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::post('/advanced-courses/{advancedCourse}/duplicate', [\App\Http\Controllers\Admin\AdvancedCourseController::class, 'duplicate'])->name('advanced-courses.duplicate');
         Route::get('/get-subjects-by-year', [\App\Http\Controllers\Admin\AdvancedCourseController::class, 'getSubjectsByYear'])->name('advanced-courses.get-subjects-by-year');
 
+        // بناء المنهج (أدمن) + سياسة فتح الفيديوهات
+        Route::get('/curriculum', [\App\Http\Controllers\Admin\CurriculumController::class, 'hub'])->name('curriculum.hub');
+        Route::get('/advanced-courses/{course}/curriculum', [\App\Http\Controllers\Admin\CurriculumController::class, 'index'])->name('advanced-courses.curriculum');
+        Route::put('/advanced-courses/{course}/unlock-policy', [\App\Http\Controllers\Admin\CurriculumController::class, 'updateUnlockPolicy'])->name('advanced-courses.unlock-policy');
+        Route::post('/advanced-courses/{course}/curriculum/exams', [\App\Http\Controllers\Admin\CurriculumController::class, 'storeExamFromCurriculum'])->name('advanced-courses.curriculum.exams.store');
+        Route::post('/advanced-courses/{course}/curriculum/assignments', [\App\Http\Controllers\Admin\CurriculumController::class, 'storeAssignmentFromCurriculum'])->name('advanced-courses.curriculum.assignments.store');
+        Route::post('/advanced-courses/{course}/sections', [\App\Http\Controllers\Admin\CurriculumController::class, 'storeSection'])->name('advanced-courses.sections.store');
+        Route::post('/advanced-courses/{course}/sections/order', [\App\Http\Controllers\Admin\CurriculumController::class, 'updateSectionsOrder'])->name('advanced-courses.sections.order');
+        Route::put('/sections/{section}', [\App\Http\Controllers\Admin\CurriculumController::class, 'updateSection'])->name('sections.update');
+        Route::put('/sections/{section}/visibility', [\App\Http\Controllers\Admin\CurriculumController::class, 'updateSectionVisibility'])->name('sections.visibility');
+        Route::delete('/sections/{section}', [\App\Http\Controllers\Admin\CurriculumController::class, 'destroySection'])->name('sections.destroy');
+        Route::post('/sections/{section}/items', [\App\Http\Controllers\Admin\CurriculumController::class, 'addItem'])->name('sections.items.store');
+        Route::post('/sections/{section}/items/order', [\App\Http\Controllers\Admin\CurriculumController::class, 'updateItemsOrder'])->name('sections.items.order');
+        Route::put('/curriculum-items/{item}/visibility', [\App\Http\Controllers\Admin\CurriculumController::class, 'updateItemVisibility'])->name('curriculum-items.visibility');
+        Route::delete('/curriculum-items/{item}', [\App\Http\Controllers\Admin\CurriculumController::class, 'removeItem'])->name('curriculum-items.destroy');
+        Route::post('/curriculum-items/{item}/move', [\App\Http\Controllers\Admin\CurriculumController::class, 'moveItem'])->name('curriculum-items.move');
+        Route::get('/lectures/{lecture}/video-questions', [\App\Http\Controllers\Instructor\LectureVideoQuestionController::class, 'index'])->name('lectures.video-questions.index');
+        Route::post('/lectures/{lecture}/video-questions', [\App\Http\Controllers\Instructor\LectureVideoQuestionController::class, 'store'])->name('lectures.video-questions.store');
+        Route::delete('/lectures/{lecture}/video-questions/{videoQuestion}', [\App\Http\Controllers\Instructor\LectureVideoQuestionController::class, 'destroy'])->name('lectures.video-questions.destroy');
+
         // الاجتماعات / الورش
         Route::get('workshops/{workshop}/confirmations', [\App\Http\Controllers\Admin\WorkshopController::class, 'confirmations'])
             ->name('workshops.confirmations');

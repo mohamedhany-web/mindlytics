@@ -1,7 +1,8 @@
 @php
     $depth = $depth ?? 0;
+    $course = $course ?? null;
     $sectionItemCount = $section->activeItems->filter(fn($ci) => (bool) $ci->item)->count();
-    $isSectionLocked = $section->is_locked ?? false;
+    $isSectionLocked = (!empty($course->admin_unlock_all_videos)) ? false : ($section->is_locked ?? false);
 @endphp
 <div class="mb-4 {{ $depth > 0 ? 'pr-2 border-r-2 border-slate-100' : '' }} {{ $isSectionLocked ? 'opacity-80' : '' }}" style="{{ $depth > 0 ? 'margin-right: ' . ($depth * 0.5) . 'rem;' : '' }}">
     <div class="curriculum-section-header mb-2 {{ $isSectionLocked ? 'section-locked' : '' }}"
@@ -62,14 +63,18 @@
                     $minPercent = $item->min_watch_percent_to_unlock_next;
                     $threshold = $minPercent !== null ? (int) $minPercent : 90;
                     $isCompleted = $watchProgress && (int) $watchProgress->progress_percent >= $threshold;
-                    $prevLecturesInSection = $section->activeItems->where('order', '<', $curriculumItem->order)->filter(fn($i) => $i->item instanceof \App\Models\Lecture);
-                    $lastPrevLecture = $prevLecturesInSection->sortByDesc('order')->first();
-                    if ($lastPrevLecture) {
-                        $prevLec = $lastPrevLecture->item;
-                        $prevWp = $prevLec->watchProgress->first();
-                        $prevMin = $prevLec->min_watch_percent_to_unlock_next;
-                        $prevThreshold = $prevMin !== null ? (int) $prevMin : 90;
-                        $isLocked = $isLocked || !$prevWp || (int) $prevWp->progress_percent < $prevThreshold;
+                    if (empty($course->admin_unlock_all_videos)) {
+                        $prevLecturesInSection = $section->activeItems->where('order', '<', $curriculumItem->order)->filter(fn($i) => $i->item instanceof \App\Models\Lecture);
+                        $lastPrevLecture = $prevLecturesInSection->sortByDesc('order')->first();
+                        if ($lastPrevLecture) {
+                            $prevLec = $lastPrevLecture->item;
+                            $prevWp = $prevLec->watchProgress->first();
+                            $prevMin = $prevLec->min_watch_percent_to_unlock_next;
+                            $prevThreshold = $prevMin !== null ? (int) $prevMin : 90;
+                            $isLocked = $isLocked || !$prevWp || (int) $prevWp->progress_percent < $prevThreshold;
+                        }
+                    } else {
+                        $isLocked = false;
                     }
                     $isCurrent = !$isCompleted && !$isLocked;
                 } elseif ($item instanceof \App\Models\LearningPattern) {
@@ -261,7 +266,7 @@
 
         @if($section->children && $section->children->count() > 0)
             @foreach($section->children as $child)
-                @include('student.my-courses.partials.learn-sidebar-section', ['section' => $child, 'depth' => $depth + 1])
+                @include('student.my-courses.partials.learn-sidebar-section', ['section' => $child, 'depth' => $depth + 1, 'course' => $course])
             @endforeach
         @endif
     </div>

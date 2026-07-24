@@ -17,9 +17,44 @@ use Illuminate\Support\Facades\DB;
 
 class CurriculumController extends Controller
 {
+    /**
+     * When true, only the course instructor may manage curriculum.
+     * Admin controller overrides this to false.
+     */
+    protected bool $requireInstructorOwnership = true;
+
     public function __construct(
         private ScholarshipCurriculumVisibilityService $scholarshipVisibility
     ) {
+    }
+
+    protected function assertOwnsCourse(AdvancedCourse $course): void
+    {
+        if (! $this->requireInstructorOwnership) {
+            return;
+        }
+
+        if ($course->instructor_id !== Auth::id()) {
+            abort(403, 'غير مسموح لك بالوصول لهذا الكورس');
+        }
+    }
+
+    protected function assertOwnsSection(CourseSection $section): void
+    {
+        $course = $section->course;
+        if (! $course) {
+            abort(404);
+        }
+        $this->assertOwnsCourse($course);
+    }
+
+    protected function assertOwnsItem(CurriculumItem $item): void
+    {
+        $section = $item->section;
+        if (! $section) {
+            abort(404);
+        }
+        $this->assertOwnsSection($section);
     }
 
     /**
@@ -27,12 +62,7 @@ class CurriculumController extends Controller
      */
     public function index(AdvancedCourse $course)
     {
-        $instructor = Auth::user();
-        
-        // التحقق من أن الكورس يخص هذا المدرب
-        if ($course->instructor_id !== $instructor->id) {
-            abort(403, 'غير مسموح لك بالوصول لهذا الكورس');
-        }
+        $this->assertOwnsCourse($course);
         
         // جلب كل الأقسام مع العناصر ثم ربط كل قسم بأبنائه لعرض الشجرة
         $allSections = $course->sections()
@@ -101,7 +131,7 @@ class CurriculumController extends Controller
             ->orderBy('order')
             ->get();
         
-        return view('instructor.curriculum.index', compact(
+        return view($this->curriculumView(), compact(
             'course',
             'sections',
             'sectionsFlatForSelect',
@@ -117,17 +147,17 @@ class CurriculumController extends Controller
         ));
     }
 
+    protected function curriculumView(): string
+    {
+        return 'instructor.curriculum.index';
+    }
+
     /**
      * إنشاء قسم جديد
      */
     public function storeSection(Request $request, AdvancedCourse $course)
     {
-        $instructor = Auth::user();
-        
-        // التحقق من أن الكورس يخص هذا المدرب
-        if ($course->instructor_id !== $instructor->id) {
-            abort(403, 'غير مسموح لك بالوصول لهذا الكورس');
-        }
+        $this->assertOwnsCourse($course);
         
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -177,12 +207,7 @@ class CurriculumController extends Controller
      */
     public function updateSection(Request $request, CourseSection $section)
     {
-        $instructor = Auth::user();
-        
-        // التحقق من أن القسم يخص المدرب
-        if ($section->course->instructor_id !== $instructor->id) {
-            abort(403, 'غير مسموح لك بتعديل هذا القسم');
-        }
+        $this->assertOwnsSection($section);
         
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -228,10 +253,7 @@ class CurriculumController extends Controller
      */
     public function updateSectionVisibility(Request $request, CourseSection $section)
     {
-        $instructor = Auth::user();
-        if ($section->course->instructor_id !== $instructor->id) {
-            abort(403, 'غير مسموح لك بتعديل هذا القسم');
-        }
+        $this->assertOwnsSection($section);
 
         $validated = $request->validate([
             'visibility_scope' => 'required|string|in:all,selected,groups',
@@ -261,11 +283,8 @@ class CurriculumController extends Controller
      */
     public function updateItemVisibility(Request $request, CurriculumItem $item)
     {
-        $instructor = Auth::user();
+        $this->assertOwnsItem($item);
         $section = $item->section;
-        if (! $section || $section->course->instructor_id !== $instructor->id) {
-            abort(403, 'غير مسموح لك بتعديل هذا العنصر');
-        }
 
         $validated = $request->validate([
             'visibility_scope' => 'required|string|in:all,selected,groups',
@@ -295,12 +314,7 @@ class CurriculumController extends Controller
      */
     public function destroySection(CourseSection $section)
     {
-        $instructor = Auth::user();
-        
-        // التحقق من أن القسم يخص المدرب
-        if ($section->course->instructor_id !== $instructor->id) {
-            abort(403, 'غير مسموح لك بحذف هذا القسم');
-        }
+        $this->assertOwnsSection($section);
         
         $section->delete();
         
@@ -315,12 +329,7 @@ class CurriculumController extends Controller
      */
     public function addItem(Request $request, CourseSection $section)
     {
-        $instructor = Auth::user();
-        
-        // التحقق من أن القسم يخص المدرب
-        if ($section->course->instructor_id !== $instructor->id) {
-            abort(403, 'غير مسموح لك بإضافة عناصر لهذا القسم');
-        }
+        $this->assertOwnsSection($section);
         
         $validated = $request->validate([
             'item_type' => 'required|string|in:App\Models\Lecture,App\Models\Assignment,App\Models\AdvancedExam',
@@ -383,10 +392,8 @@ class CurriculumController extends Controller
      */
     public function storeExamFromCurriculum(Request $request, AdvancedCourse $course)
     {
-        $instructor = Auth::user();
-        if ($course->instructor_id !== $instructor->id) {
-            abort(403, 'غير مسموح لك بإضافة امتحان لهذا الكورس');
-        }
+        $this->assertOwnsCourse($course);
+        $actorId = Auth::id();
 
         $validated = $request->validate([
             'section_id' => 'required|exists:course_sections,id',
@@ -430,7 +437,7 @@ class CurriculumController extends Controller
             'passing_marks' => $validated['passing_marks'],
             'duration_minutes' => $validated['duration_minutes'],
             'attempts_allowed' => $validated['attempts_allowed'],
-            'created_by' => $instructor->id,
+            'created_by' => $actorId,
             'randomize_questions' => false,
             'randomize_options' => false,
             'show_results_immediately' => true,
@@ -455,8 +462,17 @@ class CurriculumController extends Controller
             'success' => true,
             'message' => 'تم إنشاء الامتحان وإضافته للمنهج بنجاح',
             'exam_id' => $exam->id,
-            'redirect' => route('instructor.exams.questions.manage', $exam),
+            'redirect' => $this->examQuestionsManageUrl($exam),
         ]);
+    }
+
+    protected function examQuestionsManageUrl(AdvancedExam $exam): string
+    {
+        if (\Illuminate\Support\Facades\Route::has('admin.exams.questions.manage')) {
+            return route('admin.exams.questions.manage', $exam);
+        }
+
+        return route('instructor.exams.questions.manage', $exam);
     }
 
     /**
@@ -464,10 +480,8 @@ class CurriculumController extends Controller
      */
     public function storeAssignmentFromCurriculum(Request $request, AdvancedCourse $course)
     {
-        $instructor = Auth::user();
-        if ($course->instructor_id !== $instructor->id) {
-            abort(403, 'غير مسموح لك بإضافة واجب لهذا الكورس');
-        }
+        $this->assertOwnsCourse($course);
+        $teacherId = $course->instructor_id ?: Auth::id();
 
         $validated = $request->validate([
             'section_id' => 'required|exists:course_sections,id',
@@ -489,7 +503,7 @@ class CurriculumController extends Controller
 
         $assignment = Assignment::create([
             'advanced_course_id' => $course->id,
-            'teacher_id' => $instructor->id,
+            'teacher_id' => $teacherId,
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
             'instructions' => $validated['instructions'] ?? null,
@@ -519,12 +533,7 @@ class CurriculumController extends Controller
      */
     public function removeItem(CurriculumItem $item)
     {
-        $instructor = Auth::user();
-        
-        // التحقق من أن العنصر يخص المدرب
-        if ($item->section->course->instructor_id !== $instructor->id) {
-            abort(403, 'غير مسموح لك بحذف هذا العنصر');
-        }
+        $this->assertOwnsItem($item);
         
         $item->delete();
         
@@ -539,12 +548,7 @@ class CurriculumController extends Controller
      */
     public function updateSectionsOrder(Request $request, AdvancedCourse $course)
     {
-        $instructor = Auth::user();
-        
-        // التحقق من أن الكورس يخص هذا المدرب
-        if ($course->instructor_id !== $instructor->id) {
-            abort(403, 'غير مسموح لك بتعديل هذا الكورس');
-        }
+        $this->assertOwnsCourse($course);
         
         $validated = $request->validate([
             'sections' => 'required|array',
@@ -589,12 +593,7 @@ class CurriculumController extends Controller
      */
     public function updateItemsOrder(Request $request, CourseSection $section)
     {
-        $instructor = Auth::user();
-        
-        // التحقق من أن القسم يخص المدرب
-        if ($section->course->instructor_id !== $instructor->id) {
-            abort(403, 'غير مسموح لك بتعديل هذا القسم');
-        }
+        $this->assertOwnsSection($section);
         
         $validated = $request->validate([
             'items' => 'required|array',
@@ -620,11 +619,8 @@ class CurriculumController extends Controller
      */
     public function moveItem(Request $request, CurriculumItem $item)
     {
-        $instructor = Auth::user();
+        $this->assertOwnsItem($item);
         $section = $item->section;
-        if (!$section || $section->course->instructor_id !== $instructor->id) {
-            abort(403, 'غير مسموح لك بنقل هذا العنصر');
-        }
         
         $validated = $request->validate([
             'section_id' => 'required|exists:course_sections,id',

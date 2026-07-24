@@ -9,7 +9,7 @@
             $item = $curriculumItem->item;
             if (!$item || $item instanceof \App\Models\CourseLesson) continue;
 
-            $isSectionLocked = $section->is_locked ?? false;
+            $isSectionLocked = (!empty($course->admin_unlock_all_videos)) ? false : ($section->is_locked ?? false);
             $isLocked = $isSectionLocked;
             $isCompleted = false;
             $isCurrent = false;
@@ -28,14 +28,16 @@
                 $threshold = $minPercent !== null ? (int) $minPercent : 90;
                 $isCompleted = $watchProgress && (int) $watchProgress->progress_percent >= $threshold;
                 $isCurrent = !$isCompleted && !$isLocked;
-                $prevLecturesInSection = $section->activeItems->where('order', '<', $curriculumItem->order)->filter(fn($i) => $i->item instanceof \App\Models\Lecture);
-                $lastPrevLecture = $prevLecturesInSection->sortByDesc('order')->first();
-                if ($lastPrevLecture) {
-                    $prevLec = $lastPrevLecture->item;
-                    $prevWp = $prevLec->watchProgress->first();
-                    $prevMin = $prevLec->min_watch_percent_to_unlock_next;
-                    $prevThreshold = $prevMin !== null ? (int) $prevMin : 90;
-                    $isLocked = $isLocked || !$prevWp || (int) $prevWp->progress_percent < $prevThreshold;
+                if (empty($course->admin_unlock_all_videos)) {
+                    $prevLecturesInSection = $section->activeItems->where('order', '<', $curriculumItem->order)->filter(fn($i) => $i->item instanceof \App\Models\Lecture);
+                    $lastPrevLecture = $prevLecturesInSection->sortByDesc('order')->first();
+                    if ($lastPrevLecture) {
+                        $prevLec = $lastPrevLecture->item;
+                        $prevWp = $prevLec->watchProgress->first();
+                        $prevMin = $prevLec->min_watch_percent_to_unlock_next;
+                        $prevThreshold = $prevMin !== null ? (int) $prevMin : 90;
+                        $isLocked = $isLocked || !$prevWp || (int) $prevWp->progress_percent < $prevThreshold;
+                    }
                 }
             } elseif ($item instanceof \App\Models\LearningPattern) {
                 $typeLabel = 'تمرين تفاعلي';

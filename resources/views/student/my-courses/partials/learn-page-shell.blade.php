@@ -176,7 +176,7 @@
                     @if(isset($sections) && $sections->count() > 0)
                         <script type="application/json" id="learn-section-descriptions">@json($sectionDescriptions ?? [])</script>
                         @foreach($sections as $section)
-                            @include('student.my-courses.partials.learn-sidebar-section', ['section' => $section, 'depth' => 0])
+                            @include('student.my-courses.partials.learn-sidebar-section', ['section' => $section, 'depth' => 0, 'course' => $course])
                         @endforeach
                     @endif
                 </div>

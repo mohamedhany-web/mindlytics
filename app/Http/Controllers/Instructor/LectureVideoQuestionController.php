@@ -14,6 +14,11 @@ class LectureVideoQuestionController extends Controller
 {
     private function authorizeLecture(Lecture $lecture): void
     {
+        $user = Auth::user();
+        if ($user && in_array($user->role, ['admin', 'super_admin'], true)) {
+            return;
+        }
+
         if ($lecture->course->instructor_id !== Auth::id()) {
             abort(403, 'غير مسموح لك بإدارة أسئلة هذه المحاضرة');
         }

@@ -254,6 +254,21 @@
                 </div>
 
                 <div class="template-gallery">
+                    <!-- Econev Achievement (exact design) -->
+                    <div class="template-card" onclick="previewTemplate('econev')" style="border-color:#00334E">
+                        <div class="template-preview-container preview-econev">
+                            <div class="preview-demo" style="color:#00334E;text-shadow:none;">Certificate of Achievement</div>
+                        </div>
+                        <div class="template-info">
+                            <div class="template-name">Certificate of Achievement</div>
+                            <div class="template-description">تصميم هندسي احترافي — Navy / Teal / Gold</div>
+                            <div class="template-badge" style="background:#e6f7f6;color:#0f766e;">
+                                <i class="fas fa-check-circle"></i>
+                                <span>تصميم جديد</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Template 1: Classic -->
                     <div class="template-card" onclick="previewTemplate('classic')">
                         <div class="template-preview-container preview-classic">
@@ -432,6 +447,61 @@
     function previewTemplate(templateName) {
         const modal = document.getElementById('template-preview-modal');
         const content = document.getElementById('template-preview-content');
+
+        if (templateName === 'econev') {
+            content.innerHTML = `
+                <div class="certificate-container flex justify-center">
+                    ${document.getElementById('econev-preview-source')?.innerHTML || '<p class="text-center text-gray-500">جاري التحميل...</p>'}
+                </div>`;
+            // Build live HTML preview matching the component
+            content.innerHTML = `
+            <div class="certificate-template template-econev certificate-print relative mx-auto"
+                 style="width:100%;max-width:900px;aspect-ratio:297/210;margin:0 auto;">
+                <svg class="econev-art" viewBox="0 0 1123 794" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="none">
+                    <path d="M0 0 H210 L140 95 H0 Z" fill="#D7DEE6" opacity="0.55"/>
+                    <path d="M1123 0 H920 L980 78 H1123 Z" fill="#00334E"/>
+                    <path d="M0 210 L95 320 L0 430 Z" fill="#00334E"/>
+                    <path d="M70 360 L175 455 L70 520 Z" fill="#C9D2DB" opacity="0.45"/>
+                    <polygon points="155,390 195,415 195,465 155,490 115,465 115,415" fill="none" stroke="#00A9A5" stroke-width="7"/>
+                    <path d="M0 794 V620 L130 720 V794 Z" fill="#00A9A5"/>
+                    <path d="M1123 300 L980 400 L1123 500 Z" fill="#00334E"/>
+                    <path d="M1123 794 V680 L980 760 V794 Z" fill="#00A9A5"/>
+                    <path d="M510 794 L561.5 700 L613 794" fill="none" stroke="#00334E" stroke-width="10"/>
+                </svg>
+                <div class="econev-logo">
+                    <div class="econev-logo-mark"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+                    <div class="econev-logo-text"><strong>LOGO</strong><span>MINDLYTICS</span></div>
+                </div>
+                <div class="econev-seal">
+                    <svg viewBox="0 0 160 175" xmlns="http://www.w3.org/2000/svg">
+                        <defs><linearGradient id="econevGoldPrev" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#E0C07A"/><stop offset="100%" stop-color="#C5A059"/></linearGradient></defs>
+                        <g fill="none" stroke="#00334E" stroke-width="3.2" stroke-linecap="round">
+                            <path d="M42 118 C22 98 22 62 48 42"/><path d="M118 118 C138 98 138 62 112 42"/>
+                        </g>
+                        <g fill="#C5A059"><circle cx="80" cy="48" r="3"/><circle cx="64" cy="52" r="2.5"/><circle cx="96" cy="52" r="2.5"/></g>
+                        <text x="80" y="78" text-anchor="middle" font-family="Montserrat,Arial" font-size="11" font-weight="800" fill="#00334E">PREMIUM</text>
+                        <text x="80" y="92" text-anchor="middle" font-family="Montserrat,Arial" font-size="11" font-weight="800" fill="#00334E">QUALITY</text>
+                        <path d="M28 128 L48 118 H112 L132 128 L120 148 H40 Z" fill="url(#econevGoldPrev)"/>
+                        <text x="80" y="138" text-anchor="middle" font-family="Montserrat,Arial" font-size="9" font-weight="700" fill="#fff">CERTIFICATION</text>
+                        <text x="80" y="162" text-anchor="middle" font-family="Montserrat,Arial" font-size="8" font-weight="700" fill="#00334E">SINCE 1980</text>
+                    </svg>
+                </div>
+                <div class="econev-content">
+                    <h1 class="econev-title">CERTIFICATE</h1>
+                    <h2 class="econev-subtitle">Of Achievement</h2>
+                    <p class="econev-presented">This Certificate is Proudly Presented to</p>
+                    <div class="econev-name">Ahmed Mohamed</div>
+                    <div class="econev-name-line"></div>
+                    <p class="econev-body">For outstanding achievement, dedication, and successful completion of the Full Stack Development program.</p>
+                </div>
+                <div class="econev-footer">
+                    <div class="econev-meta"><div class="econev-meta-value">2026-07-23</div><div class="econev-meta-line"></div><div class="econev-meta-label">DATE</div></div>
+                    <div class="econev-meta"><div class="econev-meta-value econev-sig-script">Mindlytics</div><div class="econev-meta-line"></div><div class="econev-meta-label">SIGNATURE</div></div>
+                </div>
+            </div>`;
+            modal.classList.remove('hidden');
+            return;
+        }
         
         // بيانات تجريبية للمعاينة
         const demoData = {

@@ -22,6 +22,11 @@
                 </p>
             </div>
             <div class="flex flex-wrap gap-2 flex-shrink-0">
+                <a href="{{ route('admin.advanced-courses.curriculum', $advancedCourse) }}"
+                   class="inline-flex items-center gap-2 bg-white text-sky-700 hover:bg-gray-100 px-4 py-2.5 rounded-xl font-semibold transition-colors">
+                    <i class="fas fa-sitemap"></i>
+                    بناء المنهج
+                </a>
                 <a href="{{ route('admin.advanced-courses.edit', $advancedCourse) }}" 
                    class="inline-flex items-center gap-2 bg-white text-indigo-600 hover:bg-gray-100 px-4 py-2.5 rounded-xl font-semibold transition-colors">
                     <i class="fas fa-edit"></i>

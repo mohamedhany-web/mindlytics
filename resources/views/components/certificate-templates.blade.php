@@ -1,10 +1,26 @@
+@php
+    $template = $template ?? 'classic';
+@endphp
+
+@if($template === 'econev')
+    @include('components.certificate-econev', [
+        'certificate' => $certificate ?? null,
+        'studentName' => $studentName ?? null,
+        'courseTitle' => $courseTitle ?? null,
+        'courseName' => $courseName ?? null,
+        'description' => $description ?? null,
+        'certificateNumber' => $certificateNumber ?? null,
+        'serialNumber' => $serialNumber ?? null,
+        'issueDate' => $issueDate ?? null,
+        'academySignatureName' => $academySignatureName ?? null,
+    ])
+@else
 {{-- Certificate Templates Component --}}
 {{-- Usage: @include('components.certificate-templates', ['certificate' => $certificate, 'template' => 'classic']) --}}
 
 @php
-    $template = $template ?? 'classic';
     $studentName = $studentName ?? ($certificate->user->name ?? auth()->user()->name ?? 'الطالب');
-    $courseTitle = $courseTitle ?? ($certificate->title ?? $certificate->course_name ?? 'شهادة الإتمام');
+    $courseTitle = $courseTitle ?? ($certificate->title ?? $certificate->course_name ?? 'شهادة إتمام');
     $courseName = $courseName ?? ($certificate->course->title ?? $certificate->course_name ?? '');
     $description = $description ?? $certificate->description ?? '';
     $certificateNumber = $certificateNumber ?? $certificate->certificate_number ?? '';
@@ -22,7 +38,7 @@
     $verificationUrl = $verificationUrl ?? ($certificate->verification_url ?? route('public.certificates.verify', ['code' => $verificationCode]));
 @endphp
 
-<div id="certificate-template" class="certificate-template template-{{ $template }} relative mx-auto certificate-print" style="width: 297mm; height: 210mm; padding: 25mm 20mm; margin: 0 auto; box-sizing: border-box;">
+<div id="{{ $templateDomId ?? 'certificate-template' }}" class="certificate-template template-{{ $template }} relative mx-auto certificate-print" style="width: 297mm; height: 210mm; padding: 25mm 20mm; margin: 0 auto; box-sizing: border-box;">
     <!-- Watermark -->
     <div class="certificate-watermark">MINDLYTICS</div>
 
@@ -195,4 +211,5 @@
     });
 </script>
 @endpush
+@endif
 @endif
