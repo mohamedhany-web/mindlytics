@@ -1345,9 +1345,14 @@
                         {{ $course->localized('title') ?: __('public.course_title_fallback') }}
                     </h1>
                     
-                    <p class="text-base md:text-lg text-gray-600 mb-5 leading-relaxed fade-in-up" style="animation-delay: 0.2s;">
-                        {{ $course->localized('description') ?: __('public.course_desc_fallback') }}
-                    </p>
+                    @php
+                        $courseHook = trim((string) ($course->localized('hook') ?: ''));
+                    @endphp
+                    @if($courseHook !== '')
+                        <p class="text-base md:text-lg text-gray-600 mb-5 leading-relaxed fade-in-up" style="animation-delay: 0.2s;">
+                            {{ $courseHook }}
+                        </p>
+                    @endif
 
                     <!-- Course Stats -->
                     <div class="grid grid-cols-3 gap-4 mb-6 fade-in-up" style="animation-delay: 0.1s;">

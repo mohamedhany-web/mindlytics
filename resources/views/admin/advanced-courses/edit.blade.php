@@ -214,8 +214,19 @@
                                 </div>
                             </div>
 
+                            <div class="md:col-span-2 space-y-2">
+                                <label class="block text-sm font-semibold text-gray-700">
+                                    هوك الكورس (يظهر في بداية الصفحة)
+                                </label>
+                                <textarea name="hook" rows="3" maxlength="500"
+                                          class="w-full rounded-2xl border border-amber-200 bg-amber-50/40 px-4 py-3 text-gray-900 shadow-sm focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 transition"
+                                          placeholder="جملة قوية قصيرة تجذب الطالب في أول الصفحة — مش وصف طويل.">{{ old('hook', $advancedCourse->hook) }}</textarea>
+                                <p class="text-xs text-slate-500">يظهر تحت العنوان في الهيرو فقط. «وصف الكورس» يظل في قسم عن الكورس كما هو. (حد أقصى 500 حرف)</p>
+                                @error('hook') <p class="text-xs text-rose-500 mt-1">{{ $message }}</p> @enderror
+                            </div>
+
                             <div class="space-y-2">
-                                <label class="block text-sm font-semibold text-gray-700">وصف الكورس</label>
+                                <label class="block text-sm font-semibold text-gray-700">وصف الكورس (قسم «عن الكورس»)</label>
                                 <textarea name="description" rows="4"
                                           class="w-full rounded-2xl border border-gray-200 bg-white/70 px-4 py-3 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition"
                                           placeholder="اشرح محتوى الكورس وقيمته للطلاب.">{{ old('description', $advancedCourse->description) }}</textarea>
@@ -232,6 +243,13 @@
                                            class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition"
                                            placeholder="e.g. Web Development Fundamentals" dir="ltr">
                                     @error('title_en') <p class="text-xs text-rose-500 mt-1">{{ $message }}</p> @enderror
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-semibold text-gray-700">هوك الكورس (English)</label>
+                                    <textarea name="hook_en" rows="3" maxlength="500" dir="ltr"
+                                              class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition"
+                                              placeholder="Short powerful hook for the hero">{{ old('hook_en', $advancedCourse->hook_en) }}</textarea>
+                                    @error('hook_en') <p class="text-xs text-rose-500 mt-1">{{ $message }}</p> @enderror
                                 </div>
                                 <div class="space-y-2">
                                     <label class="block text-sm font-semibold text-gray-700">وصف الكورس (English)</label>
