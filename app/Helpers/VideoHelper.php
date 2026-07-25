@@ -13,8 +13,8 @@ class VideoHelper
             return null;
         }
 
-        // YouTube
-        if (preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/', $url, $matches)) {
+        // YouTube (watch / youtu.be / embed / shorts / live)
+        if (preg_match('/(?:youtube\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/', $url, $matches)) {
             $videoId = $matches[1];
             return "https://www.youtube-nocookie.com/embed/{$videoId}?autoplay=0&controls=0&disablekb=1&enablejsapi=1&fs=0&iv_load_policy=3&modestbranding=1&playsinline=1&rel=0&showinfo=0&origin=" . request()->getSchemeAndHttpHost();
         }
@@ -99,7 +99,7 @@ class VideoHelper
         }
 
         // YouTube thumbnail
-        if (preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/', $url, $matches)) {
+        if (preg_match('/(?:youtube\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/', $url, $matches)) {
             $videoId = $matches[1];
             return "https://img.youtube.com/vi/{$videoId}/maxresdefault.jpg";
         }
@@ -124,7 +124,7 @@ class VideoHelper
 
         // التحقق من الأنماط المدعومة
         $patterns = [
-            '/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/', // YouTube
+            '/(?:youtube\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/', // YouTube + Shorts
             '/vimeo\.com\/(\d+)/', // Vimeo
             '/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/', // Google Drive
             '/(?:iframe|player)\.mediadelivery\.net\/embed\/(\d+)\/([a-zA-Z0-9_-]+)/', // Bunny.net (Bunny Stream)

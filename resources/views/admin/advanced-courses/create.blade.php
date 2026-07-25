@@ -250,7 +250,7 @@
                                        class="w-full rounded-2xl border border-gray-200 bg-white/70 px-4 py-3 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition"
                                        placeholder="YouTube / Vimeo / Bunny (embed أو رابط مباشر .mp4)">
                                 <p class="mt-1 text-xs text-gray-500">
-                                    يُعرض في صفحة الكورس العامة. مدعوم: YouTube، Vimeo، <strong>Bunny</strong> — <code class="text-xs">mediadelivery.net/embed/...</code> أو رابط تشغيل، أو رابط مباشر <code class="text-xs">.mp4</code> / <code class="text-xs">.m3u8</code>.
+                                    يُعرض في صفحة الكورس العامة. مدعوم: YouTube (بما فيها Shorts)، Vimeo، <strong>Bunny</strong> — <code class="text-xs">mediadelivery.net/embed/...</code> أو رابط تشغيل، أو رابط مباشر <code class="text-xs">.mp4</code> / <code class="text-xs">.m3u8</code>.
                                 </p>
                                 @error('video_url') <p class="text-xs text-rose-500 mt-1">{{ $message }}</p> @enderror
                             </div>

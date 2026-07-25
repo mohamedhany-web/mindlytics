@@ -128,7 +128,7 @@ return [
     'explore_more_paths' => 'استكشف المزيد من المسارات التعليمية',
     'video_unsupported' => 'رابط الفيديو غير مدعوم',
     'no_intro_video' => 'لا يوجد فيديو مقدمة متاح',
-    'intro_video_unsupported' => 'رابط الفيديو غير مدعوم. استخدم YouTube أو Vimeo أو رابط Bunny (تضمين mediadelivery أو رابط مباشر .mp4 / .m3u8).',
+    'intro_video_unsupported' => 'رابط الفيديو غير مدعوم. استخدم YouTube (بما فيها Shorts) أو Vimeo أو رابط Bunny (تضمين mediadelivery أو رابط مباشر .mp4 / .m3u8).',
     'browser_no_video' => 'المتصفح لا يدعم تشغيل هذا الفيديو.',
 
     // About page

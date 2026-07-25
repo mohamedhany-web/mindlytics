@@ -20,11 +20,15 @@ final class IntroVideoResolver
             return $empty;
         }
 
-        // YouTube
-        if (preg_match('/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/', $url, $m)) {
+        // YouTube (watch / youtu.be / embed / shorts / live / m.youtube)
+        if (preg_match(
+            '/(?:youtube\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/',
+            $url,
+            $m
+        )) {
             return [
                 'type' => 'youtube',
-                'embed' => 'https://www.youtube.com/embed/'.$m[1].'?rel=0&modestbranding=1&showinfo=0',
+                'embed' => 'https://www.youtube.com/embed/'.$m[1].'?rel=0&modestbranding=1&playsinline=1',
                 'direct' => null,
                 'mime' => '',
             ];
