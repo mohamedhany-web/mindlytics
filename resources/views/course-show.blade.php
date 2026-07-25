@@ -946,19 +946,24 @@
                 border: none;
             }
 
-            /* Immersive course hero (reference-inspired) */
+            /* Immersive course hero — Mindlytics blue/emerald identity */
             .course-immersive-hero {
-                --hero-accent: #f59e0b;
-                --hero-accent-strong: #ea580c;
+                --hero-blue: #1e40af;
+                --hero-blue-deep: #1e3a8a;
+                --hero-blue-bright: #2563eb;
+                --hero-emerald: #10b981;
+                --hero-emerald-deep: #059669;
+                --hero-accent: #34d399;
+                --hero-accent-strong: #10b981;
                 --hero-ink: #f8fafc;
-                --hero-muted: rgba(248, 250, 252, 0.78);
+                --hero-muted: rgba(226, 232, 240, 0.88);
                 position: relative;
-                min-height: min(100svh, 920px);
+                min-height: min(92svh, 860px);
                 display: flex;
                 align-items: flex-end;
                 overflow: hidden;
                 color: var(--hero-ink);
-                background: #0b1220;
+                background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 45%, #0f766e 100%);
             }
             .course-immersive-hero__media,
             .course-immersive-hero__media img {
@@ -969,24 +974,43 @@
                 object-fit: cover;
             }
             .course-immersive-hero__media {
-                transform: scale(1.04);
+                transform: scale(1.03);
                 animation: courseHeroKen 18s ease-in-out infinite alternate;
+            }
+            .course-immersive-hero__media--fallback {
+                background:
+                    radial-gradient(circle at 18% 20%, rgba(56, 189, 248, 0.28), transparent 42%),
+                    radial-gradient(circle at 82% 18%, rgba(16, 185, 129, 0.22), transparent 40%),
+                    linear-gradient(135deg, #1e3a8a 0%, #1e40af 42%, #2563eb 68%, #0f766e 100%);
             }
             @keyframes courseHeroKen {
                 from { transform: scale(1.02) translate3d(0, 0, 0); }
-                to { transform: scale(1.08) translate3d(-1.5%, -1%, 0); }
+                to { transform: scale(1.06) translate3d(-1%, -0.8%, 0); }
             }
             .course-immersive-hero__shade {
                 position: absolute;
                 inset: 0;
                 background:
-                    linear-gradient(90deg, rgba(8, 15, 28, 0.92) 0%, rgba(8, 15, 28, 0.72) 42%, rgba(8, 15, 28, 0.35) 100%),
-                    linear-gradient(0deg, rgba(8, 15, 28, 0.88) 0%, rgba(8, 15, 28, 0.25) 48%, rgba(8, 15, 28, 0.45) 100%);
+                    linear-gradient(90deg, rgba(30, 58, 138, 0.94) 0%, rgba(30, 64, 175, 0.78) 38%, rgba(5, 150, 105, 0.28) 100%),
+                    linear-gradient(0deg, rgba(15, 23, 42, 0.72) 0%, rgba(30, 64, 175, 0.22) 52%, rgba(30, 58, 138, 0.45) 100%);
             }
             [dir="ltr"] .course-immersive-hero__shade {
                 background:
-                    linear-gradient(270deg, rgba(8, 15, 28, 0.92) 0%, rgba(8, 15, 28, 0.72) 42%, rgba(8, 15, 28, 0.35) 100%),
-                    linear-gradient(0deg, rgba(8, 15, 28, 0.88) 0%, rgba(8, 15, 28, 0.25) 48%, rgba(8, 15, 28, 0.45) 100%);
+                    linear-gradient(270deg, rgba(30, 58, 138, 0.94) 0%, rgba(30, 64, 175, 0.78) 38%, rgba(5, 150, 105, 0.28) 100%),
+                    linear-gradient(0deg, rgba(15, 23, 42, 0.72) 0%, rgba(30, 64, 175, 0.22) 52%, rgba(30, 58, 138, 0.45) 100%);
+            }
+            .course-immersive-hero__glow {
+                position: absolute;
+                inset: auto auto -10% -8%;
+                width: min(55vw, 420px);
+                height: min(55vw, 420px);
+                border-radius: 999px;
+                background: radial-gradient(circle, rgba(16, 185, 129, 0.28), transparent 68%);
+                filter: blur(8px);
+                pointer-events: none;
+            }
+            [dir="ltr"] .course-immersive-hero__glow {
+                inset: auto -8% -10% auto;
             }
             .course-immersive-hero__inner {
                 position: relative;
@@ -1007,7 +1031,7 @@
                 margin-bottom: 1rem;
             }
             .course-immersive-brand span {
-                background: linear-gradient(90deg, #60a5fa, #34d399);
+                background: linear-gradient(90deg, #93c5fd, #6ee7b7);
                 -webkit-background-clip: text;
                 background-clip: text;
                 color: transparent;
@@ -1030,14 +1054,14 @@
                 backdrop-filter: blur(10px);
             }
             .course-immersive-badge--offer {
-                background: rgba(245, 158, 11, 0.18);
-                color: #fbbf24;
-                border: 1px solid rgba(251, 191, 36, 0.35);
+                background: rgba(16, 185, 129, 0.2);
+                color: #a7f3d0;
+                border: 1px solid rgba(110, 231, 183, 0.4);
             }
             .course-immersive-badge--type {
-                background: rgba(255, 255, 255, 0.1);
-                color: #e2e8f0;
-                border: 1px solid rgba(255, 255, 255, 0.16);
+                background: rgba(37, 99, 235, 0.28);
+                color: #dbeafe;
+                border: 1px solid rgba(147, 197, 253, 0.35);
             }
             .course-immersive-title {
                 max-width: 16ch;
@@ -1046,10 +1070,14 @@
                 line-height: 1.08;
                 letter-spacing: -0.03em;
                 margin-bottom: 1rem;
+                text-shadow: 0 10px 30px rgba(15, 23, 42, 0.35);
             }
             .course-immersive-title em {
                 font-style: normal;
-                color: var(--hero-accent);
+                background: linear-gradient(90deg, #6ee7b7, #34d399);
+                -webkit-background-clip: text;
+                background-clip: text;
+                color: transparent;
             }
             .course-immersive-lead {
                 max-width: 38rem;
@@ -1068,7 +1096,7 @@
             .course-immersive-countdown__label {
                 font-size: 0.8rem;
                 font-weight: 700;
-                color: rgba(248, 250, 252, 0.7);
+                color: rgba(219, 234, 254, 0.85);
             }
             .course-immersive-countdown__grid {
                 display: flex;
@@ -1079,8 +1107,9 @@
                 text-align: center;
                 padding: 0.45rem 0.35rem;
                 border-radius: 0.7rem;
-                background: rgba(15, 23, 42, 0.55);
-                border: 1px solid rgba(255, 255, 255, 0.12);
+                background: rgba(30, 58, 138, 0.55);
+                border: 1px solid rgba(147, 197, 253, 0.28);
+                box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.08);
             }
             .course-immersive-countdown__num {
                 display: block;
@@ -1091,7 +1120,7 @@
             .course-immersive-countdown__unit {
                 display: block;
                 font-size: 0.65rem;
-                color: rgba(248, 250, 252, 0.55);
+                color: rgba(191, 219, 254, 0.7);
                 font-weight: 700;
             }
             .course-immersive-cta {
@@ -1102,29 +1131,46 @@
                 min-height: 3.4rem;
                 padding: 0.9rem 1.4rem;
                 border-radius: 999px;
-                background: linear-gradient(90deg, var(--hero-accent), var(--hero-accent-strong));
-                color: #111827;
+                background: linear-gradient(90deg, #2563eb 0%, #3b82f6 45%, #10b981 100%);
+                color: #fff;
                 font-weight: 900;
                 font-size: 1rem;
-                box-shadow: 0 14px 36px rgba(234, 88, 12, 0.35);
+                box-shadow: 0 14px 36px rgba(37, 99, 235, 0.38);
                 transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
             }
             .course-immersive-cta:hover {
                 transform: translateY(-2px);
-                filter: brightness(1.05);
-                box-shadow: 0 18px 40px rgba(234, 88, 12, 0.45);
+                filter: brightness(1.06);
+                box-shadow: 0 18px 40px rgba(16, 185, 129, 0.35);
             }
             .course-immersive-cta__old {
                 text-decoration: line-through;
-                opacity: 0.65;
+                opacity: 0.72;
                 font-weight: 800;
+            }
+            .course-immersive-secondary {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 0.8rem 1.2rem;
+                border-radius: 999px;
+                border: 1px solid rgba(147, 197, 253, 0.45);
+                background: rgba(255, 255, 255, 0.08);
+                color: #eff6ff;
+                font-weight: 800;
+                font-size: 0.9rem;
+                transition: background 0.2s ease, border-color 0.2s ease;
+            }
+            .course-immersive-secondary:hover {
+                background: rgba(37, 99, 235, 0.22);
+                border-color: rgba(110, 231, 183, 0.45);
             }
             .course-immersive-meta {
                 display: flex;
                 flex-wrap: wrap;
                 gap: 0.85rem 1.25rem;
                 margin-top: 1.35rem;
-                color: rgba(248, 250, 252, 0.78);
+                color: rgba(226, 232, 240, 0.9);
                 font-size: 0.86rem;
                 font-weight: 700;
             }
@@ -1132,6 +1178,9 @@
                 display: inline-flex;
                 align-items: center;
                 gap: 0.45rem;
+            }
+            .course-immersive-meta i {
+                color: #6ee7b7;
             }
             .course-immersive-float {
                 position: fixed;
@@ -1152,12 +1201,12 @@
                 font-size: 0.82rem;
                 font-weight: 800;
                 color: #fff;
-                box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+                box-shadow: 0 10px 28px rgba(30, 64, 175, 0.28);
                 transition: transform 0.2s ease;
             }
             .course-immersive-float a:hover { transform: translateY(-2px); }
-            .course-immersive-float__wa { background: #16a34a; }
-            .course-immersive-float__ask { background: #1e3a5f; }
+            .course-immersive-float__wa { background: linear-gradient(135deg, #059669, #10b981); }
+            .course-immersive-float__ask { background: linear-gradient(135deg, #1e3a8a, #2563eb); }
 
             @media (prefers-reduced-motion: reduce) {
                 .course-immersive-hero__media { animation: none; }
@@ -1259,14 +1308,13 @@
         $heroWhatsApp = 'https://wa.me/201044610507?text=' . rawurlencode('مهتم بكورس: ' . $heroTitle);
     @endphp
     <section class="course-immersive-hero" aria-label="{{ $heroTitle }}">
-        <div class="course-immersive-hero__media" aria-hidden="true">
+        <div class="course-immersive-hero__media {{ $heroImageUrl ? '' : 'course-immersive-hero__media--fallback' }}" aria-hidden="true">
             @if($heroImageUrl)
                 <img src="{{ $heroImageUrl }}" alt="" loading="eager" fetchpriority="high">
-            @else
-                <div class="absolute inset-0 bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900"></div>
             @endif
         </div>
         <div class="course-immersive-hero__shade" aria-hidden="true"></div>
+        <div class="course-immersive-hero__glow" aria-hidden="true"></div>
 
         <div class="course-immersive-hero__inner"
              @if($heroOfferEndsAt)
@@ -1355,8 +1403,7 @@
                 @endif
 
                 @if(!empty($courseMindMapVisible ?? false))
-                    <a href="{{ route('public.course.mind-map', $course->id) }}"
-                       class="inline-flex items-center gap-2 px-5 py-3 rounded-full border border-white/25 text-white/90 font-bold text-sm hover:bg-white/10 transition">
+                    <a href="{{ route('public.course.mind-map', $course->id) }}" class="course-immersive-secondary">
                         <i class="fas fa-diagram-project"></i>
                         {{ __('public.course_mind_map_short') }}
                     </a>
@@ -1364,10 +1411,10 @@
             </div>
 
             <div class="course-immersive-meta">
-                <span><i class="fas fa-play-circle text-amber-400"></i> {{ $heroLecturesCount }} {{ __('public.lecture_single') }}</span>
-                <span><i class="fas fa-clock text-sky-300"></i> {{ $heroDurationLabel }}</span>
-                <span><i class="fas fa-signal text-emerald-300"></i> {{ $heroLevelLabel }}</span>
-                <span><i class="fas fa-certificate text-violet-300"></i> {{ $__pageRtl ? 'شهادة إتمام' : 'Certificate' }}</span>
+                <span><i class="fas fa-play-circle"></i> {{ $heroLecturesCount }} {{ __('public.lecture_single') }}</span>
+                <span><i class="fas fa-clock"></i> {{ $heroDurationLabel }}</span>
+                <span><i class="fas fa-signal"></i> {{ $heroLevelLabel }}</span>
+                <span><i class="fas fa-certificate"></i> {{ $__pageRtl ? 'شهادة إتمام' : 'Certificate' }}</span>
             </div>
         </div>
     </section>
