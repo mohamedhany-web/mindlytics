@@ -450,8 +450,10 @@ Route::get('/course/{id}', function ($id) {
         ->where('course_id', $course->id)
         ->where('is_approved', true)
         ->with('user')
+        ->orderByDesc('is_featured')
+        ->orderByDesc('is_marketing')
         ->latest()
-        ->limit(20)
+        ->limit(40)
         ->get();
 
     $reviewsAvg = (float) (\App\Models\CourseReview::query()
@@ -2137,6 +2139,14 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         // إدارة التسويق
         Route::get('/personal-branding', [\App\Http\Controllers\Admin\InstructorPersonalBrandingController::class, 'index'])->name('personal-branding.index');
         Route::resource('popup-ads', \App\Http\Controllers\Admin\PopupAdController::class)->except(['show']);
+
+        Route::prefix('marketing-course-reviews')->name('marketing-course-reviews.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\MarketingCourseReviewController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Admin\MarketingCourseReviewController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Admin\MarketingCourseReviewController::class, 'store'])->name('store');
+            Route::post('/{marketing_course_review}/toggle', [\App\Http\Controllers\Admin\MarketingCourseReviewController::class, 'toggleApprove'])->name('toggle');
+            Route::delete('/{marketing_course_review}', [\App\Http\Controllers\Admin\MarketingCourseReviewController::class, 'destroy'])->name('destroy');
+        });
         Route::get('/personal-branding/{personal_branding}', [\App\Http\Controllers\Admin\InstructorPersonalBrandingController::class, 'show'])->name('personal-branding.show');
         Route::post('/personal-branding/{personal_branding}/approve', [\App\Http\Controllers\Admin\InstructorPersonalBrandingController::class, 'approve'])->name('personal-branding.approve');
         Route::post('/personal-branding/{personal_branding}/reject', [\App\Http\Controllers\Admin\InstructorPersonalBrandingController::class, 'reject'])->name('personal-branding.reject');

@@ -946,272 +946,6 @@
                 border: none;
             }
 
-            /* Immersive course hero — Mindlytics blue/emerald identity */
-            .course-immersive-hero {
-                --hero-blue: #1e40af;
-                --hero-blue-deep: #1e3a8a;
-                --hero-blue-bright: #2563eb;
-                --hero-emerald: #10b981;
-                --hero-emerald-deep: #059669;
-                --hero-accent: #34d399;
-                --hero-accent-strong: #10b981;
-                --hero-ink: #f8fafc;
-                --hero-muted: rgba(226, 232, 240, 0.88);
-                position: relative;
-                min-height: min(92svh, 860px);
-                display: flex;
-                align-items: flex-end;
-                overflow: hidden;
-                color: var(--hero-ink);
-                background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 45%, #0f766e 100%);
-            }
-            .course-immersive-hero__media,
-            .course-immersive-hero__media img {
-                position: absolute;
-                inset: 0;
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-            }
-            .course-immersive-hero__media {
-                transform: scale(1.03);
-                animation: courseHeroKen 18s ease-in-out infinite alternate;
-            }
-            .course-immersive-hero__media--fallback {
-                background:
-                    radial-gradient(circle at 18% 20%, rgba(56, 189, 248, 0.28), transparent 42%),
-                    radial-gradient(circle at 82% 18%, rgba(16, 185, 129, 0.22), transparent 40%),
-                    linear-gradient(135deg, #1e3a8a 0%, #1e40af 42%, #2563eb 68%, #0f766e 100%);
-            }
-            @keyframes courseHeroKen {
-                from { transform: scale(1.02) translate3d(0, 0, 0); }
-                to { transform: scale(1.06) translate3d(-1%, -0.8%, 0); }
-            }
-            .course-immersive-hero__shade {
-                position: absolute;
-                inset: 0;
-                background:
-                    linear-gradient(90deg, rgba(30, 58, 138, 0.94) 0%, rgba(30, 64, 175, 0.78) 38%, rgba(5, 150, 105, 0.28) 100%),
-                    linear-gradient(0deg, rgba(15, 23, 42, 0.72) 0%, rgba(30, 64, 175, 0.22) 52%, rgba(30, 58, 138, 0.45) 100%);
-            }
-            [dir="ltr"] .course-immersive-hero__shade {
-                background:
-                    linear-gradient(270deg, rgba(30, 58, 138, 0.94) 0%, rgba(30, 64, 175, 0.78) 38%, rgba(5, 150, 105, 0.28) 100%),
-                    linear-gradient(0deg, rgba(15, 23, 42, 0.72) 0%, rgba(30, 64, 175, 0.22) 52%, rgba(30, 58, 138, 0.45) 100%);
-            }
-            .course-immersive-hero__glow {
-                position: absolute;
-                inset: auto auto -10% -8%;
-                width: min(55vw, 420px);
-                height: min(55vw, 420px);
-                border-radius: 999px;
-                background: radial-gradient(circle, rgba(16, 185, 129, 0.28), transparent 68%);
-                filter: blur(8px);
-                pointer-events: none;
-            }
-            [dir="ltr"] .course-immersive-hero__glow {
-                inset: auto -8% -10% auto;
-            }
-            .course-immersive-hero__inner {
-                position: relative;
-                z-index: 2;
-                width: 100%;
-                max-width: 72rem;
-                margin: 0 auto;
-                padding: 7.5rem 1.25rem 3.5rem;
-            }
-            @media (min-width: 1024px) {
-                .course-immersive-hero__inner { padding: 8.5rem 2rem 4.5rem; }
-            }
-            .course-immersive-brand {
-                font-size: clamp(2rem, 5vw, 3.4rem);
-                font-weight: 900;
-                letter-spacing: -0.03em;
-                line-height: 1;
-                margin-bottom: 1rem;
-            }
-            .course-immersive-brand span {
-                background: linear-gradient(90deg, #93c5fd, #6ee7b7);
-                -webkit-background-clip: text;
-                background-clip: text;
-                color: transparent;
-            }
-            .course-immersive-badges {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 0.6rem;
-                margin-bottom: 1.1rem;
-            }
-            .course-immersive-badge {
-                display: inline-flex;
-                align-items: center;
-                gap: 0.4rem;
-                padding: 0.4rem 0.85rem;
-                border-radius: 999px;
-                font-size: 0.72rem;
-                font-weight: 800;
-                letter-spacing: 0.02em;
-                backdrop-filter: blur(10px);
-            }
-            .course-immersive-badge--offer {
-                background: rgba(16, 185, 129, 0.2);
-                color: #a7f3d0;
-                border: 1px solid rgba(110, 231, 183, 0.4);
-            }
-            .course-immersive-badge--type {
-                background: rgba(37, 99, 235, 0.28);
-                color: #dbeafe;
-                border: 1px solid rgba(147, 197, 253, 0.35);
-            }
-            .course-immersive-title {
-                max-width: 16ch;
-                font-size: clamp(2.1rem, 5.4vw, 4.2rem);
-                font-weight: 900;
-                line-height: 1.08;
-                letter-spacing: -0.03em;
-                margin-bottom: 1rem;
-                text-shadow: 0 10px 30px rgba(15, 23, 42, 0.35);
-            }
-            .course-immersive-title em {
-                font-style: normal;
-                background: linear-gradient(90deg, #6ee7b7, #34d399);
-                -webkit-background-clip: text;
-                background-clip: text;
-                color: transparent;
-            }
-            .course-immersive-lead {
-                max-width: 38rem;
-                color: var(--hero-muted);
-                font-size: clamp(0.98rem, 1.6vw, 1.15rem);
-                line-height: 1.75;
-                margin-bottom: 1.4rem;
-            }
-            .course-immersive-countdown {
-                display: flex;
-                flex-wrap: wrap;
-                align-items: center;
-                gap: 0.75rem 1rem;
-                margin-bottom: 1.4rem;
-            }
-            .course-immersive-countdown__label {
-                font-size: 0.8rem;
-                font-weight: 700;
-                color: rgba(219, 234, 254, 0.85);
-            }
-            .course-immersive-countdown__grid {
-                display: flex;
-                gap: 0.45rem;
-            }
-            .course-immersive-countdown__cell {
-                min-width: 3.35rem;
-                text-align: center;
-                padding: 0.45rem 0.35rem;
-                border-radius: 0.7rem;
-                background: rgba(30, 58, 138, 0.55);
-                border: 1px solid rgba(147, 197, 253, 0.28);
-                box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.08);
-            }
-            .course-immersive-countdown__num {
-                display: block;
-                font-size: 1.15rem;
-                font-weight: 900;
-                font-variant-numeric: tabular-nums;
-            }
-            .course-immersive-countdown__unit {
-                display: block;
-                font-size: 0.65rem;
-                color: rgba(191, 219, 254, 0.7);
-                font-weight: 700;
-            }
-            .course-immersive-cta {
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                gap: 0.75rem;
-                min-height: 3.4rem;
-                padding: 0.9rem 1.4rem;
-                border-radius: 999px;
-                background: linear-gradient(90deg, #2563eb 0%, #3b82f6 45%, #10b981 100%);
-                color: #fff;
-                font-weight: 900;
-                font-size: 1rem;
-                box-shadow: 0 14px 36px rgba(37, 99, 235, 0.38);
-                transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
-            }
-            .course-immersive-cta:hover {
-                transform: translateY(-2px);
-                filter: brightness(1.06);
-                box-shadow: 0 18px 40px rgba(16, 185, 129, 0.35);
-            }
-            .course-immersive-cta__old {
-                text-decoration: line-through;
-                opacity: 0.72;
-                font-weight: 800;
-            }
-            .course-immersive-secondary {
-                display: inline-flex;
-                align-items: center;
-                gap: 0.5rem;
-                padding: 0.8rem 1.2rem;
-                border-radius: 999px;
-                border: 1px solid rgba(147, 197, 253, 0.45);
-                background: rgba(255, 255, 255, 0.08);
-                color: #eff6ff;
-                font-weight: 800;
-                font-size: 0.9rem;
-                transition: background 0.2s ease, border-color 0.2s ease;
-            }
-            .course-immersive-secondary:hover {
-                background: rgba(37, 99, 235, 0.22);
-                border-color: rgba(110, 231, 183, 0.45);
-            }
-            .course-immersive-meta {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 0.85rem 1.25rem;
-                margin-top: 1.35rem;
-                color: rgba(226, 232, 240, 0.9);
-                font-size: 0.86rem;
-                font-weight: 700;
-            }
-            .course-immersive-meta span {
-                display: inline-flex;
-                align-items: center;
-                gap: 0.45rem;
-            }
-            .course-immersive-meta i {
-                color: #6ee7b7;
-            }
-            .course-immersive-float {
-                position: fixed;
-                z-index: 60;
-                display: flex;
-                flex-direction: column;
-                gap: 0.65rem;
-                bottom: 1.25rem;
-            }
-            [dir="rtl"] .course-immersive-float { left: 1rem; }
-            [dir="ltr"] .course-immersive-float { right: 1rem; }
-            .course-immersive-float a {
-                display: inline-flex;
-                align-items: center;
-                gap: 0.55rem;
-                padding: 0.7rem 1rem;
-                border-radius: 999px;
-                font-size: 0.82rem;
-                font-weight: 800;
-                color: #fff;
-                box-shadow: 0 10px 28px rgba(30, 64, 175, 0.28);
-                transition: transform 0.2s ease;
-            }
-            .course-immersive-float a:hover { transform: translateY(-2px); }
-            .course-immersive-float__wa { background: linear-gradient(135deg, #059669, #10b981); }
-            .course-immersive-float__ask { background: linear-gradient(135deg, #1e3a8a, #2563eb); }
-
-            @media (prefers-reduced-motion: reduce) {
-                .course-immersive-hero__media { animation: none; }
-            }
-
             /* Hero section z-index */
             .hero-gradient {
                 position: relative;
@@ -1231,6 +965,219 @@
                 90% { opacity: 0.3; transform: translateY(10vh) rotate(324deg) scale(0.8); }
                 100% { transform: translateY(-10vh) rotate(360deg) scale(0.3); opacity: 0; }
             }
+
+            .course-whatsapp-float {
+                position: fixed;
+                left: 1rem;
+                bottom: 1.25rem;
+                z-index: 99980;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.55rem;
+                padding: 0.7rem 1rem;
+                border-radius: 9999px;
+                background: #25D366;
+                color: #fff;
+                font-weight: 800;
+                font-size: 0.9rem;
+                box-shadow: 0 12px 30px rgba(37, 211, 102, 0.4);
+                text-decoration: none;
+                transform: translateY(120%);
+                opacity: 0;
+                pointer-events: none;
+                transition: transform 0.35s ease, opacity 0.35s ease, box-shadow 0.25s ease;
+            }
+
+            .course-whatsapp-float.is-visible {
+                transform: translateY(0);
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            .course-whatsapp-float:hover {
+                box-shadow: 0 16px 36px rgba(37, 211, 102, 0.5);
+                filter: brightness(1.03);
+            }
+
+            .course-whatsapp-float .course-whatsapp-icon {
+                width: 2rem;
+                height: 2rem;
+                border-radius: 9999px;
+                background: rgba(255,255,255,0.2);
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.15rem;
+            }
+
+            .course-buy-float {
+                position: fixed;
+                right: 1rem;
+                bottom: 1.25rem;
+                z-index: 99980;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.55rem;
+                padding: 0.75rem 1.15rem;
+                border-radius: 9999px;
+                background: linear-gradient(135deg, #2563eb 0%, #16a34a 100%);
+                color: #fff;
+                font-weight: 800;
+                font-size: 0.92rem;
+                box-shadow: 0 12px 30px rgba(37, 99, 235, 0.4);
+                text-decoration: none;
+                transform: translateY(120%);
+                opacity: 0;
+                pointer-events: none;
+                transition: transform 0.35s ease, opacity 0.35s ease, box-shadow 0.25s ease;
+                max-width: calc(100vw - 6.5rem);
+            }
+
+            .course-buy-float.is-visible {
+                transform: translateY(0);
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            .course-buy-float:hover {
+                box-shadow: 0 16px 36px rgba(37, 99, 235, 0.5);
+                filter: brightness(1.04);
+            }
+
+            .course-buy-float .course-buy-icon {
+                width: 2rem;
+                height: 2rem;
+                border-radius: 9999px;
+                background: rgba(255,255,255,0.2);
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.95rem;
+                flex-shrink: 0;
+            }
+
+            .course-buy-float .course-buy-label {
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            /* قسم التقييمات — شبكة بعرض الصفحة */
+            .course-reviews-section-head {
+                text-align: center;
+                margin-bottom: 1.75rem;
+            }
+            .course-reviews-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+                gap: 1.25rem;
+                align-items: stretch;
+                justify-items: stretch;
+                width: 100%;
+            }
+            @media (min-width: 640px) {
+                .course-reviews-grid {
+                    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+                    gap: 1.5rem;
+                }
+            }
+            @media (min-width: 1024px) {
+                .course-reviews-grid {
+                    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                }
+            }
+            .course-review-card {
+                width: 100%;
+                border-radius: 1.15rem;
+                overflow: hidden;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
+                display: flex;
+                flex-direction: column;
+                min-height: 100%;
+            }
+            .course-review-card:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 14px 32px rgba(15, 23, 42, 0.1);
+            }
+            .course-review-card .review-media {
+                position: relative;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                height: 280px;
+                margin: 0;
+                padding: 0.75rem;
+                background: #f8fafc;
+                overflow: hidden;
+                cursor: zoom-in;
+                border: 0;
+            }
+            .course-review-card .review-media img {
+                display: block;
+                max-width: 100%;
+                max-height: 100%;
+                width: auto;
+                height: auto;
+                object-fit: contain;
+                object-position: center;
+                border-radius: 0.5rem;
+            }
+            .course-review-card .review-meta {
+                padding: 0.85rem 1rem 1rem;
+                border-top: 1px solid #f1f5f9;
+                margin-top: auto;
+            }
+            .course-review-card.is-text-only {
+                background: linear-gradient(160deg, #ffffff, #f8fafc);
+                min-height: 220px;
+            }
+            .course-review-lightbox {
+                position: fixed;
+                inset: 0;
+                z-index: 100000;
+                background: rgba(2, 6, 23, 0.9);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 1rem;
+            }
+            .course-review-lightbox img {
+                max-width: min(94vw, 920px);
+                max-height: 90vh;
+                width: auto;
+                height: auto;
+                border-radius: 0.75rem;
+                object-fit: contain;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+            }
+            @media (min-width: 768px) {
+                .course-review-card .review-media {
+                    height: 320px;
+                }
+            }
+
+            @media (max-width: 640px) {
+                .course-whatsapp-float {
+                    left: 0.75rem;
+                    bottom: 0.9rem;
+                    padding: 0.75rem;
+                }
+                .course-whatsapp-float .course-whatsapp-label {
+                    display: none;
+                }
+                .course-buy-float {
+                    right: 0.75rem;
+                    bottom: 0.9rem;
+                    left: 4.25rem;
+                    max-width: none;
+                    justify-content: center;
+                    padding: 0.8rem 1rem;
+                }
+            }
         </style>
     </head>
 
@@ -1239,6 +1186,46 @@
       :class="{ 'overflow-hidden': mobileMenu }">
 
     @include('components.unified-navbar')
+
+    @php
+        $courseContact = $platformContact ?? \App\Support\PlatformSettings::contactPage();
+        $courseWhatsappDigits = \App\Support\PlatformSettings::phoneDigits((string) ($courseContact['whatsapp'] ?? ''));
+        if ($courseWhatsappDigits === '') {
+            $courseWhatsappDigits = \App\Support\PlatformSettings::phoneDigits((string) ($courseContact['phone'] ?? ''));
+        }
+        // تطبيع أرقام مصر المحلية إلى صيغة دولية لـ wa.me
+        if ($courseWhatsappDigits !== '' && str_starts_with($courseWhatsappDigits, '0')) {
+            $courseWhatsappDigits = '20' . substr($courseWhatsappDigits, 1);
+        }
+        $courseWhatsappText = rawurlencode(
+            'مرحباً فريق Mindlytics، أريد الاستفسار عن كورس: ' . ($course->localized('title') ?: $course->title)
+        );
+        $courseWhatsappUrl = $courseWhatsappDigits !== ''
+            ? 'https://wa.me/' . $courseWhatsappDigits . '?text=' . $courseWhatsappText
+            : null;
+
+        $courseBuyFloatUrl = null;
+        $courseBuyFloatLabel = __('public.buy_now');
+        $courseBuyFloatIcon = 'fa-shopping-cart';
+        if (!empty($isEnrolled)) {
+            $courseBuyFloatUrl = route('courses.show', $course->id);
+            $courseBuyFloatLabel = __('public.start_learning_now');
+            $courseBuyFloatIcon = 'fa-play-circle';
+        } elseif (($course->effectivePrice() ?? $course->price ?? 0) > 0 && !($course->is_free ?? false)) {
+            $courseBuyFloatUrl = route('public.course.checkout', $course->id);
+            $priceLabel = number_format((float) $course->effectivePrice(), 0) . ' ج.م';
+            $courseBuyFloatLabel = __('public.buy_now') . ' · ' . $priceLabel;
+            $courseBuyFloatIcon = 'fa-shopping-cart';
+        } elseif (auth()->check()) {
+            $courseBuyFloatUrl = route('public.course.enroll.free', $course->id);
+            $courseBuyFloatLabel = __('public.register_free');
+            $courseBuyFloatIcon = 'fa-gift';
+        } else {
+            $courseBuyFloatUrl = route('register', ['redirect' => route('public.course.enroll.free', $course->id)]);
+            $courseBuyFloatLabel = __('public.register_free');
+            $courseBuyFloatIcon = 'fa-gift';
+        }
+    @endphp
 
     @if(session('payment_success_modal'))
         @include('components.payment-success-modal', [
@@ -1280,151 +1267,203 @@
             </div>
         </div>
     @endif
-    <!-- Immersive course hero -->
-    @php
-        $heroThumb = $course->thumbnail ? str_replace('\\', '/', $course->thumbnail) : null;
-        $heroImageUrl = $heroThumb ? asset('storage/' . $heroThumb) : null;
-        $heroLecturesCount = (int) ($course->lectures_count ?? $course->total_lectures ?? 0);
-        $heroDurationLabel = $course->display_duration_label;
-        $heroHasDiscount = $course->hasCourseDiscount();
-        $heroIsPaid = ($course->effectivePrice() ?? 0) > 0 && !($course->is_free ?? false);
-        $heroOfferEndsAt = $course->ends_at && $course->ends_at->isFuture() ? $course->ends_at->toIso8601String() : null;
-        $heroShowOffer = $heroHasDiscount || $heroOfferEndsAt;
-        $heroTitle = $course->localized('title') ?: __('public.course_title_fallback');
-        $heroWords = preg_split('/\s+/u', trim($heroTitle), -1, PREG_SPLIT_NO_EMPTY) ?: [];
-        $heroAccentWord = count($heroWords) > 1 ? array_pop($heroWords) : null;
-        $heroTitleLead = $heroAccentWord ? implode(' ', $heroWords) : $heroTitle;
-        $heroDesc = \Illuminate\Support\Str::limit(strip_tags($course->localized('description') ?: __('public.course_desc_fallback')), 180);
-        $heroCheckoutUrl = route('public.course.checkout', $course->id);
-        $heroFreeUrl = auth()->check()
-            ? route('public.course.enroll.free', $course->id)
-            : route('register', ['redirect' => route('public.course.enroll.free', $course->id)]);
-        $heroPrimaryUrl = ($isEnrolled ?? false)
-            ? route('courses.show', $course->id)
-            : ($heroIsPaid ? $heroCheckoutUrl : $heroFreeUrl);
-        $heroLevelLabel = $course->level === 'beginner'
-            ? __('public.level_beginner')
-            : ($course->level === 'intermediate' ? __('public.level_intermediate') : __('public.level_advanced'));
-        $heroWhatsApp = 'https://wa.me/201044610507?text=' . rawurlencode('مهتم بكورس: ' . $heroTitle);
-    @endphp
-    <section class="course-immersive-hero" aria-label="{{ $heroTitle }}">
-        <div class="course-immersive-hero__media {{ $heroImageUrl ? '' : 'course-immersive-hero__media--fallback' }}" aria-hidden="true">
-            @if($heroImageUrl)
-                <img src="{{ $heroImageUrl }}" alt="" loading="eager" fetchpriority="high">
-            @endif
+    <!-- Hero Section - بدون صورة الكورس في الخلفية -->
+    <section class="hero-section relative overflow-hidden min-h-[70vh] flex items-center pt-16 lg:pt-20">
+        <!-- Animated Background -->
+        <div class="animated-background absolute inset-0 overflow-hidden">
+            <!-- Floating Circles -->
+            <div class="floating-circle circle-1"></div>
+            <div class="floating-circle circle-2"></div>
+            <div class="floating-circle circle-3"></div>
+            <div class="floating-circle circle-4"></div>
+            <div class="floating-circle circle-5"></div>
+            
+            <!-- Floating Code Symbols -->
+            <div class="floating-code-symbol code-symbol-1">&lt;/&gt;</div>
+            <div class="floating-code-symbol code-symbol-2">{ }</div>
+            <div class="floating-code-symbol code-symbol-3">( )</div>
+            <div class="floating-code-symbol code-symbol-4">[ ]</div>
+            <div class="floating-code-symbol code-symbol-5">#</div>
+            <div class="floating-code-symbol code-symbol-6">$</div>
+            <div class="floating-code-symbol code-symbol-7">&lt;div&gt;</div>
+            <div class="floating-code-symbol code-symbol-8">=&gt;</div>
+            <div class="floating-code-symbol code-symbol-9">const</div>
+            <div class="floating-code-symbol code-symbol-10">function</div>
+            <div class="floating-code-symbol code-symbol-11">import</div>
+            <div class="floating-code-symbol code-symbol-12">export</div>
+            
+            <!-- Floating Lines -->
+            <div class="floating-line line-1"></div>
+            <div class="floating-line line-2"></div>
+            <div class="floating-line line-3"></div>
+            
+            <!-- Floating Particles -->
+            <div class="floating-particle particle-1"></div>
+            <div class="floating-particle particle-2"></div>
+            <div class="floating-particle particle-3"></div>
+            <div class="floating-particle particle-4"></div>
+            <div class="floating-particle particle-5"></div>
+            <div class="floating-particle particle-6"></div>
+            <div class="floating-particle particle-7"></div>
+            <div class="floating-particle particle-8"></div>
         </div>
-        <div class="course-immersive-hero__shade" aria-hidden="true"></div>
-        <div class="course-immersive-hero__glow" aria-hidden="true"></div>
+        
+        <!-- Hero Glow -->
+        <div class="hero-glow absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-radial from-blue-400/20 via-green-400/10 to-transparent rounded-full blur-3xl"></div>
+        
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full py-8 lg:py-10">
+            <!-- Breadcrumb -->
+            <nav class="mb-4 text-gray-600 text-sm flex items-center fade-in-up">
+                <a href="{{ url('/') }}" class="hover:text-blue-600 transition-colors">{{ __('public.home') }}</a>
+                <span class="mx-2 text-gray-400">/</span>
+                <a href="{{ route('public.courses') }}" class="hover:text-blue-600 transition-colors">{{ __('public.courses') }}</a>
+                <span class="mx-2 text-gray-400">/</span>
+                <span class="text-gray-900 font-medium">{{ Str::limit($course->localized('title') ?: __('public.course_fallback'), 30) }}</span>
+            </nav>
 
-        <div class="course-immersive-hero__inner"
-             @if($heroOfferEndsAt)
-                 x-data="courseOfferCountdown(@js($heroOfferEndsAt))"
-                 x-init="tick()"
-             @endif>
-            <p class="course-immersive-brand"><span>Mindlytics</span></p>
-
-            <div class="course-immersive-badges">
-                @if($heroShowOffer)
-                    <span class="course-immersive-badge course-immersive-badge--offer">
-                        <i class="fas fa-bolt"></i>
-                        {{ $__pageRtl ? 'عرض لفترة محدودة' : 'Limited time offer' }}
-                    </span>
-                @endif
-                <span class="course-immersive-badge course-immersive-badge--type">
-                    {{ $__pageRtl ? 'كورس أونلاين مسجّل' : 'Recorded Online Course' }}
-                </span>
-            </div>
-
-            <h1 class="course-immersive-title">
-                @if($heroAccentWord)
-                    {{ $heroTitleLead }} <em>{{ $heroAccentWord }}</em>
-                @else
-                    {{ $heroTitle }}
-                @endif
-            </h1>
-
-            <p class="course-immersive-lead">
-                {{ $heroDesc }}
-                @if($heroLecturesCount > 0)
-                    <strong class="text-white">
-                        {{ $__pageRtl
-                            ? " · {$heroLecturesCount} محاضرة مسجّلة — اتعلّم بوتيرتك."
-                            : " · {$heroLecturesCount} recorded lectures — learn at your own pace." }}
-                    </strong>
-                @endif
-            </p>
-
-            @if($heroOfferEndsAt)
-                <div class="course-immersive-countdown" x-show="alive" x-cloak>
-                    <span class="course-immersive-countdown__label">{{ $__pageRtl ? 'ينتهي العرض خلال' : 'Offer ends in' }}</span>
-                    <div class="course-immersive-countdown__grid" dir="ltr">
-                        <div class="course-immersive-countdown__cell">
-                            <span class="course-immersive-countdown__num" x-text="days">00</span>
-                            <span class="course-immersive-countdown__unit">{{ $__pageRtl ? 'يوم' : 'Day' }}</span>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
+                <!-- Course Info -->
+                <div class="slide-in-left">
+                    @if($course->is_featured ?? false)
+                        <div class="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full shadow-md mb-4 fade-in-up">
+                            <i class="fas fa-star text-yellow-900 text-[8px]"></i>
+                            <span class="text-yellow-900 font-bold text-[9px]">{{ __('public.featured_course_badge') }}</span>
                         </div>
-                        <div class="course-immersive-countdown__cell">
-                            <span class="course-immersive-countdown__num" x-text="hours">00</span>
-                            <span class="course-immersive-countdown__unit">{{ $__pageRtl ? 'ساعة' : 'Hour' }}</span>
+                    @endif
+                    
+                    <h1 class="text-3xl md:text-4xl lg:text-5xl font-black mb-3 leading-tight text-gray-900 fade-in-up" style="animation-delay: 0.1s;">
+                        {{ $course->localized('title') ?: __('public.course_title_fallback') }}
+                    </h1>
+                    
+                    <p class="text-base md:text-lg text-gray-600 mb-5 leading-relaxed fade-in-up" style="animation-delay: 0.2s;">
+                        {{ $course->localized('description') ?: __('public.course_desc_fallback') }}
+                    </p>
+
+                    <!-- Course Stats -->
+                    <div class="grid grid-cols-3 gap-4 mb-6 fade-in-up" style="animation-delay: 0.1s;">
+                        <div class="bg-white rounded-2xl p-4 text-center border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
+                            <div class="text-3xl font-black text-blue-600 mb-2">{{ $course->lectures_count ?? $course->total_lectures ?? 0 }}</div>
+                            <div class="text-sm text-gray-600 font-medium">{{ __('public.lecture_single') }}</div>
                         </div>
-                        <div class="course-immersive-countdown__cell">
-                            <span class="course-immersive-countdown__num" x-text="mins">00</span>
-                            <span class="course-immersive-countdown__unit">{{ $__pageRtl ? 'د' : 'Min' }}</span>
+                        <div class="bg-white rounded-2xl p-4 text-center border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
+                            <div class="text-3xl font-black text-green-600 mb-2">{{ $course->display_duration_hours }}</div>
+                            <div class="text-sm text-gray-600 font-medium">{{ __('public.hours') }}</div>
                         </div>
-                        <div class="course-immersive-countdown__cell">
-                            <span class="course-immersive-countdown__num" x-text="secs">00</span>
-                            <span class="course-immersive-countdown__unit">{{ $__pageRtl ? 'ث' : 'Sec' }}</span>
+                        <div class="bg-white rounded-2xl p-4 text-center border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
+                            <div class="text-xl font-black text-gray-700 mb-2">
+                                @if($course->level == 'beginner') {{ __('public.level_beginner') }}
+                                @elseif($course->level == 'intermediate') {{ __('public.level_intermediate') }}
+                                @else {{ __('public.level_advanced') }}
+                                @endif
+                            </div>
+                            <div class="text-sm text-gray-600 font-medium">{{ __('public.level_label') }}</div>
                         </div>
                     </div>
-                </div>
-            @endif
 
-            <div class="flex flex-wrap items-center gap-3">
-                @if($isEnrolled ?? false)
-                    <a href="{{ $heroPrimaryUrl }}" class="course-immersive-cta">
-                        <i class="fas fa-play"></i>
-                        <span>{{ __('public.start_learning_now') }}</span>
-                        <i class="fas {{ $__pageRtl ? 'fa-arrow-left' : 'fa-arrow-right' }}"></i>
-                    </a>
-                @elseif($heroIsPaid)
-                    <a href="{{ $heroPrimaryUrl }}" class="course-immersive-cta">
-                        @if($heroHasDiscount)
-                            <span class="course-immersive-cta__old">{{ number_format($course->originalPrice(), 0) }} {{ $__pageRtl ? 'ج.م' : 'EGP' }}</span>
-                            <span>{{ $__pageRtl ? 'اشترك الآن' : 'Enroll Now' }}, {{ number_format($course->effectivePrice(), 0) }} {{ $__pageRtl ? 'ج.م فقط' : 'EGP only' }}</span>
-                        @else
-                            <span>{{ $__pageRtl ? 'اشترك الآن' : 'Enroll Now' }} — {{ number_format($course->effectivePrice(), 0) }} {{ $__pageRtl ? 'ج.م' : 'EGP' }}</span>
+                    @if($course->instructor && \App\Models\InstructorProfile::where('user_id', $course->instructor->id)->where('status', 'approved')->exists())
+                    <div class="mb-6 fade-in-up" style="animation-delay: 0.15s;">
+                        <span class="text-sm text-gray-600 font-medium">{{ __('public.instructor_label') }}</span>
+                        <a href="{{ route('public.instructors.show', $course->instructor) }}" class="text-blue-600 hover:text-blue-700 font-bold hover:underline">{{ $course->instructor->name }}</a>
+                    </div>
+                    @elseif($course->instructor)
+                    <div class="mb-6 fade-in-up" style="animation-delay: 0.15s;">
+                        <span class="text-sm text-gray-600 font-medium">{{ __('public.instructor_label') }}</span>
+                        <span class="font-semibold text-gray-800">{{ $course->instructor->name }}</span>
+                    </div>
+                    @endif
+
+                    <!-- CTA Buttons -->
+                    <div class="flex flex-col sm:flex-row flex-wrap gap-4 fade-in-up" style="animation-delay: 0.3s;">
+                        @if(!empty($courseMindMapVisible ?? false))
+                            <a href="{{ route('public.course.mind-map', $course->id) }}" class="inline-flex items-center justify-center gap-2 bg-white text-emerald-700 px-6 py-3 rounded-full font-bold text-base border-2 border-emerald-500 shadow-md hover:bg-emerald-50 hover:shadow-lg transition-all duration-300">
+                                <i class="fas fa-diagram-project"></i>
+                                {{ __('public.course_mind_map_button') }}
+                            </a>
                         @endif
-                        <i class="fas {{ $__pageRtl ? 'fa-arrow-left' : 'fa-arrow-right' }}"></i>
-                    </a>
-                @else
-                    <a href="{{ $heroPrimaryUrl }}" class="course-immersive-cta">
-                        <i class="fas fa-gift"></i>
-                        <span>{{ __('public.register_free') }}</span>
-                    </a>
-                @endif
+                        @auth
+                            @if($isEnrolled ?? false)
+                                <a href="{{ route('courses.show', $course->id) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                                    <i class="fas fa-play-circle"></i>
+                                    {{ __('public.start_learning_now') }}
+                                </a>
+                            @else
+                                @if(($course->effectivePrice() ?? 0) > 0 && !($course->is_free ?? false))
+                                    <a href="{{ route('public.course.checkout', $course->id) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                                        <i class="fas fa-shopping-cart"></i>
+                                        {{ __('public.buy_now') }}
+                                    </a>
+                                @else
+                                    <a href="{{ route('public.course.enroll.free', $course->id) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                                        <i class="fas fa-gift"></i>
+                                        {{ __('public.register_free') }}
+                                    </a>
+                                @endif
+                            @endif
+                        @endauth
+                        @guest
+                            @if(($course->price ?? 0) > 0 && !($course->is_free ?? false))
+                                <a href="{{ route('public.course.checkout', $course->id) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                                    <i class="fas fa-shopping-cart"></i>
+                                    {{ __('public.buy_now') }}
+                                </a>
+                            @else
+                                <a href="{{ route('register', ['redirect' => route('public.course.enroll.free', $course->id)]) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                                    <i class="fas fa-gift"></i>
+                                    {{ __('public.register_free') }}
+                                </a>
+                            @endif
+                        @endguest
+                        <a href="{{ route('public.courses') }}" class="inline-flex items-center justify-center gap-2 bg-white text-blue-600 px-6 py-3 rounded-full font-bold text-base border-2 border-blue-600 hover:bg-blue-50 transition-all duration-300">
+                            <i class="fas fa-arrow-right"></i>
+                            {{ __('public.all_courses') }}
+                        </a>
+                        @if($courseWhatsappUrl)
+                            <a href="{{ $courseWhatsappUrl }}"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               data-course-whatsapp-inline
+                               class="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe57] text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300">
+                                <i class="fab fa-whatsapp text-lg"></i>
+                                تواصل مع التيم
+                            </a>
+                        @endif
+                    </div>
+                </div>
 
-                @if(!empty($courseMindMapVisible ?? false))
-                    <a href="{{ route('public.course.mind-map', $course->id) }}" class="course-immersive-secondary">
-                        <i class="fas fa-diagram-project"></i>
-                        {{ __('public.course_mind_map_short') }}
-                    </a>
-                @endif
-            </div>
-
-            <div class="course-immersive-meta">
-                <span><i class="fas fa-play-circle"></i> {{ $heroLecturesCount }} {{ __('public.lecture_single') }}</span>
-                <span><i class="fas fa-clock"></i> {{ $heroDurationLabel }}</span>
-                <span><i class="fas fa-signal"></i> {{ $heroLevelLabel }}</span>
-                <span><i class="fas fa-certificate"></i> {{ $__pageRtl ? 'شهادة إتمام' : 'Certificate' }}</span>
+                <!-- Right column: Intro video + Price card -->
+                <div class="flex flex-col gap-6">
+                    <!-- مقدمة الكورس (نفس فكرة المسار) -->
+                    <div class="relative fade-in-up max-w-xl" style="animation-delay: 0.2s;">
+                        @if($course->video_url ?? null)
+                        @php
+                            $introVideoUrl = trim((string) ($course->video_url ?? ''));
+                        @endphp
+                        <div class="bg-white rounded-2xl p-4 shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300">
+                            <div class="text-center mb-3">
+                                <h2 class="text-lg font-bold text-gray-900 mb-0.5 flex items-center justify-center gap-2">
+                                    <i class="fas fa-play-circle text-blue-600 text-base"></i>
+                                    {{ __('public.intro_video_title') }}
+                                </h2>
+                                <p class="text-gray-500 text-sm">{{ __('public.intro_video_desc') }}</p>
+                            </div>
+                            @include('partials.intro-video-embed', [
+                                'url' => $introVideoUrl,
+                                'title' => __('public.intro_video_title'),
+                            ])
+                        </div>
+                        @else
+                        <div class="bg-white rounded-2xl p-4 shadow-lg border border-gray-200">
+                            <div class="text-center text-gray-500 py-6">
+                                <i class="fas fa-video text-2xl mb-2 text-gray-300"></i>
+                                <p class="text-sm">{{ __('public.no_intro_video') ?? 'لا يوجد فيديو مقدمة' }}</p>
+                            </div>
+                        </div>
+                        @endif
+                    </div>
+                </div>
             </div>
         </div>
     </section>
-
-    <div class="course-immersive-float" aria-label="{{ $__pageRtl ? 'تواصل سريع' : 'Quick contact' }}">
-        <a href="{{ $heroWhatsApp }}" target="_blank" rel="noopener" class="course-immersive-float__wa">
-            <i class="fab fa-whatsapp text-lg"></i>
-            <span>{{ $__pageRtl ? 'كلّم الفريق' : 'Talk to the team' }}</span>
-        </a>
-    </div>
 
     <!-- Course Details Section -->
     <section class="py-12 md:py-16 bg-gradient-to-b from-gray-50 via-white to-gray-50 relative z-10">
@@ -1432,20 +1471,6 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
                 <!-- Main Content -->
                 <div class="lg:col-span-2 space-y-6">
-                    @if($course->video_url ?? null)
-                        <div class="bg-white rounded-2xl shadow-lg p-6 lg:p-8 border border-gray-200 fade-in-up">
-                            <h2 class="text-2xl lg:text-3xl font-black text-gray-900 mb-4 flex items-center gap-3">
-                                <i class="fas fa-play-circle text-blue-600"></i>
-                                {{ __('public.intro_video_title') }}
-                            </h2>
-                            <p class="text-gray-500 text-sm mb-4">{{ __('public.intro_video_desc') }}</p>
-                            @include('partials.intro-video-embed', [
-                                'url' => trim((string) $course->video_url),
-                                'title' => __('public.intro_video_title'),
-                            ])
-                        </div>
-                    @endif
-
                     <!-- About Course -->
                     <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 lg:p-8 border border-gray-200 fade-in-up">
                         <h2 class="text-2xl lg:text-3xl font-black text-gray-900 mb-6 flex items-center gap-3">
@@ -1899,6 +1924,16 @@
                                     </a>
                                         @endif
                                 @endguest
+                                @if($courseWhatsappUrl)
+                                    <a href="{{ $courseWhatsappUrl }}"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       data-course-whatsapp-inline
+                                       class="mt-3 inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe57] text-white px-6 py-3.5 rounded-xl font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 w-full">
+                                        <i class="fab fa-whatsapp text-lg"></i>
+                                        تواصل مع التيم عبر واتساب
+                                    </a>
+                                @endif
                                 </div>
                             </div>
                         </div>
@@ -1931,89 +1966,122 @@
                         </div>
                         @endif
 
-                        <!-- Reviews -->
-                        <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-200">
-                            <div class="flex items-start justify-between gap-4 mb-4">
-                                <div>
-                                    <h3 class="text-xl font-black text-gray-900">التقييمات والمراجعات</h3>
-                                    <p class="text-sm text-gray-600 mt-1">
-                                        <span class="font-bold text-yellow-600">{{ number_format((float) ($reviewsAvg ?? 0), 1) }}</span>
-                                        <span class="text-gray-400">/ 5</span>
-                                        <span class="text-gray-500">— ({{ number_format((int) ($reviewsCount ?? 0)) }} مراجعة)</span>
-                                    </p>
-                                </div>
-                            </div>
-
-                            @if(session('success') && !session('payment_success_modal'))
-                                <div class="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold">
-                                    {{ session('success') }}
-                                </div>
-                            @endif
-                            @if($errors->any())
-                                <div class="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm">
-                                    {{ $errors->first() }}
-                                </div>
-                            @endif
-
-                            @auth
-                                @if($isEnrolled ?? false)
-                                    <form action="{{ route('public.course.reviews.store', $course->id) }}" method="POST" class="mb-6 space-y-3">
-                                        @csrf
-                                        <div>
-                                            <label class="block text-sm font-bold text-gray-800 mb-2">تقييمك <span class="text-rose-500">*</span></label>
-                                            <select name="rating" required class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500">
-                                                <option value="">اختر التقييم</option>
-                                                @for($i=5; $i>=1; $i--)
-                                                    <option value="{{ $i }}" @selected((string) old('rating') === (string) $i)>{{ $i }} / 5</option>
-                                                @endfor
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="block text-sm font-bold text-gray-800 mb-2">اكتب مراجعتك <span class="text-rose-500">*</span></label>
-                                            <textarea name="comment" rows="3" required class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500" placeholder="شارك رأيك في الكورس">{{ old('comment') }}</textarea>
-                                        </div>
-                                        <button type="submit" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transition-all">
-                                            <i class="fas fa-paper-plane"></i>
-                                            نشر
-                                        </button>
-                                    </form>
-                                @else
-                                    <div class="mb-6 p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-sm font-semibold">
-                                        يجب أن تكون مسجلاً في الكورس لتتمكن من إضافة تقييم.
-                                    </div>
-                                @endif
-                            @endauth
-                            @guest
-                                <div class="mb-6 p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-sm font-semibold">
-                                    <a class="text-blue-700 hover:underline" href="{{ route('login', ['redirect' => url()->current()]) }}">سجّل دخولك</a>
-                                    لإضافة تقييم.
-                                </div>
-                            @endguest
-
-                            @if(isset($approvedReviews) && $approvedReviews->count() > 0)
-                                <div class="space-y-4">
-                                    @foreach($approvedReviews as $r)
-                                        <div class="p-4 rounded-xl border border-gray-200 bg-gray-50">
-                                            <div class="flex items-center justify-between gap-3">
-                                                <div class="font-bold text-gray-900 text-sm">{{ $r->user->name ?? 'طالب' }}</div>
-                                                <div class="flex items-center gap-1 text-xs">
-                                                    @for($i = 1; $i <= 5; $i++)
-                                                        <i class="fas fa-star {{ $i <= (int) $r->rating ? 'text-yellow-400' : 'text-gray-300' }}"></i>
-                                                    @endfor
-                                                </div>
-                                            </div>
-                                            <div class="text-gray-700 text-sm mt-2 whitespace-pre-wrap">{{ $r->comment ?? $r->review ?? '' }}</div>
-                                            <div class="text-xs text-gray-400 mt-2">{{ $r->created_at?->format('Y-m-d') }}</div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @else
-                                <div class="text-sm text-gray-500">لا توجد مراجعات منشورة بعد.</div>
-                            @endif
-                        </div>
                     </div>
                 </div>
             </div>
+        </div>
+    </section>
+
+    <!-- التقييمات — بعرض الصفحة كامل -->
+    <section class="py-12 md:py-16 bg-white relative z-10 border-y border-slate-100" x-data="courseReviewsGallery()">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="course-reviews-section-head">
+                <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 text-xl mb-3">
+                    <i class="fas fa-star"></i>
+                </div>
+                <h2 class="text-2xl md:text-3xl font-black text-gray-900">التقييمات</h2>
+                @if(($reviewsCount ?? 0) > 0)
+                    <p class="mt-2 text-sm md:text-base text-gray-500">
+                        <span class="font-bold text-amber-500 text-lg">{{ number_format((float) ($reviewsAvg ?? 0), 1) }}</span>
+                        <span class="text-gray-400">/ 5</span>
+                        <span class="mx-1">·</span>
+                        <span>{{ number_format((int) ($reviewsCount ?? 0)) }} تقييم</span>
+                    </p>
+                @endif
+            </div>
+
+            @if(session('success') && !session('payment_success_modal'))
+                <div class="mb-5 max-w-2xl mx-auto p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold text-center">
+                    {{ session('success') }}
+                </div>
+            @endif
+            @if($errors->any())
+                <div class="mb-5 max-w-2xl mx-auto p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm text-center">
+                    {{ $errors->first() }}
+                </div>
+            @endif
+
+            @auth
+                @if($isEnrolled ?? false)
+                    <form action="{{ route('public.course.reviews.store', $course->id) }}" method="POST"
+                          class="mb-8 max-w-3xl mx-auto space-y-3 p-5 rounded-2xl bg-slate-50 border border-slate-200">
+                        @csrf
+                        <div class="grid sm:grid-cols-3 gap-3">
+                            <div class="sm:col-span-1">
+                                <label class="block text-sm font-bold text-gray-800 mb-2">تقييمك <span class="text-rose-500">*</span></label>
+                                <select name="rating" required class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500">
+                                    <option value="">اختر</option>
+                                    @for($i=5; $i>=1; $i--)
+                                        <option value="{{ $i }}" @selected((string) old('rating') === (string) $i)>{{ $i }} / 5</option>
+                                    @endfor
+                                </select>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-sm font-bold text-gray-800 mb-2">اكتب مراجعتك <span class="text-rose-500">*</span></label>
+                                <textarea name="comment" rows="2" required class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500" placeholder="شارك رأيك في الكورس">{{ old('comment') }}</textarea>
+                            </div>
+                        </div>
+                        <button type="submit" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg">
+                            <i class="fas fa-paper-plane"></i>
+                            نشر
+                        </button>
+                    </form>
+                @endif
+            @endauth
+
+            @if(isset($approvedReviews) && $approvedReviews->count() > 0)
+                <div class="course-reviews-grid">
+                    @foreach($approvedReviews as $r)
+                        @php
+                            $hasImage = filled($r->image_path);
+                            $body = $r->body_text;
+                        @endphp
+                        <article class="course-review-card {{ $hasImage ? 'has-image' : 'is-text-only' }}">
+                            @if($hasImage)
+                                <button type="button" class="review-media" @click="openLightbox(@js($r->image_url))" title="تكبير">
+                                    <img src="{{ $r->image_url }}" alt="تقييم {{ $r->display_name }}" loading="lazy" decoding="async">
+                                </button>
+                                <div class="review-meta">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <div class="font-bold text-gray-900 text-sm truncate">{{ $r->display_name }}</div>
+                                        <div class="flex items-center gap-0.5 shrink-0">
+                                            @for($i = 1; $i <= 5; $i++)
+                                                <i class="fas fa-star text-[11px] {{ $i <= (int) $r->rating ? 'text-amber-400' : 'text-gray-200' }}"></i>
+                                            @endfor
+                                        </div>
+                                    </div>
+                                    @if($body !== '')
+                                        <p class="text-gray-500 text-xs leading-relaxed line-clamp-2 mt-1.5 whitespace-pre-wrap">{{ $body }}</p>
+                                    @endif
+                                </div>
+                            @else
+                                <div class="review-meta flex-1 flex flex-col justify-between gap-3 p-5">
+                                    <div>
+                                        <div class="flex items-center gap-0.5 mb-3">
+                                            @for($i = 1; $i <= 5; $i++)
+                                                <i class="fas fa-star text-sm {{ $i <= (int) $r->rating ? 'text-amber-400' : 'text-gray-200' }}"></i>
+                                            @endfor
+                                        </div>
+                                        @if($body !== '')
+                                            <p class="text-gray-700 text-sm leading-relaxed line-clamp-6 whitespace-pre-wrap">{{ $body }}</p>
+                                        @endif
+                                    </div>
+                                    <div class="font-bold text-gray-900 text-sm truncate pt-2 border-t border-slate-100">{{ $r->display_name }}</div>
+                                </div>
+                            @endif
+                        </article>
+                    @endforeach
+                </div>
+            @else
+                <div class="text-center text-sm text-gray-500 py-8">لا توجد تقييمات منشورة بعد.</div>
+            @endif
+        </div>
+
+        <div x-show="lightbox" x-cloak class="course-review-lightbox" @click.self="closeLightbox()" @keydown.escape.window="closeLightbox()">
+            <button type="button" class="absolute top-4 left-4 w-11 h-11 rounded-full bg-white/10 text-white hover:bg-white/20" @click="closeLightbox()" aria-label="إغلاق">
+                <i class="fas fa-times"></i>
+            </button>
+            <img :src="lightbox" alt="معاينة التقييم" @click.stop>
         </div>
     </section>
 
@@ -2063,45 +2131,67 @@
     </section>
 
     </main>
+
+    @if($courseWhatsappUrl)
+        <a href="{{ $courseWhatsappUrl }}"
+           id="course-whatsapp-float"
+           class="course-whatsapp-float"
+           target="_blank"
+           rel="noopener noreferrer"
+           aria-label="تواصل مع التيم عبر واتساب">
+            <span class="course-whatsapp-icon"><i class="fab fa-whatsapp"></i></span>
+            <span class="course-whatsapp-label">تواصل مع التيم</span>
+        </a>
+    @endif
+
+    @if($courseBuyFloatUrl)
+        <a href="{{ $courseBuyFloatUrl }}"
+           id="course-buy-float"
+           class="course-buy-float"
+           aria-label="{{ $courseBuyFloatLabel }}">
+            <span class="course-buy-icon"><i class="fas {{ $courseBuyFloatIcon }}"></i></span>
+            <span class="course-buy-label">{{ $courseBuyFloatLabel }}</span>
+        </a>
+    @endif
     
     <!-- Unified Footer -->
     @include('components.unified-footer')
 
     <!-- Dynamic JavaScript -->
     <script>
-        function courseOfferCountdown(isoEndsAt) {
+        (function () {
+            var floatBtns = [
+                document.getElementById('course-whatsapp-float'),
+                document.getElementById('course-buy-float')
+            ].filter(Boolean);
+            if (!floatBtns.length) return;
+
+            var threshold = 280;
+            function updateFloat() {
+                var visible = window.scrollY > threshold;
+                floatBtns.forEach(function (btn) {
+                    btn.classList.toggle('is-visible', visible);
+                });
+            }
+
+            window.addEventListener('scroll', updateFloat, { passive: true });
+            updateFloat();
+        })();
+
+        function courseReviewsGallery() {
             return {
-                endsAt: new Date(isoEndsAt).getTime(),
-                alive: true,
-                days: '00',
-                hours: '00',
-                mins: '00',
-                secs: '00',
-                timer: null,
-                pad(n) { return String(Math.max(0, n)).padStart(2, '0'); },
-                tick() {
-                    const self = this;
-                    const run = function () {
-                        const diff = self.endsAt - Date.now();
-                        if (diff <= 0) {
-                            self.alive = false;
-                            self.days = self.hours = self.mins = self.secs = '00';
-                            if (self.timer) clearInterval(self.timer);
-                            return;
-                        }
-                        const totalSec = Math.floor(diff / 1000);
-                        self.days = self.pad(Math.floor(totalSec / 86400));
-                        self.hours = self.pad(Math.floor((totalSec % 86400) / 3600));
-                        self.mins = self.pad(Math.floor((totalSec % 3600) / 60));
-                        self.secs = self.pad(totalSec % 60);
-                    };
-                    run();
-                    this.timer = setInterval(run, 1000);
+                lightbox: null,
+                openLightbox(url) {
+                    this.lightbox = url || null;
+                    if (this.lightbox) document.body.style.overflow = 'hidden';
+                },
+                closeLightbox() {
+                    this.lightbox = null;
+                    document.body.style.overflow = '';
                 }
             };
         }
-    </script>
-    <script>
+
         // إضافة أرقام طائرة ديناميكية
         function createFloatingNumber() {
             const numbers = ['{}', '</>', '#', '()', '[]'];
