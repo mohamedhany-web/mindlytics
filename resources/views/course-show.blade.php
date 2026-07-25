@@ -946,6 +946,223 @@
                 border: none;
             }
 
+            /* Immersive course hero (reference-inspired) */
+            .course-immersive-hero {
+                --hero-accent: #f59e0b;
+                --hero-accent-strong: #ea580c;
+                --hero-ink: #f8fafc;
+                --hero-muted: rgba(248, 250, 252, 0.78);
+                position: relative;
+                min-height: min(100svh, 920px);
+                display: flex;
+                align-items: flex-end;
+                overflow: hidden;
+                color: var(--hero-ink);
+                background: #0b1220;
+            }
+            .course-immersive-hero__media,
+            .course-immersive-hero__media img {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+            .course-immersive-hero__media {
+                transform: scale(1.04);
+                animation: courseHeroKen 18s ease-in-out infinite alternate;
+            }
+            @keyframes courseHeroKen {
+                from { transform: scale(1.02) translate3d(0, 0, 0); }
+                to { transform: scale(1.08) translate3d(-1.5%, -1%, 0); }
+            }
+            .course-immersive-hero__shade {
+                position: absolute;
+                inset: 0;
+                background:
+                    linear-gradient(90deg, rgba(8, 15, 28, 0.92) 0%, rgba(8, 15, 28, 0.72) 42%, rgba(8, 15, 28, 0.35) 100%),
+                    linear-gradient(0deg, rgba(8, 15, 28, 0.88) 0%, rgba(8, 15, 28, 0.25) 48%, rgba(8, 15, 28, 0.45) 100%);
+            }
+            [dir="ltr"] .course-immersive-hero__shade {
+                background:
+                    linear-gradient(270deg, rgba(8, 15, 28, 0.92) 0%, rgba(8, 15, 28, 0.72) 42%, rgba(8, 15, 28, 0.35) 100%),
+                    linear-gradient(0deg, rgba(8, 15, 28, 0.88) 0%, rgba(8, 15, 28, 0.25) 48%, rgba(8, 15, 28, 0.45) 100%);
+            }
+            .course-immersive-hero__inner {
+                position: relative;
+                z-index: 2;
+                width: 100%;
+                max-width: 72rem;
+                margin: 0 auto;
+                padding: 7.5rem 1.25rem 3.5rem;
+            }
+            @media (min-width: 1024px) {
+                .course-immersive-hero__inner { padding: 8.5rem 2rem 4.5rem; }
+            }
+            .course-immersive-brand {
+                font-size: clamp(2rem, 5vw, 3.4rem);
+                font-weight: 900;
+                letter-spacing: -0.03em;
+                line-height: 1;
+                margin-bottom: 1rem;
+            }
+            .course-immersive-brand span {
+                background: linear-gradient(90deg, #60a5fa, #34d399);
+                -webkit-background-clip: text;
+                background-clip: text;
+                color: transparent;
+            }
+            .course-immersive-badges {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.6rem;
+                margin-bottom: 1.1rem;
+            }
+            .course-immersive-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.4rem;
+                padding: 0.4rem 0.85rem;
+                border-radius: 999px;
+                font-size: 0.72rem;
+                font-weight: 800;
+                letter-spacing: 0.02em;
+                backdrop-filter: blur(10px);
+            }
+            .course-immersive-badge--offer {
+                background: rgba(245, 158, 11, 0.18);
+                color: #fbbf24;
+                border: 1px solid rgba(251, 191, 36, 0.35);
+            }
+            .course-immersive-badge--type {
+                background: rgba(255, 255, 255, 0.1);
+                color: #e2e8f0;
+                border: 1px solid rgba(255, 255, 255, 0.16);
+            }
+            .course-immersive-title {
+                max-width: 16ch;
+                font-size: clamp(2.1rem, 5.4vw, 4.2rem);
+                font-weight: 900;
+                line-height: 1.08;
+                letter-spacing: -0.03em;
+                margin-bottom: 1rem;
+            }
+            .course-immersive-title em {
+                font-style: normal;
+                color: var(--hero-accent);
+            }
+            .course-immersive-lead {
+                max-width: 38rem;
+                color: var(--hero-muted);
+                font-size: clamp(0.98rem, 1.6vw, 1.15rem);
+                line-height: 1.75;
+                margin-bottom: 1.4rem;
+            }
+            .course-immersive-countdown {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 0.75rem 1rem;
+                margin-bottom: 1.4rem;
+            }
+            .course-immersive-countdown__label {
+                font-size: 0.8rem;
+                font-weight: 700;
+                color: rgba(248, 250, 252, 0.7);
+            }
+            .course-immersive-countdown__grid {
+                display: flex;
+                gap: 0.45rem;
+            }
+            .course-immersive-countdown__cell {
+                min-width: 3.35rem;
+                text-align: center;
+                padding: 0.45rem 0.35rem;
+                border-radius: 0.7rem;
+                background: rgba(15, 23, 42, 0.55);
+                border: 1px solid rgba(255, 255, 255, 0.12);
+            }
+            .course-immersive-countdown__num {
+                display: block;
+                font-size: 1.15rem;
+                font-weight: 900;
+                font-variant-numeric: tabular-nums;
+            }
+            .course-immersive-countdown__unit {
+                display: block;
+                font-size: 0.65rem;
+                color: rgba(248, 250, 252, 0.55);
+                font-weight: 700;
+            }
+            .course-immersive-cta {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.75rem;
+                min-height: 3.4rem;
+                padding: 0.9rem 1.4rem;
+                border-radius: 999px;
+                background: linear-gradient(90deg, var(--hero-accent), var(--hero-accent-strong));
+                color: #111827;
+                font-weight: 900;
+                font-size: 1rem;
+                box-shadow: 0 14px 36px rgba(234, 88, 12, 0.35);
+                transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+            }
+            .course-immersive-cta:hover {
+                transform: translateY(-2px);
+                filter: brightness(1.05);
+                box-shadow: 0 18px 40px rgba(234, 88, 12, 0.45);
+            }
+            .course-immersive-cta__old {
+                text-decoration: line-through;
+                opacity: 0.65;
+                font-weight: 800;
+            }
+            .course-immersive-meta {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.85rem 1.25rem;
+                margin-top: 1.35rem;
+                color: rgba(248, 250, 252, 0.78);
+                font-size: 0.86rem;
+                font-weight: 700;
+            }
+            .course-immersive-meta span {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.45rem;
+            }
+            .course-immersive-float {
+                position: fixed;
+                z-index: 60;
+                display: flex;
+                flex-direction: column;
+                gap: 0.65rem;
+                bottom: 1.25rem;
+            }
+            [dir="rtl"] .course-immersive-float { left: 1rem; }
+            [dir="ltr"] .course-immersive-float { right: 1rem; }
+            .course-immersive-float a {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.55rem;
+                padding: 0.7rem 1rem;
+                border-radius: 999px;
+                font-size: 0.82rem;
+                font-weight: 800;
+                color: #fff;
+                box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+                transition: transform 0.2s ease;
+            }
+            .course-immersive-float a:hover { transform: translateY(-2px); }
+            .course-immersive-float__wa { background: #16a34a; }
+            .course-immersive-float__ask { background: #1e3a5f; }
+
+            @media (prefers-reduced-motion: reduce) {
+                .course-immersive-hero__media { animation: none; }
+            }
+
             /* Hero section z-index */
             .hero-gradient {
                 position: relative;
@@ -1014,193 +1231,153 @@
             </div>
         </div>
     @endif
-    <!-- Hero Section - بدون صورة الكورس في الخلفية -->
-    <section class="hero-section relative overflow-hidden min-h-[70vh] flex items-center pt-16 lg:pt-20">
-        <!-- Animated Background -->
-        <div class="animated-background absolute inset-0 overflow-hidden">
-            <!-- Floating Circles -->
-            <div class="floating-circle circle-1"></div>
-            <div class="floating-circle circle-2"></div>
-            <div class="floating-circle circle-3"></div>
-            <div class="floating-circle circle-4"></div>
-            <div class="floating-circle circle-5"></div>
-            
-            <!-- Floating Code Symbols -->
-            <div class="floating-code-symbol code-symbol-1">&lt;/&gt;</div>
-            <div class="floating-code-symbol code-symbol-2">{ }</div>
-            <div class="floating-code-symbol code-symbol-3">( )</div>
-            <div class="floating-code-symbol code-symbol-4">[ ]</div>
-            <div class="floating-code-symbol code-symbol-5">#</div>
-            <div class="floating-code-symbol code-symbol-6">$</div>
-            <div class="floating-code-symbol code-symbol-7">&lt;div&gt;</div>
-            <div class="floating-code-symbol code-symbol-8">=&gt;</div>
-            <div class="floating-code-symbol code-symbol-9">const</div>
-            <div class="floating-code-symbol code-symbol-10">function</div>
-            <div class="floating-code-symbol code-symbol-11">import</div>
-            <div class="floating-code-symbol code-symbol-12">export</div>
-            
-            <!-- Floating Lines -->
-            <div class="floating-line line-1"></div>
-            <div class="floating-line line-2"></div>
-            <div class="floating-line line-3"></div>
-            
-            <!-- Floating Particles -->
-            <div class="floating-particle particle-1"></div>
-            <div class="floating-particle particle-2"></div>
-            <div class="floating-particle particle-3"></div>
-            <div class="floating-particle particle-4"></div>
-            <div class="floating-particle particle-5"></div>
-            <div class="floating-particle particle-6"></div>
-            <div class="floating-particle particle-7"></div>
-            <div class="floating-particle particle-8"></div>
+    <!-- Immersive course hero -->
+    @php
+        $heroThumb = $course->thumbnail ? str_replace('\\', '/', $course->thumbnail) : null;
+        $heroImageUrl = $heroThumb ? asset('storage/' . $heroThumb) : null;
+        $heroLecturesCount = (int) ($course->lectures_count ?? $course->total_lectures ?? 0);
+        $heroDurationLabel = $course->display_duration_label;
+        $heroHasDiscount = $course->hasCourseDiscount();
+        $heroIsPaid = ($course->effectivePrice() ?? 0) > 0 && !($course->is_free ?? false);
+        $heroOfferEndsAt = $course->ends_at && $course->ends_at->isFuture() ? $course->ends_at->toIso8601String() : null;
+        $heroShowOffer = $heroHasDiscount || $heroOfferEndsAt;
+        $heroTitle = $course->localized('title') ?: __('public.course_title_fallback');
+        $heroWords = preg_split('/\s+/u', trim($heroTitle), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $heroAccentWord = count($heroWords) > 1 ? array_pop($heroWords) : null;
+        $heroTitleLead = $heroAccentWord ? implode(' ', $heroWords) : $heroTitle;
+        $heroDesc = \Illuminate\Support\Str::limit(strip_tags($course->localized('description') ?: __('public.course_desc_fallback')), 180);
+        $heroCheckoutUrl = route('public.course.checkout', $course->id);
+        $heroFreeUrl = auth()->check()
+            ? route('public.course.enroll.free', $course->id)
+            : route('register', ['redirect' => route('public.course.enroll.free', $course->id)]);
+        $heroPrimaryUrl = ($isEnrolled ?? false)
+            ? route('courses.show', $course->id)
+            : ($heroIsPaid ? $heroCheckoutUrl : $heroFreeUrl);
+        $heroLevelLabel = $course->level === 'beginner'
+            ? __('public.level_beginner')
+            : ($course->level === 'intermediate' ? __('public.level_intermediate') : __('public.level_advanced'));
+        $heroWhatsApp = 'https://wa.me/201044610507?text=' . rawurlencode('مهتم بكورس: ' . $heroTitle);
+    @endphp
+    <section class="course-immersive-hero" aria-label="{{ $heroTitle }}">
+        <div class="course-immersive-hero__media" aria-hidden="true">
+            @if($heroImageUrl)
+                <img src="{{ $heroImageUrl }}" alt="" loading="eager" fetchpriority="high">
+            @else
+                <div class="absolute inset-0 bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900"></div>
+            @endif
         </div>
-        
-        <!-- Hero Glow -->
-        <div class="hero-glow absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-radial from-blue-400/20 via-green-400/10 to-transparent rounded-full blur-3xl"></div>
-        
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full py-8 lg:py-10">
-            <!-- Breadcrumb -->
-            <nav class="mb-4 text-gray-600 text-sm flex items-center fade-in-up">
-                <a href="{{ url('/') }}" class="hover:text-blue-600 transition-colors">{{ __('public.home') }}</a>
-                <span class="mx-2 text-gray-400">/</span>
-                <a href="{{ route('public.courses') }}" class="hover:text-blue-600 transition-colors">{{ __('public.courses') }}</a>
-                <span class="mx-2 text-gray-400">/</span>
-                <span class="text-gray-900 font-medium">{{ Str::limit($course->localized('title') ?: __('public.course_fallback'), 30) }}</span>
-            </nav>
+        <div class="course-immersive-hero__shade" aria-hidden="true"></div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
-                <!-- Course Info -->
-                <div class="slide-in-left">
-                    @if($course->is_featured ?? false)
-                        <div class="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full shadow-md mb-4 fade-in-up">
-                            <i class="fas fa-star text-yellow-900 text-[8px]"></i>
-                            <span class="text-yellow-900 font-bold text-[9px]">{{ __('public.featured_course_badge') }}</span>
-                        </div>
-                    @endif
-                    
-                    <h1 class="text-3xl md:text-4xl lg:text-5xl font-black mb-3 leading-tight text-gray-900 fade-in-up" style="animation-delay: 0.1s;">
-                        {{ $course->localized('title') ?: __('public.course_title_fallback') }}
-                    </h1>
-                    
-                    <p class="text-base md:text-lg text-gray-600 mb-5 leading-relaxed fade-in-up" style="animation-delay: 0.2s;">
-                        {{ $course->localized('description') ?: __('public.course_desc_fallback') }}
-                    </p>
+        <div class="course-immersive-hero__inner"
+             @if($heroOfferEndsAt)
+                 x-data="courseOfferCountdown(@js($heroOfferEndsAt))"
+                 x-init="tick()"
+             @endif>
+            <p class="course-immersive-brand"><span>Mindlytics</span></p>
 
-                    <!-- Course Stats -->
-                    <div class="grid grid-cols-3 gap-4 mb-6 fade-in-up" style="animation-delay: 0.1s;">
-                        <div class="bg-white rounded-2xl p-4 text-center border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
-                            <div class="text-3xl font-black text-blue-600 mb-2">{{ $course->lectures_count ?? $course->total_lectures ?? 0 }}</div>
-                            <div class="text-sm text-gray-600 font-medium">{{ __('public.lecture_single') }}</div>
-                        </div>
-                        <div class="bg-white rounded-2xl p-4 text-center border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
-                            <div class="text-3xl font-black text-green-600 mb-2">{{ $course->display_duration_hours }}</div>
-                            <div class="text-sm text-gray-600 font-medium">{{ __('public.hours') }}</div>
-                        </div>
-                        <div class="bg-white rounded-2xl p-4 text-center border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
-                            <div class="text-xl font-black text-gray-700 mb-2">
-                                @if($course->level == 'beginner') {{ __('public.level_beginner') }}
-                                @elseif($course->level == 'intermediate') {{ __('public.level_intermediate') }}
-                                @else {{ __('public.level_advanced') }}
-                                @endif
-                            </div>
-                            <div class="text-sm text-gray-600 font-medium">{{ __('public.level_label') }}</div>
-                        </div>
-                    </div>
+            <div class="course-immersive-badges">
+                @if($heroShowOffer)
+                    <span class="course-immersive-badge course-immersive-badge--offer">
+                        <i class="fas fa-bolt"></i>
+                        {{ $__pageRtl ? 'عرض لفترة محدودة' : 'Limited time offer' }}
+                    </span>
+                @endif
+                <span class="course-immersive-badge course-immersive-badge--type">
+                    {{ $__pageRtl ? 'كورس أونلاين مسجّل' : 'Recorded Online Course' }}
+                </span>
+            </div>
 
-                    @if($course->instructor && \App\Models\InstructorProfile::where('user_id', $course->instructor->id)->where('status', 'approved')->exists())
-                    <div class="mb-6 fade-in-up" style="animation-delay: 0.15s;">
-                        <span class="text-sm text-gray-600 font-medium">{{ __('public.instructor_label') }}</span>
-                        <a href="{{ route('public.instructors.show', $course->instructor) }}" class="text-blue-600 hover:text-blue-700 font-bold hover:underline">{{ $course->instructor->name }}</a>
-                    </div>
-                    @elseif($course->instructor)
-                    <div class="mb-6 fade-in-up" style="animation-delay: 0.15s;">
-                        <span class="text-sm text-gray-600 font-medium">{{ __('public.instructor_label') }}</span>
-                        <span class="font-semibold text-gray-800">{{ $course->instructor->name }}</span>
-                    </div>
-                    @endif
+            <h1 class="course-immersive-title">
+                @if($heroAccentWord)
+                    {{ $heroTitleLead }} <em>{{ $heroAccentWord }}</em>
+                @else
+                    {{ $heroTitle }}
+                @endif
+            </h1>
 
-                    <!-- CTA Buttons -->
-                    <div class="flex flex-col sm:flex-row flex-wrap gap-4 fade-in-up" style="animation-delay: 0.3s;">
-                        @if(!empty($courseMindMapVisible ?? false))
-                            <a href="{{ route('public.course.mind-map', $course->id) }}" class="inline-flex items-center justify-center gap-2 bg-white text-emerald-700 px-6 py-3 rounded-full font-bold text-base border-2 border-emerald-500 shadow-md hover:bg-emerald-50 hover:shadow-lg transition-all duration-300">
-                                <i class="fas fa-diagram-project"></i>
-                                {{ __('public.course_mind_map_button') }}
-                            </a>
-                        @endif
-                        @auth
-                            @if($isEnrolled ?? false)
-                                <a href="{{ route('courses.show', $course->id) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                                    <i class="fas fa-play-circle"></i>
-                                    {{ __('public.start_learning_now') }}
-                                </a>
-                            @else
-                                @if(($course->effectivePrice() ?? 0) > 0 && !($course->is_free ?? false))
-                                    <a href="{{ route('public.course.checkout', $course->id) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                                        <i class="fas fa-shopping-cart"></i>
-                                        {{ __('public.buy_now') }}
-                                    </a>
-                                @else
-                                    <a href="{{ route('public.course.enroll.free', $course->id) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                                        <i class="fas fa-gift"></i>
-                                        {{ __('public.register_free') }}
-                                    </a>
-                                @endif
-                            @endif
-                        @endauth
-                        @guest
-                            @if(($course->price ?? 0) > 0 && !($course->is_free ?? false))
-                                <a href="{{ route('public.course.checkout', $course->id) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                                    <i class="fas fa-shopping-cart"></i>
-                                    {{ __('public.buy_now') }}
-                                </a>
-                            @else
-                                <a href="{{ route('register', ['redirect' => route('public.course.enroll.free', $course->id)]) }}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-3 rounded-full font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                                    <i class="fas fa-gift"></i>
-                                    {{ __('public.register_free') }}
-                                </a>
-                            @endif
-                        @endguest
-                        <a href="{{ route('public.courses') }}" class="inline-flex items-center justify-center gap-2 bg-white text-blue-600 px-6 py-3 rounded-full font-bold text-base border-2 border-blue-600 hover:bg-blue-50 transition-all duration-300">
-                            <i class="fas fa-arrow-right"></i>
-                            {{ __('public.all_courses') }}
-                        </a>
+            <p class="course-immersive-lead">
+                {{ $heroDesc }}
+                @if($heroLecturesCount > 0)
+                    <strong class="text-white">
+                        {{ $__pageRtl
+                            ? " · {$heroLecturesCount} محاضرة مسجّلة — اتعلّم بوتيرتك."
+                            : " · {$heroLecturesCount} recorded lectures — learn at your own pace." }}
+                    </strong>
+                @endif
+            </p>
+
+            @if($heroOfferEndsAt)
+                <div class="course-immersive-countdown" x-show="alive" x-cloak>
+                    <span class="course-immersive-countdown__label">{{ $__pageRtl ? 'ينتهي العرض خلال' : 'Offer ends in' }}</span>
+                    <div class="course-immersive-countdown__grid" dir="ltr">
+                        <div class="course-immersive-countdown__cell">
+                            <span class="course-immersive-countdown__num" x-text="days">00</span>
+                            <span class="course-immersive-countdown__unit">{{ $__pageRtl ? 'يوم' : 'Day' }}</span>
+                        </div>
+                        <div class="course-immersive-countdown__cell">
+                            <span class="course-immersive-countdown__num" x-text="hours">00</span>
+                            <span class="course-immersive-countdown__unit">{{ $__pageRtl ? 'ساعة' : 'Hour' }}</span>
+                        </div>
+                        <div class="course-immersive-countdown__cell">
+                            <span class="course-immersive-countdown__num" x-text="mins">00</span>
+                            <span class="course-immersive-countdown__unit">{{ $__pageRtl ? 'د' : 'Min' }}</span>
+                        </div>
+                        <div class="course-immersive-countdown__cell">
+                            <span class="course-immersive-countdown__num" x-text="secs">00</span>
+                            <span class="course-immersive-countdown__unit">{{ $__pageRtl ? 'ث' : 'Sec' }}</span>
+                        </div>
                     </div>
                 </div>
+            @endif
 
-                <!-- Right column: Intro video + Price card -->
-                <div class="flex flex-col gap-6">
-                    <!-- مقدمة الكورس (نفس فكرة المسار) -->
-                    <div class="relative fade-in-up max-w-xl" style="animation-delay: 0.2s;">
-                        @if($course->video_url ?? null)
-                        @php
-                            $introVideoUrl = trim((string) ($course->video_url ?? ''));
-                        @endphp
-                        <div class="bg-white rounded-2xl p-4 shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300">
-                            <div class="text-center mb-3">
-                                <h2 class="text-lg font-bold text-gray-900 mb-0.5 flex items-center justify-center gap-2">
-                                    <i class="fas fa-play-circle text-blue-600 text-base"></i>
-                                    {{ __('public.intro_video_title') }}
-                                </h2>
-                                <p class="text-gray-500 text-sm">{{ __('public.intro_video_desc') }}</p>
-                            </div>
-                            @include('partials.intro-video-embed', [
-                                'url' => $introVideoUrl,
-                                'title' => __('public.intro_video_title'),
-                            ])
-                        </div>
+            <div class="flex flex-wrap items-center gap-3">
+                @if($isEnrolled ?? false)
+                    <a href="{{ $heroPrimaryUrl }}" class="course-immersive-cta">
+                        <i class="fas fa-play"></i>
+                        <span>{{ __('public.start_learning_now') }}</span>
+                        <i class="fas {{ $__pageRtl ? 'fa-arrow-left' : 'fa-arrow-right' }}"></i>
+                    </a>
+                @elseif($heroIsPaid)
+                    <a href="{{ $heroPrimaryUrl }}" class="course-immersive-cta">
+                        @if($heroHasDiscount)
+                            <span class="course-immersive-cta__old">{{ number_format($course->originalPrice(), 0) }} {{ $__pageRtl ? 'ج.م' : 'EGP' }}</span>
+                            <span>{{ $__pageRtl ? 'اشترك الآن' : 'Enroll Now' }}, {{ number_format($course->effectivePrice(), 0) }} {{ $__pageRtl ? 'ج.م فقط' : 'EGP only' }}</span>
                         @else
-                        <div class="bg-white rounded-2xl p-4 shadow-lg border border-gray-200">
-                            <div class="text-center text-gray-500 py-6">
-                                <i class="fas fa-video text-2xl mb-2 text-gray-300"></i>
-                                <p class="text-sm">{{ __('public.no_intro_video') ?? 'لا يوجد فيديو مقدمة' }}</p>
-                            </div>
-                        </div>
+                            <span>{{ $__pageRtl ? 'اشترك الآن' : 'Enroll Now' }} — {{ number_format($course->effectivePrice(), 0) }} {{ $__pageRtl ? 'ج.م' : 'EGP' }}</span>
                         @endif
-                    </div>
-                </div>
+                        <i class="fas {{ $__pageRtl ? 'fa-arrow-left' : 'fa-arrow-right' }}"></i>
+                    </a>
+                @else
+                    <a href="{{ $heroPrimaryUrl }}" class="course-immersive-cta">
+                        <i class="fas fa-gift"></i>
+                        <span>{{ __('public.register_free') }}</span>
+                    </a>
+                @endif
+
+                @if(!empty($courseMindMapVisible ?? false))
+                    <a href="{{ route('public.course.mind-map', $course->id) }}"
+                       class="inline-flex items-center gap-2 px-5 py-3 rounded-full border border-white/25 text-white/90 font-bold text-sm hover:bg-white/10 transition">
+                        <i class="fas fa-diagram-project"></i>
+                        {{ __('public.course_mind_map_short') }}
+                    </a>
+                @endif
+            </div>
+
+            <div class="course-immersive-meta">
+                <span><i class="fas fa-play-circle text-amber-400"></i> {{ $heroLecturesCount }} {{ __('public.lecture_single') }}</span>
+                <span><i class="fas fa-clock text-sky-300"></i> {{ $heroDurationLabel }}</span>
+                <span><i class="fas fa-signal text-emerald-300"></i> {{ $heroLevelLabel }}</span>
+                <span><i class="fas fa-certificate text-violet-300"></i> {{ $__pageRtl ? 'شهادة إتمام' : 'Certificate' }}</span>
             </div>
         </div>
     </section>
+
+    <div class="course-immersive-float" aria-label="{{ $__pageRtl ? 'تواصل سريع' : 'Quick contact' }}">
+        <a href="{{ $heroWhatsApp }}" target="_blank" rel="noopener" class="course-immersive-float__wa">
+            <i class="fab fa-whatsapp text-lg"></i>
+            <span>{{ $__pageRtl ? 'كلّم الفريق' : 'Talk to the team' }}</span>
+        </a>
+    </div>
 
     <!-- Course Details Section -->
     <section class="py-12 md:py-16 bg-gradient-to-b from-gray-50 via-white to-gray-50 relative z-10">
@@ -1208,6 +1385,20 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
                 <!-- Main Content -->
                 <div class="lg:col-span-2 space-y-6">
+                    @if($course->video_url ?? null)
+                        <div class="bg-white rounded-2xl shadow-lg p-6 lg:p-8 border border-gray-200 fade-in-up">
+                            <h2 class="text-2xl lg:text-3xl font-black text-gray-900 mb-4 flex items-center gap-3">
+                                <i class="fas fa-play-circle text-blue-600"></i>
+                                {{ __('public.intro_video_title') }}
+                            </h2>
+                            <p class="text-gray-500 text-sm mb-4">{{ __('public.intro_video_desc') }}</p>
+                            @include('partials.intro-video-embed', [
+                                'url' => trim((string) $course->video_url),
+                                'title' => __('public.intro_video_title'),
+                            ])
+                        </div>
+                    @endif
+
                     <!-- About Course -->
                     <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 lg:p-8 border border-gray-200 fade-in-up">
                         <h2 class="text-2xl lg:text-3xl font-black text-gray-900 mb-6 flex items-center gap-3">
@@ -1830,6 +2021,39 @@
     @include('components.unified-footer')
 
     <!-- Dynamic JavaScript -->
+    <script>
+        function courseOfferCountdown(isoEndsAt) {
+            return {
+                endsAt: new Date(isoEndsAt).getTime(),
+                alive: true,
+                days: '00',
+                hours: '00',
+                mins: '00',
+                secs: '00',
+                timer: null,
+                pad(n) { return String(Math.max(0, n)).padStart(2, '0'); },
+                tick() {
+                    const self = this;
+                    const run = function () {
+                        const diff = self.endsAt - Date.now();
+                        if (diff <= 0) {
+                            self.alive = false;
+                            self.days = self.hours = self.mins = self.secs = '00';
+                            if (self.timer) clearInterval(self.timer);
+                            return;
+                        }
+                        const totalSec = Math.floor(diff / 1000);
+                        self.days = self.pad(Math.floor(totalSec / 86400));
+                        self.hours = self.pad(Math.floor((totalSec % 86400) / 3600));
+                        self.mins = self.pad(Math.floor((totalSec % 3600) / 60));
+                        self.secs = self.pad(totalSec % 60);
+                    };
+                    run();
+                    this.timer = setInterval(run, 1000);
+                }
+            };
+        }
+    </script>
     <script>
         // إضافة أرقام طائرة ديناميكية
         function createFloatingNumber() {
