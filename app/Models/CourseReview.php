@@ -46,7 +46,12 @@ class CourseReview extends Model
 
     public function helpful()
     {
-        return $this->hasMany(ReviewHelpful::class, 'review_id');
+        // العلاقة اختيارية — الكلاس غير موجود في بعض البيئات
+        if (! class_exists(\App\Models\ReviewHelpful::class)) {
+            return $this->hasMany(\App\Models\CourseReview::class, 'id', 'id')->whereRaw('0 = 1');
+        }
+
+        return $this->hasMany(\App\Models\ReviewHelpful::class, 'review_id');
     }
 
     public function getDisplayNameAttribute(): string

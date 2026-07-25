@@ -137,7 +137,7 @@ class MarketingCourseReviewController extends Controller
 
         $isQuote = ($validated['review_type'] ?? '') === 'quote';
 
-        CourseReview::create([
+        $payload = [
             'course_id' => (int) $validated['course_id'],
             'user_id' => null,
             'reviewer_name' => filled($validated['reviewer_name'] ?? null)
@@ -145,16 +145,54 @@ class MarketingCourseReviewController extends Controller
                 : null,
             'rating' => (int) ($validated['rating'] ?? 5),
             'review' => $comment,
-            'comment' => $comment,
-            'image_path' => $path,
-            'image_disk' => $disk,
-            'is_marketing' => true,
             'is_approved' => $request->boolean('is_approved', true),
             'is_featured' => $request->boolean('is_featured') || $isQuote,
-            'status' => $request->boolean('is_approved', true) ? 'approved' : 'pending',
-            'is_verified_purchase' => false,
-            'helpful_count' => 0,
-        ]);
+        ];
+
+        // أعمدة اختيارية حسب حالة الـ migration على السيرفر
+        if (\Illuminate\Support\Facades\Schema::hasColumn('course_reviews', 'comment')) {
+            $payload['comment'] = $comment;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('course_reviews', 'image_path')) {
+            $payload['image_path'] = $path;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('course_reviews', 'image_disk')) {
+            $payload['image_disk'] = $disk;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('course_reviews', 'is_marketing')) {
+            $payload['is_marketing'] = true;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('course_reviews', 'status')) {
+            $payload['status'] = $request->boolean('is_approved', true) ? 'approved' : 'pending';
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('course_reviews', 'is_verified_purchase')) {
+            $payload['is_verified_purchase'] = false;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('course_reviews', 'helpful_count')) {
+            $payload['helpful_count'] = 0;
+        }
+
+        try {
+            CourseReview::create($payload);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('marketing_course_review_create_failed', [
+                'message' => $e->getMessage(),
+                'exception' => $e::class,
+            ]);
+
+            if ($path && $disk) {
+                $this->storage->deleteIfExists($path, $disk);
+            }
+
+            $hint = 'تحقق من تشغيل: php artisan migrate';
+            if (str_contains($e->getMessage(), 'Unknown column') || str_contains($e->getMessage(), 'no such column')) {
+                $hint = 'أعمدة قاعدة البيانات ناقصة. نفّذ على السيرفر: php artisan migrate';
+            }
+
+            throw ValidationException::withMessages([
+                'image' => 'تعذر حفظ الريفيو. '.$hint.' ('.$e->getMessage().')',
+            ]);
+        }
 
         $where = $disk === 'r2' || $disk === 's3' ? 'Cloudflare R2' : 'التخزين المحلي';
 
