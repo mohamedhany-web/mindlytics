@@ -1984,9 +1984,9 @@
                             </div>
                         </div>
 
-                        <!-- Related Courses -->
+                        <!-- Related Courses (سطح المكتب فقط — على الهاتف تظهر بعد التقييمات) -->
                         @if(isset($relatedCourses) && count($relatedCourses) > 0)
-                        <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-200">
+                        <div class="hidden lg:block bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-200">
                             <h3 class="text-xl font-black text-gray-900 mb-4">كورسات ذات صلة</h3>
                             <div class="space-y-4">
                                 @foreach($relatedCourses->take(3) as $index => $related)
@@ -2130,6 +2130,38 @@
             <img :src="lightbox" alt="معاينة التقييم" @click.stop>
         </div>
     </section>
+
+    <!-- Related Courses — نسخة الهاتف: تظهر بعد التقييمات فقط -->
+    @if(isset($relatedCourses) && count($relatedCourses) > 0)
+    <section class="lg:hidden py-10 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                <h3 class="text-xl font-black text-gray-900 mb-4">كورسات ذات صلة</h3>
+                <div class="space-y-4">
+                    @foreach($relatedCourses->take(3) as $index => $related)
+                        @php
+                            $relThumb = $related->thumbnail ? str_replace('\\', '/', $related->thumbnail) : null;
+                            $relImageUrl = $relThumb ? asset('storage/' . $relThumb) : null;
+                        @endphp
+                        <a href="{{ route('public.course.show', $related->id) }}" class="flex gap-4 p-0 bg-gray-50 rounded-xl hover:bg-blue-50 transition-all duration-300 border border-gray-200 hover:border-blue-300 hover:shadow-md overflow-hidden">
+                            <div class="w-24 h-24 flex-shrink-0 bg-gradient-to-br from-blue-600 to-green-500 flex items-center justify-center">
+                                @if($relImageUrl)
+                                    <img src="{{ $relImageUrl }}" alt="{{ $related->localized('title') }}" class="w-full h-full object-cover">
+                                @else
+                                    <i class="fas fa-book text-white text-2xl"></i>
+                                @endif
+                            </div>
+                            <div class="p-4 flex-1 min-w-0">
+                                <h4 class="font-bold text-gray-900 mb-1 text-base">{{ $related->localized('title') }}</h4>
+                                <p class="text-sm text-gray-600 line-clamp-2">{{ Str::limit($related->localized('description') ?: '', 60) }}</p>
+                            </div>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    </section>
+    @endif
 
     <!-- CTA Section -->
     <section class="py-16 md:py-20 lg:py-24 bg-gradient-to-br from-blue-50 via-white to-green-50 relative overflow-hidden">
