@@ -1089,11 +1089,11 @@
                     <!-- Course Stats -->
                     <div class="grid grid-cols-3 gap-4 mb-6 fade-in-up" style="animation-delay: 0.1s;">
                         <div class="bg-white rounded-2xl p-4 text-center border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
-                            <div class="text-3xl font-black text-blue-600 mb-2">{{ $course->lessons_count ?? 0 }}</div>
-                            <div class="text-sm text-gray-600 font-medium">{{ __('public.lesson_single') }}</div>
+                            <div class="text-3xl font-black text-blue-600 mb-2">{{ $course->lectures_count ?? $course->total_lectures ?? 0 }}</div>
+                            <div class="text-sm text-gray-600 font-medium">{{ __('public.lecture_single') }}</div>
                         </div>
                         <div class="bg-white rounded-2xl p-4 text-center border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
-                            <div class="text-3xl font-black text-green-600 mb-2">{{ $course->duration_hours ?? 0 }}</div>
+                            <div class="text-3xl font-black text-green-600 mb-2">{{ $course->display_duration_hours }}</div>
                             <div class="text-sm text-gray-600 font-medium">{{ __('public.hours') }}</div>
                         </div>
                         <div class="bg-white rounded-2xl p-4 text-center border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
@@ -1573,17 +1573,17 @@
                                             </div>
                                             <span>{{ __('public.duration') }}</span>
                                     </span>
-                                        <span class="font-black text-gray-900 text-lg">{{ $course->duration_hours ?? 0 }} ساعة</span>
+                                        <span class="font-black text-gray-900 text-lg">{{ $course->display_duration_label }}</span>
                                 </div>
                                 
                                     <div class="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border-2 border-green-100 hover:border-green-300 hover:shadow-md transition-all duration-300 group/item">
                                         <span class="text-gray-700 font-semibold flex items-center gap-3">
                                             <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center shadow-md group-hover/item:scale-110 transition-transform duration-300">
-                                                <i class="fas fa-layer-group text-white text-sm"></i>
+                                                <i class="fas fa-play-circle text-white text-sm"></i>
                                             </div>
-                                            <span>{{ __('public.lessons_count_label') }}</span>
+                                            <span>{{ __('public.lectures_count_label') }}</span>
                                     </span>
-                                        <span class="font-black text-gray-900 text-lg">{{ $course->lessons_count ?? 0 }} درس</span>
+                                        <span class="font-black text-gray-900 text-lg">{{ $course->lectures_count ?? $course->total_lectures ?? 0 }} {{ __('public.lecture_single') }}</span>
                                 </div>
                                 
                                     <div class="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border-2 border-purple-100 hover:border-purple-300 hover:shadow-md transition-all duration-300 group/item">

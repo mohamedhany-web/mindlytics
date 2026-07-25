@@ -395,7 +395,7 @@ Route::get('/course/{id}', function ($id) {
         ->publicCatalog()
         ->visibleOnCurrentHost()
         ->with(['academicSubject', 'academicYear', 'instructor'])
-        ->withCount('lessons')
+        ->withCount(['lectures', 'lessons'])
         ->firstOrFail();
 
     // التقسيمات (عناوين فقط للمعاينة قبل الشراء)
@@ -442,7 +442,7 @@ Route::get('/course/{id}', function ($id) {
                   ->orWhere('is_featured', true);
         })
         ->with(['academicSubject'])
-        ->withCount('lessons')
+        ->withCount(['lectures', 'lessons'])
         ->limit(3)
         ->get();
 

@@ -315,6 +315,56 @@ class AdvancedCourse extends Model
         return $this->lessons()->count();
     }
 
+    /**
+     * عدد المحاضرات المرتبطة بالكورس (يُفضَّل استخدام withCount('lectures') في الاستعلام).
+     */
+    public function getTotalLecturesAttribute(): int
+    {
+        if (array_key_exists('lectures_count', $this->attributes)) {
+            return (int) $this->attributes['lectures_count'];
+        }
+
+        return (int) $this->lectures()->count();
+    }
+
+    /**
+     * مدة العرض من حقول تعديل الكورس (ساعات + دقائق).
+     */
+    public function getDisplayDurationLabelAttribute(): string
+    {
+        $hours = (int) round((float) ($this->duration_hours ?? 0));
+        $minutes = (int) ($this->duration_minutes ?? 0);
+        if ($minutes > 59) {
+            $minutes = $minutes % 60;
+        }
+
+        $locale = app()->getLocale();
+        $hourWord = $locale === 'ar' ? 'ساعة' : 'hour'.($hours === 1 ? '' : 's');
+        $minuteWord = $locale === 'ar' ? 'دقيقة' : 'min';
+
+        if ($hours <= 0 && $minutes <= 0) {
+            return $locale === 'ar' ? '0 ساعة' : '0 hours';
+        }
+        if ($hours > 0 && $minutes > 0) {
+            return $locale === 'ar'
+                ? "{$hours} ساعة و {$minutes} دقيقة"
+                : "{$hours} {$hourWord} {$minutes} {$minuteWord}";
+        }
+        if ($minutes > 0) {
+            return "{$minutes} {$minuteWord}";
+        }
+
+        return "{$hours} {$hourWord}";
+    }
+
+    /**
+     * رقم الساعات للبطاقات (من تعديل الكورس فقط).
+     */
+    public function getDisplayDurationHoursAttribute(): int
+    {
+        return (int) round((float) ($this->duration_hours ?? 0));
+    }
+
     public function getActivatedStudentsCountAttribute()
     {
         return $this->activations()->where('is_active', true)->count();

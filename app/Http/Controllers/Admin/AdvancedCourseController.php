@@ -295,8 +295,8 @@ class AdvancedCourseController extends Controller
 
         $data['level'] = $data['level'] ?? 'beginner';
         $data = $this->normalizeCoursePricing($data);
-        $data['duration_hours'] = $data['duration_hours'] ?? 0;
-        $data['duration_minutes'] = $data['duration_minutes'] ?? 0;
+        $data['duration_hours'] = (int) round((float) ($request->input('duration_hours', 0) ?: 0));
+        $data['duration_minutes'] = max(0, min(59, (int) ($request->input('duration_minutes', 0) ?: 0)));
         $data['language'] = $data['language'] ?? 'ar';
         $data['skills'] = $request->filled('skills')
             ? array_values(array_filter($request->input('skills', [])))
@@ -519,8 +519,8 @@ class AdvancedCourseController extends Controller
 
         $data['level'] = $data['level'] ?? 'beginner';
         $data = $this->normalizeCoursePricing($data);
-        $data['duration_hours'] = $data['duration_hours'] ?? 0;
-        $data['duration_minutes'] = $data['duration_minutes'] ?? 0;
+        $data['duration_hours'] = (int) round((float) ($request->input('duration_hours', 0) ?: 0));
+        $data['duration_minutes'] = max(0, min(59, (int) ($request->input('duration_minutes', 0) ?: 0)));
         $data['language'] = $data['language'] ?? 'ar';
         $data['is_active'] = $request->boolean('is_active');
         $data['is_featured'] = $request->boolean('is_featured');

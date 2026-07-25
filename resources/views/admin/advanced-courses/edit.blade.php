@@ -169,14 +169,15 @@
 
                                 <div class="space-y-2">
                                     <label class="block text-sm font-semibold text-gray-700">مدة الكورس (ساعات)</label>
-                                    <input type="number" name="duration_hours" value="{{ old('duration_hours', $advancedCourse->duration_hours ?? 0) }}" min="0"
+                                    <input type="number" name="duration_hours" value="{{ old('duration_hours', (int) ($advancedCourse->duration_hours ?? 0)) }}" min="0" step="1"
                                            class="w-full rounded-2xl border border-gray-200 bg-white/70 px-4 py-3 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition"
                                            placeholder="عدد الساعات">
+                                    <p class="text-xs text-slate-500">تظهر في صفحة الكورس العامة كمدة الكورس.</p>
                                 </div>
 
                                 <div class="space-y-2">
                                     <label class="block text-sm font-semibold text-gray-700">مدة إضافية (دقائق)</label>
-                                    <input type="number" name="duration_minutes" value="{{ old('duration_minutes', $advancedCourse->duration_minutes ?? 0) }}" min="0" max="59"
+                                    <input type="number" name="duration_minutes" value="{{ old('duration_minutes', min(59, (int) ($advancedCourse->duration_minutes ?? 0))) }}" min="0" max="59" step="1"
                                            class="w-full rounded-2xl border border-gray-200 bg-white/70 px-4 py-3 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition"
                                            placeholder="دقائق إضافية">
                                 </div>

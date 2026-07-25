@@ -216,6 +216,7 @@ return [
     'course_info' => 'Course info',
     'duration' => 'Duration',
     'lessons_count_label' => 'Number of lessons',
+    'lectures_count_label' => 'Number of lectures',
     'subject_label' => 'Subject',
     'related_courses' => 'Related courses',
     'order_success_hint' => 'You can track your order status from My Orders in the dashboard.',

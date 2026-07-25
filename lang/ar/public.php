@@ -216,6 +216,7 @@ return [
     'course_info' => 'معلومات الكورس',
     'duration' => 'المدة',
     'lessons_count_label' => 'عدد الدروس',
+    'lectures_count_label' => 'عدد المحاضرات',
     'subject_label' => 'المادة',
     'related_courses' => 'كورسات ذات صلة',
     'order_success_hint' => 'يمكنك متابعة حالة الطلب من صفحة طلباتي في لوحة التحكم.',
