@@ -1072,78 +1072,110 @@
                 text-overflow: ellipsis;
             }
 
-            /* قسم التقييمات — شبكة بعرض الصفحة */
+            /* قسم التقييمات — سكرول جانبي مضغوط */
             .course-reviews-section-head {
-                text-align: center;
-                margin-bottom: 1.75rem;
+                display: flex;
+                align-items: flex-end;
+                justify-content: space-between;
+                gap: 1rem;
+                margin-bottom: 1.25rem;
+                flex-wrap: wrap;
             }
-            .course-reviews-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-                gap: 1.25rem;
+            .course-reviews-section-head .head-copy {
+                text-align: right;
+            }
+            .course-reviews-nav {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            .course-reviews-nav button {
+                width: 2.5rem;
+                height: 2.5rem;
+                border-radius: 9999px;
+                border: 1px solid #e2e8f0;
+                background: #fff;
+                color: #475569;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                transition: background 0.15s ease, border-color 0.15s ease;
+            }
+            .course-reviews-nav button:hover {
+                background: #f8fafc;
+                border-color: #cbd5e1;
+            }
+            .course-reviews-rail {
+                display: flex;
                 align-items: stretch;
-                justify-items: stretch;
-                width: 100%;
+                gap: 0.85rem;
+                overflow-x: auto;
+                scroll-snap-type: x mandatory;
+                -webkit-overflow-scrolling: touch;
+                padding: 0.25rem 0.15rem 0.85rem;
+                scrollbar-width: thin;
+                scrollbar-color: #94a3b8 transparent;
             }
-            @media (min-width: 640px) {
-                .course-reviews-grid {
-                    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-                    gap: 1.5rem;
-                }
-            }
-            @media (min-width: 1024px) {
-                .course-reviews-grid {
-                    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-                }
+            .course-reviews-rail::-webkit-scrollbar { height: 6px; }
+            .course-reviews-rail::-webkit-scrollbar-thumb {
+                background: #94a3b8;
+                border-radius: 9999px;
             }
             .course-review-card {
-                width: 100%;
-                border-radius: 1.15rem;
+                flex: 0 0 auto;
+                width: min(58vw, 190px);
+                scroll-snap-align: start;
+                border-radius: 1rem;
                 overflow: hidden;
                 background: #fff;
                 border: 1px solid #e2e8f0;
-                box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+                box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
                 transition: transform 0.2s ease, box-shadow 0.2s ease;
                 display: flex;
                 flex-direction: column;
-                min-height: 100%;
             }
             .course-review-card:hover {
-                transform: translateY(-3px);
-                box-shadow: 0 14px 32px rgba(15, 23, 42, 0.1);
+                transform: translateY(-2px);
+                box-shadow: 0 12px 28px rgba(15, 23, 42, 0.1);
+            }
+            .course-review-card.has-image {
+                width: min(62vw, 200px);
             }
             .course-review-card .review-media {
                 position: relative;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+                display: block;
                 width: 100%;
-                height: 280px;
+                height: 230px;
                 margin: 0;
-                padding: 0.75rem;
-                background: #f8fafc;
+                padding: 0;
+                background: #0f172a;
                 overflow: hidden;
                 cursor: zoom-in;
                 border: 0;
             }
             .course-review-card .review-media img {
                 display: block;
-                max-width: 100%;
-                max-height: 100%;
-                width: auto;
-                height: auto;
-                object-fit: contain;
-                object-position: center;
-                border-radius: 0.5rem;
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                object-position: top center;
+            }
+            .course-review-card .review-media::after {
+                content: '';
+                position: absolute;
+                inset: auto 0 0 0;
+                height: 42%;
+                background: linear-gradient(to top, rgba(15, 23, 42, 0.55), transparent);
+                pointer-events: none;
             }
             .course-review-card .review-meta {
-                padding: 0.85rem 1rem 1rem;
+                padding: 0.55rem 0.7rem 0.65rem;
                 border-top: 1px solid #f1f5f9;
-                margin-top: auto;
             }
             .course-review-card.is-text-only {
+                width: min(70vw, 220px);
+                min-height: 180px;
                 background: linear-gradient(160deg, #ffffff, #f8fafc);
-                min-height: 220px;
             }
             .course-review-lightbox {
                 position: fixed;
@@ -1165,8 +1197,15 @@
                 box-shadow: 0 20px 60px rgba(0,0,0,0.45);
             }
             @media (min-width: 768px) {
+                .course-review-card,
+                .course-review-card.has-image {
+                    width: 210px;
+                }
                 .course-review-card .review-media {
-                    height: 320px;
+                    height: 260px;
+                }
+                .course-review-card.is-text-only {
+                    width: 230px;
                 }
             }
 
@@ -2018,31 +2057,45 @@
         </div>
     </section>
 
-    <!-- التقييمات — بعرض الصفحة كامل -->
-    <section class="py-12 md:py-16 bg-white relative z-10 border-y border-slate-100" x-data="courseReviewsGallery()">
+    <!-- التقييمات — سكرول جانبي بعرض الصفحة -->
+    <section class="py-10 md:py-14 bg-white relative z-10 border-y border-slate-100" x-data="courseReviewsGallery()">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="course-reviews-section-head">
-                <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 text-xl mb-3">
-                    <i class="fas fa-star"></i>
+                <div class="head-copy">
+                    <div class="inline-flex items-center gap-2 mb-1.5">
+                        <span class="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 inline-flex items-center justify-center">
+                            <i class="fas fa-star"></i>
+                        </span>
+                        <h2 class="text-xl md:text-2xl font-black text-gray-900">التقييمات</h2>
+                    </div>
+                    @if(($reviewsCount ?? 0) > 0)
+                        <p class="text-sm text-gray-500">
+                            <span class="font-bold text-amber-500">{{ number_format((float) ($reviewsAvg ?? 0), 1) }}</span>
+                            <span class="text-gray-400">/ 5</span>
+                            <span class="mx-1">·</span>
+                            <span>{{ number_format((int) ($reviewsCount ?? 0)) }} تقييم</span>
+                        </p>
+                    @endif
                 </div>
-                <h2 class="text-2xl md:text-3xl font-black text-gray-900">التقييمات</h2>
-                @if(($reviewsCount ?? 0) > 0)
-                    <p class="mt-2 text-sm md:text-base text-gray-500">
-                        <span class="font-bold text-amber-500 text-lg">{{ number_format((float) ($reviewsAvg ?? 0), 1) }}</span>
-                        <span class="text-gray-400">/ 5</span>
-                        <span class="mx-1">·</span>
-                        <span>{{ number_format((int) ($reviewsCount ?? 0)) }} تقييم</span>
-                    </p>
+                @if(isset($approvedReviews) && $approvedReviews->count() > 1)
+                    <div class="course-reviews-nav">
+                        <button type="button" @click="scrollBy(-1)" aria-label="السابق">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                        <button type="button" @click="scrollBy(1)" aria-label="التالي">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                    </div>
                 @endif
             </div>
 
             @if(session('success') && !session('payment_success_modal'))
-                <div class="mb-5 max-w-2xl mx-auto p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold text-center">
+                <div class="mb-4 max-w-2xl mx-auto p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold text-center">
                     {{ session('success') }}
                 </div>
             @endif
             @if($errors->any())
-                <div class="mb-5 max-w-2xl mx-auto p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm text-center">
+                <div class="mb-4 max-w-2xl mx-auto p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm text-center">
                     {{ $errors->first() }}
                 </div>
             @endif
@@ -2050,7 +2103,7 @@
             @auth
                 @if($isEnrolled ?? false)
                     <form action="{{ route('public.course.reviews.store', $course->id) }}" method="POST"
-                          class="mb-8 max-w-3xl mx-auto space-y-3 p-5 rounded-2xl bg-slate-50 border border-slate-200">
+                          class="mb-6 max-w-3xl mx-auto space-y-3 p-4 rounded-2xl bg-slate-50 border border-slate-200">
                         @csrf
                         <div class="grid sm:grid-cols-3 gap-3">
                             <div class="sm:col-span-1">
@@ -2076,7 +2129,7 @@
             @endauth
 
             @if(isset($approvedReviews) && $approvedReviews->count() > 0)
-                <div class="course-reviews-grid">
+                <div class="course-reviews-rail" x-ref="rail">
                     @foreach($approvedReviews as $r)
                         @php
                             $hasImage = filled($r->image_path);
@@ -2089,37 +2142,37 @@
                                 </button>
                                 <div class="review-meta">
                                     <div class="flex items-center justify-between gap-2">
-                                        <div class="font-bold text-gray-900 text-sm truncate">{{ $r->display_name }}</div>
+                                        <div class="font-semibold text-gray-900 text-xs truncate">{{ $r->display_name }}</div>
                                         <div class="flex items-center gap-0.5 shrink-0">
                                             @for($i = 1; $i <= 5; $i++)
-                                                <i class="fas fa-star text-[11px] {{ $i <= (int) $r->rating ? 'text-amber-400' : 'text-gray-200' }}"></i>
+                                                <i class="fas fa-star text-[9px] {{ $i <= (int) $r->rating ? 'text-amber-400' : 'text-gray-200' }}"></i>
                                             @endfor
                                         </div>
                                     </div>
                                     @if($body !== '')
-                                        <p class="text-gray-500 text-xs leading-relaxed line-clamp-2 mt-1.5 whitespace-pre-wrap">{{ $body }}</p>
+                                        <p class="text-gray-500 text-[11px] leading-snug line-clamp-2 mt-1 whitespace-pre-wrap">{{ $body }}</p>
                                     @endif
                                 </div>
                             @else
-                                <div class="review-meta flex-1 flex flex-col justify-between gap-3 p-5">
+                                <div class="review-meta flex-1 flex flex-col justify-between gap-2 p-4">
                                     <div>
-                                        <div class="flex items-center gap-0.5 mb-3">
+                                        <div class="flex items-center gap-0.5 mb-2">
                                             @for($i = 1; $i <= 5; $i++)
-                                                <i class="fas fa-star text-sm {{ $i <= (int) $r->rating ? 'text-amber-400' : 'text-gray-200' }}"></i>
+                                                <i class="fas fa-star text-[11px] {{ $i <= (int) $r->rating ? 'text-amber-400' : 'text-gray-200' }}"></i>
                                             @endfor
                                         </div>
                                         @if($body !== '')
-                                            <p class="text-gray-700 text-sm leading-relaxed line-clamp-6 whitespace-pre-wrap">{{ $body }}</p>
+                                            <p class="text-gray-700 text-xs leading-relaxed line-clamp-5 whitespace-pre-wrap">{{ $body }}</p>
                                         @endif
                                     </div>
-                                    <div class="font-bold text-gray-900 text-sm truncate pt-2 border-t border-slate-100">{{ $r->display_name }}</div>
+                                    <div class="font-semibold text-gray-900 text-xs truncate pt-2 border-t border-slate-100">{{ $r->display_name }}</div>
                                 </div>
                             @endif
                         </article>
                     @endforeach
                 </div>
             @else
-                <div class="text-center text-sm text-gray-500 py-8">لا توجد تقييمات منشورة بعد.</div>
+                <div class="text-center text-sm text-gray-500 py-6">لا توجد تقييمات منشورة بعد.</div>
             @endif
         </div>
 
@@ -2259,6 +2312,11 @@
         function courseReviewsGallery() {
             return {
                 lightbox: null,
+                scrollBy(dir) {
+                    var rail = this.$refs.rail;
+                    if (!rail) return;
+                    rail.scrollBy({ left: dir * -220, behavior: 'smooth' });
+                },
                 openLightbox(url) {
                     this.lightbox = url || null;
                     if (this.lightbox) document.body.style.overflow = 'hidden';
