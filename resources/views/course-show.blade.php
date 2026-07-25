@@ -835,9 +835,19 @@
                 z-index: 0;
             }
             
-            /* Sidebar styling - no sticky, no scroll */
+            /* Sidebar: ثابت أثناء التمرير على الديسكتوب لتنظيم الصفحة الطويلة */
             .course-sidebar {
                 position: relative;
+            }
+            @media (min-width: 1024px) {
+                .course-sidebar {
+                    position: sticky;
+                    top: 5.5rem;
+                    align-self: start;
+                    max-height: calc(100vh - 6rem);
+                    overflow-y: auto;
+                    scrollbar-width: thin;
+                }
             }
             
             /* Smooth scroll */
@@ -1490,29 +1500,6 @@
                         </div>
                     </div>
 
-                    <!-- What You'll Learn -->
-                    @if($course->what_you_learn)
-                    <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 lg:p-8 border border-gray-200 fade-in-up" style="animation-delay: 0.1s;">
-                        <h2 class="text-2xl lg:text-3xl font-black text-gray-900 mb-6 flex items-center gap-3">
-                            <i class="fas fa-graduation-cap text-blue-600"></i>
-                            هتطلع من الكورس بإيه؟
-                        </h2>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            @php
-                                $learnPoints = explode("\n", $course->what_you_learn);
-                            @endphp
-                            @foreach($learnPoints as $point)
-                                @if(trim($point))
-                                    <div class="flex items-start gap-3 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-xl border border-blue-100 hover:border-blue-300 transition-all duration-300">
-                                        <i class="fas fa-check-circle text-green-600 mt-1 flex-shrink-0"></i>
-                                        <span class="text-gray-700">{{ trim($point) }}</span>
-                                    </div>
-                                @endif
-                            @endforeach
-                        </div>
-                    </div>
-                    @endif
-
                     @php
                         $infoBlocks = array_filter([
                             [
@@ -1551,40 +1538,13 @@
                                 'iconColor' => 'text-rose-600',
                             ],
                         ], fn ($block) => filled(trim((string) ($block['content'] ?? ''))));
+
+                        $learnPoints = collect(preg_split("/\r\n|\n|\r/", (string) ($course->what_you_learn ?? '')))
+                            ->map(fn ($p) => trim((string) $p))
+                            ->filter()
+                            ->values();
+                        $learnPreviewCount = 8;
                     @endphp
-
-                    @if(count($infoBlocks))
-                    <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 lg:p-8 border border-gray-200 fade-in-up" style="animation-delay: 0.15s;">
-                        <h2 class="text-2xl lg:text-3xl font-black text-gray-900 mb-6 flex items-center gap-3">
-                            <i class="fas fa-circle-info text-blue-600"></i>
-                            معلومات مهمة عن الكورس
-                        </h2>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            @foreach($infoBlocks as $block)
-                                <div class="rounded-xl border bg-gradient-to-br {{ $block['tone'] }} p-5">
-                                    <h3 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-                                        <i class="fas {{ $block['icon'] }} {{ $block['iconColor'] }}"></i>
-                                        {{ $block['title'] }}
-                                    </h3>
-                                    <p class="text-gray-700 whitespace-pre-line leading-relaxed">{{ $block['content'] }}</p>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                    @endif
-
-                    <!-- Requirements -->
-                    @if($course->requirements)
-                    <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 lg:p-8 border border-gray-200 fade-in-up" style="animation-delay: 0.2s;">
-                        <h2 class="text-2xl lg:text-3xl font-black text-gray-900 mb-6 flex items-center gap-3">
-                            <i class="fas fa-list-check text-blue-600"></i>
-                            {{ __('public.requirements') }}
-                        </h2>
-                        <div class="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-6 border border-gray-200">
-                            <p class="text-gray-700 whitespace-pre-line leading-relaxed">{{ $course->requirements }}</p>
-                        </div>
-                    </div>
-                    @endif
 
                     <!-- محتوى الكورس: التقسيمات + معاينة فيديوهات (أول 2 مفتوحان، الثالث مقفول) -->
                     <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 lg:p-8 border border-gray-200 fade-in-up" style="animation-delay: 0.25s;">
@@ -1786,19 +1746,31 @@
                         @endif
 
                         @if(isset($sections) && $sections->count() > 0)
-                            <div class="mt-8">
+                            <div class="mt-8" x-data="{ showAllSections: false, sectionLimit: 6 }">
                                 <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                                     <i class="fas fa-folder-open text-amber-500"></i>
                                     تقسيمات الكورس
+                                    <span class="text-sm font-semibold text-slate-500">({{ $sections->count() }})</span>
                                 </h3>
                                 <ul class="space-y-2">
                                     @foreach($sections as $idx => $section)
-                                        <li class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                        <li class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100"
+                                            x-show="showAllSections || {{ $idx }} < sectionLimit"
+                                            @if($idx >= 6) x-cloak @endif>
                                             <span class="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center text-sm font-bold">{{ $idx + 1 }}</span>
                                             <span class="font-semibold text-gray-800">{{ $section->title }}</span>
                                         </li>
                                     @endforeach
                                 </ul>
+                                @if($sections->count() > 6)
+                                    <div class="mt-4 text-center">
+                                        <button type="button" @click="showAllSections = !showAllSections"
+                                                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm">
+                                            <span x-text="showAllSections ? 'عرض أقل' : 'عرض كل التقسيمات ({{ $sections->count() }})'"></span>
+                                            <i class="fas" :class="showAllSections ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                                        </button>
+                                    </div>
+                                @endif
                             </div>
                         @endif
 
@@ -1810,6 +1782,75 @@
                             @endif
                         @endif
                     </div>
+
+                    <!-- What You'll Learn — مختصر مع عرض المزيد لتنظيم الصفحة -->
+                    @if($learnPoints->isNotEmpty())
+                    <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 lg:p-8 border border-gray-200 fade-in-up"
+                         style="animation-delay: 0.1s;"
+                         x-data="{ expanded: false, limit: {{ $learnPreviewCount }} }">
+                        <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+                            <h2 class="text-2xl lg:text-3xl font-black text-gray-900 flex items-center gap-3">
+                                <i class="fas fa-graduation-cap text-blue-600"></i>
+                                هتطلع من الكورس بإيه؟
+                            </h2>
+                            <span class="text-sm font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                                {{ $learnPoints->count() }} نقطة
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            @foreach($learnPoints as $idx => $point)
+                                <div class="flex items-start gap-3 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-xl border border-blue-100 hover:border-blue-300 transition-all duration-300"
+                                     x-show="expanded || {{ $idx }} < limit"
+                                     @if($idx >= $learnPreviewCount) x-cloak @endif>
+                                    <i class="fas fa-check-circle text-green-600 mt-1 flex-shrink-0"></i>
+                                    <span class="text-gray-700">{{ $point }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                        @if($learnPoints->count() > $learnPreviewCount)
+                            <div class="mt-6 text-center">
+                                <button type="button"
+                                        @click="expanded = !expanded"
+                                        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors">
+                                    <span x-text="expanded ? 'عرض أقل' : 'عرض المزيد ({{ $learnPoints->count() - $learnPreviewCount }})'"></span>
+                                    <i class="fas" :class="expanded ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                                </button>
+                            </div>
+                        @endif
+                    </div>
+                    @endif
+
+                    @if(count($infoBlocks))
+                    <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 lg:p-8 border border-gray-200 fade-in-up" style="animation-delay: 0.15s;">
+                        <h2 class="text-2xl lg:text-3xl font-black text-gray-900 mb-6 flex items-center gap-3">
+                            <i class="fas fa-circle-info text-blue-600"></i>
+                            معلومات مهمة عن الكورس
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            @foreach($infoBlocks as $block)
+                                <div class="rounded-xl border bg-gradient-to-br {{ $block['tone'] }} p-5">
+                                    <h3 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                                        <i class="fas {{ $block['icon'] }} {{ $block['iconColor'] }}"></i>
+                                        {{ $block['title'] }}
+                                    </h3>
+                                    <p class="text-gray-700 whitespace-pre-line leading-relaxed">{{ $block['content'] }}</p>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+
+                    @if($course->requirements)
+                    <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 lg:p-8 border border-gray-200 fade-in-up" style="animation-delay: 0.2s;">
+                        <h2 class="text-2xl lg:text-3xl font-black text-gray-900 mb-6 flex items-center gap-3">
+                            <i class="fas fa-list-check text-blue-600"></i>
+                            {{ __('public.requirements') }}
+                        </h2>
+                        <div class="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-6 border border-gray-200">
+                            <p class="text-gray-700 whitespace-pre-line leading-relaxed">{{ $course->requirements }}</p>
+                        </div>
+                    </div>
+                    @endif
                 </div>
 
                 <!-- Sidebar -->
