@@ -471,9 +471,14 @@
 
                             <!-- Price -->
                             @php
+                                $personalCoupon = $personalCoupon ?? null;
+                                $checkoutPricing = $checkoutPricing ?? null;
                                 $checkoutOriginal = isset($course) ? $course->originalPrice() : ($learningPath->price ?? 0);
-                                $checkoutFinal = isset($course) ? $course->effectivePrice() : ($learningPath->price ?? 0);
-                                $checkoutHasDiscount = isset($course) && $course->hasCourseDiscount();
+                                $checkoutCourseDiscount = isset($course) ? $course->courseDiscountAmount() : 0;
+                                $checkoutCouponDiscount = (float) ($checkoutPricing['coupon_discount'] ?? 0);
+                                $checkoutFinal = $checkoutPricing['amount']
+                                    ?? (isset($course) ? $course->effectivePrice() : ($learningPath->price ?? 0));
+                                $checkoutHasDiscount = ($checkoutCourseDiscount > 0) || ($checkoutCouponDiscount > 0);
                             @endphp
                             <div class="mb-6 space-y-4">
                                 <div class="flex items-center justify-between">
@@ -486,10 +491,22 @@
                                         <span class="text-sm text-gray-600">ج.م</span>
                                     </span>
                                 </div>
-                                @if($checkoutHasDiscount)
+                                @if($checkoutCourseDiscount > 0)
                                     <div class="flex items-center justify-between text-sm">
                                         <span class="text-gray-600">خصم الكورس:</span>
-                                        <span class="font-bold text-rose-600">- {{ number_format($course->courseDiscountAmount(), 2) }} ج.م</span>
+                                        <span class="font-bold text-rose-600">- {{ number_format($checkoutCourseDiscount, 2) }} ج.م</span>
+                                    </div>
+                                @endif
+                                @if($personalCoupon && $checkoutCouponDiscount > 0)
+                                    <div class="flex items-center justify-between text-sm">
+                                        <span class="text-gray-600">
+                                            خصمك الشخصي
+                                            @if($personalCoupon->discount_type === 'percentage')
+                                                ({{ (int) $personalCoupon->discount_value }}%)
+                                            @endif
+                                            :
+                                        </span>
+                                        <span class="font-bold text-emerald-600">- {{ number_format($checkoutCouponDiscount, 2) }} ج.م</span>
                                     </div>
                                 @endif
                                 <div class="flex items-center justify-between pt-4 border-t-2 border-gray-300">
@@ -500,6 +517,39 @@
                                     </span>
                                 </div>
                             </div>
+
+                            @if($personalCoupon && $checkoutCouponDiscount > 0)
+                                <div class="mb-6 rounded-2xl border-2 border-dashed border-emerald-300 bg-gradient-to-br from-emerald-50 to-sky-50 p-4">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center flex-shrink-0">
+                                            <i class="fas fa-tag"></i>
+                                        </div>
+                                        <div class="min-w-0">
+                                            <p class="font-bold text-emerald-900 text-sm">خصمك الشخصي مُطبَّق تلقائياً ✔</p>
+                                            <p class="text-xs text-emerald-800/90 mt-1 leading-relaxed">
+                                                {{ $personalCoupon->title ?: $personalCoupon->name }} — وفّرت
+                                                <span class="font-bold">{{ number_format($checkoutCouponDiscount, 2) }} ج.م</span>
+                                                على هذا الكورس.
+                                            </p>
+                                            <p class="text-xs text-emerald-700 mt-2">
+                                                الكود: <span class="font-mono font-bold tracking-widest">{{ $personalCoupon->code }}</span>
+                                                @if($personalCoupon->expires_at)
+                                                    · صالح حتى {{ $personalCoupon->expires_at->format('Y-m-d') }}
+                                                @endif
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            @elseif(auth()->check() && isset($course) && $course->effectivePrice() > 0)
+                                <div class="mb-6 rounded-2xl border border-sky-200 bg-sky-50 p-4">
+                                    <p class="text-xs text-sky-900 leading-relaxed">
+                                        <i class="fas fa-lightbulb text-amber-500 me-1"></i>
+                                        عميل عندنا قبل كذا؟ شاركنا رأيك في
+                                        <a href="{{ route('public.customer-survey.show') }}" class="font-bold text-sky-700 underline">استبيان العملاء</a>
+                                        وخُد خصم 20% يُطبَّق تلقائياً على أي كورس.
+                                    </p>
+                                </div>
+                            @endif
 
                             <!-- Course/Learning Path Features -->
                             <div class="space-y-3">

@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Public;
 use App\Http\Controllers\Controller;
 use App\Models\AdvancedCourse;
 use App\Models\AcademicYear;
+use App\Models\Coupon;
 use App\Models\StudentCourseEnrollment;
 use App\Models\LearningPathEnrollment;
 use App\Models\User;
+use App\Services\CustomerDiscountService;
 use App\Services\InstructorCoursePercentageService;
 use App\Models\Order;
 use App\Models\Invoice;
@@ -33,6 +35,52 @@ use Illuminate\Validation\Rules;
 
 class CheckoutController extends Controller
 {
+    /**
+     * تفصيل السعر بعد تطبيق خصم العميل الشخصي (كوبون الاستبيان/الإحالة/الورشة) تلقائياً.
+     *
+     * @return array{coupon: ?Coupon, pricing: array{original_amount: float, course_discount: float, coupon_discount: float, discount_amount: float, amount: float, coupon: ?Coupon}}
+     */
+    private function personalPricing(AdvancedCourse $course): array
+    {
+        $service = app(CustomerDiscountService::class);
+        $user = Auth::user();
+        $coupon = $user ? $service->bestCouponForCourse($user, $course) : null;
+        $pricing = $service->breakdown($course, $coupon);
+
+        // لا نستهلك كوبوناً يجعل المبلغ صفراً في مسار دفع مأجور.
+        if ($coupon && $pricing['amount'] <= 0) {
+            $coupon = null;
+            $pricing = $service->breakdown($course, null);
+        }
+
+        return ['coupon' => $pricing['coupon'], 'pricing' => $pricing];
+    }
+
+    /**
+     * تسجيل استهلاك كوبون الطلب بعد اعتماده (آمن للتكرار).
+     */
+    private function consumeOrderCoupon(Order $order, ?int $invoiceId = null): void
+    {
+        if (! $order->coupon_id || (float) $order->discount_amount <= 0) {
+            return;
+        }
+
+        $coupon = Coupon::find($order->coupon_id);
+        $user = $order->user ?: User::find($order->user_id);
+
+        if (! $coupon || ! $user) {
+            return;
+        }
+
+        app(CustomerDiscountService::class)->markUsed(
+            $coupon,
+            $user,
+            (float) $order->original_amount,
+            (float) $order->discount_amount,
+            $invoiceId
+        );
+    }
+
     /**
      * عرض صفحة إتمام الطلب
      */
@@ -89,13 +137,19 @@ class CheckoutController extends Controller
         $phoneCountries = config('phone_countries.countries', []);
         $defaultCountry = collect($phoneCountries)->firstWhere('code', config('phone_countries.default_country', 'SA'));
 
+        $personal = $this->personalPricing($course);
+        $personalCoupon = $personal['coupon'];
+        $checkoutPricing = $personal['pricing'];
+
         return view('public.checkout', compact(
             'course',
             'wallets',
             'platformPaymentMode',
             'fawaterakCheckoutReady',
             'phoneCountries',
-            'defaultCountry'
+            'defaultCountry',
+            'personalCoupon',
+            'checkoutPricing'
         ));
     }
 
@@ -229,8 +283,7 @@ class CheckoutController extends Controller
                 ->with('info', 'أنت مسجل بالفعل في هذا الكورس');
         }
 
-        $amount = $course->effectivePrice();
-        if ($amount <= 0) {
+        if ($course->effectivePrice() <= 0) {
             if ($request->expectsJson()) {
                 return response()->json(['message' => 'هذا الكورس مجاني يمكنك التسجيل مباشرة.'], 422);
             }
@@ -238,6 +291,9 @@ class CheckoutController extends Controller
             return redirect()->route('public.course.show', $course->id)
                 ->with('info', 'هذا الكورس مجاني يمكنك التسجيل مباشرة.');
         }
+
+        $personal = $this->personalPricing($course);
+        $amount = (float) $personal['pricing']['amount'];
 
         $payMode = PlatformSettings::paymentMode();
         if ($payMode === 'manual') {
@@ -273,7 +329,7 @@ class CheckoutController extends Controller
         }
 
         $orderCreatedThisRequest = false;
-        $pricing = $course->paymentBreakdown();
+        $pricing = $personal['pricing'];
         DB::beginTransaction();
         try {
             if ($existingOrder && $existingOrder->payment_method === 'online' && $existingOrder->payment_proof === null) {
@@ -283,12 +339,14 @@ class CheckoutController extends Controller
                         'original_amount' => $pricing['original_amount'],
                         'discount_amount' => $pricing['discount_amount'],
                         'amount' => $pricing['amount'],
+                        'coupon_id' => $personal['coupon']?->id,
                     ]);
                 }
             } else {
                 $order = Order::create([
                     'user_id' => Auth::id(),
                     'advanced_course_id' => $course->id,
+                    'coupon_id' => $personal['coupon']?->id,
                     'original_amount' => $pricing['original_amount'],
                     'discount_amount' => $pricing['discount_amount'],
                     'amount' => $pricing['amount'],
@@ -648,12 +706,13 @@ class CheckoutController extends Controller
             return response()->json(['message' => 'أنت مسجل بالفعل في هذا الكورس'], 422);
         }
 
-        $amount = $course->effectivePrice();
-        if ($amount <= 0) {
+        if ($course->effectivePrice() <= 0) {
             return response()->json(['message' => 'هذا الكورس مجاني يمكنك التسجيل مباشرة.'], 422);
         }
 
-        $pricing = $course->paymentBreakdown();
+        $personal = $this->personalPricing($course);
+        $pricing = $personal['pricing'];
+        $amount = (float) $pricing['amount'];
         $user = Auth::user();
         $email = trim((string) ($user->email ?? ''));
         if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -720,6 +779,7 @@ class CheckoutController extends Controller
                         'original_amount' => $pricing['original_amount'],
                         'discount_amount' => $pricing['discount_amount'],
                         'amount' => $pricing['amount'],
+                        'coupon_id' => $personal['coupon']?->id,
                         'notes' => 'دفع عبر فواتيرك (iframe)',
                     ]);
                 }
@@ -727,6 +787,7 @@ class CheckoutController extends Controller
                 $order = Order::create([
                     'user_id' => Auth::id(),
                     'advanced_course_id' => $course->id,
+                    'coupon_id' => $personal['coupon']?->id,
                     'original_amount' => $pricing['original_amount'],
                     'discount_amount' => $pricing['discount_amount'],
                     'amount' => $pricing['amount'],
@@ -1052,6 +1113,8 @@ class CheckoutController extends Controller
             'payment_id' => $payment->id,
         ]);
 
+        $this->consumeOrderCoupon($order, $invoice->id);
+
         if ($order->academic_year_id) {
             $existingPath = LearningPathEnrollment::where('user_id', $order->user_id)
                 ->where('academic_year_id', $order->academic_year_id)
@@ -1240,8 +1303,9 @@ class CheckoutController extends Controller
 
         DB::beginTransaction();
         try {
-            // حساب السعر النهائي
-            $pricing = $course->paymentBreakdown();
+            // حساب السعر النهائي بعد خصم الكورس + خصم العميل الشخصي
+            $personal = $this->personalPricing($course);
+            $pricing = $personal['pricing'];
             $originalAmount = $pricing['original_amount'];
             $finalAmount = $pricing['amount'];
             $discountAmount = $pricing['discount_amount'];
@@ -1253,6 +1317,7 @@ class CheckoutController extends Controller
             $order = Order::create([
                 'user_id' => Auth::id(),
                 'advanced_course_id' => $course->id,
+                'coupon_id' => $personal['coupon']?->id,
                 'original_amount' => $originalAmount,
                 'discount_amount' => $discountAmount,
                 'amount' => $finalAmount,

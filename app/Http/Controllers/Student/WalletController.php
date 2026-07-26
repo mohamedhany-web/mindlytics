@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
+use App\Services\CustomerDiscountService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -32,7 +33,9 @@ class WalletController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
-        return view('student.wallet.index', compact('wallets', 'transactions'));
+        $discountCoupons = app(CustomerDiscountService::class)->availableCoupons(auth()->user());
+
+        return view('student.wallet.index', compact('wallets', 'transactions', 'discountCoupons'));
     }
 
     public function transfer(Request $request)

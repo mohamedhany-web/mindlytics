@@ -92,6 +92,83 @@
         </div>
     </div>
 
+    {{-- خصوماتي: كوبونات شخصية (استبيان العملاء، الإحالات، الورش) --}}
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="px-4 sm:px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+            <h2 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                <i class="fas fa-tags text-emerald-600"></i>
+                خصوماتي
+            </h2>
+            @if(isset($discountCoupons) && $discountCoupons->count() > 0)
+                <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    {{ $discountCoupons->count() }} خصم متاح
+                </span>
+            @endif
+        </div>
+
+        @if(isset($discountCoupons) && $discountCoupons->count() > 0)
+        <div class="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+            @foreach($discountCoupons as $coupon)
+            <div x-data="{ copied: false }" class="rounded-xl border-2 border-dashed border-emerald-300 bg-gradient-to-br from-emerald-50 to-sky-50 p-4">
+                <div class="flex items-start justify-between gap-3 mb-3">
+                    <div class="min-w-0">
+                        <p class="font-bold text-gray-900 text-sm truncate">{{ $coupon->title ?: $coupon->name }}</p>
+                        @if($coupon->description)
+                            <p class="text-xs text-gray-500 mt-1 line-clamp-2">{{ $coupon->description }}</p>
+                        @endif
+                    </div>
+                    <span class="flex-shrink-0 text-lg font-black text-emerald-700">
+                        @if($coupon->discount_type === 'percentage')
+                            {{ (int) $coupon->discount_value }}%
+                        @else
+                            {{ number_format($coupon->discount_value, 0) }} {{ __('public.currency_egp') }}
+                        @endif
+                    </span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <code class="flex-1 min-w-0 truncate bg-white border border-emerald-200 rounded-lg px-3 py-2 text-sm font-bold tracking-widest text-emerald-800" x-ref="code{{ $coupon->id }}">{{ $coupon->code }}</code>
+                    <button type="button"
+                            @click="navigator.clipboard.writeText($refs.code{{ $coupon->id }}.innerText.trim()); copied = true; setTimeout(() => copied = false, 2000)"
+                            class="flex-shrink-0 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors">
+                        <i class="fas" :class="copied ? 'fa-check' : 'fa-copy'"></i>
+                    </button>
+                </div>
+
+                <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span class="text-gray-500">
+                        @if($coupon->expires_at)
+                            <i class="fas fa-clock me-1"></i>صالح حتى {{ $coupon->expires_at->format('Y-m-d') }}
+                        @else
+                            <i class="fas fa-infinity me-1"></i>بدون تاريخ انتهاء
+                        @endif
+                    </span>
+                    <a href="{{ route('public.courses') }}" class="font-bold text-sky-700 hover:text-sky-900">
+                        استخدمه الآن <i class="fas fa-arrow-left ms-1"></i>
+                    </a>
+                </div>
+            </div>
+            @endforeach
+        </div>
+        <div class="px-4 sm:px-5 pb-5">
+            <p class="text-xs text-gray-500 leading-relaxed">
+                خصوماتك تُطبَّق تلقائياً في صفحة الدفع عند شراء أي كورس، ومش محتاج تكتب الكود بنفسك.
+            </p>
+        </div>
+        @else
+        <div class="p-6 sm:p-8 text-center">
+            <div class="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3 text-gray-400">
+                <i class="fas fa-tag text-xl"></i>
+            </div>
+            <p class="text-sm text-gray-500 mb-4">لا توجد خصومات متاحة لك حالياً.</p>
+            <a href="{{ route('public.customer-survey.show') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold transition-colors">
+                <i class="fas fa-comment-dots"></i>
+                شاركنا رأيك واحصل على خصم 20%
+            </a>
+        </div>
+        @endif
+    </div>
+
     @if(isset($transactions) && $transactions->count() > 0)
     <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div class="px-4 sm:px-5 py-4 border-b border-gray-100">

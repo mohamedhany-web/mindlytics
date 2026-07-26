@@ -491,6 +491,16 @@ Route::post('/course/{courseId}/reviews', [\App\Http\Controllers\Public\PublicRe
     ->middleware('auth')
     ->name('public.course.reviews.store');
 
+// استبيان عملاء الأكاديمية (لمن اشترى كورساً) — يمنح كوبون خصم شخصي
+Route::get('/customer-survey', [\App\Http\Controllers\Public\CustomerSurveyController::class, 'show'])
+    ->name('public.customer-survey.show');
+Route::post('/customer-survey/lookup', [\App\Http\Controllers\Public\CustomerSurveyController::class, 'lookup'])
+    ->middleware('throttle:12,1')
+    ->name('public.customer-survey.lookup');
+Route::post('/customer-survey', [\App\Http\Controllers\Public\CustomerSurveyController::class, 'store'])
+    ->middleware('throttle:8,1')
+    ->name('public.customer-survey.store');
+
 // صفحة إتمام الطلب (Checkout) — متاحة للزائر مع تسجيل سريع داخل الصفحة
 Route::get('/course/{courseId}/checkout', [\App\Http\Controllers\Public\CheckoutController::class, 'show'])
     ->name('public.course.checkout');
@@ -2147,6 +2157,15 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('/{marketing_course_review}/toggle', [\App\Http\Controllers\Admin\MarketingCourseReviewController::class, 'toggleApprove'])->name('toggle');
             Route::delete('/{marketing_course_review}', [\App\Http\Controllers\Admin\MarketingCourseReviewController::class, 'destroy'])->name('destroy');
         });
+
+        // استبيان عملاء الأكاديمية (ردود العملاء + الخصم الممنوح)
+        Route::prefix('marketing-customer-surveys')->name('marketing-customer-surveys.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\MarketingCustomerSurveyController::class, 'index'])->name('index');
+            Route::get('/export', [\App\Http\Controllers\Admin\MarketingCustomerSurveyController::class, 'export'])->name('export');
+            Route::get('/{marketing_customer_survey}', [\App\Http\Controllers\Admin\MarketingCustomerSurveyController::class, 'show'])->name('show');
+            Route::delete('/{marketing_customer_survey}', [\App\Http\Controllers\Admin\MarketingCustomerSurveyController::class, 'destroy'])->name('destroy');
+        });
+
         Route::get('/personal-branding/{personal_branding}', [\App\Http\Controllers\Admin\InstructorPersonalBrandingController::class, 'show'])->name('personal-branding.show');
         Route::post('/personal-branding/{personal_branding}/approve', [\App\Http\Controllers\Admin\InstructorPersonalBrandingController::class, 'approve'])->name('personal-branding.approve');
         Route::post('/personal-branding/{personal_branding}/reject', [\App\Http\Controllers\Admin\InstructorPersonalBrandingController::class, 'reject'])->name('personal-branding.reject');

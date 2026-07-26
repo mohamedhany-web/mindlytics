@@ -348,6 +348,26 @@ class OrderController extends Controller
             ]);
             Log::info('Order approve: order updated', ['order_id' => $order->id]);
 
+            // تسجيل استهلاك كوبون الخصم الشخصي إن وُجد (لا نوقف الموافقة إذا فشل)
+            try {
+                if ($order->coupon_id && (float) $order->discount_amount > 0) {
+                    $coupon = \App\Models\Coupon::find($order->coupon_id);
+                    $orderUser = $order->user ?: \App\Models\User::find($order->user_id);
+
+                    if ($coupon && $orderUser) {
+                        app(\App\Services\CustomerDiscountService::class)->markUsed(
+                            $coupon,
+                            $orderUser,
+                            (float) $order->original_amount,
+                            (float) $order->discount_amount,
+                            $invoice->id
+                        );
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Coupon usage recording failed during order approval: ' . $e->getMessage(), ['order_id' => $order->id]);
+            }
+
             // تحديث حالة الإحالة إذا كانت موجودة (لا نوقف الموافقة إذا فشل)
             Log::info('Order approve: after order updated', ['order_id' => $order->id]);
             try {
