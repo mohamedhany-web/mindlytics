@@ -114,30 +114,13 @@
     .survey-benefits {
         display: grid;
         grid-template-columns: 1fr;
-        gap: 0.75rem;
+        gap: 0.85rem;
     }
 
     @media (min-width: 640px) {
         .survey-benefits {
             grid-template-columns: repeat(3, 1fr);
-            gap: 0;
-            background: #fff;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 1.25rem;
-            overflow: hidden;
-            box-shadow: 0 8px 28px rgba(15, 23, 42, 0.05);
-        }
-
-        .survey-benefit {
-            border: 0 !important;
-            border-radius: 0 !important;
-            box-shadow: none !important;
-            background: transparent !important;
-            border-inline-start: 1px solid #e2e8f0 !important;
-        }
-
-        .survey-benefit:first-child {
-            border-inline-start: 0 !important;
+            gap: 1rem;
         }
     }
 
@@ -145,16 +128,18 @@
         display: flex;
         align-items: center;
         gap: 0.85rem;
-        padding: 1rem 1.1rem;
+        padding: 1.1rem 1.15rem;
         background: #fff;
         border: 1.5px solid #e2e8f0;
-        border-radius: 1rem;
+        border-radius: 1.15rem;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+        min-height: 5.25rem;
     }
 
     .survey-benefit-icon {
         width: 2.5rem;
         height: 2.5rem;
-        border-radius: 0.75rem;
+        border-radius: 0.85rem;
         display: inline-flex;
         align-items: center;
         justify-content: center;
