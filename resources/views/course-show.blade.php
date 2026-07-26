@@ -1503,6 +1503,7 @@
                             @include('partials.intro-video-embed', [
                                 'url' => $introVideoUrl,
                                 'title' => __('public.intro_video_title'),
+                                'autoplay' => true,
                             ])
                         </div>
                         @else
