@@ -221,6 +221,46 @@
                     <p x-show="contacts.length === 0 && todayLeads.length > 0" class="text-sm text-sky-800 font-medium">اضغط على عميل من القائمة أعلاه — أو «إضافة الكل».</p>
                 </section>
 
+                @if(($campaigns ?? collect())->isNotEmpty())
+                <section class="dr-panel p-5">
+                    <div class="mb-3">
+                        <h2 class="font-bold text-slate-900">٤ — الحملات الإعلانية <span class="text-xs font-normal text-slate-500">(تُملأ يومياً)</span></h2>
+                        <p class="text-xs text-slate-500 mt-1">سجّل نتائج اليوم لكل حملة أُسندت إليك — الرسائل الجديدة، القنوات، والتأهيل.</p>
+                    </div>
+
+                    <div class="space-y-4">
+                        @foreach($campaigns as $campaign)
+                            @php $entry = ($campaignEntries ?? collect())->get($campaign->id); @endphp
+                            <div class="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+                                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                    <div>
+                                        <p class="font-bold text-slate-900 text-sm"><i class="fas fa-bullhorn ml-1 text-indigo-500"></i> {{ $campaign->name }}</p>
+                                        <p class="text-xs text-slate-500 mt-0.5">{{ $campaign->platformLabel() }}</p>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                                    @foreach($campaignFieldLabels as $key => $label)
+                                        <div>
+                                            <label class="block text-xs font-medium text-slate-600 mb-1">{{ $label }}</label>
+                                            <input type="number" min="0"
+                                                   name="campaigns[{{ $campaign->id }}][{{ $key }}]"
+                                                   value="{{ old('campaigns.'.$campaign->id.'.'.$key, $entry?->$key ?? 0) }}"
+                                                   class="dr-input px-3 py-2 text-sm">
+                                        </div>
+                                    @endforeach
+                                </div>
+
+                                <div class="mt-3">
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">ملاحظات عن اليوم — لهذه الحملة</label>
+                                    <textarea name="campaigns[{{ $campaign->id }}][notes]" rows="2" class="dr-input px-3 py-2 text-sm" placeholder="ملاحظاتك عن أداء الحملة اليوم…">{{ old('campaigns.'.$campaign->id.'.notes', $entry?->notes) }}</textarea>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </section>
+                @endif
+
                 <div class="flex flex-wrap gap-3 sticky bottom-0 bg-white/95 backdrop-blur border-t border-slate-200 py-3 -mx-1 px-1">
                     <button type="submit" name="action" value="draft" class="px-5 py-2.5 border border-slate-300 rounded-lg font-semibold text-sm">حفظ مسودة</button>
                     <button type="submit" name="action" value="submit" class="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-bold text-sm">تسليم نهائي</button>

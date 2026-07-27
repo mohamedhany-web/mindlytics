@@ -2150,6 +2150,11 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('/personal-branding', [\App\Http\Controllers\Admin\InstructorPersonalBrandingController::class, 'index'])->name('personal-branding.index');
         Route::resource('popup-ads', \App\Http\Controllers\Admin\PopupAdController::class)->except(['show']);
 
+        // الحملات الإعلانية + تقارير الكامبين من السيلز
+        Route::get('advertising-campaigns/reports', [\App\Http\Controllers\Admin\AdvertisingCampaignController::class, 'reports'])->name('advertising-campaigns.reports');
+        Route::get('advertising-campaigns/reports/export', [\App\Http\Controllers\Admin\AdvertisingCampaignController::class, 'reportsExport'])->name('advertising-campaigns.reports.export');
+        Route::resource('advertising-campaigns', \App\Http\Controllers\Admin\AdvertisingCampaignController::class)->except(['show']);
+
         Route::prefix('marketing-course-reviews')->name('marketing-course-reviews.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\MarketingCourseReviewController::class, 'index'])->name('index');
             Route::get('/create', [\App\Http\Controllers\Admin\MarketingCourseReviewController::class, 'create'])->name('create');

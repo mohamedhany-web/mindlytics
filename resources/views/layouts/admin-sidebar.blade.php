@@ -1006,7 +1006,7 @@
 
             <!-- إدارة التسويق -->
             @php
-                $marketingOpen = request()->routeIs('admin.coupons.*') || request()->routeIs('admin.referral-programs.*') || request()->routeIs('admin.workshop-promo-codes.*') || request()->routeIs('admin.referrals.*') || request()->routeIs('admin.loyalty.*') || request()->routeIs('admin.personal-branding.*') || request()->routeIs('admin.popup-ads.*') || request()->routeIs('admin.marketing-course-reviews.*') || request()->routeIs('admin.marketing-customer-surveys.*');
+                $marketingOpen = request()->routeIs('admin.coupons.*') || request()->routeIs('admin.referral-programs.*') || request()->routeIs('admin.workshop-promo-codes.*') || request()->routeIs('admin.referrals.*') || request()->routeIs('admin.loyalty.*') || request()->routeIs('admin.personal-branding.*') || request()->routeIs('admin.popup-ads.*') || request()->routeIs('admin.marketing-course-reviews.*') || request()->routeIs('admin.marketing-customer-surveys.*') || request()->routeIs('admin.advertising-campaigns.*');
             @endphp
             <li x-data="{ open: {{ $marketingOpen ? 'true' : 'false' }} }">
                 <button type="button" @click="open = !open" :aria-expanded="open" 
@@ -1040,6 +1040,22 @@
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.popup-ads.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
                             <i class="fas fa-bullhorn w-4"></i>
                             <span>{{ __('admin.popup_ads') }}</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.advertising-campaigns.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.advertising-campaigns.index') || request()->routeIs('admin.advertising-campaigns.create') || request()->routeIs('admin.advertising-campaigns.edit') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
+                            <i class="fas fa-rectangle-ad w-4"></i>
+                            <span>الحملات الإعلانية</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.advertising-campaigns.reports') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.advertising-campaigns.reports') || request()->routeIs('admin.advertising-campaigns.reports.export') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
+                            <i class="fas fa-chart-column w-4"></i>
+                            <span>تقارير الكامبين (السيلز)</span>
                         </a>
                     </li>
                     <li>

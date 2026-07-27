@@ -870,6 +870,15 @@ class User extends Authenticatable
     }
 
     /**
+     * الحملات الإعلانية المسندة لهذا الموظف (المبيعات).
+     */
+    public function advertisingCampaigns(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(AdvertisingCampaign::class, 'advertising_campaign_sales_user')
+            ->withTimestamps();
+    }
+
+    /**
      * هل يخضع لنظام قفل الدوام (حضور/انصراف/خصومات)؟
      */
     public function isSubjectToWorkSchedule(): bool

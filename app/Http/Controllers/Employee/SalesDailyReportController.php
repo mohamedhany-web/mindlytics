@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Employee;
 use App\Http\Controllers\Controller;
 use App\Models\SalesDailyReport;
 use App\Models\SalesLead;
+use App\Services\CampaignReportService;
 use App\Services\SalesDailyReportService;
 use App\Services\SalesNotificationService;
 use App\Support\SalesDailyReportSettings;
@@ -122,8 +123,14 @@ class SalesDailyReportController extends Controller
 
         $suggestedContacts = $service->suggestedContactsForReport($user, $date, $report);
 
+        $campaignService = app(CampaignReportService::class);
+        $campaigns = $campaignService->campaignsForUser($user, $date);
+        $campaignEntries = $campaignService->existingEntries($user, $date);
+        $campaignFieldLabels = $campaignService->fieldLabels();
+
         return view('employee.sales.daily-reports.edit', compact(
-            'report', 'date', 'leads', 'fieldLabels', 'autoFilled', 'kpiComparison', 'settings', 'todayLeads', 'suggestedContacts'
+            'report', 'date', 'leads', 'fieldLabels', 'autoFilled', 'kpiComparison', 'settings', 'todayLeads', 'suggestedContacts',
+            'campaigns', 'campaignEntries', 'campaignFieldLabels'
         ));
     }
 
@@ -165,6 +172,8 @@ class SalesDailyReportController extends Controller
 
         $report = $service->saveReport($user, $date, $validated, $validated['contacts'] ?? [], $submit);
 
+        app(CampaignReportService::class)->saveEntries($user, $date, $validated['campaigns'] ?? [], $report);
+
         $comparison = null;
         if ($submit) {
             $comparison = $service->kpiComparisonForReport($user, $report, $date);
@@ -204,6 +213,15 @@ class SalesDailyReportController extends Controller
             'contacts.*.interaction_type' => 'nullable|in:call,meeting',
             'contacts.*.client_status' => 'nullable|string|max:2000',
             'contacts.*.client_problems' => 'nullable|string|max:5000',
+            'campaigns' => 'nullable|array',
+            'campaigns.*.new_messages' => 'nullable|integer|min:0|max:100000',
+            'campaigns.*.whatsapp_messages' => 'nullable|integer|min:0|max:100000',
+            'campaigns.*.messenger_messages' => 'nullable|integer|min:0|max:100000',
+            'campaigns.*.instagram_messages' => 'nullable|integer|min:0|max:100000',
+            'campaigns.*.qualified' => 'nullable|integer|min:0|max:100000',
+            'campaigns.*.unqualified' => 'nullable|integer|min:0|max:100000',
+            'campaigns.*.converted' => 'nullable|integer|min:0|max:100000',
+            'campaigns.*.notes' => 'nullable|string|max:5000',
         ]);
 
         $data['contacts'] = array_values(array_filter(
