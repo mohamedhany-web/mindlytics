@@ -34,7 +34,6 @@ class OfflineCourseGroup extends Model
     ];
 
     protected $casts = [
-        'class_time' => 'datetime',
         'start_date' => 'date',
         'end_date' => 'date',
         'session_duration_hours' => 'decimal:1',
