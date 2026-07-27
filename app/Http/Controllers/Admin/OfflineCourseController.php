@@ -210,6 +210,10 @@ class OfflineCourseController extends Controller
         $validated['public_booking_enabled'] = $request->boolean('public_booking_enabled');
         $validated['student_online_portal_enabled'] = $request->boolean('student_online_portal_enabled');
         $validated['online_only'] = $request->boolean('online_only');
+        if ($validated['online_only']) {
+            $validated['public_booking_enabled'] = false;
+            $validated['student_online_portal_enabled'] = true;
+        }
         foreach (['booking_opens_at', 'booking_closes_at'] as $k) {
             if (empty($validated[$k] ?? null)) {
                 $validated[$k] = null;
@@ -225,6 +229,13 @@ class OfflineCourseController extends Controller
         $validated['branch_id'] = $request->filled('branch_id') ? (int) $request->input('branch_id') : null;
 
         $offlineCourse->update($validated);
+
+        if ($validated['online_only']) {
+            $offlineCourse->groups()->update([
+                'public_booking_enabled' => false,
+                'public_slug' => null,
+            ]);
+        }
 
         return redirect()->route('admin.offline-courses.show', $offlineCourse)
                         ->with('success', 'تم تحديث الكورس الأوفلاين بنجاح');

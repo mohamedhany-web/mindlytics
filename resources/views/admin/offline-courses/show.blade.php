@@ -10,7 +10,16 @@
         <div class="flex justify-between items-center">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900">{{ $offlineCourse->title }}</h1>
-                <p class="text-gray-600 mt-1">عرض تفاصيل الكورس الأوفلاين</p>
+                <p class="text-gray-600 mt-1">
+                    @if($offlineCourse->online_only)
+                        كورس أونلاين فقط — إدارة الحجز والتسجيل عبر قناة الأونلاين
+                    @else
+                        عرض تفاصيل الكورس الأوفلاين
+                    @endif
+                </p>
+                @if($offlineCourse->online_only)
+                    <span class="inline-flex mt-2 items-center gap-1 px-2.5 py-1 rounded-full bg-violet-100 text-violet-800 text-xs font-bold">أونلاين فقط</span>
+                @endif
             </div>
             <div class="flex gap-2">
                 <a href="{{ route('admin.offline-courses.index') }}" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors">
@@ -189,9 +198,17 @@
         @endif
     </div>
 
+@php $isOnlineOnly = (bool) ($offlineCourse->online_only ?? false); @endphp
     <!-- الروابط السريعة -->
     <div class="bg-white rounded-xl shadow-lg p-4 border border-gray-200">
-        <h2 class="text-sm font-bold text-gray-800 mb-3"><i class="fas fa-layer-group text-gray-500 ml-2"></i>المجموعات موحّدة في الجدول؛ التسجيلات والحجوزات مفصولة حسب القناة</h2>
+        <h2 class="text-sm font-bold text-gray-800 mb-3">
+            <i class="fas fa-layer-group text-gray-500 ml-2"></i>
+            @if($isOnlineOnly)
+                كورس أونلاين فقط — إدارة المجموعات والحجوزات والتسجيلات لقناة الأونلاين
+            @else
+                المجموعات موحّدة في الجدول؛ التسجيلات والحجوزات مفصولة حسب القناة
+            @endif
+        </h2>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <a href="{{ route('admin.offline-courses.groups.index', $offlineCourse) }}" class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-200 group">
@@ -201,10 +218,11 @@
                 </div>
                 <div>
                     <h3 class="font-bold text-gray-900 text-lg">المجموعات والجلسات</h3>
-                    <p class="text-sm text-gray-600">{{ $stats['total_groups'] }} مجموعة · جدول موحّد للقناتين</p>
+                    <p class="text-sm text-gray-600">{{ $stats['total_groups'] }} مجموعة · @if($isOnlineOnly) إدارة حجز أونلاين @else جدول موحّد للقناتين @endif</p>
                 </div>
             </div>
         </a>
+        @unless($isOnlineOnly)
         <a href="{{ route('admin.offline-courses.enrollments.index', [$offlineCourse, 'channel' => 'offline']) }}" class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-200 border-r-4 border-r-emerald-500 group">
             <div class="flex items-center gap-4">
                 <div class="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
@@ -216,6 +234,7 @@
                 </div>
             </div>
         </a>
+        @endunless
         <a href="{{ route('admin.offline-courses.enrollments.index', [$offlineCourse, 'channel' => 'online']) }}" class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-200 border-r-4 border-r-indigo-500 group">
             <div class="flex items-center gap-4">
                 <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
@@ -227,6 +246,7 @@
                 </div>
             </div>
         </a>
+        @unless($isOnlineOnly)
         <a href="{{ route('admin.offline-course-bookings.index', ['offline_course_id' => $offlineCourse->id]) }}" class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-200 border-r-4 border-r-amber-400 group">
             <div class="flex items-center gap-4">
                 <div class="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
@@ -238,6 +258,7 @@
                 </div>
             </div>
         </a>
+        @endunless
         <a href="{{ route('admin.online-course-bookings.index', ['offline_course_id' => $offlineCourse->id]) }}" class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-200 border-r-4 border-r-violet-400 group">
             <div class="flex items-center gap-4">
                 <div class="w-16 h-16 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">

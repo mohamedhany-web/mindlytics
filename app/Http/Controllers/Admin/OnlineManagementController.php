@@ -208,8 +208,8 @@ class OnlineManagementController extends Controller
         }
 
         return redirect()
-            ->route('admin.online-management.index')
-            ->with('success', 'تم إنشاء كورس أونلاين فقط مع مجموعة مفعّل لها الحجز الأونلاين. يمكنك تعديل التفاصيل من صفحة الكورس.');
+            ->route('admin.offline-courses.show', $courseId)
+            ->with('success', 'تم إنشاء كورس أونلاين فقط. إدارة الحجز والتسجيل عبر قناة الأونلاين فقط.');
     }
 
     private function resolveBranchIdForInstructor(int $instructorId): ?int

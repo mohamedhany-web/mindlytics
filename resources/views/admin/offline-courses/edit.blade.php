@@ -147,17 +147,32 @@
 
             <!-- الحجز العام للطلاب -->
             <div class="border-b border-gray-200 pb-6">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">الحجز العام (الطلاب)</h2>
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                    @if($offlineCourse->online_only)
+                        نافذة الحجز (أونلاين)
+                    @else
+                        الحجز العام (الطلاب)
+                    @endif
+                </h2>
+                @if($offlineCourse->online_only)
+                    <p class="text-sm text-violet-800 bg-violet-50 border border-violet-100 rounded-lg px-3 py-2 mb-4">
+                        هذا كورس <strong>أونلاين فقط</strong> — إدارة الحجز تتم عبر قناة الأونلاين (روابط المجموعات الأونلاين). حجز الأوفلاين غير متاح.
+                    </p>
+                    <input type="hidden" name="public_booking_enabled" value="0">
+                @else
                 <p class="text-sm text-gray-600 mb-2">تواريخ بداية/نهاية الحجز تُطبَّق على <strong>رابط حجز المجموعة</strong> ولطلبات الحجز عند مشاركة رابط مباشر. يجب أن يكون الكورس <strong>نشطاً</strong> (الحالة: نشط) وليس مسودة.</p>
                 <p class="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-4">إن اخترت «نهاية الحجز» من التقويم بدون وقت محدد (يظهر كـ 12:00 ص)، يُحفظ تلقائياً كـ <strong>نهاية ذلك اليوم</strong> حتى لا يُغلق الحجز من أول دقيقة في اليوم.</p>
                 <p class="text-sm text-gray-600 mb-4">«تفعيل الحجز العام للطلاب» يسمح بطلب الحجز عبر رابط مباشر للكورس (إن وُجد) ضمن نافذة التواريخ أدناه. رابط المجموعة يعمل بمجرد تفعيل الحجز على المجموعة + صلاحية التواريخ هنا.</p>
+                @endif
                 <div class="space-y-4">
+                    @unless($offlineCourse->online_only)
                     <label class="inline-flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="public_booking_enabled" value="1"
                                {{ old('public_booking_enabled', $offlineCourse->public_booking_enabled) ? 'checked' : '' }}
                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                         <span class="text-sm font-medium text-gray-800">تفعيل الحجز العام للطلاب</span>
                     </label>
+                    @endunless
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">بداية الحجز</label>
@@ -189,8 +204,9 @@
                 <label class="inline-flex items-center gap-2 cursor-pointer mt-4">
                     <input type="checkbox" name="online_only" value="1"
                            {{ old('online_only', $offlineCourse->online_only) ? 'checked' : '' }}
-                           class="rounded border-gray-300 text-violet-600 focus:ring-violet-500">
-                    <span class="text-sm font-medium text-gray-800">كورس أونلاين فقط (يُبرز في «إدارة الأونلاين» — لا يمنع الحضوري إن وُجدت مجموعات حضورية)</span>
+                           class="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+                           @if($offlineCourse->online_only) onclick="return confirm('إلغاء «أونلاين فقط» سيُظهر مجدداً خيارات حجز الأوفلاين في الإدارة.');" @endif>
+                    <span class="text-sm font-medium text-gray-800">كورس أونلاين فقط (إخفاء حجز الأوفلاين من الإدارة — الحجز عبر الأونلاين فقط)</span>
                 </label>
                 <p class="text-xs text-gray-500 mt-2">لظهور الكورس في قائمة كورسات الأونلاين للإدارة، فعّل أيضاً <strong>الحجز الأونلاين</strong> لمجموعة من صفحة المجموعات.</p>
             </div>

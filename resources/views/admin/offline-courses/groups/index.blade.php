@@ -4,20 +4,31 @@
 @section('header', 'مجموعات الكورس الأوفلاين')
 
 @section('content')
+@php $isOnlineOnly = (bool) ($offlineCourse->online_only ?? false); @endphp
 <div class="space-y-6" x-data="groupsPage()">
     <!-- الهيدر -->
     <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
         <div class="flex flex-wrap justify-between items-center gap-4">
             <div>
                 <nav class="text-sm text-gray-500 mb-1">
-                    <a href="{{ route('admin.offline-courses.index') }}" class="hover:text-blue-600">الكورسات الأوفلاين</a>
+                    @if($isOnlineOnly)
+                        <a href="{{ route('admin.online-management.index') }}" class="hover:text-blue-600">إدارة الأونلاين</a>
+                    @else
+                        <a href="{{ route('admin.offline-courses.index') }}" class="hover:text-blue-600">الكورسات الأوفلاين</a>
+                    @endif
                     <span class="mx-2">/</span>
                     <a href="{{ route('admin.offline-courses.show', $offlineCourse) }}" class="hover:text-blue-600">{{ $offlineCourse->title }}</a>
                     <span class="mx-2">/</span>
                     <span class="text-gray-700 font-semibold">المجموعات</span>
                 </nav>
                 <h1 class="text-2xl font-bold text-gray-900">مجموعات: {{ $offlineCourse->title }}</h1>
-                <p class="text-gray-600 mt-1">إدارة مجموعات الكورس الأوفلاين وجدول الجلسات</p>
+                <p class="text-gray-600 mt-1">
+                    @if($isOnlineOnly)
+                        إدارة مجموعات وحجز الأونلاين فقط لهذا الكورس
+                    @else
+                        إدارة مجموعات الكورس الأوفلاين وجدول الجلسات
+                    @endif
+                </p>
             </div>
             <a href="{{ route('admin.offline-courses.show', $offlineCourse) }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center">
                 <i class="fas fa-arrow-right mr-2"></i>
@@ -59,9 +70,16 @@
                 </select>
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">الحد الأقصى للطلاب <span class="text-red-500">*</span></label>
-                <input type="number" name="max_students" value="{{ old('max_students', 30) }}" min="1" required
-                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                @if($isOnlineOnly)
+                    <label class="block text-sm font-medium text-gray-700 mb-1">سعة الأونلاين (طلاب) <span class="text-red-500">*</span></label>
+                    <input type="hidden" name="max_students" value="0">
+                    <input type="number" name="max_students_online" value="{{ old('max_students_online', 30) }}" min="1" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                @else
+                    <label class="block text-sm font-medium text-gray-700 mb-1">الحد الأقصى للطلاب <span class="text-red-500">*</span></label>
+                    <input type="number" name="max_students" value="{{ old('max_students', 30) }}" min="1" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                @endif
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">المكان</label>
@@ -96,6 +114,7 @@
                 <label class="block text-sm font-medium text-gray-700 mb-1">الوصف</label>
                 <textarea name="description" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">{{ old('description') }}</textarea>
             </div>
+            @unless($isOnlineOnly)
             <div class="md:col-span-2 lg:col-span-3 border-t border-gray-200 pt-4 mt-2">
                 <p class="text-sm font-semibold text-gray-800 mb-3"><i class="fas fa-globe text-purple-600 ml-2"></i>حجز عبر رابط عام (مثل الورش)</p>
                 <input type="hidden" name="public_booking_enabled" value="0">
@@ -109,11 +128,14 @@
                            class="w-full max-w-lg px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 font-mono text-sm">
                 </div>
             </div>
+            @else
+                <input type="hidden" name="public_booking_enabled" value="0">
+            @endunless
             <div class="md:col-span-2 lg:col-span-3 border-t border-gray-200 pt-4 mt-2">
                 <p class="text-sm font-semibold text-gray-800 mb-3"><i class="fas fa-video text-indigo-600 ml-2"></i>حجز أونلاين عبر رابط عام</p>
                 <input type="hidden" name="online_booking_enabled" value="0">
                 <label class="inline-flex items-center gap-2 cursor-pointer mb-3">
-                    <input type="checkbox" name="online_booking_enabled" value="1" {{ old('online_booking_enabled') ? 'checked' : '' }} class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                    <input type="checkbox" name="online_booking_enabled" value="1" {{ old('online_booking_enabled', $isOnlineOnly ? '1' : '') ? 'checked' : '' }} class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
                     <span class="text-sm text-gray-700">تفعيل صفحة حجز أونلاين لهذه المجموعة</span>
                 </label>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -122,11 +144,13 @@
                         <input type="text" name="online_slug" value="{{ old('online_slug') }}" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="مثال: cairo-batch-1-online"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono text-sm">
                     </div>
+                    @unless($isOnlineOnly)
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">سعة الأونلاين</label>
                         <input type="number" name="max_students_online" value="{{ old('max_students_online', 0) }}" min="0"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
                     </div>
+                    @endunless
                 </div>
             </div>
             <div class="md:col-span-2 lg:col-span-3">
@@ -163,7 +187,8 @@
                         $pendBookOnline = $group->pendingBookingsCount('online');
                         $effRemOnline = $group->effectiveAvailableSeats('online');
                     @endphp
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div class="grid grid-cols-1 {{ $isOnlineOnly ? '' : 'md:grid-cols-2' }} gap-4 mt-4">
+                        @unless($isOnlineOnly)
                         <div class="rounded-xl border-2 border-emerald-200 bg-emerald-50/60 p-4">
                             <h4 class="font-bold text-emerald-900 text-sm mb-2"><i class="fas fa-building ml-1"></i> قناة الحضور (أوفلاين)</h4>
                             <p class="text-sm text-gray-800">
@@ -176,6 +201,7 @@
                                 <a href="{{ route('admin.offline-course-bookings.index', ['offline_course_id' => $offlineCourse->id]) }}" class="text-xs font-semibold text-amber-800 hover:underline">حجوزات أوفلاين</a>
                             </div>
                         </div>
+                        @endunless
                         <div class="rounded-xl border-2 border-indigo-200 bg-indigo-50/60 p-4">
                             <h4 class="font-bold text-indigo-900 text-sm mb-2"><i class="fas fa-video ml-1"></i> قناة الأونلاين</h4>
                             <p class="text-sm text-gray-800">
@@ -189,12 +215,14 @@
                             </div>
                         </div>
                     </div>
+                    @unless($isOnlineOnly)
                     @if($group->public_booking_enabled && $group->public_slug)
                         <div class="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm">
                             <span class="font-semibold text-purple-900"><i class="fas fa-link ml-1"></i> رابط حجز المجموعة:</span>
                             <a href="{{ route('public.offline-groups.show', $group->public_slug) }}" target="_blank" rel="noopener" class="text-blue-600 hover:underline break-all mr-2">{{ route('public.offline-groups.show', $group->public_slug) }}</a>
                         </div>
                     @endif
+                    @endunless
                     @if($group->online_booking_enabled && $group->online_slug)
                         <div class="mt-3 p-3 bg-indigo-50 border border-indigo-200 rounded-lg text-sm">
                             <span class="font-semibold text-indigo-900"><i class="fas fa-link ml-1"></i> رابط حجز الأونلاين:</span>
@@ -322,10 +350,18 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">الحد الأقصى للطلاب</label>
-                            <input type="number" name="max_students" x-model="editGroup.max_students" min="1" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        </div>
+                        @if($isOnlineOnly)
+                            <input type="hidden" name="max_students" value="0">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">سعة الأونلاين</label>
+                                <input type="number" name="max_students_online" x-model="editGroup.max_students_online" min="1" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                        @else
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">الحد الأقصى للطلاب</label>
+                                <input type="number" name="max_students" x-model="editGroup.max_students" min="1" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        @endif
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">الحالة</label>
                             <select name="status" x-model="editGroup.status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
@@ -364,6 +400,7 @@
                             <textarea name="description" x-model="editGroup.description" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
                         </div>
                         <div class="md:col-span-2 border-t border-gray-200 pt-4 mt-2">
+                            @unless($isOnlineOnly)
                             <p class="text-sm font-semibold text-gray-800 mb-2"><i class="fas fa-link text-purple-600 ml-1"></i>رابط الحجز العام</p>
                             <input type="hidden" name="public_booking_enabled" value="0">
                             <label class="inline-flex items-center gap-2 cursor-pointer mb-3">
@@ -375,6 +412,9 @@
                                 <input type="text" name="public_slug" x-model="editGroup.public_slug" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 font-mono text-sm" placeholder="يُولَّد تلقائياً إن فُعِّل الحجز وترك فارغاً">
                             </div>
                             <div class="mt-4 border-t border-gray-200 pt-4">
+                            @else
+                                <input type="hidden" name="public_booking_enabled" value="0">
+                            @endunless
                                 <p class="text-sm font-semibold text-gray-800 mb-2"><i class="fas fa-video text-indigo-600 ml-1"></i>رابط الحجز الأونلاين</p>
                                 <input type="hidden" name="online_booking_enabled" value="0">
                                 <label class="inline-flex items-center gap-2 cursor-pointer mb-3">
@@ -386,12 +426,16 @@
                                         <label class="block text-sm font-medium text-gray-700 mb-1">رابط الأونلاين (slug)</label>
                                         <input type="text" name="online_slug" x-model="editGroup.online_slug" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono text-sm">
                                     </div>
+                                    @unless($isOnlineOnly)
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">سعة الأونلاين</label>
                                         <input type="number" name="max_students_online" x-model="editGroup.max_students_online" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
                                     </div>
+                                    @endunless
                                 </div>
+                            @unless($isOnlineOnly)
                             </div>
+                            @endunless
                         </div>
                     </div>
                     <div class="mt-4 flex justify-end gap-2">
