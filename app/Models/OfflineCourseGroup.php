@@ -127,7 +127,11 @@ class OfflineCourseGroup extends Model
 
     public static function generateUniqueOnlineSlug(string $fromName, ?int $exceptId = null): string
     {
-        $base = Str::slug($fromName) ?: 'group-online';
+        $base = Str::slug($fromName);
+        if ($base === '' || $base === null) {
+            // عناوين عربية غالباً لا تنتج slug لاتيني — استخدم معرفاً فريداً آمناً
+            $base = 'group-online-'.Str::lower(Str::random(8));
+        }
         $slug = $base;
         $n = 0;
 
@@ -140,7 +144,7 @@ class OfflineCourseGroup extends Model
                 return $slug;
             }
             $n++;
-            $slug = $base . '-' . $n;
+            $slug = $base.'-'.$n;
         }
     }
 

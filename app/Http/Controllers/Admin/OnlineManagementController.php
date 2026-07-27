@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\OfflineCourse;
 use App\Models\OfflineCourseGroup;
 use App\Models\User;
@@ -11,6 +12,8 @@ use App\Support\OfflineEnrollmentProvisioner;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class OnlineManagementController extends Controller
@@ -78,21 +81,47 @@ class OnlineManagementController extends Controller
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'instructor_id' => ['required', 'exists:users,id'],
+            'instructor_id' => [
+                'required',
+                Rule::exists('users', 'id')->where(fn ($q) => $q->where('role', 'instructor')->where('is_active', true)),
+            ],
             'price' => ['nullable', 'numeric', 'min:0'],
             'max_students_online' => ['required', 'integer', 'min:1', 'max:500'],
             'group_name' => ['nullable', 'string', 'max:255'],
             'status' => ['required', 'in:draft,active'],
         ], [
+            'title.required' => 'أدخل عنوان الكورس.',
+            'instructor_id.required' => 'اختر المدرب.',
+            'instructor_id.exists' => 'المدرب المحدد غير صالح أو غير نشط.',
             'max_students_online.required' => 'حدد سعة المجموعة الأونلاين.',
+            'status.required' => 'حدد حالة الكورس.',
         ]);
+
+        if (! Schema::hasColumn('offline_courses', 'online_only')) {
+            return back()->withInput()->withErrors([
+                'error' => 'قاعدة البيانات غير محدّثة (عمود online_only مفقود). نفّذ php artisan migrate على السيرفر.',
+            ]);
+        }
+
+        if (! Schema::hasColumn('offline_course_groups', 'online_slug')) {
+            return back()->withInput()->withErrors([
+                'error' => 'قاعدة البيانات غير محدّثة (أعمدة الحجز الأونلاين للمجموعات مفقودة). نفّذ php artisan migrate على السيرفر.',
+            ]);
+        }
+
+        $branchId = $this->resolveBranchIdForInstructor((int) $validated['instructor_id']);
+        if ($branchId === null && Schema::hasColumn('offline_courses', 'branch_id')) {
+            return back()->withInput()->withErrors([
+                'error' => 'لا يوجد فرع صالح لتعيين الكورس. أنشئ فرعاً في النظام أو اربط المدرب بفرع صحيح.',
+            ]);
+        }
 
         DB::beginTransaction();
         try {
-            $course = OfflineCourse::create([
+            $payload = [
                 'title' => $validated['title'],
                 'description' => $validated['description'] ?? null,
-                'instructor_id' => $validated['instructor_id'],
+                'instructor_id' => (int) $validated['instructor_id'],
                 'location_id' => null,
                 'location' => null,
                 'start_date' => null,
@@ -110,10 +139,19 @@ class OnlineManagementController extends Controller
                 'online_only' => true,
                 'booking_opens_at' => null,
                 'booking_closes_at' => null,
-            ]);
+            ];
 
-            $groupName = $validated['group_name'] ?: ('مجموعة أونلاين — ' . $course->title);
-            $onlineSlug = OfflineCourseGroup::generateUniqueOnlineSlug($groupName);
+            if (Schema::hasColumn('offline_courses', 'branch_id')) {
+                $payload['branch_id'] = $branchId;
+            }
+
+            $course = OfflineCourse::create($payload);
+
+            $groupName = trim((string) ($validated['group_name'] ?? ''));
+            if ($groupName === '') {
+                $groupName = 'مجموعة أونلاين — '.$course->title;
+            }
+            $onlineSlug = OfflineCourseGroup::generateUniqueOnlineSlug($groupName.'-'.$course->id);
 
             OfflineCourseGroup::create([
                 'offline_course_id' => $course->id,
@@ -143,12 +181,34 @@ class OnlineManagementController extends Controller
             DB::rollBack();
             report($e);
 
-            return back()->withInput()->withErrors(['error' => 'تعذر إنشاء الكورس. حاول مرة أخرى.']);
+            $hint = 'تعذر إنشاء الكورس. حاول مرة أخرى.';
+            $msg = $e->getMessage();
+            if (str_contains($msg, 'Unknown column')) {
+                $hint = 'قاعدة البيانات غير محدّثة. نفّذ php artisan migrate على السيرفر ثم أعد المحاولة.';
+            } elseif (str_contains($msg, 'foreign key') || str_contains($msg, '1452')) {
+                $hint = 'فشل الربط مع المدرب أو الفرع. تأكد أن المدرب نشط ومرتبط بفرع صحيح.';
+            } elseif (str_contains($msg, 'Duplicate') || str_contains($msg, '1062')) {
+                $hint = 'تعارض في البيانات (slug مكرر). غيّر اسم المجموعة وأعد المحاولة.';
+            } elseif (config('app.debug')) {
+                $hint = 'تعذر إنشاء الكورس: '.$msg;
+            }
+
+            return back()->withInput()->withErrors(['error' => $hint]);
         }
 
         return redirect()
             ->route('admin.online-management.index')
             ->with('success', 'تم إنشاء كورس أونلاين فقط مع مجموعة مفعّل لها الحجز الأونلاين. يمكنك تعديل التفاصيل من صفحة الكورس.');
+    }
+
+    private function resolveBranchIdForInstructor(int $instructorId): ?int
+    {
+        $instructorBranchId = User::query()->whereKey($instructorId)->value('branch_id');
+        if ($instructorBranchId && Branch::query()->whereKey($instructorBranchId)->whereNull('deleted_at')->exists()) {
+            return (int) $instructorBranchId;
+        }
+
+        return Branch::defaultAssignableId();
     }
 
     public function enrollForm(Request $request): View

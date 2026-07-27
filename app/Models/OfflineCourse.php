@@ -54,21 +54,26 @@ class OfflineCourse extends Model
     protected static function booted(): void
     {
         static::creating(function (OfflineCourse $course): void {
-            if ($course->getAttribute('branch_id') !== null && $course->getAttribute('branch_id') !== '') {
+            $current = $course->getAttribute('branch_id');
+            if ($current !== null && $current !== '' && Branch::query()->whereKey($current)->whereNull('deleted_at')->exists()) {
                 return;
             }
+
             $instructorId = $course->getAttribute('instructor_id');
             if ($instructorId) {
                 $bid = User::query()->whereKey($instructorId)->value('branch_id');
-                if ($bid !== null) {
+                if ($bid !== null && Branch::query()->whereKey($bid)->whereNull('deleted_at')->exists()) {
                     $course->setAttribute('branch_id', $bid);
 
                     return;
                 }
             }
+
             $default = Branch::defaultAssignableId();
             if ($default !== null) {
                 $course->setAttribute('branch_id', $default);
+            } else {
+                $course->setAttribute('branch_id', null);
             }
         });
     }
