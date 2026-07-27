@@ -1,4 +1,9 @@
 <!-- Unified Navigation Bar - واجهة محدثة بألوان الأكاديمية وخط عربي -->
+@php
+    $navLogoUrl = filled($platformLogoUrl ?? null)
+        ? $platformLogoUrl
+        : \App\Support\SiteBranding::logoUrl();
+@endphp
 <nav id="navbar" 
      x-data="{ 
          mobileMenu: false,
@@ -39,11 +44,14 @@
             <!-- الشعار والعلامة -->
             <div class="flex items-center gap-3 gap-reverse flex-shrink-0">
                 <a href="{{ route('home') }}" class="flex items-center gap-3 gap-reverse group nav-brand">
-                    <div class="relative flex-shrink-0 flex items-center">
+                    <div class="relative flex-shrink-0 flex items-center leading-none">
                         <img
-                            src="{{ $platformLogoUrl ?? asset('logo-fallback.svg') }}"
+                            src="{{ $navLogoUrl }}"
                             alt="Mindlytics Logo"
+                            width="44"
+                            height="44"
                             class="block h-9 w-auto max-h-9 sm:h-10 sm:max-h-10 lg:h-11 lg:max-h-11 object-contain object-center transition-opacity duration-200 group-hover:opacity-95"
+                            style="min-width: 2.25rem; min-height: 2.25rem;"
                             onerror="this.onerror=null; this.src='{{ asset('logo-fallback.svg') }}';">
                     </div>
                     <div class="flex flex-col">
@@ -153,9 +161,12 @@
             <div class="flex items-center gap-3 min-w-0">
                 <div class="flex h-11 w-auto max-w-[120px] flex-shrink-0 items-center">
                     <img
-                        src="{{ $platformLogoUrl ?? asset('logo-fallback.svg') }}"
+                        src="{{ $navLogoUrl }}"
                         alt="Mindlytics Logo"
+                        width="44"
+                        height="44"
                         class="max-h-11 w-auto max-w-full object-contain object-center"
+                        style="min-width: 2.25rem; min-height: 2.25rem;"
                         onerror="this.onerror=null; this.src='{{ asset('logo-fallback.svg') }}';">
                 </div>
                 <div class="min-w-0">
