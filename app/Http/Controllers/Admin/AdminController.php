@@ -75,6 +75,16 @@ class AdminController extends Controller
             ->whereBetween('paid_at', [$previousPeriodStart->copy()->startOfDay(), $previousMonthMtdEnd])
             ->sum('amount') ?? 0);
 
+        $monthlyExpenses = (float) (\App\Models\Expense::where('status', 'approved')
+            ->whereBetween('expense_date', [$currentPeriodStart->toDateString(), $currentPeriodEnd->toDateString()])
+            ->sum('amount') ?? 0);
+        $previousMonthMtdExpenses = (float) (\App\Models\Expense::where('status', 'approved')
+            ->whereBetween('expense_date', [$previousPeriodStart->toDateString(), $previousMonthMtdEnd->toDateString()])
+            ->sum('amount') ?? 0);
+
+        $monthlyProfit = (float) ($stats['monthly_revenue'] ?? 0) - $monthlyExpenses;
+        $previousMonthMtdProfit = $previousMonthMtdRevenue - $previousMonthMtdExpenses;
+
         // مقارنات شهرية
         $monthlyComparisons = [
             'new_users' => $this->calculateChange(
@@ -84,10 +94,6 @@ class AdminController extends Controller
             'new_students' => $this->calculateChange(
                 User::where('role', 'student')->whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count(),
                 User::where('role', 'student')->whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])->count()
-            ),
-            'new_instructors' => $this->calculateChange(
-                User::where('role', 'instructor')->whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count(),
-                User::where('role', 'instructor')->whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])->count()
             ),
             'new_courses' => $this->calculateChange(
                 \App\Models\AdvancedCourse::whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count(),
@@ -101,9 +107,13 @@ class AdminController extends Controller
                 $stats['monthly_revenue'],
                 $previousMonthMtdRevenue
             ),
-            'pending_invoices' => $this->calculateChange(
-                \App\Models\Invoice::where('status', 'pending')->whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count(),
-                \App\Models\Invoice::where('status', 'pending')->whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])->count()
+            'monthly_expenses' => $this->calculateChange(
+                $monthlyExpenses,
+                $previousMonthMtdExpenses
+            ),
+            'monthly_profit' => $this->calculateChange(
+                $monthlyProfit,
+                $previousMonthMtdProfit
             ),
         ];
 
@@ -117,11 +127,6 @@ class AdminController extends Controller
                 'total' => $stats['total_students'],
                 'new_this_month' => $monthlyComparisons['new_students']['current'],
                 'trend' => $monthlyComparisons['new_students'],
-            ],
-            'instructors' => [
-                'total' => $stats['total_instructors'],
-                'new_this_month' => $monthlyComparisons['new_instructors']['current'],
-                'trend' => $monthlyComparisons['new_instructors'],
             ],
             'courses' => [
                 'total' => $stats['total_courses'],
@@ -137,10 +142,13 @@ class AdminController extends Controller
                 'current' => $stats['monthly_revenue'],
                 'trend' => $monthlyComparisons['monthly_revenue'],
             ],
-            'pending_invoices' => [
-                'total' => $stats['pending_invoices'],
-                'new_this_month' => $monthlyComparisons['pending_invoices']['current'],
-                'trend' => $monthlyComparisons['pending_invoices'],
+            'monthly_expenses' => [
+                'current' => $monthlyExpenses,
+                'trend' => $monthlyComparisons['monthly_expenses'],
+            ],
+            'monthly_profit' => [
+                'current' => $monthlyProfit,
+                'trend' => $monthlyComparisons['monthly_profit'],
             ],
         ];
 

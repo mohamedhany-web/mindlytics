@@ -21,9 +21,6 @@
         'decline' => 'text-rose-600',
         default => 'text-slate-600',
     };
-    $walletAvailable = (float) ($stats['total_wallet_balance'] ?? 0);
-    $walletPending = (float) ($stats['total_wallet_pending'] ?? 0);
-    $walletTotal = $walletAvailable + $walletPending;
     $revenueArr = $monthly['revenue'] ?? [];
     $latestRevenue = $revenueArr !== [] ? (float) $revenueArr[array_key_last($revenueArr)] : 0;
     $enrollArr = $monthly['totalEnrollments'] ?? [];
@@ -35,9 +32,9 @@
         ['label' => 'إيراد الشهر', 'value' => number_format($metrics['monthly_revenue']['current'] ?? 0, 0), 'icon' => 'fas fa-chart-line', 'theme' => 'sky', 'desc' => 'ج.م — مدفوعات مكتملة', 'trend' => $metrics['monthly_revenue']['trend'] ?? null],
         ['label' => 'إجمالي الإيراد', 'value' => number_format($stats['total_revenue'] ?? 0, 0), 'icon' => 'fas fa-money-bill-wave', 'theme' => 'green', 'desc' => 'ج.م — تراكمي', 'trend' => null],
         ['label' => 'الكورسات', 'value' => number_format($metrics['courses']['total'] ?? 0), 'icon' => 'fas fa-book', 'theme' => 'amber', 'desc' => number_format($stats['published_courses'] ?? 0) . ' منشور', 'trend' => $metrics['courses']['trend'] ?? null],
-        ['label' => 'المدربون', 'value' => number_format($metrics['instructors']['total'] ?? 0), 'icon' => 'fas fa-chalkboard-teacher', 'theme' => 'indigo', 'desc' => '+' . number_format($metrics['instructors']['new_this_month'] ?? 0) . ' هذا الشهر', 'trend' => $metrics['instructors']['trend'] ?? null],
+        ['label' => 'مصروفات الشهر', 'value' => number_format($metrics['monthly_expenses']['current'] ?? 0, 0), 'icon' => 'fas fa-receipt', 'theme' => 'rose', 'desc' => 'ج.م — مصروفات معتمدة', 'trend' => $metrics['monthly_expenses']['trend'] ?? null, 'invert_trend' => true],
         ['label' => 'المستخدمون', 'value' => number_format($metrics['users']['total'] ?? 0), 'icon' => 'fas fa-users', 'theme' => 'blue', 'desc' => '+' . number_format($metrics['users']['new_this_month'] ?? 0) . ' هذا الشهر', 'trend' => $metrics['users']['trend'] ?? null],
-        ['label' => 'فواتير معلّقة', 'value' => number_format($metrics['pending_invoices']['total'] ?? 0), 'icon' => 'fas fa-file-invoice', 'theme' => 'rose', 'desc' => number_format($walletTotal, 0) . ' ج.م في المحافظ', 'trend' => $metrics['pending_invoices']['trend'] ?? null],
+        ['label' => 'Profit', 'value' => number_format($metrics['monthly_profit']['current'] ?? 0, 0), 'icon' => 'fas fa-coins', 'theme' => ((float) ($metrics['monthly_profit']['current'] ?? 0) >= 0 ? 'teal' : 'rose'), 'desc' => 'ج.م — إيراد الشهر − المصروفات', 'trend' => $metrics['monthly_profit']['trend'] ?? null],
     ];
 
     $cardThemes = [
@@ -49,6 +46,7 @@
         'indigo'  => ['border' => 'border-indigo-200/70', 'bg' => 'from-white via-white to-indigo-50/60', 'label' => 'text-indigo-800/80', 'value' => 'from-indigo-700 to-violet-600', 'icon' => 'from-indigo-500 to-violet-600', 'desc' => 'text-indigo-700/70'],
         'blue'    => ['border' => 'border-blue-200/70', 'bg' => 'from-white via-white to-blue-50/60', 'label' => 'text-blue-800/80', 'value' => 'from-blue-700 to-sky-600', 'icon' => 'from-blue-500 to-sky-600', 'desc' => 'text-blue-700/70'],
         'rose'    => ['border' => 'border-rose-200/70', 'bg' => 'from-white via-white to-rose-50/60', 'label' => 'text-rose-800/80', 'value' => 'from-rose-700 to-red-600', 'icon' => 'from-rose-500 to-red-500', 'desc' => 'text-rose-700/70'],
+        'teal'    => ['border' => 'border-teal-200/70', 'bg' => 'from-white via-white to-teal-50/60', 'label' => 'text-teal-800/80', 'value' => 'from-teal-700 to-emerald-600', 'icon' => 'from-teal-500 to-emerald-600', 'desc' => 'text-teal-700/70'],
     ];
 @endphp
 
@@ -89,7 +87,9 @@
                 $theme = $cardThemes[$card['theme'] ?? 'blue'] ?? $cardThemes['blue'];
                 $trend = $card['trend'] ?? null;
                 $pct = $trend['percent'] ?? null;
+                $invertTrend = ! empty($card['invert_trend']);
                 $trendUp = $pct !== null && $pct >= 0;
+                $trendGood = $invertTrend ? ! $trendUp : $trendUp;
             @endphp
             <div class="dashboard-stat-card rounded-2xl border-2 {{ $theme['border'] }} bg-gradient-to-br {{ $theme['bg'] }} p-5 shadow-lg">
                 <div class="flex items-center justify-between gap-3 mb-3">
@@ -103,7 +103,7 @@
                 </div>
                 <p class="text-xs font-medium {{ $theme['desc'] }} truncate">{{ $card['desc'] }}</p>
                 @if($pct !== null)
-                    <p class="text-xs font-bold mt-2 {{ $trendUp ? 'text-emerald-700' : 'text-rose-700' }}">
+                    <p class="text-xs font-bold mt-2 {{ $trendGood ? 'text-emerald-700' : 'text-rose-700' }}">
                         {{ $trendUp ? '↑' : '↓' }} {{ number_format(abs((float) $pct), 1) }}% عن الشهر السابق
                     </p>
                 @endif
