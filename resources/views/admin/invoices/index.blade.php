@@ -229,10 +229,17 @@
                                 @endif
                             </td>
                             <td class="px-3 py-3 align-middle">
-                                <p class="font-semibold text-slate-900">{{ $invoice->user->name ?? '—' }}</p>
-                                <p class="text-xs text-slate-500 truncate max-w-[200px]" title="{{ $invoice->user->email ?? '' }}">{{ $invoice->user->email ?? '—' }}</p>
-                                @if(!empty($invoice->user->phone))
-                                    <p class="text-[11px] text-slate-400 font-mono dir-ltr text-right">{{ $invoice->user->phone }}</p>
+                                @if($invoice->isCompanyClient())
+                                    <p class="font-semibold text-slate-900">{{ $invoice->clientDisplayName() }}</p>
+                                    <p class="text-xs text-indigo-600 font-semibold mt-0.5">
+                                        <i class="fas fa-building text-[10px] ml-0.5"></i> شركة / جهة خارجية
+                                    </p>
+                                @else
+                                    <p class="font-semibold text-slate-900">{{ $invoice->user->name ?? '—' }}</p>
+                                    <p class="text-xs text-slate-500 truncate max-w-[200px]" title="{{ $invoice->user->email ?? '' }}">{{ $invoice->user->email ?? '—' }}</p>
+                                    @if(!empty($invoice->user->phone))
+                                        <p class="text-[11px] text-slate-400 font-mono dir-ltr text-right">{{ $invoice->user->phone }}</p>
+                                    @endif
                                 @endif
                             </td>
                             <td class="px-3 py-3 align-middle">

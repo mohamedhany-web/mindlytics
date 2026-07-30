@@ -13,7 +13,7 @@
                 </div>
                 <div>
                     <h2 class="text-xl font-black text-slate-900">تعديل {{ $invoice->invoice_number }}</h2>
-                    <p class="text-xs text-slate-600">{{ $invoice->user->name ?? '—' }} · {{ number_format((float) $invoice->total_amount, 2) }} ج.م</p>
+                    <p class="text-xs text-slate-600">{{ $invoice->clientDisplayName() }} · {{ number_format((float) $invoice->total_amount, 2) }} ج.م</p>
                 </div>
             </div>
             <div class="flex flex-wrap gap-2">

@@ -158,22 +158,37 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 sm:p-6">
                     <h3 class="text-sm font-black text-slate-900 mb-4 flex items-center gap-2">
-                        <i class="fas fa-user text-sky-600"></i>
+                        <i class="fas {{ $invoice->isCompanyClient() ? 'fa-building' : 'fa-user' }} text-sky-600"></i>
                         بيانات العميل
                     </h3>
                     <dl class="space-y-3 text-sm">
-                        <div class="flex justify-between gap-4 border-b border-slate-200/80 pb-2">
-                            <dt class="text-slate-500">الاسم</dt>
-                            <dd class="font-bold text-slate-900 text-left">{{ $invoice->user->name ?? '—' }}</dd>
-                        </div>
-                        <div class="flex justify-between gap-4 border-b border-slate-200/80 pb-2">
-                            <dt class="text-slate-500">البريد</dt>
-                            <dd class="font-semibold text-slate-800 text-left break-all">{{ $invoice->user->email ?? '—' }}</dd>
-                        </div>
-                        <div class="flex justify-between gap-4 border-b border-slate-200/80 pb-2">
-                            <dt class="text-slate-500">الهاتف</dt>
-                            <dd class="font-mono font-semibold text-slate-800 dir-ltr text-left">{{ $invoice->user->phone ?? '—' }}</dd>
-                        </div>
+                        @if($invoice->isCompanyClient())
+                            <div class="flex justify-between gap-4 border-b border-slate-200/80 pb-2">
+                                <dt class="text-slate-500">النوع</dt>
+                                <dd class="font-bold text-indigo-700 text-left">شركة / جهة خارجية</dd>
+                            </div>
+                            <div class="flex justify-between gap-4 border-b border-slate-200/80 pb-2">
+                                <dt class="text-slate-500">اسم الشركة</dt>
+                                <dd class="font-bold text-slate-900 text-left">{{ $invoice->clientDisplayName() }}</dd>
+                            </div>
+                        @else
+                            <div class="flex justify-between gap-4 border-b border-slate-200/80 pb-2">
+                                <dt class="text-slate-500">النوع</dt>
+                                <dd class="font-bold text-slate-700 text-left">طالب</dd>
+                            </div>
+                            <div class="flex justify-between gap-4 border-b border-slate-200/80 pb-2">
+                                <dt class="text-slate-500">الاسم</dt>
+                                <dd class="font-bold text-slate-900 text-left">{{ $invoice->user->name ?? '—' }}</dd>
+                            </div>
+                            <div class="flex justify-between gap-4 border-b border-slate-200/80 pb-2">
+                                <dt class="text-slate-500">البريد</dt>
+                                <dd class="font-semibold text-slate-800 text-left break-all">{{ $invoice->user->email ?? '—' }}</dd>
+                            </div>
+                            <div class="flex justify-between gap-4 border-b border-slate-200/80 pb-2">
+                                <dt class="text-slate-500">الهاتف</dt>
+                                <dd class="font-mono font-semibold text-slate-800 dir-ltr text-left">{{ $invoice->user->phone ?? '—' }}</dd>
+                            </div>
+                        @endif
                     </dl>
                 </div>
                 <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 sm:p-6">

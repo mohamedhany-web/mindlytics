@@ -3,6 +3,7 @@
     $isEdit = $invoice !== null;
     $formAction = $formAction ?? ($isEdit ? route('admin.invoices.update', $invoice) : route('admin.invoices.store'));
     $formMethod = $isEdit ? 'PUT' : 'POST';
+    $defaultClientType = old('client_type', $invoice->client_type ?? (($invoice && $invoice->isCompanyClient()) ? 'company' : 'student'));
 @endphp
 
 <form action="{{ $formAction }}" method="POST" class="space-y-6" id="invoiceForm">
@@ -22,42 +23,78 @@
         </div>
     @endif
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-        @if(!$isEdit)
-        <div class="md:col-span-2 space-y-2">
-            <label for="invoice-client-search" class="block text-xs font-bold text-slate-700">بحث عن عميل</label>
-            <input type="search" id="invoice-client-search" autocomplete="off" placeholder="البريد، الاسم، أو الهاتف…"
-                   class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
-            <p class="text-[11px] text-slate-500">يُصفّي قائمة العملاء دون إعادة تحميل الصفحة.</p>
+    {{-- نوع العميل --}}
+    <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+        <p class="text-xs font-bold text-slate-700">نوع العميل *</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 cursor-pointer hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/50">
+                <input type="radio" name="client_type" value="student" class="text-blue-600 focus:ring-blue-500"
+                       @checked($defaultClientType === 'student') data-client-type-radio>
+                <span>
+                    <span class="block text-sm font-bold text-slate-900">طالب</span>
+                    <span class="block text-[11px] text-slate-500">فاتورة مرتبطة بحساب طالب مسجّل</span>
+                </span>
+            </label>
+            <label class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 cursor-pointer hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/50">
+                <input type="radio" name="client_type" value="company" class="text-blue-600 focus:ring-blue-500"
+                       @checked($defaultClientType === 'company') data-client-type-radio>
+                <span>
+                    <span class="block text-sm font-bold text-slate-900">شركة / جهة خارجية</span>
+                    <span class="block text-[11px] text-slate-500">إيراد من جهة خارجية باسم الشركة</span>
+                </span>
+            </label>
         </div>
-        @endif
+        @error('client_type')<p class="text-xs text-rose-600">{{ $message }}</p>@enderror
+    </div>
 
-        <div>
-            <label for="invoice-user-select" class="block text-xs font-bold text-slate-700 mb-1">العميل *</label>
-            <select name="user_id" id="invoice-user-select" required
-                    class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 @error('user_id') border-rose-400 @enderror">
-                <option value="">اختر العميل</option>
-                @foreach($users as $user)
-                    @php
-                        $searchBlob = \Illuminate\Support\Str::lower(trim(implode(' ', array_filter([
-                            $user->name ?? '',
-                            $user->email ?? '',
-                            $user->phone ?? '',
-                        ]))));
-                        $sel = (int) old('user_id', $invoice->user_id ?? 0) === (int) $user->id;
-                    @endphp
-                    <option value="{{ $user->id }}" data-search="{{ e($searchBlob) }}" @selected($sel)>
-                        {{ $user->name }} — {{ $user->email }}@if(!empty($user->phone)) — {{ $user->phone }}@endif
-                    </option>
-                @endforeach
-            </select>
-            @error('user_id')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div id="invoice-student-fields" class="md:col-span-2 space-y-3">
+            @if(!$isEdit)
+            <div class="space-y-2">
+                <label for="invoice-client-search" class="block text-xs font-bold text-slate-700">بحث عن طالب</label>
+                <input type="search" id="invoice-client-search" autocomplete="off" placeholder="البريد، الاسم، أو الهاتف…"
+                       class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                <p class="text-[11px] text-slate-500">يُصفّي قائمة الطلاب دون إعادة تحميل الصفحة.</p>
+            </div>
+            @endif
+
+            <div>
+                <label for="invoice-user-select" class="block text-xs font-bold text-slate-700 mb-1">الطالب *</label>
+                <select name="user_id" id="invoice-user-select"
+                        class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 @error('user_id') border-rose-400 @enderror">
+                    <option value="">اختر الطالب</option>
+                    @foreach($users as $user)
+                        @php
+                            $searchBlob = \Illuminate\Support\Str::lower(trim(implode(' ', array_filter([
+                                $user->name ?? '',
+                                $user->email ?? '',
+                                $user->phone ?? '',
+                            ]))));
+                            $sel = (int) old('user_id', $invoice->user_id ?? 0) === (int) $user->id;
+                        @endphp
+                        <option value="{{ $user->id }}" data-search="{{ e($searchBlob) }}" @selected($sel)>
+                            {{ $user->name }} — {{ $user->email }}@if(!empty($user->phone)) — {{ $user->phone }}@endif
+                        </option>
+                    @endforeach
+                </select>
+                @error('user_id')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
+            </div>
+        </div>
+
+        <div id="invoice-company-fields" class="md:col-span-2" style="display:none;">
+            <label for="invoice-company-name" class="block text-xs font-bold text-slate-700 mb-1">اسم الشركة / الجهة *</label>
+            <input type="text" name="company_name" id="invoice-company-name" maxlength="255"
+                   value="{{ old('company_name', $invoice->company_name ?? '') }}"
+                   placeholder="مثال: شركة النور للتجارة"
+                   class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 @error('company_name') border-rose-400 @enderror">
+            <p class="text-[11px] text-slate-500 mt-1">يُستخدم لتسجيل إيراد من جهة خارجية غير مرتبطة بطالب.</p>
+            @error('company_name')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
         </div>
 
         <div>
             <label class="block text-xs font-bold text-slate-700 mb-1">نوع الفاتورة *</label>
             <select name="type" required class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 @error('type') border-rose-400 @enderror">
-                @include('admin.invoices.partials.type-options', ['selected' => old('type', $invoice->type ?? 'course')])
+                @include('admin.invoices.partials.type-options', ['selected' => old('type', $invoice->type ?? 'other')])
             </select>
             @error('type')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
         </div>
@@ -176,6 +213,35 @@ document.addEventListener('DOMContentLoaded', function () {
             select.value = still ? prev : '';
         });
     }
+
+    function syncClientType() {
+        var checked = document.querySelector('[data-client-type-radio]:checked');
+        var type = checked ? checked.value : 'student';
+        var studentBox = document.getElementById('invoice-student-fields');
+        var companyBox = document.getElementById('invoice-company-fields');
+        var userSelect = document.getElementById('invoice-user-select');
+        var companyInput = document.getElementById('invoice-company-name');
+        var isCompany = type === 'company';
+
+        if (studentBox) studentBox.style.display = isCompany ? 'none' : '';
+        if (companyBox) companyBox.style.display = isCompany ? '' : 'none';
+
+        if (userSelect) {
+            userSelect.required = !isCompany;
+            userSelect.disabled = isCompany;
+            if (isCompany) userSelect.value = '';
+        }
+        if (companyInput) {
+            companyInput.required = isCompany;
+            companyInput.disabled = !isCompany;
+            if (!isCompany) companyInput.value = companyInput.value; // keep for old() redisplay if switching back
+        }
+    }
+
+    document.querySelectorAll('[data-client-type-radio]').forEach(function (radio) {
+        radio.addEventListener('change', syncClientType);
+    });
+    syncClientType();
 });
 </script>
 @endpush

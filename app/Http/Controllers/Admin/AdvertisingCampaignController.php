@@ -29,7 +29,14 @@ class AdvertisingCampaignController extends Controller
             $aggregates[$campaign->id] = $service->aggregateForCampaign($campaign);
         }
 
-        return view('admin.marketing.advertising-campaigns.index', compact('campaigns', 'aggregates'));
+        $stats = [
+            'total' => AdvertisingCampaign::query()->count(),
+            'active' => AdvertisingCampaign::query()->where('is_active', true)->count(),
+            'inactive' => AdvertisingCampaign::query()->where('is_active', false)->count(),
+            'total_cost' => (float) AdvertisingCampaign::query()->sum('cost'),
+        ];
+
+        return view('admin.marketing.advertising-campaigns.index', compact('campaigns', 'aggregates', 'stats'));
     }
 
     public function create()

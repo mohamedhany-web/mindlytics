@@ -8,23 +8,50 @@
     <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
         <h1 class="text-2xl font-bold text-gray-900 mb-6">إضافة دفعة جديدة</h1>
         
-        <form action="{{ route('admin.payments.store') }}" method="POST" class="space-y-6">
+        <form action="{{ route('admin.payments.store') }}" method="POST" class="space-y-6" id="payment-create-form">
             @csrf
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="md:col-span-2 space-y-2">
-                    <label for="payment-client-search" class="block text-sm font-medium text-gray-700 mb-2">بحث عن عميل</label>
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">الفاتورة *</label>
+                    <select name="invoice_id" id="payment-invoice-select" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
+                        @if($invoices->isEmpty())
+                            <option value="" disabled selected>لا توجد فواتير مستحقة حاليًا</option>
+                        @else
+                            <option value="">اختر الفاتورة</option>
+                            @foreach($invoices as $invoice)
+                                @php
+                                    $isCompany = $invoice->isCompanyClient();
+                                    $clientLabel = $invoice->clientDisplayName();
+                                @endphp
+                                <option value="{{ $invoice->id }}"
+                                        data-user-id="{{ $invoice->user_id ?? '' }}"
+                                        data-client-type="{{ $isCompany ? 'company' : 'student' }}"
+                                        data-client-label="{{ e($clientLabel) }}"
+                                        data-remaining="{{ $invoice->remaining_amount }}">
+                                    {{ $invoice->invoice_number }}
+                                    · {{ $clientLabel }}{{ $isCompany ? ' (شركة)' : '' }}
+                                    · متبقي {{ number_format($invoice->remaining_amount, 2) }} ج.م
+                                </option>
+                            @endforeach
+                        @endif
+                    </select>
+                    @error('invoice_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    @if($invoices->isEmpty())
+                        <p class="mt-2 text-xs text-amber-600">لا توجد فواتير بحاجة إلى دفع في الوقت الحالي.</p>
+                    @endif
+                </div>
+
+                <div id="payment-student-block" class="md:col-span-2 space-y-2">
+                    <label for="payment-client-search" class="block text-sm font-medium text-gray-700 mb-2">بحث عن طالب (اختياري)</label>
                     <input type="search"
                            id="payment-client-search"
                            autocomplete="off"
                            placeholder="البريد الإلكتروني، الاسم، أو الهاتف…"
                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 placeholder:text-gray-400">
-                    <p class="text-xs text-gray-500">يُصفّي قائمة العملاء أدناه دون إعادة تحميل الصفحة.</p>
-                </div>
-                <div>
-                    <label for="payment-user-select" class="block text-sm font-medium text-gray-700 mb-2">العميل *</label>
-                    <select name="user_id" id="payment-user-select" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
-                        <option value="">اختر العميل</option>
+                    <label for="payment-user-select" class="block text-sm font-medium text-gray-700 mb-2">الطالب</label>
+                    <select name="user_id" id="payment-user-select" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
+                        <option value="">يُحدَّد تلقائياً من الفاتورة</option>
                         @foreach($users as $user)
                         @php
                             $searchBlob = \Illuminate\Support\Str::lower(trim(implode(' ', array_filter([
@@ -38,31 +65,19 @@
                         </option>
                         @endforeach
                     </select>
+                    @error('user_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">الفاتورة *</label>
-                    <select name="invoice_id" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
-                        @if($invoices->isEmpty())
-                            <option value="" disabled selected>لا توجد فواتير مستحقة حاليًا</option>
-                        @else
-                            <option value="">اختر الفاتورة</option>
-                            @foreach($invoices as $invoice)
-                            <option value="{{ $invoice->id }}">
-                                {{ $invoice->invoice_number }} · {{ $invoice->user->name }} · متبقي {{ number_format($invoice->remaining_amount, 2) }} ج.م
-                            </option>
-                            @endforeach
-                        @endif
-                    </select>
-                    @if($invoices->isEmpty())
-                        <p class="mt-2 text-xs text-amber-600">لا توجد فواتير بحاجة إلى دفع في الوقت الحالي.</p>
-                    @endif
+                <div id="payment-company-hint" class="md:col-span-2 hidden rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
+                    <i class="fas fa-building ml-1"></i>
+                    فاتورة جهة خارجية: <strong id="payment-company-name-label"></strong> — لا يلزم اختيار طالب.
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">المبلغ *</label>
-                    <input type="number" name="amount" step="0.01" min="0" required value="{{ old('amount') }}" 
+                    <input type="number" name="amount" id="payment-amount" step="0.01" min="0" required value="{{ old('amount') }}" 
                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
+                    @error('amount')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
 
                 <div>
@@ -127,17 +142,22 @@
 document.addEventListener('DOMContentLoaded', function () {
     var search = document.getElementById('payment-client-search');
     var select = document.getElementById('payment-user-select');
-    if (!search || !select) return;
+    var invoiceSelect = document.getElementById('payment-invoice-select');
+    var studentBlock = document.getElementById('payment-student-block');
+    var companyHint = document.getElementById('payment-company-hint');
+    var companyLabel = document.getElementById('payment-company-name-label');
+    var amountInput = document.getElementById('payment-amount');
 
-    var pool = Array.prototype.slice.call(select.options, 1).map(function (o) {
+    var pool = select ? Array.prototype.slice.call(select.options, 1).map(function (o) {
         return {
             v: o.value,
             t: o.text,
             s: (o.getAttribute('data-search') || o.text || '').toLowerCase()
         };
-    });
+    }) : [];
 
     function applyFilter() {
+        if (!search || !select) return;
         var q = search.value.trim().toLowerCase().replace(/\s+/g, ' ');
         var prev = select.value;
 
@@ -161,7 +181,47 @@ document.addEventListener('DOMContentLoaded', function () {
         select.value = stillThere ? prev : '';
     }
 
-    search.addEventListener('input', applyFilter);
+    if (search) search.addEventListener('input', applyFilter);
+
+    function syncInvoiceClient() {
+        if (!invoiceSelect) return;
+        var opt = invoiceSelect.options[invoiceSelect.selectedIndex];
+        if (!opt || !opt.value) {
+            if (studentBlock) studentBlock.classList.remove('hidden');
+            if (companyHint) companyHint.classList.add('hidden');
+            return;
+        }
+        var type = opt.getAttribute('data-client-type') || 'student';
+        var userId = opt.getAttribute('data-user-id') || '';
+        var label = opt.getAttribute('data-client-label') || '';
+        var remaining = opt.getAttribute('data-remaining');
+
+        if (type === 'company') {
+            if (studentBlock) studentBlock.classList.add('hidden');
+            if (companyHint) companyHint.classList.remove('hidden');
+            if (companyLabel) companyLabel.textContent = label;
+            if (select) select.value = '';
+        } else {
+            if (studentBlock) studentBlock.classList.remove('hidden');
+            if (companyHint) companyHint.classList.add('hidden');
+            if (select && userId) select.value = userId;
+        }
+
+        if (amountInput && remaining && (!amountInput.value || amountInput.dataset.autofilled === '1')) {
+            amountInput.value = parseFloat(remaining).toFixed(2);
+            amountInput.dataset.autofilled = '1';
+        }
+    }
+
+    if (invoiceSelect) {
+        invoiceSelect.addEventListener('change', syncInvoiceClient);
+        syncInvoiceClient();
+    }
+    if (amountInput) {
+        amountInput.addEventListener('input', function () {
+            amountInput.dataset.autofilled = '0';
+        });
+    }
 
     var methodSelect = document.getElementById('payment-method-select');
     var walletRow = document.getElementById('payment-wallet-row');
@@ -214,4 +274,3 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 @endpush
-

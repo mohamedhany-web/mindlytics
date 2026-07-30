@@ -63,17 +63,23 @@ class InvoiceController extends Controller
                 if (strlen($search) > 0 && strlen($search) <= 255) {
                     $like = '%'.$search.'%';
                     $usersHasPhone = Schema::hasColumn('users', 'phone');
-                    $query->where(function ($q) use ($like, $usersHasPhone) {
+                    $hasCompany = Schema::hasColumn('invoices', 'company_name');
+                    $query->where(function ($q) use ($like, $usersHasPhone, $hasCompany) {
                         $q->where('invoice_number', 'like', $like)
-                            ->orWhere('description', 'like', $like)
-                            ->orWhereHas('user', function ($uq) use ($like, $usersHasPhone) {
-                                $uq->where('name', 'like', $like)
-                                    ->orWhere('email', 'like', $like);
+                            ->orWhere('description', 'like', $like);
 
-                                if ($usersHasPhone) {
-                                    $uq->orWhere('phone', 'like', $like);
-                                }
-                            });
+                        if ($hasCompany) {
+                            $q->orWhere('company_name', 'like', $like);
+                        }
+
+                        $q->orWhereHas('user', function ($uq) use ($like, $usersHasPhone) {
+                            $uq->where('name', 'like', $like)
+                                ->orWhere('email', 'like', $like);
+
+                            if ($usersHasPhone) {
+                                $uq->orWhere('phone', 'like', $like);
+                            }
+                        });
                     });
                 }
             }
@@ -134,7 +140,9 @@ class InvoiceController extends Controller
 
             // Sanitization
             $validated = $request->validate([
-                'user_id' => 'required|exists:users,id',
+                'client_type' => 'required|in:student,company',
+                'user_id' => 'nullable|required_if:client_type,student|exists:users,id',
+                'company_name' => 'nullable|required_if:client_type,company|string|max:255',
                 'type' => 'required|in:course,subscription,membership,learning_path,offline_course,other',
                 'description' => 'nullable|string|max:1000',
                 'subtotal' => 'required|numeric|min:0|max:99999999.99',
@@ -143,6 +151,8 @@ class InvoiceController extends Controller
                 'due_date' => 'nullable|date|after_or_equal:today',
                 'notes' => 'nullable|string|max:1000',
             ]);
+
+            $validated = $this->normalizeClientFields($validated, $request);
 
             $subtotal = (float) $validated['subtotal'];
             $tax = (float) ($validated['tax_amount'] ?? 0);
@@ -261,7 +271,9 @@ class InvoiceController extends Controller
             DB::beginTransaction();
 
             $validated = $request->validate([
-                'user_id' => 'required|exists:users,id',
+                'client_type' => 'required|in:student,company',
+                'user_id' => 'nullable|required_if:client_type,student|exists:users,id',
+                'company_name' => 'nullable|required_if:client_type,company|string|max:255',
                 'type' => 'required|in:course,subscription,membership,learning_path,offline_course,other',
                 'description' => 'nullable|string|max:1000',
                 'subtotal' => 'required|numeric|min:0|max:99999999.99',
@@ -271,6 +283,8 @@ class InvoiceController extends Controller
                 'due_date' => 'nullable|date',
                 'notes' => 'nullable|string|max:1000',
             ]);
+
+            $validated = $this->normalizeClientFields($validated, $request);
 
             $subtotal = (float) $validated['subtotal'];
             $tax = (float) ($validated['tax_amount'] ?? 0);
@@ -297,7 +311,9 @@ class InvoiceController extends Controller
             $total = $subtotal + $tax - $discount;
 
             $updateData = [
-                'user_id' => (int) $validated['user_id'],
+                'user_id' => $validated['user_id'] ?? null,
+                'client_type' => $validated['client_type'],
+                'company_name' => $validated['company_name'] ?? null,
                 'type' => $validated['type'],
                 'description' => $validated['description'],
                 'subtotal' => $subtotal,
@@ -308,6 +324,14 @@ class InvoiceController extends Controller
                 'due_date' => $validated['due_date'] ? date('Y-m-d', strtotime($validated['due_date'])) : null,
                 'notes' => $validated['notes'],
             ];
+
+            if ($validated['client_type'] === 'student' && ! empty($validated['user_id']) && Schema::hasColumn('invoices', 'branch_id')) {
+                $branchId = User::query()->whereKey((int) $validated['user_id'])->value('branch_id')
+                    ?? Branch::defaultAssignableId();
+                if ($branchId !== null) {
+                    $updateData['branch_id'] = $branchId;
+                }
+            }
 
             if ($validated['status'] === 'paid' && ! $invoice->paid_at) {
                 $updateData['paid_at'] = now()->toDateString();
@@ -417,19 +441,24 @@ class InvoiceController extends Controller
             $description = '-';
         }
 
-        $dueDate = $validated['due_date']
+        $dueDate = ! empty($validated['due_date'])
             ? date('Y-m-d', strtotime($validated['due_date']))
             : now()->addDays(30)->format('Y-m-d');
 
         $now = now();
         $invoiceNumber = $this->nextInvoiceNumber();
 
-        $branchId = User::query()->whereKey((int) $validated['user_id'])->value('branch_id')
-            ?? Branch::defaultAssignableId();
+        $branchId = null;
+        if (! empty($validated['user_id'])) {
+            $branchId = User::query()->whereKey((int) $validated['user_id'])->value('branch_id')
+                ?? Branch::defaultAssignableId();
+        } else {
+            $branchId = Branch::defaultAssignableId();
+        }
 
         $row = [
             'invoice_number' => $invoiceNumber,
-            'user_id' => (int) $validated['user_id'],
+            'user_id' => ! empty($validated['user_id']) ? (int) $validated['user_id'] : null,
             'type' => $validated['type'],
             'description' => $description,
             'subtotal' => round((float) $validated['subtotal'], 2),
@@ -443,6 +472,13 @@ class InvoiceController extends Controller
             'updated_at' => $now,
         ];
 
+        if (Schema::hasColumn('invoices', 'client_type')) {
+            $row['client_type'] = $validated['client_type'] ?? 'student';
+        }
+        if (Schema::hasColumn('invoices', 'company_name')) {
+            $row['company_name'] = $validated['company_name'] ?? null;
+        }
+
         if ($branchId !== null && Schema::hasColumn('invoices', 'branch_id')) {
             $row['branch_id'] = $branchId;
         }
@@ -450,6 +486,36 @@ class InvoiceController extends Controller
         $id = DB::table('invoices')->insertGetId($row);
 
         return Invoice::query()->findOrFail($id);
+    }
+
+    /**
+     * توحيد حقول العميل: طالب أو شركة خارجية.
+     */
+    private function normalizeClientFields(array $validated, Request $request): array
+    {
+        $clientType = $validated['client_type'] ?? 'student';
+        if ($clientType === 'company') {
+            $company = strip_tags(trim((string) ($validated['company_name'] ?? '')));
+            $validated['company_name'] = $company !== '' ? $company : null;
+            $validated['user_id'] = null;
+            $validated['client_type'] = 'company';
+            if (empty($validated['company_name'])) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'company_name' => 'اسم الشركة مطلوب لفواتير الجهات الخارجية.',
+                ]);
+            }
+        } else {
+            $validated['client_type'] = 'student';
+            $validated['company_name'] = null;
+            $validated['user_id'] = ! empty($validated['user_id']) ? (int) $validated['user_id'] : null;
+            if (empty($validated['user_id'])) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'user_id' => 'يجب اختيار الطالب.',
+                ]);
+            }
+        }
+
+        return $validated;
     }
 
     private function nextInvoiceNumber(): string

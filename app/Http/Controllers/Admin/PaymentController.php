@@ -120,7 +120,7 @@ class PaymentController extends Controller
     {
         $validated = $request->validate([
             'invoice_id' => 'required|exists:invoices,id',
-            'user_id' => 'required|exists:users,id',
+            'user_id' => 'nullable|exists:users,id',
             'payment_method' => 'required|in:cash,card,bank_transfer,online,wallet,other',
             'wallet_id' => 'nullable|required_if:payment_method,wallet|exists:wallets,id',
             'amount' => 'required|numeric|min:0.01',
@@ -129,8 +129,14 @@ class PaymentController extends Controller
 
         $invoice = Invoice::with('user', 'payments')->findOrFail($validated['invoice_id']);
 
-        if ((int) $invoice->user_id !== (int) $validated['user_id']) {
-            return back()->withErrors(['invoice_id' => 'هذه الفاتورة لا تتبع الطالب المحدد.'])->withInput();
+        $paymentUserId = null;
+        if ($invoice->isCompanyClient() || empty($invoice->user_id)) {
+            $paymentUserId = null;
+        } else {
+            $paymentUserId = (int) ($validated['user_id'] ?? $invoice->user_id);
+            if ((int) $invoice->user_id !== $paymentUserId) {
+                return back()->withErrors(['invoice_id' => 'هذه الفاتورة لا تتبع الطالب المحدد.'])->withInput();
+            }
         }
 
         $remainingAmount = $invoice->remaining_amount;
@@ -161,7 +167,7 @@ class PaymentController extends Controller
             $payment = Payment::create([
                 'payment_number' => 'PAY-' . str_pad(Payment::count() + 1, 8, '0', STR_PAD_LEFT),
                 'invoice_id' => $invoice->id,
-                'user_id' => $validated['user_id'],
+                'user_id' => $paymentUserId,
                 'payment_method' => $validated['payment_method'],
                 'wallet_id' => $walletForPayment ? $walletForPayment->id : null,
                 'amount' => $validated['amount'],
@@ -174,6 +180,9 @@ class PaymentController extends Controller
 
             if ($walletForPayment) {
                 $depositNotes = 'إيداع من دفعة فاتورة: ' . $invoice->invoice_number;
+                if ($invoice->isCompanyClient()) {
+                    $depositNotes .= ' — ' . $invoice->clientDisplayName();
+                }
                 $walletForPayment->deposit(
                     (float) $validated['amount'],
                     $payment->id,
@@ -187,23 +196,26 @@ class PaymentController extends Controller
                 'invoice_id' => $invoice->id,
                 'payment_id' => $payment->id,
                 'payment_method' => $validated['payment_method'],
+                'client_type' => $invoice->isCompanyClient() ? 'company' : 'student',
+                'company_name' => $invoice->isCompanyClient() ? $invoice->company_name : null,
             ];
             if ($walletForPayment) {
                 $metadata['wallet_id'] = $walletForPayment->id;
             }
 
+            $clientLabel = $invoice->clientDisplayName();
             $transaction = \App\Models\Transaction::create([
                 'transaction_number' => $transactionNumber,
-                'user_id' => $validated['user_id'],
+                'user_id' => $paymentUserId,
                 'payment_id' => $payment->id,
                 'invoice_id' => $invoice->id,
                 'expense_id' => null,
                 'subscription_id' => null,
                 'type' => 'credit',
-                'category' => $invoice->type === 'subscription' ? 'subscription' : 'course_payment',
+                'category' => $invoice->type === 'subscription' ? 'subscription' : ($invoice->isCompanyClient() ? 'other' : 'course_payment'),
                 'amount' => $validated['amount'],
                 'currency' => 'EGP',
-                'description' => 'دفعة للفاتورة: ' . $invoice->invoice_number . ' - ' . $invoice->description
+                'description' => 'دفعة للفاتورة: ' . $invoice->invoice_number . ' — ' . $clientLabel . ' - ' . $invoice->description
                     . ($walletForPayment ? ' — محفظة: ' . ($walletForPayment->name ?? '') : ''),
                 'status' => 'completed',
                 'metadata' => $metadata,
@@ -268,7 +280,7 @@ class PaymentController extends Controller
     {
         $validated = $request->validate([
             'invoice_id' => 'required|exists:invoices,id',
-            'user_id' => 'required|exists:users,id',
+            'user_id' => 'nullable|exists:users,id',
             'payment_method' => 'required|in:cash,card,bank_transfer,online,wallet,other',
             'amount' => 'required|numeric|min:0.01',
             'status' => 'required|in:pending,completed,failed,cancelled,refunded',
@@ -277,8 +289,14 @@ class PaymentController extends Controller
 
         $invoice = Invoice::with('payments')->findOrFail($validated['invoice_id']);
 
-        if ((int) $invoice->user_id !== (int) $validated['user_id']) {
-            return back()->withErrors(['invoice_id' => 'هذه الفاتورة لا تتبع الطالب المحدد.'])->withInput();
+        $paymentUserId = null;
+        if ($invoice->isCompanyClient() || empty($invoice->user_id)) {
+            $paymentUserId = null;
+        } else {
+            $paymentUserId = (int) ($validated['user_id'] ?? $invoice->user_id);
+            if ((int) $invoice->user_id !== $paymentUserId) {
+                return back()->withErrors(['invoice_id' => 'هذه الفاتورة لا تتبع الطالب المحدد.'])->withInput();
+            }
         }
 
         $currentRemaining = $invoice->remaining_amount + ($payment->status === 'completed' ? $payment->amount : 0);
@@ -291,7 +309,7 @@ class PaymentController extends Controller
 
         $payment->update([
             'invoice_id' => $invoice->id,
-            'user_id' => $validated['user_id'],
+            'user_id' => $paymentUserId,
             'payment_method' => $validated['payment_method'],
             'amount' => $validated['amount'],
             'status' => $validated['status'],

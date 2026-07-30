@@ -25,6 +25,8 @@ class Invoice extends Model
         'branch_id',
         'invoice_number',
         'user_id',
+        'client_type',
+        'company_name',
         'type',
         'description',
         'subtotal',
@@ -124,6 +126,30 @@ class Invoice extends Model
                         ->where('due_date', '<', now());
                 });
         });
+    }
+
+    public function isCompanyClient(): bool
+    {
+        return ($this->client_type ?? 'student') === 'company'
+            || (empty($this->user_id) && filled($this->company_name));
+    }
+
+    public function clientDisplayName(): string
+    {
+        if ($this->isCompanyClient()) {
+            return (string) ($this->company_name ?: 'جهة خارجية');
+        }
+
+        return (string) ($this->user?->name ?? '—');
+    }
+
+    public function clientSecondaryLine(): string
+    {
+        if ($this->isCompanyClient()) {
+            return 'شركة / جهة خارجية';
+        }
+
+        return (string) ($this->user?->email ?? '—');
     }
 
     // Methods
