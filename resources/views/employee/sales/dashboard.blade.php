@@ -69,8 +69,6 @@
         <div class="flex flex-wrap gap-2 shrink-0">{!! $heroActions !!}</div>
     </div>
 
-    @endif
-
     @php
         $dr = $dailyResults ?? null;
         $db = $dayBlock ?? null;
