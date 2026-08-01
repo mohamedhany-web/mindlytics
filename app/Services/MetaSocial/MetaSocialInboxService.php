@@ -24,7 +24,9 @@ class MetaSocialInboxService
     }
 
     /**
-     * @return array{success: bool, synced?: int, error?: string}
+     * مزامنة كل المحادثات وكل الرسائل المتاحة من Graph (مع pagination).
+     *
+     * @return array{success: bool, synced?: int, messages?: int, error?: string}
      */
     public function syncConversationsForPage(MetaSocialPage $page, string $platform = 'messenger'): array
     {
@@ -36,25 +38,141 @@ class MetaSocialInboxService
         $graphPlatform = $platform === MetaSocialConversation::PLATFORM_INSTAGRAM ? 'INSTAGRAM' : 'MESSENGER';
 
         try {
-            $response = Http::timeout(45)->get("{$this->graph->graphUrl()}/{$page->page_id}/conversations", [
+            $url = "{$this->graph->graphUrl()}/{$page->page_id}/conversations";
+            $params = [
                 'platform' => $graphPlatform,
-                'fields' => 'id,updated_time,participants,snippet,unread_count,messages.limit(30){id,message,from,created_time,attachments}',
-                'limit' => 50,
+                'fields' => 'id,updated_time,participants,snippet,unread_count',
+                'limit' => 100,
                 'access_token' => $token,
-            ]);
-
-            if (! $response->successful()) {
-                return ['success' => false, 'error' => $this->graph->graphErrorMessage($response->json() ?? [], 'تعذّر مزامنة المحادثات')];
-            }
+            ];
 
             $synced = 0;
-            foreach ($response->json('data') ?? [] as $thread) {
-                $conversation = $this->upsertConversationFromThread($page, $platform, $thread);
-                $this->ingestThreadMessages($conversation, $page, $thread);
-                $synced++;
+            $messagesImported = 0;
+            $pagesFetched = 0;
+            $maxConversationPages = 50; // حماية: حتى ~5000 محادثة
+
+            while ($url && $pagesFetched < $maxConversationPages) {
+                $response = $pagesFetched === 0
+                    ? Http::timeout(60)->get($url, $params)
+                    : Http::timeout(60)->get($url);
+
+                if (! $response->successful()) {
+                    return [
+                        'success' => false,
+                        'error' => $this->graph->graphErrorMessage($response->json() ?? [], 'تعذّر مزامنة المحادثات'),
+                        'synced' => $synced,
+                        'messages' => $messagesImported,
+                    ];
+                }
+
+                $json = $response->json() ?? [];
+                foreach ($json['data'] ?? [] as $thread) {
+                    if (! is_array($thread)) {
+                        continue;
+                    }
+                    $conversation = $this->upsertConversationFromThread($page, $platform, $thread);
+                    $msgResult = $this->syncAllMessagesForConversation($conversation);
+                    $messagesImported += (int) ($msgResult['imported'] ?? 0);
+                    $synced++;
+                }
+
+                $url = $json['paging']['next'] ?? null;
+                $pagesFetched++;
+                // بعد الصفحة الأولى نستخدم next كاملة (فيها access_token)
+                $params = [];
             }
 
-            return ['success' => true, 'synced' => $synced];
+            return [
+                'success' => true,
+                'synced' => $synced,
+                'messages' => $messagesImported,
+            ];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * جلب كل رسائل محادثة واحدة من Graph حرفياً (كل الصفحات).
+     *
+     * @return array{success: bool, imported?: int, total?: int, error?: string}
+     */
+    public function syncAllMessagesForConversation(MetaSocialConversation $conversation): array
+    {
+        $conversation->loadMissing('page');
+        $page = $conversation->page;
+        if (! $page || ! $page->page_access_token) {
+            return ['success' => false, 'error' => 'الصفحة أو التوكن غير متاح'];
+        }
+
+        $threadId = (string) ($conversation->thread_id ?: '');
+        if ($threadId === '') {
+            return ['success' => false, 'error' => 'لا يوجد thread_id — زامن المحادثات أولاً'];
+        }
+
+        try {
+            $url = "{$this->graph->graphUrl()}/{$threadId}/messages";
+            $params = [
+                'fields' => 'id,message,from,created_time,attachments{image_data,file_url,type,payload}',
+                'limit' => 100,
+                'access_token' => (string) $page->page_access_token,
+            ];
+
+            $imported = 0;
+            $seen = 0;
+            $pagesFetched = 0;
+            $maxMessagePages = 100; // حماية: حتى ~10000 رسالة لكل محادثة
+
+            while ($url && $pagesFetched < $maxMessagePages) {
+                $response = $pagesFetched === 0
+                    ? Http::timeout(60)->get($url, $params)
+                    : Http::timeout(60)->get($url);
+
+                if (! $response->successful()) {
+                    // بعض المحادثات قد ترفض الرسائل القديمة — نكمل بما لدينا
+                    if ($pagesFetched === 0) {
+                        return [
+                            'success' => false,
+                            'error' => $this->graph->graphErrorMessage($response->json() ?? [], 'تعذّر جلب الرسائل'),
+                            'imported' => $imported,
+                        ];
+                    }
+                    break;
+                }
+
+                $json = $response->json() ?? [];
+                $batch = $json['data'] ?? [];
+                if (! is_array($batch) || $batch === []) {
+                    break;
+                }
+
+                $seen += count($batch);
+                $imported += $this->storeGraphMessages($conversation, $page, $batch);
+
+                $url = $json['paging']['next'] ?? null;
+                $pagesFetched++;
+                $params = [];
+            }
+
+            // حدّث معاينة آخر رسالة من أحدث سجل محلي
+            $latest = MetaSocialMessage::query()
+                ->where('meta_social_conversation_id', $conversation->id)
+                ->orderByDesc('sent_at')
+                ->orderByDesc('id')
+                ->first();
+
+            if ($latest) {
+                $conversation->update([
+                    'last_message_at' => $latest->sent_at ?? $conversation->last_message_at,
+                    'last_message_preview' => mb_substr($latest->displayBody(), 0, 500),
+                ]);
+            }
+
+            return [
+                'success' => true,
+                'imported' => $imported,
+                'total' => $seen,
+            ];
         } catch (\Throwable $e) {
             return ['success' => false, 'error' => $e->getMessage()];
         }
@@ -94,21 +212,18 @@ class MetaSocialInboxService
     }
 
     /**
-     * @param  array<string, mixed>  $thread
+     * @param  list<array<string, mixed>>  $messages
      */
-    public function ingestThreadMessages(MetaSocialConversation $conversation, MetaSocialPage $page, array $thread): void
+    public function storeGraphMessages(MetaSocialConversation $conversation, MetaSocialPage $page, array $messages): int
     {
-        $messages = $thread['messages']['data'] ?? [];
-        if (! is_array($messages) || $messages === []) {
-            return;
+        if ($messages === []) {
+            return 0;
         }
 
-        // Graph يرجع الأحدث أولاً — نخزّن بالترتيب الزمني التصاعدي
-        $ordered = collect($messages)->sortBy(function ($m) {
-            return isset($m['created_time']) ? Carbon::parse($m['created_time'])->timestamp : 0;
-        })->values();
+        // Graph يرجع الأحدث أولاً — نخزّن بأي ترتيب؛ العرض يعتمد على sent_at,id
+        $imported = 0;
 
-        foreach ($ordered as $msg) {
+        foreach ($messages as $msg) {
             if (! is_array($msg)) {
                 continue;
             }
@@ -126,12 +241,20 @@ class MetaSocialInboxService
             $body = (string) ($msg['message'] ?? '');
             $type = 'text';
             $attachmentUrl = null;
-            if (isset($msg['attachments']['data'][0]['image_data']['url'])) {
-                $type = 'image';
-                $attachmentUrl = $msg['attachments']['data'][0]['image_data']['url'];
-            } elseif (isset($msg['attachments']['data'][0]['file_url'])) {
-                $type = 'file';
-                $attachmentUrl = $msg['attachments']['data'][0]['file_url'];
+
+            $attachments = $msg['attachments']['data'] ?? $msg['attachments'] ?? null;
+            if (is_array($attachments) && isset($attachments[0]) && is_array($attachments[0])) {
+                $att = $attachments[0];
+                if (! empty($att['image_data']['url'])) {
+                    $type = 'image';
+                    $attachmentUrl = $att['image_data']['url'];
+                } elseif (! empty($att['file_url'])) {
+                    $type = (string) ($att['type'] ?? 'file');
+                    $attachmentUrl = $att['file_url'];
+                } elseif (! empty($att['payload']['url'])) {
+                    $type = (string) ($att['type'] ?? 'file');
+                    $attachmentUrl = $att['payload']['url'];
+                }
             }
 
             $sentAt = isset($msg['created_time']) ? Carbon::parse($msg['created_time']) : now();
@@ -147,10 +270,13 @@ class MetaSocialInboxService
                     'sent_at' => $sentAt,
                     'meta' => ['graph_message' => $msg],
                 ]);
+                $imported++;
             } catch (QueryException) {
                 // unique race — تجاهل التكرار
             }
         }
+
+        return $imported;
     }
 
     /**

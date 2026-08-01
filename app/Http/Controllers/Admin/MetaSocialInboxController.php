@@ -59,24 +59,37 @@ class MetaSocialInboxController extends Controller
                 $query->where('assigned_to', (int) $assignedFilter);
             }
 
-            $conversations = $query->limit(150)->get();
+            $conversations = $query->limit(500)->get();
 
             if ($conversationId > 0) {
                 $activeConversation = MetaSocialConversation::query()
-                    ->with(['page', 'assignee:id,name', 'salesLead', 'messages' => fn ($q) => $q->orderBy('sent_at')->orderBy('id'), 'messages.sentBy:id,name'])
+                    ->with(['page', 'assignee:id,name', 'salesLead'])
                     ->find($conversationId);
             } elseif ($conversations->isNotEmpty()) {
                 $activeConversation = MetaSocialConversation::query()
-                    ->with(['page', 'assignee:id,name', 'salesLead', 'messages' => fn ($q) => $q->orderBy('sent_at')->orderBy('id'), 'messages.sentBy:id,name'])
+                    ->with(['page', 'assignee:id,name', 'salesLead'])
                     ->find($conversations->first()->id);
             }
 
             if ($activeConversation) {
+                // جلب كل الرسائل من Meta لهذه المحادثة قبل العرض
+                if ($request->boolean('sync_messages') || $activeConversation->messages()->count() < 5) {
+                    $this->inbox->syncAllMessagesForConversation($activeConversation);
+                }
+
                 if ($crmReady && ! $activeConversation->participant_name) {
                     $this->crm->enrichParticipantProfile($activeConversation);
                     $activeConversation->refresh();
-                    $activeConversation->load(['page', 'assignee:id,name', 'salesLead', 'messages.sentBy:id,name']);
                 }
+
+                $activeConversation->load([
+                    'page',
+                    'assignee:id,name',
+                    'salesLead',
+                    'messages' => fn ($q) => $q->orderBy('sent_at')->orderBy('id'),
+                    'messages.sentBy:id,name',
+                ]);
+
                 $this->inbox->markConversationRead($activeConversation);
                 $messages = $activeConversation->messages;
                 if ($crmReady) {
@@ -246,6 +259,41 @@ class MetaSocialInboxController extends Controller
         return response()->json([
             'success' => true,
             'crm' => $this->crm->serializeCrm($conversation),
+        ]);
+    }
+
+    public function syncMessages(MetaSocialConversation $conversation): JsonResponse
+    {
+        $result = $this->inbox->syncAllMessagesForConversation($conversation);
+
+        if (! ($result['success'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'error' => $result['error'] ?? 'فشل جلب الرسائل',
+            ], 422);
+        }
+
+        $messages = $conversation->messages()
+            ->with('sentBy:id,name')
+            ->orderBy('sent_at')
+            ->orderBy('id')
+            ->get()
+            ->map(fn ($m) => [
+                'id' => $m->id,
+                'body' => $m->displayBody(),
+                'direction' => $m->direction,
+                'message_type' => $m->message_type,
+                'attachment_url' => $m->attachment_url,
+                'author' => $m->sentBy?->name,
+                'sent_at_human' => $m->sent_at?->format('H:i') ?? $m->created_at?->format('H:i'),
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'imported' => (int) ($result['imported'] ?? 0),
+            'total_fetched' => (int) ($result['total'] ?? 0),
+            'message_count' => $messages->count(),
+            'messages' => $messages,
         ]);
     }
 

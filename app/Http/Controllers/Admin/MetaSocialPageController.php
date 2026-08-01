@@ -122,14 +122,26 @@ class MetaSocialPageController extends Controller
         $platform = $request->query('platform', 'messenger');
         $result = $this->inbox->syncConversationsForPage($page, $platform);
 
+        $totalConversations = (int) ($result['synced'] ?? 0);
+        $totalMessages = (int) ($result['messages'] ?? 0);
+
         if ($page->hasInstagram()) {
-            $this->inbox->syncConversationsForPage($page, 'instagram');
+            $ig = $this->inbox->syncConversationsForPage($page, 'instagram');
+            $totalConversations += (int) ($ig['synced'] ?? 0);
+            $totalMessages += (int) ($ig['messages'] ?? 0);
+            if (! ($result['success'] ?? false) && ($ig['success'] ?? false)) {
+                $result = $ig;
+            }
         }
+
+        $ok = (bool) ($result['success'] ?? false);
 
         return redirect()->route('admin.meta-social.inbox.index', ['page' => $page->id])
             ->with(
-                ($result['success'] ?? false) ? 'success' : 'error',
-                ($result['success'] ?? false) ? 'تمت مزامنة المحادثات' : ($result['error'] ?? 'فشل')
+                $ok ? 'success' : 'error',
+                $ok
+                    ? "تمت مزامنة {$totalConversations} محادثة و {$totalMessages} رسالة جديدة من Meta"
+                    : ($result['error'] ?? 'فشل')
             );
     }
 }

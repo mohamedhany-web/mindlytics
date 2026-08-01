@@ -16,6 +16,7 @@
         'createLead' => route('admin.meta-social.inbox.create-lead', $convId),
         'linkLead' => route('admin.meta-social.inbox.link-lead', $convId),
         'enrich' => route('admin.meta-social.inbox.enrich', $convId),
+        'syncMessages' => route('admin.meta-social.inbox.sync-messages', $convId),
     ] : [];
 @endphp
 
@@ -192,6 +193,12 @@
                                 <i class="fab fa-facebook-messenger ml-1"></i> Messenger
                             </span>
                         @endif
+                        <button type="button" @click="syncAllMessages()"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-white border border-slate-200 text-slate-700 hover:bg-sky-50 hover:border-sky-200 transition-colors"
+                                :disabled="syncingMessages" title="جلب كل الرسائل من Meta">
+                            <i class="fas fa-cloud-download-alt" :class="syncingMessages ? 'fa-spinner fa-spin' : ''"></i>
+                            <span class="hidden sm:inline">جلب كل الرسائل</span>
+                        </button>
                     </div>
 
                     <div id="sm-chat-messages" class="wa-chat-messages p-3 sm:p-4">
@@ -398,6 +405,7 @@ function metaSocialInbox() {
         crmSaving: false,
         crmError: '',
         crmOk: '',
+        syncingMessages: false,
         init() {
             const el = document.getElementById('sm-chat-messages');
             if (el) el.scrollTop = el.scrollHeight;
@@ -473,6 +481,33 @@ function metaSocialInbox() {
         async enrichProfile() {
             if (!this.crmUrls.enrich) return;
             await this.postJson(this.crmUrls.enrich, {});
+        },
+        async syncAllMessages() {
+            if (!this.crmUrls.syncMessages || this.syncingMessages) return;
+            this.syncingMessages = true;
+            this.crmError = '';
+            this.crmOk = '';
+            try {
+                const res = await fetch(this.crmUrls.syncMessages, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': this.csrf,
+                    },
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    this.crmError = data.error || 'فشل جلب الرسائل';
+                    return;
+                }
+                this.crmOk = 'تم جلب ' + (data.imported || 0) + ' رسالة جديدة (الإجمالي المعروض: ' + (data.message_count || 0) + ')';
+                // إعادة تحميل لضمان الترتيب الكامل في الواجهة
+                location.reload();
+            } catch (e) {
+                this.crmError = 'خطأ أثناء جلب الرسائل';
+            } finally {
+                this.syncingMessages = false;
+            }
         },
         async sendReply() {
             if (!this.replyUrl || !this.replyBody.trim() || this.sending) return;
