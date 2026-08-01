@@ -22,9 +22,7 @@ class SalesGroupPrintPdfService
      */
     public function download(SalesLeadGroup $group, ?User $employee = null): StreamedResponse
     {
-        if (! class_exists(\Mpdf\Mpdf::class)) {
-            throw new RuntimeException('مكتبة PDF غير مثبتة على السيرفر (mpdf/mpdf).');
-        }
+        $this->ensureMpdfAvailable();
 
         @ini_set('memory_limit', '512M');
         @set_time_limit(180);
@@ -236,6 +234,33 @@ class SalesGroupPrintPdfService
     private function isPdf(string $binary): bool
     {
         return str_starts_with(ltrim($binary), '%PDF');
+    }
+
+    private function ensureMpdfAvailable(): void
+    {
+        if (class_exists(\Mpdf\Mpdf::class, true)) {
+            return;
+        }
+
+        $autoload = base_path('vendor/autoload.php');
+        if (is_file($autoload)) {
+            require_once $autoload;
+        }
+
+        if (class_exists(\Mpdf\Mpdf::class, true)) {
+            return;
+        }
+
+        $mpdfSrc = base_path('vendor/mpdf/mpdf/src/Mpdf.php');
+        if (is_file($mpdfSrc)) {
+            throw new RuntimeException(
+                'مكتبة mPDF موجودة لكن الـ autoload لا يحمّلها. على السيرفر نفّذ: composer dump-autoload -o'
+            );
+        }
+
+        throw new RuntimeException(
+            'مكتبة mPDF غير مثبتة في vendor. على السيرفر نفّذ: composer install --no-dev -o   أو: composer require mpdf/mpdf:^8.2'
+        );
     }
 
     private function filename(SalesLeadGroup $group, ?User $employee = null): string
