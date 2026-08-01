@@ -19,6 +19,13 @@ class EmployeeAttendanceRecord extends Model
         'worked_minutes',
         'status',
         'is_late',
+        'attendance_approval_status',
+        'attendance_requested_at',
+        'approved_by',
+        'approved_at',
+        'manager_lateness_decision',
+        'late_penalty_waived',
+        'approval_rejection_reason',
         'clock_in_ip',
         'clock_out_ip',
         'metadata',
@@ -29,6 +36,20 @@ class EmployeeAttendanceRecord extends Model
         'presence_deduction_id',
     ];
 
+    public const APPROVAL_NOT_REQUIRED = 'not_required';
+
+    public const APPROVAL_PENDING = 'pending';
+
+    public const APPROVAL_APPROVED = 'approved';
+
+    public const APPROVAL_REJECTED = 'rejected';
+
+    public const LATENESS_ON_TIME = 'on_time';
+
+    public const LATENESS_EXCUSED = 'excused_late';
+
+    public const LATENESS_CONFIRMED = 'confirmed_late';
+
     protected $casts = [
         'work_date' => 'date',
         'scheduled_start' => 'datetime',
@@ -38,6 +59,9 @@ class EmployeeAttendanceRecord extends Model
         'worked_minutes' => 'integer',
         'required_minutes' => 'integer',
         'is_late' => 'boolean',
+        'attendance_requested_at' => 'datetime',
+        'approved_at' => 'datetime',
+        'late_penalty_waived' => 'boolean',
         'metadata' => 'array',
     ];
 
@@ -53,6 +77,36 @@ class EmployeeAttendanceRecord extends Model
             'on_leave' => 'إجازة',
             'off_day' => 'راحة أسبوعية',
         ];
+    }
+
+    public static function approvalStatusLabels(): array
+    {
+        return [
+            self::APPROVAL_NOT_REQUIRED => 'غير مطلوب',
+            self::APPROVAL_PENDING => 'بانتظار موافقة المدير',
+            self::APPROVAL_APPROVED => 'تمت الموافقة',
+            self::APPROVAL_REJECTED => 'مرفوض',
+        ];
+    }
+
+    public static function latenessDecisionLabels(): array
+    {
+        return [
+            self::LATENESS_ON_TIME => 'حضر في الميعاد',
+            self::LATENESS_EXCUSED => 'متأخر — بدون خصم',
+            self::LATENESS_CONFIRMED => 'متأخر — مع خصم',
+        ];
+    }
+
+    public function isAwaitingManagerApproval(): bool
+    {
+        return $this->attendance_approval_status === self::APPROVAL_PENDING
+            && ! $this->clock_in_at;
+    }
+
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
     public function user(): BelongsTo

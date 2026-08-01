@@ -114,6 +114,8 @@
     $title = match ($mode) {
         'completed' => 'انتهى يوم العمل',
         'awaiting_clock_in' => 'حان وقت الحضور',
+        'pending_manager_approval' => 'بانتظار موافقة المدير',
+        'attendance_rejected' => 'رُفض طلب الحضور',
         'manager_unlocked' => 'تم فتح النظام',
         'missed_shift' => 'فات موعد الحضور',
         'on_leave' => 'يوم إجازة',
@@ -124,6 +126,8 @@
     $icon = match ($mode) {
         'completed' => 'fa-check',
         'awaiting_clock_in' => 'fa-fingerprint',
+        'pending_manager_approval' => 'fa-user-clock',
+        'attendance_rejected' => 'fa-times-circle',
         'manager_unlocked' => 'fa-unlock-alt',
         'missed_shift' => 'fa-exclamation',
         'on_leave' => 'fa-umbrella-beach',
@@ -199,12 +203,20 @@
         @endif
 
         {{-- Actions --}}
-        @if(in_array($mode, ['awaiting_clock_in', 'manager_unlocked'], true) && ($att['can_clock_in'] ?? false))
+        @if($mode === 'pending_manager_approval')
+            <div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                <p class="font-bold mb-1">طلبك قيد المراجعة</p>
+                <p>المدير سيؤكد تواجدك في المكتب من السيستم. حدّث الصفحة بعد الموافقة.</p>
+            </div>
+            <script>setTimeout(function(){ location.reload(); }, 20000);</script>
+        @endif
+
+        @if(in_array($mode, ['awaiting_clock_in', 'manager_unlocked', 'attendance_rejected'], true) && ($att['can_clock_in'] ?? false))
             <form method="post" action="{{ route('employee.attendance.clock-in') }}" class="mb-6">
                 @csrf
                 <button type="submit" class="btn-primary w-full text-white font-bold py-3.5 px-6 rounded-xl inline-flex items-center justify-center gap-2">
                     <i class="fas fa-fingerprint"></i>
-                    تسجيل الحضور
+                    {{ ($att['requires_manager_approval'] ?? false) || (($att['work_mode'] ?? '') === 'offline') ? 'طلب إذن الحضور' : 'تسجيل الحضور' }}
                 </button>
             </form>
         @endif

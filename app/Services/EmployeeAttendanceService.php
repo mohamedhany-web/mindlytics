@@ -184,6 +184,32 @@ class EmployeeAttendanceService
                 'schedule' => $schedule,
                 'record' => $record,
                 'message' => $record->status === 'on_leave' ? 'أنت في إجازة معتمدة اليوم.' : 'يوم راحتك الأسبوعية.',
+                'work_mode' => $user->work_mode ?? User::WORK_MODE_ONLINE,
+            ]);
+        }
+
+        if ($record->isAwaitingManagerApproval() && ! $unlock) {
+            return $this->state([
+                'mode' => 'pending_manager_approval',
+                'can_access' => false,
+                'can_clock_in' => false,
+                'schedule' => $schedule,
+                'record' => $record,
+                'message' => 'تم إرسال طلب الحضور — بانتظار موافقة مدير المبيعات (تأكيد تواجدك في المكتب).',
+                'work_mode' => $user->work_mode ?? User::WORK_MODE_ONLINE,
+                'attendance_requested_at' => $record->attendance_requested_at?->toIso8601String(),
+            ]);
+        }
+
+        if ($record->attendance_approval_status === EmployeeAttendanceRecord::APPROVAL_REJECTED && ! $record->clock_in_at && ! $unlock) {
+            return $this->state([
+                'mode' => 'attendance_rejected',
+                'can_access' => false,
+                'can_clock_in' => true,
+                'schedule' => $schedule,
+                'record' => $record,
+                'message' => 'رُفض طلب الحضور'.($record->approval_rejection_reason ? ': '.$record->approval_rejection_reason : '').' — يمكنك إعادة الطلب.',
+                'work_mode' => $user->work_mode ?? User::WORK_MODE_ONLINE,
             ]);
         }
 
@@ -196,6 +222,7 @@ class EmployeeAttendanceService
                 'worked_seconds' => ($record->worked_minutes ?? 0) * 60,
                 'required_seconds' => $record->required_minutes * 60,
                 'message' => 'تم إنهاء يوم العمل. نراك غداً!',
+                'work_mode' => $user->work_mode ?? User::WORK_MODE_ONLINE,
             ]);
         }
 
@@ -214,6 +241,7 @@ class EmployeeAttendanceService
                 'shift_starts_at' => $window['shift_starts_at']->toIso8601String(),
                 'shift_ends_at' => $window['shift_ends_at']->toIso8601String(),
                 'message' => 'النظام يفتح عند بدء موعد العمل.',
+                'work_mode' => $user->work_mode ?? User::WORK_MODE_ONLINE,
             ]);
         }
 
@@ -224,13 +252,17 @@ class EmployeeAttendanceService
                 'schedule' => $schedule,
                 'record' => $record,
                 'message' => 'انتهى موعد العمل دون تسجيل حضور.',
+                'work_mode' => $user->work_mode ?? User::WORK_MODE_ONLINE,
             ]);
         }
 
         if (! $record->clock_in_at) {
+            $isOffline = $user->isOfflineWorker();
             $message = $unlock
                 ? 'تم فتح النظام بواسطة المدير — سجّل حضورك لبدء العمل.'
-                : 'سجّل حضورك لبدء يوم العمل.';
+                : ($isOffline
+                    ? 'اطلب الحضور — المدير يؤكد تواجدك في المكتب ثم يفتح النظام.'
+                    : 'سجّل حضورك لبدء يوم العمل.');
 
             return $this->state(array_merge([
                 'mode' => $unlock ? 'manager_unlocked' : 'awaiting_clock_in',
@@ -242,6 +274,8 @@ class EmployeeAttendanceService
                 'shift_starts_at' => $window['shift_starts_at']->toIso8601String(),
                 'shift_ends_at' => $window['shift_ends_at']->toIso8601String(),
                 'message' => $message,
+                'work_mode' => $user->work_mode ?? User::WORK_MODE_ONLINE,
+                'requires_manager_approval' => $isOffline && ! $unlock,
             ], $unlockMeta));
         }
 
@@ -264,6 +298,7 @@ class EmployeeAttendanceService
             'message' => $unlock
                 ? 'نظام مفتوح بتصريح المدير حتى '.$unlock->expires_at->format('H:i').'.'
                 : ($canClockOut ? 'يمكنك إنهاء يوم العمل الآن.' : 'استمر في العمل حتى إكمال الساعات المطلوبة.'),
+            'work_mode' => $user->work_mode ?? User::WORK_MODE_ONLINE,
         ], $unlockMeta));
     }
 
@@ -290,8 +325,26 @@ class EmployeeAttendanceService
                 throw ValidationException::withMessages(['attendance' => 'تم تسجيل الحضور مسبقاً.']);
             }
 
-            $window = $this->scheduleWindow($state['schedule'], $now);
             $unlock = $state['unlock'] ?? null;
+            $requiresApproval = $user->isOfflineWorker() && ! $unlock;
+
+            if ($requiresApproval) {
+                $record->update([
+                    'attendance_approval_status' => EmployeeAttendanceRecord::APPROVAL_PENDING,
+                    'attendance_requested_at' => $now,
+                    'approval_rejection_reason' => null,
+                    'clock_in_ip' => $ip,
+                    'status' => 'pending',
+                    'metadata' => array_merge($record->metadata ?? [], [
+                        'attendance_request_ip' => $ip,
+                        'attendance_requested_via' => 'employee_clock_in',
+                    ]),
+                ]);
+
+                return $record->fresh();
+            }
+
+            $window = $this->scheduleWindow($state['schedule'], $now);
             $isLate = ! $unlock && $now->gt($window['shift_starts_at']->copy()->addMinutes((int) $state['schedule']->grace_minutes));
 
             $metadata = $record->metadata ?? [];
@@ -305,16 +358,155 @@ class EmployeeAttendanceService
                 'clock_in_ip' => $ip,
                 'status' => 'active',
                 'is_late' => $isLate,
+                'attendance_approval_status' => EmployeeAttendanceRecord::APPROVAL_NOT_REQUIRED,
+                'attendance_requested_at' => $now,
                 'metadata' => $metadata,
             ]);
 
             $record = $record->fresh(['user']);
-            app(EmployeeAttendancePenaltyService::class)->applyLatePenalty($record);
+            if ($isLate) {
+                app(EmployeeAttendancePenaltyService::class)->applyLatePenalty($record);
+            }
 
             $user->forceFill([
                 'presence_last_seen_at' => $now,
                 'presence_status' => 'online',
             ])->save();
+
+            return $record->fresh();
+        });
+    }
+
+    /**
+     * موافقة مدير المبيعات على طلب حضور موظف أوفلاين.
+     *
+     * @param  'on_time'|'excused_late'|'confirmed_late'  $latenessDecision
+     */
+    public function approveAttendanceRequest(
+        EmployeeAttendanceRecord $record,
+        User $manager,
+        string $latenessDecision,
+        ?string $ip = null,
+    ): EmployeeAttendanceRecord {
+        if (! in_array($latenessDecision, [
+            EmployeeAttendanceRecord::LATENESS_ON_TIME,
+            EmployeeAttendanceRecord::LATENESS_EXCUSED,
+            EmployeeAttendanceRecord::LATENESS_CONFIRMED,
+        ], true)) {
+            throw ValidationException::withMessages([
+                'lateness_decision' => 'قرار التأخير غير صالح.',
+            ]);
+        }
+
+        return DB::transaction(function () use ($record, $manager, $latenessDecision, $ip) {
+            $record = EmployeeAttendanceRecord::query()->whereKey($record->id)->lockForUpdate()->firstOrFail();
+
+            if ($record->clock_in_at) {
+                throw ValidationException::withMessages(['attendance' => 'تم تثبيت الحضور مسبقاً.']);
+            }
+
+            if ($record->attendance_approval_status !== EmployeeAttendanceRecord::APPROVAL_PENDING) {
+                throw ValidationException::withMessages(['attendance' => 'لا يوجد طلب حضور معلّق لهذا اليوم.']);
+            }
+
+            $clockInAt = $record->attendance_requested_at ?? now();
+            $markLate = $latenessDecision !== EmployeeAttendanceRecord::LATENESS_ON_TIME;
+            $waivePenalty = $latenessDecision !== EmployeeAttendanceRecord::LATENESS_CONFIRMED;
+
+            $record->update([
+                'clock_in_at' => $clockInAt,
+                'clock_in_ip' => $ip ?: $record->clock_in_ip,
+                'status' => 'active',
+                'is_late' => $markLate,
+                'attendance_approval_status' => EmployeeAttendanceRecord::APPROVAL_APPROVED,
+                'approved_by' => $manager->id,
+                'approved_at' => now(),
+                'manager_lateness_decision' => $latenessDecision,
+                'late_penalty_waived' => $waivePenalty && $markLate,
+                'approval_rejection_reason' => null,
+                'metadata' => array_merge($record->metadata ?? [], [
+                    'approved_by_manager' => $manager->id,
+                    'approved_at' => now()->toIso8601String(),
+                    'lateness_decision' => $latenessDecision,
+                ]),
+            ]);
+
+            $record = $record->fresh(['user']);
+
+            if ($latenessDecision === EmployeeAttendanceRecord::LATENESS_CONFIRMED) {
+                app(EmployeeAttendancePenaltyService::class)->applyLatePenalty($record);
+            }
+
+            $record->user?->forceFill([
+                'presence_last_seen_at' => now(),
+                'presence_status' => 'online',
+            ])->save();
+
+            return $record->fresh();
+        });
+    }
+
+    public function rejectAttendanceRequest(
+        EmployeeAttendanceRecord $record,
+        User $manager,
+        string $reason,
+    ): EmployeeAttendanceRecord {
+        $reason = trim($reason);
+        if (mb_strlen($reason) < 3) {
+            throw ValidationException::withMessages([
+                'reason' => 'اكتب سبب الرفض (3 أحرف على الأقل).',
+            ]);
+        }
+
+        return DB::transaction(function () use ($record, $manager, $reason) {
+            $record = EmployeeAttendanceRecord::query()->whereKey($record->id)->lockForUpdate()->firstOrFail();
+
+            if ($record->clock_in_at || $record->attendance_approval_status !== EmployeeAttendanceRecord::APPROVAL_PENDING) {
+                throw ValidationException::withMessages(['attendance' => 'لا يوجد طلب حضور معلّق.']);
+            }
+
+            $record->update([
+                'attendance_approval_status' => EmployeeAttendanceRecord::APPROVAL_REJECTED,
+                'approved_by' => $manager->id,
+                'approved_at' => now(),
+                'approval_rejection_reason' => $reason,
+                'attendance_requested_at' => null,
+                'metadata' => array_merge($record->metadata ?? [], [
+                    'rejected_by_manager' => $manager->id,
+                    'rejected_at' => now()->toIso8601String(),
+                    'rejection_reason' => $reason,
+                ]),
+            ]);
+
+            return $record->fresh();
+        });
+    }
+
+    /**
+     * إعفاء خصم التأخير لموظف أونلاين (أو بعد التأكيد).
+     */
+    public function waiveLatePenalty(EmployeeAttendanceRecord $record, User $manager, ?string $note = null): EmployeeAttendanceRecord
+    {
+        return DB::transaction(function () use ($record, $manager, $note) {
+            $record = EmployeeAttendanceRecord::query()->whereKey($record->id)->lockForUpdate()->firstOrFail();
+
+            if (! $record->clock_in_at) {
+                throw ValidationException::withMessages(['attendance' => 'لا يوجد حضور مثبت.']);
+            }
+
+            $record->update([
+                'late_penalty_waived' => true,
+                'manager_lateness_decision' => EmployeeAttendanceRecord::LATENESS_EXCUSED,
+                'approved_by' => $record->approved_by ?: $manager->id,
+                'approved_at' => $record->approved_at ?: now(),
+                'metadata' => array_merge($record->metadata ?? [], [
+                    'late_waived_by' => $manager->id,
+                    'late_waived_at' => now()->toIso8601String(),
+                    'late_waive_note' => $note,
+                ]),
+            ]);
+
+            app(EmployeeAttendancePenaltyService::class)->revokeLatePenalty($record);
 
             return $record->fresh();
         });
@@ -384,8 +576,8 @@ class EmployeeAttendanceService
             'required_minutes' => (int) round((float) $schedule->required_hours * 60),
         ];
 
-        // يوم الراحة من ملف الموظف (weekly_off_day) وليس من موعد العمل
-        if ($user->isWeeklyOff($now)) {
+        // يوم الراحة من ملف الموظف (أوفلاين بأيام محددة أو weekly_off_day)
+        if ($user->isAttendanceOffDay($now)) {
             return EmployeeAttendanceRecord::create($base + ['status' => 'off_day']);
         }
 
@@ -408,6 +600,10 @@ class EmployeeAttendanceService
         $now = $now ?? now();
 
         if ($record->clock_in_at || in_array($record->status, ['active', 'completed'], true)) {
+            return $record;
+        }
+
+        if ($record->isAwaitingManagerApproval()) {
             return $record;
         }
 
@@ -459,7 +655,7 @@ class EmployeeAttendanceService
 
     private function desiredDayStatus(User $user, Carbon $now): string
     {
-        if ($user->isWeeklyOff($now)) {
+        if ($user->isAttendanceOffDay($now)) {
             return 'off_day';
         }
 
@@ -522,6 +718,9 @@ class EmployeeAttendanceService
             'clock_in_at' => null,
             'message' => '',
             'unlock' => null,
+            'work_mode' => User::WORK_MODE_ONLINE,
+            'requires_manager_approval' => false,
+            'attendance_requested_at' => null,
         ], $data);
     }
 }

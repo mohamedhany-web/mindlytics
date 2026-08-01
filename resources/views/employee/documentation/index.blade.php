@@ -75,6 +75,14 @@
             <p class="font-bold">أهداف النتائج اليومية الافتراضية (تظهر على الداشبورد مقابل الفعلي):</p>
             <p>120 محاولة اتصال · 35 رد · 15 محادثة مؤهلة · 8 جلسات · 5 عروض · 2 تسجيل مدفوع</p>
         </div>
+        <div class="rounded-xl border border-violet-200 bg-violet-50/70 p-4 text-sm text-violet-950 space-y-2">
+            <p class="font-bold">الحضور: أونلاين vs أوفلاين</p>
+            <ul class="list-disc list-inside space-y-1 text-violet-900/90">
+                <li><strong>أونلاين:</strong> سجّل الحضور من أي مكان عند بدء الشيفت.</li>
+                <li><strong>أوفلاين:</strong> لازم تكون في المكتب → اضغط «طلب إذن الحضور» → المدير يشوفك ويعمل قبول (في الميعاد / إعفاء تأخير بدون خصم / تأخير بخصم).</li>
+                <li>الأوفلاين قد يكون Full-time أو أيام نزول محددة من ملفك في الأدمن.</li>
+            </ul>
+        </div>
     </section>
 
     {{-- HOW TO USE --}}

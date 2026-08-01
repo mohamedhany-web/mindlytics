@@ -18,7 +18,12 @@ class EmployeeAttendancePenaltyService
 
     public function applyLatePenalty(EmployeeAttendanceRecord $record): ?EmployeeSalaryDeduction
     {
-        if (! EmployeeAttendanceSettings::latePenaltyEnabled() || ! $record->is_late || $record->late_deduction_id) {
+        if (
+            ! EmployeeAttendanceSettings::latePenaltyEnabled()
+            || ! $record->is_late
+            || $record->late_deduction_id
+            || $record->late_penalty_waived
+        ) {
             return null;
         }
 
@@ -35,6 +40,29 @@ class EmployeeAttendancePenaltyService
         $this->notifyEmployee($record->user, $deduction, 'تأخير حضور');
 
         return $deduction;
+    }
+
+    /**
+     * إلغاء خصم التأخير بعد إعفاء المدير.
+     */
+    public function revokeLatePenalty(EmployeeAttendanceRecord $record): void
+    {
+        if (! $record->late_deduction_id) {
+            return;
+        }
+
+        $deduction = EmployeeSalaryDeduction::query()->find($record->late_deduction_id);
+        if ($deduction && $deduction->status !== 'cancelled') {
+            $deduction->update([
+                'status' => 'cancelled',
+                'notes' => trim(($deduction->notes ? $deduction->notes."\n" : '').'أُلغي بإعفاء مدير المبيعات من خصم التأخير.'),
+            ]);
+        }
+
+        $record->update([
+            'late_deduction_id' => null,
+            'late_penalty_waived' => true,
+        ]);
     }
 
     public function applyAbsencePenalty(User $employee, Carbon $date): ?EmployeeSalaryDeduction
@@ -135,7 +163,7 @@ class EmployeeAttendancePenaltyService
                 continue;
             }
 
-            if ($record->is_late && ! $record->late_deduction_id && $record->clock_in_at) {
+            if ($record->is_late && ! $record->late_deduction_id && ! $record->late_penalty_waived && $record->clock_in_at) {
                 if ($this->applyLatePenalty($record)) {
                     $counts['late']++;
                 }

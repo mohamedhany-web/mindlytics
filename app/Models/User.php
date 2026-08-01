@@ -49,6 +49,9 @@ class User extends Authenticatable
         'hire_date',
         'weekly_off_day',
         'work_schedule_id',
+        'work_mode',
+        'offline_attendance_type',
+        'onsite_days',
         'termination_date',
         'salary',
         'employee_notes',
@@ -121,7 +124,55 @@ class User extends Authenticatable
             'two_factor_confirmed_at' => 'datetime',
             'two_factor_recovery_codes' => 'array',
             'skills' => 'array',
+            'onsite_days' => 'array',
         ];
+    }
+
+    public const WORK_MODE_ONLINE = 'online';
+
+    public const WORK_MODE_OFFLINE = 'offline';
+
+    public const OFFLINE_FULL_TIME = 'full_time';
+
+    public const OFFLINE_SELECTED_DAYS = 'selected_days';
+
+    public static function workModeLabels(): array
+    {
+        return [
+            self::WORK_MODE_ONLINE => 'أونلاين (عن بُعد)',
+            self::WORK_MODE_OFFLINE => 'أوفلاين (بالمكتب)',
+        ];
+    }
+
+    public function isOfflineWorker(): bool
+    {
+        return ($this->work_mode ?? self::WORK_MODE_ONLINE) === self::WORK_MODE_OFFLINE;
+    }
+
+    public function isOnlineWorker(): bool
+    {
+        return ! $this->isOfflineWorker();
+    }
+
+    public function workModeLabel(): string
+    {
+        return self::workModeLabels()[$this->work_mode ?? self::WORK_MODE_ONLINE]
+            ?? ($this->work_mode ?? self::WORK_MODE_ONLINE);
+    }
+
+    /**
+     * أيام النزول للأوفلاين (0=أحد … 6=سبت).
+     *
+     * @return list<int>
+     */
+    public function onsiteDayIndexes(): array
+    {
+        $days = $this->onsite_days ?? [];
+        if (! is_array($days)) {
+            return [];
+        }
+
+        return array_values(array_unique(array_map('intval', $days)));
     }
 
     public function salesCommissionLabel(): string
@@ -1007,6 +1058,28 @@ class User extends Authenticatable
         }
 
         return $date->isWeekend();
+    }
+
+    /**
+     * هل اليوم يوم راحة من ناحية الحضور؟
+     * للأوفلاين بأيام محددة: أيام العمل = onsite_days فقط.
+     * غير ذلك: weekly_off_day / عطلة نهاية الأسبوع.
+     */
+    public function isAttendanceOffDay(\Carbon\Carbon $date): bool
+    {
+        if (
+            $this->isOfflineWorker()
+            && ($this->offline_attendance_type ?? null) === self::OFFLINE_SELECTED_DAYS
+        ) {
+            $days = $this->onsiteDayIndexes();
+            if ($days === []) {
+                return true;
+            }
+
+            return ! in_array((int) $date->dayOfWeek, $days, true);
+        }
+
+        return $this->isWeeklyOff($date);
     }
 
     /**

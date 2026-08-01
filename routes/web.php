@@ -1042,6 +1042,10 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('attendance/employees/{employee}', [\App\Http\Controllers\Employee\SalesManagerAttendanceController::class, 'employee'])->name('attendance.employee');
             Route::post('attendance/employees/{employee}/unlock', [\App\Http\Controllers\Employee\SalesManagerAttendanceController::class, 'unlock'])->name('attendance.unlock');
             Route::post('attendance/employees/{employee}/unlocks/{unlock}/revoke', [\App\Http\Controllers\Employee\SalesManagerAttendanceController::class, 'revokeUnlock'])->name('attendance.unlock.revoke');
+            Route::post('attendance/records/{record}/approve', [\App\Http\Controllers\Employee\SalesManagerAttendanceController::class, 'approve'])->name('attendance.approve');
+            Route::post('attendance/records/{record}/reject', [\App\Http\Controllers\Employee\SalesManagerAttendanceController::class, 'reject'])->name('attendance.reject');
+            Route::post('attendance/records/{record}/waive-late', [\App\Http\Controllers\Employee\SalesManagerAttendanceController::class, 'waiveLate'])->name('attendance.waive-late');
+            Route::get('ops-board', [\App\Http\Controllers\Employee\SalesManagerOpsBoardController::class, 'index'])->name('ops-board');
             Route::get('presence', [\App\Http\Controllers\Employee\SalesManagerPresenceController::class, 'index'])->name('presence.index');
             Route::get('presence/poll', [\App\Http\Controllers\Employee\SalesManagerPresenceController::class, 'poll'])->name('presence.poll');
             Route::post('presence/violations/{violation}/acknowledge', [\App\Http\Controllers\Employee\SalesManagerPresenceController::class, 'acknowledge'])->name('presence.acknowledge');

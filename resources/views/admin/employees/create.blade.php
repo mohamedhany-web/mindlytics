@@ -90,6 +90,11 @@
 
                     @include('admin.employees._weekly_off_day_field', ['employee' => new \App\Models\User()])
 
+                    @include('admin.employees._work_mode_field', [
+                        'employee' => new \App\Models\User(),
+                        'workSchedules' => $workSchedules ?? [],
+                    ])
+
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">الراتب</label>
                         <input type="number" name="salary" value="{{ old('salary') }}" min="0" step="0.01" 

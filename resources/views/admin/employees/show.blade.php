@@ -145,6 +145,28 @@
                     @endif
                 </p>
             </div>
+            <div>
+                <p class="text-sm text-gray-600 mb-1">نوع العمل</p>
+                <p class="font-semibold text-gray-900 text-lg">{{ $employee->workModeLabel() }}</p>
+                @if($employee->isOfflineWorker())
+                    <p class="text-xs text-slate-500 mt-1">
+                        @if(($employee->offline_attendance_type ?? '') === 'selected_days')
+                            أيام النزول:
+                            @foreach($employee->onsiteDayIndexes() as $d)
+                                {{ \App\Models\User::weeklyOffDayOptions()[$d] ?? $d }}@if(! $loop->last)، @endif
+                            @endforeach
+                        @else
+                            Full-time — حسب الشيفت ويوم الراحة
+                        @endif
+                    </p>
+                @endif
+            </div>
+            @if($employee->workSchedule)
+            <div>
+                <p class="text-sm text-gray-600 mb-1">ميعاد الحضور / الانصراف</p>
+                <p class="font-semibold text-gray-900 text-lg">{{ $employee->workSchedule->name }} — {{ $employee->workSchedule->timeRangeLabel() }}</p>
+            </div>
+            @endif
             @if($employee->salary)
             <div>
                 <p class="text-sm text-gray-600 mb-1">الراتب</p>

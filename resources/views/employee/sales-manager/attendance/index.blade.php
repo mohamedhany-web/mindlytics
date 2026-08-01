@@ -11,6 +11,8 @@
         'manager_unlocked_working' => 'يعمل (مفتوح)',
         'manager_unlocked' => 'مفتوح — بانتظار الحضور',
         'awaiting_clock_in' => 'بانتظار تسجيل الحضور',
+        'pending_manager_approval' => 'بانتظار موافقة المدير',
+        'attendance_rejected' => 'رُفض طلب الحضور',
         'locked_before_shift' => 'قبل موعد العمل',
         'missed_shift' => 'فات الموعد',
         'completed' => 'انتهى اليوم',
@@ -36,13 +38,14 @@
         </div>
     @endif
 
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+    <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
         @foreach([
             ['label' => 'سجلات', 'value' => $stats['total']],
             ['label' => 'مكتمل', 'value' => $stats['completed']],
             ['label' => 'متأخر', 'value' => $stats['late']],
             ['label' => 'جاري العمل', 'value' => $stats['active_now']],
             ['label' => 'غياب', 'value' => $stats['absent']],
+            ['label' => 'بانتظار موافقة', 'value' => $stats['pending_approval'] ?? 0],
         ] as $s)
             <div class="bg-white rounded-xl border border-slate-200 p-4">
                 <p class="text-xs text-slate-500">{{ $s['label'] }}</p>
@@ -50,6 +53,51 @@
             </div>
         @endforeach
     </div>
+
+    @if(($pendingApprovals ?? collect())->isNotEmpty())
+        <div class="rounded-2xl border border-amber-200 bg-amber-50/80 overflow-hidden">
+            <div class="px-5 py-4 border-b border-amber-100">
+                <h3 class="font-black text-amber-950 flex items-center gap-2">
+                    <i class="fas fa-user-check"></i>
+                    طلبات حضور أوفلاين بانتظارك ({{ $pendingApprovals->count() }})
+                </h3>
+                <p class="text-xs text-amber-900/80 mt-1">أكد تواجد الموظف في المكتب ثم اختر: في الميعاد / إعفاء تأخير / تأخير بخصم.</p>
+            </div>
+            <div class="p-4 space-y-3">
+                @foreach($pendingApprovals as $rec)
+                    <div class="bg-white rounded-xl border border-amber-100 p-4 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <p class="font-bold text-slate-900">{{ $rec->user?->name }}</p>
+                            <p class="text-xs text-slate-500 mt-0.5">
+                                طلب {{ $rec->attendance_requested_at?->format('H:i') ?? '—' }}
+                                · ميعاد الشيفت {{ $rec->scheduled_start?->format('H:i') ?? '—' }}
+                            </p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 items-center">
+                            @foreach(($latenessLabels ?? \App\Models\EmployeeAttendanceRecord::latenessDecisionLabels()) as $decision => $label)
+                                <form method="POST" action="{{ route('employee.sales-manager.attendance.approve', $rec) }}">
+                                    @csrf
+                                    <input type="hidden" name="lateness_decision" value="{{ $decision }}">
+                                    <button type="submit" @class([
+                                        'text-xs font-bold px-3 py-1.5 rounded-lg border',
+                                        'bg-emerald-600 text-white border-emerald-600' => $decision === 'on_time',
+                                        'bg-sky-50 text-sky-800 border-sky-200' => $decision === 'excused_late',
+                                        'bg-rose-50 text-rose-800 border-rose-200' => $decision === 'confirmed_late',
+                                    ])>{{ $label }}</button>
+                                </form>
+                            @endforeach
+                            <form method="POST" action="{{ route('employee.sales-manager.attendance.reject', $rec) }}" class="flex gap-1"
+                                  onsubmit="return confirm('رفض طلب الحضور؟');">
+                                @csrf
+                                <input type="text" name="reason" required placeholder="سبب الرفض" class="px-2 py-1.5 border border-slate-200 rounded-lg text-xs w-36">
+                                <button type="submit" class="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">رفض</button>
+                            </form>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
 
     {{-- فتح النظام --}}
     <div class="rounded-2xl border border-teal-200 bg-gradient-to-l from-teal-50 via-white to-emerald-50/40 overflow-hidden">
@@ -216,6 +264,7 @@
                     <th class="px-4 py-3 text-right">خروج</th>
                     <th class="px-4 py-3 text-right">ساعات</th>
                     <th class="px-4 py-3 text-right">الحالة</th>
+                    <th class="px-4 py-3 text-right">إجراء</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
@@ -225,15 +274,41 @@
                             <a href="{{ route('employee.sales-manager.attendance.employee', $rec->user_id) }}" class="hover:text-teal-700">
                                 {{ $rec->user->name ?? '—' }}
                             </a>
+                            @if(($rec->user->work_mode ?? '') === 'offline')
+                                <span class="text-[10px] text-violet-700 font-bold">أوفلاين</span>
+                            @endif
                         </td>
                         <td class="px-4 py-3">{{ $rec->work_date?->format('Y-m-d') }}</td>
-                        <td class="px-4 py-3">{{ $rec->clock_in_at?->format('H:i') ?? '—' }}</td>
+                        <td class="px-4 py-3">
+                            {{ $rec->clock_in_at?->format('H:i') ?? ($rec->isAwaitingManagerApproval() ? 'طلب '.$rec->attendance_requested_at?->format('H:i') : '—') }}
+                            @if($rec->is_late)
+                                <span class="text-[10px] text-rose-600 font-bold">متأخر</span>
+                            @endif
+                        </td>
                         <td class="px-4 py-3">{{ $rec->clock_out_at?->format('H:i') ?? '—' }}</td>
                         <td class="px-4 py-3">{{ $rec->worked_minutes ? round($rec->worked_minutes / 60, 1) : '—' }}</td>
-                        <td class="px-4 py-3">{{ $statusLabels[$rec->status] ?? $rec->status }}</td>
+                        <td class="px-4 py-3">
+                            {{ $statusLabels[$rec->status] ?? $rec->status }}
+                            @if($rec->isAwaitingManagerApproval())
+                                <span class="block text-[10px] text-amber-700 font-bold">بانتظار موافقة</span>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3">
+                            @if($rec->is_late && ! $rec->late_penalty_waived && $rec->clock_in_at)
+                                <form method="POST" action="{{ route('employee.sales-manager.attendance.waive-late', $rec) }}"
+                                      onsubmit="return confirm('إعفاء خصم التأخير؟');">
+                                    @csrf
+                                    <button type="submit" class="text-[11px] font-bold text-sky-700 hover:underline">إعفاء خصم</button>
+                                </form>
+                            @elseif($rec->late_penalty_waived)
+                                <span class="text-[11px] text-emerald-700">تم الإعفاء</span>
+                            @else
+                                <span class="text-slate-300">—</span>
+                            @endif
+                        </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="px-4 py-10 text-center text-slate-500">لا توجد سجلات.</td></tr>
+                    <tr><td colspan="7" class="px-4 py-10 text-center text-slate-500">لا توجد سجلات.</td></tr>
                 @endforelse
             </tbody>
         </table>

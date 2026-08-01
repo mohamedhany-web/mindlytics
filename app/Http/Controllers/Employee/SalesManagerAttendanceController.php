@@ -30,10 +30,10 @@ class SalesManagerAttendanceController extends Controller
             ->whereIn('id', $memberIds)
             ->with(['workSchedule', 'employeeJob'])
             ->orderBy('name')
-            ->get(['id', 'name', 'work_schedule_id', 'weekly_off_day', 'employee_job_id']);
+            ->get(['id', 'name', 'work_schedule_id', 'weekly_off_day', 'employee_job_id', 'work_mode', 'offline_attendance_type', 'onsite_days']);
 
         $query = EmployeeAttendanceRecord::query()
-            ->with(['user:id,name', 'workSchedule'])
+            ->with(['user:id,name,work_mode', 'workSchedule'])
             ->whereIn('user_id', $memberIds)
             ->orderByDesc('work_date')
             ->orderByDesc('id');
@@ -66,7 +66,22 @@ class SalesManagerAttendanceController extends Controller
             'late' => (clone $statsBase)->where('is_late', true)->count(),
             'active_now' => (clone $statsBase)->where('status', 'active')->count(),
             'absent' => (clone $statsBase)->whereNull('clock_in_at')->whereIn('status', ['pending', 'absent'])->count(),
+            'pending_approval' => EmployeeAttendanceRecord::query()
+                ->whereIn('user_id', $memberIds)
+                ->whereDate('work_date', today())
+                ->where('attendance_approval_status', EmployeeAttendanceRecord::APPROVAL_PENDING)
+                ->whereNull('clock_in_at')
+                ->count(),
         ];
+
+        $pendingApprovals = EmployeeAttendanceRecord::query()
+            ->with(['user:id,name,work_mode'])
+            ->whereIn('user_id', $memberIds)
+            ->whereDate('work_date', today())
+            ->where('attendance_approval_status', EmployeeAttendanceRecord::APPROVAL_PENDING)
+            ->whereNull('clock_in_at')
+            ->orderBy('attendance_requested_at')
+            ->get();
 
         $activeUnlocks = EmployeeWorkUnlock::query()
             ->with(['user:id,name', 'unlockedBy:id,name'])
@@ -86,8 +101,10 @@ class SalesManagerAttendanceController extends Controller
             'members' => $members,
             'team' => $team,
             'activeUnlocks' => $activeUnlocks,
+            'pendingApprovals' => $pendingApprovals,
             'memberStates' => $memberStates,
             'durationOptions' => EmployeeWorkUnlock::durationOptions(),
+            'latenessLabels' => EmployeeAttendanceRecord::latenessDecisionLabels(),
         ]);
     }
 
@@ -181,5 +198,63 @@ class SalesManagerAttendanceController extends Controller
         $this->attendance->revokeUnlock($unlock, $manager, $data['revoke_reason'] ?? null);
 
         return back()->with('success', 'تم إلغاء فتح النظام لـ «'.$employee->name.'».');
+    }
+
+    public function approve(Request $request, EmployeeAttendanceRecord $record): RedirectResponse
+    {
+        $manager = Auth::user();
+        $team = $this->teamService->managedTeamOrFail($manager);
+        $memberIds = $this->teamService->memberUserIds($team);
+
+        abort_unless(in_array((int) $record->user_id, $memberIds, true), 403);
+
+        $data = $request->validate([
+            'lateness_decision' => ['required', 'in:on_time,excused_late,confirmed_late'],
+        ], [
+            'lateness_decision.required' => 'اختر قرار الحضور (في الميعاد / إعفاء / تأخير بخصم).',
+        ]);
+
+        $this->attendance->approveAttendanceRequest($record, $manager, $data['lateness_decision'], $request->ip());
+
+        $labels = EmployeeAttendanceRecord::latenessDecisionLabels();
+
+        return back()->with(
+            'success',
+            'تم قبول حضور «'.($record->user?->name ?? 'الموظف').'» — '.$labels[$data['lateness_decision']]
+        );
+    }
+
+    public function reject(Request $request, EmployeeAttendanceRecord $record): RedirectResponse
+    {
+        $manager = Auth::user();
+        $team = $this->teamService->managedTeamOrFail($manager);
+        $memberIds = $this->teamService->memberUserIds($team);
+
+        abort_unless(in_array((int) $record->user_id, $memberIds, true), 403);
+
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'min:3', 'max:500'],
+        ]);
+
+        $this->attendance->rejectAttendanceRequest($record, $manager, $data['reason']);
+
+        return back()->with('success', 'تم رفض طلب الحضور.');
+    }
+
+    public function waiveLate(Request $request, EmployeeAttendanceRecord $record): RedirectResponse
+    {
+        $manager = Auth::user();
+        $team = $this->teamService->managedTeamOrFail($manager);
+        $memberIds = $this->teamService->memberUserIds($team);
+
+        abort_unless(in_array((int) $record->user_id, $memberIds, true), 403);
+
+        $data = $request->validate([
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $this->attendance->waiveLatePenalty($record, $manager, $data['note'] ?? null);
+
+        return back()->with('success', 'تم إعفاء خصم التأخير لـ «'.($record->user?->name ?? 'الموظف').'».');
     }
 }

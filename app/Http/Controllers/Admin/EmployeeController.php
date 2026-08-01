@@ -87,6 +87,10 @@ class EmployeeController extends Controller
             'hire_date' => 'required|date',
             'weekly_off_day' => 'nullable|integer|min:0|max:6',
             'work_schedule_id' => 'nullable|exists:work_schedules,id',
+            'work_mode' => 'required|in:online,offline',
+            'offline_attendance_type' => 'nullable|required_if:work_mode,offline|in:full_time,selected_days',
+            'onsite_days' => 'nullable|array',
+            'onsite_days.*' => 'integer|min:0|max:6',
             'salary' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
         ]);
@@ -100,6 +104,8 @@ class EmployeeController extends Controller
         if (empty($validated['work_schedule_id'])) {
             $validated['work_schedule_id'] = null;
         }
+
+        $validated = $this->normalizeWorkModeFields($validated, $request);
 
         // إنشاء رمز الموظف إذا لم يتم توفيره
         if (empty($validated['employee_code'])) {
@@ -182,6 +188,10 @@ class EmployeeController extends Controller
             'hire_date' => 'required|date',
             'weekly_off_day' => 'nullable|integer|min:0|max:6',
             'work_schedule_id' => 'nullable|exists:work_schedules,id',
+            'work_mode' => 'required|in:online,offline',
+            'offline_attendance_type' => 'nullable|required_if:work_mode,offline|in:full_time,selected_days',
+            'onsite_days' => 'nullable|array',
+            'onsite_days.*' => 'integer|min:0|max:6',
             'termination_date' => 'nullable|date|after:hire_date',
             'salary' => 'nullable|numeric|min:0',
             'employee_notes' => 'nullable|string',
@@ -209,16 +219,52 @@ class EmployeeController extends Controller
             $validated['work_schedule_id'] = null;
         }
 
+        $validated = $this->normalizeWorkModeFields($validated, $request);
+
         $validated['is_active'] = $request->has('is_active') ? true : false;
 
         $employee->update($validated);
         $employee->refresh();
 
-        // أعد حساب يوم الراحة/الحضور لليوم الحالي حسب weekly_off_day من ملف الموظف
+        // أعد حساب يوم الراحة/الحضور لليوم الحالي حسب ملف الموظف
         app(EmployeeAttendanceService::class)->resyncTodayAfterEmployeeUpdate($employee);
 
         return redirect()->route('admin.employees.show', $employee)
-                        ->with('success', 'تم تحديث بيانات الموظف بنجاح — يوم الإجازة الأسبوعية يُطبَّق فوراً على قفل النظام والحضور.');
+                        ->with('success', 'تم تحديث بيانات الموظف بنجاح — نوع العمل وأيام النزول تُطبَّق فوراً على قفل النظام والحضور.');
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function normalizeWorkModeFields(array $validated, Request $request): array
+    {
+        $mode = $validated['work_mode'] ?? User::WORK_MODE_ONLINE;
+        $validated['work_mode'] = $mode;
+
+        if ($mode !== User::WORK_MODE_OFFLINE) {
+            $validated['offline_attendance_type'] = null;
+            $validated['onsite_days'] = null;
+
+            return $validated;
+        }
+
+        $type = $validated['offline_attendance_type'] ?? User::OFFLINE_FULL_TIME;
+        $validated['offline_attendance_type'] = $type;
+
+        if ($type === User::OFFLINE_SELECTED_DAYS) {
+            $days = array_values(array_unique(array_map('intval', $request->input('onsite_days', []))));
+            if ($days === []) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'onsite_days' => 'اختر يوماً واحداً على الأقل لنزول الموظف للمكتب.',
+                ]);
+            }
+            $validated['onsite_days'] = $days;
+        } else {
+            $validated['onsite_days'] = null;
+        }
+
+        return $validated;
     }
 
     /**

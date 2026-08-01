@@ -33,12 +33,17 @@
                 {{ max(0, (int) ceil((($att['required_seconds'] ?? 0) - ($att['worked_seconds'] ?? 0)) / 60)) }} د متبقية
             </span>
         @endif
+    @elseif($mode === 'pending_manager_approval')
+        <span class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold">
+            <i class="fas fa-hourglass-half"></i>
+            بانتظار موافقة المدير
+        </span>
     @elseif($att['can_clock_in'] ?? false)
         <form method="post" action="{{ route('employee.attendance.clock-in') }}">
             @csrf
             <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow animate-pulse">
                 <i class="fas fa-fingerprint"></i>
-                تسجيل الحضور
+                {{ ($att['requires_manager_approval'] ?? false) || (($att['work_mode'] ?? '') === 'offline') ? 'طلب الحضور' : 'تسجيل الحضور' }}
             </button>
         </form>
     @endif

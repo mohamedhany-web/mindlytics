@@ -48,7 +48,7 @@ class EmployeeAttendanceController extends Controller
         abort_unless($user->isSubjectToWorkSchedule(), 403, 'نظام الدوام متاح لموظفي المبيعات فقط.');
 
         try {
-            $this->attendance->clockIn($user, $request->ip());
+            $record = $this->attendance->clockIn($user, $request->ip());
         } catch (\Illuminate\Validation\ValidationException $e) {
             if ($request->expectsJson()) {
                 return response()->json(['success' => false, 'errors' => $e->errors()], 422);
@@ -57,11 +57,16 @@ class EmployeeAttendanceController extends Controller
             return back()->withErrors($e->errors());
         }
 
+        $pending = $record->isAwaitingManagerApproval();
+        $msg = $pending
+            ? 'تم إرسال طلب الحضور — بانتظار موافقة مدير المبيعات.'
+            : 'تم تسجيل الحضور — يوم عمل موفق!';
+
         if ($request->expectsJson()) {
-            return response()->json(['success' => true, 'message' => 'تم تسجيل الحضور بنجاح.']);
+            return response()->json(['success' => true, 'message' => $msg, 'pending_approval' => $pending]);
         }
 
-        return redirect()->route('employee.dashboard')->with('success', 'تم تسجيل الحضور — يوم عمل موفق!');
+        return redirect()->route('employee.dashboard')->with('success', $msg);
     }
 
     public function clockOut(Request $request): RedirectResponse|JsonResponse
