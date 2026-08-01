@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', 'محادثات Messenger & Instagram')
-@section('header', 'Inbox — السوشيال')
+@section('title', 'Meta Inbox — Business Suite')
+@section('header', 'Meta Inbox')
 
 @section('content')
 @php
@@ -10,6 +10,7 @@
     $pollUrl = route('admin.meta-social.inbox.poll', ['page' => $pageId, 'conversation' => $convId]);
     $canUse = (bool) ($connected ?? ($connectionMeta['can_use'] ?? false));
     $crmReady = (bool) ($crmReady ?? false);
+    $filterCounts = $filterCounts ?? ['all' => 0, 'unread' => 0, 'messenger' => 0, 'instagram' => 0, 'open' => 0, 'closed' => 0];
     $crmUrls = $convId ? [
         'assign' => route('admin.meta-social.inbox.assign', $convId),
         'contact' => route('admin.meta-social.inbox.contact', $convId),
@@ -18,355 +19,436 @@
         'enrich' => route('admin.meta-social.inbox.enrich', $convId),
         'syncMessages' => route('admin.meta-social.inbox.sync-messages', $convId),
     ] : [];
+    $navBase = array_filter([
+        'page' => $pageId ?: null,
+        'assigned_to' => $assignedFilter ?: null,
+        'q' => $search ?: null,
+    ], fn ($v) => $v !== null && $v !== '');
 @endphp
 
-<div class="wa-inbox-page flex flex-col min-h-0 overflow-hidden gap-2 wa-inbox-immersive admin-wa-inbox sm-meta-inbox" x-data="metaSocialInbox()" x-cloak>
+<div class="bs-inbox-page wa-inbox-immersive" x-data="metaSocialInbox()" x-cloak>
     @include('admin.meta-social._alerts')
 
-    {{-- شريط علوي --}}
-    <div class="shrink-0 flex flex-wrap items-center justify-between gap-2 px-2 sm:px-3 pt-2">
-        <div class="flex items-center gap-3 min-w-0">
-            <button type="button" @click="$dispatch('open-sidebar')" class="lg:hidden w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-600 flex items-center justify-center shrink-0">
-                <i class="fas fa-bars text-sm"></i>
+    {{-- Top bar — Business Suite style --}}
+    <header class="bs-topbar shrink-0">
+        <div class="bs-topbar__brand">
+            <button type="button" @click="$dispatch('open-sidebar')" class="lg:hidden bs-icon-btn">
+                <i class="fas fa-bars"></i>
             </button>
-            <div class="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 text-sky-600 flex items-center justify-center shrink-0">
-                <i class="fab fa-meta text-sm"></i>
-            </div>
+            <div class="bs-meta-mark"><i class="fab fa-meta"></i></div>
             <div class="min-w-0">
-                <h2 class="text-base sm:text-lg font-black text-slate-900 truncate">{{ $waInboxTitle ?? 'محادثات السوشيال' }}</h2>
-                <p class="text-[11px] text-slate-500 truncate hidden sm:block">{{ $waInboxSubtitle ?? 'Messenger · Instagram' }}</p>
+                <h1 class="bs-topbar__title">Inbox</h1>
+                <p class="bs-topbar__sub">Business Suite · Messenger & Instagram</p>
             </div>
         </div>
-        <div class="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-            <a href="{{ $waAdminSettingsUrl ?? route('admin.meta-social.settings') }}"
-               class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors">
-                <i class="fas fa-plug text-sky-600"></i>
-                <span class="hidden sm:inline">ربط Meta</span>
-            </a>
-            <a href="{{ $waAdminPagesUrl ?? route('admin.meta-social.pages.index') }}"
-               class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors hidden md:inline-flex">
-                <i class="fab fa-facebook text-sky-500"></i>
-                <span>الصفحات</span>
-            </a>
-            <a href="{{ $waAdminDashboardUrl ?? route('admin.meta-social.index') }}"
-               class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors hidden md:inline-flex">
-                <i class="fas fa-tachometer-alt text-slate-500"></i>
-                <span>لوحة السوشيال</span>
-            </a>
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-white border border-slate-200 text-slate-700">
-                غير مقروء: {{ $unreadTotal }}
-            </span>
+        <div class="bs-topbar__actions">
+            @if($pages->isNotEmpty())
+                <select class="bs-select" onchange="metaInboxNav({page: this.value})">
+                    <option value="">كل الصفحات</option>
+                    @foreach($pages as $p)
+                        <option value="{{ $p->id }}" @selected($pageId == $p->id)>{{ $p->page_name }}</option>
+                    @endforeach
+                </select>
+            @endif
+            <span class="bs-chip bs-chip--unread">{{ $unreadTotal }} غير مقروء</span>
+            <a href="{{ route('admin.meta-social.pages.index') }}" class="bs-btn-ghost hidden md:inline-flex"><i class="fab fa-facebook"></i> الصفحات</a>
+            <a href="{{ route('admin.meta-social.settings') }}" class="bs-btn-ghost hidden md:inline-flex"><i class="fas fa-cog"></i></a>
         </div>
-    </div>
+    </header>
 
     @if(! $tablesReady)
-        <div class="shrink-0 rounded-xl border-2 border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 mx-2">
-            <p class="font-bold">تشغيل الترحيل مطلوب</p>
-            <p class="mt-1">نفّذ: <code class="bg-white px-2 py-0.5 rounded">php artisan migrate --force</code></p>
-        </div>
+        <div class="bs-banner bs-banner--warn">شغّل: <code>php artisan migrate --force</code></div>
     @elseif(! $canUse)
-        <div class="shrink-0 mx-2">
-            <a href="{{ route('admin.meta-social.settings') }}"
-               class="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200/80 text-[11px] text-amber-900 hover:bg-amber-100 transition-colors">
-                <i class="fas fa-exclamation-triangle text-amber-600 shrink-0"></i>
-                <span class="font-semibold">Meta غير مربوط — <span class="underline">إعداد الربط</span></span>
-            </a>
+        <div class="bs-banner bs-banner--warn">
+            Meta غير مربوط —
+            <a href="{{ route('admin.meta-social.settings') }}" class="underline font-bold">إعداد الربط</a>
         </div>
     @endif
 
-    <div class="wa-inbox-shell flex-1 min-h-0 overflow-hidden rounded-2xl border border-slate-200 shadow-sm bg-white">
-        {{-- قائمة المحادثات --}}
-        <aside class="wa-conv-sidebar wa-inbox-col border-s border-slate-200/80 bg-[#f0f2f5]"
-               :class="(conversationId && !showSidebarMobile) ? 'max-lg:hidden' : ''">
-            <div class="wa-conv-header shrink-0 border-b border-slate-200/80 bg-[#f0f2f5]">
-                <div class="flex items-center justify-between gap-2 px-3 pt-2.5 pb-1">
-                    <h3 class="text-sm font-black text-slate-800">المحادثات</h3>
-                    <span class="text-[10px] font-bold text-slate-500 bg-white/80 border border-slate-200/60 rounded-full px-2 py-0.5 tabular-nums">{{ $conversations->count() }} محادثة</span>
+    <div class="bs-shell">
+        {{-- Conversations column --}}
+        <aside class="bs-col bs-list" :class="(conversationId && !showSidebarMobile) ? 'max-lg:hidden' : ''">
+            <div class="bs-list__head">
+                <div class="bs-search">
+                    <i class="fas fa-search"></i>
+                    <form method="get" action="{{ route('admin.meta-social.inbox.index') }}" class="flex-1">
+                        @foreach($navBase as $k => $v)
+                            @if($k !== 'q')<input type="hidden" name="{{ $k }}" value="{{ $v }}">@endif
+                        @endforeach
+                        @if($platformFilter)<input type="hidden" name="platform" value="{{ $platformFilter }}">@endif
+                        @if($statusFilter)<input type="hidden" name="status" value="{{ $statusFilter }}">@endif
+                        @if($unreadOnly)<input type="hidden" name="unread" value="1">@endif
+                        <input type="search" name="q" value="{{ $search }}" placeholder="بحث بالاسم، الهاتف، الرسالة..." autocomplete="off">
+                    </form>
                 </div>
-                <div class="px-2.5 pb-2.5 space-y-1.5">
-                    @if($pages->isNotEmpty())
-                    <select class="w-full text-xs rounded-xl border-0 bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200/60 focus:ring-2 focus:ring-sky-400 focus:outline-none"
-                            onchange="metaInboxNav({page: this.value})">
-                        <option value="">كل الصفحات</option>
-                        @foreach($pages as $p)
-                            <option value="{{ $p->id }}" @selected($pageId == $p->id)>{{ $p->page_name }}</option>
+
+                <div class="bs-tabs">
+                    <a href="{{ route('admin.meta-social.inbox.index', $navBase) }}"
+                       class="bs-tab {{ ! $platformFilter && ! $unreadOnly && ! $statusFilter ? 'is-active' : '' }}">
+                        الكل <span>{{ $filterCounts['all'] }}</span>
+                    </a>
+                    <a href="{{ route('admin.meta-social.inbox.index', $navBase + ['unread' => 1]) }}"
+                       class="bs-tab {{ $unreadOnly ? 'is-active' : '' }}">
+                        غير مقروء <span>{{ $filterCounts['unread'] }}</span>
+                    </a>
+                    <a href="{{ route('admin.meta-social.inbox.index', $navBase + ['platform' => 'messenger']) }}"
+                       class="bs-tab {{ ($platformFilter ?? '') === 'messenger' ? 'is-active' : '' }}">
+                        <i class="fab fa-facebook-messenger"></i> <span>{{ $filterCounts['messenger'] }}</span>
+                    </a>
+                    <a href="{{ route('admin.meta-social.inbox.index', $navBase + ['platform' => 'instagram']) }}"
+                       class="bs-tab {{ ($platformFilter ?? '') === 'instagram' ? 'is-active' : '' }}">
+                        <i class="fab fa-instagram"></i> <span>{{ $filterCounts['instagram'] }}</span>
+                    </a>
+                    <a href="{{ route('admin.meta-social.inbox.index', $navBase + ['status' => 'open']) }}"
+                       class="bs-tab {{ ($statusFilter ?? '') === 'open' ? 'is-active' : '' }}">
+                        مفتوح <span>{{ $filterCounts['open'] }}</span>
+                    </a>
+                    <a href="{{ route('admin.meta-social.inbox.index', $navBase + ['status' => 'closed']) }}"
+                       class="bs-tab {{ ($statusFilter ?? '') === 'closed' ? 'is-active' : '' }}">
+                        منتهي <span>{{ $filterCounts['closed'] }}</span>
+                    </a>
+                </div>
+
+                <div class="bs-filters-row">
+                    <select class="bs-select bs-select--sm" onchange="metaInboxNav({assigned_to: this.value})">
+                        <option value="">كل الموظفين</option>
+                        <option value="unassigned" @selected(($assignedFilter ?? '') === 'unassigned')>غير معيّن</option>
+                        @foreach(($agents ?? []) as $agent)
+                            <option value="{{ $agent->id }}" @selected((string) ($assignedFilter ?? '') === (string) $agent->id)>{{ $agent->name }}</option>
                         @endforeach
                     </select>
-                    @endif
-                    <div class="grid grid-cols-2 gap-1.5">
-                        <select class="w-full text-[11px] rounded-xl border-0 bg-white px-2 py-2 shadow-sm ring-1 ring-slate-200/60"
-                                onchange="metaInboxNav({platform: this.value})">
-                            <option value="">كل المنصات</option>
-                            <option value="messenger" @selected(($platformFilter ?? '') === 'messenger')>Messenger</option>
-                            <option value="instagram" @selected(($platformFilter ?? '') === 'instagram')>Instagram</option>
-                        </select>
-                        <select class="w-full text-[11px] rounded-xl border-0 bg-white px-2 py-2 shadow-sm ring-1 ring-slate-200/60"
-                                onchange="metaInboxNav({assigned_to: this.value})">
-                            <option value="">كل الموظفين</option>
-                            <option value="unassigned" @selected(($assignedFilter ?? '') === 'unassigned')>غير معيّن</option>
-                            @foreach(($agents ?? []) as $agent)
-                                <option value="{{ $agent->id }}" @selected((string) ($assignedFilter ?? '') === (string) $agent->id)>{{ $agent->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                    <span class="bs-count">{{ $conversations->count() }} محادثة</span>
                 </div>
             </div>
-            <div class="wa-conv-list">
+
+            <div class="bs-list__body">
                 @forelse($conversations as $c)
-                    <a href="{{ route('admin.meta-social.inbox.index', array_filter(['page' => $pageId ?: null, 'conversation' => $c->id, 'platform' => $platformFilter ?: null, 'assigned_to' => $assignedFilter ?: null])) }}"
-                       class="wa-conv-item block w-full text-right px-3 py-3 flex gap-3 items-center border-b border-slate-100/80 transition-colors hover:bg-[#f5f6f6] {{ $convId == $c->id ? 'wa-conv-item--active' : '' }}">
-                        <div class="min-w-0 flex-1 order-2">
-                            <div class="flex items-baseline justify-between gap-2 mb-0.5">
-                                <p class="font-bold text-slate-900 truncate text-[13px] leading-tight">{{ $c->displayName() }}</p>
-                                <span class="text-[10px] text-slate-400 shrink-0 whitespace-nowrap tabular-nums">{{ $c->last_message_at?->diffForHumans(null, true) ?? '' }}</span>
+                    @php
+                        $href = route('admin.meta-social.inbox.index', array_filter([
+                            'page' => $pageId ?: null,
+                            'conversation' => $c->id,
+                            'platform' => $platformFilter ?: null,
+                            'assigned_to' => $assignedFilter ?: null,
+                            'status' => $statusFilter ?: null,
+                            'unread' => $unreadOnly ? 1 : null,
+                            'q' => $search ?: null,
+                        ]));
+                    @endphp
+                    <a href="{{ $href }}" class="bs-conv {{ $convId == $c->id ? 'is-active' : '' }} {{ $c->unread_count > 0 ? 'is-unread' : '' }}">
+                        <div class="bs-avatar">
+                            @if($c->participant_profile_pic)
+                                <img src="{{ $c->participant_profile_pic }}" alt="">
+                            @else
+                                <span>{{ mb_substr($c->displayName(), 0, 1) }}</span>
+                            @endif
+                            <i class="bs-plat {{ $c->platform === 'instagram' ? 'fab fa-instagram ig' : 'fab fa-facebook-messenger msgr' }}"></i>
+                        </div>
+                        <div class="bs-conv__main">
+                            <div class="bs-conv__row">
+                                <p class="bs-conv__name">{{ $c->displayName() }}</p>
+                                <time>{{ $c->last_message_at?->format('H:i') ?? '' }}</time>
                             </div>
-                            <p class="text-[10px] text-slate-500 truncate mb-1">
-                                {{ $c->platformLabel() }} · {{ $c->page?->page_name }}
-                                @if($c->assignee)
-                                    · <span class="text-sky-700 font-semibold">{{ $c->assignee->name }}</span>
-                                @endif
+                            <p class="bs-conv__meta">
+                                {{ $c->page?->page_name }}
+                                @if($c->assignee) · {{ $c->assignee->name }} @endif
                             </p>
-                            <div class="flex items-center justify-between gap-2">
-                                <p class="text-[12px] text-slate-500 truncate leading-snug flex-1">{{ $c->last_message_preview ?: '—' }}</p>
-                                <div class="flex items-center gap-1 shrink-0">
-                                    @if($c->sales_lead_id)
-                                        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">CRM</span>
-                                    @endif
-                                    @if($c->unread_count > 0)
-                                        <span class="inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-sky-500 text-white text-[10px] font-bold shadow-sm">{{ $c->unread_count }}</span>
-                                    @endif
+                            <div class="bs-conv__row">
+                                <p class="bs-conv__preview">{{ $c->last_message_preview ?: '—' }}</p>
+                                <div class="bs-conv__badges">
+                                    @if($c->sales_lead_id)<span class="bs-mini crm">CRM</span>@endif
+                                    @if($c->status === 'closed')<span class="bs-mini done">Done</span>@endif
+                                    @if($c->unread_count > 0)<span class="bs-unread">{{ $c->unread_count }}</span>@endif
                                 </div>
                             </div>
                         </div>
-                        <div class="w-12 h-12 rounded-full shrink-0 order-1 flex items-center justify-center font-bold text-sm shadow-sm overflow-hidden {{ $convId == $c->id ? 'bg-sky-500 text-white' : 'bg-sky-100 text-sky-700' }}">
-                            @if($c->participant_profile_pic)
-                                <img src="{{ $c->participant_profile_pic }}" alt="" class="w-full h-full object-cover">
-                            @else
-                                {{ mb_substr($c->displayName(), 0, 1) }}
-                            @endif
-                        </div>
                     </a>
                 @empty
-                    <div class="p-10 text-center text-slate-500 text-sm">
-                        <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-slate-100 flex items-center justify-center">
-                            <i class="fab fa-meta text-2xl text-slate-300"></i>
-                        </div>
-                        <p class="font-semibold text-slate-700">لا توجد محادثات</p>
-                        <p class="text-xs text-slate-400 mt-1">فعّل صفحة واضغط «مزامنة محادثات» من قسم الصفحات</p>
-                        <a href="{{ route('admin.meta-social.pages.index') }}" class="inline-flex items-center gap-1 mt-3 text-xs font-bold text-sky-700 hover:text-sky-900">
-                            <i class="fab fa-facebook"></i> إدارة الصفحات
-                        </a>
+                    <div class="bs-empty">
+                        <i class="fab fa-meta"></i>
+                        <p>لا توجد محادثات بهذا الفلتر</p>
+                        <a href="{{ route('admin.meta-social.pages.index') }}">جلب كل الرسائل من الصفحات</a>
                     </div>
                 @endforelse
             </div>
         </aside>
 
-        {{-- نافذة المحادثة --}}
-        <section class="wa-inbox-col wa-chat-panel overflow-hidden bg-[#efeae2] {{ $convId ? '' : 'max-lg:hidden' }}">
+        {{-- Chat column --}}
+        <section class="bs-col bs-chat {{ $convId ? '' : 'max-lg:hidden' }}">
             @if($activeConversation)
-                <div class="wa-chat-active">
-                    <div class="px-4 py-3 border-b border-slate-200 flex items-center gap-3 bg-[#f0f2f5] shrink-0">
-                        <button type="button" @click="showSidebarMobile = true" class="lg:hidden w-9 h-9 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-600">
-                            <i class="fas fa-arrow-right"></i>
-                        </button>
-                        <div class="w-10 h-10 rounded-full bg-sky-500 text-white flex items-center justify-center font-bold shrink-0">
-                            {{ mb_substr($activeConversation->displayName(), 0, 1) }}
+                <div class="bs-chat__wrap">
+                    <div class="bs-chat__head">
+                        <button type="button" @click="showSidebarMobile = true" class="lg:hidden bs-icon-btn"><i class="fas fa-arrow-right"></i></button>
+                        <div class="bs-avatar bs-avatar--lg">
+                            @if($activeConversation->participant_profile_pic)
+                                <img src="{{ $activeConversation->participant_profile_pic }}" alt="">
+                            @else
+                                <span>{{ mb_substr($activeConversation->displayName(), 0, 1) }}</span>
+                            @endif
                         </div>
                         <div class="min-w-0 flex-1">
-                            <h3 class="font-bold text-slate-900 truncate text-sm" x-text="crm?.display_name || @js($activeConversation->displayName())">{{ $activeConversation->displayName() }}</h3>
-                            <p class="text-xs text-slate-500 truncate">
+                            <h2 class="bs-chat__name" x-text="crm?.display_name || @js($activeConversation->displayName())">{{ $activeConversation->displayName() }}</h2>
+                            <p class="bs-chat__sub">
+                                <i class="{{ $activeConversation->platform === 'instagram' ? 'fab fa-instagram text-pink-500' : 'fab fa-facebook-messenger text-[#0084FF]' }}"></i>
                                 {{ $activeConversation->platformLabel() }} · {{ $activeConversation->page?->page_name }}
-                                @if($activeConversation->assignee)
-                                    · <span class="text-sky-700 font-semibold">{{ $activeConversation->assignee->name }}</span>
-                                @endif
-                                @if($activeConversation->phone)
-                                    · <span dir="ltr">{{ $activeConversation->phone }}</span>
-                                @endif
+                                <span x-show="crm?.assignee_name"> · <span x-text="crm?.assignee_name"></span></span>
                             </p>
                         </div>
-                        @if($activeConversation->platform === 'instagram')
-                            <span class="hidden sm:inline-flex text-[10px] font-semibold px-2 py-1 rounded-full bg-pink-100 text-pink-800 border border-pink-200">
-                                <i class="fab fa-instagram ml-1"></i> Instagram
-                            </span>
-                        @else
-                            <span class="hidden sm:inline-flex text-[10px] font-semibold px-2 py-1 rounded-full bg-sky-100 text-sky-800 border border-sky-200">
-                                <i class="fab fa-facebook-messenger ml-1"></i> Messenger
-                            </span>
-                        @endif
-                        <button type="button" @click="syncAllMessages()"
-                                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-white border border-slate-200 text-slate-700 hover:bg-sky-50 hover:border-sky-200 transition-colors"
-                                :disabled="syncingMessages" title="جلب كل الرسائل من Meta">
+                        <button type="button" @click="syncAllMessages()" class="bs-btn-ghost" :disabled="syncingMessages" title="جلب كل الرسائل">
                             <i class="fas fa-cloud-download-alt" :class="syncingMessages ? 'fa-spinner fa-spin' : ''"></i>
-                            <span class="hidden sm:inline">جلب كل الرسائل</span>
+                            <span class="hidden sm:inline">مزامنة</span>
+                        </button>
+                        <button type="button" @click="toggleDone()" class="bs-btn-ghost" :disabled="crmSaving">
+                            <i class="fas" :class="(crm?.status || @js($activeConversation->status)) === 'closed' ? 'fa-envelope-open-text' : 'fa-check-circle'"></i>
+                            <span class="hidden sm:inline" x-text="(crm?.status || @js($activeConversation->status)) === 'closed' ? 'إعادة فتح' : 'إنهاء'"></span>
+                        </button>
+                        <button type="button" @click="showDetails = !showDetails" class="bs-btn-ghost xl:hidden">
+                            <i class="fas fa-user-circle"></i>
                         </button>
                     </div>
 
-                    <div id="sm-chat-messages" class="wa-chat-messages p-3 sm:p-4">
+                    <div id="sm-chat-messages" class="bs-chat__messages">
+                        @php $lastDate = null; @endphp
                         @forelse($messages as $m)
-                            <div class="flex items-end gap-1 mb-1 {{ $m->direction === 'inbound' ? 'justify-start' : 'justify-end' }}">
-                                <div class="relative max-w-[min(85%,18rem)] w-fit">
-                                    <div class="wa-msg-bubble {{ $m->direction === 'inbound' ? 'wa-msg-bubble--in' : 'wa-msg-bubble--out' }}">
-                                        @if($m->attachment_url && $m->message_type === 'image')
-                                            <img src="{{ $m->attachment_url }}" alt="" class="rounded-lg max-w-full max-h-52 object-cover mb-1">
+                            @php
+                                $day = $m->sent_at?->format('Y-m-d') ?? $m->created_at?->format('Y-m-d');
+                                $dayLabel = $m->sent_at?->locale('ar')->translatedFormat('l j F Y')
+                                    ?? $m->created_at?->locale('ar')->translatedFormat('l j F Y')
+                                    ?? '';
+                            @endphp
+                            @if($day && $day !== $lastDate)
+                                @php $lastDate = $day; @endphp
+                                <div class="bs-date-pill"><span>{{ $dayLabel }}</span></div>
+                            @endif
+                            <div class="bs-msg {{ $m->direction === 'inbound' ? 'is-in' : 'is-out' }}">
+                                <div class="bs-bubble {{ $m->direction === 'inbound' ? 'is-in' : 'is-out' }}">
+                                    @if($m->attachment_url && str_contains((string) $m->message_type, 'image'))
+                                        <a href="{{ $m->attachment_url }}" target="_blank" rel="noopener">
+                                            <img src="{{ $m->attachment_url }}" alt="" class="bs-bubble__img">
+                                        </a>
+                                    @elseif($m->attachment_url)
+                                        <a href="{{ $m->attachment_url }}" target="_blank" class="bs-bubble__file" rel="noopener">
+                                            <i class="fas fa-paperclip"></i> مرفق
+                                        </a>
+                                    @endif
+                                    @if(filled($m->displayBody()) && $m->displayBody() !== '—')
+                                        <p class="bs-bubble__text">{{ $m->displayBody() }}</p>
+                                    @endif
+                                    <div class="bs-bubble__meta">
+                                        @if($m->direction === 'outbound' && $m->sentBy)
+                                            <span>{{ $m->sentBy->name }}</span>
                                         @endif
-                                        <p class="wa-msg-text">{{ $m->displayBody() }}</p>
-                                        <span class="wa-msg-meta">
-                                            @if($m->direction === 'outbound' && $m->sentBy)
-                                                <span>{{ $m->sentBy->name }}</span>
-                                            @endif
-                                            <span>{{ $m->sent_at?->format('H:i') ?? $m->created_at?->format('H:i') }}</span>
-                                        </span>
+                                        <span>{{ $m->sent_at?->format('H:i') ?? $m->created_at?->format('H:i') }}</span>
                                     </div>
                                 </div>
                             </div>
                         @empty
-                            <div class="flex flex-col items-center justify-center py-16 text-slate-500 text-sm">
-                                <i class="fas fa-comments text-3xl text-slate-300 mb-2"></i>
-                                <p>لا رسائل بعد — ابدأ المحادثة من الأسفل</p>
+                            <div class="bs-empty">
+                                <i class="fas fa-comments"></i>
+                                <p>لا رسائل بعد — اضغط «مزامنة» لجلب كل الرسائل من Meta</p>
                             </div>
                         @endforelse
                     </div>
 
-                    <form class="wa-chat-composer px-3 py-2.5 border-t border-slate-200 bg-[#f0f2f5] flex gap-2 items-end" @submit.prevent="sendReply()">
-                        <input type="text" x-model="replyBody" placeholder="اكتب رسالة..." autocomplete="off"
-                               class="flex-1 rounded-3xl border-0 bg-white px-4 py-2.5 text-sm shadow-sm ring-1 ring-slate-200/60 focus:ring-2 focus:ring-sky-400 focus:outline-none"
-                               :disabled="sending">
-                        <button type="submit"
-                                class="w-11 h-11 rounded-full bg-sky-600 hover:bg-sky-700 text-white flex items-center justify-center shrink-0 shadow-md transition-colors disabled:opacity-50"
-                                :disabled="sending || !replyBody.trim()">
-                            <i class="fas fa-paper-plane text-sm" :class="sending ? 'fa-spinner fa-spin' : ''"></i>
+                    <form class="bs-composer" @submit.prevent="sendReply()">
+                        <textarea x-model="replyBody"
+                                  rows="1"
+                                  placeholder="اكتب رسالة… (Enter للإرسال · Shift+Enter لسطر جديد)"
+                                  @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); sendReply(); }"
+                                  :disabled="sending"
+                                  class="bs-composer__input"></textarea>
+                        <button type="submit" class="bs-send" :disabled="sending || !replyBody.trim()">
+                            <i class="fas fa-paper-plane" :class="sending ? 'fa-spinner fa-spin' : ''"></i>
                         </button>
                     </form>
                 </div>
             @else
-                <div class="wa-chat-panel__pane flex flex-col items-center justify-center text-slate-500 p-8 bg-[#f0f2f5] h-full">
-                    <div class="w-24 h-24 rounded-full bg-sky-100 flex items-center justify-center mb-4">
-                        <i class="fab fa-meta text-5xl text-sky-500"></i>
-                    </div>
-                    <p class="font-semibold text-slate-700 text-lg">محادثات السوشيال</p>
-                    <p class="text-sm text-slate-500 mt-1 text-center max-w-sm">اختر محادثة من القائمة — Messenger أو Instagram</p>
-                    <a href="{{ route('admin.meta-social.pages.index') }}" class="{{ $smBtnPrimary }} mt-5 text-sm">
-                        <i class="fab fa-facebook"></i> إدارة الصفحات
-                    </a>
+                <div class="bs-empty bs-empty--center">
+                    <div class="bs-meta-mark bs-meta-mark--xl"><i class="fab fa-meta"></i></div>
+                    <p class="font-black text-lg text-slate-800">Meta Business Suite Inbox</p>
+                    <p class="text-sm text-slate-500 max-w-sm text-center">اختر محادثة من القائمة — Messenger و Instagram في مكان واحد، مع CRM أقوى من Business Suite.</p>
                 </div>
             @endif
         </section>
 
-        @include('admin.meta-social._crm_panel')
+        {{-- Details / CRM --}}
+        <div class="bs-col bs-details" :class="showDetails ? 'max-xl:!flex' : ''" x-show="conversationId" x-cloak>
+            @include('admin.meta-social._crm_panel')
+        </div>
     </div>
 </div>
 
 @push('styles')
 <style>
-    main:has(.wa-inbox-page) { overflow: hidden !important; }
-    main:has(.wa-inbox-page) > div:last-child {
-        flex: 1 1 auto !important;
-        min-height: 0 !important;
-        display: flex !important;
-        flex-direction: column !important;
-        overflow: hidden !important;
-        padding-bottom: 0.75rem !important;
+:root {
+    --bs-blue: #0084FF;
+    --bs-ink: #1c2b33;
+    --bs-muted: #65676b;
+    --bs-line: #e4e6eb;
+    --bs-bg: #f0f2f5;
+    --bs-ig: #E1306C;
+}
+main:has(.bs-inbox-page) { overflow: hidden !important; }
+main:has(.bs-inbox-page) > div:last-child {
+    flex: 1 1 auto !important; min-height: 0 !important; display: flex !important;
+    flex-direction: column !important; overflow: hidden !important; padding: 0 !important;
+}
+.bs-inbox-page {
+    display: flex; flex-direction: column; height: 100dvh; max-height: 100dvh;
+    min-height: 0; overflow: hidden; background: #fff; color: var(--bs-ink);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+.bs-topbar {
+    display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+    padding: .65rem .9rem; border-bottom: 1px solid var(--bs-line); background: #fff; flex-shrink: 0;
+}
+.bs-topbar__brand { display: flex; align-items: center; gap: .65rem; min-width: 0; }
+.bs-topbar__title { font-size: 1.05rem; font-weight: 800; line-height: 1.1; }
+.bs-topbar__sub { font-size: 10px; color: var(--bs-muted); }
+.bs-topbar__actions { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; justify-content: flex-end; }
+.bs-meta-mark {
+    width: 2.25rem; height: 2.25rem; border-radius: .75rem; display: grid; place-items: center;
+    background: linear-gradient(135deg, #0084FF, #0064E0); color: #fff; font-size: 1rem; flex-shrink: 0;
+}
+.bs-meta-mark--xl { width: 4.5rem; height: 4.5rem; font-size: 2rem; border-radius: 1.25rem; margin-bottom: .75rem; }
+.bs-shell {
+    flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 1fr; overflow: hidden;
+}
+@media (min-width: 1024px) {
+    .bs-shell { grid-template-columns: minmax(280px, 340px) minmax(0, 1fr) minmax(280px, 320px); }
+}
+.bs-col { min-width: 0; min-height: 0; max-height: 100%; overflow: hidden; }
+.bs-list { display: grid; grid-template-rows: auto minmax(0,1fr); border-inline-end: 1px solid var(--bs-line); background: #fff; }
+.bs-list__head { border-bottom: 1px solid var(--bs-line); padding: .65rem .7rem .55rem; background: #fff; }
+.bs-search {
+    display: flex; align-items: center; gap: .5rem; background: var(--bs-bg); border-radius: 999px;
+    padding: .45rem .8rem; margin-bottom: .55rem;
+}
+.bs-search i { color: var(--bs-muted); font-size: .75rem; }
+.bs-search input {
+    width: 100%; border: 0; outline: 0; background: transparent; font-size: .8rem; color: var(--bs-ink);
+}
+.bs-tabs { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .45rem; }
+.bs-tab {
+    display: inline-flex; align-items: center; gap: .3rem; padding: .28rem .55rem; border-radius: 999px;
+    font-size: 10px; font-weight: 700; color: var(--bs-muted); background: var(--bs-bg); text-decoration: none;
+}
+.bs-tab span { opacity: .85; }
+.bs-tab.is-active { background: #e7f3ff; color: var(--bs-blue); }
+.bs-filters-row { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.bs-count { font-size: 10px; color: var(--bs-muted); font-weight: 700; }
+.bs-select {
+    border: 1px solid var(--bs-line); border-radius: .55rem; background: #fff; font-size: 11px;
+    padding: .35rem .55rem; color: var(--bs-ink); max-width: 11rem;
+}
+.bs-select--sm { max-width: 100%; flex: 1; }
+.bs-list__body { overflow-y: auto; overscroll-behavior: contain; }
+.bs-conv {
+    display: flex; gap: .7rem; padding: .7rem .8rem; border-bottom: 1px solid #f0f2f5;
+    text-decoration: none; color: inherit; transition: background .12s;
+}
+.bs-conv:hover { background: #f7f8fa; }
+.bs-conv.is-active { background: #e7f3ff; }
+.bs-conv.is-unread .bs-conv__name { font-weight: 800; }
+.bs-conv.is-unread .bs-conv__preview { color: var(--bs-ink); font-weight: 600; }
+.bs-avatar {
+    position: relative; width: 2.75rem; height: 2.75rem; border-radius: 999px; overflow: hidden;
+    background: #dbeafe; color: #1d4ed8; display: grid; place-items: center; font-weight: 800; flex-shrink: 0;
+}
+.bs-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.bs-avatar--lg { width: 2.5rem; height: 2.5rem; }
+.bs-plat {
+    position: absolute; inset-inline-end: -2px; bottom: -2px; width: 1rem; height: 1rem; border-radius: 999px;
+    background: #fff; display: grid; place-items: center; font-size: 9px; box-shadow: 0 0 0 1.5px #fff;
+}
+.bs-plat.msgr { color: var(--bs-blue); }
+.bs-plat.ig { color: var(--bs-ig); }
+.bs-conv__main { min-width: 0; flex: 1; }
+.bs-conv__row { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; }
+.bs-conv__name { font-size: 13px; font-weight: 700; truncate; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bs-conv__row time { font-size: 10px; color: var(--bs-muted); flex-shrink: 0; }
+.bs-conv__meta { font-size: 10px; color: var(--bs-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 1px 0 2px; }
+.bs-conv__preview { font-size: 12px; color: #8a8d91; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+.bs-conv__badges { display: flex; align-items: center; gap: .25rem; }
+.bs-mini { font-size: 9px; font-weight: 800; padding: .1rem .35rem; border-radius: 999px; }
+.bs-mini.crm { background: #ecfdf5; color: #047857; }
+.bs-mini.done { background: #f3f4f6; color: #4b5563; }
+.bs-unread {
+    min-width: 1.1rem; height: 1.1rem; padding: 0 .3rem; border-radius: 999px; background: var(--bs-blue);
+    color: #fff; font-size: 10px; font-weight: 800; display: inline-grid; place-items: center;
+}
+.bs-chat { background: var(--bs-bg); display: grid; grid-template-rows: minmax(0,1fr); }
+.bs-chat__wrap { display: grid; grid-template-rows: auto minmax(0,1fr) auto; min-height: 0; max-height: 100%; overflow: hidden; }
+.bs-chat__head {
+    display: flex; align-items: center; gap: .55rem; padding: .65rem .85rem; background: #fff;
+    border-bottom: 1px solid var(--bs-line); flex-shrink: 0;
+}
+.bs-chat__name { font-size: .95rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bs-chat__sub { font-size: 11px; color: var(--bs-muted); display: flex; align-items: center; gap: .3rem; flex-wrap: wrap; }
+.bs-chat__messages {
+    min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 1rem .85rem 1.25rem;
+}
+.bs-date-pill { display: flex; justify-content: center; margin: .75rem 0; }
+.bs-date-pill span {
+    background: rgba(255,255,255,.92); border: 1px solid var(--bs-line); color: var(--bs-muted);
+    font-size: 11px; font-weight: 700; padding: .2rem .65rem; border-radius: 999px;
+}
+.bs-msg { display: flex; margin-bottom: .35rem; }
+.bs-msg.is-in { justify-content: flex-start; }
+.bs-msg.is-out { justify-content: flex-end; }
+.bs-bubble {
+    max-width: min(78%, 28rem); padding: .45rem .7rem .35rem; border-radius: 1.15rem;
+    font-size: 14px; line-height: 1.4; word-break: break-word; box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+.bs-bubble.is-in { background: #fff; color: var(--bs-ink); border-start-start-radius: .35rem; }
+.bs-bubble.is-out { background: var(--bs-blue); color: #fff; border-start-end-radius: .35rem; }
+.bs-bubble__text { white-space: pre-wrap; margin: 0; }
+.bs-bubble__img { max-width: 100%; max-height: 240px; border-radius: .75rem; display: block; margin-bottom: .25rem; }
+.bs-bubble__file { display: inline-flex; align-items: center; gap: .35rem; font-weight: 700; text-decoration: underline; }
+.bs-bubble__meta {
+    display: flex; justify-content: flex-end; gap: .35rem; margin-top: .15rem;
+    font-size: 10px; opacity: .8;
+}
+.bs-bubble.is-out .bs-bubble__meta { color: rgba(255,255,255,.9); }
+.bs-composer {
+    display: flex; align-items: flex-end; gap: .5rem; padding: .65rem .75rem; background: #fff;
+    border-top: 1px solid var(--bs-line); flex-shrink: 0;
+}
+.bs-composer__input {
+    flex: 1; resize: none; min-height: 2.5rem; max-height: 7rem; border: 1px solid var(--bs-line);
+    border-radius: 1.25rem; padding: .65rem .9rem; font-size: .9rem; outline: none; background: var(--bs-bg);
+}
+.bs-composer__input:focus { border-color: var(--bs-blue); background: #fff; box-shadow: 0 0 0 3px rgba(0,132,255,.12); }
+.bs-send {
+    width: 2.6rem; height: 2.6rem; border-radius: 999px; border: 0; background: var(--bs-blue); color: #fff;
+    display: grid; place-items: center; flex-shrink: 0; cursor: pointer;
+}
+.bs-send:disabled { opacity: .45; cursor: not-allowed; }
+.bs-details { display: none; border-inline-start: 1px solid var(--bs-line); background: #fff; }
+@media (min-width: 1280px) { .bs-details { display: flex; flex-direction: column; } }
+.bs-details .sm-crm-sidebar { display: flex !important; width: 100%; height: 100%; border: 0; }
+.bs-btn-ghost, .bs-icon-btn {
+    display: inline-flex; align-items: center; gap: .35rem; border: 1px solid var(--bs-line); background: #fff;
+    border-radius: .65rem; padding: .4rem .6rem; font-size: 11px; font-weight: 700; color: var(--bs-ink); cursor: pointer;
+    text-decoration: none;
+}
+.bs-icon-btn { width: 2.1rem; height: 2.1rem; justify-content: center; padding: 0; }
+.bs-chip { font-size: 11px; font-weight: 800; padding: .3rem .55rem; border-radius: 999px; background: var(--bs-bg); }
+.bs-chip--unread { background: #e7f3ff; color: var(--bs-blue); }
+.bs-banner { margin: .5rem .75rem 0; padding: .55rem .75rem; border-radius: .75rem; font-size: 12px; font-weight: 600; }
+.bs-banner--warn { background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; }
+.bs-empty { padding: 2.5rem 1rem; text-align: center; color: var(--bs-muted); font-size: .85rem; }
+.bs-empty i { font-size: 1.75rem; opacity: .35; display: block; margin-bottom: .5rem; }
+.bs-empty a { color: var(--bs-blue); font-weight: 800; text-decoration: underline; }
+.bs-empty--center { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+@media (max-width: 1023px) {
+    .bs-shell { position: relative; }
+    .bs-list, .bs-chat { grid-column: 1; grid-row: 1; }
+    .bs-chat { z-index: 2; }
+    .bs-details.max-xl\:\!flex {
+        position: absolute; inset: 0; z-index: 5; display: flex !important; background: #fff;
     }
-    .wa-inbox-page {
-        display: flex;
-        flex-direction: column;
-        height: calc(100dvh - 4.25rem);
-        max-height: calc(100dvh - 4.25rem);
-        min-height: 0;
-        overflow: hidden;
-    }
-    body.wa-immersive-inbox .wa-inbox-page.wa-inbox-immersive {
-        height: 100dvh;
-        max-height: 100dvh;
-        gap: 0.375rem;
-        padding: 0.25rem 0.375rem 0.375rem;
-    }
-    @media (min-width: 1024px) {
-        body.wa-immersive-inbox .wa-inbox-page.wa-inbox-immersive {
-            padding: 0.375rem 0.5rem 0.5rem;
-        }
-    }
-    body.wa-immersive-inbox main:has(.wa-inbox-page) > div:last-child {
-        padding-bottom: 0 !important;
-    }
-    .sm-meta-inbox .wa-inbox-shell {
-        display: grid;
-        grid-template-columns: 1fr;
-        grid-template-rows: minmax(0, 1fr);
-        flex: 1 1 auto;
-        min-height: 0;
-        max-height: 100%;
-        overflow: hidden;
-    }
-    @media (min-width: 1024px) {
-        .sm-meta-inbox .wa-inbox-shell {
-            grid-template-columns: minmax(260px, 300px) minmax(0, 1fr) minmax(260px, 300px);
-        }
-    }
-    .sm-crm-sidebar {
-        display: none;
-    }
-    @media (min-width: 1024px) {
-        .sm-crm-sidebar { display: flex; }
-    }
-    .wa-inbox-col { min-height: 0; min-width: 0; max-height: 100%; overflow: hidden; }
-    .wa-conv-sidebar {
-        display: grid;
-        grid-template-rows: auto minmax(0, 1fr);
-        max-height: 100%;
-        min-height: 0;
-        overflow: hidden;
-    }
-    .wa-conv-list {
-        min-height: 0;
-        overflow-y: auto;
-        overflow-x: hidden;
-        overscroll-behavior: contain;
-        background: #fff;
-        scrollbar-width: thin;
-    }
-    .wa-chat-panel { display: grid; grid-template-rows: minmax(0, 1fr); min-height: 0; max-height: 100%; overflow: hidden; }
-    .wa-chat-active { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-height: 0; max-height: 100%; overflow: hidden; }
-    .wa-chat-messages {
-        min-height: 0;
-        overflow-y: auto;
-        overscroll-behavior: contain;
-        background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23d4cdc4\' fill-opacity=\'0.2\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');
-    }
-    .wa-conv-item { position: relative; text-decoration: none; color: inherit; }
-    .wa-conv-item--active { background-color: #f0f2f5 !important; }
-    .sm-meta-inbox .wa-conv-item--active::before {
-        content: '';
-        position: absolute;
-        inset-inline-start: 0;
-        top: 0;
-        bottom: 0;
-        width: 4px;
-        background: #0ea5e9;
-        border-radius: 0 4px 4px 0;
-    }
-    .wa-msg-bubble {
-        position: relative;
-        display: inline-block;
-        max-width: 100%;
-        padding: 4px 8px 5px;
-        border-radius: 7.5px;
-        font-size: 14px;
-        line-height: 1.35;
-        box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
-        word-break: break-word;
-    }
-    .wa-msg-bubble--in { background: #fff; color: #111b21; border-top-left-radius: 0; }
-    .wa-msg-bubble--out { background: #dbeafe; color: #111b21; border-top-right-radius: 0; }
-    .wa-msg-text { white-space: pre-wrap; }
-    .wa-msg-meta { display: flex; gap: 4px; justify-content: flex-end; align-items: center; font-size: 10px; color: #667781; margin-top: 2px; }
-    @media (max-width: 1023px) {
-        .sm-meta-inbox .wa-inbox-shell { position: relative; }
-        .sm-meta-inbox .wa-conv-sidebar,
-        .sm-meta-inbox .wa-chat-panel { grid-column: 1; grid-row: 1; }
-        .sm-meta-inbox .wa-chat-panel { z-index: 2; }
-    }
-    [x-cloak] { display: none !important; }
+}
+[x-cloak] { display: none !important; }
 </style>
 @endpush
 
@@ -378,7 +460,8 @@ function metaInboxNav(patch) {
         if (v === undefined || v === null || v === '') params.delete(k);
         else params.set(k, v);
     });
-    params.delete('conversation');
+    // عند تغيير فلتر عام نبدأ من قائمة نظيفة
+    if (!('conversation' in (patch || {}))) params.delete('conversation');
     const qs = params.toString();
     window.location = @json(route('admin.meta-social.inbox.index')) + (qs ? ('?' + qs) : '');
 }
@@ -389,6 +472,7 @@ function metaSocialInbox() {
         replyBody: '',
         sending: false,
         showSidebarMobile: false,
+        showDetails: false,
         replyUrl: @json($replyUrl),
         pollUrl: @json($pollUrl),
         csrf: @json(csrf_token()),
@@ -400,7 +484,7 @@ function metaSocialInbox() {
         contactPhone: @json($crmPayload['phone'] ?? $activeConversation?->phone ?? ''),
         contactEmail: @json($crmPayload['email'] ?? $activeConversation?->email ?? ''),
         contactNotes: @json($crmPayload['notes'] ?? $activeConversation?->notes ?? ''),
-        assigneeId: @json($crmPayload['assigned_to'] ? (string) $crmPayload['assigned_to'] : ''),
+        assigneeId: @json(!empty($crmPayload['assigned_to']) ? (string) $crmPayload['assigned_to'] : ''),
         linkLeadId: '',
         crmSaving: false,
         crmError: '',
@@ -409,9 +493,7 @@ function metaSocialInbox() {
         init() {
             const el = document.getElementById('sm-chat-messages');
             if (el) el.scrollTop = el.scrollHeight;
-            if (this.conversationId) {
-                setInterval(() => this.poll(), 8000);
-            }
+            if (this.conversationId) setInterval(() => this.poll(), 8000);
         },
         applyCrm(crm) {
             if (!crm) return;
@@ -482,26 +564,25 @@ function metaSocialInbox() {
             if (!this.crmUrls.enrich) return;
             await this.postJson(this.crmUrls.enrich, {});
         },
+        async toggleDone() {
+            if (!this.crmUrls.contact) return;
+            const next = (this.crm?.status || 'open') === 'closed' ? 'open' : 'closed';
+            await this.postJson(this.crmUrls.contact, { status: next });
+        },
         async syncAllMessages() {
             if (!this.crmUrls.syncMessages || this.syncingMessages) return;
             this.syncingMessages = true;
             this.crmError = '';
-            this.crmOk = '';
             try {
                 const res = await fetch(this.crmUrls.syncMessages, {
                     method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': this.csrf,
-                    },
+                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': this.csrf },
                 });
                 const data = await res.json();
                 if (!data.success) {
                     this.crmError = data.error || 'فشل جلب الرسائل';
                     return;
                 }
-                this.crmOk = 'تم جلب ' + (data.imported || 0) + ' رسالة جديدة (الإجمالي المعروض: ' + (data.message_count || 0) + ')';
-                // إعادة تحميل لضمان الترتيب الكامل في الواجهة
                 location.reload();
             } catch (e) {
                 this.crmError = 'خطأ أثناء جلب الرسائل';
@@ -543,7 +624,6 @@ function metaSocialInbox() {
                 if (!data.success) return;
                 if (data.crm) this.applyCrm(data.crm);
                 if (typeof data.message_count === 'number' && data.message_count > this.lastMessageCount) {
-                    // رسائل جديدة: أعد التحميل للحفاظ على ترتيب ثابت ومنظم
                     location.reload();
                 }
             } catch (e) {}

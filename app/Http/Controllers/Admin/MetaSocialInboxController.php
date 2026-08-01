@@ -34,14 +34,36 @@ class MetaSocialInboxController extends Controller
         $conversationId = (int) $request->query('conversation');
         $assignedFilter = $request->query('assigned_to');
         $platformFilter = $request->query('platform');
+        $statusFilter = $request->query('status'); // open|closed|all
+        $unreadOnly = $request->boolean('unread');
+        $search = trim((string) $request->query('q', ''));
 
         $conversations = collect();
         $activeConversation = null;
         $messages = collect();
         $crmPayload = null;
         $agents = $crmReady ? $this->crm->eligibleAgents() : [];
+        $filterCounts = [
+            'all' => 0,
+            'unread' => 0,
+            'messenger' => 0,
+            'instagram' => 0,
+            'open' => 0,
+            'closed' => 0,
+        ];
 
         if ($tablesReady) {
+            $baseCounts = MetaSocialConversation::query();
+            if ($pageId > 0) {
+                $baseCounts->where('meta_social_page_id', $pageId);
+            }
+            $filterCounts['all'] = (clone $baseCounts)->count();
+            $filterCounts['unread'] = (clone $baseCounts)->where('unread_count', '>', 0)->count();
+            $filterCounts['messenger'] = (clone $baseCounts)->where('platform', 'messenger')->count();
+            $filterCounts['instagram'] = (clone $baseCounts)->where('platform', 'instagram')->count();
+            $filterCounts['open'] = (clone $baseCounts)->where('status', MetaSocialConversation::STATUS_OPEN)->count();
+            $filterCounts['closed'] = (clone $baseCounts)->where('status', MetaSocialConversation::STATUS_CLOSED)->count();
+
             $query = MetaSocialConversation::query()
                 ->with(['page', 'assignee:id,name', 'salesLead:id,name,stage,phone'])
                 ->orderByDesc('last_message_at')
@@ -53,10 +75,26 @@ class MetaSocialInboxController extends Controller
             if ($platformFilter && in_array($platformFilter, ['messenger', 'instagram'], true)) {
                 $query->where('platform', $platformFilter);
             }
+            if ($statusFilter === 'open' || $statusFilter === 'closed') {
+                $query->where('status', $statusFilter);
+            }
+            if ($unreadOnly) {
+                $query->where('unread_count', '>', 0);
+            }
             if ($assignedFilter === 'unassigned') {
                 $query->whereNull('assigned_to');
             } elseif (is_numeric($assignedFilter) && (int) $assignedFilter > 0) {
                 $query->where('assigned_to', (int) $assignedFilter);
+            }
+            if ($search !== '') {
+                $query->where(function ($q) use ($search) {
+                    $q->where('participant_name', 'like', '%'.$search.'%')
+                        ->orWhere('participant_username', 'like', '%'.$search.'%')
+                        ->orWhere('participant_id', 'like', '%'.$search.'%')
+                        ->orWhere('phone', 'like', '%'.$search.'%')
+                        ->orWhere('email', 'like', '%'.$search.'%')
+                        ->orWhere('last_message_preview', 'like', '%'.$search.'%');
+                });
             }
 
             $conversations = $query->limit(500)->get();
@@ -116,10 +154,14 @@ class MetaSocialInboxController extends Controller
             'crmPayload',
             'assignedFilter',
             'platformFilter',
+            'statusFilter',
+            'unreadOnly',
+            'search',
+            'filterCounts',
         ))->with([
             'waImmersiveInbox' => true,
-            'waInboxTitle' => 'محادثات السوشيال',
-            'waInboxSubtitle' => 'Messenger · Instagram — CRM مثل واتساب',
+            'waInboxTitle' => 'Meta Inbox',
+            'waInboxSubtitle' => 'Business Suite — Messenger · Instagram · CRM',
             'waAdminSettingsUrl' => route('admin.meta-social.settings'),
             'waAdminPagesUrl' => route('admin.meta-social.pages.index'),
             'waAdminDashboardUrl' => route('admin.meta-social.index'),
