@@ -42,15 +42,20 @@ class LectureWatchProgress extends Model
     {
         $durationSec = max(1, $durationSec);
         $currentSec = max(0, min($currentSec, $durationSec));
-        $percent = (int) round(($currentSec / $durationSec) * 100);
+        $samplePercent = (int) min(100, round(($currentSec / $durationSec) * 100));
+
+        // لا ننقص النسبة أبداً (Seek للخلف / عيّنة خاطئة لا تلغي إنجاز الطالب)
+        $percent = max((int) ($this->progress_percent ?? 0), $samplePercent);
+        $watchTime = max((int) ($this->watch_time_seconds ?? 0), $currentSec);
+        $storedDuration = max((int) ($this->video_duration_seconds ?? 0), $durationSec);
 
         $threshold = $minPercentToComplete ?? 90;
-        $completed = $percent >= $threshold;
+        $completed = (bool) ($this->is_completed) || $percent >= $threshold;
 
         $this->fill([
-            'watch_time_seconds' => $currentSec,
-            'video_duration_seconds' => $durationSec,
-            'progress_percent' => min(100, $percent),
+            'watch_time_seconds' => $watchTime,
+            'video_duration_seconds' => $storedDuration,
+            'progress_percent' => $percent,
             'is_completed' => $completed,
         ])->save();
     }

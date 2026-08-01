@@ -195,6 +195,15 @@ class GroupController extends Controller
             'status' => 'submitted',
         ]);
 
+        try {
+            if ($assignment->advanced_course_id) {
+                app(\App\Http\Controllers\Student\MyCourseController::class)
+                    ->updateCourseProgress((int) auth()->id(), (int) $assignment->advanced_course_id);
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Failed to update course progress after group assignment submit: '.$e->getMessage());
+        }
+
         return back()->with('success', 'تم تسليم الواجب بنجاح.');
     }
 }

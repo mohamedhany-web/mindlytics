@@ -191,6 +191,13 @@ class LearningPatternController extends Controller
         if ($evaluation['status'] === 'completed') {
             $pattern->increment('total_completions');
         }
+
+        try {
+            app(\App\Http\Controllers\Student\MyCourseController::class)
+                ->updateCourseProgress($user->id, (int) $course->id);
+        } catch (\Throwable $e) {
+            \Log::warning('Failed to update course progress after pattern attempt: '.$e->getMessage());
+        }
         
         return response()->json([
             'success' => true,

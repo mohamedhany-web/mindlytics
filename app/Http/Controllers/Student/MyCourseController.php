@@ -9,6 +9,7 @@ use App\Models\LectureVideoQuestion;
 use App\Models\LectureVideoQuestionAnswer;
 use App\Models\CourseLesson;
 use App\Models\Lecture;
+use App\Services\CourseProgressService;
 use App\Services\ScholarshipCurriculumVisibilityService;
 use App\Support\LectureRecordingResolver;
 use Illuminate\Http\JsonResponse;
@@ -19,7 +20,8 @@ use Illuminate\Support\Facades\Storage;
 class MyCourseController extends Controller
 {
     public function __construct(
-        private ScholarshipCurriculumVisibilityService $scholarshipVisibility
+        private ScholarshipCurriculumVisibilityService $scholarshipVisibility,
+        private CourseProgressService $courseProgress,
     ) {
     }
 
@@ -96,23 +98,9 @@ class MyCourseController extends Controller
 
         $sections = $this->scholarshipVisibility->filterSectionsForStudent($sections, $user, $course);
 
-        // تحميل تقدم الدروس والأنماط والامتحانات والواجبات في العناصر
-        foreach ($sections as $section) {
-            foreach ($section->activeItems as $curriculumItem) {
-                $entity = $curriculumItem->item;
-                if ($entity instanceof \App\Models\CourseLesson) {
-                    $entity->load(['progress' => function($q) use ($user) { $q->where('user_id', $user->id); }]);
-                } elseif ($entity instanceof \App\Models\LearningPattern) {
-                    $entity->load(['attempts' => function($q) use ($user) { $q->where('user_id', $user->id)->latest(); }]);
-                } elseif ($entity instanceof \App\Models\AdvancedExam) {
-                    $entity->load(['attempts' => function($q) use ($user) { $q->where('user_id', $user->id)->whereNotNull('submitted_at'); }]);
-                } elseif ($entity instanceof \App\Models\Assignment) {
-                    $entity->load(['submissions' => function($q) use ($user) { $q->where('student_id', $user->id); }]);
-                }
-            }
-        }
-
-        list($progress, $totalLessons, $completedLessons) = $this->calculateProgressFromSections($user, $course, $sections);
+        $this->courseProgress->loadCurriculumProgressForUser($sections, $user);
+        list($progress, $totalLessons, $completedLessons) = $this->courseProgress->calculateFromSections($user, $course, $sections);
+        $this->courseProgress->syncEnrollmentProgress((int) $user->id, (int) $course->id, (float) $progress);
 
         $coursePoints = LectureVideoQuestionAnswer::totalScoreForUserInCourse($user->id, $course->id);
 
@@ -206,30 +194,9 @@ class MyCourseController extends Controller
 
         $allSections = $this->scholarshipVisibility->filterSectionsForStudent($allSections, $user, $course);
 
-        // تحميل تقدم الدروس والأنماط والامتحانات في العناصر
-        foreach ($allSections as $section) {
-            foreach ($section->activeItems as $curriculumItem) {
-                if ($curriculumItem->item instanceof \App\Models\CourseLesson) {
-                    $curriculumItem->item->load(['progress' => function($q) use ($user) {
-                        $q->where('user_id', $user->id);
-                    }]);
-                } elseif ($curriculumItem->item instanceof \App\Models\LearningPattern) {
-                    $curriculumItem->item->load(['attempts' => function($q) use ($user) {
-                        $q->where('user_id', $user->id)->latest();
-                    }]);
-                } elseif ($curriculumItem->item instanceof \App\Models\AdvancedExam) {
-                    $curriculumItem->item->load(['attempts' => function($q) use ($user) {
-                        $q->where('user_id', $user->id)->whereNotNull('submitted_at');
-                    }]);
-                } elseif ($curriculumItem->item instanceof \App\Models\Assignment) {
-                    $curriculumItem->item->load(['submissions' => function($q) use ($user) { $q->where('student_id', $user->id); }]);
-                } elseif ($curriculumItem->item instanceof \App\Models\Lecture) {
-                    $curriculumItem->item->load(['watchProgress' => function($q) use ($user) { $q->where('user_id', $user->id); }]);
-                }
-            }
-        }
-
-        list($progress, $totalLessons, $completedLessons) = $this->calculateProgressFromSections($user, $course, $allSections);
+        $this->courseProgress->loadCurriculumProgressForUser($allSections, $user);
+        list($progress, $totalLessons, $completedLessons) = $this->courseProgress->calculateFromSections($user, $course, $allSections);
+        $this->courseProgress->syncEnrollmentProgress((int) $user->id, (int) $course->id, (float) $progress);
 
         // بناء شجرة الأقسام (جذور + أطفال) للعرض في السايدبار
         foreach ($allSections as $section) {
@@ -468,23 +435,7 @@ class MyCourseController extends Controller
 
         $allSections = $this->scholarshipVisibility->filterSectionsForStudent($allSections, $user, $course);
 
-        // تحميل التقدم الذي تعتمد عليه الأقفال
-        foreach ($allSections as $section) {
-            foreach ($section->activeItems as $curriculumItem) {
-                $entity = $curriculumItem->item;
-                if ($entity instanceof Lecture) {
-                    $entity->load(['watchProgress' => fn ($q) => $q->where('user_id', $user->id)]);
-                } elseif ($entity instanceof CourseLesson) {
-                    $entity->load(['progress' => fn ($q) => $q->where('user_id', $user->id)]);
-                } elseif ($entity instanceof \App\Models\LearningPattern) {
-                    $entity->load(['attempts' => fn ($q) => $q->where('user_id', $user->id)->latest()]);
-                } elseif ($entity instanceof \App\Models\AdvancedExam) {
-                    $entity->load(['attempts' => fn ($q) => $q->where('user_id', $user->id)->whereNotNull('submitted_at')]);
-                } elseif ($entity instanceof \App\Models\Assignment) {
-                    $entity->load(['submissions' => fn ($q) => $q->where('student_id', $user->id)]);
-                }
-            }
-        }
+        $this->courseProgress->loadCurriculumProgressForUser($allSections, $user);
 
         // نفس قفل الأقسام المستخدم في learn()
         $this->computeSectionLockState($user, $allSections, (bool) ($course->admin_unlock_all_videos ?? false));
@@ -515,10 +466,10 @@ class MyCourseController extends Controller
                         if ($prev instanceof Lecture) { $prevLecture = $prev; break; }
                     }
                     if ($prevLecture) {
-                        $prevWp = $prevLecture->watchProgress->first();
+                        $prevWp = $prevLecture->watchProgress->firstWhere('user_id', $user->id);
                         $prevMin = $prevLecture->min_watch_percent_to_unlock_next;
                         $prevThreshold = $prevMin !== null ? (int) $prevMin : 90;
-                        if (! $prevWp || (int) $prevWp->progress_percent < $prevThreshold) {
+                        if (! $prevWp || (! $prevWp->is_completed && (int) $prevWp->progress_percent < $prevThreshold)) {
                             $isLocked = true;
                         }
                     }
@@ -580,14 +531,8 @@ class MyCourseController extends Controller
             ->orderBy('order')
             ->get();
         $sectionsForProgress = $this->scholarshipVisibility->filterSectionsForStudent($sectionsForProgress, $user, $course);
-        foreach ($sectionsForProgress as $section) {
-            foreach ($section->activeItems as $curriculumItem) {
-                if ($curriculumItem->item instanceof \App\Models\Lecture) {
-                    $curriculumItem->item->load(['watchProgress' => fn ($q) => $q->where('user_id', $user->id)]);
-                }
-            }
-        }
-        list($courseProgressPct, $totalItems, $completedItems) = $this->calculateProgressFromSections($user, $course, $sectionsForProgress);
+        $this->courseProgress->loadCurriculumProgressForUser($sectionsForProgress, $user);
+        list($courseProgressPct, $totalItems, $completedItems) = $this->courseProgress->calculateFromSections($user, $course, $sectionsForProgress);
 
         return response()->json([
             'success' => true,
@@ -702,7 +647,19 @@ class MyCourseController extends Controller
         } else {
             $progressPercent = $clientPercent;
         }
-        $isCompleted = $request->boolean('completed') || $progressPercent >= 90;
+        $existingLessonProgress = \App\Models\LessonProgress::query()
+            ->where('user_id', $user->id)
+            ->where('course_lesson_id', $lessonId)
+            ->first();
+        if ($existingLessonProgress) {
+            $progressPercent = max((int) $existingLessonProgress->progress_percent, $progressPercent);
+            $watchTime = max((int) $existingLessonProgress->watch_time, $watchTime);
+            $isCompleted = (bool) $existingLessonProgress->is_completed
+                || $request->boolean('completed')
+                || $progressPercent >= 90;
+        } else {
+            $isCompleted = $request->boolean('completed') || $progressPercent >= 90;
+        }
 
         // تحديث أو إنشاء تقدم الدرس
         $progress = \App\Models\LessonProgress::updateOrCreate(
@@ -712,7 +669,7 @@ class MyCourseController extends Controller
             ],
             [
                 'is_completed' => $isCompleted,
-                'completed_at' => $isCompleted ? now() : null,
+                'completed_at' => $isCompleted ? ($existingLessonProgress?->completed_at ?? now()) : null,
                 'watch_time' => $watchTime,
                 'progress_percent' => $progressPercent,
             ]
@@ -730,21 +687,8 @@ class MyCourseController extends Controller
             ->orderBy('order')
             ->get();
         $sections = $this->scholarshipVisibility->filterSectionsForStudent($sections, $user, $course);
-        foreach ($sections as $section) {
-            foreach ($section->activeItems as $curriculumItem) {
-                $entity = $curriculumItem->item;
-                if ($entity instanceof \App\Models\CourseLesson) {
-                    $entity->load(['progress' => fn ($q) => $q->where('user_id', $user->id)]);
-                } elseif ($entity instanceof \App\Models\LearningPattern) {
-                    $entity->load(['attempts' => fn ($q) => $q->where('user_id', $user->id)->latest()]);
-                } elseif ($entity instanceof \App\Models\AdvancedExam) {
-                    $entity->load(['attempts' => fn ($q) => $q->where('user_id', $user->id)->whereNotNull('submitted_at')]);
-                } elseif ($entity instanceof \App\Models\Assignment) {
-                    $entity->load(['submissions' => fn ($q) => $q->where('student_id', $user->id)]);
-                }
-            }
-        }
-        list($progressPct, $totalItems, $completedItems) = $this->calculateProgressFromSections($user, $course, $sections);
+        $this->courseProgress->loadCurriculumProgressForUser($sections, $user);
+        list($progressPct, $totalItems, $completedItems) = $this->courseProgress->calculateFromSections($user, $course, $sections);
 
         return response()->json([
             'success' => true,
@@ -768,28 +712,8 @@ class MyCourseController extends Controller
                 $entity = $item->item;
                 if (!$entity) continue;
                 $total++;
-                if ($entity instanceof \App\Models\CourseLesson) {
-                    $p = $entity->progress->first();
-                    if ($p && $p->is_completed) $completed++;
-                } elseif ($entity instanceof \App\Models\Lecture) {
-                    $wp = $entity->watchProgress->first();
-                    $minPercent = $entity->min_watch_percent_to_unlock_next;
-                    $threshold = $minPercent !== null ? (int) $minPercent : 90;
-                    if ($wp && $wp->progress_percent >= $threshold) $completed++;
-                    elseif ($entity->videoQuestions()->count() > 0) {
-                        $answered = \App\Models\LectureVideoQuestionAnswer::where('user_id', $user->id)
-                            ->whereIn('lecture_video_question_id', $entity->videoQuestions()->pluck('id'))
-                            ->distinct('lecture_video_question_id')->count('lecture_video_question_id');
-                        if ($answered >= $entity->videoQuestions()->count()) $completed++;
-                    }
-                } elseif ($entity instanceof \App\Models\Assignment) {
-                    if ($entity->submissions->where('student_id', $user->id)->isNotEmpty()) $completed++;
-                } elseif ($entity instanceof \App\Models\LearningPattern) {
-                    $best = $entity->getUserBestAttempt($user->id);
-                    if ($best && $best->status === 'completed') $completed++;
-                } elseif ($entity instanceof \App\Models\AdvancedExam) {
-                    $passing = (float) ($entity->passing_marks ?? 0);
-                    if ($entity->attempts->contains(fn ($a) => $a->score !== null && (float) $a->score >= $passing)) $completed++;
+                if ($this->courseProgress->isItemCompletedForUser($entity, $user)) {
+                    $completed++;
                 }
             }
             $section->progress_percent = $total > 0 ? round(($completed / $total) * 100, 2) : 0;
@@ -824,67 +748,6 @@ class MyCourseController extends Controller
     }
 
     /**
-     * حساب التقدم من المنهج (أقسام + عناصر) أو من الدروس فقط
-     * يُرجع: [نسبة التقدم، إجمالي العناصر، العناصر المكتملة]
-     */
-    private function calculateProgressFromSections($user, $course, $sections)
-    {
-        if ($sections->isEmpty()) {
-            $total = $course->lessons()->where('is_active', true)->count();
-            $completed = \App\Models\LessonProgress::where('user_id', $user->id)
-                ->whereIn('course_lesson_id', $course->lessons()->where('is_active', true)->pluck('id'))
-                ->where('is_completed', true)
-                ->count();
-            $progress = $total > 0 ? round(($completed / $total) * 100, 2) : 0;
-            return [$progress, $total, $completed];
-        }
-
-        $totalItems = 0;
-        $completedItems = 0;
-
-        foreach ($sections as $section) {
-            foreach ($section->activeItems as $item) {
-                $entity = $item->item;
-                if (!$entity) continue;
-
-                $totalItems++;
-                if ($entity instanceof \App\Models\CourseLesson) {
-                    $p = $entity->progress->first();
-                    if ($p && $p->is_completed) $completedItems++;
-                } elseif ($entity instanceof \App\Models\Lecture) {
-                    $wp = $entity->watchProgress->first();
-                    $minPercent = $entity->min_watch_percent_to_unlock_next;
-                    $threshold = $minPercent !== null ? (int) $minPercent : 90;
-                    if ($wp && $wp->progress_percent >= $threshold) {
-                        $completedItems++;
-                    } else {
-                        $vqCount = $entity->videoQuestions()->count();
-                        if ($vqCount > 0) {
-                            $answered = \App\Models\LectureVideoQuestionAnswer::where('user_id', $user->id)
-                                ->whereIn('lecture_video_question_id', $entity->videoQuestions()->pluck('id'))
-                                ->distinct('lecture_video_question_id')
-                                ->count('lecture_video_question_id');
-                            if ($answered >= $vqCount) $completedItems++;
-                        }
-                    }
-                } elseif ($entity instanceof \App\Models\Assignment) {
-                    if ($entity->submissions->where('student_id', $user->id)->isNotEmpty()) $completedItems++;
-                } elseif ($entity instanceof \App\Models\LearningPattern) {
-                    $best = $entity->getUserBestAttempt($user->id);
-                    if ($best && $best->status === 'completed') $completedItems++;
-                } elseif ($entity instanceof \App\Models\AdvancedExam) {
-                    $passing = (float) ($entity->passing_marks ?? 0);
-                    $passed = $entity->attempts->contains(fn ($a) => $a->score !== null && (float) $a->score >= $passing);
-                    if ($passed) $completedItems++;
-                }
-            }
-        }
-
-        $progress = $totalItems > 0 ? round(($completedItems / $totalItems) * 100, 2) : 0;
-        return [$progress, $totalItems, $completedItems];
-    }
-
-    /**
      * الحصول على تقدم الكورس (نسبة مئوية)
      */
     private function getCourseProgress($userId, $courseId)
@@ -901,33 +764,15 @@ class MyCourseController extends Controller
 
         $sections = $this->scholarshipVisibility->filterSectionsForStudent($sections, $user, $course);
 
-        foreach ($sections as $section) {
-            foreach ($section->activeItems as $curriculumItem) {
-                $entity = $curriculumItem->item;
-                if ($entity instanceof \App\Models\CourseLesson) {
-                    $entity->load(['progress' => fn ($q) => $q->where('user_id', $userId)]);
-                } elseif ($entity instanceof \App\Models\LearningPattern) {
-                    $entity->load(['attempts' => fn ($q) => $q->where('user_id', $userId)->latest()]);
-                } elseif ($entity instanceof \App\Models\AdvancedExam) {
-                    $entity->load(['attempts' => fn ($q) => $q->where('user_id', $userId)->whereNotNull('submitted_at')]);
-                } elseif ($entity instanceof \App\Models\Assignment) {
-                    $entity->load(['submissions' => fn ($q) => $q->where('student_id', $userId)]);
-                }
-            }
-        }
-
-        list($progress) = $this->calculateProgressFromSections($user, $course, $sections);
-        return $progress;
+        return $this->courseProgress->getCourseProgress($user, $course, $sections);
     }
 
     /**
-     * تحديث التقدم الإجمالي للكورس في جدول التسجيلات (يُستدعى أيضاً بعد تسليم الامتحان)
+     * تحديث التقدم الإجمالي للكورس في جدول التسجيلات (يُستدعى أيضاً بعد تسليم الامتحان/الواجب/النمط)
      */
     public function updateCourseProgress($userId, $courseId)
     {
         $progress = $this->getCourseProgress($userId, $courseId);
-        \App\Models\StudentCourseEnrollment::where('user_id', $userId)
-            ->where('advanced_course_id', $courseId)
-            ->update(['progress' => $progress]);
+        $this->courseProgress->syncEnrollmentProgress((int) $userId, (int) $courseId, (float) $progress);
     }
 }

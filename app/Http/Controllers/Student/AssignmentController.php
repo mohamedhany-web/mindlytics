@@ -147,6 +147,13 @@ class AssignmentController extends Controller
         ]);
         $submission->save();
 
+        try {
+            app(\App\Http\Controllers\Student\MyCourseController::class)
+                ->updateCourseProgress($user->id, (int) $assignment->advanced_course_id);
+        } catch (\Throwable $e) {
+            \Log::warning('Failed to update course progress after assignment submit: '.$e->getMessage());
+        }
+
         return back()->with('success', 'تم تسليم الواجب بنجاح');
     }
 
