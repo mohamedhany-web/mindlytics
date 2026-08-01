@@ -93,7 +93,10 @@ class SalesManagerOpsBoardService
                 'name' => $member->name,
                 'work_mode' => $member->work_mode ?? User::WORK_MODE_ONLINE,
                 'work_mode_label' => $member->workModeLabel(),
-                'is_offline' => $member->isOfflineWorker(),
+                'is_offline' => $member->requiresManagerApprovalFor($date),
+                'day_attendance_mode' => $member->isAttendanceOffDay($date)
+                    ? 'off'
+                    : $member->attendanceModeFor($date),
                 'attendance_mode' => $state['mode'] ?? null,
                 'attendance_filter' => $attendanceFilterKey,
                 'attendance_message' => $state['message'] ?? '',
@@ -124,7 +127,7 @@ class SalesManagerOpsBoardService
             $rows = $rows->where('user_id', $eid)->values();
         }
 
-        if (! empty($filters['work_mode']) && in_array($filters['work_mode'], ['online', 'offline'], true)) {
+        if (! empty($filters['work_mode']) && in_array($filters['work_mode'], ['online', 'offline', 'hybrid'], true)) {
             $rows = $rows->where('work_mode', $filters['work_mode'])->values();
         }
 

@@ -52,6 +52,7 @@ class User extends Authenticatable
         'work_mode',
         'offline_attendance_type',
         'onsite_days',
+        'work_week_plan',
         'termination_date',
         'salary',
         'employee_notes',
@@ -125,6 +126,7 @@ class User extends Authenticatable
             'two_factor_recovery_codes' => 'array',
             'skills' => 'array',
             'onsite_days' => 'array',
+            'work_week_plan' => 'array',
         ];
     }
 
@@ -132,15 +134,22 @@ class User extends Authenticatable
 
     public const WORK_MODE_OFFLINE = 'offline';
 
+    public const WORK_MODE_HYBRID = 'hybrid';
+
     public const OFFLINE_FULL_TIME = 'full_time';
 
     public const OFFLINE_SELECTED_DAYS = 'selected_days';
+
+    public const DAY_MODE_ONLINE = 'online';
+
+    public const DAY_MODE_OFFLINE = 'offline';
 
     public static function workModeLabels(): array
     {
         return [
             self::WORK_MODE_ONLINE => 'أونلاين (عن بُعد)',
             self::WORK_MODE_OFFLINE => 'أوفلاين (بالمكتب)',
+            self::WORK_MODE_HYBRID => 'Hybrid (أيام أوفلاين + أيام أونلاين)',
         ];
     }
 
@@ -149,9 +158,14 @@ class User extends Authenticatable
         return ($this->work_mode ?? self::WORK_MODE_ONLINE) === self::WORK_MODE_OFFLINE;
     }
 
+    public function isHybridWorker(): bool
+    {
+        return ($this->work_mode ?? self::WORK_MODE_ONLINE) === self::WORK_MODE_HYBRID;
+    }
+
     public function isOnlineWorker(): bool
     {
-        return ! $this->isOfflineWorker();
+        return ($this->work_mode ?? self::WORK_MODE_ONLINE) === self::WORK_MODE_ONLINE;
     }
 
     public function workModeLabel(): string
@@ -161,18 +175,155 @@ class User extends Authenticatable
     }
 
     /**
-     * أيام النزول للأوفلاين (0=أحد … 6=سبت).
+     * أيام النزول للأوفلاين/الهجين (0=أحد … 6=سبت).
      *
      * @return list<int>
      */
     public function onsiteDayIndexes(): array
     {
+        $fromPlan = [];
+        foreach ($this->normalizedWorkWeekPlan() as $day => $row) {
+            if (($row['active'] ?? false) && ($row['attendance_mode'] ?? '') === self::DAY_MODE_OFFLINE) {
+                $fromPlan[] = (int) $day;
+            }
+        }
+        if ($fromPlan !== []) {
+            return array_values(array_unique($fromPlan));
+        }
+
         $days = $this->onsite_days ?? [];
         if (! is_array($days)) {
             return [];
         }
 
         return array_values(array_unique(array_map('intval', $days)));
+    }
+
+    /**
+     * جدول الأسبوع المنسّق: مفتاح 0..6.
+     *
+     * @return array<int, array{active:bool,attendance_mode:string,start_time:?string,end_time:?string,required_hours:?float}>
+     */
+    public function normalizedWorkWeekPlan(): array
+    {
+        $raw = $this->work_week_plan;
+        if (! is_array($raw) || $raw === []) {
+            return [];
+        }
+
+        $out = [];
+        foreach (range(0, 6) as $day) {
+            $row = $raw[$day] ?? $raw[(string) $day] ?? null;
+            if (! is_array($row)) {
+                continue;
+            }
+            $active = (bool) ($row['active'] ?? false);
+            $mode = (string) ($row['attendance_mode'] ?? self::DAY_MODE_ONLINE);
+            if (! in_array($mode, [self::DAY_MODE_ONLINE, self::DAY_MODE_OFFLINE], true)) {
+                $mode = self::DAY_MODE_ONLINE;
+            }
+            $start = $this->normalizeHm($row['start_time'] ?? null);
+            $end = $this->normalizeHm($row['end_time'] ?? null);
+            $hours = $row['required_hours'] ?? null;
+            $hours = $hours === null || $hours === '' ? null : (float) $hours;
+
+            $out[$day] = [
+                'active' => $active,
+                'attendance_mode' => $mode,
+                'start_time' => $start,
+                'end_time' => $end,
+                'required_hours' => $hours,
+            ];
+        }
+
+        return $out;
+    }
+
+    public function hasWorkWeekPlan(): bool
+    {
+        return $this->normalizedWorkWeekPlan() !== [];
+    }
+
+    /**
+     * @return array{active:bool,attendance_mode:string,start_time:?string,end_time:?string,required_hours:?float}|null
+     */
+    public function workPlanForDay(\Carbon\Carbon $date): ?array
+    {
+        $plan = $this->normalizedWorkWeekPlan();
+        if ($plan === []) {
+            return null;
+        }
+
+        return $plan[(int) $date->dayOfWeek] ?? [
+            'active' => false,
+            'attendance_mode' => self::DAY_MODE_ONLINE,
+            'start_time' => null,
+            'end_time' => null,
+            'required_hours' => null,
+        ];
+    }
+
+    /**
+     * وضع الحضور المطلوب لهذا اليوم: online | offline.
+     */
+    public function attendanceModeFor(\Carbon\Carbon $date): string
+    {
+        if ($day = $this->workPlanForDay($date)) {
+            if (! ($day['active'] ?? false)) {
+                return self::DAY_MODE_ONLINE;
+            }
+
+            return ($day['attendance_mode'] ?? self::DAY_MODE_ONLINE) === self::DAY_MODE_OFFLINE
+                ? self::DAY_MODE_OFFLINE
+                : self::DAY_MODE_ONLINE;
+        }
+
+        $mode = $this->work_mode ?? self::WORK_MODE_ONLINE;
+
+        if ($mode === self::WORK_MODE_ONLINE) {
+            return self::DAY_MODE_ONLINE;
+        }
+
+        if ($mode === self::WORK_MODE_OFFLINE) {
+            if (($this->offline_attendance_type ?? null) === self::OFFLINE_SELECTED_DAYS) {
+                return in_array((int) $date->dayOfWeek, $this->onsiteDayIndexes(), true)
+                    ? self::DAY_MODE_OFFLINE
+                    : self::DAY_MODE_ONLINE;
+            }
+
+            return self::DAY_MODE_OFFLINE;
+        }
+
+        // hybrid بدون خطة مفصّلة: onsite_days = أوفلاين، الباقي أونلاين
+        if ($mode === self::WORK_MODE_HYBRID) {
+            return in_array((int) $date->dayOfWeek, $this->onsiteDayIndexes(), true)
+                ? self::DAY_MODE_OFFLINE
+                : self::DAY_MODE_ONLINE;
+        }
+
+        return self::DAY_MODE_ONLINE;
+    }
+
+    public function requiresManagerApprovalFor(\Carbon\Carbon $date): bool
+    {
+        if ($this->isAttendanceOffDay($date)) {
+            return false;
+        }
+
+        return $this->attendanceModeFor($date) === self::DAY_MODE_OFFLINE;
+    }
+
+    private function normalizeHm(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        $str = (string) $value;
+        if (preg_match('/^\d{2}:\d{2}/', $str, $m)) {
+            return substr($m[0], 0, 5);
+        }
+
+        return null;
     }
 
     public function salesCommissionLabel(): string
@@ -1062,11 +1213,16 @@ class User extends Authenticatable
 
     /**
      * هل اليوم يوم راحة من ناحية الحضور؟
-     * للأوفلاين بأيام محددة: أيام العمل = onsite_days فقط.
-     * غير ذلك: weekly_off_day / عطلة نهاية الأسبوع.
+     * إن وُجد work_week_plan: اليوم غير النشط = راحة.
+     * للأوفلاين بأيام محددة بدون خطة: أيام العمل = onsite_days فقط.
+     * للهجين بدون خطة: يعتمد weekly_off_day (الأيام المحددة أوفلاين/أونلاين فقط ضمن أيام العمل).
      */
     public function isAttendanceOffDay(\Carbon\Carbon $date): bool
     {
+        if ($plan = $this->workPlanForDay($date)) {
+            return ! ($plan['active'] ?? false);
+        }
+
         if (
             $this->isOfflineWorker()
             && ($this->offline_attendance_type ?? null) === self::OFFLINE_SELECTED_DAYS

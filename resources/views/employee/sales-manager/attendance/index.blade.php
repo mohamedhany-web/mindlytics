@@ -276,6 +276,8 @@
                             </a>
                             @if(($rec->user->work_mode ?? '') === 'offline')
                                 <span class="text-[10px] text-violet-700 font-bold">أوفلاين</span>
+                            @elseif(($rec->user->work_mode ?? '') === 'hybrid')
+                                <span class="text-[10px] text-amber-700 font-bold">Hybrid</span>
                             @endif
                         </td>
                         <td class="px-4 py-3">{{ $rec->work_date?->format('Y-m-d') }}</td>

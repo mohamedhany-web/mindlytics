@@ -226,7 +226,7 @@ class EmployeeAttendanceService
             ]);
         }
 
-        $window = $this->scheduleWindow($schedule, $now);
+        $window = $this->scheduleWindowForUser($user, $schedule, $now);
         $secondsUntilOpen = $now->lt($window['access_starts_at'])
             ? (int) $now->diffInSeconds($window['access_starts_at'])
             : 0;
@@ -242,6 +242,7 @@ class EmployeeAttendanceService
                 'shift_ends_at' => $window['shift_ends_at']->toIso8601String(),
                 'message' => 'النظام يفتح عند بدء موعد العمل.',
                 'work_mode' => $user->work_mode ?? User::WORK_MODE_ONLINE,
+                'day_attendance_mode' => $user->attendanceModeFor($now),
             ]);
         }
 
@@ -253,14 +254,15 @@ class EmployeeAttendanceService
                 'record' => $record,
                 'message' => 'انتهى موعد العمل دون تسجيل حضور.',
                 'work_mode' => $user->work_mode ?? User::WORK_MODE_ONLINE,
+                'day_attendance_mode' => $user->attendanceModeFor($now),
             ]);
         }
 
         if (! $record->clock_in_at) {
-            $isOffline = $user->isOfflineWorker();
+            $needsApproval = $user->requiresManagerApprovalFor($now);
             $message = $unlock
                 ? 'تم فتح النظام بواسطة المدير — سجّل حضورك لبدء العمل.'
-                : ($isOffline
+                : ($needsApproval
                     ? 'اطلب الحضور — المدير يؤكد تواجدك في المكتب ثم يفتح النظام.'
                     : 'سجّل حضورك لبدء يوم العمل.');
 
@@ -275,7 +277,8 @@ class EmployeeAttendanceService
                 'shift_ends_at' => $window['shift_ends_at']->toIso8601String(),
                 'message' => $message,
                 'work_mode' => $user->work_mode ?? User::WORK_MODE_ONLINE,
-                'requires_manager_approval' => $isOffline && ! $unlock,
+                'day_attendance_mode' => $user->attendanceModeFor($now),
+                'requires_manager_approval' => $needsApproval && ! $unlock,
             ], $unlockMeta));
         }
 
@@ -299,6 +302,7 @@ class EmployeeAttendanceService
                 ? 'نظام مفتوح بتصريح المدير حتى '.$unlock->expires_at->format('H:i').'.'
                 : ($canClockOut ? 'يمكنك إنهاء يوم العمل الآن.' : 'استمر في العمل حتى إكمال الساعات المطلوبة.'),
             'work_mode' => $user->work_mode ?? User::WORK_MODE_ONLINE,
+            'day_attendance_mode' => $user->attendanceModeFor($now),
         ], $unlockMeta));
     }
 
@@ -326,7 +330,7 @@ class EmployeeAttendanceService
             }
 
             $unlock = $state['unlock'] ?? null;
-            $requiresApproval = $user->isOfflineWorker() && ! $unlock;
+            $requiresApproval = $user->requiresManagerApprovalFor($now) && ! $unlock;
 
             if ($requiresApproval) {
                 $record->update([
@@ -344,7 +348,7 @@ class EmployeeAttendanceService
                 return $record->fresh();
             }
 
-            $window = $this->scheduleWindow($state['schedule'], $now);
+            $window = $this->scheduleWindowForUser($user, $state['schedule'], $now);
             $isLate = ! $unlock && $now->gt($window['shift_starts_at']->copy()->addMinutes((int) $state['schedule']->grace_minutes));
 
             $metadata = $record->metadata ?? [];
@@ -352,6 +356,7 @@ class EmployeeAttendanceService
                 $metadata['clock_in_via_manager_unlock'] = true;
                 $metadata['unlock_id'] = $unlock['id'] ?? null;
             }
+            $metadata['day_attendance_mode'] = $user->attendanceModeFor($now);
 
             $record->update([
                 'clock_in_at' => $now,
@@ -566,14 +571,15 @@ class EmployeeAttendanceService
             return $this->syncDayStatusFromEmployeeFile($user, $existing, $now);
         }
 
-        $window = $this->scheduleWindow($schedule, $now);
+        $window = $this->scheduleWindowForUser($user, $schedule, $now);
+        $requiredMinutes = $window['required_minutes'];
         $base = [
             'user_id' => $user->id,
             'work_schedule_id' => $schedule->id,
             'work_date' => $now->toDateString(),
             'scheduled_start' => $window['shift_starts_at'],
             'scheduled_end' => $window['shift_ends_at'],
-            'required_minutes' => (int) round((float) $schedule->required_hours * 60),
+            'required_minutes' => $requiredMinutes,
         ];
 
         // يوم الراحة من ملف الموظف (أوفلاين بأيام محددة أو weekly_off_day)
@@ -621,17 +627,34 @@ class EmployeeAttendanceService
             $desired = 'pending';
         }
 
-        if ($record->status === $desired) {
-            return $record;
-        }
-
-        $record->update([
+        $schedule = $this->resolveSchedule($user);
+        $payload = [
             'status' => $desired,
             'metadata' => array_merge($record->metadata ?? [], [
                 'synced_from_employee_file_at' => $now->toIso8601String(),
                 'synced_weekly_off_day' => $user->weekly_off_day,
+                'day_attendance_mode' => $user->isAttendanceOffDay($now) ? 'off' : $user->attendanceModeFor($now),
             ]),
-        ]);
+        ];
+
+        if ($schedule) {
+            $window = $this->scheduleWindowForUser($user, $schedule, $now);
+            $payload['work_schedule_id'] = $schedule->id;
+            $payload['scheduled_start'] = $window['shift_starts_at'];
+            $payload['scheduled_end'] = $window['shift_ends_at'];
+            $payload['required_minutes'] = $window['required_minutes'];
+        }
+
+        $needsUpdate = $record->status !== $desired
+            || (isset($payload['scheduled_start']) && ! $record->scheduled_start?->equalTo($payload['scheduled_start']))
+            || (isset($payload['scheduled_end']) && ! $record->scheduled_end?->equalTo($payload['scheduled_end']))
+            || (isset($payload['required_minutes']) && (int) $record->required_minutes !== (int) $payload['required_minutes']);
+
+        if (! $needsUpdate) {
+            return $record;
+        }
+
+        $record->update($payload);
 
         return $record->fresh();
     }
@@ -664,6 +687,41 @@ class EmployeeAttendanceService
         }
 
         return 'pending';
+    }
+
+    /** @return array{shift_starts_at: Carbon, shift_ends_at: Carbon, access_starts_at: Carbon, required_minutes: int} */
+    public function scheduleWindowForUser(User $user, WorkSchedule $schedule, Carbon $date): array
+    {
+        $base = $this->scheduleWindow($schedule, $date);
+        $plan = $user->workPlanForDay($date);
+
+        $start = $base['shift_starts_at']->copy();
+        $end = $base['shift_ends_at']->copy();
+        $requiredMinutes = (int) round((float) $schedule->required_hours * 60);
+
+        if ($plan && ($plan['active'] ?? false)) {
+            if (! empty($plan['start_time'])) {
+                $start = $date->copy()->setTimeFromTimeString($plan['start_time'].':00');
+            }
+            if (! empty($plan['end_time'])) {
+                $end = $date->copy()->setTimeFromTimeString($plan['end_time'].':00');
+            }
+            if ($end->lte($start)) {
+                $end->addDay();
+            }
+            if ($plan['required_hours'] !== null) {
+                $requiredMinutes = (int) round((float) $plan['required_hours'] * 60);
+            }
+        }
+
+        $accessStarts = $start->copy()->subMinutes((int) ($schedule->early_access_minutes ?? 0));
+
+        return [
+            'shift_starts_at' => $start,
+            'shift_ends_at' => $end,
+            'access_starts_at' => $accessStarts,
+            'required_minutes' => max(1, $requiredMinutes),
+        ];
     }
 
     /** @return array{shift_starts_at: Carbon, shift_ends_at: Carbon, access_starts_at: Carbon} */
@@ -719,6 +777,7 @@ class EmployeeAttendanceService
             'message' => '',
             'unlock' => null,
             'work_mode' => User::WORK_MODE_ONLINE,
+            'day_attendance_mode' => User::DAY_MODE_ONLINE,
             'requires_manager_approval' => false,
             'attendance_requested_at' => null,
         ], $data);

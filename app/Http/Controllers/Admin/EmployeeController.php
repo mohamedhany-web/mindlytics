@@ -87,10 +87,17 @@ class EmployeeController extends Controller
             'hire_date' => 'required|date',
             'weekly_off_day' => 'nullable|integer|min:0|max:6',
             'work_schedule_id' => 'nullable|exists:work_schedules,id',
-            'work_mode' => 'required|in:online,offline',
+            'work_mode' => 'required|in:online,offline,hybrid',
             'offline_attendance_type' => 'nullable|required_if:work_mode,offline|in:full_time,selected_days',
             'onsite_days' => 'nullable|array',
             'onsite_days.*' => 'integer|min:0|max:6',
+            'use_custom_week' => 'nullable|boolean',
+            'work_week_plan' => 'nullable|array',
+            'work_week_plan.*.active' => 'nullable',
+            'work_week_plan.*.attendance_mode' => 'nullable|in:online,offline',
+            'work_week_plan.*.start_time' => 'nullable|date_format:H:i',
+            'work_week_plan.*.end_time' => 'nullable|date_format:H:i',
+            'work_week_plan.*.required_hours' => 'nullable|numeric|min:0|max:24',
             'salary' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
         ]);
@@ -188,10 +195,17 @@ class EmployeeController extends Controller
             'hire_date' => 'required|date',
             'weekly_off_day' => 'nullable|integer|min:0|max:6',
             'work_schedule_id' => 'nullable|exists:work_schedules,id',
-            'work_mode' => 'required|in:online,offline',
+            'work_mode' => 'required|in:online,offline,hybrid',
             'offline_attendance_type' => 'nullable|required_if:work_mode,offline|in:full_time,selected_days',
             'onsite_days' => 'nullable|array',
             'onsite_days.*' => 'integer|min:0|max:6',
+            'use_custom_week' => 'nullable|boolean',
+            'work_week_plan' => 'nullable|array',
+            'work_week_plan.*.active' => 'nullable',
+            'work_week_plan.*.attendance_mode' => 'nullable|in:online,offline',
+            'work_week_plan.*.start_time' => 'nullable|date_format:H:i',
+            'work_week_plan.*.end_time' => 'nullable|date_format:H:i',
+            'work_week_plan.*.required_hours' => 'nullable|numeric|min:0|max:24',
             'termination_date' => 'nullable|date|after:hire_date',
             'salary' => 'nullable|numeric|min:0',
             'employee_notes' => 'nullable|string',
@@ -241,14 +255,99 @@ class EmployeeController extends Controller
     {
         $mode = $validated['work_mode'] ?? User::WORK_MODE_ONLINE;
         $validated['work_mode'] = $mode;
+        unset($validated['use_custom_week']);
 
-        if ($mode !== User::WORK_MODE_OFFLINE) {
+        $useCustomWeek = $request->boolean('use_custom_week') || $mode === User::WORK_MODE_HYBRID;
+        $planInput = $request->input('work_week_plan', []);
+
+        if ($useCustomWeek && is_array($planInput) && $planInput !== []) {
+            $plan = $this->normalizeWorkWeekPlanInput($planInput, $mode);
+            $activeDays = collect($plan)->filter(fn ($row) => $row['active'])->keys()->map(fn ($d) => (int) $d)->values()->all();
+            if ($activeDays === []) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'work_week_plan' => 'فعّل يوماً واحداً على الأقل في الجدول الأسبوعي.',
+                ]);
+            }
+
+            $validated['work_week_plan'] = $plan;
+            $validated['onsite_days'] = collect($plan)
+                ->filter(fn ($row) => $row['active'] && ($row['attendance_mode'] ?? '') === User::DAY_MODE_OFFLINE)
+                ->keys()
+                ->map(fn ($d) => (int) $d)
+                ->values()
+                ->all();
+
+            if ($mode === User::WORK_MODE_OFFLINE) {
+                $validated['offline_attendance_type'] = User::OFFLINE_SELECTED_DAYS;
+            } elseif ($mode === User::WORK_MODE_HYBRID) {
+                $validated['offline_attendance_type'] = null;
+                if ($validated['onsite_days'] === []) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'work_week_plan' => 'في وضع Hybrid اختر يوماً أوفلاين واحداً على الأقل (أو غيّر الوضع لأونلاين كامل).',
+                    ]);
+                }
+            } else {
+                // online + custom week times only
+                $validated['offline_attendance_type'] = null;
+                $validated['onsite_days'] = null;
+            }
+
+            return $validated;
+        }
+
+        $validated['work_week_plan'] = null;
+
+        if ($mode === User::WORK_MODE_ONLINE) {
             $validated['offline_attendance_type'] = null;
             $validated['onsite_days'] = null;
 
             return $validated;
         }
 
+        if ($mode === User::WORK_MODE_HYBRID) {
+            $days = array_values(array_unique(array_map('intval', $request->input('onsite_days', []))));
+            if ($days === []) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'work_week_plan' => 'Hybrid يحتاج جدولاً أسبوعياً أو أيام أوفلاين محددة.',
+                ]);
+            }
+            $validated['offline_attendance_type'] = null;
+            $validated['onsite_days'] = $days;
+
+            // ابنِ خطة بسيطة من الأيام المحددة + يوم الراحة
+            $plan = [];
+            foreach (range(0, 6) as $day) {
+                $isOff = $validated['weekly_off_day'] !== null
+                    ? (int) $validated['weekly_off_day'] === $day
+                    : in_array($day, [5, 6], true); // default weekend if null — approximate; attendance still uses weekly_off
+                $isOnsite = in_array($day, $days, true);
+                $plan[$day] = [
+                    'active' => ! $isOff,
+                    'attendance_mode' => $isOnsite ? User::DAY_MODE_OFFLINE : User::DAY_MODE_ONLINE,
+                    'start_time' => null,
+                    'end_time' => null,
+                    'required_hours' => null,
+                ];
+            }
+            // Prefer explicit: active if not weekly off via employee weekly_off when set
+            if ($validated['weekly_off_day'] !== null) {
+                foreach (range(0, 6) as $day) {
+                    $plan[$day]['active'] = (int) $validated['weekly_off_day'] !== $day;
+                    if (! $plan[$day]['active']) {
+                        $plan[$day]['attendance_mode'] = User::DAY_MODE_ONLINE;
+                    } else {
+                        $plan[$day]['attendance_mode'] = in_array($day, $days, true)
+                            ? User::DAY_MODE_OFFLINE
+                            : User::DAY_MODE_ONLINE;
+                    }
+                }
+            }
+            $validated['work_week_plan'] = $plan;
+
+            return $validated;
+        }
+
+        // offline
         $type = $validated['offline_attendance_type'] ?? User::OFFLINE_FULL_TIME;
         $validated['offline_attendance_type'] = $type;
 
@@ -265,6 +364,47 @@ class EmployeeController extends Controller
         }
 
         return $validated;
+    }
+
+    /**
+     * @param  array<string|int, mixed>  $planInput
+     * @return array<int, array{active:bool,attendance_mode:string,start_time:?string,end_time:?string,required_hours:?float}>
+     */
+    private function normalizeWorkWeekPlanInput(array $planInput, string $mode): array
+    {
+        $plan = [];
+        foreach (range(0, 6) as $day) {
+            $row = $planInput[$day] ?? $planInput[(string) $day] ?? [];
+            if (! is_array($row)) {
+                $row = [];
+            }
+            $activeRaw = $row['active'] ?? '0';
+            $active = $activeRaw === true || $activeRaw === 1 || $activeRaw === '1';
+            $attMode = (string) ($row['attendance_mode'] ?? User::DAY_MODE_ONLINE);
+            if ($mode === User::WORK_MODE_OFFLINE && $active) {
+                $attMode = User::DAY_MODE_OFFLINE;
+            }
+            if ($mode === User::WORK_MODE_ONLINE && $active) {
+                $attMode = User::DAY_MODE_ONLINE;
+            }
+            if (! in_array($attMode, [User::DAY_MODE_ONLINE, User::DAY_MODE_OFFLINE], true)) {
+                $attMode = User::DAY_MODE_ONLINE;
+            }
+
+            $start = $row['start_time'] ?? null;
+            $end = $row['end_time'] ?? null;
+            $hours = $row['required_hours'] ?? null;
+
+            $plan[$day] = [
+                'active' => $active,
+                'attendance_mode' => $attMode,
+                'start_time' => $start !== null && $start !== '' ? substr((string) $start, 0, 5) : null,
+                'end_time' => $end !== null && $end !== '' ? substr((string) $end, 0, 5) : null,
+                'required_hours' => $hours === null || $hours === '' ? null : (float) $hours,
+            ];
+        }
+
+        return $plan;
     }
 
     /**

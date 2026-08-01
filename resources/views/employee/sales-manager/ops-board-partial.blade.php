@@ -57,6 +57,7 @@
                 <option value="">الكل</option>
                 <option value="online" @selected(($filters['work_mode'] ?? '') === 'online')>أونلاين</option>
                 <option value="offline" @selected(($filters['work_mode'] ?? '') === 'offline')>أوفلاين</option>
+                <option value="hybrid" @selected(($filters['work_mode'] ?? '') === 'hybrid')>Hybrid</option>
             </select>
         </div>
         <div>
@@ -91,7 +92,7 @@
         ['يعملون', $stats['working']],
         ['بانتظار موافقة', $stats['pending_approval']],
         ['لم يحضروا', $stats['not_clocked_in']],
-        ['أوفلاين', $stats['offline_workers']],
+        ['مكتب اليوم', $stats['offline_workers']],
     ] as [$label, $value])
         <div class="bg-white rounded-xl border border-slate-200 p-3">
             <p class="text-[11px] text-slate-500">{{ $label }}</p>
@@ -163,9 +164,17 @@
                         <td class="px-3 py-3">
                             <span @class([
                                 'text-[11px] font-bold px-2 py-0.5 rounded-full',
-                                'bg-sky-50 text-sky-800' => ! $row['is_offline'],
-                                'bg-violet-50 text-violet-800' => $row['is_offline'],
-                            ])>{{ $row['is_offline'] ? 'أوفلاين' : 'أونلاين' }}</span>
+                                'bg-sky-50 text-sky-800' => ($row['work_mode'] ?? '') === 'online',
+                                'bg-violet-50 text-violet-800' => ($row['work_mode'] ?? '') === 'offline',
+                                'bg-amber-50 text-amber-800' => ($row['work_mode'] ?? '') === 'hybrid',
+                            ])>
+                                {{ $row['work_mode_label'] ?? ($row['is_offline'] ? 'أوفلاين' : 'أونلاين') }}
+                            </span>
+                            @if(($row['day_attendance_mode'] ?? null) === 'offline')
+                                <p class="text-[10px] text-violet-700 mt-0.5">اليوم: مكتب</p>
+                            @elseif(($row['day_attendance_mode'] ?? null) === 'online')
+                                <p class="text-[10px] text-sky-700 mt-0.5">اليوم: عن بُعد</p>
+                            @endif
                         </td>
                         <td class="px-3 py-3">
                             <p class="font-semibold text-slate-800">{{ $attendanceFilterLabels[$row['attendance_filter']] ?? $row['attendance_mode'] }}</p>

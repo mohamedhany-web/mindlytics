@@ -148,7 +148,29 @@
             <div>
                 <p class="text-sm text-gray-600 mb-1">نوع العمل</p>
                 <p class="font-semibold text-gray-900 text-lg">{{ $employee->workModeLabel() }}</p>
-                @if($employee->isOfflineWorker())
+                @if($employee->hasWorkWeekPlan())
+                    <div class="mt-2 text-xs text-slate-600 space-y-1">
+                        @foreach(\App\Models\User::weeklyOffDayOptions() as $d => $label)
+                            @php $plan = $employee->normalizedWorkWeekPlan()[$d] ?? null; @endphp
+                            @if($plan)
+                                <p>
+                                    <span class="font-semibold">{{ $label }}:</span>
+                                    @if(! ($plan['active'] ?? false))
+                                        راحة
+                                    @else
+                                        {{ ($plan['attendance_mode'] ?? '') === 'offline' ? 'أوفلاين' : 'أونلاين' }}
+                                        @if($plan['start_time'] || $plan['end_time'])
+                                            · {{ $plan['start_time'] ?? '—' }}–{{ $plan['end_time'] ?? '—' }}
+                                        @endif
+                                        @if($plan['required_hours'])
+                                            · {{ $plan['required_hours'] }} س
+                                        @endif
+                                    @endif
+                                </p>
+                            @endif
+                        @endforeach
+                    </div>
+                @elseif($employee->isOfflineWorker())
                     <p class="text-xs text-slate-500 mt-1">
                         @if(($employee->offline_attendance_type ?? '') === 'selected_days')
                             أيام النزول:
@@ -158,6 +180,13 @@
                         @else
                             Full-time — حسب الشيفت ويوم الراحة
                         @endif
+                    </p>
+                @elseif($employee->isHybridWorker())
+                    <p class="text-xs text-slate-500 mt-1">
+                        أيام أوفلاين:
+                        @foreach($employee->onsiteDayIndexes() as $d)
+                            {{ \App\Models\User::weeklyOffDayOptions()[$d] ?? $d }}@if(! $loop->last)، @endif
+                        @endforeach
                     </p>
                 @endif
             </div>

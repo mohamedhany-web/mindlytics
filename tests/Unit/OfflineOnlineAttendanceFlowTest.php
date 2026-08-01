@@ -79,6 +79,7 @@ class OfflineOnlineAttendanceFlowTest extends TestCase
             $table->string('work_mode', 20)->default('online');
             $table->string('offline_attendance_type', 30)->nullable();
             $table->json('onsite_days')->nullable();
+            $table->json('work_week_plan')->nullable();
             $table->unsignedBigInteger('employee_job_id')->nullable();
             $table->string('presence_status')->nullable();
             $table->dateTime('presence_last_seen_at')->nullable();
@@ -592,6 +593,69 @@ class OfflineOnlineAttendanceFlowTest extends TestCase
         );
 
         $this->assertTrue($approved->clock_in_at->equalTo($requestedAt));
+    }
+
+    public function test_hybrid_offline_day_requires_approval_online_day_clocks_in(): void
+    {
+        $schedule = $this->makeSchedule();
+        $employee = $this->makeEmployee($schedule, [
+            'work_mode' => User::WORK_MODE_HYBRID,
+            'work_week_plan' => [
+                '0' => ['active' => true, 'attendance_mode' => 'online', 'start_time' => null, 'end_time' => null, 'required_hours' => null],
+                '1' => ['active' => true, 'attendance_mode' => 'offline', 'start_time' => '10:00', 'end_time' => '18:00', 'required_hours' => 8],
+                '2' => ['active' => true, 'attendance_mode' => 'online', 'start_time' => '11:00', 'end_time' => '19:00', 'required_hours' => 7],
+                '3' => ['active' => true, 'attendance_mode' => 'online', 'start_time' => null, 'end_time' => null, 'required_hours' => null],
+                '4' => ['active' => true, 'attendance_mode' => 'online', 'start_time' => null, 'end_time' => null, 'required_hours' => null],
+                '5' => ['active' => false, 'attendance_mode' => 'online', 'start_time' => null, 'end_time' => null, 'required_hours' => null],
+                '6' => ['active' => false, 'attendance_mode' => 'online', 'start_time' => null, 'end_time' => null, 'required_hours' => null],
+            ],
+        ]);
+        $employee->load('employeeJob');
+        $service = app(EmployeeAttendanceService::class);
+
+        // Monday = offline (day 1)
+        Carbon::setTestNow(Carbon::parse('2026-08-03 10:05:00', 'Africa/Cairo'));
+        $this->assertTrue($employee->requiresManagerApprovalFor(now()));
+        $monday = $service->ensureTodayRecord($employee, $schedule, now());
+        $this->assertSame('10:00', $monday->scheduled_start->format('H:i'));
+        $this->assertSame(480, (int) $monday->required_minutes);
+        $pending = $service->clockIn($employee, '127.0.0.1');
+        $this->assertTrue($pending->isAwaitingManagerApproval());
+        $this->assertNull($pending->clock_in_at);
+
+        // Tuesday = online with custom start 11:00
+        Carbon::setTestNow(Carbon::parse('2026-08-04 11:20:00', 'Africa/Cairo'));
+        $this->assertFalse($employee->requiresManagerApprovalFor(now()));
+        $tuesday = $service->ensureTodayRecord($employee, $schedule, now());
+        $this->assertSame('11:00', $tuesday->scheduled_start->format('H:i'));
+        $this->assertSame(420, (int) $tuesday->required_minutes);
+        $in = $service->clockIn($employee, '127.0.0.1');
+        $this->assertFalse($in->isAwaitingManagerApproval());
+        $this->assertNotNull($in->clock_in_at);
+        $this->assertTrue((bool) $in->is_late);
+    }
+
+    public function test_hybrid_inactive_day_is_off_day(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-08-07 10:00:00', 'Africa/Cairo')); // Friday = 5
+
+        $schedule = $this->makeSchedule();
+        $employee = $this->makeEmployee($schedule, [
+            'work_mode' => User::WORK_MODE_HYBRID,
+            'work_week_plan' => [
+                '0' => ['active' => true, 'attendance_mode' => 'online'],
+                '1' => ['active' => true, 'attendance_mode' => 'online'],
+                '2' => ['active' => true, 'attendance_mode' => 'online'],
+                '3' => ['active' => true, 'attendance_mode' => 'online'],
+                '4' => ['active' => true, 'attendance_mode' => 'online'],
+                '5' => ['active' => false, 'attendance_mode' => 'online'],
+                '6' => ['active' => false, 'attendance_mode' => 'online'],
+            ],
+        ]);
+
+        $this->assertTrue($employee->isAttendanceOffDay(now()));
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        app(EmployeeAttendanceService::class)->clockIn($employee, '127.0.0.1');
     }
 
     protected function tearDown(): void

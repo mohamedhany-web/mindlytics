@@ -43,7 +43,7 @@
             @csrf
             <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow animate-pulse">
                 <i class="fas fa-fingerprint"></i>
-                {{ ($att['requires_manager_approval'] ?? false) || (($att['work_mode'] ?? '') === 'offline') ? 'طلب الحضور' : 'تسجيل الحضور' }}
+                {{ ($att['requires_manager_approval'] ?? false) ? 'طلب الحضور' : 'تسجيل الحضور' }}
             </button>
         </form>
     @endif
