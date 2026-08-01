@@ -84,6 +84,6 @@ class SalesWinApprovalController extends Controller
             return back()->withErrors(['error' => $result['error'] ?? 'فشل الرفض']);
         }
 
-        return back()->with('success', 'تم رفض اعتماد الفوز وإعادة الصفقة لمرحلة «عرض سعر».');
+        return back()->with('success', 'تم رفض اعتماد الفوز وإعادة الصفقة لمرحلة Offer Sent.');
     }
 }

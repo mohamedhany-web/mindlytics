@@ -373,10 +373,22 @@ class WhatsAppCrmService
         }
 
         $oldStage = $lead->stage;
-        $lead->update(['stage' => $stage]);
+        $stage = SalesLead::normalizeStage($stage);
+        $lead->update([
+            'stage' => $stage,
+            'stage_entered_at' => now(),
+        ]);
 
-        if ($oldStage !== 'contacted' && $stage !== 'new') {
+        if (! in_array($stage, ['new_lead'], true)) {
             $lead->update(['last_contacted_at' => now()]);
+        }
+
+        if (in_array($stage, [...SalesLead::CLOSED_STAGES, SalesLead::WON_STAGE], true)) {
+            if (! $lead->closed_at) {
+                $lead->forceFill(['closed_at' => now()])->save();
+            }
+        } elseif ($lead->closed_at && ! in_array($stage, SalesLead::WON_LIKE_STAGES, true)) {
+            $lead->forceFill(['closed_at' => null])->save();
         }
 
         SalesActivity::create([
@@ -384,7 +396,7 @@ class WhatsAppCrmService
             'user_id' => $userId ?? auth()->id(),
             'type' => 'stage_change',
             'title' => 'تغيير مرحلة من المحادثات',
-            'body' => (SalesLead::STAGES[$oldStage] ?? $oldStage) . ' → ' . (SalesLead::STAGES[$stage] ?? $stage),
+            'body' => SalesLead::stageLabel($oldStage).' → '.SalesLead::stageLabel($stage),
             'meta' => ['conversation_id' => $conversation->id, 'from' => $oldStage, 'to' => $stage],
         ]);
 
@@ -392,10 +404,18 @@ class WhatsAppCrmService
             $conversation,
             WhatsAppConversationEvent::TYPE_STATUS_CHANGED,
             'مرحلة Pipeline',
-            (SalesLead::STAGES[$oldStage] ?? $oldStage) . ' → ' . (SalesLead::STAGES[$stage] ?? $stage),
+            SalesLead::stageLabel($oldStage).' → '.SalesLead::stageLabel($stage),
             ['lead_stage_from' => $oldStage, 'lead_stage_to' => $stage],
             $userId
         );
+
+        if ($stage === SalesLead::WON_STAGE && $oldStage !== SalesLead::WON_STAGE) {
+            try {
+                app(SalesNotificationService::class)->notifyWinPendingApproval($lead->fresh(['assignee']));
+            } catch (\Throwable) {
+                // ignore
+            }
+        }
 
         return $lead->fresh();
     }

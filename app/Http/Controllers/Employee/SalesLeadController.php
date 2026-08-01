@@ -354,10 +354,8 @@ class SalesLeadController extends Controller
                 'not_interested' => $pipeline->transition($lead, 'lost', ['lost_reason' => 'no_need'], Auth::user()),
                 'wrong_number' => $pipeline->transition($lead, 'lost', ['lost_reason' => 'wrong_number'], Auth::user()),
                 'closed_lost' => $pipeline->transition($lead, 'lost', ['lost_reason' => 'other'], Auth::user()),
-                'closed_won' => $pipeline->transition($lead, 'payment_received', [
-                    'payment_txn_ref' => 'PENDING-'.now()->format('YmdHis'),
-                    'payment_amount' => $lead->expected_value ?: $lead->offer_price ?: 1,
-                    'paid_at' => now()->format('Y-m-d\TH:i'),
+                'closed_won' => $pipeline->transition($lead, SalesLead::WON_STAGE, [
+                    'expected_value' => $lead->expected_value ?: $lead->offer_price ?: $lead->payment_amount ?: 1,
                 ], Auth::user()),
                 default => null,
             };
@@ -410,11 +408,16 @@ class SalesLeadController extends Controller
         $stage = $validated['stage'];
         unset($validated['stage']);
 
-        $pipeline->transition($lead, $stage, $validated, Auth::user());
+        $updated = $pipeline->transition($lead, $stage, $validated, Auth::user());
 
         $this->syncTodayDailyReport();
 
-        return back()->with('success', 'تم تحديث مرحلة العميل إلى «'.SalesLead::stageLabel($stage).'».');
+        $msg = 'تم تحديث مرحلة العميل إلى «'.SalesLead::stageLabel($updated->stage).'».';
+        if ($updated->stage === SalesLead::WON_STAGE && ! $updated->won_confirmed_at) {
+            $msg = 'تم تسجيل Enrollment Completed — أُرسل طلب اعتماد للإدارة لاعتماد الكوميشن.';
+        }
+
+        return back()->with('success', $msg);
     }
 
     public function setNextFollow(Request $request, SalesLead $lead)

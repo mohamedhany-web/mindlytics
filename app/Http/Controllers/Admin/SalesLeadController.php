@@ -269,6 +269,16 @@ class SalesLeadController extends Controller
                 'body' => 'من «' . SalesLead::stageLabel($oldStage) . '» إلى «' . SalesLead::stageLabel($lead->stage) . '»',
                 'meta' => ['from' => $oldStage, 'to' => $lead->stage, 'by' => 'admin'],
             ]);
+
+            $lead->forceFill(['stage_entered_at' => now()])->save();
+
+            if ($lead->stage === SalesLead::WON_STAGE && $oldStage !== SalesLead::WON_STAGE) {
+                try {
+                    app(SalesNotificationService::class)->notifyWinPendingApproval($lead->fresh(['assignee']));
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            }
         }
 
         $this->syncClosedAt($lead);
