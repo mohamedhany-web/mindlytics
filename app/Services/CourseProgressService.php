@@ -178,13 +178,25 @@ class CourseProgressService
         return (float) $progress;
     }
 
-    public function syncEnrollmentProgress(int $userId, int $courseId, float $progress): void
+    /**
+     * تحديث النسبة المخزّنة في التسجيل.
+     * افتراضياً: لا نخفّض النسبة (منع مسح تقدّم ظاهر بسبب اختلاف طريقة الحساب).
+     */
+    public function syncEnrollmentProgress(int $userId, int $courseId, float $progress, bool $allowDecrease = false): void
     {
         // لا نغيّر status إلى completed هنا — activeCourses يعتمد على status=active.
-        StudentCourseEnrollment::query()
+        $query = StudentCourseEnrollment::query()
             ->where('user_id', $userId)
-            ->where('advanced_course_id', $courseId)
-            ->update(['progress' => $progress]);
+            ->where('advanced_course_id', $courseId);
+
+        if (! $allowDecrease) {
+            $query->where(function ($q) use ($progress) {
+                $q->whereNull('progress')
+                    ->orWhere('progress', '<', $progress);
+            });
+        }
+
+        $query->update(['progress' => $progress]);
     }
 
     private function watchProgressForUser(Lecture $lecture, User $user): ?LectureWatchProgress

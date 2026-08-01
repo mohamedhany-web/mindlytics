@@ -14,7 +14,9 @@ class ResyncCourseProgressCommand extends Command
     protected $signature = 'courses:resync-progress
                             {--course= : Limit to a specific advanced_course_id}
                             {--user= : Limit to a specific user_id}
-                            {--dry-run : Show changes without writing}';
+                            {--dry-run : Show changes without writing}
+                            {--only-increase : Never lower stored progress (default)}
+                            {--allow-decrease : Allow lowering stored progress (unsafe)}';
 
     protected $description = 'Recalculate stored student course progress from curriculum completion (fixes stuck progress bars)';
 
@@ -38,8 +40,23 @@ class ResyncCourseProgressCommand extends Command
             return self::SUCCESS;
         }
 
+        // Default: only raise progress. Decreases require explicit --allow-decrease.
+        $allowDecrease = (bool) $this->option('allow-decrease');
+        $onlyIncrease = ! $allowDecrease || (bool) $this->option('only-increase');
+        if ($allowDecrease && $this->option('only-increase')) {
+            $onlyIncrease = true;
+        }
+        if (! $allowDecrease) {
+            $onlyIncrease = true;
+        }
+
+        $this->info($onlyIncrease
+            ? 'Mode: only-increase (will not lower any student progress)'
+            : 'Mode: allow-decrease (can lower stored progress)');
+
         $updated = 0;
         $unchanged = 0;
+        $skippedDecrease = 0;
         $failed = 0;
         $dryRun = (bool) $this->option('dry-run');
         $courseCache = [];
@@ -48,8 +65,10 @@ class ResyncCourseProgressCommand extends Command
             $progressService,
             $visibility,
             $dryRun,
+            $onlyIncrease,
             &$updated,
             &$unchanged,
+            &$skippedDecrease,
             &$failed,
             &$courseCache
         ) {
@@ -75,8 +94,15 @@ class ResyncCourseProgressCommand extends Command
                         ->orderBy('order')
                         ->get();
                     $sections = $visibility->filterSectionsForStudent($sections, $user, $course);
-                    $after = $progressService->getCourseProgress($user, $course, $sections);
+                    $calculated = $progressService->getCourseProgress($user, $course, $sections);
                     $before = (float) $enrollment->progress;
+                    $after = $calculated;
+
+                    if ($onlyIncrease && $after + 0.001 < $before) {
+                        $skippedDecrease++;
+                        $this->line("skip-decrease user {$enrollment->user_id} course {$courseId}: {$before}% → {$calculated}%");
+                        continue;
+                    }
 
                     if (abs($after - $before) > 0.001) {
                         $updated++;
@@ -94,7 +120,7 @@ class ResyncCourseProgressCommand extends Command
             }
         });
 
-        $this->info("Done. updated={$updated} unchanged={$unchanged} failed={$failed}".($dryRun ? ' (dry-run)' : ''));
+        $this->info("Done. updated={$updated} unchanged={$unchanged} skipped-decrease={$skippedDecrease} failed={$failed}".($dryRun ? ' (dry-run)' : ''));
 
         return $failed > 0 ? self::FAILURE : self::SUCCESS;
     }
