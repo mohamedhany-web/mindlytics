@@ -161,6 +161,8 @@ class SalesLeadGroupController extends Controller
     {
         $validated = $request->validate([
             'employee_id' => 'nullable|integer|exists:users,id',
+            'from' => 'nullable|integer|min:1|max:100000',
+            'to' => 'nullable|integer|min:1|max:100000',
         ]);
 
         $employee = null;
@@ -178,8 +180,13 @@ class SalesLeadGroupController extends Controller
             }
         }
 
+        $range = [
+            'from' => $validated['from'] ?? null,
+            'to' => $validated['to'] ?? null,
+        ];
+
         try {
-            return $pdf->download($group, $employee);
+            return $pdf->download($group, $employee, $range);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Admin group print PDF endpoint failed', [
                 'group_id' => $group->id,

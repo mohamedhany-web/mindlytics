@@ -19,16 +19,18 @@ class SalesGroupPrintPdfService
 
     /**
      * طباعة نموذج ورقي لعملاء مجموعة — لكل الموظفين أو لموظف محدد.
+     *
+     * @param  array{from?: int|null, to?: int|null}  $range  أرقام 1-based داخل القائمة المرتبة
      */
-    public function download(SalesLeadGroup $group, ?User $employee = null): StreamedResponse
+    public function download(SalesLeadGroup $group, ?User $employee = null, array $range = []): StreamedResponse
     {
         $this->ensureMpdfAvailable();
 
         @ini_set('memory_limit', '512M');
         @set_time_limit(180);
 
-        $payload = $this->buildPayload($group, $employee);
-        $filename = $this->filename($group, $employee);
+        $payload = $this->buildPayload($group, $employee, $range);
+        $filename = $this->filename($group, $employee, $payload);
 
         $binary = null;
         $errors = [];
@@ -81,9 +83,10 @@ class SalesGroupPrintPdfService
     }
 
     /**
+     * @param  array{from?: int|null, to?: int|null}  $range
      * @return array<string, mixed>
      */
-    public function buildPayload(SalesLeadGroup $group, ?User $employee = null): array
+    public function buildPayload(SalesLeadGroup $group, ?User $employee = null, array $range = []): array
     {
         $group->loadMissing(['members:id,name', 'assignee:id,name']);
 
@@ -97,15 +100,43 @@ class SalesGroupPrintPdfService
         }
 
         /** @var Collection<int, SalesLead> $allLeads */
-        $allLeads = $leadsQuery->get();
-        $total = $allLeads->count();
-        $leads = $allLeads->take(self::MAX_LEADS)->values();
+        $allLeads = $leadsQuery->get()->values();
+        $totalAvailable = $allLeads->count();
+
+        [$from, $to, $rangeLabel, $hasCustomRange] = $this->normalizeRange(
+            $range['from'] ?? null,
+            $range['to'] ?? null,
+            $totalAvailable
+        );
+
+        // slice بفهارس 0-based مع الإبقاء على الترقيم الأصلي (من from)
+        $leads = $totalAvailable > 0
+            ? $allLeads->slice($from - 1, $to - $from + 1)->values()
+            : collect();
+
+        // حد أمان أقصى للطباعة في ملف واحد
+        $hardCap = self::MAX_LEADS;
+        $truncatedByCap = $leads->count() > $hardCap;
+        if ($truncatedByCap) {
+            $leads = $leads->take($hardCap)->values();
+            $to = $from + $leads->count() - 1;
+            $rangeLabel = $from.'-'.$to;
+        }
 
         if ($employee) {
             $sections = [[
                 'employee' => $employee,
                 'employee_name' => (string) ($employee->name ?: 'موظف'),
                 'leads' => $leads,
+                'start_number' => $from,
+            ]];
+        } elseif ($hasCustomRange) {
+            // نطاق محدد بدون موظف: قائمة واحدة متسلسلة بنفس ترتيب الأسماء
+            $sections = [[
+                'employee' => null,
+                'employee_name' => 'كل الموظفين',
+                'leads' => $leads,
+                'start_number' => $from,
             ]];
         } else {
             $sections = $leads
@@ -118,6 +149,7 @@ class SalesGroupPrintPdfService
                         'employee' => $assignee,
                         'employee_name' => (string) ($assignee?->name ?: 'بدون إسناد'),
                         'leads' => $groupLeads->values(),
+                        'start_number' => 1,
                     ];
                 })
                 ->sortBy(fn ($s) => $s['employee_name'] === 'بدون إسناد' ? 'zzz' : $s['employee_name'])
@@ -126,22 +158,59 @@ class SalesGroupPrintPdfService
         }
 
         $employeeLabel = $employee?->name ?? 'كل الموظفين';
+        $shown = $leads->count();
 
         return [
             'group' => $group,
             'employee' => $employee,
             'employee_label' => $employeeLabel,
             'sections' => $sections,
-            'leads_total' => $total,
-            'leads_shown' => $leads->count(),
-            'truncated' => $total > self::MAX_LEADS,
+            'leads_total' => $totalAvailable,
+            'leads_shown' => $shown,
+            'range_from' => $shown > 0 ? $from : null,
+            'range_to' => $shown > 0 ? ($from + $shown - 1) : null,
+            'range_label' => $rangeLabel,
+            'has_custom_range' => $hasCustomRange,
+            'truncated' => $truncatedByCap,
             'printed_at' => now(),
             'app_name' => (string) config('app.name', 'Mindlytics'),
-            'doc_title' => 'نموذج متابعة مجموعة - '.$group->name.' - '.$employeeLabel,
+            'doc_title' => 'نموذج متابعة مجموعة - '.$group->name.' - '.$employeeLabel.($rangeLabel ? ' - '.$rangeLabel : ''),
             'mode' => $employee ? 'employee' : 'all',
             'stage_labels' => SalesLead::STAGES,
             'priority_labels' => SalesLead::PRIORITIES,
         ];
+    }
+
+    /**
+     * @return array{0: int, 1: int, 2: string|null, 3: bool} [from, to, label, hasCustomRange]
+     */
+    private function normalizeRange(mixed $fromRaw, mixed $toRaw, int $total): array
+    {
+        if ($total <= 0) {
+            return [1, 0, null, false];
+        }
+
+        $fromGiven = $fromRaw !== null && $fromRaw !== '';
+        $toGiven = $toRaw !== null && $toRaw !== '';
+
+        if (! $fromGiven && ! $toGiven) {
+            return [1, $total, null, false];
+        }
+
+        $from = $fromGiven ? max(1, (int) $fromRaw) : 1;
+        $to = $toGiven ? max(1, (int) $toRaw) : $total;
+
+        if ($from > $total) {
+            throw new RuntimeException("رقم البداية ({$from}) أكبر من عدد العملاء ({$total}).");
+        }
+
+        if ($to < $from) {
+            throw new RuntimeException('رقم «إلى» يجب أن يكون أكبر من أو يساوي رقم «من».');
+        }
+
+        $to = min($to, $total);
+
+        return [$from, $to, $from.'-'.$to, true];
     }
 
     /**
@@ -178,15 +247,20 @@ class SalesGroupPrintPdfService
         $employeeLabel = e((string) $payload['employee_label']);
         $printed = e($payload['printed_at']->format('Y-m-d H:i'));
         $total = (int) $payload['leads_total'];
+        $shown = (int) ($payload['leads_shown'] ?? $total);
+        $rangeLabel = e((string) ($payload['range_label'] ?? ''));
+        $rangeText = $rangeLabel !== ''
+            ? ' | النطاق: '.$rangeLabel.' ('.$shown.' من '.$total.')'
+            : ' | العدد: '.$shown;
 
         $rows = '';
-        $n = 0;
         foreach ($payload['sections'] as $section) {
             $sectionName = e((string) ($section['employee_name'] ?? 'موظف'));
+            $startNumber = max(1, (int) ($section['start_number'] ?? 1));
             $rows .= '<tr><td colspan="8" style="background:#0f766e;color:#fff;font-weight:bold;padding:6px;">ورقة عمل - '.$sectionName.'</td></tr>';
 
-            foreach ($section['leads'] as $lead) {
-                $n++;
+            foreach ($section['leads'] as $i => $lead) {
+                $n = $startNumber + (int) $i;
                 $stage = (string) ($lead->stage ?? '');
                 $prio = (string) ($lead->priority ?: 'normal');
                 $interest = trim(implode(' | ', array_filter([
@@ -221,7 +295,7 @@ class SalesGroupPrintPdfService
             .'<div style="border-bottom:3px solid #0f766e;padding-bottom:8px;margin-bottom:10px;">'
             .'<div style="font-size:14pt;font-weight:bold;color:#0f766e;">'.$app.'</div>'
             .'<div style="font-size:11pt;font-weight:bold;">نموذج متابعة ميداني - مجموعة: '.$groupName.'</div>'
-            .'<div style="font-size:9pt;color:#475569;">الموظف: '.$employeeLabel.' | العدد: '.$total.' | التاريخ: '.$printed.'</div>'
+            .'<div style="font-size:9pt;color:#475569;">الموظف: '.$employeeLabel.$rangeText.' | التاريخ: '.$printed.'</div>'
             .'</div>'
             .'<p style="font-size:8pt;background:#fffbeb;border:1px solid #fcd34d;padding:6px;">عبّئ نتيجة الاتصال يدوياً ثم سجّل الأكشن على النظام.</p>'
             .'<table><thead><tr>'
@@ -263,7 +337,7 @@ class SalesGroupPrintPdfService
         );
     }
 
-    private function filename(SalesLeadGroup $group, ?User $employee = null): string
+    private function filename(SalesLeadGroup $group, ?User $employee = null, array $payload = []): string
     {
         $groupSlug = Str::slug($group->name, '-');
         if ($groupSlug === '') {
@@ -271,6 +345,9 @@ class SalesGroupPrintPdfService
         }
 
         $date = now()->format('Ymd-His');
+        $rangePart = ! empty($payload['range_label'])
+            ? '-r'.preg_replace('/[^0-9\-]/', '', (string) $payload['range_label'])
+            : '';
 
         if ($employee) {
             $empSlug = Str::slug((string) $employee->name, '-');
@@ -278,9 +355,9 @@ class SalesGroupPrintPdfService
                 $empSlug = 'emp-'.$employee->id;
             }
 
-            return sprintf('sales-group-%s-%s-%s.pdf', $groupSlug, $empSlug, $date);
+            return sprintf('sales-group-%s-%s%s-%s.pdf', $groupSlug, $empSlug, $rangePart, $date);
         }
 
-        return sprintf('sales-group-%s-all-%s.pdf', $groupSlug, $date);
+        return sprintf('sales-group-%s-all%s-%s.pdf', $groupSlug, $rangePart, $date);
     }
 }

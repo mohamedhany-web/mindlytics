@@ -26,13 +26,22 @@
                 </p>
             @endif
         </div>
-        <div class="flex flex-wrap gap-2">
+        <div class="flex flex-wrap gap-2 items-center">
             <a href="{{ route('employee.sales.groups.index') }}" class="px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-700">المجموعات</a>
-            <a href="{{ route('employee.sales.groups.print-pdf', $group) }}" target="_blank"
-               class="px-4 py-2 text-sm font-bold rounded-lg text-white bg-teal-700 hover:bg-teal-800 inline-flex items-center gap-2">
-                <i class="fas fa-file-pdf"></i>
-                طباعة نموذجي PDF
-            </a>
+            <form method="get" action="{{ route('employee.sales.groups.print-pdf', $group) }}" target="_blank" class="flex flex-wrap items-end gap-2">
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 mb-0.5">من</label>
+                    <input type="number" name="from" min="1" placeholder="1" class="w-20 px-2 py-2 text-sm border border-slate-200 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 mb-0.5">إلى</label>
+                    <input type="number" name="to" min="1" placeholder="{{ max(1, $group->leads->count()) }}" class="w-20 px-2 py-2 text-sm border border-slate-200 rounded-lg">
+                </div>
+                <button type="submit" class="px-4 py-2 text-sm font-bold rounded-lg text-white bg-teal-700 hover:bg-teal-800 inline-flex items-center gap-2">
+                    <i class="fas fa-file-pdf"></i>
+                    طباعة PDF
+                </button>
+            </form>
             <a href="{{ route('employee.sales.leads.index', ['group_id' => $group->id]) }}" class="px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-700">عرض العملاء</a>
             <a href="{{ route('employee.sales.leads.create') }}?group={{ $group->id }}" class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-semibold">+ عميل في المجموعة</a>
         </div>

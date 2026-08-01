@@ -194,7 +194,14 @@
                 </td>
                 <td>
                     <div class="meta-label">عدد العملاء</div>
-                    <div class="meta-value">{{ number_format($leads_total) }}</div>
+                    <div class="meta-value">
+                        @if(!empty($range_label))
+                            {{ number_format($leads_shown) }}
+                            <span style="font-size:8pt;font-weight:normal;color:#64748b;">(من {{ $range_from }} إلى {{ $range_to }} / {{ number_format($leads_total) }})</span>
+                        @else
+                            {{ number_format($leads_total) }}
+                        @endif
+                    </div>
                 </td>
                 <td>
                     <div class="meta-label">تاريخ الطباعة</div>
@@ -206,15 +213,22 @@
 </div>
 
 @if(!empty($truncated))
-    <div class="warn">تنبيه: تم عرض أول {{ number_format($leads_shown) }} عميل فقط من أصل {{ number_format($leads_total) }}. صفِّ حسب موظف لطباعة الباقي.</div>
+    <div class="warn">تنبيه: تم قص النتيجة لحد أقصى للطباعة الآمنة. صغّر النطاق (مثلاً 50 عميلاً في كل مرة).</div>
+@elseif(!empty($range_label))
+    <div class="hint" style="background:#ecfeff;border-color:#67e8f9;border-right-color:#0891b2;color:#155e75;">
+        <strong>نطاق الطباعة:</strong> العملاء من رقم {{ $range_from }} إلى {{ $range_to }}
+        ({{ number_format($leads_shown) }} من أصل {{ number_format($leads_total) }}).
+    </div>
 @endif
 
+@if(empty($range_label))
 <div class="hint">
     <strong>طريقة الاستخدام:</strong>
     سجّل نتيجة كل عميل في الخانات الصفراء والزرقاء أثناء المتابعة، ثم افتح النظام وأدخل الأكشن (مرحلة / متابعة / ملاحظة).
 </div>
+@endif
 
-@if($leads_total === 0)
+@if($leads_total === 0 || $leads_shown === 0)
     <div class="empty-state">
         <div style="font-size:12pt;font-weight:bold;margin-bottom:4px;">لا يوجد عملاء في هذه المجموعة للطباعة</div>
         <div>أضف عملاء للمجموعة أو اختر موظفاً لديه عملاء مسندين داخل المجموعة.</div>
@@ -224,6 +238,7 @@
         @php
             $sectionName = $section['employee_name'] ?? ($section['employee']->name ?? 'بدون إسناد');
             $sectionLeads = $section['leads'] ?? collect();
+            $startNumber = max(1, (int) ($section['start_number'] ?? 1));
         @endphp
 
         <div class="section-head" @if($mode === 'all' && $sectionIndex > 0) style="page-break-before:always;" @endif>
@@ -279,7 +294,7 @@
                         }
                     @endphp
                     <tr>
-                        <td class="col-num" style="text-align:center;">{{ $i + 1 }}</td>
+                        <td class="col-num" style="text-align:center;">{{ $startNumber + $i }}</td>
                         <td class="col-name">
                             <div class="name-main">{{ $lead->name ?: '-' }}</div>
                             @if(!empty($lead->email))

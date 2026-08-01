@@ -70,21 +70,19 @@
             $leadsByAssignee = $group->leads->groupBy('assigned_to');
         @endphp
         <div class="mx-4 mt-4 mb-1 rounded-2xl border border-teal-200 bg-gradient-to-l from-teal-50 via-white to-emerald-50 p-4">
-            <div class="flex flex-col lg:flex-row lg:items-end gap-4">
-                <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2 mb-1">
-                        <div class="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-sm">
-                            <i class="fas fa-file-pdf"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-black text-slate-900">طباعة نموذج ورقي (PDF)</h3>
-                            <p class="text-xs text-slate-600">نموذج منظّم باسم الموظف — يُعبَّأ يدوياً أثناء المتابعة ثم تُسجَّل النتائج على النظام.</p>
-                        </div>
+            <div class="flex flex-col gap-4">
+                <div class="flex items-center gap-2">
+                    <div class="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-sm">
+                        <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-black text-slate-900">طباعة نموذج ورقي (PDF)</h3>
+                        <p class="text-xs text-slate-600">اطبع الكل، أو موظفاً محدداً، أو نطاقاً مثل من 1 إلى 50 / من 51 إلى 100.</p>
                     </div>
                 </div>
-                <form method="get" action="{{ route('admin.sales.groups.print-pdf', $group) }}" target="_blank" class="flex flex-col sm:flex-row gap-2 sm:items-end">
-                    <div class="min-w-[220px]">
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">نطاق الطباعة</label>
+                <form method="get" action="{{ route('admin.sales.groups.print-pdf', $group) }}" target="_blank" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 items-end">
+                    <div class="sm:col-span-2 xl:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">الموظف</label>
                         <select name="employee_id" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
                             <option value="">كافة بيانات المجموعة ({{ number_format($leadsCount) }})</option>
                             @foreach($printEmployees as $emp)
@@ -93,11 +91,29 @@
                             @endforeach
                         </select>
                     </div>
-                    <button type="submit" class="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-bold text-white rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 shadow-md shadow-teal-500/20 whitespace-nowrap">
-                        <i class="fas fa-print"></i>
-                        تحميل / طباعة PDF
-                    </button>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">من رقم</label>
+                        <input type="number" name="from" min="1" max="{{ max(1, (int) $leadsCount) }}" placeholder="1"
+                               class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                               title="اتركه فارغاً للبداية من أول عميل">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">إلى رقم</label>
+                        <input type="number" name="to" min="1" max="{{ max(1, (int) $leadsCount) }}" placeholder="{{ max(1, (int) $leadsCount) }}"
+                               class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                               title="اتركه فارغاً حتى آخر عميل">
+                    </div>
+                    <div>
+                        <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 shadow-md shadow-teal-500/20 whitespace-nowrap">
+                            <i class="fas fa-print"></i>
+                            تحميل PDF
+                        </button>
+                    </div>
                 </form>
+                <p class="text-[11px] text-slate-500 -mt-1">
+                    أمثلة: من <strong>1</strong> إلى <strong>50</strong> · من <strong>51</strong> إلى <strong>100</strong> · أو اترك الحقول فارغة لطباعة الكل.
+                    الترقيم حسب ترتيب الأسماء{{ $printEmployees->isNotEmpty() ? ' (ومع اختيار موظف يكون الترقيم داخل عملائه فقط)' : '' }}.
+                </p>
             </div>
         </div>
 

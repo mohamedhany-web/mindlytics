@@ -142,15 +142,23 @@ class SalesLeadGroupController extends Controller
     /**
      * طباعة PDF نموذج ورقي لعملاء المجموعة الخاصة بالموظف الحالي.
      */
-    public function printPdf(SalesLeadGroup $group, SalesGroupPrintPdfService $pdf): StreamedResponse|\Illuminate\Http\RedirectResponse
+    public function printPdf(Request $request, SalesLeadGroup $group, SalesGroupPrintPdfService $pdf): StreamedResponse|\Illuminate\Http\RedirectResponse
     {
         $this->authorizeGroup($group);
 
         /** @var User $user */
         $user = Auth::user();
 
+        $validated = $request->validate([
+            'from' => 'nullable|integer|min:1|max:100000',
+            'to' => 'nullable|integer|min:1|max:100000',
+        ]);
+
         try {
-            return $pdf->download($group, $user);
+            return $pdf->download($group, $user, [
+                'from' => $validated['from'] ?? null,
+                'to' => $validated['to'] ?? null,
+            ]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Employee group print PDF endpoint failed', [
                 'group_id' => $group->id,
