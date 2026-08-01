@@ -144,6 +144,15 @@
                                         <button type="submit" class="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white font-semibold">تفعيل</button>
                                     </form>
                                 @endif
+                                @if($page->is_active)
+                                    <form method="post" action="{{ route('admin.meta-social.pages.sync-conversations', $page) }}"
+                                          onsubmit="return confirm('سيتم جلب كل المحادثات وكل الرسائل من Meta — قد يستغرق وقتاً. متابعة؟')">
+                                        @csrf
+                                        <button type="submit" class="text-xs px-2.5 py-1.5 rounded-lg border-2 border-sky-200 text-sky-800 bg-sky-50 hover:bg-sky-100 font-semibold inline-flex items-center gap-1">
+                                            <i class="fas fa-cloud-download-alt"></i> جلب كل الرسائل
+                                        </button>
+                                    </form>
+                                @endif
                                 <a href="{{ route('admin.meta-social.inbox.index', ['page' => $page->id]) }}" class="text-xs px-2.5 py-1.5 rounded-lg bg-sky-600 text-white inline-flex items-center font-semibold">Inbox</a>
                             </div>
                         </td>
