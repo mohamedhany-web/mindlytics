@@ -157,7 +157,7 @@ class SalesLeadGroupController extends Controller
     /**
      * طباعة PDF نموذج ورقي لعملاء المجموعة (كامل أو لموظف محدد).
      */
-    public function printPdf(Request $request, SalesLeadGroup $group, SalesGroupPrintPdfService $pdf): StreamedResponse
+    public function printPdf(Request $request, SalesLeadGroup $group, SalesGroupPrintPdfService $pdf): StreamedResponse|\Illuminate\Http\RedirectResponse
     {
         $validated = $request->validate([
             'employee_id' => 'nullable|integer|exists:users,id',
@@ -165,17 +165,32 @@ class SalesLeadGroupController extends Controller
 
         $employee = null;
         if (! empty($validated['employee_id'])) {
-            $employee = User::salesEmployees()
-                ->where('is_active', true)
+            // نقبل أي مستخدم موجود في المجموعة / مسند له عملاء — ليس فقط job=sales
+            // (قد يكون مدير مبيعات أو موظف مضاف للمجموعة)
+            $employee = User::query()
                 ->whereKey((int) $validated['employee_id'])
-                ->first();
+                ->first(['id', 'name', 'is_active', 'is_employee']);
 
             if (! $employee) {
-                abort(422, 'الموظف المحدد ليس موظف مبيعات فعّالاً.');
+                return redirect()
+                    ->route('admin.sales.groups.show', $group)
+                    ->with('error', 'الموظف المحدد غير موجود.');
             }
         }
 
-        return $pdf->download($group, $employee);
+        try {
+            return $pdf->download($group, $employee);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Admin group print PDF endpoint failed', [
+                'group_id' => $group->id,
+                'employee_id' => $employee?->id,
+                'message' => $e->getMessage(),
+            ]);
+
+            return redirect()
+                ->route('admin.sales.groups.show', $group)
+                ->with('error', 'تعذّر إنشاء ملف PDF. '. (config('app.debug') ? $e->getMessage() : 'حاول مرة أخرى أو صفِّ حسب موظف واحد.'));
+        }
     }
 
     /**

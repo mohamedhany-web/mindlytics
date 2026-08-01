@@ -14,6 +14,8 @@ use Throwable;
 
 class SalesGroupPrintPdfService
 {
+    private const MAX_LEADS = 400;
+
     /**
      * طباعة نموذج ورقي لعملاء مجموعة — لكل الموظفين أو لموظف محدد.
      */
@@ -29,19 +31,43 @@ class SalesGroupPrintPdfService
         $payload = $this->buildPayload($group, $employee);
         $filename = $this->filename($group, $employee);
 
+        $binary = null;
+        $lastError = null;
+
         try {
             $html = view('pdf.sales-group-print', $payload)->render();
-            $binary = $this->renderHtmlToPdf($html, $payload['doc_title']);
+            $binary = $this->renderHtmlToPdf($html, (string) $payload['doc_title'], true);
         } catch (Throwable $e) {
-            Log::error('Sales group print PDF failed', [
+            $lastError = $e;
+            Log::warning('Sales group print PDF landscape failed, trying portrait', [
                 'group_id' => $group->id,
                 'employee_id' => $employee?->id,
                 'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
             ]);
-            $hint = config('app.debug') ? ' ('.$e->getMessage().')' : '';
-            abort(500, 'تعذّر إنشاء ملف PDF للطباعة.'.$hint);
+        }
+
+        if ($binary === null || $binary === '') {
+            try {
+                $html = view('pdf.sales-group-print', $payload)->render();
+                $binary = $this->renderHtmlToPdf($html, (string) $payload['doc_title'], false);
+            } catch (Throwable $e) {
+                $lastError = $e;
+                Log::error('Sales group print PDF failed', [
+                    'group_id' => $group->id,
+                    'employee_id' => $employee?->id,
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+            }
+        }
+
+        if ($binary === null || $binary === '' || ! str_starts_with($binary, '%PDF')) {
+            $hint = config('app.debug') && $lastError
+                ? ' ('.$lastError->getMessage().')'
+                : '';
+            abort(500, 'تعذّر إنشاء ملف PDF للطباعة. جرّب تصفية بموظف واحد أو قلّل عدد العملاء.'.$hint);
         }
 
         return response()->streamDownload(
@@ -49,7 +75,10 @@ class SalesGroupPrintPdfService
                 echo $binary;
             },
             $filename,
-            ['Content-Type' => 'application/pdf']
+            [
+                'Content-Type' => 'application/pdf',
+                'Cache-Control' => 'no-store, no-cache, must-revalidate',
+            ]
         );
     }
 
@@ -69,44 +98,52 @@ class SalesGroupPrintPdfService
             $leadsQuery->where('assigned_to', $employee->id);
         }
 
-        /** @var Collection<int, SalesLead> $leads */
-        $leads = $leadsQuery->get();
+        /** @var Collection<int, SalesLead> $allLeads */
+        $allLeads = $leadsQuery->get();
+        $total = $allLeads->count();
+        $leads = $allLeads->take(self::MAX_LEADS)->values();
 
-        // أقسام حسب الموظف — مفيدة لما تطبع الكل وتوزّع الورق
         if ($employee) {
             $sections = [[
                 'employee' => $employee,
+                'employee_name' => (string) ($employee->name ?: 'موظف'),
                 'leads' => $leads,
             ]];
         } else {
             $sections = $leads
                 ->groupBy(fn (SalesLead $l) => (int) ($l->assigned_to ?: 0))
-                ->map(function (Collection $groupLeads, $assigneeId) {
+                ->map(function (Collection $groupLeads) {
                     $first = $groupLeads->first();
+                    $assignee = $first?->assignee;
 
                     return [
-                        'employee' => $first?->assignee,
+                        'employee' => $assignee,
+                        'employee_name' => (string) ($assignee?->name ?: 'بدون إسناد'),
                         'leads' => $groupLeads->values(),
                     ];
                 })
-                ->sortBy(fn ($s) => $s['employee']?->name ?? 'zzz')
+                ->sortBy(fn ($s) => $s['employee_name'] === 'بدون إسناد' ? 'zzz' : $s['employee_name'])
                 ->values()
                 ->all();
         }
 
         $employeeLabel = $employee?->name ?? 'كل الموظفين';
-        $docTitle = 'نموذج متابعة مجموعة — '.$group->name.' — '.$employeeLabel;
+        $docTitle = 'نموذج متابعة مجموعة - '.$group->name.' - '.$employeeLabel;
 
         return [
             'group' => $group,
             'employee' => $employee,
             'employee_label' => $employeeLabel,
             'sections' => $sections,
-            'leads_total' => $leads->count(),
+            'leads_total' => $total,
+            'leads_shown' => $leads->count(),
+            'truncated' => $total > self::MAX_LEADS,
             'printed_at' => now(),
-            'app_name' => config('app.name', 'Mindlytics'),
+            'app_name' => (string) config('app.name', 'Mindlytics'),
             'doc_title' => $docTitle,
             'mode' => $employee ? 'employee' : 'all',
+            'stage_labels' => SalesLead::STAGES,
+            'priority_labels' => SalesLead::PRIORITIES,
         ];
     }
 
@@ -117,22 +154,21 @@ class SalesGroupPrintPdfService
             $groupSlug = 'group-'.$group->id;
         }
 
-        $date = now()->format('Ymd');
+        $date = now()->format('Ymd-His');
 
         if ($employee) {
-            $empSlug = Str::slug($employee->name, '-');
+            $empSlug = Str::slug((string) $employee->name, '-');
             if ($empSlug === '') {
                 $empSlug = 'emp-'.$employee->id;
             }
 
-            // اسم واضح للتحميل: يحتوي اسم الموظف عند الإمكان + المعرّفات لضمان التفرد
             return sprintf('sales-group-%s-%s-%s.pdf', $groupSlug, $empSlug, $date);
         }
 
         return sprintf('sales-group-%s-all-%s.pdf', $groupSlug, $date);
     }
 
-    private function renderHtmlToPdf(string $html, string $title): string
+    private function renderHtmlToPdf(string $html, string $title, bool $landscape = true): string
     {
         $html = preg_replace(
             '/font-family\s*:\s*[^;]+;/i',
@@ -142,26 +178,37 @@ class SalesGroupPrintPdfService
 
         $html = preg_replace('/<img\b[^>]*>/i', '', $html) ?? $html;
 
+        // إزالة خصائص CSS قد تسبب أعطالاً على بعض بيئات الاستضافة
+        $html = preg_replace('/border-radius\s*:\s*[^;]+;/i', '', $html) ?? $html;
+        $html = preg_replace('/letter-spacing\s*:\s*[^;]+;/i', '', $html) ?? $html;
+
         $mpdf = MpdfArabic::make([
             'default_font' => 'dejavusans',
-            'format' => 'A4-L',
-            'orientation' => 'L',
-            'margin_left' => 10,
-            'margin_right' => 10,
-            'margin_top' => 10,
-            'margin_bottom' => 12,
+            'format' => $landscape ? 'A4-L' : 'A4',
+            'orientation' => $landscape ? 'L' : 'P',
+            'margin_left' => 8,
+            'margin_right' => 8,
+            'margin_top' => 8,
+            'margin_bottom' => 14,
+            'margin_header' => 4,
+            'margin_footer' => 6,
         ]);
-        $mpdf->SetTitle($title);
-        $mpdf->SetAuthor(config('app.name', 'Mindlytics'));
+
+        $safeTitle = mb_substr(preg_replace('/[^\p{L}\p{N}\s\-_]+/u', ' ', $title) ?? $title, 0, 120);
+        $mpdf->SetTitle($safeTitle !== '' ? $safeTitle : 'Sales Group Print');
+        $mpdf->SetAuthor((string) config('app.name', 'Mindlytics'));
+
+        $printed = e(now()->format('Y-m-d H:i'));
         $mpdf->SetHTMLFooter('
-            <table width="100%" style="font-size:7.5pt;color:#64748b;border-top:1px solid #e2e8f0;padding-top:4px;">
+            <table width="100%" style="font-size:7pt;color:#64748b;border-top:1px solid #cbd5e1;">
                 <tr>
-                    <td width="33%" style="text-align:right;">Mindlytics Academy — نموذج متابعة ميداني</td>
-                    <td width="34%" style="text-align:center;">صفحة {PAGENO} من {nbpg}</td>
-                    <td width="33%" style="text-align:left;direction:ltr;">'.e(now()->format('Y-m-d H:i')).'</td>
+                    <td width="40%" style="text-align:right;">Mindlytics - نموذج متابعة ميداني</td>
+                    <td width="20%" style="text-align:center;">{PAGENO} / {nbpg}</td>
+                    <td width="40%" style="text-align:left; direction:ltr;">'.$printed.'</td>
                 </tr>
             </table>
         ');
+
         $mpdf->WriteHTML($html);
 
         return (string) $mpdf->Output('', 'S');
