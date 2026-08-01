@@ -158,9 +158,11 @@ class SalesLeadGroupController extends Controller
                 'message' => $e->getMessage(),
             ]);
 
+            $detail = trim(mb_substr($e->getMessage(), 0, 300));
+
             return redirect()
                 ->route('employee.sales.groups.show', $group)
-                ->with('error', 'تعذّر إنشاء ملف PDF. حاول مرة أخرى.');
+                ->with('error', 'تعذّر إنشاء ملف PDF'.($detail !== '' ? ': '.$detail : '. حاول مرة أخرى.'));
         }
     }
 
