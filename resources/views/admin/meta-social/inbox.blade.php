@@ -9,6 +9,14 @@
     $replyUrl = $convId ? route('admin.meta-social.inbox.reply', $convId) : '';
     $pollUrl = route('admin.meta-social.inbox.poll', ['page' => $pageId, 'conversation' => $convId]);
     $canUse = (bool) ($connected ?? ($connectionMeta['can_use'] ?? false));
+    $crmReady = (bool) ($crmReady ?? false);
+    $crmUrls = $convId ? [
+        'assign' => route('admin.meta-social.inbox.assign', $convId),
+        'contact' => route('admin.meta-social.inbox.contact', $convId),
+        'createLead' => route('admin.meta-social.inbox.create-lead', $convId),
+        'linkLead' => route('admin.meta-social.inbox.link-lead', $convId),
+        'enrich' => route('admin.meta-social.inbox.enrich', $convId),
+    ] : [];
 @endphp
 
 <div class="wa-inbox-page flex flex-col min-h-0 overflow-hidden gap-2 wa-inbox-immersive admin-wa-inbox sm-meta-inbox" x-data="metaSocialInbox()" x-cloak>
@@ -74,37 +82,67 @@
                     <h3 class="text-sm font-black text-slate-800">المحادثات</h3>
                     <span class="text-[10px] font-bold text-slate-500 bg-white/80 border border-slate-200/60 rounded-full px-2 py-0.5 tabular-nums">{{ $conversations->count() }} محادثة</span>
                 </div>
-                @if($pages->isNotEmpty())
-                <div class="px-2.5 pb-2.5">
-                    <select class="w-full text-xs rounded-xl border-0 bg-white px-3 py-2.5 shadow-sm ring-1 ring-slate-200/60 focus:ring-2 focus:ring-sky-400 focus:outline-none"
-                            onchange="if(this.value) window.location='{{ route('admin.meta-social.inbox.index') }}?page='+this.value; else window.location='{{ route('admin.meta-social.inbox.index') }}'">
+                <div class="px-2.5 pb-2.5 space-y-1.5">
+                    @if($pages->isNotEmpty())
+                    <select class="w-full text-xs rounded-xl border-0 bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200/60 focus:ring-2 focus:ring-sky-400 focus:outline-none"
+                            onchange="metaInboxNav({page: this.value})">
                         <option value="">كل الصفحات</option>
                         @foreach($pages as $p)
                             <option value="{{ $p->id }}" @selected($pageId == $p->id)>{{ $p->page_name }}</option>
                         @endforeach
                     </select>
+                    @endif
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <select class="w-full text-[11px] rounded-xl border-0 bg-white px-2 py-2 shadow-sm ring-1 ring-slate-200/60"
+                                onchange="metaInboxNav({platform: this.value})">
+                            <option value="">كل المنصات</option>
+                            <option value="messenger" @selected(($platformFilter ?? '') === 'messenger')>Messenger</option>
+                            <option value="instagram" @selected(($platformFilter ?? '') === 'instagram')>Instagram</option>
+                        </select>
+                        <select class="w-full text-[11px] rounded-xl border-0 bg-white px-2 py-2 shadow-sm ring-1 ring-slate-200/60"
+                                onchange="metaInboxNav({assigned_to: this.value})">
+                            <option value="">كل الموظفين</option>
+                            <option value="unassigned" @selected(($assignedFilter ?? '') === 'unassigned')>غير معيّن</option>
+                            @foreach(($agents ?? []) as $agent)
+                                <option value="{{ $agent->id }}" @selected((string) ($assignedFilter ?? '') === (string) $agent->id)>{{ $agent->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                 </div>
-                @endif
             </div>
             <div class="wa-conv-list">
                 @forelse($conversations as $c)
-                    <a href="{{ route('admin.meta-social.inbox.index', array_filter(['page' => $pageId ?: null, 'conversation' => $c->id])) }}"
+                    <a href="{{ route('admin.meta-social.inbox.index', array_filter(['page' => $pageId ?: null, 'conversation' => $c->id, 'platform' => $platformFilter ?: null, 'assigned_to' => $assignedFilter ?: null])) }}"
                        class="wa-conv-item block w-full text-right px-3 py-3 flex gap-3 items-center border-b border-slate-100/80 transition-colors hover:bg-[#f5f6f6] {{ $convId == $c->id ? 'wa-conv-item--active' : '' }}">
                         <div class="min-w-0 flex-1 order-2">
                             <div class="flex items-baseline justify-between gap-2 mb-0.5">
                                 <p class="font-bold text-slate-900 truncate text-[13px] leading-tight">{{ $c->displayName() }}</p>
                                 <span class="text-[10px] text-slate-400 shrink-0 whitespace-nowrap tabular-nums">{{ $c->last_message_at?->diffForHumans(null, true) ?? '' }}</span>
                             </div>
-                            <p class="text-[10px] text-slate-500 truncate mb-1">{{ $c->platformLabel() }} · {{ $c->page?->page_name }}</p>
+                            <p class="text-[10px] text-slate-500 truncate mb-1">
+                                {{ $c->platformLabel() }} · {{ $c->page?->page_name }}
+                                @if($c->assignee)
+                                    · <span class="text-sky-700 font-semibold">{{ $c->assignee->name }}</span>
+                                @endif
+                            </p>
                             <div class="flex items-center justify-between gap-2">
                                 <p class="text-[12px] text-slate-500 truncate leading-snug flex-1">{{ $c->last_message_preview ?: '—' }}</p>
-                                @if($c->unread_count > 0)
-                                    <span class="inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-sky-500 text-white text-[10px] font-bold shrink-0 shadow-sm">{{ $c->unread_count }}</span>
-                                @endif
+                                <div class="flex items-center gap-1 shrink-0">
+                                    @if($c->sales_lead_id)
+                                        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">CRM</span>
+                                    @endif
+                                    @if($c->unread_count > 0)
+                                        <span class="inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-sky-500 text-white text-[10px] font-bold shadow-sm">{{ $c->unread_count }}</span>
+                                    @endif
+                                </div>
                             </div>
                         </div>
-                        <div class="w-12 h-12 rounded-full shrink-0 order-1 flex items-center justify-center font-bold text-sm shadow-sm {{ $convId == $c->id ? 'bg-sky-500 text-white' : 'bg-sky-100 text-sky-700' }}">
-                            {{ mb_substr($c->displayName(), 0, 1) }}
+                        <div class="w-12 h-12 rounded-full shrink-0 order-1 flex items-center justify-center font-bold text-sm shadow-sm overflow-hidden {{ $convId == $c->id ? 'bg-sky-500 text-white' : 'bg-sky-100 text-sky-700' }}">
+                            @if($c->participant_profile_pic)
+                                <img src="{{ $c->participant_profile_pic }}" alt="" class="w-full h-full object-cover">
+                            @else
+                                {{ mb_substr($c->displayName(), 0, 1) }}
+                            @endif
                         </div>
                     </a>
                 @empty
@@ -134,9 +172,15 @@
                             {{ mb_substr($activeConversation->displayName(), 0, 1) }}
                         </div>
                         <div class="min-w-0 flex-1">
-                            <h3 class="font-bold text-slate-900 truncate text-sm">{{ $activeConversation->displayName() }}</h3>
+                            <h3 class="font-bold text-slate-900 truncate text-sm" x-text="crm?.display_name || @js($activeConversation->displayName())">{{ $activeConversation->displayName() }}</h3>
                             <p class="text-xs text-slate-500 truncate">
                                 {{ $activeConversation->platformLabel() }} · {{ $activeConversation->page?->page_name }}
+                                @if($activeConversation->assignee)
+                                    · <span class="text-sky-700 font-semibold">{{ $activeConversation->assignee->name }}</span>
+                                @endif
+                                @if($activeConversation->phone)
+                                    · <span dir="ltr">{{ $activeConversation->phone }}</span>
+                                @endif
                             </p>
                         </div>
                         @if($activeConversation->platform === 'instagram')
@@ -200,6 +244,8 @@
                 </div>
             @endif
         </section>
+
+        @include('admin.meta-social._crm_panel')
     </div>
 </div>
 
@@ -247,8 +293,14 @@
     }
     @media (min-width: 1024px) {
         .sm-meta-inbox .wa-inbox-shell {
-            grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+            grid-template-columns: minmax(260px, 300px) minmax(0, 1fr) minmax(260px, 300px);
         }
+    }
+    .sm-crm-sidebar {
+        display: none;
+    }
+    @media (min-width: 1024px) {
+        .sm-crm-sidebar { display: flex; }
     }
     .wa-inbox-col { min-height: 0; min-width: 0; max-height: 100%; overflow: hidden; }
     .wa-conv-sidebar {
@@ -313,6 +365,17 @@
 
 @push('scripts')
 <script>
+function metaInboxNav(patch) {
+    const params = new URLSearchParams(window.location.search);
+    Object.entries(patch || {}).forEach(([k, v]) => {
+        if (v === undefined || v === null || v === '') params.delete(k);
+        else params.set(k, v);
+    });
+    params.delete('conversation');
+    const qs = params.toString();
+    window.location = @json(route('admin.meta-social.inbox.index')) + (qs ? ('?' + qs) : '');
+}
+
 function metaSocialInbox() {
     return {
         conversationId: {{ $convId ?: 'null' }},
@@ -323,12 +386,93 @@ function metaSocialInbox() {
         pollUrl: @json($pollUrl),
         csrf: @json(csrf_token()),
         lastMessageCount: {{ $messages->count() }},
+        lastMessageId: {{ $messages->last()?->id ?: 0 }},
+        crm: @json($crmPayload),
+        crmUrls: @json($crmUrls),
+        contactName: @json($crmPayload['display_name'] ?? $activeConversation?->displayName() ?? ''),
+        contactPhone: @json($crmPayload['phone'] ?? $activeConversation?->phone ?? ''),
+        contactEmail: @json($crmPayload['email'] ?? $activeConversation?->email ?? ''),
+        contactNotes: @json($crmPayload['notes'] ?? $activeConversation?->notes ?? ''),
+        assigneeId: @json($crmPayload['assigned_to'] ? (string) $crmPayload['assigned_to'] : ''),
+        linkLeadId: '',
+        crmSaving: false,
+        crmError: '',
+        crmOk: '',
         init() {
             const el = document.getElementById('sm-chat-messages');
             if (el) el.scrollTop = el.scrollHeight;
             if (this.conversationId) {
                 setInterval(() => this.poll(), 8000);
             }
+        },
+        applyCrm(crm) {
+            if (!crm) return;
+            this.crm = crm;
+            this.contactName = crm.display_name || '';
+            this.contactPhone = crm.phone || '';
+            this.contactEmail = crm.email || '';
+            this.contactNotes = crm.notes || '';
+            this.assigneeId = crm.assigned_to ? String(crm.assigned_to) : '';
+        },
+        async postJson(url, body) {
+            this.crmSaving = true;
+            this.crmError = '';
+            this.crmOk = '';
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': this.csrf,
+                    },
+                    body: JSON.stringify(body || {}),
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    this.crmError = data.error || 'فشلت العملية';
+                    return null;
+                }
+                if (data.crm) this.applyCrm(data.crm);
+                this.crmOk = 'تم الحفظ';
+                return data;
+            } catch (e) {
+                this.crmError = 'خطأ في الاتصال';
+                return null;
+            } finally {
+                this.crmSaving = false;
+            }
+        },
+        async saveContact() {
+            if (!this.crmUrls.contact) return;
+            await this.postJson(this.crmUrls.contact, {
+                name: this.contactName,
+                phone: this.contactPhone,
+                email: this.contactEmail,
+                notes: this.contactNotes,
+            });
+        },
+        async assignAgent() {
+            if (!this.crmUrls.assign || !this.assigneeId) return;
+            await this.postJson(this.crmUrls.assign, { assigned_to: Number(this.assigneeId) });
+        },
+        async createLead() {
+            if (!this.crmUrls.createLead) return;
+            const data = await this.postJson(this.crmUrls.createLead, {
+                name: this.contactName,
+                phone: this.contactPhone,
+                email: this.contactEmail,
+                assigned_to: this.assigneeId ? Number(this.assigneeId) : null,
+            });
+            if (data?.lead_id) this.crmOk = 'تم إنشاء Lead #' + data.lead_id;
+        },
+        async linkLead() {
+            if (!this.crmUrls.linkLead || !this.linkLeadId) return;
+            await this.postJson(this.crmUrls.linkLead, { sales_lead_id: Number(this.linkLeadId) });
+        },
+        async enrichProfile() {
+            if (!this.crmUrls.enrich) return;
+            await this.postJson(this.crmUrls.enrich, {});
         },
         async sendReply() {
             if (!this.replyUrl || !this.replyBody.trim() || this.sending) return;
@@ -358,9 +502,13 @@ function metaSocialInbox() {
         async poll() {
             if (!this.pollUrl) return;
             try {
-                const res = await fetch(this.pollUrl, { headers: { 'Accept': 'application/json' } });
+                const url = this.pollUrl + (this.pollUrl.includes('?') ? '&' : '?') + 'after_id=' + (this.lastMessageId || 0);
+                const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
                 const data = await res.json();
-                if (data.success && typeof data.message_count === 'number' && data.message_count > this.lastMessageCount) {
+                if (!data.success) return;
+                if (data.crm) this.applyCrm(data.crm);
+                if (typeof data.message_count === 'number' && data.message_count > this.lastMessageCount) {
+                    // رسائل جديدة: أعد التحميل للحفاظ على ترتيب ثابت ومنظم
                     location.reload();
                 }
             } catch (e) {}

@@ -23,12 +23,16 @@ class MetaSocialConversation extends Model
         'participant_name',
         'participant_username',
         'participant_profile_pic',
+        'phone',
+        'email',
+        'notes',
         'thread_id',
         'last_message_at',
         'last_message_preview',
         'unread_count',
         'status',
         'assigned_to',
+        'sales_lead_id',
         'meta',
     ];
 
@@ -46,6 +50,11 @@ class MetaSocialConversation extends Model
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function salesLead(): BelongsTo
+    {
+        return $this->belongsTo(SalesLead::class, 'sales_lead_id');
     }
 
     public function messages(): HasMany

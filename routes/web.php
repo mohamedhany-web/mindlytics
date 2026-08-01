@@ -1953,6 +1953,11 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/inbox', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'index'])->name('inbox.index');
             Route::get('/inbox/poll', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'poll'])->name('inbox.poll');
             Route::post('/inbox/{conversation}/reply', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'reply'])->name('inbox.reply');
+            Route::post('/inbox/{conversation}/assign', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'assign'])->name('inbox.assign');
+            Route::post('/inbox/{conversation}/contact', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'updateContact'])->name('inbox.contact');
+            Route::post('/inbox/{conversation}/create-lead', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'createLead'])->name('inbox.create-lead');
+            Route::post('/inbox/{conversation}/link-lead', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'linkLead'])->name('inbox.link-lead');
+            Route::post('/inbox/{conversation}/enrich', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'enrich'])->name('inbox.enrich');
         });
 
         // إدارة الرسائل والتقارير

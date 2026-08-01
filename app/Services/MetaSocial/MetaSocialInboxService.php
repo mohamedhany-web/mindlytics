@@ -5,8 +5,8 @@ namespace App\Services\MetaSocial;
 use App\Models\MetaSocialConversation;
 use App\Models\MetaSocialMessage;
 use App\Models\MetaSocialPage;
-use App\Support\MetaSocialSettings;
 use Carbon\Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 
@@ -14,6 +14,7 @@ class MetaSocialInboxService
 {
     public function __construct(
         private MetaSocialGraphService $graph,
+        private MetaSocialCrmService $crm,
     ) {}
 
     public function tablesReady(): bool
@@ -37,7 +38,7 @@ class MetaSocialInboxService
         try {
             $response = Http::timeout(45)->get("{$this->graph->graphUrl()}/{$page->page_id}/conversations", [
                 'platform' => $graphPlatform,
-                'fields' => 'id,updated_time,participants,snippet,unread_count',
+                'fields' => 'id,updated_time,participants,snippet,unread_count,messages.limit(30){id,message,from,created_time,attachments}',
                 'limit' => 50,
                 'access_token' => $token,
             ]);
@@ -48,7 +49,8 @@ class MetaSocialInboxService
 
             $synced = 0;
             foreach ($response->json('data') ?? [] as $thread) {
-                $this->upsertConversationFromThread($page, $platform, $thread);
+                $conversation = $this->upsertConversationFromThread($page, $platform, $thread);
+                $this->ingestThreadMessages($conversation, $page, $thread);
                 $synced++;
             }
 
@@ -66,22 +68,89 @@ class MetaSocialInboxService
         $participant = $this->resolveParticipant($thread, (string) $page->page_id);
         $updated = isset($thread['updated_time']) ? Carbon::parse($thread['updated_time']) : now();
 
-        return MetaSocialConversation::query()->updateOrCreate(
-            [
-                'meta_social_page_id' => $page->id,
-                'platform' => $platform,
-                'participant_id' => $participant['id'],
-            ],
-            [
-                'participant_name' => $participant['name'],
-                'thread_id' => (string) ($thread['id'] ?? ''),
-                'last_message_at' => $updated,
-                'last_message_preview' => mb_substr((string) ($thread['snippet'] ?? ''), 0, 500),
-                'unread_count' => (int) ($thread['unread_count'] ?? 0),
-                'status' => MetaSocialConversation::STATUS_OPEN,
-                'meta' => ['thread' => $thread],
-            ],
-        );
+        $conversation = MetaSocialConversation::query()->firstOrNew([
+            'meta_social_page_id' => $page->id,
+            'platform' => $platform,
+            'participant_id' => $participant['id'],
+        ]);
+
+        $conversation->fill([
+            'thread_id' => (string) ($thread['id'] ?? $conversation->thread_id ?? ''),
+            'last_message_at' => $updated,
+            'last_message_preview' => mb_substr((string) ($thread['snippet'] ?? $conversation->last_message_preview ?? ''), 0, 500),
+            'unread_count' => (int) ($thread['unread_count'] ?? $conversation->unread_count ?? 0),
+            'status' => $conversation->status ?: MetaSocialConversation::STATUS_OPEN,
+            'meta' => array_merge($conversation->meta ?? [], ['thread' => $thread]),
+        ]);
+
+        // لا نمسح الاسم الموجود بقيمة فارغة من المزامنة
+        if (! empty($participant['name'])) {
+            $conversation->participant_name = $participant['name'];
+        }
+
+        $conversation->save();
+
+        return $conversation;
+    }
+
+    /**
+     * @param  array<string, mixed>  $thread
+     */
+    public function ingestThreadMessages(MetaSocialConversation $conversation, MetaSocialPage $page, array $thread): void
+    {
+        $messages = $thread['messages']['data'] ?? [];
+        if (! is_array($messages) || $messages === []) {
+            return;
+        }
+
+        // Graph يرجع الأحدث أولاً — نخزّن بالترتيب الزمني التصاعدي
+        $ordered = collect($messages)->sortBy(function ($m) {
+            return isset($m['created_time']) ? Carbon::parse($m['created_time'])->timestamp : 0;
+        })->values();
+
+        foreach ($ordered as $msg) {
+            if (! is_array($msg)) {
+                continue;
+            }
+
+            $mid = (string) ($msg['id'] ?? '');
+            if ($mid !== '' && MetaSocialMessage::query()->where('meta_message_id', $mid)->exists()) {
+                continue;
+            }
+
+            $fromId = (string) ($msg['from']['id'] ?? '');
+            $direction = ($fromId !== '' && $fromId === (string) $page->page_id)
+                ? MetaSocialMessage::DIRECTION_OUTBOUND
+                : MetaSocialMessage::DIRECTION_INBOUND;
+
+            $body = (string) ($msg['message'] ?? '');
+            $type = 'text';
+            $attachmentUrl = null;
+            if (isset($msg['attachments']['data'][0]['image_data']['url'])) {
+                $type = 'image';
+                $attachmentUrl = $msg['attachments']['data'][0]['image_data']['url'];
+            } elseif (isset($msg['attachments']['data'][0]['file_url'])) {
+                $type = 'file';
+                $attachmentUrl = $msg['attachments']['data'][0]['file_url'];
+            }
+
+            $sentAt = isset($msg['created_time']) ? Carbon::parse($msg['created_time']) : now();
+
+            try {
+                MetaSocialMessage::query()->create([
+                    'meta_social_conversation_id' => $conversation->id,
+                    'meta_message_id' => $mid !== '' ? $mid : null,
+                    'direction' => $direction,
+                    'message_type' => $type,
+                    'body' => $body,
+                    'attachment_url' => $attachmentUrl,
+                    'sent_at' => $sentAt,
+                    'meta' => ['graph_message' => $msg],
+                ]);
+            } catch (QueryException) {
+                // unique race — تجاهل التكرار
+            }
+        }
     }
 
     /**
@@ -106,20 +175,33 @@ class MetaSocialInboxService
             return ['success' => false, 'error' => $result['error'] ?? 'فشل الإرسال'];
         }
 
-        $message = MetaSocialMessage::query()->create([
-            'meta_social_conversation_id' => $conversation->id,
-            'meta_message_id' => $result['message_id'] ?? null,
-            'direction' => MetaSocialMessage::DIRECTION_OUTBOUND,
-            'message_type' => 'text',
-            'body' => $body,
-            'sent_by_user_id' => $userId,
-            'sent_at' => now(),
-        ]);
+        $metaMessageId = $result['message_id'] ?? null;
+        if ($metaMessageId && MetaSocialMessage::query()->where('meta_message_id', $metaMessageId)->exists()) {
+            $message = MetaSocialMessage::query()->where('meta_message_id', $metaMessageId)->first();
+        } else {
+            try {
+                $message = MetaSocialMessage::query()->create([
+                    'meta_social_conversation_id' => $conversation->id,
+                    'meta_message_id' => $metaMessageId,
+                    'direction' => MetaSocialMessage::DIRECTION_OUTBOUND,
+                    'message_type' => 'text',
+                    'body' => $body,
+                    'sent_by_user_id' => $userId,
+                    'sent_at' => now(),
+                ]);
+            } catch (QueryException) {
+                $message = MetaSocialMessage::query()->where('meta_message_id', $metaMessageId)->first();
+            }
+        }
 
         $conversation->update([
             'last_message_at' => now(),
             'last_message_preview' => mb_substr($body, 0, 500),
         ]);
+
+        if ($this->crm->crmReady()) {
+            $this->crm->logOutboundToSalesLead($conversation, $body, $userId);
+        }
 
         return ['success' => true, 'message' => $message];
     }
@@ -144,6 +226,11 @@ class MetaSocialInboxService
             return null;
         }
 
+        // تجاهل echo للرسائل الصادرة من الصفحة لتجنب التكرار
+        if (! empty($messagePayload['is_echo'])) {
+            return null;
+        }
+
         $conversation = MetaSocialConversation::query()->firstOrCreate(
             [
                 'meta_social_page_id' => $page->id,
@@ -155,6 +242,11 @@ class MetaSocialInboxService
                 'status' => MetaSocialConversation::STATUS_OPEN,
             ],
         );
+
+        if (! $conversation->participant_name && $this->crm->crmReady()) {
+            $this->crm->enrichParticipantProfile($conversation);
+            $conversation->refresh();
+        }
 
         $body = (string) ($messagePayload['text'] ?? '');
         $type = 'text';
@@ -175,16 +267,20 @@ class MetaSocialInboxService
             ? Carbon::createFromTimestampMs((int) $messagingEvent['timestamp'])
             : now();
 
-        $message = MetaSocialMessage::query()->create([
-            'meta_social_conversation_id' => $conversation->id,
-            'meta_message_id' => $metaMessageId ?: null,
-            'direction' => MetaSocialMessage::DIRECTION_INBOUND,
-            'message_type' => $type,
-            'body' => $body,
-            'attachment_url' => $attachmentUrl,
-            'sent_at' => $sentAt,
-            'meta' => ['event' => $messagingEvent],
-        ]);
+        try {
+            $message = MetaSocialMessage::query()->create([
+                'meta_social_conversation_id' => $conversation->id,
+                'meta_message_id' => $metaMessageId ?: null,
+                'direction' => MetaSocialMessage::DIRECTION_INBOUND,
+                'message_type' => $type,
+                'body' => $body,
+                'attachment_url' => $attachmentUrl,
+                'sent_at' => $sentAt,
+                'meta' => ['event' => $messagingEvent],
+            ]);
+        } catch (QueryException) {
+            return null;
+        }
 
         $conversation->update([
             'last_message_at' => $sentAt,
