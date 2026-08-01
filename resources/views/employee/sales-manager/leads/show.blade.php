@@ -39,6 +39,8 @@
             <span>{{ session('success') }}</span>
         </div>
     @endif
+
+    @include('employee.sales._pipeline_journey', ['lead' => $lead, 'pipelineReadonly' => true])
     @if($errors->any())
         <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
             <ul class="list-disc pe-5 space-y-1">
@@ -132,7 +134,7 @@
                         $done = $i < $currentStageIndex;
                         $current = $i === $currentStageIndex;
                         $lost = $lead->stage === 'lost';
-                        $won = $lead->stage === 'won';
+                        $won = $lead->stage === \App\Models\SalesLead::WON_STAGE;
                         if ($lost && $stageKey !== 'lost') {
                             $done = false;
                             $current = false;
@@ -396,7 +398,7 @@
             </section>
 
             {{-- Win / CSAT --}}
-            @if($lead->stage === 'won')
+            @if($lead->stage === \App\Models\SalesLead::WON_STAGE)
                 <section class="rounded-2xl bg-white border border-emerald-200 shadow-sm overflow-hidden">
                     <div class="px-4 py-3 border-b border-emerald-100 bg-emerald-50/70">
                         <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">

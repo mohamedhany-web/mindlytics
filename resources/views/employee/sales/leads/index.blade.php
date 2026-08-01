@@ -48,7 +48,7 @@
         'today' => ['label' => 'متابعات اليوم', 'url' => route('employee.sales.leads.index', ['follow_up' => 'today', 'sort' => 'follow_up']), 'count' => $quickCounts['today'] ?? 0],
         'overdue' => ['label' => 'متأخرة', 'url' => route('employee.sales.leads.index', ['follow_up' => 'overdue', 'sort' => 'follow_up']), 'count' => $quickCounts['overdue'] ?? 0],
         'stale' => ['label' => 'بلا تواصل', 'url' => route('employee.sales.leads.index', ['stale' => 1, 'sort' => 'last_contact']), 'count' => $quickCounts['stale'] ?? 0],
-        'new' => ['label' => 'جديد', 'url' => route('employee.sales.leads.index', ['stage' => 'new']), 'count' => $quickCounts['new'] ?? 0],
+        'new_lead' => ['label' => 'New Lead', 'url' => route('employee.sales.leads.index', ['stage' => 'new_lead']), 'count' => $quickCounts['new'] ?? 0],
     ];
 
     $redirectTo = url()->full();
@@ -261,7 +261,10 @@
                                 @csrf
                                 <input type="hidden" name="type" value="call">
                                 <input type="hidden" name="redirect_to" value="{{ $redirectTo }}">
-                                <button type="submit" class="act-btn" title="سجّل مكالمة"><i class="fas fa-phone-volume"></i></button>
+                                <button type="button" class="act-btn" title="سجّل مكالمة"
+                                        onclick="openCallOutcomeModal({{ $lead->id }}, @js($lead->name), @js(route('employee.sales.leads.quick-activity', $lead)))">
+                                    <i class="fas fa-phone-volume"></i>
+                                </button>
                             </form>
                             <form method="post" action="{{ route('employee.sales.leads.quick-activity', $lead) }}" class="inline">
                                 @csrf
@@ -328,6 +331,42 @@
         </form>
     </div>
 </div>
+{{-- مودال نتيجة المكالمة --}}
+<div id="call-outcome-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/40">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onclick="event.stopPropagation()">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h3 class="font-bold text-slate-900">تسجيل مكالمة</h3>
+                <p class="text-xs text-slate-500 mt-0.5" id="co-lead-name"></p>
+            </div>
+            <button type="button" onclick="closeCallOutcomeModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fas fa-times"></i></button>
+        </div>
+        <form method="post" id="co-form" class="p-5 space-y-3">
+            @csrf
+            <input type="hidden" name="type" value="call">
+            <input type="hidden" name="redirect_to" value="{{ $redirectTo }}">
+            <input type="hidden" name="apply_stage" value="1">
+            <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">نتيجة المكالمة <span class="text-rose-500">*</span></label>
+                <select name="outcome" id="co-outcome" required class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2.5 text-sm font-semibold">
+                    <option value="">— اختر —</option>
+                    @foreach(\App\Models\SalesActivity::OUTCOMES as $k => $label)
+                        <option value="{{ $k }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">ملاحظة (اختياري)</label>
+                <input type="text" name="body" maxlength="500" placeholder="ملخص سريع…"
+                       class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+            </div>
+            <div class="flex gap-2 justify-end pt-1">
+                <button type="button" onclick="closeCallOutcomeModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700">إلغاء</button>
+                <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold">حفظ المكالمة</button>
+            </div>
+        </form>
+    </div>
+</div>
 <script>
 function openNextFollowModal(leadId, name, datetime) {
     var modal = document.getElementById('next-follow-modal');
@@ -345,6 +384,23 @@ function closeNextFollowModal() {
 }
 document.getElementById('next-follow-modal').addEventListener('click', function (e) {
     if (e.target === this) closeNextFollowModal();
+});
+function openCallOutcomeModal(leadId, name, actionUrl) {
+    var modal = document.getElementById('call-outcome-modal');
+    var form = document.getElementById('co-form');
+    form.action = actionUrl;
+    document.getElementById('co-lead-name').textContent = name || '';
+    document.getElementById('co-outcome').value = '';
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+function closeCallOutcomeModal() {
+    var modal = document.getElementById('call-outcome-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+document.getElementById('call-outcome-modal').addEventListener('click', function (e) {
+    if (e.target === this) closeCallOutcomeModal();
 });
 </script>
 @endsection

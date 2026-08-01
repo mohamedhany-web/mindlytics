@@ -21,8 +21,8 @@ class SalesCategoryStatsService
             $total = (int) (clone $base)->count();
             $open = (int) (clone $base)->openPipeline()->count();
             $createdMonth = (int) (clone $base)->whereBetween('created_at', [$start, $end])->count();
-            $wonMonth = (int) (clone $base)->where('stage', 'won')->whereBetween('closed_at', [$start, $end])->count();
-            $revenueMonth = (float) (clone $base)->where('stage', 'won')->whereBetween('closed_at', [$start, $end])->sum('expected_value');
+            $wonMonth = (int) (clone $base)->where('stage', SalesLead::WON_STAGE)->whereBetween('closed_at', [$start, $end])->count();
+            $revenueMonth = (float) (clone $base)->where('stage', SalesLead::WON_STAGE)->whereBetween('closed_at', [$start, $end])->sum('expected_value');
             $overdue = (int) (clone $base)->openPipeline()
                 ->whereNotNull('next_follow_up_at')
                 ->where('next_follow_up_at', '<', now())

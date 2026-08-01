@@ -144,6 +144,19 @@
                 <i class="fas fa-users-cog text-base"></i>
                 <span>مركز الفريق</span>
             </a>
+            <a href="{{ route('employee.sales-manager.pipeline') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.pipeline') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-project-diagram text-base"></i>
+                <span>Pipeline الرحلة</span>
+            </a>
+
+            <a href="{{ route('employee.sales-manager.live-board') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.live-board') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-tv text-base"></i>
+                <span>اللوحة الحية SOS</span>
+            </a>
             <a href="{{ route('employee.sales-manager.leads.index') }}"
                class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.leads.*') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
                @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">

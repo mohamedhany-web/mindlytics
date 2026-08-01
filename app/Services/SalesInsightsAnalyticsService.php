@@ -77,7 +77,7 @@ class SalesInsightsAnalyticsService
 
             $c = (int) SalesLead::query()->whereBetween('created_at', [$start, $end])->count();
             $w = (int) SalesLead::query()
-                ->where('stage', 'won')
+                ->where('stage', SalesLead::WON_STAGE)
                 ->whereNotNull('closed_at')
                 ->whereBetween('closed_at', [$start, $end])
                 ->count();
@@ -87,7 +87,7 @@ class SalesInsightsAnalyticsService
                 ->whereBetween('closed_at', [$start, $end])
                 ->count();
             $rev = (float) SalesLead::query()
-                ->where('stage', 'won')
+                ->where('stage', SalesLead::WON_STAGE)
                 ->whereNotNull('closed_at')
                 ->whereBetween('closed_at', [$start, $end])
                 ->sum('expected_value');
@@ -214,7 +214,18 @@ class SalesInsightsAnalyticsService
      */
     private function pipelineFunnel(): array
     {
-        $stages = ['new', 'contacted', 'qualified', 'proposal'];
+        $stages = [
+            'new_lead',
+            'first_contact',
+            'no_answer',
+            'connected',
+            'qualification',
+            'interested',
+            'objection',
+            'follow_up_scheduled',
+            'offer_sent',
+            'payment_pending',
+        ];
         $labels = [];
         $values = [];
 
@@ -225,9 +236,9 @@ class SalesInsightsAnalyticsService
                 ->count();
         }
 
-        $labels[] = 'فوز (هذا الشهر)';
+        $labels[] = 'Enrollment (هذا الشهر)';
         $values[] = (int) SalesLead::query()
-            ->where('stage', 'won')
+            ->where('stage', SalesLead::WON_STAGE)
             ->whereNotNull('closed_at')
             ->whereBetween('closed_at', [now()->startOfMonth(), now()->endOfMonth()])
             ->count();
@@ -304,7 +315,7 @@ class SalesInsightsAnalyticsService
 
             $wins[] = (int) SalesLead::query()
                 ->forAssignee($userId)
-                ->where('stage', 'won')
+                ->where('stage', SalesLead::WON_STAGE)
                 ->whereNotNull('closed_at')
                 ->whereBetween('closed_at', [$dayStart, $dayEnd])
                 ->count();
@@ -388,7 +399,7 @@ class SalesInsightsAnalyticsService
     private function academyConversionsFromWonLeads(Carbon $start, Carbon $end): int
     {
         $wonLeads = SalesLead::query()
-            ->where('stage', 'won')
+            ->where('stage', SalesLead::WON_STAGE)
             ->whereBetween('closed_at', [$start, $end])
             ->whereNotNull('email')
             ->where('email', '!=', '')

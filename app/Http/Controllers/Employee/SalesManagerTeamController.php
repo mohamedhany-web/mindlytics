@@ -44,7 +44,7 @@ class SalesManagerTeamController extends Controller
         $leadStats = [
             'total' => SalesLead::query()->where('assigned_to', $employee->id)->count(),
             'open' => (clone $open)->count(),
-            'won' => SalesLead::query()->where('assigned_to', $employee->id)->where('stage', 'won')->count(),
+            'won' => SalesLead::query()->where('assigned_to', $employee->id)->where('stage', SalesLead::WON_STAGE)->count(),
             'followups_today' => (clone $open)
                 ->whereNotNull('next_follow_up_at')
                 ->whereDate('next_follow_up_at', today())

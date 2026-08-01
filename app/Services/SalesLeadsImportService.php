@@ -106,7 +106,7 @@ class SalesLeadsImportService
                     'expected_value' => $this->parseNumber($row[$map['expected_value'] ?? ''] ?? null),
                     'notes' => isset($map['notes']) ? trim((string) ($row[$map['notes']] ?? '')) ?: null : null,
                     'source' => $source,
-                    'stage' => 'new',
+                    'stage' => 'new_lead',
                     'priority' => $this->parsePriority($row[$map['priority'] ?? ''] ?? null, $defaultPriority),
                     'next_follow_up_at' => now()->addDay()->setTime(10, 0),
                 ]);

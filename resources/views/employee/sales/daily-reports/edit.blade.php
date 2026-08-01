@@ -102,6 +102,24 @@
                 </ul>
             </div>
 
+            @php $sos = $dailyResults ?? null; @endphp
+            @if($sos)
+            <div class="dr-panel p-4">
+                <h3 class="font-bold text-slate-900 text-sm mb-1"><i class="fas fa-chart-line ml-1"></i> نتائج اليوم مقابل الهدف</h3>
+                <p class="text-[11px] text-slate-500 mb-2">قراءة فقط من CRM (مكالمات بنتائج + مراحل)</p>
+                <p class="text-xl font-black {{ match($sos['status'] ?? '') { 'met' => 'kpi-met', 'near' => 'kpi-near', default => 'kpi-behind' } }}">{{ $sos['overall_pct'] ?? 0 }}%</p>
+                <ul class="mt-3 space-y-2 text-xs">
+                    @foreach($sos['lines'] ?? [] as $line)
+                        @php $lc = match($line['status']){ 'met'=>'text-emerald-700','near'=>'text-amber-700',default=>'text-rose-700' }; @endphp
+                        <li class="flex justify-between gap-2 border-b border-slate-100 pb-1">
+                            <span class="text-slate-600">{{ $line['label'] }}</span>
+                            <span class="font-bold {{ $lc }}">{{ $line['actual'] }}/{{ (int) $line['target'] }}</span>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+            @endif
+
             <div class="dr-panel p-4 text-xs text-slate-700 space-y-2">
                 <p class="font-bold text-slate-900">ما يُحسب تلقائياً</p>
                 <ul class="list-disc list-inside space-y-1 text-slate-600">

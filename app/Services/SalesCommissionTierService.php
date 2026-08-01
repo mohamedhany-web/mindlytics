@@ -123,7 +123,7 @@ class SalesCommissionTierService
 
         $q = SalesLead::query()
             ->where('assigned_to', $user->id)
-            ->where('stage', 'won')
+            ->where('stage', SalesLead::WON_STAGE)
             ->whereNotNull('won_confirmed_at');
 
         if ($start && $end) {

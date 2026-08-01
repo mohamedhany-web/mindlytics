@@ -108,6 +108,8 @@ class SalesDailyReportController extends Controller
             ? $service->kpiComparisonForReport($user, $report, $date)
             : $service->kpiComparisonForReport($user, array_fill_keys($service->requiredFieldKeys(), 0), $date);
 
+        $dailyResults = app(\App\Services\SalesDailyResultService::class)->comparisonFor($user, $date);
+
         $settings = SalesDailyReportSettings::all();
 
         $todayLeads = $service->leadsTouchedOnDate($user, $date);
@@ -129,7 +131,7 @@ class SalesDailyReportController extends Controller
         $campaignFieldLabels = $campaignService->fieldLabels();
 
         return view('employee.sales.daily-reports.edit', compact(
-            'report', 'date', 'leads', 'fieldLabels', 'autoFilled', 'kpiComparison', 'settings', 'todayLeads', 'suggestedContacts',
+            'report', 'date', 'leads', 'fieldLabels', 'autoFilled', 'kpiComparison', 'dailyResults', 'settings', 'todayLeads', 'suggestedContacts',
             'campaigns', 'campaignEntries', 'campaignFieldLabels'
         ));
     }

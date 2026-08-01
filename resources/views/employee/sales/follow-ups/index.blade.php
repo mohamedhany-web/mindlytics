@@ -116,14 +116,12 @@
                                         onclick="openNextFollowModal({{ $lead->id }}, @js($lead->name), @js($lead->next_follow_up_at && $lead->next_follow_up_at->isFuture() ? $lead->next_follow_up_at->format('Y-m-d\TH:i') : now()->addDay()->setTime(10, 0)->format('Y-m-d\TH:i')))">
                                     <i class="fas fa-calendar-plus text-xs"></i>
                                 </button>
-                                <form method="post" action="{{ route('employee.sales.leads.quick-activity', $lead) }}" class="inline">
-                                    @csrf
-                                    <input type="hidden" name="type" value="call">
-                                    <input type="hidden" name="redirect_to" value="{{ $redirectTo }}">
-                                    <button type="submit" class="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50" title="سجّل مكالمة">
-                                        <i class="fas fa-phone text-xs"></i>
-                                    </button>
-                                </form>
+                                <button type="button"
+                                        class="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+                                        title="سجّل مكالمة"
+                                        onclick="openCallOutcomeModal(@js(route('employee.sales.leads.quick-activity', $lead)), @js($lead->name))">
+                                    <i class="fas fa-phone text-xs"></i>
+                                </button>
                                 <a href="{{ route('employee.sales.leads.show', $lead) }}"
                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50" title="فتح">
                                     <i class="fas fa-eye text-xs"></i>
@@ -176,6 +174,36 @@
         </form>
     </div>
 </div>
+<div id="call-outcome-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/40">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onclick="event.stopPropagation()">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h3 class="font-bold text-slate-900">تسجيل مكالمة</h3>
+                <p class="text-xs text-slate-500 mt-0.5" id="co-lead-name"></p>
+            </div>
+            <button type="button" onclick="closeCallOutcomeModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fas fa-times"></i></button>
+        </div>
+        <form method="post" id="co-form" class="p-5 space-y-3">
+            @csrf
+            <input type="hidden" name="type" value="call">
+            <input type="hidden" name="redirect_to" value="{{ $redirectTo }}">
+            <input type="hidden" name="apply_stage" value="1">
+            <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">نتيجة المكالمة <span class="text-rose-500">*</span></label>
+                <select name="outcome" id="co-outcome" required class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2.5 text-sm font-semibold">
+                    <option value="">— اختر —</option>
+                    @foreach(\App\Models\SalesActivity::OUTCOMES as $k => $label)
+                        <option value="{{ $k }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="flex gap-2 justify-end pt-1">
+                <button type="button" onclick="closeCallOutcomeModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold">إلغاء</button>
+                <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-bold">حفظ</button>
+            </div>
+        </form>
+    </div>
+</div>
 <script>
 function openNextFollowModal(leadId, name, datetime) {
     var modal = document.getElementById('next-follow-modal');
@@ -192,6 +220,22 @@ function closeNextFollowModal() {
 }
 document.getElementById('next-follow-modal').addEventListener('click', function (e) {
     if (e.target === this) closeNextFollowModal();
+});
+function openCallOutcomeModal(actionUrl, name) {
+    var modal = document.getElementById('call-outcome-modal');
+    document.getElementById('co-form').action = actionUrl;
+    document.getElementById('co-lead-name').textContent = name || '';
+    document.getElementById('co-outcome').value = '';
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+function closeCallOutcomeModal() {
+    var modal = document.getElementById('call-outcome-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+document.getElementById('call-outcome-modal').addEventListener('click', function (e) {
+    if (e.target === this) closeCallOutcomeModal();
 });
 </script>
 @endsection

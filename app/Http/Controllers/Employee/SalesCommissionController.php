@@ -55,7 +55,7 @@ class SalesCommissionController extends Controller
 
         $pendingLeads = SalesLead::query()
             ->where('assigned_to', $user->id)
-            ->where('stage', 'won')
+            ->where('stage', SalesLead::WON_STAGE)
             ->whereNull('won_confirmed_at')
             ->with(['advancedCourse:id,title', 'offlineCourse:id,title', 'legacyCourse:id,title'])
             ->orderByDesc('updated_at')

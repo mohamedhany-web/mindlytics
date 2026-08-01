@@ -174,7 +174,7 @@ class SalesManagerLeadController extends Controller
             'today' => $open()->whereNotNull('next_follow_up_at')->whereDate('next_follow_up_at', today())->count(),
             'overdue' => $open()->whereNotNull('next_follow_up_at')->where('next_follow_up_at', '<', now())->count(),
             'stale' => $this->staleCount($base),
-            'new' => (clone $base)->where('stage', 'new')->count(),
+            'new' => (clone $base)->where('stage', 'new_lead')->count(),
         ];
     }
 

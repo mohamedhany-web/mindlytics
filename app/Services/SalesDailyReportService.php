@@ -259,11 +259,11 @@ class SalesDailyReportService
 
         $stageChanges = $activities->where('type', 'stage_change');
         $qualified = $stageChanges
-            ->filter(fn (SalesActivity $a) => ($a->meta['to'] ?? null) === 'qualified')
+            ->filter(fn (SalesActivity $a) => in_array($a->meta['to'] ?? null, ['qualification', 'qualified'], true))
             ->unique('sales_lead_id')
             ->count();
         $bookings = $stageChanges
-            ->filter(fn (SalesActivity $a) => in_array($a->meta['to'] ?? null, ['won', 'proposal'], true))
+            ->filter(fn (SalesActivity $a) => in_array($a->meta['to'] ?? null, ['enrollment_completed', 'payment_received', 'offer_sent', 'won', 'proposal'], true))
             ->unique('sales_lead_id')
             ->count();
 

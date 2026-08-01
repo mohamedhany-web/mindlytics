@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
 use App\Models\SalesLead;
+use App\Services\SalesDailyResultService;
+use App\Services\SalesDayBlockService;
 use App\Services\SalesKpiService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -21,9 +23,9 @@ class SalesDashboardController extends Controller
 
         $stats = [
             'total' => (clone $base)->count(),
-            'new' => (clone $base)->where('stage', 'new')->count(),
+            'new' => (clone $base)->where('stage', 'new_lead')->count(),
             'active' => $open()->count(),
-            'won' => (clone $base)->where('stage', 'won')->count(),
+            'won' => (clone $base)->where('stage', SalesLead::WON_STAGE)->count(),
             'lost' => (clone $base)->where('stage', 'lost')->count(),
             'followups_today' => $open()
                 ->whereNotNull('next_follow_up_at')
@@ -36,7 +38,7 @@ class SalesDashboardController extends Controller
             'urgent_open' => $open()->where('priority', 'urgent')->count(),
             'stale' => $this->staleQuery(clone $base)->count(),
             'pipeline_value' => (float) $open()->whereNotNull('expected_value')->sum('expected_value'),
-            'won_month_value' => (float) (clone $base)->where('stage', 'won')
+            'won_month_value' => (float) (clone $base)->where('stage', SalesLead::WON_STAGE)
                 ->whereNotNull('closed_at')
                 ->whereBetween('closed_at', [now()->startOfMonth(), now()->endOfMonth()])
                 ->sum('expected_value'),
@@ -102,6 +104,8 @@ class SalesDashboardController extends Controller
             ->values();
 
         $kpiQuick = app(SalesKpiService::class)->buildReport($user);
+        $dailyResults = app(SalesDailyResultService::class)->comparisonFor($user);
+        $dayBlock = app(SalesDayBlockService::class)->snapshot();
 
         return view('employee.sales.dashboard', compact(
             'stats',
@@ -113,7 +117,9 @@ class SalesDashboardController extends Controller
             'taskQueue',
             'noFirstResponseLeads',
             'slaCutoffHours',
-            'kpiQuick'
+            'kpiQuick',
+            'dailyResults',
+            'dayBlock'
         ));
     }
 

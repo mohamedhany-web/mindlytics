@@ -69,7 +69,7 @@ class SalesKpiController extends Controller
             ->pluck('total', 'source');
 
         $sourceWon = SalesLead::query()
-            ->where('stage', 'won')
+            ->where('stage', SalesLead::WON_STAGE)
             ->whereNotNull('closed_at')
             ->whereBetween('closed_at', [now()->startOfMonth(), now()->endOfMonth()])
             ->selectRaw('source, COUNT(*) as total, COALESCE(SUM(expected_value), 0) as revenue')

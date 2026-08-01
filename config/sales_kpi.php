@@ -20,6 +20,13 @@ return [
         'calls_daily' => 50,
         'meetings_daily' => 5,
         'followups_daily' => 15,
+        /** SOS — أهداف يومية قائمة على النتائج */
+        'call_attempts_daily' => 120,
+        'calls_answered_daily' => 35,
+        'qualified_conversations_daily' => 15,
+        'discovery_sessions_daily' => 8,
+        'proposals_daily' => 5,
+        'paid_enrollments_daily' => 2,
         /** أقصى متوسط وقت أول رد مقبول (دقائق) — أقل أفضل */
         'response_minutes_max' => 30,
         /** أدنى نسبة إغلاق won/(won+lost) */

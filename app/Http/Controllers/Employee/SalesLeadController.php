@@ -153,7 +153,7 @@ class SalesLeadController extends Controller
                 'meta' => ['from' => $oldStage, 'to' => $lead->stage],
             ]);
 
-            if ($lead->stage === 'won' && $oldStage !== 'won') {
+            if ($lead->stage === SalesLead::WON_STAGE && $oldStage !== SalesLead::WON_STAGE) {
                 try {
                     app(SalesNotificationService::class)->notifyWinPendingApproval($lead->fresh(['assignee']));
                 } catch (\Throwable $e) {
@@ -182,8 +182,8 @@ class SalesLeadController extends Controller
         $warnings = $this->duplicateWarnings($request, (int) $lead->assigned_to, $lead->id);
 
         $successMessage = 'تم حفظ التعديلات';
-        if ($lead->stage === 'won' && ! $lead->won_confirmed_at) {
-            $successMessage = 'تم تسجيل الفوز — في انتظار موافقة الإدارة لاعتماد الكوميشن.';
+        if ($lead->stage === SalesLead::WON_STAGE && ! $lead->won_confirmed_at) {
+            $successMessage = 'تم تسجيل Enrollment — في انتظار موافقة الإدارة لاعتماد الكوميشن.';
         }
 
         return redirect()->route('employee.sales.leads.show', $lead)
@@ -217,26 +217,42 @@ class SalesLeadController extends Controller
 
         $validated = $request->validate([
             'type' => 'required|string|in:' . implode(',', array_keys(SalesActivity::TYPES)),
+            'outcome' => 'nullable|string|in:' . implode(',', array_keys(SalesActivity::OUTCOMES)),
             'title' => 'nullable|string|max:255',
             'body' => 'nullable|string|max:5000',
+            'duration_seconds' => 'nullable|integer|min:0|max:7200',
+            'recording_url' => 'nullable|url|max:500',
+            'apply_stage' => 'nullable|boolean',
         ]);
+
+        if ($validated['type'] === 'call' && empty($validated['outcome'])) {
+            return back()->withErrors(['outcome' => 'نتيجة المكالمة مطلوبة.'])->withInput();
+        }
 
         $activity = SalesActivity::create([
             'sales_lead_id' => $lead->id,
             'user_id' => Auth::id(),
             'type' => $validated['type'],
+            'outcome' => $validated['type'] === 'call' ? ($validated['outcome'] ?? null) : null,
+            'duration_seconds' => $validated['type'] === 'call' ? ($validated['duration_seconds'] ?? null) : null,
+            'recording_url' => $validated['type'] === 'call' ? ($validated['recording_url'] ?? null) : null,
             'title' => $validated['title'] ?? null,
             'body' => $validated['body'] ?? null,
         ]);
 
         $lead->touchLastContactFromActivity($validated['type']);
 
+        if ($validated['type'] === 'call' && $request->boolean('apply_stage', true)) {
+            $this->applyOutcomeStage($lead, $validated['outcome'] ?? null);
+        }
+
         SalesAuditService::log(
             'sales_activity_created',
             $lead,
             null,
-            $activity->only(['type', 'title', 'body']),
+            $activity->only(['type', 'outcome', 'title', 'body']),
             'نشاط مبيعات على: ' . $lead->name . ' — ' . SalesActivity::typeLabel($activity->type)
+                . ($activity->outcome ? ' / '.SalesActivity::outcomeLabel($activity->outcome) : '')
         );
 
         $this->syncTodayDailyReport();
@@ -250,15 +266,22 @@ class SalesLeadController extends Controller
 
         $validated = $request->validate([
             'type' => 'required|string|in:call,whatsapp,follow_up,note',
+            'outcome' => 'nullable|string|in:' . implode(',', array_keys(SalesActivity::OUTCOMES)),
             'body' => 'nullable|string|max:500',
+            'apply_stage' => 'nullable|boolean',
         ]);
+
+        if ($validated['type'] === 'call' && empty($validated['outcome'])) {
+            return back()->withErrors(['outcome' => 'اختر نتيجة المكالمة قبل التسجيل.'])->withInput();
+        }
 
         $activity = SalesActivity::create([
             'sales_lead_id' => $lead->id,
             'user_id' => Auth::id(),
             'type' => $validated['type'],
+            'outcome' => $validated['type'] === 'call' ? ($validated['outcome'] ?? null) : null,
             'title' => match ($validated['type']) {
-                'call' => 'مكالمة سريعة',
+                'call' => 'مكالمة — '.SalesActivity::outcomeLabel($validated['outcome'] ?? null),
                 'whatsapp' => 'واتساب سريع',
                 'follow_up' => 'متابعة سريعة',
                 default => 'ملاحظة سريعة',
@@ -268,7 +291,17 @@ class SalesLeadController extends Controller
 
         $lead->touchLastContactFromActivity($validated['type']);
 
+        if ($validated['type'] === 'call' && $request->boolean('apply_stage', true)) {
+            $this->applyOutcomeStage($lead, $validated['outcome'] ?? null);
+        }
+
         if ($validated['type'] === 'follow_up' && $lead->isOpen()) {
+            $lead->update([
+                'next_follow_up_at' => now()->addDay()->setTime(10, 0),
+            ]);
+        }
+
+        if (($validated['outcome'] ?? null) === 'follow_up' && $lead->isOpen() && ! $lead->next_follow_up_at) {
             $lead->update([
                 'next_follow_up_at' => now()->addDay()->setTime(10, 0),
             ]);
@@ -278,7 +311,7 @@ class SalesLeadController extends Controller
             'sales_activity_created',
             $lead,
             null,
-            $activity->only(['type', 'title']),
+            $activity->only(['type', 'outcome', 'title']),
             'نشاط سريع: ' . $lead->name . ' — ' . SalesActivity::typeLabel($activity->type)
         );
 
@@ -289,8 +322,99 @@ class SalesLeadController extends Controller
             return redirect()->to($redirect)->with('success', 'تم التسجيل');
         }
 
-        return redirect()->route('employee.sales.leads.index', $request->except(['_token', 'type', 'body', 'redirect_to']))
+        return redirect()->route('employee.sales.leads.index', $request->except(['_token', 'type', 'body', 'outcome', 'apply_stage', 'redirect_to']))
             ->with('success', 'تم تسجيل «'.SalesActivity::typeLabel($activity->type).'» — '.$lead->name);
+    }
+
+    private function applyOutcomeStage(SalesLead $lead, ?string $outcome): void
+    {
+        if (! $outcome) {
+            return;
+        }
+
+        $pipeline = app(\App\Services\SalesPipelineService::class);
+
+        try {
+            match ($outcome) {
+                'no_answer' => $pipeline->transition($lead, 'no_answer', [], Auth::user()),
+                'interested' => $pipeline->transition($lead, 'connected', [
+                    'connected_disposition' => 'interested',
+                ], Auth::user()),
+                'follow_up' => $pipeline->transition(
+                    $lead,
+                    in_array($lead->stage, ['new_lead', 'first_contact', 'no_answer'], true) ? 'connected' : 'follow_up_scheduled',
+                    in_array($lead->stage, ['new_lead', 'first_contact', 'no_answer'], true)
+                        ? ['connected_disposition' => 'callback']
+                        : [
+                            'next_follow_up_at' => now()->addDay()->setTime(10, 0)->format('Y-m-d\TH:i'),
+                            'follow_up_channel' => 'call',
+                        ],
+                    Auth::user()
+                ),
+                'not_interested' => $pipeline->transition($lead, 'lost', ['lost_reason' => 'no_need'], Auth::user()),
+                'wrong_number' => $pipeline->transition($lead, 'lost', ['lost_reason' => 'wrong_number'], Auth::user()),
+                'closed_lost' => $pipeline->transition($lead, 'lost', ['lost_reason' => 'other'], Auth::user()),
+                'closed_won' => $pipeline->transition($lead, 'payment_received', [
+                    'payment_txn_ref' => 'PENDING-'.now()->format('YmdHis'),
+                    'payment_amount' => $lead->expected_value ?: $lead->offer_price ?: 1,
+                    'paid_at' => now()->format('Y-m-d\TH:i'),
+                ], Auth::user()),
+                default => null,
+            };
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // لا نفشل تسجيل المكالمة إن تعذّر الانتقال التلقائي — يحدّث الموظف المرحلة يدوياً
+            Log::info('sales.outcome_stage_skipped', [
+                'lead_id' => $lead->id,
+                'outcome' => $outcome,
+                'errors' => $e->errors(),
+            ]);
+        }
+    }
+
+    public function advanceStage(Request $request, SalesLead $lead, \App\Services\SalesPipelineService $pipeline)
+    {
+        $this->authorizeOwn($lead);
+
+        $validated = $request->validate([
+            'stage' => 'required|string|in:'.implode(',', array_keys(SalesLead::STAGES)),
+            'call_answered' => 'nullable',
+            'connected_disposition' => 'nullable|string|in:'.implode(',', array_keys(SalesLead::CONNECTED_DISPOSITIONS)),
+            'profile_type' => 'nullable|string|in:'.implode(',', array_keys(SalesLead::PROFILE_TYPES)),
+            'age' => 'nullable|integer|min:10|max:90',
+            'field_domain' => 'nullable|string|max:120',
+            'experience_level' => 'nullable|string|max:80',
+            'course_motivation' => 'nullable|string|max:2000',
+            'start_preference' => 'nullable|string|max:120',
+            'can_pay' => 'nullable',
+            'interest_pct' => 'nullable|integer',
+            'objection_reason' => 'nullable|string|in:'.implode(',', array_keys(SalesLead::OBJECTION_REASONS)),
+            'objection_notes' => 'nullable|string|max:2000',
+            'next_follow_up_at' => 'nullable|date',
+            'follow_up_channel' => 'nullable|string|in:'.implode(',', array_keys(SalesLead::FOLLOW_UP_CHANNELS)),
+            'offer_price' => 'nullable|numeric|min:0',
+            'offer_discount' => 'nullable|string|max:80',
+            'offer_installment_plan' => 'nullable|string|max:160',
+            'offer_notes' => 'nullable|string|max:2000',
+            'payment_method' => 'nullable|string|in:'.implode(',', array_keys(SalesLead::PAYMENT_METHODS)),
+            'payment_amount' => 'nullable|numeric|min:0',
+            'payment_due_at' => 'nullable|date',
+            'payment_txn_ref' => 'nullable|string|max:120',
+            'paid_at' => 'nullable|date',
+            'expected_value' => 'nullable|numeric|min:0',
+            'lost_reason' => 'nullable|string|in:'.implode(',', array_keys(SalesLead::LOSS_REASONS)),
+            'notes' => 'nullable|string|max:2000',
+            'duration_seconds' => 'nullable|integer|min:0|max:7200',
+            'recording_url' => 'nullable|url|max:500',
+        ]);
+
+        $stage = $validated['stage'];
+        unset($validated['stage']);
+
+        $pipeline->transition($lead, $stage, $validated, Auth::user());
+
+        $this->syncTodayDailyReport();
+
+        return back()->with('success', 'تم تحديث مرحلة العميل إلى «'.SalesLead::stageLabel($stage).'».');
     }
 
     public function setNextFollow(Request $request, SalesLead $lead)
@@ -375,7 +499,7 @@ class SalesLeadController extends Controller
                     $q2->whereNull('last_contacted_at')->where('created_at', '<', now()->subDays($staleDays));
                 })->orWhere('last_contacted_at', '<', now()->subDays($staleDays));
             })->count(),
-            'new' => (clone $base)->where('stage', 'new')->count(),
+            'new' => (clone $base)->where('stage', 'new_lead')->count(),
         ];
     }
 
@@ -383,8 +507,8 @@ class SalesLeadController extends Controller
     {
         $this->authorizeOwn($lead);
 
-        if ($lead->stage !== 'won') {
-            return back()->withErrors(['csat_rating' => 'التقييم متاح عند مرحلة «مكتمل / فوز» فقط.']);
+        if ($lead->stage !== SalesLead::WON_STAGE) {
+            return back()->withErrors(['csat_rating' => 'التقييم متاح عند مرحلة Enrollment Completed فقط.']);
         }
 
         $data = $request->validate([
@@ -515,11 +639,11 @@ class SalesLeadController extends Controller
     private function syncClosedAt(SalesLead $lead): void
     {
         $lead->refresh();
-        if (in_array($lead->stage, ['won', 'lost'], true)) {
+        if (in_array($lead->stage, [...SalesLead::CLOSED_STAGES, SalesLead::WON_STAGE], true)) {
             if (! $lead->closed_at) {
                 $lead->forceFill(['closed_at' => now()])->save();
             }
-        } elseif ($lead->closed_at) {
+        } elseif ($lead->closed_at && ! in_array($lead->stage, SalesLead::WON_LIKE_STAGES, true)) {
             $lead->forceFill(['closed_at' => null])->save();
         }
     }
@@ -669,13 +793,13 @@ class SalesLeadController extends Controller
         $nextFollow = $validated['next_follow_up_at'] ?? $lead->next_follow_up_at;
         $expectedValue = $validated['expected_value'] ?? $lead->expected_value;
 
-        $isOpenNewStage = ! in_array($newStage, ['won', 'lost'], true);
+        $isOpenNewStage = ! in_array($newStage, [...SalesLead::CLOSED_STAGES, SalesLead::WON_STAGE], true);
 
-        // 1) أي Lead خرج من "new" إلى مراحل أعمق يجب أن يكون له موعد متابعة
-        if ($isOpenNewStage && $newStage !== 'new') {
+        // 1) أي Lead خرج من new_lead إلى مراحل أعمق يجب أن يكون له موعد متابعة (ما عدا no_answer المبكر)
+        if ($isOpenNewStage && ! in_array($newStage, ['new_lead', 'first_contact', 'no_answer'], true)) {
             if (empty($nextFollow)) {
                 throw ValidationException::withMessages([
-                    'next_follow_up_at' => ['موعد المتابعة مطلوب عند اختيار مرحلة غير "جديد".'],
+                    'next_follow_up_at' => ['موعد المتابعة مطلوب عند اختيار مرحلة أعمق في الرحلة.'],
                 ]);
             }
         }
@@ -698,15 +822,14 @@ class SalesLeadController extends Controller
             }
         }
 
-        // 3) الإغلاق (won/lost) يتطلب نشاط حديث + قيمة متوقعة + سبب خسارة عند lost
-        if (in_array($newStage, ['won', 'lost'], true)) {
+        // 3) الإغلاق (enrollment/lost) يتطلب نشاط حديث + قيمة متوقعة + سبب خسارة عند lost
+        if (in_array($newStage, [SalesLead::WON_STAGE, 'lost'], true)) {
             if ($expectedValue === null || (float) $expectedValue <= 0) {
                 throw ValidationException::withMessages([
-                    'expected_value' => ['قيمة متوقعة مطلوبة (> 0) قبل إغلاق الـ lead (won/lost).'],
+                    'expected_value' => ['قيمة متوقعة مطلوبة (> 0) قبل إغلاق الـ lead.'],
                 ]);
             }
 
-            // نشاط غير "stage_change" خلال آخر X أيام أو على الأقل وجود last_contacted_at حديث
             $cutoff = now()->subDays(self::REQUIRED_ACTIVITY_DAYS_FOR_CLOSE);
 
             $hasRecentActivity = SalesActivity::query()
@@ -734,10 +857,10 @@ class SalesLeadController extends Controller
             }
         }
 
-        // 4) حماية: لا تسمح بخفض المرحلة من won/lost إلى مراحل مفتوحة بدون مسح closed_at (يحدث تلقائياً) لكن نمنع التلاعب
-        if (in_array($oldStage, ['won', 'lost'], true) && $isOpenNewStage) {
+        // 4) حماية: لا تسمح بإعادة فتح من closed/won
+        if (in_array($oldStage, [...SalesLead::CLOSED_STAGES, SalesLead::WON_STAGE], true) && $isOpenNewStage) {
             throw ValidationException::withMessages([
-                'stage' => ['لا يمكن إعادة فتح Lead مُغلَق (won/lost) من واجهة الموظف. تواصل مع الإدارة.'],
+                'stage' => ['لا يمكن إعادة فتح Lead مُغلَق من واجهة الموظف. تواصل مع الإدارة.'],
             ]);
         }
     }

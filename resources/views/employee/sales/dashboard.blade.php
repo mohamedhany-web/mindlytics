@@ -69,6 +69,73 @@
         <div class="flex flex-wrap gap-2 shrink-0">{!! $heroActions !!}</div>
     </div>
 
+    @endif
+
+    @php
+        $dr = $dailyResults ?? null;
+        $db = $dayBlock ?? null;
+        $currentBlock = $db['current'] ?? null;
+    @endphp
+
+    @if($currentBlock || ($db['next'] ?? null))
+    <div class="dashboard-card border-teal-200 bg-teal-50/40">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <p class="text-xs font-bold text-teal-800 uppercase tracking-wider">جدول اليوم — البلوك الحالي</p>
+                <p class="text-2xl font-black text-slate-900 mt-1">
+                    أنت الآن في: {{ $currentBlock?->name ?? ($db['label'] ?? '—') }}
+                </p>
+                @if($currentBlock?->goal_text)
+                    <p class="text-sm text-slate-600 mt-1">{{ $currentBlock->goal_text }}</p>
+                @endif
+            </div>
+            <div class="text-center sm:text-left shrink-0">
+                @if(($db['minutes_left'] ?? null) !== null && $currentBlock)
+                    <p class="text-3xl font-black text-teal-800 tabular-nums">{{ $db['minutes_left'] }}</p>
+                    <p class="text-xs font-semibold text-teal-700">دقيقة حتى نهاية البلوك</p>
+                    <p class="text-[11px] text-slate-500 mt-1">{{ $currentBlock->startTimeHm() }} – {{ $currentBlock->endTimeHm() }}</p>
+                @elseif($db['next'] ?? null)
+                    <p class="text-sm font-bold text-slate-700">التالي: {{ $db['next']->name }}</p>
+                    <p class="text-xs text-slate-500">{{ $db['next']->startTimeHm() }}</p>
+                @endif
+            </div>
+        </div>
+    </div>
+    @endif
+
+    @if($dr)
+    <div class="dashboard-card">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
+            <div>
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">نتائج اليوم مقابل الهدف (SOS)</p>
+                <p class="text-3xl font-black tabular-nums mt-1 {{ ($dr['status'] ?? '') === 'met' ? 'text-emerald-700' : (($dr['status'] ?? '') === 'near' ? 'text-amber-700' : 'text-rose-700') }}">
+                    {{ $dr['overall_pct'] ?? 0 }}%
+                </p>
+                <p class="text-xs font-semibold text-slate-600">{{ $dr['status_label'] ?? '' }}</p>
+            </div>
+            <a href="{{ route('employee.sales.daily-reports.edit') }}" class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 border border-slate-200 rounded-lg px-4 py-2 hover:bg-slate-50">
+                التقرير اليومي
+            </a>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
+            @foreach($dr['lines'] ?? [] as $line)
+                @php
+                    $lc = match($line['status'] ?? '') {
+                        'met' => 'border-emerald-200 bg-emerald-50/60',
+                        'near' => 'border-amber-200 bg-amber-50/60',
+                        default => 'border-rose-100 bg-rose-50/40',
+                    };
+                @endphp
+                <div class="rounded-xl border p-3 {{ $lc }}">
+                    <p class="text-[11px] font-semibold text-slate-600 truncate">{{ $line['label'] }}</p>
+                    <p class="text-lg font-black text-slate-900 tabular-nums mt-0.5">{{ $line['actual'] }}<span class="text-xs font-semibold text-slate-500">/{{ (int) $line['target'] }}</span></p>
+                    <p class="text-[10px] font-bold text-slate-500">{{ $line['pct'] }}%</p>
+                </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
+
     @php $kq = $kpiQuick ?? null; @endphp
     @if($kq)
     <div class="dashboard-card border-slate-200 bg-slate-50/50">

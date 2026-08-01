@@ -9,7 +9,7 @@
         ['label' => 'إجمالي النتائج', 'value' => number_format($stats['total'] ?? 0), 'icon' => 'fas fa-users', 'bg' => 'bg-sky-100', 'text' => 'text-sky-600', 'description' => 'حسب الفلتر الحالي'],
         ['label' => 'قيد المتابعة', 'value' => number_format($stats['open'] ?? 0), 'icon' => 'fas fa-briefcase', 'bg' => 'bg-violet-100', 'text' => 'text-violet-600', 'description' => 'Leads مفتوحة'],
         ['label' => 'متابعات متأخرة', 'value' => number_format($stats['overdue_followups'] ?? 0), 'icon' => 'fas fa-clock', 'bg' => 'bg-rose-100', 'text' => 'text-rose-600', 'description' => 'تحتاج إجراء'],
-        ['label' => 'صفقات فوز', 'value' => number_format($stats['won'] ?? 0), 'icon' => 'fas fa-trophy', 'bg' => 'bg-emerald-100', 'text' => 'text-emerald-600', 'description' => 'مرحلة Won'],
+        ['label' => 'صفقات فوز', 'value' => number_format($stats['won'] ?? 0), 'icon' => 'fas fa-trophy', 'bg' => 'bg-emerald-100', 'text' => 'text-emerald-600', 'description' => 'Enrollment Completed'],
     ];
 
     $priorityBadges = [

@@ -70,7 +70,7 @@ class SalesCommissionController extends Controller
 
             $pendingLeads = SalesLead::query()
                 ->where('assigned_to', $rep->id)
-                ->where('stage', 'won')
+                ->where('stage', SalesLead::WON_STAGE)
                 ->whereNull('won_confirmed_at')
                 ->get(['expected_value']);
 
@@ -147,7 +147,7 @@ class SalesCommissionController extends Controller
 
         $confirmedQuery = SalesLead::query()
             ->where('assigned_to', $user->id)
-            ->where('stage', 'won')
+            ->where('stage', SalesLead::WON_STAGE)
             ->whereNotNull('won_confirmed_at')
             ->with(['category:id,name', 'creator:id,name', 'advancedCourse:id,title', 'offlineCourse:id,title', 'legacyCourse:id,title']);
 
@@ -161,7 +161,7 @@ class SalesCommissionController extends Controller
 
         $pendingLeads = SalesLead::query()
             ->where('assigned_to', $user->id)
-            ->where('stage', 'won')
+            ->where('stage', SalesLead::WON_STAGE)
             ->whereNull('won_confirmed_at')
             ->with(['category:id,name'])
             ->orderByDesc('closed_at')
@@ -189,7 +189,7 @@ class SalesCommissionController extends Controller
 
             $tierLeadsQ = SalesLead::query()
                 ->where('assigned_to', $user->id)
-                ->where('stage', 'won')
+                ->where('stage', SalesLead::WON_STAGE)
                 ->whereNotNull('won_confirmed_at')
                 ->with(['category:id,name', 'creator:id,name'])
                 ->orderBy('won_confirmed_at')

@@ -45,7 +45,7 @@
                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border {{ $activePreset === 'stale' ? 'bg-orange-600 text-white border-orange-600' : 'bg-white text-slate-600 border-slate-200' }}">
                 بلا تواصل <span class="tabular-nums opacity-80">{{ $quickCounts['stale'] ?? 0 }}</span>
             </a>
-            <a href="{{ route('employee.sales-manager.leads.index', ['stage' => 'new']) }}"
+            <a href="{{ route('employee.sales-manager.leads.index', ['stage' => 'new_lead']) }}"
                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border {{ $activePreset === 'new' ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-slate-600 border-slate-200' }}">
                 جديد <span class="tabular-nums opacity-80">{{ $quickCounts['new'] ?? 0 }}</span>
             </a>

@@ -256,7 +256,7 @@ class WhatsAppQueueService
             'name' => $conversation->displayName(),
             'phone' => '+'.ltrim($conversation->phone_number, '+'),
             'source' => 'whatsapp',
-            'stage' => 'new',
+            'stage' => 'new_lead',
             'priority' => 'normal',
             'assigned_to' => $assignee->id,
             'created_by' => $createdBy->id,

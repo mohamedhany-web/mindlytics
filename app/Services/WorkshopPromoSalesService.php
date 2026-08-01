@@ -101,7 +101,7 @@ class WorkshopPromoSalesService
                     'phone' => $user?->phone,
                     'email' => $user?->email,
                     'source' => 'event',
-                    'stage' => 'new',
+                    'stage' => 'new_lead',
                     'priority' => 'normal',
                     'interest' => 'كود خصم ورشة: '.($promo?->code ?? '—').' — '.$workshopTitle,
                     'notes' => $notesBlock,

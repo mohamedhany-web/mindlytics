@@ -152,7 +152,7 @@ class SalesKpiService
 
         $newLeads = (clone $base)->whereBetween('created_at', [$start, $end])->count();
 
-        $wonClosed = (clone $base)->where('stage', 'won')
+        $wonClosed = (clone $base)->where('stage', SalesLead::WON_STAGE)
             ->whereNotNull('closed_at')
             ->whereBetween('closed_at', [$start, $end])
             ->count();
@@ -162,7 +162,7 @@ class SalesKpiService
             ->whereBetween('closed_at', [$start, $end])
             ->count();
 
-        $revenue = (float) (clone $base)->where('stage', 'won')
+        $revenue = (float) (clone $base)->where('stage', SalesLead::WON_STAGE)
             ->whereNotNull('closed_at')
             ->whereBetween('closed_at', [$start, $end])
             ->sum('expected_value');
@@ -187,7 +187,7 @@ class SalesKpiService
         $closingRatioPct = $closingDen > 0 ? round($wonClosed / $closingDen * 100, 1) : null;
         $lossRatioPct = $closingDen > 0 ? round($lostClosed / $closingDen * 100, 1) : null;
 
-        $csatAvg = (clone $base)->where('stage', 'won')
+        $csatAvg = (clone $base)->where('stage', SalesLead::WON_STAGE)
             ->whereNotNull('csat_rating')
             ->whereNotNull('closed_at')
             ->whereBetween('closed_at', [$start, $end])
@@ -195,7 +195,7 @@ class SalesKpiService
 
         $csatAvg = $csatAvg !== null ? round((float) $csatAvg, 2) : null;
 
-        $wonLeadsPeriod = (clone $base)->where('stage', 'won')
+        $wonLeadsPeriod = (clone $base)->where('stage', SalesLead::WON_STAGE)
             ->whereNotNull('closed_at')
             ->whereBetween('closed_at', [$start, $end])
             ->get(['created_at', 'closed_at']);

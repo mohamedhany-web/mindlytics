@@ -287,7 +287,7 @@ class WorkshopController extends Controller
                     'phone' => $reg->phone,
                     'email' => $reg->email,
                     'source' => 'event',
-                    'stage' => 'new',
+                    'stage' => 'new_lead',
                     'priority' => 'normal',
                     'interest' => 'الاهتمام بورشة: '.$workshop->title,
                     'notes' => $notes,

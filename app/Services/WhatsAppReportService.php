@@ -55,7 +55,7 @@ class WhatsAppReportService
         $linkedLeads = WhatsAppConversation::query()->whereNotNull('sales_lead_id')->count();
         $wonLinked = WhatsAppConversation::query()
             ->whereNotNull('sales_lead_id')
-            ->whereHas('salesLead', fn ($q) => $q->where('stage', 'won'))
+            ->whereHas('salesLead', fn ($q) => $q->where('stage', SalesLead::WON_STAGE))
             ->count();
 
         $dailyVolume = WhatsAppConversationMessage::query()

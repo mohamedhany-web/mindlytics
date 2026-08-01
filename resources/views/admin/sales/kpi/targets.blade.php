@@ -12,6 +12,12 @@
         'calls_daily' => 'مكالمات / يوم',
         'meetings_daily' => 'اجتماعات أو ديمو / يوم',
         'followups_daily' => 'متابعات مسجّلة / يوم',
+        'call_attempts_daily' => 'محاولات اتصال / يوم (SOS)',
+        'calls_answered_daily' => 'مكالمات تم الرد / يوم (SOS)',
+        'qualified_conversations_daily' => 'محادثات مؤهلة / يوم (SOS)',
+        'discovery_sessions_daily' => 'جلسات تعريف / يوم (SOS)',
+        'proposals_daily' => 'عروض سعر / يوم (SOS)',
+        'paid_enrollments_daily' => 'تسجيلات مدفوعة / يوم (SOS)',
         'response_minutes_max' => 'أقصى متوسط أول رد (دقيقة)',
         'closing_ratio_pct_min' => 'أدنى نسبة إغلاق won/(won+lost) %',
         'csat_min' => 'أدنى متوسط CSAT (1–5)',
@@ -24,6 +30,7 @@
         'conversion_pct_target' => 'هدف نسبة تحويل % (شهري)',
     ];
     $groups = [
+        'نتائج SOS اليومية' => ['icon' => 'fas fa-phone-volume text-teal-600', 'keys' => ['call_attempts_daily', 'calls_answered_daily', 'qualified_conversations_daily', 'discovery_sessions_daily', 'proposals_daily', 'paid_enrollments_daily']],
         'النشاط اليومي' => ['icon' => 'fas fa-bolt text-amber-600', 'keys' => ['leads_daily', 'leads_weekly', 'calls_daily', 'meetings_daily', 'followups_daily', 'crm_activities_daily_min']],
         'النتائج والإيراد' => ['icon' => 'fas fa-coins text-emerald-600', 'keys' => ['deals_weekly', 'revenue_monthly', 'closing_ratio_pct_min', 'conversion_pct_target']],
         'الجودة والالتزام' => ['icon' => 'fas fa-star text-sky-600', 'keys' => ['response_minutes_max', 'csat_min', 'loss_ratio_max_pct', 'sales_cycle_max_days', 'engagement_days_pct_min']],

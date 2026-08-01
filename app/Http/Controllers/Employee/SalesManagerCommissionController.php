@@ -68,7 +68,7 @@ class SalesManagerCommissionController extends Controller
 
             $pending = SalesLead::query()
                 ->where('assigned_to', $rep->id)
-                ->where('stage', 'won')
+                ->where('stage', SalesLead::WON_STAGE)
                 ->whereNull('won_confirmed_at')
                 ->count();
 
@@ -128,7 +128,7 @@ class SalesManagerCommissionController extends Controller
 
         $confirmedQ = SalesLead::query()
             ->where('assigned_to', $employee->id)
-            ->where('stage', 'won')
+            ->where('stage', SalesLead::WON_STAGE)
             ->whereNotNull('won_confirmed_at')
             ->with(['advancedCourse:id,title', 'offlineCourse:id,title', 'legacyCourse:id,title']);
         if ($rangeStart && $rangeEnd) {
@@ -138,7 +138,7 @@ class SalesManagerCommissionController extends Controller
 
         $pendingLeads = SalesLead::query()
             ->where('assigned_to', $employee->id)
-            ->where('stage', 'won')
+            ->where('stage', SalesLead::WON_STAGE)
             ->whereNull('won_confirmed_at')
             ->with(['advancedCourse:id,title', 'offlineCourse:id,title', 'legacyCourse:id,title'])
             ->orderByDesc('closed_at')

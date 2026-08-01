@@ -34,7 +34,7 @@ class SalesLeadController extends Controller
                 ->whereNotNull('next_follow_up_at')
                 ->where('next_follow_up_at', '<', now())
                 ->count(),
-            'won' => (clone $filterQuery)->where('stage', 'won')->count(),
+            'won' => (clone $filterQuery)->where('stage', SalesLead::WON_STAGE)->count(),
         ];
 
         $query = clone $filterQuery;
@@ -310,14 +310,20 @@ class SalesLeadController extends Controller
     {
         $validated = $request->validate([
             'type' => 'required|string|in:' . implode(',', array_keys(SalesActivity::TYPES)),
+            'outcome' => 'nullable|string|in:' . implode(',', array_keys(SalesActivity::OUTCOMES)),
             'title' => 'nullable|string|max:255',
             'body' => 'nullable|string|max:5000',
         ]);
+
+        if ($validated['type'] === 'call' && empty($validated['outcome'])) {
+            return back()->withErrors(['outcome' => 'نتيجة المكالمة مطلوبة.'])->withInput();
+        }
 
         $activity = SalesActivity::create([
             'sales_lead_id' => $lead->id,
             'user_id' => auth()->id(),
             'type' => $validated['type'],
+            'outcome' => $validated['type'] === 'call' ? ($validated['outcome'] ?? null) : null,
             'title' => $validated['title'] ?? null,
             'body' => $validated['body'] ?? null,
         ]);
@@ -328,7 +334,7 @@ class SalesLeadController extends Controller
             'sales_activity_created_admin',
             $lead,
             null,
-            $activity->only(['type', 'title', 'body']),
+            $activity->only(['type', 'outcome', 'title', 'body']),
             'الإدارة سجّلت نشاطاً على: ' . $lead->name
         );
 
@@ -459,7 +465,7 @@ class SalesLeadController extends Controller
     private function syncClosedAt(SalesLead $lead): void
     {
         $lead->refresh();
-        if (in_array($lead->stage, ['won', 'lost'], true)) {
+        if (in_array($lead->stage, [...\App\Models\SalesLead::CLOSED_STAGES, \App\Models\SalesLead::WON_STAGE], true)) {
             if (! $lead->closed_at) {
                 $lead->forceFill(['closed_at' => now()])->save();
             }

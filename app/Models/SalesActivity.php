@@ -18,10 +18,39 @@ class SalesActivity extends Model
         'other' => 'أخرى',
     ];
 
+    public const OUTCOMES = [
+        'interested' => 'مهتم (Interested)',
+        'follow_up' => 'متابعة (Follow Up)',
+        'not_interested' => 'غير مهتم (Not Interested)',
+        'no_answer' => 'لم يرد (No Answer)',
+        'wrong_number' => 'رقم خطأ (Wrong Number)',
+        'closed_won' => 'إغلاق ناجح (Closed Won)',
+        'closed_lost' => 'إغلاق خسارة (Closed Lost)',
+    ];
+
+    /** نتائج تعني أن المكالمة تم الرد عليها */
+    public const ANSWERED_OUTCOMES = [
+        'interested',
+        'follow_up',
+        'not_interested',
+        'closed_won',
+        'closed_lost',
+    ];
+
+    /** نتائج تُحسب محادثة مؤهلة */
+    public const QUALIFIED_OUTCOMES = [
+        'interested',
+        'follow_up',
+        'closed_won',
+    ];
+
     protected $fillable = [
         'sales_lead_id',
         'user_id',
         'type',
+        'outcome',
+        'duration_seconds',
+        'recording_url',
         'title',
         'body',
         'meta',
@@ -31,6 +60,7 @@ class SalesActivity extends Model
     {
         return [
             'meta' => 'array',
+            'duration_seconds' => 'integer',
         ];
     }
 
@@ -47,5 +77,24 @@ class SalesActivity extends Model
     public static function typeLabel(string $type): string
     {
         return self::TYPES[$type] ?? $type;
+    }
+
+    public static function outcomeLabel(?string $outcome): string
+    {
+        if ($outcome === null || $outcome === '') {
+            return '—';
+        }
+
+        return self::OUTCOMES[$outcome] ?? $outcome;
+    }
+
+    public function isAnsweredCall(): bool
+    {
+        return $this->type === 'call' && in_array((string) $this->outcome, self::ANSWERED_OUTCOMES, true);
+    }
+
+    public function isQualifiedConversation(): bool
+    {
+        return $this->type === 'call' && in_array((string) $this->outcome, self::QUALIFIED_OUTCOMES, true);
     }
 }

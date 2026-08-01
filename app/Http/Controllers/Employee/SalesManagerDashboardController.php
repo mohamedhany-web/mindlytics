@@ -30,9 +30,9 @@ class SalesManagerDashboardController extends Controller
 
         $stats = [
             'total' => (clone $base)->count(),
-            'new' => (clone $base)->where('stage', 'new')->count(),
+            'new' => (clone $base)->where('stage', 'new_lead')->count(),
             'active' => $open()->count(),
-            'won' => (clone $base)->where('stage', 'won')->count(),
+            'won' => (clone $base)->where('stage', SalesLead::WON_STAGE)->count(),
             'lost' => (clone $base)->where('stage', 'lost')->count(),
             'followups_today' => $open()
                 ->whereNotNull('next_follow_up_at')
@@ -45,7 +45,7 @@ class SalesManagerDashboardController extends Controller
             'urgent_open' => $open()->where('priority', 'urgent')->count(),
             'stale' => $this->staleQuery(clone $base)->count(),
             'pipeline_value' => (float) $open()->whereNotNull('expected_value')->sum('expected_value'),
-            'won_month_value' => (float) (clone $base)->where('stage', 'won')
+            'won_month_value' => (float) (clone $base)->where('stage', SalesLead::WON_STAGE)
                 ->whereNotNull('closed_at')
                 ->whereBetween('closed_at', [now()->startOfMonth(), now()->endOfMonth()])
                 ->sum('expected_value'),

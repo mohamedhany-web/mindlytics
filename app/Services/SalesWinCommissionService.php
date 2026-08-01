@@ -18,8 +18,8 @@ class SalesWinCommissionService
     {
         $lead->loadMissing(['assignee', 'advancedCourse', 'offlineCourse', 'legacyCourse']);
 
-        if ($lead->stage !== 'won') {
-            return ['success' => false, 'error' => 'لا يمكن اعتماد الكوميشن إلا عند مرحلة «مكتمل / فوز».'];
+        if ($lead->stage !== SalesLead::WON_STAGE) {
+            return ['success' => false, 'error' => 'لا يمكن اعتماد الكوميشن إلا عند مرحلة Enrollment Completed.'];
         }
         if ($lead->won_confirmed_at) {
             return ['success' => false, 'error' => 'تم اعتماد هذا الـ lead مسبقاً.'];
@@ -176,7 +176,7 @@ class SalesWinCommissionService
      */
     public function rejectWin(SalesLead $lead, string $reason, ?int $adminId = null): array
     {
-        if ($lead->stage !== 'won' || $lead->won_confirmed_at) {
+        if ($lead->stage !== SalesLead::WON_STAGE || $lead->won_confirmed_at) {
             return ['success' => false, 'error' => 'لا يمكن رفض هذه الصفقة.'];
         }
 
@@ -187,9 +187,10 @@ class SalesWinCommissionService
             return ['success' => false, 'error' => 'سبب الرفض مطلوب.'];
         }
 
-        $previousStage = 'won';
+        $previousStage = SalesLead::WON_STAGE;
         $lead->forceFill([
-            'stage' => 'proposal',
+            'stage' => 'offer_sent',
+            'stage_entered_at' => now(),
             'closed_at' => null,
             'won_confirmed_at' => null,
             'won_confirmed_by' => null,
@@ -203,15 +204,15 @@ class SalesWinCommissionService
             'user_id' => $adminId,
             'type' => 'stage_change',
             'title' => 'رفض اعتماد الفوز',
-            'body' => 'أُعيدت الصفقة إلى «عرض سعر» — السبب: '.$reason,
-            'meta' => ['from' => $previousStage, 'to' => 'proposal', 'rejected_by_admin' => true],
+            'body' => 'أُعيدت الصفقة إلى «Offer Sent» — السبب: '.$reason,
+            'meta' => ['from' => $previousStage, 'to' => 'offer_sent', 'rejected_by_admin' => true],
         ]);
 
         SalesAuditService::log(
             'sales_lead_won_rejected',
             $lead->fresh(),
             ['stage' => $previousStage],
-            ['stage' => 'proposal', 'reason' => $reason],
+            ['stage' => 'offer_sent', 'reason' => $reason],
             'رفض اعتماد فوز Lead: '.($lead->name ?? '')
         );
 

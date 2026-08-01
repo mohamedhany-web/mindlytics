@@ -51,6 +51,8 @@
         </div>
     @endif
 
+    @include('employee.sales._pipeline_journey', ['lead' => $lead])
+
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
         {{-- العمود الرئيسي: النشاطات --}}
         <div class="lg:col-span-8 space-y-6 order-1">
@@ -89,18 +91,32 @@
                                 </ul>
                             </div>
                         @endif
-                        <div class="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-12 gap-4" x-data="{ actType: '{{ old('type', 'call') }}' }">
                             <div class="sm:col-span-4">
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">نوع النشاط</label>
-                                <select name="type" class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" required>
+                                <select name="type" x-model="actType" class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" required>
                                     @foreach(\App\Models\SalesActivity::TYPES as $k => $label)
                                         @if($k !== 'stage_change')
-                                            <option value="{{ $k }}">{{ $label }}</option>
+                                            <option value="{{ $k }}" @selected(old('type', 'call') === $k)>{{ $label }}</option>
                                         @endif
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="sm:col-span-8">
+                            <div class="sm:col-span-8" x-show="actType === 'call'" x-cloak>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">نتيجة المكالمة <span class="text-rose-500">*</span></label>
+                                <select name="outcome" class="w-full border-2 border-amber-200 bg-amber-50/40 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                        :required="actType === 'call'">
+                                    <option value="">— اختر النتيجة —</option>
+                                    @foreach(\App\Models\SalesActivity::OUTCOMES as $k => $label)
+                                        <option value="{{ $k }}" @selected(old('outcome') === $k)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                                <label class="mt-2 inline-flex items-center gap-2 text-xs text-slate-600">
+                                    <input type="checkbox" name="apply_stage" value="1" checked class="rounded border-slate-300 text-emerald-600">
+                                    حدّث مرحلة العميل تلقائياً حسب النتيجة
+                                </label>
+                            </div>
+                            <div class="sm:col-span-8" x-show="actType !== 'call'">
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">عنوان مختصر <span class="text-gray-400 font-normal">(اختياري)</span></label>
                                 <input type="text" name="title" value="{{ old('title') }}" placeholder="مثال: متابعة عرض السعر" class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
                             </div>
@@ -136,6 +152,9 @@
                                     <div class="flex flex-wrap items-center justify-between gap-2 gap-y-1">
                                         <span class="inline-flex items-center gap-1.5 text-sm font-bold text-gray-900">
                                             {{ \App\Models\SalesActivity::typeLabel($act->type) }}
+                                            @if($act->type === 'call' && $act->outcome)
+                                                <span class="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">{{ \App\Models\SalesActivity::outcomeLabel($act->outcome) }}</span>
+                                            @endif
                                         </span>
                                         <time class="text-xs text-gray-500 font-medium tabular-nums" datetime="{{ $act->created_at->toIso8601String() }}">
                                             {{ $act->created_at->format('Y-m-d H:i') }}
@@ -234,7 +253,7 @@
                     </div>
                 @endif
 
-                @if($lead->stage === 'won')
+                @if($lead->stage === \App\Models\SalesLead::WON_STAGE)
                     @if($lead->isWinConfirmed())
                         <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm">
                             <p class="font-bold text-emerald-900 flex items-center gap-2"><i class="fas fa-check-circle"></i> تم اعتماد الفوز والكوميشن</p>

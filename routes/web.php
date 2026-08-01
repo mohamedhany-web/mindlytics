@@ -997,6 +997,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('groups/{group}/whatsapp-batches/{batch}', [\App\Http\Controllers\Employee\SalesGroupWhatsAppController::class, 'showBatch'])->name('groups.whatsapp-batches.show');
             Route::get('groups/{group}/whatsapp-batches/{batch}/status', [\App\Http\Controllers\Employee\SalesGroupWhatsAppController::class, 'statusJson'])->name('groups.whatsapp-batches.status');
             Route::post('leads/{lead}/activities', [\App\Http\Controllers\Employee\SalesLeadController::class, 'storeActivity'])->name('leads.activities.store');
+            Route::post('leads/{lead}/pipeline', [\App\Http\Controllers\Employee\SalesLeadController::class, 'advanceStage'])->name('leads.pipeline');
             Route::post('leads/{lead}/quick-activity', [\App\Http\Controllers\Employee\SalesLeadController::class, 'quickActivity'])->name('leads.quick-activity');
             Route::post('leads/{lead}/next-follow', [\App\Http\Controllers\Employee\SalesLeadController::class, 'setNextFollow'])->name('leads.next-follow');
             Route::post('leads/{lead}/csat', [\App\Http\Controllers\Employee\SalesLeadController::class, 'storeCsat'])->name('leads.csat.store');
@@ -1026,6 +1027,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
 
         Route::middleware('sales.manager')->prefix('sales-manager')->name('sales-manager.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Employee\SalesManagerDashboardController::class, 'index'])->name('dashboard');
+            Route::get('live-board', [\App\Http\Controllers\Employee\SalesManagerLiveBoardController::class, 'index'])->name('live-board');
+            Route::get('pipeline', [\App\Http\Controllers\Employee\SalesManagerPipelineController::class, 'index'])->name('pipeline');
             Route::get('team/{employee}', [\App\Http\Controllers\Employee\SalesManagerTeamController::class, 'show'])->name('team.show');
             Route::get('team/{employee}/report', [\App\Http\Controllers\Employee\SalesManagerTeamController::class, 'report'])->name('team.report');
             Route::get('team/{employee}/report/pdf', [\App\Http\Controllers\Employee\SalesManagerTeamController::class, 'reportPdf'])->name('team.report.pdf');
@@ -1226,6 +1229,10 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('kpi', [\App\Http\Controllers\Admin\SalesKpiController::class, 'index'])->name('kpi.index');
             Route::get('kpi/targets', [\App\Http\Controllers\Admin\SalesKpiController::class, 'targets'])->name('kpi.targets');
             Route::put('kpi/targets', [\App\Http\Controllers\Admin\SalesKpiController::class, 'updateTargets'])->name('kpi.targets.update');
+            Route::get('day-blocks', [\App\Http\Controllers\Admin\SalesDayBlockController::class, 'index'])->name('day-blocks.index');
+            Route::post('day-blocks', [\App\Http\Controllers\Admin\SalesDayBlockController::class, 'store'])->name('day-blocks.store');
+            Route::put('day-blocks/{day_block}', [\App\Http\Controllers\Admin\SalesDayBlockController::class, 'update'])->name('day-blocks.update');
+            Route::delete('day-blocks/{day_block}', [\App\Http\Controllers\Admin\SalesDayBlockController::class, 'destroy'])->name('day-blocks.destroy');
             Route::get('course-commission-courses', [\App\Http\Controllers\Admin\SalesCourseCommissionAgreementController::class, 'courses'])->name('course-commission.courses');
             Route::post('course-commission-agreements', [\App\Http\Controllers\Admin\SalesCourseCommissionAgreementController::class, 'store'])->name('course-commission-agreements.store');
             Route::put('course-commission-agreements/{agreement}', [\App\Http\Controllers\Admin\SalesCourseCommissionAgreementController::class, 'update'])->name('course-commission-agreements.update');

@@ -11,13 +11,99 @@ class SalesLead extends Model
 {
     use SoftDeletes;
 
+    /** Academy sales journey */
     public const STAGES = [
-        'new' => 'جديد',
-        'contacted' => 'تم التواصل',
-        'qualified' => 'مؤهل',
-        'proposal' => 'عرض سعر',
-        'won' => 'مكتمل / فوز',
-        'lost' => 'خسارة',
+        'new_lead' => 'New Lead',
+        'first_contact' => 'First Contact',
+        'no_answer' => 'No Answer',
+        'connected' => 'Connected',
+        'qualification' => 'Qualification',
+        'interested' => 'Interested',
+        'objection' => 'Objection',
+        'follow_up_scheduled' => 'Follow-up Scheduled',
+        'offer_sent' => 'Offer Sent',
+        'payment_pending' => 'Payment Pending',
+        'payment_received' => 'Payment Received',
+        'enrollment_completed' => 'Enrollment Completed',
+        'upsell' => 'Upsell',
+        'dormant' => 'Dormant Lead',
+        'lost' => 'Lost',
+    ];
+
+    /** مراحل مغلقة خارج الأنبوب النشط */
+    public const CLOSED_STAGES = [
+        'lost',
+        'dormant',
+    ];
+
+    /** مرحلة الفوز الرسمية (عمولة / موافقة) */
+    public const WON_STAGE = 'enrollment_completed';
+
+    /** مراحل تُحسب نجاحاً في التقارير */
+    public const WON_LIKE_STAGES = [
+        'enrollment_completed',
+        'upsell',
+    ];
+
+    /** مراحل تُحسب تسجيلاً مدفوعاً لـ SOS */
+    public const PAID_STAGES = [
+        'payment_received',
+        'enrollment_completed',
+        'upsell',
+    ];
+
+    public const LEGACY_STAGE_MAP = [
+        'new' => 'new_lead',
+        'contacted' => 'connected',
+        'qualified' => 'qualification',
+        'proposal' => 'offer_sent',
+        'won' => 'enrollment_completed',
+    ];
+
+    public const CONNECTED_DISPOSITIONS = [
+        'interested' => 'مهتم',
+        'busy' => 'مشغول',
+        'callback' => 'يريد معاودة الاتصال',
+        'info_only' => 'يسأل فقط',
+        'wrong_number' => 'رقم خطأ',
+    ];
+
+    public const PROFILE_TYPES = [
+        'student' => 'طالب',
+        'graduate' => 'خريج',
+        'employee' => 'موظف',
+        'other' => 'أخرى',
+    ];
+
+    public const INTEREST_PCTS = [40, 60, 80, 100];
+
+    public const OBJECTION_REASONS = [
+        'price' => 'السعر',
+        'timing' => 'الوقت',
+        'thinking' => 'يفكر',
+        'family' => 'يستشير أهله',
+        'competitor' => 'يقارن مع منافس',
+        'installment' => 'يريد التقسيط',
+        'other_course' => 'يريد كورس آخر',
+        'trust' => 'لا يثق',
+        'no_need' => 'لا يحتاج حالياً',
+        'postponed' => 'أجل القرار',
+        'other' => 'أخرى',
+    ];
+
+    public const FOLLOW_UP_CHANNELS = [
+        'call' => 'Call',
+        'whatsapp' => 'WhatsApp',
+        'meeting' => 'Meeting',
+    ];
+
+    public const PAYMENT_METHODS = [
+        'vodafone_cash' => 'فودافون كاش',
+        'instapay' => 'إنستا باي',
+        'bank_transfer' => 'تحويل بنكي',
+        'card' => 'بطاقة',
+        'cash' => 'نقدي',
+        'other' => 'أخرى',
     ];
 
     public const SOURCES = [
@@ -38,13 +124,19 @@ class SalesLead extends Model
     ];
 
     public const LOSS_REASONS = [
+        'price' => 'السعر',
+        'competitor' => 'منافس',
+        'postponed' => 'أجل القرار',
+        'no_time' => 'لا يملك وقتاً',
+        'trust' => 'لا يثق',
+        'no_need' => 'لا يحتاج حالياً',
         'price_high' => 'السعر مرتفع',
         'no_budget' => 'لا يوجد ميزانية',
-        'competitor' => 'اختار منافس',
         'not_decision_maker' => 'ليس صاحب قرار',
         'timing' => 'التوقيت غير مناسب',
         'no_follow_up' => 'عدم الاستجابة للمتابعة',
         'wrong_fit' => 'غير مناسب للاحتياج',
+        'wrong_number' => 'رقم خطأ',
         'other' => 'أخرى',
     ];
 
@@ -52,6 +144,10 @@ class SalesLead extends Model
     public const STALE_CONTACT_DAYS = 10;
 
     public const COURSE_TYPES = SalesCourseCommissionAgreement::COURSE_TYPES;
+
+    protected $attributes = [
+        'stage' => 'new_lead',
+    ];
 
     protected $fillable = [
         'assigned_to',
@@ -65,6 +161,7 @@ class SalesLead extends Model
         'company',
         'source',
         'stage',
+        'stage_entered_at',
         'priority',
         'interest',
         'course_type',
@@ -74,7 +171,32 @@ class SalesLead extends Model
         'expected_value',
         'notes',
         'next_follow_up_at',
+        'follow_up_channel',
         'last_contacted_at',
+        'contact_attempts',
+        'last_attempt_at',
+        'next_attempt_due_at',
+        'connected_disposition',
+        'profile_type',
+        'age',
+        'field_domain',
+        'experience_level',
+        'course_motivation',
+        'start_preference',
+        'can_pay',
+        'interest_pct',
+        'objection_reason',
+        'objection_notes',
+        'offer_sent_at',
+        'offer_price',
+        'offer_discount',
+        'offer_installment_plan',
+        'offer_notes',
+        'payment_method',
+        'payment_amount',
+        'payment_due_at',
+        'payment_txn_ref',
+        'paid_at',
         'closed_at',
         'won_confirmed_at',
         'won_confirmed_by',
@@ -91,12 +213,24 @@ class SalesLead extends Model
     {
         return [
             'expected_value' => 'decimal:2',
+            'offer_price' => 'decimal:2',
+            'payment_amount' => 'decimal:2',
+            'commission_amount' => 'decimal:2',
             'next_follow_up_at' => 'datetime',
             'last_contacted_at' => 'datetime',
+            'last_attempt_at' => 'datetime',
+            'next_attempt_due_at' => 'datetime',
+            'offer_sent_at' => 'datetime',
+            'payment_due_at' => 'datetime',
+            'paid_at' => 'datetime',
             'closed_at' => 'datetime',
             'won_confirmed_at' => 'datetime',
-            'commission_amount' => 'decimal:2',
+            'stage_entered_at' => 'datetime',
             'csat_recorded_at' => 'datetime',
+            'can_pay' => 'boolean',
+            'contact_attempts' => 'integer',
+            'interest_pct' => 'integer',
+            'age' => 'integer',
         ];
     }
 
@@ -201,26 +335,47 @@ class SalesLead extends Model
 
     public function scopeOpenPipeline($query)
     {
-        return $query->whereNotIn('stage', ['won', 'lost']);
+        return $query->whereNotIn('stage', self::CLOSED_STAGES);
+    }
+
+    public function scopeWonLike($query)
+    {
+        return $query->whereIn('stage', self::WON_LIKE_STAGES);
+    }
+
+    public function scopeEnrollmentWon($query)
+    {
+        return $query->where('stage', self::WON_STAGE);
     }
 
     public function scopePendingWinApproval($query)
     {
-        return $query->where('stage', 'won')->whereNull('won_confirmed_at');
+        return $query->where('stage', self::WON_STAGE)->whereNull('won_confirmed_at');
     }
 
     public function isPendingWinApproval(): bool
     {
-        return $this->stage === 'won' && $this->won_confirmed_at === null;
+        return $this->stage === self::WON_STAGE && $this->won_confirmed_at === null;
     }
 
     public function isWinConfirmed(): bool
     {
-        return $this->stage === 'won' && $this->won_confirmed_at !== null;
+        return $this->stage === self::WON_STAGE && $this->won_confirmed_at !== null;
+    }
+
+    public static function normalizeStage(?string $stage): string
+    {
+        if ($stage === null || $stage === '') {
+            return 'new_lead';
+        }
+
+        return self::LEGACY_STAGE_MAP[$stage] ?? $stage;
     }
 
     public static function stageLabel(string $stage): string
     {
+        $stage = self::normalizeStage($stage);
+
         return self::STAGES[$stage] ?? $stage;
     }
 
@@ -240,7 +395,12 @@ class SalesLead extends Model
 
     public function isOpen(): bool
     {
-        return ! in_array($this->stage, ['won', 'lost'], true);
+        return ! in_array($this->stage, self::CLOSED_STAGES, true);
+    }
+
+    public function isWonLike(): bool
+    {
+        return in_array($this->stage, self::WON_LIKE_STAGES, true);
     }
 
     public function isFollowUpOverdue(): bool
@@ -282,5 +442,18 @@ class SalesLead extends Model
     public function scopeOrderByPriorityDesc($query)
     {
         return $query->orderByRaw("FIELD(priority, 'urgent','high','normal','low')");
+    }
+
+    public function journeyOrder(): array
+    {
+        return array_keys(self::STAGES);
+    }
+
+    public function journeyIndex(): int
+    {
+        $keys = $this->journeyOrder();
+        $idx = array_search($this->stage, $keys, true);
+
+        return $idx === false ? 0 : (int) $idx;
     }
 }
