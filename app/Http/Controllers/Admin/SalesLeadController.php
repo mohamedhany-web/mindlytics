@@ -495,6 +495,12 @@ class SalesLeadController extends Controller
 
     private function validatedLead(Request $request, bool $admin): array
     {
+        if ($request->filled('stage')) {
+            $request->merge([
+                'stage' => SalesLead::normalizeStage((string) $request->input('stage')),
+            ]);
+        }
+
         $rules = [
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:50',

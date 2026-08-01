@@ -653,6 +653,13 @@ class SalesLeadController extends Controller
 
     private function validatedLead(Request $request): array
     {
+        // قبول المراحل القديمة (new/contacted/...) وتحويلها لـ Academy Pipeline
+        if ($request->filled('stage')) {
+            $request->merge([
+                'stage' => SalesLead::normalizeStage((string) $request->input('stage')),
+            ]);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:50',

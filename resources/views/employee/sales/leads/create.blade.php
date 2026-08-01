@@ -61,7 +61,7 @@
           class="grid grid-cols-1 xl:grid-cols-12 gap-6"
           @keydown.ctrl.enter.prevent="$refs.primarySubmit.click()">
         @csrf
-        <input type="hidden" name="stage" value="new">
+        <input type="hidden" name="stage" value="new_lead">
         <input type="hidden" name="follow_preset" :value="followPreset">
         <input type="hidden" name="next_follow_up_at" :value="resolvedFollowUp()">
 

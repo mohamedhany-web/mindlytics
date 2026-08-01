@@ -50,7 +50,7 @@
         <label class="{{ $labelClass }}">المرحلة <span class="text-rose-600">*</span></label>
         <select name="stage" required class="{{ $inputClass }}">
             @foreach(\App\Models\SalesLead::STAGES as $k => $label)
-                <option value="{{ $k }}" @selected(old('stage', $lead->stage ?? 'new') === $k)>{{ $label }}</option>
+                <option value="{{ $k }}" @selected(old('stage', $lead->stage ?? 'new_lead') === $k)>{{ $label }}</option>
             @endforeach
         </select>
         @error('stage')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
