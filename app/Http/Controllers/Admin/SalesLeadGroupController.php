@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SalesLead;
 use App\Models\SalesLeadGroup;
 use App\Models\User;
+use App\Services\SalesGroupPrintPdfService;
 use App\Services\SalesLeadWhatsAppBatchService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SalesLeadGroupController extends Controller
 {
@@ -150,6 +152,30 @@ class SalesLeadGroupController extends Controller
         $group->delete();
 
         return redirect()->route('admin.sales.groups.index')->with('success', 'تم حذف المجموعة');
+    }
+
+    /**
+     * طباعة PDF نموذج ورقي لعملاء المجموعة (كامل أو لموظف محدد).
+     */
+    public function printPdf(Request $request, SalesLeadGroup $group, SalesGroupPrintPdfService $pdf): StreamedResponse
+    {
+        $validated = $request->validate([
+            'employee_id' => 'nullable|integer|exists:users,id',
+        ]);
+
+        $employee = null;
+        if (! empty($validated['employee_id'])) {
+            $employee = User::salesEmployees()
+                ->where('is_active', true)
+                ->whereKey((int) $validated['employee_id'])
+                ->first();
+
+            if (! $employee) {
+                abort(422, 'الموظف المحدد ليس موظف مبيعات فعّالاً.');
+            }
+        }
+
+        return $pdf->download($group, $employee);
     }
 
     /**

@@ -28,6 +28,11 @@
         </div>
         <div class="flex flex-wrap gap-2">
             <a href="{{ route('employee.sales.groups.index') }}" class="px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-700">المجموعات</a>
+            <a href="{{ route('employee.sales.groups.print-pdf', $group) }}" target="_blank"
+               class="px-4 py-2 text-sm font-bold rounded-lg text-white bg-teal-700 hover:bg-teal-800 inline-flex items-center gap-2">
+                <i class="fas fa-file-pdf"></i>
+                طباعة نموذجي PDF
+            </a>
             <a href="{{ route('employee.sales.leads.index', ['group_id' => $group->id]) }}" class="px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-700">عرض العملاء</a>
             <a href="{{ route('employee.sales.leads.create') }}?group={{ $group->id }}" class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-semibold">+ عميل في المجموعة</a>
         </div>

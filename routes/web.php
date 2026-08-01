@@ -991,6 +991,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('daily-reports/edit', [\App\Http\Controllers\Employee\SalesDailyReportController::class, 'edit'])->name('daily-reports.edit');
             Route::post('daily-reports', [\App\Http\Controllers\Employee\SalesDailyReportController::class, 'store'])->name('daily-reports.store');
             Route::post('daily-reports/sync-auto', [\App\Http\Controllers\Employee\SalesDailyReportController::class, 'syncAuto'])->name('daily-reports.sync-auto');
+            Route::get('groups/{group}/print-pdf', [\App\Http\Controllers\Employee\SalesLeadGroupController::class, 'printPdf'])->name('groups.print-pdf');
             Route::resource('groups', \App\Http\Controllers\Employee\SalesLeadGroupController::class)->except(['edit']);
             Route::post('groups/{group}/whatsapp-bulk', [\App\Http\Controllers\Employee\SalesGroupWhatsAppController::class, 'store'])->name('groups.whatsapp.store');
             Route::get('groups/{group}/whatsapp-batches/{batch}', [\App\Http\Controllers\Employee\SalesGroupWhatsAppController::class, 'showBatch'])->name('groups.whatsapp-batches.show');
@@ -1235,6 +1236,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('win-approvals', [\App\Http\Controllers\Admin\SalesWinApprovalController::class, 'index'])->name('win-approvals.index');
             Route::post('win-approvals/{lead}/approve', [\App\Http\Controllers\Admin\SalesWinApprovalController::class, 'approve'])->name('win-approvals.approve');
             Route::post('win-approvals/{lead}/reject', [\App\Http\Controllers\Admin\SalesWinApprovalController::class, 'reject'])->name('win-approvals.reject');
+            Route::get('groups/{group}/print-pdf', [\App\Http\Controllers\Admin\SalesLeadGroupController::class, 'printPdf'])->name('groups.print-pdf');
             Route::resource('groups', \App\Http\Controllers\Admin\SalesLeadGroupController::class)->except(['edit']);
             Route::post('groups/{group}/whatsapp-bulk', [\App\Http\Controllers\Admin\SalesGroupWhatsAppController::class, 'store'])->name('groups.whatsapp.store');
             Route::get('groups/{group}/whatsapp-batches/{batch}', [\App\Http\Controllers\Admin\SalesGroupWhatsAppController::class, 'showBatch'])->name('groups.whatsapp-batches.show');

@@ -57,6 +57,50 @@
             </div>
         </div>
 
+        {{-- طباعة نموذج ورقي PDF --}}
+        @php
+            $printEmployees = collect();
+            if (($group->members ?? collect())->isNotEmpty()) {
+                $printEmployees = $group->members;
+            } elseif ($group->assignee) {
+                $printEmployees = collect([$group->assignee]);
+            }
+            $leadAssignees = $group->leads->pluck('assignee')->filter()->unique('id');
+            $printEmployees = $printEmployees->concat($leadAssignees)->unique('id')->sortBy('name')->values();
+            $leadsByAssignee = $group->leads->groupBy('assigned_to');
+        @endphp
+        <div class="mx-4 mt-4 mb-1 rounded-2xl border border-teal-200 bg-gradient-to-l from-teal-50 via-white to-emerald-50 p-4">
+            <div class="flex flex-col lg:flex-row lg:items-end gap-4">
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                        <div class="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-sm">
+                            <i class="fas fa-file-pdf"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-black text-slate-900">طباعة نموذج ورقي (PDF)</h3>
+                            <p class="text-xs text-slate-600">نموذج منظّم باسم الموظف — يُعبَّأ يدوياً أثناء المتابعة ثم تُسجَّل النتائج على النظام.</p>
+                        </div>
+                    </div>
+                </div>
+                <form method="get" action="{{ route('admin.sales.groups.print-pdf', $group) }}" target="_blank" class="flex flex-col sm:flex-row gap-2 sm:items-end">
+                    <div class="min-w-[220px]">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">نطاق الطباعة</label>
+                        <select name="employee_id" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+                            <option value="">كافة بيانات المجموعة ({{ number_format($leadsCount) }})</option>
+                            @foreach($printEmployees as $emp)
+                                @php $empLeadCount = ($leadsByAssignee->get($emp->id) ?? collect())->count(); @endphp
+                                <option value="{{ $emp->id }}">{{ $emp->name }} — {{ number_format($empLeadCount) }} عميل</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <button type="submit" class="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-bold text-white rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 shadow-md shadow-teal-500/20 whitespace-nowrap">
+                        <i class="fas fa-print"></i>
+                        تحميل / طباعة PDF
+                    </button>
+                </form>
+            </div>
+        </div>
+
         <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 p-4">
             <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div class="flex items-center justify-between gap-2">

@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Employee;
 use App\Http\Controllers\Controller;
 use App\Models\SalesLead;
 use App\Models\SalesLeadGroup;
+use App\Models\User;
+use App\Services\SalesGroupPrintPdfService;
 use App\Services\SalesLeadWhatsAppBatchService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SalesLeadGroupController extends Controller
 {
@@ -134,6 +137,19 @@ class SalesLeadGroupController extends Controller
 
         return redirect()->route('employee.sales.groups.index')
             ->with('success', 'تم حذف المجموعة');
+    }
+
+    /**
+     * طباعة PDF نموذج ورقي لعملاء المجموعة الخاصة بالموظف الحالي.
+     */
+    public function printPdf(SalesLeadGroup $group, SalesGroupPrintPdfService $pdf): StreamedResponse
+    {
+        $this->authorizeGroup($group);
+
+        /** @var User $user */
+        $user = Auth::user();
+
+        return $pdf->download($group, $user);
     }
 
     private function authorizeGroup(SalesLeadGroup $group): void
