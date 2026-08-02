@@ -1963,10 +1963,18 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
 
             Route::get('/leads', [\App\Http\Controllers\Admin\MetaSocialLeadCenterController::class, 'index'])->name('leads.index');
             Route::get('/leads/poll', [\App\Http\Controllers\Admin\MetaSocialLeadCenterController::class, 'poll'])->name('leads.poll');
+            Route::get('/leads/export', [\App\Http\Controllers\Admin\MetaSocialLeadCenterController::class, 'export'])->name('leads.export');
+            Route::post('/leads/bulk', [\App\Http\Controllers\Admin\MetaSocialLeadCenterController::class, 'bulk'])->name('leads.bulk');
             Route::post('/leads/{conversation}/create-lead', [\App\Http\Controllers\Admin\MetaSocialLeadCenterController::class, 'createLead'])->name('leads.create');
             Route::post('/leads/{conversation}/assign', [\App\Http\Controllers\Admin\MetaSocialLeadCenterController::class, 'assign'])->name('leads.assign');
             Route::post('/leads/{conversation}/contact', [\App\Http\Controllers\Admin\MetaSocialLeadCenterController::class, 'updateContact'])->name('leads.contact');
             Route::post('/leads/{conversation}/stage', [\App\Http\Controllers\Admin\MetaSocialLeadCenterController::class, 'updateStage'])->name('leads.stage');
+            Route::post('/leads/{conversation}/priority', [\App\Http\Controllers\Admin\MetaSocialLeadCenterController::class, 'updatePriority'])->name('leads.priority');
+            Route::post('/leads/{conversation}/reminder', [\App\Http\Controllers\Admin\MetaSocialLeadCenterController::class, 'updateReminder'])->name('leads.reminder');
+            Route::post('/leads/{conversation}/labels', [\App\Http\Controllers\Admin\MetaSocialLeadCenterController::class, 'updateLabels'])->name('leads.labels');
+            Route::post('/leads/{conversation}/done', [\App\Http\Controllers\Admin\MetaSocialLeadCenterController::class, 'markDone'])->name('leads.done');
+            Route::post('/leads/{conversation}/request-phone', [\App\Http\Controllers\Admin\MetaSocialLeadCenterController::class, 'requestPhone'])->name('leads.request-phone');
+            Route::post('/leads/{conversation}/reply', [\App\Http\Controllers\Admin\MetaSocialLeadCenterController::class, 'reply'])->name('leads.reply');
         });
 
         // إدارة الرسائل والتقارير
