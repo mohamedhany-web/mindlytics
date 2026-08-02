@@ -309,6 +309,11 @@ class SalesLead extends Model
         return $this->hasMany(SalesActivity::class)->orderByDesc('created_at');
     }
 
+    public function metaSocialConversations(): HasMany
+    {
+        return $this->hasMany(MetaSocialConversation::class, 'sales_lead_id');
+    }
+
     public function transfers(): HasMany
     {
         return $this->hasMany(SalesLeadTransfer::class)->orderByDesc('created_at');

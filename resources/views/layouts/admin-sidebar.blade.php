@@ -467,6 +467,14 @@
                             <span>Messenger & Instagram</span>
                         </a>
                     </li>
+                    <li>
+                        <a href="{{ route('admin.meta-social.leads.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.meta-social.leads.*') ? 'bg-sky-600/30 text-white font-semibold border-r-2 border-sky-400' : '' }}">
+                            <i class="fas fa-user-plus w-4"></i>
+                            <span>Lead Center</span>
+                        </a>
+                    </li>
                 </ul>
             </li>
 

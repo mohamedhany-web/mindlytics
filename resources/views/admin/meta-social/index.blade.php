@@ -17,6 +17,7 @@
         'icon' => 'fab fa-meta',
         'actions' => '
             <a href="' . route('admin.meta-social.inbox.index') . '" class="' . $smBtnPrimary . '"><i class="fas fa-inbox"></i> المحادثات</a>
+            <a href="' . route('admin.meta-social.leads.index') . '" class="' . $smBtnSecondary . '"><i class="fas fa-user-plus"></i> Lead Center</a>
             <a href="' . route('admin.meta-social.pages.index') . '" class="' . $smBtnSecondary . '"><i class="fab fa-facebook"></i> الصفحات</a>
             <a href="' . route('admin.meta-social.settings') . '" class="' . $smBtnSecondary . '"><i class="fas fa-plug"></i> إعدادات الربط</a>
         ',

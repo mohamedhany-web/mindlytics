@@ -1960,6 +1960,13 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('/inbox/{conversation}/enrich', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'enrich'])->name('inbox.enrich');
             Route::post('/inbox/{conversation}/request-phone', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'requestPhone'])->name('inbox.request-phone');
             Route::post('/inbox/{conversation}/sync-messages', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'syncMessages'])->name('inbox.sync-messages');
+
+            Route::get('/leads', [\App\Http\Controllers\Admin\MetaSocialLeadCenterController::class, 'index'])->name('leads.index');
+            Route::get('/leads/poll', [\App\Http\Controllers\Admin\MetaSocialLeadCenterController::class, 'poll'])->name('leads.poll');
+            Route::post('/leads/{conversation}/create-lead', [\App\Http\Controllers\Admin\MetaSocialLeadCenterController::class, 'createLead'])->name('leads.create');
+            Route::post('/leads/{conversation}/assign', [\App\Http\Controllers\Admin\MetaSocialLeadCenterController::class, 'assign'])->name('leads.assign');
+            Route::post('/leads/{conversation}/contact', [\App\Http\Controllers\Admin\MetaSocialLeadCenterController::class, 'updateContact'])->name('leads.contact');
+            Route::post('/leads/{conversation}/stage', [\App\Http\Controllers\Admin\MetaSocialLeadCenterController::class, 'updateStage'])->name('leads.stage');
         });
 
         // إدارة الرسائل والتقارير

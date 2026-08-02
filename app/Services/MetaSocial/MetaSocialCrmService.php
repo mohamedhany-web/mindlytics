@@ -106,6 +106,7 @@ class MetaSocialCrmService
 
         if ($updates !== []) {
             $conversation->update($updates);
+            MetaSocialContactCaptureService::bumpInboxVersion();
         }
 
         return $conversation->fresh(['page', 'assignee', 'salesLead']);
@@ -115,6 +116,7 @@ class MetaSocialCrmService
     {
         $assignee = User::query()->findOrFail($userId);
         $conversation->update(['assigned_to' => $assignee->id]);
+        MetaSocialContactCaptureService::bumpInboxVersion();
 
         if ($conversation->sales_lead_id) {
             SalesLead::query()
@@ -231,6 +233,7 @@ class MetaSocialCrmService
         }
 
         $conversation->update($updates);
+        MetaSocialContactCaptureService::bumpInboxVersion();
 
         return $conversation->fresh(['page', 'assignee', 'salesLead']);
     }
