@@ -268,7 +268,7 @@ class OfflineEnrollmentController extends Controller
             'payment_method' => $paymentMethod,
             'wallet_id' => $walletId,
             'notes' => $validated['notes'] ?? null,
-            'deposit_notes' => 'إيداع دفعة إضافية — تسجيل كورس أوفلاين #'.$enrollment->id,
+            'deposit_notes' => 'إيداع دفعة إضافية — تسجيل كورس '.((($enrollment->enrollment_channel ?? 'offline') === 'online') ? 'أونلاين' : 'أوفلاين').' #'.$enrollment->id,
         ];
         if ($wallet) {
             $walletLabel = $wallet->name ?: Wallet::typeLabel($wallet->type);
@@ -292,7 +292,12 @@ class OfflineEnrollmentController extends Controller
             return back()->with('success', "تم تسجيل دفعة بمبلغ {$payAmount} بنجاح");
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => 'حدث خطأ أثناء تسجيل الدفعة']);
+            Log::error('Offline enrollment addPayment failed: '.$e->getMessage(), [
+                'enrollment_id' => $enrollment->id,
+                'amount' => $payAmount ?? null,
+            ]);
+
+            return back()->withErrors(['error' => 'حدث خطأ أثناء تسجيل الدفعة: '.$e->getMessage()]);
         }
     }
 
@@ -326,10 +331,16 @@ class OfflineEnrollmentController extends Controller
 
     private function createPaymentRecord(OfflineCourseEnrollment $enrollment, float $amount, array $data, ?Invoice $invoice = null): void
     {
+        $enrollment->loadMissing('course', 'invoice');
         $invoice = $invoice ?? $enrollment->invoice;
-        if (!$invoice) return;
 
-        $enrollment->loadMissing('course');
+        // تسجيلات الأونلاين غالباً تُنشأ بدون فاتورة (paid=0) — أنشئ فاتورة عند أول دفعة
+        if (! $invoice) {
+            $invoice = $this->ensureEnrollmentInvoice($enrollment);
+        }
+
+        $channelLabel = ($enrollment->enrollment_channel ?? 'offline') === 'online' ? 'أونلاين' : 'أوفلاين';
+        $courseTitle = $enrollment->course->title ?? '';
 
         $paymentNumber = 'OFF-PAY-' . str_pad(Payment::count() + 1, 6, '0', STR_PAD_LEFT);
 
@@ -363,7 +374,7 @@ class OfflineEnrollmentController extends Controller
                 try {
                     $depositDescription = $data['deposit_notes'] ?? $data['payment_notes'] ?? $data['notes'] ?? '';
                     if ($depositDescription === '') {
-                        $depositDescription = 'إيداع كورس أوفلاين — فاتورة: '.$invoice->invoice_number;
+                        $depositDescription = 'إيداع كورس '.$channelLabel.' — فاتورة: '.$invoice->invoice_number;
                     } else {
                         $depositDescription .= ' — فاتورة: '.$invoice->invoice_number;
                     }
@@ -385,8 +396,7 @@ class OfflineEnrollmentController extends Controller
 
         $transactionNumber = 'OFF-TXN-' . str_pad(Transaction::count() + 1, 6, '0', STR_PAD_LEFT);
 
-        $courseTitle = $enrollment->course->title ?? '';
-        $txDescription = 'دفعة كورس أوفلاين: '.$courseTitle;
+        $txDescription = 'دفعة كورس '.$channelLabel.': '.$courseTitle;
         if ($wallet) {
             $txDescription .= ' — محفظة: '.($wallet->name ?? (string) $wallet->id);
         }
@@ -395,6 +405,7 @@ class OfflineEnrollmentController extends Controller
             'offline_course_id' => $enrollment->offline_course_id,
             'enrollment_id' => $enrollment->id,
             'group_id' => $enrollment->group_id,
+            'enrollment_channel' => $enrollment->enrollment_channel ?? 'offline',
         ];
         if ($walletId !== null) {
             $metadata['wallet_id'] = $walletId;
@@ -429,6 +440,54 @@ class OfflineEnrollmentController extends Controller
         if ($enrollment->payment_status === 'paid' && $invoice->status !== 'paid') {
             $invoice->markAsPaid();
         }
+    }
+
+    /**
+     * إنشاء فاتورة معلقة للتسجيل إن لم تكن موجودة (شائع في تسجيلات الأونلاين غير المدفوعة).
+     */
+    private function ensureEnrollmentInvoice(OfflineCourseEnrollment $enrollment): Invoice
+    {
+        $enrollment->loadMissing('course');
+        $course = $enrollment->course;
+        $channelLabel = ($enrollment->enrollment_channel ?? 'offline') === 'online' ? 'أونلاين' : 'أوفلاين';
+        $title = $course->title ?? '';
+        $total = (float) ($enrollment->total_amount ?? 0);
+        if ($total <= 0) {
+            throw new \RuntimeException('لا يمكن إنشاء فاتورة لتسجيل بمبلغ صفر');
+        }
+
+        $listPrice = $total + (float) ($enrollment->discount_amount ?? 0);
+        $invoiceNumber = 'OFF-INV-'.str_pad((string) $enrollment->id, 6, '0', STR_PAD_LEFT);
+
+        $invoice = Invoice::query()->where('invoice_number', $invoiceNumber)->first();
+        if (! $invoice) {
+            $invoice = Invoice::create([
+                'invoice_number' => $invoiceNumber,
+                'user_id' => $enrollment->user_id,
+                'type' => 'offline_course',
+                'description' => "تسجيل في كورس {$channelLabel}: {$title}",
+                'subtotal' => $listPrice,
+                'tax_amount' => 0,
+                'discount_amount' => (float) ($enrollment->discount_amount ?? 0),
+                'total_amount' => $total,
+                'status' => 'pending',
+                'due_date' => now()->addDays(30),
+                'paid_at' => null,
+                'items' => [[
+                    'description' => "كورس {$channelLabel}: {$title}",
+                    'quantity' => 1,
+                    'unit_price' => $listPrice,
+                    'total' => $total,
+                ]],
+            ]);
+        }
+
+        if ((int) ($enrollment->invoice_id ?? 0) !== (int) $invoice->id) {
+            $enrollment->update(['invoice_id' => $invoice->id]);
+            $enrollment->setRelation('invoice', $invoice);
+        }
+
+        return $invoice;
     }
 
     private function resolveEnrollmentDiscount(Request $request, float $listPrice): float

@@ -84,7 +84,8 @@ class OfflineEnrollmentProvisioner
             }
         }
 
-        if ($paidAmount > 0) {
+        if ($coursePrice > 0) {
+            // دائماً أنشئ فاتورة (حتى لو المدفوع 0) حتى تظهر الدفعات اللاحقة في المعاملات/المحفظة
             self::createFinancialRecords(
                 $enrollment,
                 $course,
@@ -112,22 +113,23 @@ class OfflineEnrollmentProvisioner
         ?float $listPrice = null,
     ): void {
         $listPrice = $listPrice ?? $totalAmount;
+        $channelLabel = ($enrollment->enrollment_channel ?? 'offline') === 'online' ? 'أونلاين' : 'أوفلاين';
         $invoiceNumber = 'OFF-INV-' . str_pad((string) $enrollment->id, 6, '0', STR_PAD_LEFT);
 
         $invoice = Invoice::create([
             'invoice_number' => $invoiceNumber,
             'user_id' => $enrollment->user_id,
             'type' => 'offline_course',
-            'description' => "تسجيل في كورس أوفلاين: {$course->title}",
+            'description' => "تسجيل في كورس {$channelLabel}: {$course->title}",
             'subtotal' => $listPrice,
             'tax_amount' => 0,
             'discount_amount' => $discountAmount,
             'total_amount' => $totalAmount,
-            'status' => $paidAmount >= $totalAmount ? 'paid' : 'pending',
+            'status' => $paidAmount >= $totalAmount && $totalAmount > 0 ? 'paid' : 'pending',
             'due_date' => now()->addDays(30),
-            'paid_at' => $paidAmount >= $totalAmount ? now() : null,
+            'paid_at' => $paidAmount >= $totalAmount && $totalAmount > 0 ? now() : null,
             'items' => [[
-                'description' => "كورس أوفلاين: {$course->title}",
+                'description' => "كورس {$channelLabel}: {$course->title}",
                 'quantity' => 1,
                 'unit_price' => $listPrice,
                 'total' => $totalAmount,
@@ -136,7 +138,10 @@ class OfflineEnrollmentProvisioner
 
         $enrollment->update(['invoice_id' => $invoice->id]);
 
-        $payment = self::createPaymentRecord($enrollment, $course, $paidAmount, $data, $invoice);
+        $payment = null;
+        if ($paidAmount > 0) {
+            $payment = self::createPaymentRecord($enrollment, $course, $paidAmount, $data, $invoice);
+        }
 
         // Ensure offline/online approved bookings appear in student's "orders".
         Order::updateOrCreate(
@@ -154,7 +159,7 @@ class OfflineEnrollmentProvisioner
                 'payment_proof' => null,
                 'payment_id' => $payment?->id,
                 'status' => Order::STATUS_APPROVED,
-                'notes' => trim(($data['payment_notes'] ?? $data['notes'] ?? '') . "\n" . "طلب كورس " . ($enrollment->enrollment_channel === 'online' ? 'أونلاين' : 'أوفلاين') . ": " . ($course->title ?? '')),
+                'notes' => trim(($data['payment_notes'] ?? $data['notes'] ?? '') . "\n" . "طلب كورس " . $channelLabel . ": " . ($course->title ?? '')),
                 'approved_at' => now(),
                 'approved_by' => Auth::id(),
             ]
@@ -183,6 +188,8 @@ class OfflineEnrollmentProvisioner
             $walletId = null;
         }
 
+        $channelLabel = ($enrollment->enrollment_channel ?? 'offline') === 'online' ? 'أونلاين' : 'أوفلاين';
+
         $paymentAttrs = [
             'payment_number' => $paymentNumber,
             'invoice_id' => $invoice->id,
@@ -208,7 +215,7 @@ class OfflineEnrollmentProvisioner
                 try {
                     $depositDescription = $data['deposit_notes'] ?? $data['payment_notes'] ?? $data['notes'] ?? '';
                     if ($depositDescription === '') {
-                        $depositDescription = 'إيداع كورس أوفلاين — فاتورة: ' . $invoice->invoice_number;
+                        $depositDescription = 'إيداع كورس '.$channelLabel.' — فاتورة: ' . $invoice->invoice_number;
                     } else {
                         $depositDescription .= ' — فاتورة: ' . $invoice->invoice_number;
                     }
@@ -230,7 +237,7 @@ class OfflineEnrollmentProvisioner
 
         $transactionNumber = 'OFF-TXN-' . str_pad((string) (Transaction::count() + 1), 6, '0', STR_PAD_LEFT);
 
-        $txDescription = 'دفعة كورس أوفلاين: '.($course->title ?? '');
+        $txDescription = 'دفعة كورس '.$channelLabel.': '.($course->title ?? '');
         if ($wallet) {
             $txDescription .= ' — محفظة: '.($wallet->name ?? (string) $wallet->id);
         }
@@ -239,6 +246,7 @@ class OfflineEnrollmentProvisioner
             'offline_course_id' => $enrollment->offline_course_id,
             'enrollment_id' => $enrollment->id,
             'group_id' => $enrollment->group_id,
+            'enrollment_channel' => $enrollment->enrollment_channel ?? 'offline',
         ];
         if ($walletId !== null) {
             $metadata['wallet_id'] = $walletId;
