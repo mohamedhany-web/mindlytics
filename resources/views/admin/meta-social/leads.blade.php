@@ -210,7 +210,12 @@
                         <td data-role="labels">{{ implode(', ', $row['labels'] ?? []) }}</td>
                         <td data-role="assignee">{{ $row['assignee_name'] ?: '—' }}</td>
                         <td dir="ltr">{{ $row['phone'] ?: '—' }}</td>
-                        <td>{{ $row['is_done'] ? 'Done' : 'Open' }}@if($row['unread']) · {{ $row['unread'] }} unread@endif</td>
+                        <td>
+                            {{ $row['is_done'] ? 'Done' : 'Open' }}
+                            @if(($row['unread'] ?? 0) > 0)
+                                · {{ $row['unread'] }} unread
+                            @endif
+                        </td>
                         <td>{{ $row['reminder_human'] ?: '—' }}</td>
                         <td><a href="{{ $row['inbox_url'] }}" class="lc-link">Message</a></td>
                     </tr>
