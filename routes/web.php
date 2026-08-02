@@ -1260,6 +1260,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('insights', [\App\Http\Controllers\Admin\SalesInsightsController::class, 'index'])->name('insights.index');
             Route::get('commissions', [\App\Http\Controllers\Admin\SalesCommissionController::class, 'index'])->name('commissions.index');
             Route::get('commissions/{user}', [\App\Http\Controllers\Admin\SalesCommissionController::class, 'show'])->name('commissions.show')->whereNumber('user');
+            Route::post('commissions/{user}/settle', [\App\Http\Controllers\Admin\SalesCommissionController::class, 'settle'])->name('commissions.settle')->whereNumber('user');
             Route::get('win-approvals', [\App\Http\Controllers\Admin\SalesWinApprovalController::class, 'index'])->name('win-approvals.index');
             Route::post('win-approvals/{lead}/approve', [\App\Http\Controllers\Admin\SalesWinApprovalController::class, 'approve'])->name('win-approvals.approve');
             Route::post('win-approvals/{lead}/reject', [\App\Http\Controllers\Admin\SalesWinApprovalController::class, 'reject'])->name('win-approvals.reject');

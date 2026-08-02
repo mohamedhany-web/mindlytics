@@ -7,11 +7,13 @@
 @php
     $inputClass = 'w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500';
     $hasFilters = request()->hasAny(['view', 'year_month']);
+    $settlementReady = $settlementReady ?? false;
+    $settlements = $settlements ?? collect();
     $statCards = [
         ['label' => 'عملاء معتمدون بالكامل', 'value' => number_format($stats['confirmed_wins']), 'icon' => 'fas fa-user-check', 'bg' => 'bg-emerald-100', 'text' => 'text-emerald-600', 'description' => $periodLabel],
         ['label' => 'كوميشن محقّق', 'value' => number_format($stats['commission_from_leads'], 2).' ج.م', 'icon' => 'fas fa-coins', 'bg' => 'bg-amber-100', 'text' => 'text-amber-600', 'description' => $stats['rate_pct'] !== null ? 'نسبة '.number_format($stats['rate_pct'], 2).'%' : '—'],
-        ['label' => 'قيمة الصفقات', 'value' => number_format($stats['expected_confirmed'], 2).' ج.م', 'icon' => 'fas fa-chart-line', 'bg' => 'bg-violet-100', 'text' => 'text-violet-600', 'description' => 'expected_value'],
-        ['label' => 'معلّق بانتظار الاعتماد', 'value' => number_format($stats['pending_wins']), 'icon' => 'fas fa-clock', 'bg' => 'bg-amber-100', 'text' => 'text-amber-700', 'description' => number_format($stats['pending_estimated'], 2).' ج.م تقدير'],
+        ['label' => 'تم الصرف (مخالصة)', 'value' => number_format($stats['settled_amount'] ?? 0, 2).' ج.م', 'icon' => 'fas fa-hand-holding-usd', 'bg' => 'bg-sky-100', 'text' => 'text-sky-700', 'description' => number_format($stats['settled_count'] ?? 0).' صفقة'],
+        ['label' => 'مستحق لم يُصرف', 'value' => number_format($stats['unsettled_amount'] ?? 0, 2).' ج.م', 'icon' => 'fas fa-wallet', 'bg' => 'bg-rose-100', 'text' => 'text-rose-600', 'description' => number_format($stats['unsettled_count'] ?? 0).' صفقة'],
     ];
 @endphp
 
@@ -64,6 +66,47 @@
                 </div>
             @endforeach
         </div>
+
+        @if($settlementReady && ($stats['unsettled_count'] ?? 0) > 0)
+            <div class="px-4 pb-4">
+                <form method="post" action="{{ route('admin.sales.commissions.settle', $user) }}"
+                      class="rounded-xl border border-rose-200 bg-rose-50/60 p-4 space-y-3"
+                      onsubmit="return confirm('تأكيد مخالصة الكوميشن المستحق في الفترة المعروضة؟');">
+                    @csrf
+                    @foreach($confirmedLeads as $lead)
+                        @if(! $lead->commission_settled_at && (float) ($lead->commission_amount ?? 0) > 0)
+                            <input type="hidden" name="lead_ids[]" value="{{ $lead->id }}">
+                        @endif
+                    @endforeach
+                    <div class="flex flex-col sm:flex-row sm:items-end gap-3">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-black text-rose-950">مخالصة حسابية</p>
+                            <p class="text-xs text-rose-800 mt-0.5">
+                                صرف المستحق في الفترة المعروضة: <strong>{{ number_format($stats['unsettled_amount'] ?? 0, 2) }} ج.م</strong>
+                                ({{ number_format($stats['unsettled_count'] ?? 0) }} صفقة). أي فوز جديد بعد المخالصة يظهر «لم يتم الدفع».
+                            </p>
+                        </div>
+                        <div class="w-full sm:w-64">
+                            <label class="block text-[11px] font-semibold text-slate-700 mb-1">ملاحظة (اختياري)</label>
+                            <input type="text" name="notes" maxlength="2000" placeholder="مثلاً: تحويل بنكي / كاش يوم …" class="{{ $inputClass }}">
+                        </div>
+                        <button type="submit"
+                                class="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-700 px-4 py-2.5 text-sm font-semibold text-white whitespace-nowrap">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                            مخالصة الكل المستحق
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-600">أو اختر صفقات محددة من الجدول بالأسفل ثم اضغط «مخالصة المحدد».</p>
+                </form>
+            </div>
+        @elseif($settlementReady)
+            <div class="px-4 pb-4">
+                <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                    <i class="fas fa-check-circle text-emerald-600 ml-1"></i>
+                    لا يوجد كوميشن مستحق في الفترة المعروضة — كل المعتمد مُخالَص.
+                </div>
+            </div>
+        @endif
     </section>
 
     @if($tierBreakdown)
@@ -202,108 +245,198 @@
             </div>
             <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">{{ $confirmedLeads->count() }} عميل</span>
         </div>
-        <div class="overflow-x-auto w-full">
-            <table class="min-w-full w-full text-sm">
-                <thead>
-                    <tr class="bg-slate-50 text-slate-700 border-b border-slate-200">
-                        @if($tierBreakdown)
-                            <th class="px-4 py-3 text-center font-semibold"># بيع</th>
-                        @endif
-                        <th class="px-4 py-3 text-right font-semibold">العميل</th>
-                        <th class="px-4 py-3 text-center font-semibold">الكورس</th>
-                        <th class="px-4 py-3 text-center font-semibold">الهاتف</th>
-                        <th class="px-4 py-3 text-center font-semibold">التصنيف</th>
-                        <th class="px-4 py-3 text-center font-semibold">قيمة الصفقة</th>
-                        @if($tierBreakdown)
-                            <th class="px-4 py-3 text-center font-semibold">سعر الشريحة</th>
-                            <th class="px-4 py-3 text-center font-semibold">بونص</th>
-                        @endif
-                        <th class="px-4 py-3 text-center font-semibold">الكوميشن</th>
-                        <th class="px-4 py-3 text-center font-semibold">تاريخ الاعتماد</th>
-                        <th class="px-4 py-3 text-center font-semibold">معاملة</th>
-                        <th class="px-4 py-3 text-center font-semibold">عرض</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    @forelse($confirmedLeads as $lead)
-                        @php $tierLine = $tierLineByLeadId[$lead->id] ?? null; @endphp
-                        <tr class="hover:bg-emerald-50/40">
+        <form method="post" action="{{ route('admin.sales.commissions.settle', $user) }}" id="settle-selected-form"
+              onsubmit="return confirm('تأكيد مخالصة الصفقات المحددة؟');">
+            @csrf
+            @if($settlementReady && ($stats['unsettled_count'] ?? 0) > 0)
+                <div class="px-4 py-3 border-b border-slate-100 flex flex-wrap items-center gap-2 bg-white">
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-700 px-3 py-2 text-xs font-semibold text-white">
+                        <i class="fas fa-check-double"></i>
+                        مخالصة المحدد
+                    </button>
+                    <input type="text" name="notes" maxlength="2000" placeholder="ملاحظة للمخالصة المحددة" class="{{ $inputClass }} max-w-xs text-xs py-1.5">
+                </div>
+            @endif
+            <div class="overflow-x-auto w-full">
+                <table class="min-w-full w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-700 border-b border-slate-200">
+                            @if($settlementReady && ($stats['unsettled_count'] ?? 0) > 0)
+                                <th class="px-3 py-3 text-center font-semibold w-10">
+                                    <input type="checkbox" id="settle-select-all" class="rounded border-slate-300 text-rose-600 focus:ring-rose-500" title="تحديد الكل المستحق">
+                                </th>
+                            @endif
                             @if($tierBreakdown)
-                                <td class="px-4 py-3 text-center font-black text-violet-700 tabular-nums">
-                                    {{ $tierLine['sale_number'] ?? '—' }}
+                                <th class="px-4 py-3 text-center font-semibold"># بيع</th>
+                            @endif
+                            <th class="px-4 py-3 text-right font-semibold">العميل</th>
+                            <th class="px-4 py-3 text-center font-semibold">الكورس</th>
+                            <th class="px-4 py-3 text-center font-semibold">الهاتف</th>
+                            <th class="px-4 py-3 text-center font-semibold">التصنيف</th>
+                            <th class="px-4 py-3 text-center font-semibold">قيمة الصفقة</th>
+                            @if($tierBreakdown)
+                                <th class="px-4 py-3 text-center font-semibold">سعر الشريحة</th>
+                                <th class="px-4 py-3 text-center font-semibold">بونص</th>
+                            @endif
+                            <th class="px-4 py-3 text-center font-semibold">الكوميشن</th>
+                            <th class="px-4 py-3 text-center font-semibold">حالة الدفع</th>
+                            <th class="px-4 py-3 text-center font-semibold">تاريخ الاعتماد</th>
+                            <th class="px-4 py-3 text-center font-semibold">معاملة</th>
+                            <th class="px-4 py-3 text-center font-semibold">عرض</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @forelse($confirmedLeads as $lead)
+                            @php
+                                $tierLine = $tierLineByLeadId[$lead->id] ?? null;
+                                $isSettled = $settlementReady && $lead->commission_settled_at;
+                                $canSettle = $settlementReady && ! $isSettled && (float) ($lead->commission_amount ?? 0) > 0;
+                            @endphp
+                            <tr class="hover:bg-emerald-50/40 {{ $isSettled ? 'bg-sky-50/30' : '' }}">
+                                @if($settlementReady && ($stats['unsettled_count'] ?? 0) > 0)
+                                    <td class="px-3 py-3 text-center">
+                                        @if($canSettle)
+                                            <input type="checkbox" name="lead_ids[]" value="{{ $lead->id }}" class="settle-lead-cb rounded border-slate-300 text-rose-600 focus:ring-rose-500">
+                                        @else
+                                            <span class="text-slate-300">—</span>
+                                        @endif
+                                    </td>
+                                @endif
+                                @if($tierBreakdown)
+                                    <td class="px-4 py-3 text-center font-black text-violet-700 tabular-nums">
+                                        {{ $tierLine['sale_number'] ?? '—' }}
+                                    </td>
+                                @endif
+                                <td class="px-4 py-3">
+                                    <a href="{{ route('admin.sales.leads.show', $lead) }}" class="font-bold text-emerald-700 hover:text-emerald-900 hover:underline">
+                                        {{ $lead->name }}
+                                    </a>
+                                    @if($lead->company)
+                                        <p class="text-[11px] text-slate-500 mt-0.5">{{ $lead->company }}</p>
+                                    @endif
                                 </td>
-                            @endif
-                            <td class="px-4 py-3">
-                                <a href="{{ route('admin.sales.leads.show', $lead) }}" class="font-bold text-emerald-700 hover:text-emerald-900 hover:underline">
-                                    {{ $lead->name }}
-                                </a>
-                                @if($lead->company)
-                                    <p class="text-[11px] text-slate-500 mt-0.5">{{ $lead->company }}</p>
-                                @endif
-                            </td>
-                            <td class="px-4 py-3 text-center text-xs">
-                                @if($lead->linkedCourseTitle())
-                                    <span class="font-semibold text-slate-800">{{ $lead->linkedCourseTitle() }}</span>
-                                    <p class="text-[10px] text-slate-500">{{ $lead->linkedCourseTypeLabel() }}</p>
-                                @else
-                                    —
-                                @endif
-                            </td>
-                            <td class="px-4 py-3 text-center font-mono text-xs dir-ltr">{{ $lead->phone ?? '—' }}</td>
-                            <td class="px-4 py-3 text-center">{{ $lead->category?->name ?? '—' }}</td>
-                            <td class="px-4 py-3 text-center tabular-nums font-semibold">{{ number_format((float) ($lead->expected_value ?? 0), 2) }}</td>
-                            @if($tierBreakdown)
-                                <td class="px-4 py-3 text-center tabular-nums">{{ $tierLine ? number_format($tierLine['rate'], 2) : '—' }}</td>
-                                <td class="px-4 py-3 text-center tabular-nums text-amber-700">
-                                    {{ $tierLine && $tierLine['milestone_bonus'] > 0 ? number_format($tierLine['milestone_bonus'], 2) : '—' }}
+                                <td class="px-4 py-3 text-center text-xs">
+                                    @if($lead->linkedCourseTitle())
+                                        <span class="font-semibold text-slate-800">{{ $lead->linkedCourseTitle() }}</span>
+                                        <p class="text-[10px] text-slate-500">{{ $lead->linkedCourseTypeLabel() }}</p>
+                                    @else
+                                        —
+                                    @endif
                                 </td>
-                            @endif
-                            <td class="px-4 py-3 text-center tabular-nums font-bold text-emerald-700">{{ number_format((float) ($lead->commission_amount ?? 0), 2) }}</td>
-                            <td class="px-4 py-3 text-center tabular-nums text-xs text-slate-600">{{ $lead->won_confirmed_at?->format('Y-m-d H:i') ?? '—' }}</td>
-                            <td class="px-4 py-3 text-center text-xs text-slate-500">
-                                @if($lead->commission_transaction_id)
-                                    #{{ $lead->commission_transaction_id }}
-                                @else
-                                    —
+                                <td class="px-4 py-3 text-center font-mono text-xs dir-ltr">{{ $lead->phone ?? '—' }}</td>
+                                <td class="px-4 py-3 text-center">{{ $lead->category?->name ?? '—' }}</td>
+                                <td class="px-4 py-3 text-center tabular-nums font-semibold">{{ number_format((float) ($lead->expected_value ?? 0), 2) }}</td>
+                                @if($tierBreakdown)
+                                    <td class="px-4 py-3 text-center tabular-nums">{{ $tierLine ? number_format($tierLine['rate'], 2) : '—' }}</td>
+                                    <td class="px-4 py-3 text-center tabular-nums text-amber-700">
+                                        {{ $tierLine && $tierLine['milestone_bonus'] > 0 ? number_format($tierLine['milestone_bonus'], 2) : '—' }}
+                                    </td>
                                 @endif
-                            </td>
-                            <td class="px-4 py-3 text-center">
-                                <a href="{{ route('admin.sales.leads.show', $lead) }}"
-                                   class="inline-flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white">
-                                    <i class="fas fa-external-link-alt"></i>
-                                    التفاصيل
-                                </a>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="{{ $tierBreakdown ? 12 : 9 }}" class="px-4 py-12 text-center">
-                                <div class="w-14 h-14 mx-auto mb-3 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
-                                    <i class="fas fa-user-check text-xl"></i>
-                                </div>
-                                <p class="text-sm font-semibold text-slate-900">لا يوجد عملاء معتمدون في هذه الفترة</p>
-                                <p class="text-xs text-slate-500 mt-1">بعد موافقة الإدارة على الفوز يظهر العميل هنا.</p>
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-                @if($confirmedLeads->isNotEmpty())
-                    <tfoot>
-                        <tr class="bg-slate-50 border-t border-slate-200 font-bold text-slate-900">
-                            <td class="px-4 py-3" colspan="{{ $tierBreakdown ? 5 : 4 }}">الإجمالي ({{ $confirmedLeads->count() }})</td>
-                            <td class="px-4 py-3 text-center tabular-nums">{{ number_format($stats['expected_confirmed'], 2) }}</td>
-                            @if($tierBreakdown)
-                                <td class="px-4 py-3 text-center tabular-nums">{{ number_format($tierBreakdown['progressive_commission'], 2) }}</td>
-                                <td class="px-4 py-3 text-center tabular-nums text-amber-700">{{ number_format($tierBreakdown['milestones_bonus'], 2) }}</td>
-                            @endif
-                            <td class="px-4 py-3 text-center tabular-nums text-emerald-700">{{ number_format($stats['commission_from_leads'], 2) }}</td>
-                            <td class="px-4 py-3" colspan="3"></td>
-                        </tr>
-                    </tfoot>
-                @endif
-            </table>
-        </div>
+                                <td class="px-4 py-3 text-center tabular-nums font-bold text-emerald-700">{{ number_format((float) ($lead->commission_amount ?? 0), 2) }}</td>
+                                <td class="px-4 py-3 text-center">
+                                    @if(! $settlementReady)
+                                        <span class="text-xs text-slate-400">—</span>
+                                    @elseif($isSettled)
+                                        <span class="inline-flex items-center gap-1 rounded-lg bg-sky-100 text-sky-800 px-2 py-1 text-[11px] font-semibold border border-sky-200">
+                                            <i class="fas fa-check"></i>
+                                            تم الدفع
+                                        </span>
+                                        <p class="text-[10px] text-slate-500 mt-0.5">{{ $lead->commission_settled_at?->format('Y-m-d') }}</p>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 rounded-lg bg-rose-100 text-rose-800 px-2 py-1 text-[11px] font-semibold border border-rose-200">
+                                            لم يتم الدفع
+                                        </span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-center tabular-nums text-xs text-slate-600">{{ $lead->won_confirmed_at?->format('Y-m-d H:i') ?? '—' }}</td>
+                                <td class="px-4 py-3 text-center text-xs text-slate-500">
+                                    @if($lead->commission_transaction_id)
+                                        #{{ $lead->commission_transaction_id }}
+                                    @else
+                                        —
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    <a href="{{ route('admin.sales.leads.show', $lead) }}"
+                                       class="inline-flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white">
+                                        <i class="fas fa-external-link-alt"></i>
+                                        التفاصيل
+                                    </a>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="{{ ($tierBreakdown ? 12 : 9) + ($settlementReady ? 2 : 1) }}" class="px-4 py-12 text-center">
+                                    <div class="w-14 h-14 mx-auto mb-3 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
+                                        <i class="fas fa-user-check text-xl"></i>
+                                    </div>
+                                    <p class="text-sm font-semibold text-slate-900">لا يوجد عملاء معتمدون في هذه الفترة</p>
+                                    <p class="text-xs text-slate-500 mt-1">بعد موافقة الإدارة على الفوز يظهر العميل هنا.</p>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                    @if($confirmedLeads->isNotEmpty())
+                        <tfoot>
+                            <tr class="bg-slate-50 border-t border-slate-200 font-bold text-slate-900">
+                                <td class="px-4 py-3" colspan="{{ ($tierBreakdown ? 5 : 4) + ($settlementReady && ($stats['unsettled_count'] ?? 0) > 0 ? 1 : 0) }}">الإجمالي ({{ $confirmedLeads->count() }})</td>
+                                <td class="px-4 py-3 text-center tabular-nums">{{ number_format($stats['expected_confirmed'], 2) }}</td>
+                                @if($tierBreakdown)
+                                    <td class="px-4 py-3 text-center tabular-nums">{{ number_format($tierBreakdown['progressive_commission'], 2) }}</td>
+                                    <td class="px-4 py-3 text-center tabular-nums text-amber-700">{{ number_format($tierBreakdown['milestones_bonus'], 2) }}</td>
+                                @endif
+                                <td class="px-4 py-3 text-center tabular-nums text-emerald-700">{{ number_format($stats['commission_from_leads'], 2) }}</td>
+                                <td class="px-4 py-3 text-center text-xs font-semibold">
+                                    <span class="text-sky-700">{{ number_format($stats['settled_amount'] ?? 0, 2) }}</span>
+                                    /
+                                    <span class="text-rose-700">{{ number_format($stats['unsettled_amount'] ?? 0, 2) }}</span>
+                                </td>
+                                <td class="px-4 py-3" colspan="3"></td>
+                            </tr>
+                        </tfoot>
+                    @endif
+                </table>
+            </div>
+        </form>
     </section>
+
+    @if($settlementReady && $settlements->isNotEmpty())
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                    <i class="fas fa-history text-sky-600"></i>
+                    سجل المخالصات
+                </h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-700 border-b border-slate-200">
+                            <th class="px-4 py-3 text-right font-semibold">#</th>
+                            <th class="px-4 py-3 text-center font-semibold">التاريخ</th>
+                            <th class="px-4 py-3 text-center font-semibold">عدد الصفقات</th>
+                            <th class="px-4 py-3 text-center font-semibold">المبلغ</th>
+                            <th class="px-4 py-3 text-center font-semibold">بواسطة</th>
+                            <th class="px-4 py-3 text-right font-semibold">ملاحظة</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @foreach($settlements as $settlement)
+                            <tr>
+                                <td class="px-4 py-3 font-mono text-xs">#{{ $settlement->id }}</td>
+                                <td class="px-4 py-3 text-center text-xs tabular-nums">{{ $settlement->settled_at?->format('Y-m-d H:i') ?? '—' }}</td>
+                                <td class="px-4 py-3 text-center tabular-nums">{{ $settlement->leads_count }}</td>
+                                <td class="px-4 py-3 text-center tabular-nums font-bold text-sky-700">{{ number_format((float) $settlement->amount_total, 2) }} ج.م</td>
+                                <td class="px-4 py-3 text-center text-xs">{{ $settlement->settler?->name ?? '—' }}</td>
+                                <td class="px-4 py-3 text-xs text-slate-600">{{ $settlement->notes ?: '—' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    @endif
 
     @if($pendingLeads->isNotEmpty())
         <section class="rounded-2xl bg-white border border-amber-200 shadow-lg overflow-hidden">
@@ -360,12 +493,22 @@
 (function () {
     const viewSel = document.getElementById('view_sel');
     const monthInput = document.getElementById('year_month');
-    if (!viewSel || !monthInput) return;
-    function toggleMonth() {
-        monthInput.disabled = viewSel.value === 'all';
+    if (viewSel && monthInput) {
+        function toggleMonth() {
+            monthInput.disabled = viewSel.value === 'all';
+        }
+        viewSel.addEventListener('change', toggleMonth);
+        toggleMonth();
     }
-    viewSel.addEventListener('change', toggleMonth);
-    toggleMonth();
+
+    const selectAll = document.getElementById('settle-select-all');
+    if (selectAll) {
+        selectAll.addEventListener('change', function () {
+            document.querySelectorAll('.settle-lead-cb').forEach(function (cb) {
+                cb.checked = selectAll.checked;
+            });
+        });
+    }
 })();
 </script>
 @endpush

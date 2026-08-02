@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\SalesCommissionSettlement;
 use App\Models\SalesLead;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\SalesCommissionSettlementService;
 use App\Services\SalesCommissionTierService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class SalesCommissionController extends Controller
 {
@@ -170,6 +173,27 @@ class SalesCommissionController extends Controller
         $expectedSum = (float) $confirmedLeads->sum('expected_value');
         $commissionFromLeads = (float) $confirmedLeads->sum('commission_amount');
 
+        $settlementReady = Schema::hasColumn('sales_leads', 'commission_settled_at');
+        $settledAmount = 0.0;
+        $unsettledAmount = 0.0;
+        $settledCount = 0;
+        $unsettledCount = 0;
+        if ($settlementReady) {
+            foreach ($confirmedLeads as $lead) {
+                $amt = (float) ($lead->commission_amount ?? 0);
+                if ($lead->commission_settled_at) {
+                    $settledAmount += $amt;
+                    $settledCount++;
+                } else {
+                    $unsettledAmount += $amt;
+                    $unsettledCount++;
+                }
+            }
+        } else {
+            $unsettledAmount = $commissionFromLeads;
+            $unsettledCount = $confirmedLeads->count();
+        }
+
         $txnQ = Transaction::query()
             ->where('user_id', $user->id)
             ->where('type', 'credit')
@@ -220,7 +244,21 @@ class SalesCommissionController extends Controller
             'rate_pct' => $expectedSum > 0.0001
                 ? round($commissionFromLeads / $expectedSum * 100, 2)
                 : null,
+            'settled_amount' => round($settledAmount, 2),
+            'unsettled_amount' => round($unsettledAmount, 2),
+            'settled_count' => $settledCount,
+            'unsettled_count' => $unsettledCount,
         ];
+
+        $settlements = collect();
+        if ($settlementReady && Schema::hasTable('sales_commission_settlements')) {
+            $settlements = SalesCommissionSettlement::query()
+                ->where('user_id', $user->id)
+                ->with('settler:id,name')
+                ->orderByDesc('settled_at')
+                ->limit(20)
+                ->get();
+        }
 
         return view('admin.sales.commissions.show', compact(
             'user',
@@ -231,8 +269,52 @@ class SalesCommissionController extends Controller
             'yearMonth',
             'periodLabel',
             'tierBreakdown',
-            'tierLineByLeadId'
+            'tierLineByLeadId',
+            'settlementReady',
+            'settlements'
         ));
+    }
+
+    /**
+     * مخالصة حسابية: تعليم كوميشن الموظف كـ «تم الصرف».
+     */
+    public function settle(Request $request, User $user, SalesCommissionSettlementService $settlementService)
+    {
+        if (! $user->isSalesEmployee()) {
+            abort(404);
+        }
+
+        $data = $request->validate([
+            'lead_ids' => ['nullable', 'array'],
+            'lead_ids.*' => ['integer', 'exists:sales_leads,id'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+            'settle_all' => ['nullable', 'boolean'],
+        ]);
+
+        $leadIds = null;
+        if (! empty($data['settle_all'])) {
+            $leadIds = null; // كل المستحق للموظف
+        } else {
+            $leadIds = $data['lead_ids'] ?? [];
+            if ($leadIds === []) {
+                return back()->with('error', 'اختر صفقة واحدة على الأقل للمخالصة');
+            }
+        }
+
+        $result = $settlementService->settle(
+            $user,
+            $leadIds,
+            $data['notes'] ?? null
+        );
+
+        if (! ($result['success'] ?? false)) {
+            return back()->with('error', $result['error'] ?? 'فشلت المخالصة');
+        }
+
+        return back()->with(
+            'success',
+            'تمت المخالصة: '.number_format((float) ($result['amount'] ?? 0), 2).' ج.م على '.((int) ($result['count'] ?? 0)).' صفقة'
+        );
     }
 
     /**

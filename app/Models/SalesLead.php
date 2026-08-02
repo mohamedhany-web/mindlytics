@@ -203,6 +203,9 @@ class SalesLead extends Model
         'commission_amount',
         'commission_transaction_id',
         'commission_notes',
+        'commission_settled_at',
+        'commission_settled_by',
+        'commission_settlement_id',
         'lost_reason',
         'csat_rating',
         'csat_comment',
@@ -225,6 +228,7 @@ class SalesLead extends Model
             'paid_at' => 'datetime',
             'closed_at' => 'datetime',
             'won_confirmed_at' => 'datetime',
+            'commission_settled_at' => 'datetime',
             'stage_entered_at' => 'datetime',
             'csat_recorded_at' => 'datetime',
             'can_pay' => 'boolean',
@@ -366,6 +370,21 @@ class SalesLead extends Model
     public function isWinConfirmed(): bool
     {
         return $this->stage === self::WON_STAGE && $this->won_confirmed_at !== null;
+    }
+
+    public function isCommissionSettled(): bool
+    {
+        return $this->commission_settled_at !== null;
+    }
+
+    public function scopeCommissionUnsettled($query)
+    {
+        return $query->whereNotNull('won_confirmed_at')->whereNull('commission_settled_at');
+    }
+
+    public function commissionSettlement(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(SalesCommissionSettlement::class, 'commission_settlement_id');
     }
 
     public static function normalizeStage(?string $stage): string
