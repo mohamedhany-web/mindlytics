@@ -47,69 +47,101 @@ class MetaSocialLeadCenterController extends Controller
 
     public function index(Request $request)
     {
-        $tablesReady = $this->leads->ready();
-        $crmReady = $tablesReady && $this->crm->crmReady();
-        $columnsReady = $tablesReady && $this->leads->leadCenterColumnsReady();
-        $connectionMeta = $this->graph->connectionMeta();
+        try {
+            $tablesReady = $this->leads->ready();
+            $crmReady = $tablesReady && $this->crm->crmReady();
+            $columnsReady = $tablesReady && $this->leads->leadCenterColumnsReady();
+            $connectionMeta = $this->graph->connectionMeta();
 
-        $pages = $tablesReady
-            ? MetaSocialPage::query()->where('is_active', true)->orderBy('page_name')->get()
-            : collect();
+            $pages = $tablesReady
+                ? MetaSocialPage::query()->where('is_active', true)->orderBy('page_name')->get()
+                : collect();
 
-        $filters = $this->filtersFrom($request);
-        $stats = $tablesReady ? $this->leads->stats($filters['page'] ?: null) : [];
-        $rows = $tablesReady
-            ? $this->leads->listLeads($filters)->map(fn ($c) => $this->leads->serializeRow($c))
-            : collect();
-        $pipeline = ($tablesReady && $filters['view'] === 'pipeline')
-            ? $this->leads->pipelineGroups($filters)
-            : [];
+            $filters = $this->filtersFrom($request);
+            $stats = $tablesReady ? $this->leads->stats($filters['page'] ?: null) : [];
+            $rows = $tablesReady
+                ? $this->leads->listLeads($filters)->map(fn ($c) => $this->leads->serializeRow($c))
+                : collect();
+            $pipeline = ($tablesReady && $filters['view'] === 'pipeline')
+                ? $this->leads->pipelineGroups($filters)
+                : [];
 
-        $selectedId = (int) $request->query('lead', $request->query('conversation', 0));
-        $selected = null;
-        $detail = null;
-        if ($tablesReady && $selectedId > 0) {
-            $selected = MetaSocialConversation::query()
-                ->with(['page', 'assignee:id,name', 'salesLead'])
-                ->find($selectedId);
-            if ($selected) {
-                $detail = $this->leads->serializeDetail($selected);
+            $selectedId = (int) $request->query('lead', $request->query('conversation', 0));
+            $selected = null;
+            $detail = null;
+            $with = ['page', 'assignee:id,name'];
+            if ($crmReady) {
+                $with[] = 'salesLead';
             }
-        } elseif ($rows->isNotEmpty() && $filters['view'] !== 'pipeline') {
-            $selectedId = (int) $rows->first()['id'];
-            $selected = MetaSocialConversation::query()
-                ->with(['page', 'assignee:id,name', 'salesLead'])
-                ->find($selectedId);
-            if ($selected) {
-                $detail = $this->leads->serializeDetail($selected);
+            if ($tablesReady && $selectedId > 0) {
+                $selected = MetaSocialConversation::query()->with($with)->find($selectedId);
+                if ($selected) {
+                    $detail = $this->leads->serializeDetail($selected);
+                }
+            } elseif ($rows->isNotEmpty() && $filters['view'] !== 'pipeline') {
+                $selectedId = (int) $rows->first()['id'];
+                $selected = MetaSocialConversation::query()->with($with)->find($selectedId);
+                if ($selected) {
+                    $detail = $this->leads->serializeDetail($selected);
+                }
             }
+
+            $agents = [];
+            try {
+                $agents = $crmReady ? $this->crm->eligibleAgents() : [];
+            } catch (\Throwable) {
+                $agents = [];
+            }
+            $stages = MetaSocialConversation::LEAD_STAGES;
+            $crmStages = SalesLead::STAGES;
+            $priorities = MetaSocialConversation::PRIORITIES;
+            $suggestedLabels = MetaSocialConversation::SUGGESTED_LABELS;
+            $pageError = null;
+
+            return view('admin.meta-social.leads', compact(
+                'tablesReady',
+                'crmReady',
+                'columnsReady',
+                'connectionMeta',
+                'pages',
+                'filters',
+                'stats',
+                'rows',
+                'pipeline',
+                'selected',
+                'selectedId',
+                'detail',
+                'agents',
+                'stages',
+                'crmStages',
+                'priorities',
+                'suggestedLabels',
+                'pageError',
+            ));
+        } catch (\Throwable $e) {
+            report($e);
+
+            return view('admin.meta-social.leads', [
+                'tablesReady' => false,
+                'crmReady' => false,
+                'columnsReady' => false,
+                'connectionMeta' => ['can_use' => false, 'label' => 'خطأ'],
+                'pages' => collect(),
+                'filters' => $this->filtersFrom($request),
+                'stats' => [],
+                'rows' => collect(),
+                'pipeline' => [],
+                'selected' => null,
+                'selectedId' => 0,
+                'detail' => null,
+                'agents' => [],
+                'stages' => MetaSocialConversation::LEAD_STAGES,
+                'crmStages' => SalesLead::STAGES,
+                'priorities' => MetaSocialConversation::PRIORITIES,
+                'suggestedLabels' => MetaSocialConversation::SUGGESTED_LABELS,
+                'pageError' => $e->getMessage(),
+            ]);
         }
-
-        $agents = $crmReady ? $this->crm->eligibleAgents() : [];
-        $stages = MetaSocialConversation::LEAD_STAGES;
-        $crmStages = SalesLead::STAGES;
-        $priorities = MetaSocialConversation::PRIORITIES;
-        $suggestedLabels = MetaSocialConversation::SUGGESTED_LABELS;
-
-        return view('admin.meta-social.leads', compact(
-            'tablesReady',
-            'crmReady',
-            'columnsReady',
-            'connectionMeta',
-            'pages',
-            'filters',
-            'stats',
-            'rows',
-            'pipeline',
-            'selected',
-            'selectedId',
-            'detail',
-            'agents',
-            'stages',
-            'crmStages',
-            'priorities',
-            'suggestedLabels',
-        ));
     }
 
     public function poll(Request $request): JsonResponse

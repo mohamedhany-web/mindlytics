@@ -52,11 +52,18 @@ class MetaSocialLeadCenterService
         return Schema::hasTable('meta_social_conversations');
     }
 
+    public function crmColumnsReady(): bool
+    {
+        return Schema::hasColumn('meta_social_conversations', 'sales_lead_id')
+            && Schema::hasColumn('meta_social_conversations', 'phone');
+    }
+
     public function leadCenterColumnsReady(): bool
     {
         return Schema::hasColumn('meta_social_conversations', 'labels')
             && Schema::hasColumn('meta_social_conversations', 'priority')
-            && Schema::hasColumn('meta_social_conversations', 'reminder_at');
+            && Schema::hasColumn('meta_social_conversations', 'reminder_at')
+            && Schema::hasColumn('meta_social_conversations', 'lead_stage');
     }
 
     /**
@@ -67,9 +74,9 @@ class MetaSocialLeadCenterService
         $base = $this->baseQuery($pageId);
         $stats = [
             'all' => (clone $base)->count(),
-            'new' => (clone $base)->whereNull('sales_lead_id')->count(),
-            'in_crm' => (clone $base)->whereNotNull('sales_lead_id')->count(),
-            'has_phone' => (clone $base)->whereNotNull('phone')->where('phone', 'not like', 'meta_%')->count(),
+            'new' => 0,
+            'in_crm' => 0,
+            'has_phone' => 0,
             'unassigned' => (clone $base)->whereNull('assigned_to')->count(),
             'unread' => (clone $base)->where('unread_count', '>', 0)->count(),
             'open' => (clone $base)->where('status', MetaSocialConversation::STATUS_OPEN)->count(),
@@ -79,6 +86,12 @@ class MetaSocialLeadCenterService
             'reminder_due' => 0,
             'high_priority' => 0,
         ];
+
+        if ($this->crmColumnsReady()) {
+            $stats['new'] = (clone $base)->whereNull('sales_lead_id')->count();
+            $stats['in_crm'] = (clone $base)->whereNotNull('sales_lead_id')->count();
+            $stats['has_phone'] = (clone $base)->whereNotNull('phone')->where('phone', 'not like', 'meta_%')->count();
+        }
 
         if ($this->leadCenterColumnsReady()) {
             $stats['reminder_due'] = (clone $base)->whereNotNull('reminder_at')->where('reminder_at', '<=', now())->count();
@@ -104,19 +117,21 @@ class MetaSocialLeadCenterService
     public function filteredQuery(array $filters): Builder
     {
         $pageId = (int) ($filters['page'] ?? 0);
-        $q = $this->baseQuery($pageId > 0 ? $pageId : null)
-            ->with([
-                'page:id,page_name',
-                'assignee:id,name',
-                'salesLead:id,name,phone,email,stage,priority,assigned_to,source,updated_at,last_contacted_at,next_follow_up_at,notes',
-            ]);
+        $with = [
+            'page:id,page_name',
+            'assignee:id,name',
+        ];
+        if ($this->crmColumnsReady() && Schema::hasTable('sales_leads')) {
+            $with[] = 'salesLead:id,name,phone,email,stage,priority,assigned_to,source,updated_at,last_contacted_at,next_follow_up_at,notes';
+        }
+        $q = $this->baseQuery($pageId > 0 ? $pageId : null)->with($with);
 
         $sort = (string) ($filters['sort'] ?? 'recent');
         match ($sort) {
             'oldest' => $q->orderBy('last_message_at')->orderBy('id'),
             'name' => $q->orderBy('participant_name')->orderByDesc('id'),
             'priority' => $this->leadCenterColumnsReady()
-                ? $q->orderByRaw("FIELD(priority, 'urgent','high','normal','low')")->orderByDesc('last_message_at')
+                ? $q->orderByRaw("FIELD(COALESCE(priority, 'normal'), 'urgent','high','normal','low')")->orderByDesc('last_message_at')
                 : $q->orderByDesc('last_message_at'),
             'reminder' => $this->leadCenterColumnsReady()
                 ? $q->orderByRaw('reminder_at is null')->orderBy('reminder_at')->orderByDesc('id')
@@ -125,20 +140,24 @@ class MetaSocialLeadCenterService
         };
 
         $tab = (string) ($filters['tab'] ?? 'all');
+        $crmReady = $this->crmColumnsReady();
+        $lcReady = $this->leadCenterColumnsReady();
         match ($tab) {
-            'new' => $q->whereNull('sales_lead_id'),
-            'in_crm' => $q->whereNotNull('sales_lead_id'),
-            'has_phone' => $q->whereNotNull('phone')->where('phone', 'not like', 'meta_%'),
+            'new' => $crmReady ? $q->whereNull('sales_lead_id') : $q->whereRaw('1=0'),
+            'in_crm' => $crmReady ? $q->whereNotNull('sales_lead_id') : $q->whereRaw('1=0'),
+            'has_phone' => $crmReady
+                ? $q->whereNotNull('phone')->where('phone', 'not like', 'meta_%')
+                : $q->whereRaw('1=0'),
             'unassigned' => $q->whereNull('assigned_to'),
             'unread' => $q->where('unread_count', '>', 0),
             'open' => $q->where('status', MetaSocialConversation::STATUS_OPEN),
             'closed' => $q->where('status', MetaSocialConversation::STATUS_CLOSED),
             'messenger' => $q->where('platform', MetaSocialConversation::PLATFORM_MESSENGER),
             'instagram' => $q->where('platform', MetaSocialConversation::PLATFORM_INSTAGRAM),
-            'reminder_due' => $this->leadCenterColumnsReady()
+            'reminder_due' => $lcReady
                 ? $q->whereNotNull('reminder_at')->where('reminder_at', '<=', now())
                 : $q->whereRaw('1=0'),
-            'high_priority' => $this->leadCenterColumnsReady()
+            'high_priority' => $lcReady
                 ? $q->whereIn('priority', ['high', 'urgent'])
                 : $q->whereRaw('1=0'),
             default => null,
@@ -155,11 +174,20 @@ class MetaSocialLeadCenterService
         if (! empty($filters['stage'])) {
             $stage = (string) $filters['stage'];
             $q->where(function ($inner) use ($stage) {
+                $applied = false;
                 if (Schema::hasColumn('meta_social_conversations', 'lead_stage')) {
                     $inner->where('lead_stage', $stage);
+                    $applied = true;
                 }
-                $crmStage = self::STAGE_TO_CRM[$stage] ?? $stage;
-                $inner->orWhereHas('salesLead', fn ($lq) => $lq->where('stage', $crmStage));
+                if ($this->crmColumnsReady() && Schema::hasTable('sales_leads')) {
+                    $crmStage = self::STAGE_TO_CRM[$stage] ?? $stage;
+                    $method = $applied ? 'orWhereHas' : 'whereHas';
+                    $inner->{$method}('salesLead', fn ($lq) => $lq->where('stage', $crmStage));
+                    $applied = true;
+                }
+                if (! $applied) {
+                    $inner->whereRaw('1=0');
+                }
             });
         }
 
@@ -185,15 +213,23 @@ class MetaSocialLeadCenterService
                 $inner->where('participant_name', 'like', '%'.$search.'%')
                     ->orWhere('participant_username', 'like', '%'.$search.'%')
                     ->orWhere('participant_id', 'like', '%'.$search.'%')
-                    ->orWhere('phone', 'like', '%'.$search.'%')
-                    ->orWhere('email', 'like', '%'.$search.'%')
-                    ->orWhere('last_message_preview', 'like', '%'.$search.'%')
-                    ->orWhere('notes', 'like', '%'.$search.'%')
-                    ->orWhereHas('salesLead', function ($lq) use ($search) {
+                    ->orWhere('last_message_preview', 'like', '%'.$search.'%');
+                if (Schema::hasColumn('meta_social_conversations', 'phone')) {
+                    $inner->orWhere('phone', 'like', '%'.$search.'%');
+                }
+                if (Schema::hasColumn('meta_social_conversations', 'email')) {
+                    $inner->orWhere('email', 'like', '%'.$search.'%');
+                }
+                if (Schema::hasColumn('meta_social_conversations', 'notes')) {
+                    $inner->orWhere('notes', 'like', '%'.$search.'%');
+                }
+                if ($this->crmColumnsReady() && Schema::hasTable('sales_leads')) {
+                    $inner->orWhereHas('salesLead', function ($lq) use ($search) {
                         $lq->where('name', 'like', '%'.$search.'%')
                             ->orWhere('phone', 'like', '%'.$search.'%')
                             ->orWhere('email', 'like', '%'.$search.'%');
                     });
+                }
             });
         }
 
@@ -290,27 +326,40 @@ class MetaSocialLeadCenterService
     public function serializeDetail(MetaSocialConversation $c): array
     {
         $row = $this->serializeRow($c);
-        if ($this->crm->crmReady()) {
-            $row['crm'] = $this->crm->serializeCrm($c);
+        try {
+            if ($this->crm->crmReady()) {
+                $row['crm'] = $this->crm->serializeCrm($c);
+            }
+        } catch (\Throwable) {
+            $row['crm'] = null;
         }
-        $row['notes'] = $c->notes ?: $c->salesLead?->notes;
-        $row['message_count'] = $c->messages()->count();
-        $row['recent_messages'] = $c->messages()
-            ->with('sentBy:id,name')
-            ->orderByDesc('sent_at')
-            ->orderByDesc('id')
-            ->limit(12)
-            ->get()
-            ->sortBy(fn ($m) => [$m->sent_at?->timestamp ?? 0, $m->id])
-            ->values()
-            ->map(fn ($m) => [
-                'id' => $m->id,
-                'body' => $m->displayBody(),
-                'direction' => $m->direction,
-                'author' => $m->sentBy?->name,
-                'sent_at_human' => $m->sent_at?->format('Y-m-d H:i') ?? $m->created_at?->format('Y-m-d H:i'),
-            ])
-            ->all();
+        $row['notes'] = Schema::hasColumn('meta_social_conversations', 'notes')
+            ? ($c->notes ?: $c->salesLead?->notes)
+            : ($c->salesLead?->notes);
+        $row['message_count'] = 0;
+        $row['recent_messages'] = [];
+        try {
+            if (Schema::hasTable('meta_social_messages')) {
+                $row['message_count'] = $c->messages()->count();
+                $row['recent_messages'] = $c->messages()
+                    ->with('sentBy:id,name')
+                    ->orderByDesc('id')
+                    ->limit(12)
+                    ->get()
+                    ->sortBy('id')
+                    ->values()
+                    ->map(fn ($m) => [
+                        'id' => $m->id,
+                        'body' => $m->displayBody(),
+                        'direction' => $m->direction,
+                        'author' => $m->sentBy?->name,
+                        'sent_at_human' => $m->sent_at?->format('Y-m-d H:i') ?? $m->created_at?->format('Y-m-d H:i'),
+                    ])
+                    ->all();
+            }
+        } catch (\Throwable) {
+            // تجاهل فشل تحميل الرسائل حتى لا تسقط الصفحة
+        }
 
         return $row;
     }

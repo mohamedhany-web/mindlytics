@@ -57,10 +57,12 @@
         </div>
     </header>
 
-    @if(! ($tablesReady ?? false))
+    @if(!empty($pageError))
+        <div class="lc-banner">خطأ مؤقت في Lead Center: {{ $pageError }} — نفّذ على السيرفر: <code>php artisan migrate --force && php artisan view:clear</code></div>
+    @elseif(! ($tablesReady ?? false))
         <div class="lc-banner">شغّل: <code>php artisan migrate --force</code></div>
-    @elseif(! ($columnsReady ?? true))
-        <div class="lc-banner">لتفعيل Labels / Reminder / Priority: <code>php artisan migrate --force</code></div>
+    @elseif(! ($columnsReady ?? true) || ! ($crmReady ?? true))
+        <div class="lc-banner">لتفعيل Lead Center بالكامل (CRM / Labels / Reminder): <code>php artisan migrate --force</code></div>
     @endif
 
     <div class="lc-stats" id="lc-stats">
