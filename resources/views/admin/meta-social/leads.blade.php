@@ -162,7 +162,15 @@
                                 <p class="preview">{{ \Illuminate\Support\Str::limit($row['preview'] ?: '—', 80) }}</p>
                                 <div class="lc-pipe-card__fields">
                                     <div><span>الأولوية</span><b>{{ $row['priority_label'] ?: '—' }}</b></div>
-                                    <div><span>الحالة</span><b>{{ !empty($row['is_done']) ? 'Done' : 'Open' }}@if(($row['unread'] ?? 0) > 0) · {{ $row['unread'] }} unread@endif</b></div>
+                                    <div>
+                                        <span>الحالة</span>
+                                        <b>
+                                            {{ !empty($row['is_done']) ? 'Done' : 'Open' }}
+                                            @if(($row['unread'] ?? 0) > 0)
+                                                · {{ $row['unread'] }} unread
+                                            @endif
+                                        </b>
+                                    </div>
                                     <div><span>المسؤول</span><b>{{ $row['assignee_name'] ?: 'Unassigned' }}</b></div>
                                     <div><span>الهاتف</span><b dir="ltr">{{ $row['phone'] ?: '—' }}</b></div>
                                     <div><span>الإيميل</span><b dir="ltr">{{ $row['email'] ?: '—' }}</b></div>
