@@ -9,6 +9,7 @@
     $stats = $stats ?? [];
     $rows = $rows ?? collect();
     $pipeline = $pipeline ?? [];
+    $pipelineTotal = (int) ($pipelineTotal ?? 0);
     $detail = $detail ?? null;
     $selectedId = (int) ($selectedId ?? 0);
     $stages = $stages ?? \App\Models\MetaSocialConversation::LEAD_STAGES;
@@ -139,6 +140,10 @@
 
     {{-- PIPELINE --}}
     @if($viewMode === 'pipeline')
+        <div class="lc-pipe-summary">
+            <strong id="lc-pipe-total">{{ number_format($pipelineTotal) }}</strong>
+            <span>lead في الـ Pipeline (كل البيانات)</span>
+        </div>
         <div class="lc-pipeline" id="lc-pipeline">
             @foreach($stages as $stageKey => $stageLabel)
                 <div class="lc-pipe-col" data-stage="{{ $stageKey }}">
@@ -147,18 +152,33 @@
                         <span>{{ count($pipeline[$stageKey] ?? []) }}</span>
                     </header>
                     <div class="lc-pipe-body">
-                        @foreach(($pipeline[$stageKey] ?? []) as $row)
-                            <a href="{{ $lcRoute(['view' => 'list', 'lead' => $row['id']]) }}" class="lc-pipe-card">
-                                <p class="name">{{ $row['display_name'] }}</p>
-                                <p class="meta">{{ $row['platform_label'] }} · {{ $row['page_name'] }}</p>
-                                <p class="preview">{{ \Illuminate\Support\Str::limit($row['preview'] ?: '—', 60) }}</p>
-                                <div class="tags">
-                                    @if($row['assignee_name'])<span>{{ $row['assignee_name'] }}</span>@endif
-                                    @if($row['is_real_phone'])<span class="phone">Phone</span>@endif
-                                    @foreach(($row['labels'] ?? []) as $lb)<span>{{ $lb }}</span>@endforeach
+                        @forelse(($pipeline[$stageKey] ?? []) as $row)
+                            <a href="{{ $lcRoute(['view' => 'list', 'lead' => $row['id']]) }}" class="lc-pipe-card {{ !empty($row['is_done']) ? 'is-done' : '' }} {{ !empty($row['priority']) && $row['priority'] !== 'normal' ? 'prio-'.$row['priority'] : '' }}">
+                                <div class="lc-pipe-card__top">
+                                    <p class="name">{{ $row['display_name'] }}</p>
+                                    <span class="time">{{ $row['last_time'] ?: ($row['last_human'] ?? '') }}</span>
                                 </div>
+                                <p class="meta">{{ $row['platform_label'] }} · {{ $row['page_name'] ?: '—' }}</p>
+                                <p class="preview">{{ \Illuminate\Support\Str::limit($row['preview'] ?: '—', 80) }}</p>
+                                <div class="lc-pipe-card__fields">
+                                    <div><span>الأولوية</span><b>{{ $row['priority_label'] ?: '—' }}</b></div>
+                                    <div><span>الحالة</span><b>{{ !empty($row['is_done']) ? 'Done' : 'Open' }}@if(($row['unread'] ?? 0) > 0) · {{ $row['unread'] }} unread@endif</b></div>
+                                    <div><span>المسؤول</span><b>{{ $row['assignee_name'] ?: 'Unassigned' }}</b></div>
+                                    <div><span>الهاتف</span><b dir="ltr">{{ $row['phone'] ?: '—' }}</b></div>
+                                    <div><span>الإيميل</span><b dir="ltr">{{ $row['email'] ?: '—' }}</b></div>
+                                    <div><span>تذكير</span><b class="{{ !empty($row['reminder_due']) ? 'due' : '' }}">{{ $row['reminder_human'] ?: '—' }}</b></div>
+                                    <div><span>CRM</span><b>{{ !empty($row['in_crm']) ? ($row['crm_stage_label'] ?: 'Linked') : '—' }}</b></div>
+                                    <div><span>آخر نشاط</span><b>{{ $row['last_at'] ?: ($row['created_at'] ?: '—') }}</b></div>
+                                </div>
+                                @if(!empty($row['labels']))
+                                    <div class="tags">
+                                        @foreach($row['labels'] as $lb)<span>{{ $lb }}</span>@endforeach
+                                    </div>
+                                @endif
                             </a>
-                        @endforeach
+                        @empty
+                            <p class="lc-pipe-empty">لا يوجد</p>
+                        @endforelse
                     </div>
                 </div>
             @endforeach
@@ -472,15 +492,28 @@ main:has(.lc-page){overflow:hidden!important} main:has(.lc-page)>div:last-child{
 .lc-table th{position:sticky;top:0;background:#fff;font-size:10px;text-transform:uppercase;color:var(--lc-muted)}
 .lc-bulk{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;padding:.45rem .6rem;margin-bottom:.4rem;background:#e7f3ff;border-radius:.75rem;font-size:12px;font-weight:700}
 .lc-bulk button,.lc-bulk select{border:1px solid var(--lc-line);border-radius:.55rem;padding:.3rem .5rem;background:#fff;font-size:11px;font-weight:700}
+.lc-pipe-summary{display:flex;align-items:baseline;gap:.4rem;padding:.45rem .85rem 0;font-size:12px;color:var(--lc-muted)}
+.lc-pipe-summary strong{font-size:1.05rem;color:var(--lc-ink);font-variant-numeric:tabular-nums}
 .lc-pipeline{flex:1;min-height:0;display:flex;gap:.55rem;overflow:auto;padding:.65rem .75rem}
-.lc-pipe-col{min-width:240px;max-width:260px;background:var(--lc-bg);border-radius:.9rem;display:flex;flex-direction:column;max-height:100%}
+.lc-pipe-col{min-width:280px;max-width:300px;background:var(--lc-bg);border-radius:.9rem;display:flex;flex-direction:column;max-height:100%}
 .lc-pipe-col header{display:flex;justify-content:space-between;padding:.55rem .65rem;font-size:12px;font-weight:900}
 .lc-pipe-body{overflow:auto;padding:0 .45rem .55rem;display:flex;flex-direction:column;gap:.4rem}
-.lc-pipe-card{background:#fff;border:1px solid var(--lc-line);border-radius:.75rem;padding:.55rem;text-decoration:none;color:inherit}
-.lc-pipe-card .name{font-size:12px;font-weight:800}.lc-pipe-card .meta,.lc-pipe-card .preview{font-size:10px;color:var(--lc-muted);margin-top:.15rem}
+.lc-pipe-card{background:#fff;border:1px solid var(--lc-line);border-radius:.75rem;padding:.55rem;text-decoration:none;color:inherit;display:block}
+.lc-pipe-card.is-done{opacity:.72}
+.lc-pipe-card.prio-high{border-color:#f59e0b}
+.lc-pipe-card.prio-urgent{border-color:#ef4444}
+.lc-pipe-card__top{display:flex;justify-content:space-between;gap:.35rem;align-items:flex-start}
+.lc-pipe-card .name{font-size:12px;font-weight:800;margin:0}
+.lc-pipe-card .time{font-size:9px;color:var(--lc-muted);white-space:nowrap}
+.lc-pipe-card .meta,.lc-pipe-card .preview{font-size:10px;color:var(--lc-muted);margin-top:.15rem}
+.lc-pipe-card__fields{display:grid;grid-template-columns:1fr 1fr;gap:.25rem .35rem;margin-top:.4rem}
+.lc-pipe-card__fields > div{min-width:0}
+.lc-pipe-card__fields span{display:block;font-size:8px;font-weight:800;color:var(--lc-muted);text-transform:uppercase;letter-spacing:.02em}
+.lc-pipe-card__fields b{display:block;font-size:10px;font-weight:700;color:var(--lc-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lc-pipe-card__fields b.due{color:#b45309}
 .lc-pipe-card .tags{display:flex;flex-wrap:wrap;gap:.2rem;margin-top:.35rem}
 .lc-pipe-card .tags span{font-size:9px;font-weight:800;background:#e7f3ff;color:var(--lc-blue);border-radius:999px;padding:.1rem .35rem}
-.lc-pipe-card .tags .phone{background:#ecfdf5;color:#047857}
+.lc-pipe-empty{font-size:11px;color:var(--lc-muted);text-align:center;padding:.75rem .25rem}
 </style>
 @endpush
 

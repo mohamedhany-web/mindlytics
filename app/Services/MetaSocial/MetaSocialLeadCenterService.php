@@ -239,9 +239,14 @@ class MetaSocialLeadCenterService
     /**
      * @return Collection<int, MetaSocialConversation>
      */
-    public function listLeads(array $filters, int $limit = 400): Collection
+    public function listLeads(array $filters, ?int $limit = 400): Collection
     {
-        return $this->filteredQuery($filters)->limit($limit)->get();
+        $q = $this->filteredQuery($filters);
+        if ($limit !== null && $limit > 0) {
+            $q->limit($limit);
+        }
+
+        return $q->get();
     }
 
     public function resolveStage(MetaSocialConversation $c): string
@@ -579,25 +584,32 @@ class MetaSocialLeadCenterService
     }
 
     /**
-     * @return array<string, list<array<string, mixed>>>
+     * كل الـ leads حسب المرحلة — بدون حد أقصى حتى تظهر كل البيانات في Pipeline.
+     *
+     * @return array{groups: array<string, list<array<string, mixed>>>, total: int}
      */
     public function pipelineGroups(array $filters): array
     {
         $filters = array_merge($filters, ['tab' => $filters['tab'] ?? 'all']);
+        // عمود المرحلة يُجمّع الكل؛ فلتر المرحلة من الشريط يُلغى حتى لا يفرّغ باقي الأعمدة
         unset($filters['stage']);
-        $rows = $this->listLeads($filters, 500)->map(fn ($c) => $this->serializeRow($c));
+
+        $rows = $this->listLeads($filters, null)->map(fn ($c) => $this->serializeRow($c));
         $groups = [];
         foreach (array_keys(MetaSocialConversation::LEAD_STAGES) as $stage) {
             $groups[$stage] = [];
         }
         foreach ($rows as $row) {
-            $stage = $row['stage'] ?? 'intake';
+            $stage = $row['stage'] ?? 'inbox';
             if (! isset($groups[$stage])) {
                 $groups[$stage] = [];
             }
             $groups[$stage][] = $row;
         }
 
-        return $groups;
+        return [
+            'groups' => $groups,
+            'total' => $rows->count(),
+        ];
     }
 }

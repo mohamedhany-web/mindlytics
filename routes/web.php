@@ -1025,6 +1025,22 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             });
         });
 
+        // Messenger & Instagram لموظفي/مديري المبيعات (كل الرسايل — الربط عند الرد/الأكشن)
+        Route::middleware('sales.staff')->prefix('sales/meta-social/inbox')->name('sales.meta-social.inbox.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Employee\SalesMetaSocialInboxController::class, 'index'])->name('index');
+            Route::get('/poll', [\App\Http\Controllers\Employee\SalesMetaSocialInboxController::class, 'poll'])->name('poll');
+            Route::post('/{conversation}/reply', [\App\Http\Controllers\Employee\SalesMetaSocialInboxController::class, 'reply'])->name('reply');
+            Route::put('/{conversation}/messages/{message}', [\App\Http\Controllers\Employee\SalesMetaSocialInboxController::class, 'updateMessage'])->name('messages.update');
+            Route::delete('/{conversation}/messages/{message}', [\App\Http\Controllers\Employee\SalesMetaSocialInboxController::class, 'destroyMessage'])->name('messages.destroy');
+            Route::post('/{conversation}/assign', [\App\Http\Controllers\Employee\SalesMetaSocialInboxController::class, 'assign'])->name('assign');
+            Route::post('/{conversation}/contact', [\App\Http\Controllers\Employee\SalesMetaSocialInboxController::class, 'updateContact'])->name('contact');
+            Route::post('/{conversation}/create-lead', [\App\Http\Controllers\Employee\SalesMetaSocialInboxController::class, 'createLead'])->name('create-lead');
+            Route::post('/{conversation}/link-lead', [\App\Http\Controllers\Employee\SalesMetaSocialInboxController::class, 'linkLead'])->name('link-lead');
+            Route::post('/{conversation}/enrich', [\App\Http\Controllers\Employee\SalesMetaSocialInboxController::class, 'enrich'])->name('enrich');
+            Route::post('/{conversation}/request-phone', [\App\Http\Controllers\Employee\SalesMetaSocialInboxController::class, 'requestPhone'])->name('request-phone');
+            Route::post('/{conversation}/sync-messages', [\App\Http\Controllers\Employee\SalesMetaSocialInboxController::class, 'syncMessages'])->name('sync-messages');
+        });
+
         Route::middleware('sales.manager')->prefix('sales-manager')->name('sales-manager.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Employee\SalesManagerDashboardController::class, 'index'])->name('dashboard');
             Route::get('live-board', [\App\Http\Controllers\Employee\SalesManagerLiveBoardController::class, 'index'])->name('live-board');
@@ -1953,6 +1969,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/inbox', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'index'])->name('inbox.index');
             Route::get('/inbox/poll', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'poll'])->name('inbox.poll');
             Route::post('/inbox/{conversation}/reply', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'reply'])->name('inbox.reply');
+            Route::put('/inbox/{conversation}/messages/{message}', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'updateMessage'])->name('inbox.messages.update');
+            Route::delete('/inbox/{conversation}/messages/{message}', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'destroyMessage'])->name('inbox.messages.destroy');
             Route::post('/inbox/{conversation}/assign', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'assign'])->name('inbox.assign');
             Route::post('/inbox/{conversation}/contact', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'updateContact'])->name('inbox.contact');
             Route::post('/inbox/{conversation}/create-lead', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'createLead'])->name('inbox.create-lead');

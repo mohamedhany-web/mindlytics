@@ -26,11 +26,48 @@ class MetaSocialCrmService
     }
 
     /**
+     * موظفو المبيعات/مديرو المبيعات النشطون فقط (اللي عندهم أكسس فعلي).
+     *
      * @return list<User>
      */
     public function eligibleAgents(): array
     {
         return $this->assignment->eligibleSalesStaff();
+    }
+
+    /**
+     * @return list<int>
+     */
+    public function eligibleAgentIds(): array
+    {
+        return array_values(array_map(
+            static fn (User $u) => (int) $u->id,
+            $this->eligibleAgents()
+        ));
+    }
+
+    public function isEligibleAgent(int $userId): bool
+    {
+        return in_array($userId, $this->eligibleAgentIds(), true);
+    }
+
+    /**
+     * عند رد/أكشن من موظف سيلز: ربط المحادثة (+ الـ Lead إن وُجد) بحسابه للتقارير.
+     */
+    public function claimOnSalesAction(MetaSocialConversation $conversation, int $userId): MetaSocialConversation
+    {
+        if (! $this->crmReady() || $userId <= 0 || ! $this->isEligibleAgent($userId)) {
+            return $conversation;
+        }
+
+        $conversation->loadMissing('salesLead:id,assigned_to');
+        $leadAssignee = $conversation->salesLead?->assigned_to;
+        if ((int) $conversation->assigned_to === $userId
+            && (! $conversation->sales_lead_id || (int) $leadAssignee === $userId)) {
+            return $conversation;
+        }
+
+        return $this->assign($conversation, $userId, $userId);
     }
 
     public function enrichParticipantProfile(MetaSocialConversation $conversation): MetaSocialConversation
@@ -114,6 +151,12 @@ class MetaSocialCrmService
 
     public function assign(MetaSocialConversation $conversation, int $userId, ?int $performedBy = null): MetaSocialConversation
     {
+        if (! $this->isEligibleAgent($userId)) {
+            throw ValidationException::withMessages([
+                'assigned_to' => 'يمكن التعيين فقط لموظف مبيعات نشط لديه أكسس.',
+            ]);
+        }
+
         $assignee = User::query()->findOrFail($userId);
         $conversation->update(['assigned_to' => $assignee->id]);
         MetaSocialContactCaptureService::bumpInboxVersion();
@@ -173,11 +216,12 @@ class MetaSocialCrmService
         }
 
         $assigneeId = $assigneeId ?: $conversation->assigned_to ?: auth()->id();
-        if (! $assigneeId) {
+        if (! $assigneeId || ! $this->isEligibleAgent((int) $assigneeId)) {
             throw ValidationException::withMessages([
-                'assigned_to' => 'اختر موظف مبيعات قبل إنشاء العميل.',
+                'assigned_to' => 'اختر موظف مبيعات نشط (لديه أكسس) قبل إنشاء العميل.',
             ]);
         }
+        $assigneeId = (int) $assigneeId;
 
         $lead = SalesLead::query()->create([
             'name' => $name ?: $conversation->displayName(),
@@ -280,11 +324,19 @@ class MetaSocialCrmService
     /**
      * @return array<string, mixed>
      */
-    public function serializeCrm(MetaSocialConversation $conversation): array
+    public function serializeCrm(MetaSocialConversation $conversation, string $audience = 'admin'): array
     {
         $conversation->loadMissing(['assignee:id,name', 'salesLead:id,name,phone,email,stage,assigned_to', 'page:id,page_name']);
 
         $lead = $conversation->salesLead;
+        $salesLeadUrl = null;
+        if ($lead) {
+            $salesLeadUrl = match ($audience) {
+                'employee' => route('employee.sales.leads.show', $lead),
+                'sales_manager' => route('employee.sales-manager.leads.show', $lead),
+                default => route('admin.sales.leads.show', $lead),
+            };
+        }
 
         return [
             'conversation_id' => $conversation->id,
@@ -305,7 +357,7 @@ class MetaSocialCrmService
             'sales_lead_name' => $lead?->name,
             'sales_lead_stage' => $lead?->stage,
             'sales_lead_stage_label' => $lead ? SalesLead::stageLabel((string) $lead->stage) : null,
-            'sales_lead_url' => $lead ? route('admin.sales.leads.show', $lead) : null,
+            'sales_lead_url' => $salesLeadUrl,
             'last_message_at' => $conversation->last_message_at?->toIso8601String(),
             'unread_count' => (int) $conversation->unread_count,
         ];

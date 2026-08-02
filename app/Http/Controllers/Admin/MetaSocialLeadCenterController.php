@@ -59,12 +59,17 @@ class MetaSocialLeadCenterController extends Controller
 
             $filters = $this->filtersFrom($request);
             $stats = $tablesReady ? $this->leads->stats($filters['page'] ?: null) : [];
-            $rows = $tablesReady
+            $isPipeline = ($filters['view'] ?? '') === 'pipeline';
+            $rows = ($tablesReady && ! $isPipeline)
                 ? $this->leads->listLeads($filters)->map(fn ($c) => $this->leads->serializeRow($c))
                 : collect();
-            $pipeline = ($tablesReady && $filters['view'] === 'pipeline')
-                ? $this->leads->pipelineGroups($filters)
-                : [];
+            $pipeline = [];
+            $pipelineTotal = 0;
+            if ($tablesReady && $isPipeline) {
+                $pipelinePayload = $this->leads->pipelineGroups($filters);
+                $pipeline = $pipelinePayload['groups'] ?? [];
+                $pipelineTotal = (int) ($pipelinePayload['total'] ?? 0);
+            }
 
             $selectedId = (int) $request->query('lead', $request->query('conversation', 0));
             $selected = null;
@@ -110,6 +115,7 @@ class MetaSocialLeadCenterController extends Controller
                 'stats',
                 'rows',
                 'pipeline',
+                'pipelineTotal',
                 'selected',
                 'selectedId',
                 'detail',
@@ -136,6 +142,7 @@ class MetaSocialLeadCenterController extends Controller
                 'stats' => [],
                 'rows' => collect(),
                 'pipeline' => [],
+                'pipelineTotal' => 0,
                 'selected' => null,
                 'selectedId' => 0,
                 'detail' => null,
@@ -223,7 +230,9 @@ class MetaSocialLeadCenterController extends Controller
                 ->map(fn ($c) => $this->leads->serializeRow($c))
                 ->values();
             if (($filters['view'] ?? '') === 'pipeline') {
-                $payload['pipeline'] = $this->leads->pipelineGroups($filters);
+                $pipelinePayload = $this->leads->pipelineGroups($filters);
+                $payload['pipeline'] = $pipelinePayload['groups'] ?? [];
+                $payload['pipeline_total'] = (int) ($pipelinePayload['total'] ?? 0);
             }
         }
 
@@ -264,7 +273,7 @@ class MetaSocialLeadCenterController extends Controller
         }
 
         $validated = $request->validate([
-            'assigned_to' => 'nullable|integer|exists:users,id',
+            'assigned_to' => ['nullable', 'integer', Rule::in($this->crm->eligibleAgentIds())],
             'name' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:40',
             'email' => 'nullable|email|max:255',
@@ -303,8 +312,9 @@ class MetaSocialLeadCenterController extends Controller
             return response()->json(['success' => false, 'error' => 'شغّل migrate أولاً'], 503);
         }
 
+        $eligibleIds = $this->crm->eligibleAgentIds();
         $validated = $request->validate([
-            'assigned_to' => 'nullable|integer|exists:users,id',
+            'assigned_to' => ['nullable', 'integer', Rule::in($eligibleIds)],
         ]);
 
         if (empty($validated['assigned_to'])) {
@@ -444,7 +454,7 @@ class MetaSocialLeadCenterController extends Controller
             'ids' => 'required|array|min:1|max:100',
             'ids.*' => 'integer',
             'action' => 'required|in:done,reopen,assign,unassign,stage,priority,create_crm',
-            'assigned_to' => 'nullable|integer|exists:users,id',
+            'assigned_to' => ['nullable', 'integer', Rule::in($this->crm->eligibleAgentIds())],
             'stage' => ['nullable', 'string', Rule::in(array_keys(MetaSocialConversation::LEAD_STAGES))],
             'priority' => ['nullable', 'string', Rule::in(array_keys(MetaSocialConversation::PRIORITIES))],
         ]);

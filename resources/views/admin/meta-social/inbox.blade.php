@@ -1,17 +1,21 @@
-@extends('layouts.admin')
+@extends($msLayout ?? 'layouts.admin')
 
-@section('title', 'Meta Inbox — Business Suite')
-@section('header', 'Meta Inbox')
+@section('title', ($waInboxTitle ?? 'Meta Inbox').' — Mindlytics')
+@section('header', $waInboxTitle ?? 'Meta Inbox')
 
 @section('content')
 @php
     $convId = $activeConversation?->id;
-    $replyUrl = $convId ? route('admin.meta-social.inbox.reply', $convId) : '';
-    $pollUrl = route('admin.meta-social.inbox.poll', ['page' => $pageId, 'conversation' => $convId]);
+    $msIndexUrl = $msIndexUrl ?? route('admin.meta-social.inbox.index');
+    $replyUrl = $msReplyUrl ?? ($convId ? route('admin.meta-social.inbox.reply', $convId) : '');
+    $pollUrl = $msPollUrl ?? route('admin.meta-social.inbox.poll', ['page' => $pageId, 'conversation' => $convId]);
     $canUse = (bool) ($connected ?? ($connectionMeta['can_use'] ?? false));
     $crmReady = (bool) ($crmReady ?? false);
+    $msHideAdminLinks = (bool) ($msHideAdminLinks ?? false);
+    $msCanAssignOthers = (bool) ($msCanAssignOthers ?? true);
+    $msAutoClaim = (bool) ($msAutoClaim ?? false);
     $filterCounts = $filterCounts ?? ['all' => 0, 'unread' => 0, 'messenger' => 0, 'instagram' => 0, 'open' => 0, 'closed' => 0];
-    $crmUrls = $convId ? [
+    $crmUrls = $msUrls ?? ($convId ? [
         'assign' => route('admin.meta-social.inbox.assign', $convId),
         'contact' => route('admin.meta-social.inbox.contact', $convId),
         'createLead' => route('admin.meta-social.inbox.create-lead', $convId),
@@ -19,7 +23,8 @@
         'enrich' => route('admin.meta-social.inbox.enrich', $convId),
         'requestPhone' => route('admin.meta-social.inbox.request-phone', $convId),
         'syncMessages' => route('admin.meta-social.inbox.sync-messages', $convId),
-    ] : [];
+        'messageUpdateBase' => url('/admin/meta-social/inbox/'.$convId.'/messages'),
+    ] : []);
     $navBase = array_filter([
         'page' => $pageId ?: null,
         'assigned_to' => $assignedFilter ?: null,
@@ -33,13 +38,13 @@
     {{-- Top bar — Business Suite style --}}
     <header class="bs-topbar shrink-0">
         <div class="bs-topbar__brand">
-            <button type="button" @click="$dispatch('open-sidebar')" class="lg:hidden bs-icon-btn">
+            <button type="button" x-on:click="$dispatch('open-sidebar')" class="lg:hidden bs-icon-btn">
                 <i class="fas fa-bars"></i>
             </button>
             <div class="bs-meta-mark"><i class="fab fa-meta"></i></div>
             <div class="min-w-0">
-                <h1 class="bs-topbar__title">Inbox</h1>
-                <p class="bs-topbar__sub">Business Suite · Messenger & Instagram</p>
+                <h1 class="bs-topbar__title">{{ $waInboxTitle ?? 'Inbox' }}</h1>
+                <p class="bs-topbar__sub">{{ $waInboxSubtitle ?? 'Business Suite · Messenger & Instagram' }}</p>
             </div>
         </div>
         <div class="bs-topbar__actions">
@@ -53,8 +58,10 @@
             @endif
             <span class="bs-chip bs-chip--live" id="bs-live-chip"><i class="fas fa-circle"></i> Live</span>
             <span class="bs-chip bs-chip--unread" id="bs-unread-chip">{{ $unreadTotal }} غير مقروء</span>
-            <a href="{{ route('admin.meta-social.pages.index') }}" class="bs-btn-ghost hidden md:inline-flex"><i class="fab fa-facebook"></i> الصفحات</a>
-            <a href="{{ route('admin.meta-social.settings') }}" class="bs-btn-ghost hidden md:inline-flex"><i class="fas fa-cog"></i></a>
+            @unless($msHideAdminLinks)
+                <a href="{{ route('admin.meta-social.pages.index') }}" class="bs-btn-ghost hidden md:inline-flex"><i class="fab fa-facebook"></i> الصفحات</a>
+                <a href="{{ route('admin.meta-social.settings') }}" class="bs-btn-ghost hidden md:inline-flex"><i class="fas fa-cog"></i></a>
+            @endunless
         </div>
     </header>
 
@@ -63,7 +70,15 @@
     @elseif(! $canUse)
         <div class="bs-banner bs-banner--warn">
             Meta غير مربوط —
-            <a href="{{ route('admin.meta-social.settings') }}" class="underline font-bold">إعداد الربط</a>
+            @unless($msHideAdminLinks)
+                <a href="{{ route('admin.meta-social.settings') }}" class="underline font-bold">إعداد الربط</a>
+            @else
+                تواصل مع الإدارة لربط الحساب.
+            @endunless
+        </div>
+    @elseif($msAutoClaim)
+        <div class="bs-banner" style="background:#e7f3ff;color:#0b5cab;border-color:#b6daff">
+            تشوف كل الرسايل · أول رد أو أي أكشن بيربط المحادثة بحسابك عشان التقارير.
         </div>
     @endif
 
@@ -73,7 +88,7 @@
             <div class="bs-list__head">
                 <div class="bs-search">
                     <i class="fas fa-search"></i>
-                    <form method="get" action="{{ route('admin.meta-social.inbox.index') }}" class="flex-1">
+                    <form method="get" action="{{ $msIndexUrl }}" class="flex-1">
                         @foreach($navBase as $k => $v)
                             @if($k !== 'q')<input type="hidden" name="{{ $k }}" value="{{ $v }}">@endif
                         @endforeach
@@ -85,27 +100,27 @@
                 </div>
 
                 <div class="bs-tabs">
-                    <a href="{{ route('admin.meta-social.inbox.index', $navBase) }}"
+                    <a href="{{ url($msIndexUrl).(($q = http_build_query($navBase)) ? '?'.$q : '') }}"
                        class="bs-tab {{ ! $platformFilter && ! $unreadOnly && ! $statusFilter ? 'is-active' : '' }}">
                         الكل <span>{{ $filterCounts['all'] }}</span>
                     </a>
-                    <a href="{{ route('admin.meta-social.inbox.index', $navBase + ['unread' => 1]) }}"
+                    <a href="{{ url($msIndexUrl).'?'.http_build_query($navBase + ['unread' => 1]) }}"
                        class="bs-tab {{ $unreadOnly ? 'is-active' : '' }}">
                         غير مقروء <span>{{ $filterCounts['unread'] }}</span>
                     </a>
-                    <a href="{{ route('admin.meta-social.inbox.index', $navBase + ['platform' => 'messenger']) }}"
+                    <a href="{{ url($msIndexUrl).'?'.http_build_query($navBase + ['platform' => 'messenger']) }}"
                        class="bs-tab {{ ($platformFilter ?? '') === 'messenger' ? 'is-active' : '' }}">
                         <i class="fab fa-facebook-messenger"></i> <span>{{ $filterCounts['messenger'] }}</span>
                     </a>
-                    <a href="{{ route('admin.meta-social.inbox.index', $navBase + ['platform' => 'instagram']) }}"
+                    <a href="{{ url($msIndexUrl).'?'.http_build_query($navBase + ['platform' => 'instagram']) }}"
                        class="bs-tab {{ ($platformFilter ?? '') === 'instagram' ? 'is-active' : '' }}">
                         <i class="fab fa-instagram"></i> <span>{{ $filterCounts['instagram'] }}</span>
                     </a>
-                    <a href="{{ route('admin.meta-social.inbox.index', $navBase + ['status' => 'open']) }}"
+                    <a href="{{ url($msIndexUrl).'?'.http_build_query($navBase + ['status' => 'open']) }}"
                        class="bs-tab {{ ($statusFilter ?? '') === 'open' ? 'is-active' : '' }}">
                         مفتوح <span>{{ $filterCounts['open'] }}</span>
                     </a>
-                    <a href="{{ route('admin.meta-social.inbox.index', $navBase + ['status' => 'closed']) }}"
+                    <a href="{{ url($msIndexUrl).'?'.http_build_query($navBase + ['status' => 'closed']) }}"
                        class="bs-tab {{ ($statusFilter ?? '') === 'closed' ? 'is-active' : '' }}">
                         منتهي <span>{{ $filterCounts['closed'] }}</span>
                     </a>
@@ -126,7 +141,7 @@
             <div class="bs-list__body" id="bs-conv-list">
                 @forelse($conversations as $c)
                     @php
-                        $href = route('admin.meta-social.inbox.index', array_filter([
+                        $href = url($msIndexUrl).'?'.http_build_query(array_filter([
                             'page' => $pageId ?: null,
                             'conversation' => $c->id,
                             'platform' => $platformFilter ?: null,
@@ -134,7 +149,7 @@
                             'status' => $statusFilter ?: null,
                             'unread' => $unreadOnly ? 1 : null,
                             'q' => $search ?: null,
-                        ]));
+                        ], fn ($v) => $v !== null && $v !== ''));
                     @endphp
                     <a href="{{ $href }}"
                        class="bs-conv {{ $convId == $c->id ? 'is-active' : '' }} {{ $c->unread_count > 0 ? 'is-unread' : '' }}"
@@ -171,7 +186,9 @@
                     <div class="bs-empty">
                         <i class="fab fa-meta"></i>
                         <p>لا توجد محادثات بهذا الفلتر</p>
-                        <a href="{{ route('admin.meta-social.pages.index') }}">جلب كل الرسائل من الصفحات</a>
+                        @unless($msHideAdminLinks)
+                            <a href="{{ route('admin.meta-social.pages.index') }}">جلب كل الرسائل من الصفحات</a>
+                        @endunless
                     </div>
                 @endforelse
             </div>
@@ -182,7 +199,7 @@
             @if($activeConversation)
                 <div class="bs-chat__wrap">
                     <div class="bs-chat__head">
-                        <button type="button" @click="showSidebarMobile = true" class="lg:hidden bs-icon-btn"><i class="fas fa-arrow-right"></i></button>
+                        <button type="button" x-on:click="showSidebarMobile = true" class="lg:hidden bs-icon-btn"><i class="fas fa-arrow-right"></i></button>
                         <div class="bs-avatar bs-avatar--lg">
                             @if($activeConversation->participant_profile_pic)
                                 <img src="{{ $activeConversation->participant_profile_pic }}" alt="">
@@ -199,20 +216,20 @@
                             </p>
                         </div>
                         @if($activeConversation->platform === 'messenger')
-                            <button type="button" @click="requestPhone()" class="bs-btn-ghost" :disabled="crmSaving" title="طلب رقم الهاتف من العميل">
+                            <button type="button" x-on:click="requestPhone()" class="bs-btn-ghost" :disabled="crmSaving" title="طلب رقم الهاتف من العميل">
                                 <i class="fas fa-mobile-alt"></i>
                                 <span class="hidden sm:inline">طلب رقم</span>
                             </button>
                         @endif
-                        <button type="button" @click="syncAllMessages()" class="bs-btn-ghost" :disabled="syncingMessages" title="جلب كل الرسائل">
+                        <button type="button" x-on:click="syncAllMessages()" class="bs-btn-ghost" :disabled="syncingMessages" title="جلب كل الرسائل">
                             <i class="fas fa-cloud-download-alt" :class="syncingMessages ? 'fa-spinner fa-spin' : ''"></i>
                             <span class="hidden sm:inline">مزامنة</span>
                         </button>
-                        <button type="button" @click="toggleDone()" class="bs-btn-ghost" :disabled="crmSaving">
+                        <button type="button" x-on:click="toggleDone()" class="bs-btn-ghost" :disabled="crmSaving">
                             <i class="fas" :class="(crm?.status || @js($activeConversation->status)) === 'closed' ? 'fa-envelope-open-text' : 'fa-check-circle'"></i>
                             <span class="hidden sm:inline" x-text="(crm?.status || @js($activeConversation->status)) === 'closed' ? 'إعادة فتح' : 'إنهاء'"></span>
                         </button>
-                        <button type="button" @click="showDetails = !showDetails" class="bs-btn-ghost xl:hidden">
+                        <button type="button" x-on:click="showDetails = !showDetails" class="bs-btn-ghost xl:hidden">
                             <i class="fas fa-user-circle"></i>
                         </button>
                     </div>
@@ -232,6 +249,10 @@
                             @endif
                             <div class="bs-msg {{ $m->direction === 'inbound' ? 'is-in' : 'is-out' }}" data-msg-id="{{ $m->id }}">
                                 <div class="bs-bubble {{ $m->direction === 'inbound' ? 'is-in' : 'is-out' }}">
+                                    <div class="bs-bubble__actions">
+                                        <button type="button" class="bs-msg-act" title="تعديل" x-on:click="editMessage({{ $m->id }}, @js($m->displayBody()))"><i class="fas fa-pen"></i></button>
+                                        <button type="button" class="bs-msg-act" title="مسح" x-on:click="deleteMessage({{ $m->id }})"><i class="fas fa-trash"></i></button>
+                                    </div>
                                     @if($m->attachment_url && str_contains((string) $m->message_type, 'image'))
                                         <a href="{{ $m->attachment_url }}" target="_blank" rel="noopener">
                                             <img src="{{ $m->attachment_url }}" alt="" class="bs-bubble__img">
@@ -242,13 +263,16 @@
                                         </a>
                                     @endif
                                     @if(filled($m->displayBody()) && $m->displayBody() !== '—')
-                                        <p class="bs-bubble__text">{{ $m->displayBody() }}</p>
+                                        <p class="bs-bubble__text" data-role="text">{{ $m->displayBody() }}</p>
                                     @endif
                                     <div class="bs-bubble__meta">
                                         @if($m->direction === 'outbound' && $m->sentBy)
                                             <span>{{ $m->sentBy->name }}</span>
                                         @endif
                                         <span>{{ $m->sent_at?->format('H:i') ?? $m->created_at?->format('H:i') }}</span>
+                                        @if(!empty(($m->meta['edited_at'] ?? null)))
+                                            <span class="bs-edited">تعديل</span>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -260,11 +284,11 @@
                         @endforelse
                     </div>
 
-                    <form class="bs-composer" @submit.prevent="sendReply()">
+                    <form class="bs-composer" x-on:submit.prevent="sendReply()">
                         <textarea x-model="replyBody"
                                   rows="1"
                                   placeholder="اكتب رسالة… (Enter للإرسال · Shift+Enter لسطر جديد)"
-                                  @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); sendReply(); }"
+                                  x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); sendReply(); }"
                                   :disabled="sending"
                                   class="bs-composer__input"></textarea>
                         <button type="submit" class="bs-send" :disabled="sending || !replyBody.trim()">
@@ -407,16 +431,29 @@ main:has(.bs-inbox-page) > div:last-child {
 .bs-msg.is-in { justify-content: flex-start; }
 .bs-msg.is-out { justify-content: flex-end; }
 .bs-bubble {
+    position: relative;
     max-width: min(78%, 28rem); padding: .45rem .7rem .35rem; border-radius: 1.15rem;
     font-size: 14px; line-height: 1.4; word-break: break-word; box-shadow: 0 1px 1px rgba(0,0,0,.04);
 }
 .bs-bubble.is-in { background: #fff; color: var(--bs-ink); border-start-start-radius: .35rem; }
 .bs-bubble.is-out { background: var(--bs-blue); color: #fff; border-start-end-radius: .35rem; }
-.bs-bubble__text { white-space: pre-wrap; margin: 0; }
+.bs-bubble__text { white-space: pre-wrap; margin: 0; padding-inline-end: 2.2rem; }
 .bs-bubble__img { max-width: 100%; max-height: 240px; border-radius: .75rem; display: block; margin-bottom: .25rem; }
 .bs-bubble__file { display: inline-flex; align-items: center; gap: .35rem; font-weight: 700; text-decoration: underline; }
+.bs-bubble__actions {
+    position: absolute; top: .2rem; inset-inline-end: .2rem;
+    display: none; gap: .15rem; z-index: 2;
+}
+.bs-msg:hover .bs-bubble__actions { display: inline-flex; }
+.bs-msg-act {
+    width: 1.4rem; height: 1.4rem; border: 0; border-radius: .4rem; cursor: pointer;
+    background: rgba(0,0,0,.08); color: inherit; font-size: 10px;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+.bs-bubble.is-out .bs-msg-act { background: rgba(255,255,255,.22); color: #fff; }
+.bs-edited { font-size: 9px; font-weight: 800; opacity: .9; }
 .bs-bubble__meta {
-    display: flex; justify-content: flex-end; gap: .35rem; margin-top: .15rem;
+    display: flex; justify-content: flex-end; gap: .35rem; margin-top: .15rem; flex-wrap: wrap;
     font-size: 10px; opacity: .8;
 }
 .bs-bubble.is-out .bs-bubble__meta { color: rgba(255,255,255,.9); }
@@ -479,7 +516,7 @@ function metaInboxNav(patch) {
     // عند تغيير فلتر عام نبدأ من قائمة نظيفة
     if (!('conversation' in (patch || {}))) params.delete('conversation');
     const qs = params.toString();
-    window.location = @json(route('admin.meta-social.inbox.index')) + (qs ? ('?' + qs) : '');
+    window.location = @json($msIndexUrl) + (qs ? ('?' + qs) : '');
 }
 
 function metaSocialInbox() {
@@ -500,6 +537,7 @@ function metaSocialInbox() {
         liveOk: true,
         crm: @json($crmPayload),
         crmUrls: @json($crmUrls),
+        msCanAssignOthers: @json($msCanAssignOthers),
         contactName: @json($crmPayload['display_name'] ?? $activeConversation?->displayName() ?? ''),
         contactPhone: @json($crmPayload['phone'] ?? $activeConversation?->phone ?? ''),
         contactEmail: @json($crmPayload['email'] ?? $activeConversation?->email ?? ''),
@@ -540,6 +578,10 @@ function metaSocialInbox() {
                 '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
             }[c]));
         },
+        messageUrl(id) {
+            if (!this.crmUrls.messageUpdateBase) return '';
+            return this.crmUrls.messageUpdateBase + '/' + id;
+        },
         appendMessage(m) {
             if (!m || !m.id) return;
             const box = document.getElementById('sm-chat-messages');
@@ -558,17 +600,89 @@ function metaSocialInbox() {
                 media = '<a href="' + this.escapeHtml(m.attachment_url) + '" target="_blank" class="bs-bubble__file" rel="noopener"><i class="fas fa-paperclip"></i> مرفق</a>';
             }
             const text = (m.body && m.body !== '—')
-                ? '<p class="bs-bubble__text">' + this.escapeHtml(m.body) + '</p>'
+                ? '<p class="bs-bubble__text" data-role="text">' + this.escapeHtml(m.body) + '</p>'
                 : '';
             const author = (m.direction === 'outbound' && m.author)
                 ? '<span>' + this.escapeHtml(m.author) + '</span>'
                 : '';
-            wrap.innerHTML = '<div class="bs-bubble ' + dir + '">' + media + text
-                + '<div class="bs-bubble__meta">' + author + '<span>' + this.escapeHtml(m.sent_at_human || '') + '</span></div></div>';
+            const edited = m.edited ? '<span class="bs-edited">تعديل</span>' : '';
+            const actions = '<div class="bs-bubble__actions">'
+                + '<button type="button" class="bs-msg-act" title="تعديل" data-act="edit"><i class="fas fa-pen"></i></button>'
+                + '<button type="button" class="bs-msg-act" title="مسح" data-act="del"><i class="fas fa-trash"></i></button>'
+                + '</div>';
+            wrap.innerHTML = '<div class="bs-bubble ' + dir + '">' + actions + media + text
+                + '<div class="bs-bubble__meta">' + author + '<span>' + this.escapeHtml(m.sent_at_human || '') + '</span>' + edited + '</div></div>';
+            wrap.querySelector('[data-act="edit"]')?.addEventListener('click', () => this.editMessage(m.id, m.body || ''));
+            wrap.querySelector('[data-act="del"]')?.addEventListener('click', () => this.deleteMessage(m.id));
             box.appendChild(wrap);
             this.lastMessageId = Math.max(this.lastMessageId || 0, Number(m.id) || 0);
             this.lastMessageCount = (this.lastMessageCount || 0) + 1;
             this.scrollChat();
+        },
+        async editMessage(id, currentBody) {
+            const next = window.prompt('تعديل الرسالة (في النظام فقط):', currentBody || '');
+            if (next === null) return;
+            const body = String(next).trim();
+            if (!body) { alert('النص مطلوب'); return; }
+            const url = this.messageUrl(id);
+            if (!url) return;
+            try {
+                const res = await fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': this.csrf,
+                        'X-HTTP-Method-Override': 'PUT',
+                    },
+                    body: JSON.stringify({ body }),
+                });
+                const data = await res.json();
+                if (!data.success) { alert(data.error || 'فشل التعديل'); return; }
+                const el = document.querySelector('[data-msg-id="' + id + '"] [data-role="text"]');
+                if (el) el.textContent = body;
+                else {
+                    const bubble = document.querySelector('[data-msg-id="' + id + '"] .bs-bubble');
+                    if (bubble && !bubble.querySelector('[data-role="text"]')) {
+                        const p = document.createElement('p');
+                        p.className = 'bs-bubble__text';
+                        p.setAttribute('data-role', 'text');
+                        p.textContent = body;
+                        bubble.insertBefore(p, bubble.querySelector('.bs-bubble__meta'));
+                    }
+                }
+                const meta = document.querySelector('[data-msg-id="' + id + '"] .bs-bubble__meta');
+                if (meta && !meta.querySelector('.bs-edited')) {
+                    const tag = document.createElement('span');
+                    tag.className = 'bs-edited';
+                    tag.textContent = 'تعديل';
+                    meta.appendChild(tag);
+                }
+                this.crmOk = data.note || 'تم التعديل';
+            } catch (e) {
+                alert('خطأ أثناء التعديل');
+            }
+        },
+        async deleteMessage(id) {
+            if (!confirm('مسح الرسالة من النظام؟ (لن تُمسح من Meta عند العميل)')) return;
+            const url = this.messageUrl(id);
+            if (!url) return;
+            try {
+                const res = await fetch(url, {
+                    method: 'DELETE',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': this.csrf,
+                        'X-HTTP-Method-Override': 'DELETE',
+                    },
+                });
+                const data = await res.json();
+                if (!data.success) { alert(data.error || 'فشل المسح'); return; }
+                document.querySelector('[data-msg-id="' + id + '"]')?.remove();
+                this.crmOk = data.note || 'تم المسح';
+            } catch (e) {
+                alert('خطأ أثناء المسح');
+            }
         },
         updateConversationList(rows) {
             if (!Array.isArray(rows)) return;
@@ -645,8 +759,13 @@ function metaSocialInbox() {
             });
         },
         async assignAgent() {
-            if (!this.crmUrls.assign || !this.assigneeId) return;
-            await this.postJson(this.crmUrls.assign, { assigned_to: Number(this.assigneeId) });
+            if (!this.crmUrls.assign) return;
+            if (this.msCanAssignOthers && !this.assigneeId) return;
+            const payload = this.msCanAssignOthers
+                ? { assigned_to: Number(this.assigneeId) }
+                : {};
+            const data = await this.postJson(this.crmUrls.assign, payload);
+            if (data?.success) this.crmOk = this.msCanAssignOthers ? 'تم التعيين' : 'تم استلام المحادثة لحسابك';
         },
         async createLead() {
             if (!this.crmUrls.createLead) return;
@@ -654,7 +773,7 @@ function metaSocialInbox() {
                 name: this.contactName,
                 phone: this.contactPhone,
                 email: this.contactEmail,
-                assigned_to: this.assigneeId ? Number(this.assigneeId) : null,
+                assigned_to: (this.msCanAssignOthers && this.assigneeId) ? Number(this.assigneeId) : null,
             });
             if (data?.lead_id) this.crmOk = 'تم إنشاء Lead #' + data.lead_id;
         },
@@ -713,6 +832,7 @@ function metaSocialInbox() {
                 const data = await res.json();
                 if (data.success) {
                     this.replyBody = '';
+                    if (data.crm) this.applyCrm(data.crm);
                     if (data.message) this.appendMessage(data.message);
                     else this.poll(true);
                 } else {

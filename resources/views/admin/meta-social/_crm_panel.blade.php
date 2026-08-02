@@ -1,6 +1,8 @@
 @php
     $crm = $crmPayload ?? null;
     $agentsList = $agents ?? [];
+    $msCanAssignOthers = (bool) ($msCanAssignOthers ?? true);
+    $msAutoClaim = (bool) ($msAutoClaim ?? false);
 @endphp
 <aside class="sm-crm-sidebar flex flex-col min-h-0 overflow-hidden w-full h-full bg-white"
        x-show="conversationId"
@@ -8,9 +10,15 @@
     <div class="px-4 py-3 border-b border-[#e4e6eb] shrink-0 flex items-center justify-between">
         <div>
             <p class="text-sm font-black text-[#1c2b33]">Details</p>
-            <p class="text-[10px] text-[#65676b] mt-0.5">أقوى من Business Suite · مربوط بـ CRM</p>
+            <p class="text-[10px] text-[#65676b] mt-0.5">
+                @if($msAutoClaim)
+                    مربوط بحسابك عند أول رد/أكشن
+                @else
+                    أقوى من Business Suite · مربوط بـ CRM
+                @endif
+            </p>
         </div>
-        <button type="button" class="xl:hidden bs-icon-btn" @click="showDetails = false"><i class="fas fa-times"></i></button>
+        <button type="button" class="xl:hidden bs-icon-btn" x-on:click="showDetails = false"><i class="fas fa-times"></i></button>
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 text-sm">
@@ -66,7 +74,7 @@
 
             <section class="space-y-2">
                 <h3 class="text-[11px] font-black uppercase tracking-wide text-[#65676b]">Contact</h3>
-                <form class="space-y-2" @submit.prevent="saveContact()">
+                <form class="space-y-2" x-on:submit.prevent="saveContact()">
                     <input type="text" x-model="contactName" placeholder="الاسم" class="w-full text-xs rounded-xl border border-[#e4e6eb] px-3 py-2 bg-white">
                     <input type="text" x-model="contactPhone" placeholder="الهاتف" class="w-full text-xs rounded-xl border border-[#e4e6eb] px-3 py-2 bg-white" dir="ltr">
                     <input type="email" x-model="contactEmail" placeholder="البريد" class="w-full text-xs rounded-xl border border-[#e4e6eb] px-3 py-2 bg-white" dir="ltr">
@@ -76,7 +84,7 @@
                     </button>
                 </form>
                 <template x-if="(crm?.platform || @js($crm['platform'] ?? '')) === 'messenger'">
-                    <button type="button" @click="requestPhone()" class="w-full text-xs font-bold py-2.5 rounded-xl bg-[#0084FF] text-white hover:opacity-90" :disabled="crmSaving">
+                    <button type="button" x-on:click="requestPhone()" class="w-full text-xs font-bold py-2.5 rounded-xl bg-[#0084FF] text-white hover:opacity-90" :disabled="crmSaving">
                         <i class="fas fa-mobile-alt ml-1"></i> طلب رقم الهاتف من العميل
                     </button>
                 </template>
@@ -84,15 +92,23 @@
 
             <section class="space-y-2 border-t border-[#e4e6eb] pt-3">
                 <h3 class="text-[11px] font-black uppercase tracking-wide text-[#65676b]">Assign</h3>
-                <select x-model="assigneeId" class="w-full text-xs rounded-xl border border-[#e4e6eb] px-3 py-2">
-                    <option value="">— Unassigned —</option>
-                    @foreach($agentsList as $agent)
-                        <option value="{{ $agent->id }}">{{ $agent->name }}</option>
-                    @endforeach
-                </select>
-                <button type="button" @click="assignAgent()" class="w-full text-xs font-bold py-2.5 rounded-xl bg-[#0084FF] text-white hover:opacity-90" :disabled="crmSaving || !assigneeId">
-                    تعيين موظف مبيعات
-                </button>
+                @if($msCanAssignOthers)
+                    <select x-model="assigneeId" class="w-full text-xs rounded-xl border border-[#e4e6eb] px-3 py-2">
+                        <option value="">— Unassigned —</option>
+                        @foreach($agentsList as $agent)
+                            <option value="{{ $agent->id }}">{{ $agent->name }}</option>
+                        @endforeach
+                    </select>
+                    <button type="button" x-on:click="assignAgent()" class="w-full text-xs font-bold py-2.5 rounded-xl bg-[#0084FF] text-white hover:opacity-90" :disabled="crmSaving || !assigneeId">
+                        تعيين موظف مبيعات
+                    </button>
+                    <p class="text-[10px] text-[#65676b]">القائمة = موظفو المبيعات النشطون فقط.</p>
+                @else
+                    <button type="button" x-on:click="assignAgent()" class="w-full text-xs font-bold py-2.5 rounded-xl bg-[#0084FF] text-white hover:opacity-90" :disabled="crmSaving">
+                        استلام المحادثة لحسابي
+                    </button>
+                    <p class="text-[10px] text-[#65676b]">أو رد على الرسالة — هتتربط تلقائيًا بحسابك.</p>
+                @endif
             </section>
 
             <section class="space-y-2 border-t border-[#e4e6eb] pt-3">
@@ -109,18 +125,20 @@
                 <template x-if="!crm?.sales_lead_id">
                     <div class="space-y-2">
                         <p class="text-[11px] text-[#65676b]">حوّل المحادثة لعميل محتمل في نظام المبيعات.</p>
-                        <button type="button" @click="createLead()" class="w-full text-xs font-bold py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700" :disabled="crmSaving">
+                        <button type="button" x-on:click="createLead()" class="w-full text-xs font-bold py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700" :disabled="crmSaving">
                             إنشاء Lead
                         </button>
-                        <div class="flex gap-1">
-                            <input type="number" x-model="linkLeadId" placeholder="رقم Lead" class="flex-1 text-xs rounded-xl border border-[#e4e6eb] px-3 py-2" dir="ltr">
-                            <button type="button" @click="linkLead()" class="px-3 text-xs font-bold rounded-xl border border-[#e4e6eb] bg-white" :disabled="crmSaving || !linkLeadId">ربط</button>
-                        </div>
+                        @if($msCanAssignOthers)
+                            <div class="flex gap-1">
+                                <input type="number" x-model="linkLeadId" placeholder="رقم Lead" class="flex-1 text-xs rounded-xl border border-[#e4e6eb] px-3 py-2" dir="ltr">
+                                <button type="button" x-on:click="linkLead()" class="px-3 text-xs font-bold rounded-xl border border-[#e4e6eb] bg-white" :disabled="crmSaving || !linkLeadId">ربط</button>
+                            </div>
+                        @endif
                     </div>
                 </template>
             </section>
 
-            <button type="button" @click="enrichProfile()" class="w-full text-[11px] font-semibold py-2 rounded-xl border border-[#e4e6eb] text-[#65676b] hover:bg-[#f0f2f5]" :disabled="crmSaving">
+            <button type="button" x-on:click="enrichProfile()" class="w-full text-[11px] font-semibold py-2 rounded-xl border border-[#e4e6eb] text-[#65676b] hover:bg-[#f0f2f5]" :disabled="crmSaving">
                 تحديث الملف من Meta
             </button>
 

@@ -336,6 +336,82 @@ class MetaSocialInboxService
     }
 
     /**
+     * تعديل نص رسالة محليًا في النظام (Meta لا تدعم Edit عبر Graph API).
+     *
+     * @return array{success: bool, message?: MetaSocialMessage, error?: string}
+     */
+    public function editMessage(MetaSocialConversation $conversation, MetaSocialMessage $message, string $body, ?int $userId = null): array
+    {
+        if ((int) $message->meta_social_conversation_id !== (int) $conversation->id) {
+            return ['success' => false, 'error' => 'الرسالة لا تتبع هذه المحادثة'];
+        }
+
+        $body = trim($body);
+        if ($body === '') {
+            return ['success' => false, 'error' => 'نص الرسالة مطلوب'];
+        }
+        if (mb_strlen($body) > 2000) {
+            return ['success' => false, 'error' => 'النص طويل جدًا'];
+        }
+
+        $meta = is_array($message->meta) ? $message->meta : [];
+        $meta['edited_at'] = now()->toIso8601String();
+        $meta['edited_by'] = $userId;
+        $meta['original_body'] = $meta['original_body'] ?? $message->body;
+
+        $message->update([
+            'body' => $body,
+            'message_type' => $message->message_type ?: 'text',
+            'meta' => $meta,
+        ]);
+
+        $this->refreshConversationPreview($conversation);
+        MetaSocialContactCaptureService::bumpInboxVersion();
+
+        return ['success' => true, 'message' => $message->fresh(['sentBy:id,name'])];
+    }
+
+    /**
+     * حذف رسالة من النظام محليًا (Meta لا تدعم Delete للرسائل عبر Graph API).
+     *
+     * @return array{success: bool, error?: string}
+     */
+    public function deleteMessage(MetaSocialConversation $conversation, MetaSocialMessage $message): array
+    {
+        if ((int) $message->meta_social_conversation_id !== (int) $conversation->id) {
+            return ['success' => false, 'error' => 'الرسالة لا تتبع هذه المحادثة'];
+        }
+
+        $message->delete();
+        $this->refreshConversationPreview($conversation);
+        MetaSocialContactCaptureService::bumpInboxVersion();
+
+        return ['success' => true];
+    }
+
+    public function refreshConversationPreview(MetaSocialConversation $conversation): void
+    {
+        $last = $conversation->messages()
+            ->orderByDesc('sent_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $last) {
+            $conversation->update([
+                'last_message_at' => null,
+                'last_message_preview' => null,
+            ]);
+
+            return;
+        }
+
+        $conversation->update([
+            'last_message_at' => $last->sent_at ?? $last->created_at,
+            'last_message_preview' => mb_substr($last->displayBody(), 0, 500),
+        ]);
+    }
+
+    /**
      * إرسال طلب مشاركة رقم الهاتف (Messenger Quick Reply).
      *
      * @return array{success: bool, message?: MetaSocialMessage, error?: string}
