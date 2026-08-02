@@ -26,13 +26,17 @@ class MetaSocialCrmService
     }
 
     /**
-     * موظفو المبيعات/مديرو المبيعات النشطون فقط (اللي عندهم أكسس فعلي).
+     * موظفو المبيعات/مديرو المبيعات + أي موظف مربوط بيوزر أكسس Meta Business Suite.
      *
      * @return list<User>
      */
     public function eligibleAgents(): array
     {
-        return $this->assignment->eligibleSalesStaff();
+        try {
+            return app(MetaSocialAgentLinkService::class)->eligibleAgentsMerged();
+        } catch (\Throwable) {
+            return $this->assignment->eligibleSalesStaff();
+        }
     }
 
     /**

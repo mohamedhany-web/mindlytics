@@ -452,6 +452,12 @@
                         </a>
                     </li>
                     <li>
+                        <a href="{{ route('admin.meta-social.agents.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.meta-social.agents.*') ? 'bg-sky-600/30 text-white font-semibold border-r-2 border-sky-400' : '' }}">
+                            <i class="fas fa-link w-4"></i>
+                            <span>ربط موظفي Meta</span>
+                        </a>
                         <a href="{{ route('admin.meta-social.pages.index') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.meta-social.pages.*') ? 'bg-sky-600/30 text-white font-semibold border-r-2 border-sky-400' : '' }}">

@@ -1966,6 +1966,10 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('/pages/{page}/activate', [\App\Http\Controllers\Admin\MetaSocialPageController::class, 'activate'])->name('pages.activate');
             Route::post('/pages/{page}/deactivate', [\App\Http\Controllers\Admin\MetaSocialPageController::class, 'deactivate'])->name('pages.deactivate');
             Route::post('/pages/{page}/sync-conversations', [\App\Http\Controllers\Admin\MetaSocialPageController::class, 'syncConversations'])->name('pages.sync-conversations');
+            Route::get('/agents', [\App\Http\Controllers\Admin\MetaSocialAgentLinkController::class, 'index'])->name('agents.index');
+            Route::post('/agents/sync', [\App\Http\Controllers\Admin\MetaSocialAgentLinkController::class, 'sync'])->name('agents.sync');
+            Route::post('/agents', [\App\Http\Controllers\Admin\MetaSocialAgentLinkController::class, 'store'])->name('agents.store');
+            Route::put('/agents/{agent}', [\App\Http\Controllers\Admin\MetaSocialAgentLinkController::class, 'update'])->name('agents.update');
             Route::get('/inbox', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'index'])->name('inbox.index');
             Route::get('/inbox/poll', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'poll'])->name('inbox.poll');
             Route::post('/inbox/{conversation}/reply', [\App\Http\Controllers\Admin\MetaSocialInboxController::class, 'reply'])->name('inbox.reply');
