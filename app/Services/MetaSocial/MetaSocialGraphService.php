@@ -293,15 +293,50 @@ class MetaSocialGraphService
      */
     public function sendTextMessage(MetaSocialPage $page, string $recipientId, string $text, string $platform = 'messenger'): array
     {
+        return $this->sendMessagePayload($page, $recipientId, [
+            'text' => mb_substr($text, 0, 2000),
+        ], $platform);
+    }
+
+    /**
+     * يطلب رقم الهاتف من المستخدم عبر Quick Reply (Messenger فقط — Instagram غير مدعوم من Meta).
+     *
+     * @return array{success: bool, message_id?: string, error?: string}
+     */
+    public function sendPhoneNumberRequest(MetaSocialPage $page, string $recipientId, ?string $prompt = null): array
+    {
+        $prompt = trim((string) ($prompt ?: 'لو سمحت شارك رقم موبايلك عشان فريق المبيعات يتواصل معاك 📱'));
+
+        return $this->sendMessagePayload($page, $recipientId, [
+            'text' => mb_substr($prompt, 0, 600),
+            'quick_replies' => [
+                [
+                    'content_type' => 'user_phone_number',
+                ],
+            ],
+        ], 'messenger');
+    }
+
+    /**
+     * @param  array<string, mixed>  $message
+     * @return array{success: bool, message_id?: string, error?: string}
+     */
+    public function sendMessagePayload(MetaSocialPage $page, string $recipientId, array $message, string $platform = 'messenger'): array
+    {
         $token = (string) $page->page_access_token;
         if ($token === '') {
             return ['success' => false, 'error' => 'Page Access Token مفقود'];
         }
 
+        // Instagram Messaging لا يدعم user_phone_number quick reply
+        if ($platform === 'instagram' && isset($message['quick_replies'])) {
+            return ['success' => false, 'error' => 'طلب رقم الهاتف متاح على Messenger فقط (قيود Meta)'];
+        }
+
         $payload = [
             'messaging_type' => 'RESPONSE',
             'recipient' => ['id' => $recipientId],
-            'message' => ['text' => mb_substr($text, 0, 2000)],
+            'message' => $message,
         ];
 
         try {

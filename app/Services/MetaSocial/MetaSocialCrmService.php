@@ -42,9 +42,10 @@ class MetaSocialCrmService
         }
 
         try {
+            // Meta لا ترجع phone/email هنا حتى مع Business verification
             $fields = $conversation->platform === MetaSocialConversation::PLATFORM_INSTAGRAM
                 ? 'name,username,profile_pic'
-                : 'name,profile_pic';
+                : 'name,first_name,last_name,profile_pic';
 
             $response = Http::timeout(20)->get(
                 "{$this->graph->graphUrl()}/{$conversation->participant_id}",
@@ -55,13 +56,19 @@ class MetaSocialCrmService
             );
 
             if (! $response->successful()) {
-                return $conversation;
+                app(MetaSocialContactCaptureService::class)->scanConversationHistory($conversation);
+
+                return $conversation->fresh(['page', 'assignee', 'salesLead']);
             }
 
             $data = $response->json() ?? [];
             $updates = [];
-            if (! empty($data['name']) && $data['name'] !== $conversation->participant_name) {
-                $updates['participant_name'] = (string) $data['name'];
+            $name = (string) ($data['name'] ?? '');
+            if ($name === '' && (! empty($data['first_name']) || ! empty($data['last_name']))) {
+                $name = trim(($data['first_name'] ?? '').' '.($data['last_name'] ?? ''));
+            }
+            if ($name !== '' && $name !== $conversation->participant_name) {
+                $updates['participant_name'] = $name;
             }
             if (! empty($data['username'])) {
                 $updates['participant_username'] = (string) $data['username'];
@@ -76,6 +83,8 @@ class MetaSocialCrmService
         } catch (\Throwable) {
             // ignore Graph profile failures
         }
+
+        app(MetaSocialContactCaptureService::class)->scanConversationHistory($conversation);
 
         return $conversation->fresh(['page', 'assignee', 'salesLead']);
     }

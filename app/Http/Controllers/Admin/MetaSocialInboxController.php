@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\MetaSocialConversation;
+use App\Models\MetaSocialMessage;
 use App\Models\MetaSocialPage;
 use App\Models\SalesLead;
+use App\Services\MetaSocial\MetaSocialContactCaptureService;
 use App\Services\MetaSocial\MetaSocialCrmService;
 use App\Services\MetaSocial\MetaSocialGraphService;
 use App\Services\MetaSocial\MetaSocialInboxService;
@@ -339,6 +341,35 @@ class MetaSocialInboxController extends Controller
         ]);
     }
 
+    public function requestPhone(MetaSocialConversation $conversation): JsonResponse
+    {
+        $result = $this->inbox->requestPhoneNumber($conversation, auth()->id());
+
+        if (! ($result['success'] ?? false)) {
+            return response()->json(['success' => false, 'error' => $result['error'] ?? 'فشل'], 422);
+        }
+
+        /** @var \App\Models\MetaSocialMessage $message */
+        $message = $result['message'];
+        $payload = [
+            'success' => true,
+            'message' => [
+                'id' => $message->id,
+                'body' => $message->displayBody(),
+                'direction' => $message->direction,
+                'message_type' => $message->message_type,
+                'attachment_url' => null,
+                'author' => auth()->user()?->name,
+                'sent_at_human' => $message->sent_at?->format('H:i') ?? now()->format('H:i'),
+            ],
+        ];
+        if ($this->crm->crmReady()) {
+            $payload['crm'] = $this->crm->serializeCrm($conversation->fresh(['page', 'assignee', 'salesLead']));
+        }
+
+        return response()->json($payload);
+    }
+
     public function poll(Request $request): JsonResponse
     {
         if (! $this->inbox->tablesReady()) {
@@ -348,17 +379,34 @@ class MetaSocialInboxController extends Controller
         $pageId = (int) $request->query('page');
         $conversationId = (int) $request->query('conversation');
         $afterId = (int) $request->query('after_id', 0);
+        $clientVersion = (string) $request->query('v', '');
 
+        $inboxVersion = MetaSocialContactCaptureService::inboxVersion();
         $unreadTotal = (int) MetaSocialConversation::sum('unread_count');
 
         $payload = [
             'success' => true,
+            'inbox_version' => $inboxVersion,
+            'changed' => $clientVersion === '' || $clientVersion !== $inboxVersion,
             'unread_total' => $unreadTotal,
+            'server_time' => now()->toIso8601String(),
         ];
+
+        // لو مفيش تغيير وماطلبناش رسائل جديدة — رد خفيف
+        if (! $payload['changed'] && $afterId > 0 && $conversationId > 0) {
+            $hasNew = MetaSocialMessage::query()
+                ->where('meta_social_conversation_id', $conversationId)
+                ->where('id', '>', $afterId)
+                ->exists();
+            if (! $hasNew) {
+                return response()->json($payload);
+            }
+            $payload['changed'] = true;
+        }
 
         if ($conversationId > 0) {
             $conversation = MetaSocialConversation::query()
-                ->with(['assignee:id,name', 'salesLead:id,name,stage'])
+                ->with(['assignee:id,name', 'salesLead:id,name,stage,phone,email'])
                 ->find($conversationId);
 
             if ($conversation) {
@@ -366,7 +414,7 @@ class MetaSocialInboxController extends Controller
                 if ($afterId > 0) {
                     $messagesQuery->where('id', '>', $afterId);
                 }
-                $messages = $messagesQuery->get();
+                $messages = $messagesQuery->limit(200)->get();
 
                 $payload['message_count'] = $conversation->messages()->count();
                 $payload['messages'] = $messages->map(fn ($m) => [
@@ -384,12 +432,12 @@ class MetaSocialInboxController extends Controller
             }
         }
 
-        if ($pageId >= 0) {
+        if ($pageId >= 0 && ($payload['changed'] || $clientVersion === '')) {
             $listQuery = MetaSocialConversation::query()
                 ->with(['page:id,page_name', 'assignee:id,name'])
                 ->orderByDesc('last_message_at')
                 ->orderByDesc('id')
-                ->limit(50);
+                ->limit(80);
 
             if ($pageId > 0) {
                 $listQuery->where('meta_social_page_id', $pageId);
@@ -398,12 +446,18 @@ class MetaSocialInboxController extends Controller
             $payload['conversations'] = $listQuery->get()->map(fn ($c) => [
                 'id' => $c->id,
                 'name' => $c->displayName(),
-                'platform' => $c->platformLabel(),
+                'platform' => $c->platform,
+                'platform_label' => $c->platformLabel(),
                 'page' => $c->page?->page_name,
                 'preview' => $c->last_message_preview,
-                'unread' => $c->unread_count,
+                'unread' => (int) $c->unread_count,
                 'assignee' => $c->assignee?->name,
-                'last_at' => $c->last_message_at?->diffForHumans(),
+                'status' => $c->status,
+                'has_crm' => (bool) $c->sales_lead_id,
+                'phone' => $c->phone,
+                'profile_pic' => $c->participant_profile_pic,
+                'last_at' => $c->last_message_at?->format('H:i') ?? '',
+                'last_human' => $c->last_message_at?->diffForHumans(),
             ]);
         }
 

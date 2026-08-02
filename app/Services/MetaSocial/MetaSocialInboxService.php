@@ -15,6 +15,7 @@ class MetaSocialInboxService
     public function __construct(
         private MetaSocialGraphService $graph,
         private MetaSocialCrmService $crm,
+        private MetaSocialContactCaptureService $contactCapture,
     ) {}
 
     public function tablesReady(): bool
@@ -329,6 +330,61 @@ class MetaSocialInboxService
             $this->crm->logOutboundToSalesLead($conversation, $body, $userId);
         }
 
+        MetaSocialContactCaptureService::bumpInboxVersion();
+
+        return ['success' => true, 'message' => $message];
+    }
+
+    /**
+     * إرسال طلب مشاركة رقم الهاتف (Messenger Quick Reply).
+     *
+     * @return array{success: bool, message?: MetaSocialMessage, error?: string}
+     */
+    public function requestPhoneNumber(MetaSocialConversation $conversation, ?int $userId = null, ?string $prompt = null): array
+    {
+        $conversation->loadMissing('page');
+        $page = $conversation->page;
+        if (! $page) {
+            return ['success' => false, 'error' => 'الصفحة غير موجودة'];
+        }
+        if ($conversation->platform !== MetaSocialConversation::PLATFORM_MESSENGER) {
+            return ['success' => false, 'error' => 'طلب الرقم متاح على Messenger فقط — Instagram لا يسمح بذلك من Meta'];
+        }
+
+        $prompt = $prompt ?: 'لو سمحت شارك رقم موبايلك عشان فريق المبيعات يتواصل معاك 📱';
+        $result = $this->graph->sendPhoneNumberRequest(
+            $page,
+            (string) $conversation->participant_id,
+            $prompt,
+        );
+
+        if (! ($result['success'] ?? false)) {
+            return ['success' => false, 'error' => $result['error'] ?? 'فشل إرسال طلب الرقم'];
+        }
+
+        $metaMessageId = $result['message_id'] ?? null;
+        try {
+            $message = MetaSocialMessage::query()->create([
+                'meta_social_conversation_id' => $conversation->id,
+                'meta_message_id' => $metaMessageId,
+                'direction' => MetaSocialMessage::DIRECTION_OUTBOUND,
+                'message_type' => 'phone_request',
+                'body' => $prompt,
+                'sent_by_user_id' => $userId,
+                'sent_at' => now(),
+                'meta' => ['kind' => 'user_phone_number_request'],
+            ]);
+        } catch (QueryException) {
+            $message = MetaSocialMessage::query()->where('meta_message_id', $metaMessageId)->first();
+        }
+
+        $conversation->update([
+            'last_message_at' => now(),
+            'last_message_preview' => 'طلب رقم الهاتف',
+        ]);
+
+        MetaSocialContactCaptureService::bumpInboxVersion();
+
         return ['success' => true, 'message' => $message];
     }
 
@@ -414,6 +470,12 @@ class MetaSocialInboxService
             'unread_count' => (int) $conversation->unread_count + 1,
             'status' => MetaSocialConversation::STATUS_OPEN,
         ]);
+
+        if ($body !== '') {
+            $this->contactCapture->captureFromInboundText($conversation->fresh(), $body);
+        }
+
+        MetaSocialContactCaptureService::bumpInboxVersion();
 
         return $message;
     }

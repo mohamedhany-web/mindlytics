@@ -17,6 +17,7 @@
         'createLead' => route('admin.meta-social.inbox.create-lead', $convId),
         'linkLead' => route('admin.meta-social.inbox.link-lead', $convId),
         'enrich' => route('admin.meta-social.inbox.enrich', $convId),
+        'requestPhone' => route('admin.meta-social.inbox.request-phone', $convId),
         'syncMessages' => route('admin.meta-social.inbox.sync-messages', $convId),
     ] : [];
     $navBase = array_filter([
@@ -50,7 +51,8 @@
                     @endforeach
                 </select>
             @endif
-            <span class="bs-chip bs-chip--unread">{{ $unreadTotal }} غير مقروء</span>
+            <span class="bs-chip bs-chip--live" id="bs-live-chip"><i class="fas fa-circle"></i> Live</span>
+            <span class="bs-chip bs-chip--unread" id="bs-unread-chip">{{ $unreadTotal }} غير مقروء</span>
             <a href="{{ route('admin.meta-social.pages.index') }}" class="bs-btn-ghost hidden md:inline-flex"><i class="fab fa-facebook"></i> الصفحات</a>
             <a href="{{ route('admin.meta-social.settings') }}" class="bs-btn-ghost hidden md:inline-flex"><i class="fas fa-cog"></i></a>
         </div>
@@ -121,7 +123,7 @@
                 </div>
             </div>
 
-            <div class="bs-list__body">
+            <div class="bs-list__body" id="bs-conv-list">
                 @forelse($conversations as $c)
                     @php
                         $href = route('admin.meta-social.inbox.index', array_filter([
@@ -134,30 +136,33 @@
                             'q' => $search ?: null,
                         ]));
                     @endphp
-                    <a href="{{ $href }}" class="bs-conv {{ $convId == $c->id ? 'is-active' : '' }} {{ $c->unread_count > 0 ? 'is-unread' : '' }}">
+                    <a href="{{ $href }}"
+                       class="bs-conv {{ $convId == $c->id ? 'is-active' : '' }} {{ $c->unread_count > 0 ? 'is-unread' : '' }}"
+                       data-conv-id="{{ $c->id }}"
+                       data-platform="{{ $c->platform }}">
                         <div class="bs-avatar">
                             @if($c->participant_profile_pic)
-                                <img src="{{ $c->participant_profile_pic }}" alt="">
+                                <img src="{{ $c->participant_profile_pic }}" alt="" data-role="avatar">
                             @else
-                                <span>{{ mb_substr($c->displayName(), 0, 1) }}</span>
+                                <span data-role="avatar-letter">{{ mb_substr($c->displayName(), 0, 1) }}</span>
                             @endif
                             <i class="bs-plat {{ $c->platform === 'instagram' ? 'fab fa-instagram ig' : 'fab fa-facebook-messenger msgr' }}"></i>
                         </div>
                         <div class="bs-conv__main">
                             <div class="bs-conv__row">
-                                <p class="bs-conv__name">{{ $c->displayName() }}</p>
-                                <time>{{ $c->last_message_at?->format('H:i') ?? '' }}</time>
+                                <p class="bs-conv__name" data-role="name">{{ $c->displayName() }}</p>
+                                <time data-role="time">{{ $c->last_message_at?->format('H:i') ?? '' }}</time>
                             </div>
-                            <p class="bs-conv__meta">
+                            <p class="bs-conv__meta" data-role="meta">
                                 {{ $c->page?->page_name }}
                                 @if($c->assignee) · {{ $c->assignee->name }} @endif
                             </p>
                             <div class="bs-conv__row">
-                                <p class="bs-conv__preview">{{ $c->last_message_preview ?: '—' }}</p>
-                                <div class="bs-conv__badges">
+                                <p class="bs-conv__preview" data-role="preview">{{ $c->last_message_preview ?: '—' }}</p>
+                                <div class="bs-conv__badges" data-role="badges">
                                     @if($c->sales_lead_id)<span class="bs-mini crm">CRM</span>@endif
                                     @if($c->status === 'closed')<span class="bs-mini done">Done</span>@endif
-                                    @if($c->unread_count > 0)<span class="bs-unread">{{ $c->unread_count }}</span>@endif
+                                    @if($c->unread_count > 0)<span class="bs-unread" data-role="unread">{{ $c->unread_count }}</span>@endif
                                 </div>
                             </div>
                         </div>
@@ -193,6 +198,12 @@
                                 <span x-show="crm?.assignee_name"> · <span x-text="crm?.assignee_name"></span></span>
                             </p>
                         </div>
+                        @if($activeConversation->platform === 'messenger')
+                            <button type="button" @click="requestPhone()" class="bs-btn-ghost" :disabled="crmSaving" title="طلب رقم الهاتف من العميل">
+                                <i class="fas fa-mobile-alt"></i>
+                                <span class="hidden sm:inline">طلب رقم</span>
+                            </button>
+                        @endif
                         <button type="button" @click="syncAllMessages()" class="bs-btn-ghost" :disabled="syncingMessages" title="جلب كل الرسائل">
                             <i class="fas fa-cloud-download-alt" :class="syncingMessages ? 'fa-spinner fa-spin' : ''"></i>
                             <span class="hidden sm:inline">مزامنة</span>
@@ -219,7 +230,7 @@
                                 @php $lastDate = $day; @endphp
                                 <div class="bs-date-pill"><span>{{ $dayLabel }}</span></div>
                             @endif
-                            <div class="bs-msg {{ $m->direction === 'inbound' ? 'is-in' : 'is-out' }}">
+                            <div class="bs-msg {{ $m->direction === 'inbound' ? 'is-in' : 'is-out' }}" data-msg-id="{{ $m->id }}">
                                 <div class="bs-bubble {{ $m->direction === 'inbound' ? 'is-in' : 'is-out' }}">
                                     @if($m->attachment_url && str_contains((string) $m->message_type, 'image'))
                                         <a href="{{ $m->attachment_url }}" target="_blank" rel="noopener">
@@ -434,6 +445,11 @@ main:has(.bs-inbox-page) > div:last-child {
 .bs-icon-btn { width: 2.1rem; height: 2.1rem; justify-content: center; padding: 0; }
 .bs-chip { font-size: 11px; font-weight: 800; padding: .3rem .55rem; border-radius: 999px; background: var(--bs-bg); }
 .bs-chip--unread { background: #e7f3ff; color: var(--bs-blue); }
+.bs-chip--live { background: #ecfdf5; color: #047857; gap: .35rem; display: inline-flex; align-items: center; }
+.bs-chip--live i { font-size: 7px; color: #10b981; animation: bs-pulse 1.4s ease-in-out infinite; }
+.bs-chip--live.is-stale { background: #f3f4f6; color: #6b7280; }
+.bs-chip--live.is-stale i { color: #9ca3af; animation: none; }
+@keyframes bs-pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
 .bs-banner { margin: .5rem .75rem 0; padding: .55rem .75rem; border-radius: .75rem; font-size: 12px; font-weight: 600; }
 .bs-banner--warn { background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; }
 .bs-empty { padding: 2.5rem 1rem; text-align: center; color: var(--bs-muted); font-size: .85rem; }
@@ -478,6 +494,10 @@ function metaSocialInbox() {
         csrf: @json(csrf_token()),
         lastMessageCount: {{ $messages->count() }},
         lastMessageId: {{ $messages->last()?->id ?: 0 }},
+        inboxVersion: '',
+        polling: false,
+        pollTimer: null,
+        liveOk: true,
         crm: @json($crmPayload),
         crmUrls: @json($crmUrls),
         contactName: @json($crmPayload['display_name'] ?? $activeConversation?->displayName() ?? ''),
@@ -491,9 +511,20 @@ function metaSocialInbox() {
         crmOk: '',
         syncingMessages: false,
         init() {
+            this.scrollChat();
+            this.schedulePoll(1500);
+            document.addEventListener('visibilitychange', () => {
+                this.schedulePoll(document.hidden ? 8000 : 1500);
+                if (!document.hidden) this.poll();
+            });
+        },
+        schedulePoll(ms) {
+            if (this.pollTimer) clearInterval(this.pollTimer);
+            this.pollTimer = setInterval(() => this.poll(), ms);
+        },
+        scrollChat() {
             const el = document.getElementById('sm-chat-messages');
             if (el) el.scrollTop = el.scrollHeight;
-            if (this.conversationId) setInterval(() => this.poll(), 8000);
         },
         applyCrm(crm) {
             if (!crm) return;
@@ -503,6 +534,76 @@ function metaSocialInbox() {
             this.contactEmail = crm.email || '';
             this.contactNotes = crm.notes || '';
             this.assigneeId = crm.assigned_to ? String(crm.assigned_to) : '';
+        },
+        escapeHtml(s) {
+            return String(s ?? '').replace(/[&<>"']/g, (c) => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+        },
+        appendMessage(m) {
+            if (!m || !m.id) return;
+            const box = document.getElementById('sm-chat-messages');
+            if (!box) return;
+            if (box.querySelector('[data-msg-id="' + m.id + '"]')) return;
+            const empty = box.querySelector('.bs-empty');
+            if (empty) empty.remove();
+            const dir = m.direction === 'outbound' ? 'is-out' : 'is-in';
+            const wrap = document.createElement('div');
+            wrap.className = 'bs-msg ' + dir;
+            wrap.setAttribute('data-msg-id', m.id);
+            let media = '';
+            if (m.attachment_url && String(m.message_type || '').includes('image')) {
+                media = '<a href="' + this.escapeHtml(m.attachment_url) + '" target="_blank" rel="noopener"><img src="' + this.escapeHtml(m.attachment_url) + '" alt="" class="bs-bubble__img"></a>';
+            } else if (m.attachment_url) {
+                media = '<a href="' + this.escapeHtml(m.attachment_url) + '" target="_blank" class="bs-bubble__file" rel="noopener"><i class="fas fa-paperclip"></i> مرفق</a>';
+            }
+            const text = (m.body && m.body !== '—')
+                ? '<p class="bs-bubble__text">' + this.escapeHtml(m.body) + '</p>'
+                : '';
+            const author = (m.direction === 'outbound' && m.author)
+                ? '<span>' + this.escapeHtml(m.author) + '</span>'
+                : '';
+            wrap.innerHTML = '<div class="bs-bubble ' + dir + '">' + media + text
+                + '<div class="bs-bubble__meta">' + author + '<span>' + this.escapeHtml(m.sent_at_human || '') + '</span></div></div>';
+            box.appendChild(wrap);
+            this.lastMessageId = Math.max(this.lastMessageId || 0, Number(m.id) || 0);
+            this.lastMessageCount = (this.lastMessageCount || 0) + 1;
+            this.scrollChat();
+        },
+        updateConversationList(rows) {
+            if (!Array.isArray(rows)) return;
+            const list = document.getElementById('bs-conv-list');
+            if (!list) return;
+            rows.forEach((c) => {
+                const row = list.querySelector('[data-conv-id="' + c.id + '"]');
+                if (!row) return;
+                const name = row.querySelector('[data-role="name"]');
+                const time = row.querySelector('[data-role="time"]');
+                const preview = row.querySelector('[data-role="preview"]');
+                const badges = row.querySelector('[data-role="badges"]');
+                if (name && c.name) name.textContent = c.name;
+                if (time) time.textContent = c.last_at || '';
+                if (preview) preview.textContent = c.preview || '—';
+                row.classList.toggle('is-unread', Number(c.unread) > 0 && Number(c.id) !== Number(this.conversationId));
+                if (badges) {
+                    let html = '';
+                    if (c.has_crm) html += '<span class="bs-mini crm">CRM</span>';
+                    if (c.status === 'closed') html += '<span class="bs-mini done">Done</span>';
+                    if (Number(c.unread) > 0 && Number(c.id) !== Number(this.conversationId)) {
+                        html += '<span class="bs-unread" data-role="unread">' + Number(c.unread) + '</span>';
+                    }
+                    badges.innerHTML = html;
+                }
+                if (list.firstElementChild !== row && Number(c.id) !== Number(this.conversationId)) {
+                    // ارفع المحادثات الجديدة للأعلى فقط لو فيها unread أو أحدث preview
+                    if (Number(c.unread) > 0) list.prepend(row);
+                }
+            });
+        },
+        setLive(ok) {
+            this.liveOk = ok;
+            const chip = document.getElementById('bs-live-chip');
+            if (chip) chip.classList.toggle('is-stale', !ok);
         },
         async postJson(url, body) {
             this.crmSaving = true;
@@ -524,6 +625,7 @@ function metaSocialInbox() {
                     return null;
                 }
                 if (data.crm) this.applyCrm(data.crm);
+                if (data.message) this.appendMessage(data.message);
                 this.crmOk = 'تم الحفظ';
                 return data;
             } catch (e) {
@@ -563,6 +665,11 @@ function metaSocialInbox() {
         async enrichProfile() {
             if (!this.crmUrls.enrich) return;
             await this.postJson(this.crmUrls.enrich, {});
+        },
+        async requestPhone() {
+            if (!this.crmUrls.requestPhone) return;
+            const data = await this.postJson(this.crmUrls.requestPhone, {});
+            if (data) this.crmOk = 'تم إرسال طلب الرقم للعميل';
         },
         async toggleDone() {
             if (!this.crmUrls.contact) return;
@@ -606,7 +713,8 @@ function metaSocialInbox() {
                 const data = await res.json();
                 if (data.success) {
                     this.replyBody = '';
-                    location.reload();
+                    if (data.message) this.appendMessage(data.message);
+                    else this.poll(true);
                 } else {
                     alert(data.error || 'فشل الإرسال');
                 }
@@ -615,18 +723,40 @@ function metaSocialInbox() {
             }
             this.sending = false;
         },
-        async poll() {
-            if (!this.pollUrl) return;
+        async poll(force) {
+            if (!this.pollUrl || this.polling) return;
+            this.polling = true;
             try {
-                const url = this.pollUrl + (this.pollUrl.includes('?') ? '&' : '?') + 'after_id=' + (this.lastMessageId || 0);
-                const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                const sep = this.pollUrl.includes('?') ? '&' : '?';
+                const url = this.pollUrl + sep + 'after_id=' + (this.lastMessageId || 0)
+                    + '&v=' + encodeURIComponent(this.inboxVersion || '');
+                const res = await fetch(url, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
                 const data = await res.json();
-                if (!data.success) return;
-                if (data.crm) this.applyCrm(data.crm);
-                if (typeof data.message_count === 'number' && data.message_count > this.lastMessageCount) {
-                    location.reload();
+                if (!data.success) {
+                    this.setLive(false);
+                    return;
                 }
-            } catch (e) {}
+                this.setLive(true);
+                if (data.inbox_version) this.inboxVersion = data.inbox_version;
+                if (typeof data.unread_total === 'number') {
+                    const chip = document.getElementById('bs-unread-chip');
+                    if (chip) chip.textContent = data.unread_total + ' غير مقروء';
+                }
+                if (data.crm) this.applyCrm(data.crm);
+                if (Array.isArray(data.messages)) {
+                    data.messages.forEach((m) => this.appendMessage(m));
+                }
+                if (Array.isArray(data.conversations)) {
+                    this.updateConversationList(data.conversations);
+                }
+                if (force && typeof data.message_count === 'number') {
+                    this.lastMessageCount = data.message_count;
+                }
+            } catch (e) {
+                this.setLive(false);
+            } finally {
+                this.polling = false;
+            }
         },
     };
 }

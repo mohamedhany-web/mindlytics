@@ -66,15 +66,24 @@
 
             <section class="space-y-2">
                 <h3 class="text-[11px] font-black uppercase tracking-wide text-[#65676b]">Contact</h3>
+                <div class="rounded-xl border border-[#e7f3ff] bg-[#f5faff] p-2.5 text-[10px] text-[#1c2b33] leading-relaxed">
+                    Meta <strong>مش بتدي رقم التليفون أو الإيميل</strong> من Messenger/Instagram حتى لو الحساب موثّق.
+                    النظام بيحفظ الرقم تلقائياً لو العميل كتبه في الرسالة، أو لما يضغط «مشاركة الرقم» على Messenger.
+                </div>
                 <form class="space-y-2" @submit.prevent="saveContact()">
                     <input type="text" x-model="contactName" placeholder="الاسم" class="w-full text-xs rounded-xl border border-[#e4e6eb] px-3 py-2 bg-white">
-                    <input type="text" x-model="contactPhone" placeholder="الهاتف" class="w-full text-xs rounded-xl border border-[#e4e6eb] px-3 py-2 bg-white" dir="ltr">
-                    <input type="email" x-model="contactEmail" placeholder="البريد" class="w-full text-xs rounded-xl border border-[#e4e6eb] px-3 py-2 bg-white" dir="ltr">
+                    <input type="text" x-model="contactPhone" placeholder="الهاتف (يتملأ تلقائياً)" class="w-full text-xs rounded-xl border border-[#e4e6eb] px-3 py-2 bg-white" dir="ltr">
+                    <input type="email" x-model="contactEmail" placeholder="البريد (يتملأ تلقائياً)" class="w-full text-xs rounded-xl border border-[#e4e6eb] px-3 py-2 bg-white" dir="ltr">
                     <textarea x-model="contactNotes" rows="2" placeholder="ملاحظات داخلية" class="w-full text-xs rounded-xl border border-[#e4e6eb] px-3 py-2 bg-white"></textarea>
                     <button type="submit" class="w-full text-xs font-bold py-2.5 rounded-xl bg-[#1c2b33] text-white hover:bg-black" :disabled="crmSaving">
                         حفظ التفاصيل
                     </button>
                 </form>
+                <template x-if="(crm?.platform || @js($crm['platform'] ?? '')) === 'messenger'">
+                    <button type="button" @click="requestPhone()" class="w-full text-xs font-bold py-2.5 rounded-xl bg-[#0084FF] text-white hover:opacity-90" :disabled="crmSaving">
+                        <i class="fas fa-mobile-alt ml-1"></i> طلب رقم الهاتف من العميل
+                    </button>
+                </template>
             </section>
 
             <section class="space-y-2 border-t border-[#e4e6eb] pt-3">
