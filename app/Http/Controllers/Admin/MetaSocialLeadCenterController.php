@@ -97,6 +97,8 @@ class MetaSocialLeadCenterController extends Controller
             $priorities = MetaSocialConversation::PRIORITIES;
             $suggestedLabels = MetaSocialConversation::SUGGESTED_LABELS;
             $pageError = null;
+            $urls = $this->leadCenterUrls($filters, $selectedId);
+            $detailJson = $this->safeJson($detail);
 
             return view('admin.meta-social.leads', compact(
                 'tablesReady',
@@ -111,36 +113,90 @@ class MetaSocialLeadCenterController extends Controller
                 'selected',
                 'selectedId',
                 'detail',
+                'detailJson',
                 'agents',
                 'stages',
                 'crmStages',
                 'priorities',
                 'suggestedLabels',
                 'pageError',
+                'urls',
             ));
         } catch (\Throwable $e) {
             report($e);
+            $filters = $this->filtersFrom($request);
 
-            return view('admin.meta-social.leads', [
+            return response()->view('admin.meta-social.leads', [
                 'tablesReady' => false,
                 'crmReady' => false,
                 'columnsReady' => false,
                 'connectionMeta' => ['can_use' => false, 'label' => 'خطأ'],
                 'pages' => collect(),
-                'filters' => $this->filtersFrom($request),
+                'filters' => $filters,
                 'stats' => [],
                 'rows' => collect(),
                 'pipeline' => [],
                 'selected' => null,
                 'selectedId' => 0,
                 'detail' => null,
+                'detailJson' => 'null',
                 'agents' => [],
                 'stages' => MetaSocialConversation::LEAD_STAGES,
                 'crmStages' => SalesLead::STAGES,
                 'priorities' => MetaSocialConversation::PRIORITIES,
                 'suggestedLabels' => MetaSocialConversation::SUGGESTED_LABELS,
                 'pageError' => $e->getMessage(),
-            ]);
+                'urls' => $this->leadCenterUrls($filters, 0),
+            ], 200);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return array{poll: string, export: string, bulk: string, index: string, inbox: string}
+     */
+    private function leadCenterUrls(array $filters, int $selectedId): array
+    {
+        $qs = array_filter([
+            'page' => ($filters['page'] ?? 0) ?: null,
+            'tab' => (($filters['tab'] ?? 'all') !== 'all') ? ($filters['tab'] ?? null) : null,
+            'q' => ($filters['q'] ?? '') !== '' ? $filters['q'] : null,
+            'assigned_to' => $filters['assigned_to'] ?? null,
+            'stage' => $filters['stage'] ?? null,
+            'label' => $filters['label'] ?? null,
+            'priority' => $filters['priority'] ?? null,
+            'from' => $filters['from'] ?? null,
+            'to' => $filters['to'] ?? null,
+            'sort' => (($filters['sort'] ?? 'recent') !== 'recent') ? ($filters['sort'] ?? null) : null,
+            'view' => (($filters['view'] ?? 'list') !== 'list') ? ($filters['view'] ?? null) : null,
+        ], fn ($v) => $v !== null && $v !== '');
+
+        $safe = function (string $name, array $params = [], string $fallback = '#') {
+            try {
+                return route($name, $params);
+            } catch (\Throwable) {
+                return $fallback;
+            }
+        };
+
+        return [
+            'index' => $safe('admin.meta-social.leads.index', $qs, url('/admin/meta-social/leads')),
+            'poll' => $safe('admin.meta-social.leads.poll', array_merge($qs, ['lead' => $selectedId ?: null]), url('/admin/meta-social/leads/poll')),
+            'export' => $safe('admin.meta-social.leads.export', $qs, url('/admin/meta-social/leads/export')),
+            'bulk' => $safe('admin.meta-social.leads.bulk', [], url('/admin/meta-social/leads/bulk')),
+            'inbox' => $safe('admin.meta-social.inbox.index', [], url('/admin/meta-social/inbox')),
+        ];
+    }
+
+    private function safeJson(mixed $value): string
+    {
+        try {
+            return json_encode(
+                $value,
+                JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT
+            ) ?: 'null';
+        } catch (\Throwable) {
+            return 'null';
         }
     }
 

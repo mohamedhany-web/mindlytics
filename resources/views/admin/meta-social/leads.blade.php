@@ -29,9 +29,21 @@
         'sort' => ($filters['sort'] ?? 'recent') !== 'recent' ? $filters['sort'] : null,
         'view' => $viewMode !== 'list' ? $viewMode : null,
     ], fn ($v) => $v !== null && $v !== '');
-    $pollUrl = route('admin.meta-social.leads.poll', array_merge($filterQs, ['lead' => $selectedId ?: null]));
-    $exportUrl = route('admin.meta-social.leads.export', $filterQs);
-    $bulkUrl = route('admin.meta-social.leads.bulk');
+    $urls = $urls ?? [];
+    $pollUrl = $urls['poll'] ?? url('/admin/meta-social/leads/poll');
+    $exportUrl = $urls['export'] ?? url('/admin/meta-social/leads/export');
+    $bulkUrl = $urls['bulk'] ?? url('/admin/meta-social/leads/bulk');
+    $leadsIndexUrl = $urls['index'] ?? url('/admin/meta-social/leads');
+    $inboxUrl = $urls['inbox'] ?? url('/admin/meta-social/inbox');
+    $detailJson = $detailJson ?? 'null';
+    $lcRoute = function (array $extra = []) use ($filterQs, $leadsIndexUrl) {
+        $params = array_filter(array_merge($filterQs, $extra), fn ($v) => $v !== null && $v !== '');
+        try {
+            return route('admin.meta-social.leads.index', $params);
+        } catch (\Throwable) {
+            return $leadsIndexUrl.(count($params) ? ('?'.http_build_query($params)) : '');
+        }
+    };
 @endphp
 
 <div class="lc-page" x-data="metaLeadCenter()" :class="{ 'has-selection': detail && viewMode === 'list' }" x-cloak>
@@ -48,12 +60,12 @@
             <span class="lc-chip lc-chip--live" id="lc-live"><i class="fas fa-circle"></i> Live</span>
             <div class="lc-view-switch">
                 @foreach(['list' => 'قائمة', 'table' => 'جدول', 'pipeline' => 'Pipeline'] as $v => $lbl)
-                    <a href="{{ route('admin.meta-social.leads.index', array_merge($filterQs, ['view' => $v === 'list' ? null : $v])) }}"
+                    <a href="{{ $lcRoute(['view' => $v === 'list' ? null : $v]) }}"
                        class="{{ $viewMode === $v ? 'is-active' : '' }}">{{ $lbl }}</a>
                 @endforeach
             </div>
             <a href="{{ $exportUrl }}" class="lc-btn-ghost"><i class="fas fa-download"></i> Export</a>
-            <a href="{{ route('admin.meta-social.inbox.index') }}" class="lc-btn-ghost"><i class="fas fa-inbox"></i> Inbox</a>
+            <a href="{{ $inboxUrl }}" class="lc-btn-ghost"><i class="fas fa-inbox"></i> Inbox</a>
         </div>
     </header>
 
@@ -74,7 +86,7 @@
             ['high_priority', 'Priority', 'fa-fire'],
             ['closed', 'Done', 'fa-check-circle'],
         ] as [$key, $label, $icon])
-            <a href="{{ route('admin.meta-social.leads.index', array_merge($filterQs, ['tab' => $key === 'all' ? null : $key, 'view' => $viewMode !== 'list' ? $viewMode : null])) }}"
+            <a href="{{ $lcRoute(['tab' => $key === 'all' ? null : $key, 'view' => $viewMode !== 'list' ? $viewMode : null]) }}"
                class="lc-stat {{ ($filters['tab'] ?? 'all') === $key ? 'is-active' : '' }}" data-stat="{{ $key }}">
                 <i class="fas {{ $icon }}"></i>
                 <div>
@@ -85,7 +97,7 @@
         @endforeach
     </div>
 
-    <form method="get" action="{{ route('admin.meta-social.leads.index') }}" class="lc-toolbar">
+    <form method="get" action="{{ $leadsIndexUrl }}" class="lc-toolbar">
         @if($viewMode !== 'list')<input type="hidden" name="view" value="{{ $viewMode }}">@endif
         <input type="search" name="q" value="{{ $filters['q'] }}" placeholder="بحث…">
         <select name="page">
@@ -136,7 +148,7 @@
                     </header>
                     <div class="lc-pipe-body">
                         @foreach(($pipeline[$stageKey] ?? []) as $row)
-                            <a href="{{ route('admin.meta-social.leads.index', array_merge($filterQs, ['view' => 'list', 'lead' => $row['id']])) }}" class="lc-pipe-card">
+                            <a href="{{ $lcRoute(['view' => 'list', 'lead' => $row['id']]) }}" class="lc-pipe-card">
                                 <p class="name">{{ $row['display_name'] }}</p>
                                 <p class="meta">{{ $row['platform_label'] }} · {{ $row['page_name'] }}</p>
                                 <p class="preview">{{ \Illuminate\Support\Str::limit($row['preview'] ?: '—', 60) }}</p>
@@ -189,7 +201,7 @@
                         <td><input type="checkbox" value="{{ $row['id'] }}" @change="toggleId({{ $row['id'] }}, $event.target.checked)"></td>
                         <td>{{ $row['last_at'] ?: $row['created_at'] }}</td>
                         <td>
-                            <a href="{{ route('admin.meta-social.leads.index', array_merge($filterQs, ['view' => null, 'lead' => $row['id']])) }}" class="font-bold text-[#0084FF]">{{ $row['display_name'] }}</a>
+                            <a href="{{ $lcRoute(['view' => null, 'lead' => $row['id']]) }}" class="font-bold text-[#0084FF]">{{ $row['display_name'] }}</a>
                             <div class="text-[10px] text-slate-500">{{ \Illuminate\Support\Str::limit($row['preview'] ?: '', 40) }}</div>
                         </td>
                         <td>{{ $row['platform_label'] }}</td>
@@ -215,7 +227,7 @@
             <aside class="lc-list">
                 <div class="lc-list__body" id="lc-rows">
                     @forelse($rows as $row)
-                        <a href="{{ route('admin.meta-social.leads.index', array_merge($filterQs, ['lead' => $row['id']])) }}"
+                        <a href="{{ $lcRoute(['lead' => $row['id']]) }}"
                            class="lc-row {{ $selectedId === (int)$row['id'] ? 'is-active' : '' }} {{ ($row['unread'] ?? 0) > 0 ? 'is-unread' : '' }}"
                            data-lead-id="{{ $row['id'] }}">
                             <div class="lc-avatar">
@@ -260,7 +272,7 @@
                 <template x-if="detail">
                     <div class="lc-detail__wrap">
                         <div class="lc-detail__head">
-                            <a href="{{ route('admin.meta-social.leads.index', $filterQs) }}" class="lg:hidden lc-icon-btn"><i class="fas fa-arrow-right"></i></a>
+                            <a href="{{ $lcRoute() }}" class="lg:hidden lc-icon-btn"><i class="fas fa-arrow-right"></i></a>
                             <div class="lc-avatar lc-avatar--lg">
                                 <template x-if="detail.profile_pic"><img :src="detail.profile_pic" alt=""></template>
                                 <template x-if="!detail.profile_pic"><span x-text="(detail.display_name || '?').charAt(0)"></span></template>
@@ -473,7 +485,7 @@ function metaLeadCenter() {
     const base = @json(url('/admin/meta-social/leads'));
     return {
         viewMode: @json($viewMode),
-        detail: @json($detail),
+        detail: {!! $detailJson !!},
         pollUrl: @json($pollUrl),
         bulkUrl: @json($bulkUrl),
         csrf: @json(csrf_token()),
