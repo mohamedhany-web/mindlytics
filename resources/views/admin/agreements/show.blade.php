@@ -37,6 +37,16 @@
                     <i class="fas fa-edit"></i>
                     تعديل
                 </a>
+                <form method="POST" action="{{ route('admin.agreements.destroy', $agreement) }}"
+                      onsubmit="return confirm('حذف هذه الاتفاقية نهائيًا؟\nلن يُسمح بالحذف إذا وُجدت مدفوعات مكتملة.');"
+                      class="inline">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-rose-600 rounded-xl shadow hover:bg-rose-700 transition-all">
+                        <i class="fas fa-trash"></i>
+                        حذف
+                    </button>
+                </form>
                 <a href="{{ route('admin.agreements.index') }}" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-all">
                     <i class="fas fa-arrow-right"></i>
                     رجوع

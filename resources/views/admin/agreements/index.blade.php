@@ -5,6 +5,12 @@
 
 @section('content')
 <div class="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" style="background: #f8fafc; min-height: 100vh;">
+    @if(session('success'))
+        <div class="rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 text-sm">{{ session('success') }}</div>
+    @endif
+    @if(session('error'))
+        <div class="rounded-xl bg-rose-50 border border-rose-200 text-rose-800 px-4 py-3 text-sm">{{ session('error') }}</div>
+    @endif
     <!-- الهيدر -->
     <section class="rounded-2xl bg-white/95 backdrop-blur border-2 border-slate-200/50 shadow-xl overflow-hidden">
         <div class="px-5 py-6 sm:px-8 lg:px-12 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -256,6 +262,17 @@
                                        title="تعديل">
                                         <i class="fas fa-edit text-sm"></i>
                                     </a>
+                                    <form method="POST" action="{{ route('admin.agreements.destroy', $agreement) }}"
+                                          onsubmit="return confirm('حذف الاتفاقية {{ $agreement->agreement_number }}؟\nلن يُسمح بالحذف إذا وُجدت مدفوعات مكتملة للمدرب.');"
+                                          class="inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                                class="w-9 h-9 flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors duration-200"
+                                                title="حذف">
+                                            <i class="fas fa-trash text-sm"></i>
+                                        </button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>
