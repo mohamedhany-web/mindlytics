@@ -49,7 +49,7 @@
 <div class="lc-page" x-data="metaLeadCenter()" :class="{ 'has-selection': detail && viewMode === 'list' }" x-cloak>
     <header class="lc-topbar">
         <div class="lc-topbar__brand">
-            <button type="button" @click="$dispatch('open-sidebar')" class="lg:hidden lc-icon-btn"><i class="fas fa-bars"></i></button>
+            <button type="button" x-on:click="$dispatch('open-sidebar')" class="lg:hidden lc-icon-btn"><i class="fas fa-bars"></i></button>
             <div class="lc-mark"><i class="fas fa-user-plus"></i></div>
             <div>
                 <h1 class="lc-topbar__title">Lead Center</h1>
@@ -169,19 +169,19 @@
         <div class="lc-table-wrap">
             <div class="lc-bulk" x-show="selectedIds.length" x-cloak>
                 <span x-text="selectedIds.length + ' محدد'"></span>
-                <button type="button" @click="bulk('done')">Mark Done</button>
-                <button type="button" @click="bulk('reopen')">Reopen</button>
-                <button type="button" @click="bulk('create_crm')">إنشاء CRM</button>
+                <button type="button" x-on:click="bulk('done')">Mark Done</button>
+                <button type="button" x-on:click="bulk('reopen')">Reopen</button>
+                <button type="button" x-on:click="bulk('create_crm')">إنشاء CRM</button>
                 <select x-model="bulkAssignee">
                     <option value="">تعيين إلى…</option>
                     @foreach($agents as $agent)<option value="{{ $agent->id }}">{{ $agent->name }}</option>@endforeach
                 </select>
-                <button type="button" @click="bulk('assign')" :disabled="!bulkAssignee">Assign</button>
+                <button type="button" x-on:click="bulk('assign')" :disabled="!bulkAssignee">Assign</button>
             </div>
             <table class="lc-table" id="lc-table">
                 <thead>
                 <tr>
-                    <th><input type="checkbox" @change="toggleAll($event)"></th>
+                    <th><input type="checkbox" x-on:change="toggleAll($event)"></th>
                     <th>Date</th>
                     <th>Name</th>
                     <th>Channel</th>
@@ -198,7 +198,7 @@
                 <tbody>
                 @forelse($rows as $row)
                     <tr data-lead-id="{{ $row['id'] }}">
-                        <td><input type="checkbox" value="{{ $row['id'] }}" @change="toggleId({{ $row['id'] }}, $event.target.checked)"></td>
+                        <td><input type="checkbox" value="{{ $row['id'] }}" x-on:change="toggleId({{ $row['id'] }}, $event.target.checked)"></td>
                         <td>{{ $row['last_at'] ?: $row['created_at'] }}</td>
                         <td>
                             <a href="{{ $lcRoute(['view' => null, 'lead' => $row['id']]) }}" class="font-bold text-[#0084FF]">{{ $row['display_name'] }}</a>
@@ -285,7 +285,7 @@
                                     <span x-text="detail.source"></span>
                                 </p>
                             </div>
-                            <button type="button" class="lc-btn-ghost" @click="toggleDone()" :disabled="saving">
+                            <button type="button" class="lc-btn-ghost" x-on:click="toggleDone()" :disabled="saving">
                                 <i class="fas" :class="detail.is_done ? 'fa-envelope-open-text' : 'fa-check-circle'"></i>
                                 <span x-text="detail.is_done ? 'Reopen' : 'Mark Done'"></span>
                             </button>
@@ -295,40 +295,40 @@
                         <div class="lc-detail__body">
                             <div class="lc-actions-grid">
                                 <label>Stage
-                                    <select x-model="stageValue" @change="saveStage()">
+                                    <select x-model="stageValue" x-on:change="saveStage()">
                                         @foreach($stages as $key => $label)<option value="{{ $key }}">{{ $label }}</option>@endforeach
                                     </select>
                                 </label>
                                 <label>Assigned to
-                                    <select x-model="assigneeId" @change="assignAgent()">
+                                    <select x-model="assigneeId" x-on:change="assignAgent()">
                                         <option value="">Unassigned</option>
                                         @foreach($agents as $agent)<option value="{{ $agent->id }}">{{ $agent->name }}</option>@endforeach
                                     </select>
                                 </label>
                                 <label>Priority
-                                    <select x-model="priorityValue" @change="savePriority()">
+                                    <select x-model="priorityValue" x-on:change="savePriority()">
                                         @foreach($priorities as $key => $label)<option value="{{ $key }}">{{ $label }}</option>@endforeach
                                     </select>
                                 </label>
                                 <label>Reminder
                                     <div class="lc-form-row">
                                         <input type="datetime-local" x-model="reminderValue">
-                                        <button type="button" class="lc-btn-ghost" @click="saveReminder()">حفظ</button>
+                                        <button type="button" class="lc-btn-ghost" x-on:click="saveReminder()">حفظ</button>
                                     </div>
                                 </label>
                             </div>
 
                             <div class="lc-card">
                                 <h3>Contact information</h3>
-                                <form class="lc-form" @submit.prevent="saveContact()">
+                                <form class="lc-form" x-on:submit.prevent="saveContact()">
                                     <input type="text" x-model="contactName" placeholder="Name">
                                     <input type="text" x-model="contactPhone" placeholder="Phone" dir="ltr">
                                     <input type="email" x-model="contactEmail" placeholder="Email" dir="ltr">
                                     <textarea x-model="contactNotes" rows="2" placeholder="Internal note"></textarea>
                                     <div class="lc-form-row">
                                         <button type="submit" class="lc-btn-dark" :disabled="saving">Save</button>
-                                        <button type="button" class="lc-btn-ghost" x-show="detail.can_request_phone" @click="requestPhone()" :disabled="saving">Request phone</button>
-                                        <button type="button" class="lc-btn-success" x-show="!detail.in_crm" @click="createLead()" :disabled="saving">Create in CRM</button>
+                                        <button type="button" class="lc-btn-ghost" x-show="detail.can_request_phone" x-on:click="requestPhone()" :disabled="saving">Request phone</button>
+                                        <button type="button" class="lc-btn-success" x-show="!detail.in_crm" x-on:click="createLead()" :disabled="saving">Create in CRM</button>
                                         <a x-show="detail.crm_url" :href="detail.crm_url" class="lc-btn-ghost" target="_blank">Open CRM</a>
                                     </div>
                                 </form>
@@ -338,16 +338,16 @@
                                 <h3>Labels</h3>
                                 <div class="lc-labels">
                                     <template x-for="lb in (detail.labels || [])" :key="lb">
-                                        <button type="button" class="lc-label" @click="removeLabel(lb)" x-text="lb + ' ×'"></button>
+                                        <button type="button" class="lc-label" x-on:click="removeLabel(lb)" x-text="lb + ' ×'"></button>
                                     </template>
                                 </div>
                                 <div class="lc-form-row mt-2">
-                                    <input type="text" x-model="newLabel" placeholder="Add label" @keydown.enter.prevent="addLabel()">
-                                    <button type="button" class="lc-btn-primary" @click="addLabel()">Add</button>
+                                    <input type="text" x-model="newLabel" placeholder="Add label" x-on:keydown.enter.prevent="addLabel()">
+                                    <button type="button" class="lc-btn-primary" x-on:click="addLabel()">Add</button>
                                 </div>
                                 <div class="lc-suggest">
                                     @foreach($suggestedLabels as $sug)
-                                        <button type="button" @click="addSuggestedLabel(@js($sug))">{{ $sug }}</button>
+                                        <button type="button" x-on:click="addSuggestedLabel(@js($sug))">{{ $sug }}</button>
                                     @endforeach
                                 </div>
                             </div>
@@ -375,7 +375,7 @@
                                         </div>
                                     </template>
                                 </div>
-                                <form class="lc-form-row mt-2" @submit.prevent="sendReply()">
+                                <form class="lc-form-row mt-2" x-on:submit.prevent="sendReply()">
                                     <input type="text" x-model="replyBody" placeholder="اكتب رسالة…" class="flex-1">
                                     <button type="submit" class="lc-btn-primary" :disabled="saving || !replyBody.trim()">Send</button>
                                 </form>
