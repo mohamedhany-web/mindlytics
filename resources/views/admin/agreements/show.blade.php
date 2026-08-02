@@ -21,7 +21,18 @@
                 </h2>
                 <p class="text-sm text-slate-500 mt-2">رقم الاتفاقية: <span class="font-semibold">{{ $agreement->agreement_number }}</span></p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+                @if($agreement->isCoursePercentageType())
+                    <form method="POST" action="{{ route('admin.agreements.apply-percentage', $agreement) }}"
+                          onsubmit="return confirm('تطبيق النسبة الحالية ({{ number_format($agreement->course_percentage ?? 0, 2) }}%) على كل مدفوعات التفعيل غير المدفوعة؟\nالمدفوعات اللي اتدفعت للمدرب هتتساب زي ما هي.');"
+                          class="inline">
+                        @csrf
+                        <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-xl shadow hover:bg-emerald-700 transition-all">
+                            <i class="fas fa-percentage"></i>
+                            تطبيق النسبة الجديدة
+                        </button>
+                    </form>
+                @endif
                 <a href="{{ route('admin.agreements.edit', $agreement) }}" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-amber-600 rounded-xl shadow hover:bg-amber-700 transition-all">
                     <i class="fas fa-edit"></i>
                     تعديل
@@ -81,6 +92,7 @@
                         <div>
                             <p class="text-xs font-semibold text-slate-500 mb-1">نسبة المدرب</p>
                             <p class="text-sm font-semibold text-slate-900">{{ number_format($agreement->course_percentage ?? 0, 2) }}%</p>
+                            <p class="text-[11px] text-slate-500 mt-1">لو غيّرت النسبة بعد تسجيلات قديمة، استخدم زر «تطبيق النسبة الجديدة» فوق.</p>
                         </div>
                         @else
                         <div>

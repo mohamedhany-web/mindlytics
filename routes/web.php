@@ -2154,6 +2154,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::delete('/payments/{payment}', [\App\Http\Controllers\Admin\InstructorAgreementController::class, 'destroyPayment'])
                 ->name('payments.destroy');
             Route::get('/{agreement}', [\App\Http\Controllers\Admin\InstructorAgreementController::class, 'show'])->name('show');
+            Route::post('/{agreement}/apply-percentage', [\App\Http\Controllers\Admin\InstructorAgreementController::class, 'applyPercentage'])
+                ->middleware('throttle:10,1')
+                ->name('apply-percentage');
             Route::get('/{agreement}/edit', [\App\Http\Controllers\Admin\InstructorAgreementController::class, 'edit'])->name('edit');
             Route::put('/{agreement}', [\App\Http\Controllers\Admin\InstructorAgreementController::class, 'update'])
                 ->middleware('throttle:20,5')

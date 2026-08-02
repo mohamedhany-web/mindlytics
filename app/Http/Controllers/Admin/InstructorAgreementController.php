@@ -170,6 +170,44 @@ class InstructorAgreementController extends Controller
         return view('admin.agreements.show', compact('agreement', 'stats'));
     }
 
+    /**
+     * تطبيق النسبة الحالية للاتفاقية على مدفوعات التفعيل المسجّلة بالنسبة القديمة.
+     */
+    public function applyPercentage(Request $request, InstructorAgreement $agreement)
+    {
+        if (! Auth::check() || ! Auth::user()->isSuperAdmin()) {
+            abort(403);
+        }
+
+        if (! $agreement->isCoursePercentageType()) {
+            return back()->with('error', 'هذه الاتفاقية ليست من نوع نسبة من الكورس.');
+        }
+
+        $includePaid = $request->boolean('include_paid');
+        $result = InstructorCoursePercentageService::applyCurrentPercentageToExistingPayments(
+            $agreement,
+            $includePaid,
+        );
+
+        $pct = number_format((float) $agreement->course_percentage, 2);
+        $parts = [
+            "تم تطبيق النسبة {$pct}%",
+            "تحديث: {$result['updated']}",
+        ];
+        if ($result['created'] > 0) {
+            $parts[] = "إنشاء ناقص: {$result['created']}";
+        }
+        if ($result['skipped_paid'] > 0) {
+            $parts[] = "تم تخطي مدفوع: {$result['skipped_paid']}";
+        }
+        if (abs($result['total_delta']) >= 0.01) {
+            $sign = $result['total_delta'] > 0 ? '+' : '';
+            $parts[] = 'فرق الإجمالي: '.$sign.number_format($result['total_delta'], 2).' ج.م';
+        }
+
+        return back()->with('success', implode(' · ', $parts));
+    }
+
     public function updatePayment(Request $request, AgreementPayment $payment)
     {
         if (! Auth::check() || ! Auth::user()->isSuperAdmin()) {

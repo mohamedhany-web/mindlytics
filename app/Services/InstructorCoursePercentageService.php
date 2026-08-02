@@ -171,6 +171,94 @@ class InstructorCoursePercentageService
     }
 
     /**
+     * إعادة تطبيق نسبة الاتفاقية الحالية على مدفوعات التفعيل المسجّلة سابقًا.
+     * لا يمس المدفوعات المدفوعة للمدرب (status=paid) إلا إذا $includePaid=true وبدون إيصال تحويل.
+     *
+     * @return array{updated: int, skipped_paid: int, skipped_other: int, created: int, total_delta: float}
+     */
+    public static function applyCurrentPercentageToExistingPayments(
+        InstructorAgreement $agreement,
+        bool $includePaidWithoutReceipt = false,
+    ): array {
+        $result = [
+            'updated' => 0,
+            'skipped_paid' => 0,
+            'skipped_other' => 0,
+            'created' => 0,
+            'total_delta' => 0.0,
+        ];
+
+        if (! $agreement->isCoursePercentageType()) {
+            return $result;
+        }
+
+        $percentage = (float) $agreement->course_percentage;
+        if ($percentage <= 0) {
+            return $result;
+        }
+
+        $payments = AgreementPayment::query()
+            ->where('agreement_id', $agreement->id)
+            ->where('type', AgreementPayment::TYPE_COURSE_ACTIVATION)
+            ->with(['enrollment.course', 'enrollment.invoice', 'enrollment.payment'])
+            ->orderBy('id')
+            ->get();
+
+        foreach ($payments as $payment) {
+            if ($payment->status === AgreementPayment::STATUS_PAID) {
+                if (! $includePaidWithoutReceipt || filled($payment->transfer_receipt_path)) {
+                    $result['skipped_paid']++;
+
+                    continue;
+                }
+            }
+
+            if (in_array($payment->status, [AgreementPayment::STATUS_REJECTED, AgreementPayment::STATUS_CANCELLED], true)) {
+                $result['skipped_other']++;
+
+                continue;
+            }
+
+            $enrollment = $payment->enrollment;
+            if (! $enrollment) {
+                $result['skipped_other']++;
+
+                continue;
+            }
+
+            $base = self::resolveActivationBaseAmount($enrollment, $enrollment->course);
+            if ($base <= 0) {
+                $result['skipped_other']++;
+
+                continue;
+            }
+
+            $newAmount = round($base * ($percentage / 100), 2);
+            $oldAmount = round((float) $payment->amount, 2);
+            if (abs($newAmount - $oldAmount) < 0.005) {
+                continue;
+            }
+
+            $payment->update([
+                'amount' => $newAmount,
+                'notes' => trim(
+                    (string) $payment->notes
+                    ."\n[إعادة تطبيق نسبة {$percentage}%] كان {$oldAmount} ← أصبح {$newAmount} في ".now()->format('Y-m-d H:i')
+                ),
+            ]);
+
+            $result['updated']++;
+            $result['total_delta'] += ($newAmount - $oldAmount);
+        }
+
+        // إنشاء أي تفعيلات ناقصة بالنسبة الجديدة
+        $created = self::syncMissingPaymentsForAgreementDetailed($agreement);
+        $result['created'] = count($created);
+
+        return $result;
+    }
+
+    /**
      * مزامنة كل مدفوعات نسبة المدرب الناقصة لكل الاتفاقيات النشطة من نوع نسبة من الكورس.
      */
     public static function syncAllMissingPayments(): int
