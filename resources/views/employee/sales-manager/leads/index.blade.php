@@ -65,6 +65,12 @@
                     <option value="{{ $k }}" @selected(request('stage') === $k)>{{ $label }}</option>
                 @endforeach
             </select>
+            <select name="interest_type_id" class="px-3 py-2 border border-slate-200 rounded-lg text-sm">
+                <option value="">كل الاهتمامات</option>
+                @foreach($interestTypes ?? [] as $itype)
+                    <option value="{{ $itype->id }}" @selected(request('interest_type_id') == $itype->id)>{{ $itype->name_ar }}</option>
+                @endforeach
+            </select>
             <select name="follow_up" class="px-3 py-2 border border-slate-200 rounded-lg text-sm">
                 <option value="">كل المتابعات</option>
                 <option value="overdue" @selected(request('follow_up') === 'overdue')>متأخرة</option>
@@ -89,7 +95,15 @@
             <tbody class="divide-y divide-slate-100">
                 @forelse($leads as $lead)
                     <tr class="hover:bg-slate-50 {{ $lead->isFollowUpOverdue() ? 'bg-rose-50/40' : '' }}">
-                        <td class="px-4 py-3 font-medium text-slate-900">{{ $lead->name }}</td>
+                        <td class="px-4 py-3 font-medium text-slate-900">
+                            {{ $lead->name }}
+                            @if($lead->interestType)
+                                <span class="block mt-0.5 text-[10px] font-bold" style="color:{{ $lead->interestType->color }}">{{ $lead->interestType->name_ar }}</span>
+                            @endif
+                            @if($lead->creator)
+                                <span class="block text-[10px] text-slate-400">سجّله: {{ $lead->creator->name }}</span>
+                            @endif
+                        </td>
                         <td class="px-4 py-3 text-slate-600">{{ $lead->assignee->name ?? '—' }}</td>
                         <td class="px-4 py-3">{{ \App\Models\SalesLead::STAGES[$lead->stage] ?? $lead->stage }}</td>
                         <td class="px-4 py-3 @if($lead->isFollowUpOverdue()) text-rose-700 font-bold @else text-slate-500 @endif">

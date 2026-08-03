@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\SalesInterestType;
 use App\Models\SalesLead;
 use App\Models\SalesLeadCategory;
 use App\Models\SalesLeadGroup;
@@ -92,6 +93,10 @@ class SalesLeadsImportService
             }
 
             try {
+                $interestTypeId = $this->resolveInterestTypeId(
+                    isset($map['interest_type']) ? trim((string) ($row[$map['interest_type']] ?? '')) : null
+                );
+
                 SalesLead::create([
                     'assigned_to' => $assignedTo,
                     'created_by' => $createdBy,
@@ -102,6 +107,7 @@ class SalesLeadsImportService
                     'phone' => $phone ?: null,
                     'email' => $email ?: null,
                     'company' => isset($map['company']) ? trim((string) ($row[$map['company']] ?? '')) ?: null : null,
+                    'interest_type_id' => $interestTypeId,
                     'interest' => isset($map['interest']) ? trim((string) ($row[$map['interest']] ?? '')) ?: null : null,
                     'expected_value' => $this->parseNumber($row[$map['expected_value'] ?? ''] ?? null),
                     'notes' => isset($map['notes']) ? trim((string) ($row[$map['notes']] ?? '')) ?: null : null,
@@ -184,7 +190,8 @@ class SalesLeadsImportService
             'phone' => ['الهاتف', 'phone', 'تليفون', 'موبايل'],
             'email' => ['البريد', 'email', 'ايميل'],
             'company' => ['الشركة', 'company'],
-            'interest' => ['الاهتمام', 'interest', 'منتج'],
+            'interest_type' => ['نوع الاهتمام', 'interest_type', 'اهتمام', 'الاهتمام', 'interest type', 'slug الاهتمام'],
+            'interest' => ['تفاصيل الاهتمام', 'interest_details', 'منتج', 'الاهتمام التفصيلي'],
             'expected_value' => ['القيمة', 'expected_value', 'value', 'قيمة متوقعة'],
             'notes' => ['ملاحظات', 'notes'],
             'priority' => ['الأولوية', 'priority'],
@@ -225,5 +232,26 @@ class SalesLeadsImportService
         ];
 
         return $map[$v] ?? $default;
+    }
+
+    private function resolveInterestTypeId(?string $raw): ?int
+    {
+        $raw = trim((string) $raw);
+        if ($raw === '') {
+            return null;
+        }
+
+        $slug = mb_strtolower($raw);
+        $bySlug = SalesInterestType::query()->where('slug', $slug)->value('id');
+        if ($bySlug) {
+            return (int) $bySlug;
+        }
+
+        $byName = SalesInterestType::query()
+            ->where('name_ar', $raw)
+            ->orWhere('name_en', $raw)
+            ->value('id');
+
+        return $byName ? (int) $byName : null;
     }
 }

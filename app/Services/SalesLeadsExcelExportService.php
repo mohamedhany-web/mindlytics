@@ -391,7 +391,7 @@ class SalesLeadsExcelExportService
         $sheet->setTitle('قالب الاستيراد');
         $sheet->setRightToLeft(true);
 
-        $headers = ['الاسم', 'الهاتف', 'البريد', 'الشركة', 'الاهتمام', 'القيمة', 'ملاحظات', 'الأولوية'];
+        $headers = ['الاسم', 'الهاتف', 'البريد', 'الشركة', 'نوع الاهتمام', 'تفاصيل الاهتمام', 'القيمة', 'ملاحظات', 'الأولوية'];
         foreach ($headers as $i => $header) {
             $col = Coordinate::stringFromColumnIndex($i + 1);
             $sheet->setCellValue($col.'1', $header);
@@ -401,17 +401,18 @@ class SalesLeadsExcelExportService
         $sheet->setCellValue('B2', '01001234567');
         $sheet->setCellValue('C2', 'ahmed@example.com');
         $sheet->setCellValue('D2', 'شركة مثال');
-        $sheet->setCellValue('E2', 'دورة Laravel');
-        $sheet->setCellValue('F2', 5000);
-        $sheet->setCellValue('G2', 'عميل مهتم');
-        $sheet->setCellValue('H2', 'عادي');
+        $sheet->setCellValue('E2', 'courses');
+        $sheet->setCellValue('F2', 'دورة Laravel');
+        $sheet->setCellValue('G2', 5000);
+        $sheet->setCellValue('H2', 'عميل مهتم');
+        $sheet->setCellValue('I2', 'عادي');
 
-        $sheet->getStyle('A1:H1')->applyFromArray([
+        $sheet->getStyle('A1:I1')->applyFromArray([
             'font' => ['bold' => true, 'color' => ['rgb' => self::WHITE]],
             'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => self::EMERALD_700]],
         ]);
 
-        for ($i = 1; $i <= 8; $i++) {
+        for ($i = 1; $i <= 9; $i++) {
             $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($i))->setAutoSize(true);
         }
 

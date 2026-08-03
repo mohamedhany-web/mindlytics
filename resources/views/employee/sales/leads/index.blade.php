@@ -169,6 +169,15 @@
                         @endforeach
                     </select>
                 </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">الاهتمام</label>
+                    <select name="interest_type_id" class="w-full px-3 py-2 text-sm bg-white" onchange="this.form.submit()">
+                        <option value="">الكل</option>
+                        @foreach($interestTypes ?? [] as $itype)
+                            <option value="{{ $itype->id }}" @selected($req->interest_type_id == $itype->id)>{{ $itype->name_ar }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 @if(($groups ?? collect())->isNotEmpty())
                 <div>
                     <label class="block text-xs font-medium text-slate-600 mb-1">المجموعة</label>

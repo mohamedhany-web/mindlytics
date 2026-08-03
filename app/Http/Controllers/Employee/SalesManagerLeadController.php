@@ -29,10 +29,14 @@ class SalesManagerLeadController extends Controller
 
         $query = SalesLead::query()
             ->whereIn('assigned_to', $memberIds)
-            ->with(['assignee:id,name', 'category']);
+            ->with(['assignee:id,name', 'category', 'creator:id,name', 'interestType']);
 
         if ($request->filled('assignee')) {
             $query->where('assigned_to', (int) $request->assignee);
+        }
+
+        if ($request->filled('interest_type_id')) {
+            $query->where('interest_type_id', (int) $request->interest_type_id);
         }
 
         if ($request->filled('stage')) {
@@ -75,12 +79,14 @@ class SalesManagerLeadController extends Controller
 
         $leads = $query->paginate(20)->withQueryString();
         $categories = SalesLeadCategory::active()->ordered()->get();
+        $interestTypes = \App\Models\SalesInterestType::active()->ordered()->get();
 
         $quickCounts = $this->indexQuickCounts($memberIds);
 
         return view('employee.sales-manager.leads.index', compact(
             'leads',
             'categories',
+            'interestTypes',
             'quickCounts',
             'members',
             'team'

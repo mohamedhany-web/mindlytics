@@ -39,8 +39,9 @@ class SalesLeadController extends Controller
 
         $quickCounts = $this->indexQuickCounts(Auth::id());
         $groups = SalesLeadGroup::forAssignee(Auth::id())->orderBy('name')->get(['id', 'name']);
+        $interestTypes = \App\Models\SalesInterestType::active()->ordered()->get();
 
-        return view('employee.sales.leads.index', compact('leads', 'categories', 'importBatches', 'quickCounts', 'groups'));
+        return view('employee.sales.leads.index', compact('leads', 'categories', 'importBatches', 'quickCounts', 'groups', 'interestTypes'));
     }
 
     public function create(Request $request)

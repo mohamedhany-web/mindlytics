@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Auth;
 
 class SalesDistributionController extends Controller
 {
-    public function index(Request $request, SalesSpecialtyService $specialtyService, SalesTeamService $teamService)
+    public function index(Request $request, SalesSpecialtyService $specialtyService)
     {
         $types = $specialtyService->activeTypes();
         $filter = $request->query('filter', 'all'); // all|unassigned|mismatch
