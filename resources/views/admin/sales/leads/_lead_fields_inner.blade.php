@@ -85,8 +85,19 @@
         @error('next_follow_up_at')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
     </div>
 
+    <div>
+        <label class="{{ $labelClass }}">اهتمام العميل <span class="text-rose-600">*</span></label>
+        <select name="interest_type_id" required class="{{ $inputClass }}">
+            <option value="">— اختر الاهتمام —</option>
+            @foreach($interestTypes ?? \App\Models\SalesInterestType::active()->ordered()->get() as $itype)
+                <option value="{{ $itype->id }}" @selected(old('interest_type_id', $lead->interest_type_id ?? '') == $itype->id)>{{ $itype->name_ar }}</option>
+            @endforeach
+        </select>
+        @error('interest_type_id')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
+    </div>
+
     <div class="md:col-span-2 xl:col-span-3">
-        <label class="{{ $labelClass }}">اهتمام / منتج</label>
+        <label class="{{ $labelClass }}">تفاصيل الاهتمام / منتج (اختياري)</label>
         <textarea name="interest" rows="2" class="{{ $inputClass }}">{{ old('interest', $lead->interest ?? '') }}</textarea>
         @error('interest')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
     </div>

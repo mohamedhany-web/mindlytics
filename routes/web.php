@@ -1051,6 +1051,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('leads', [\App\Http\Controllers\Employee\SalesManagerLeadController::class, 'index'])->name('leads.index');
             Route::get('leads/{lead}', [\App\Http\Controllers\Employee\SalesManagerLeadController::class, 'show'])->name('leads.show');
             Route::post('leads/{lead}/transfer', [\App\Http\Controllers\Employee\SalesManagerLeadController::class, 'transfer'])->name('leads.transfer');
+            Route::get('distribution', [\App\Http\Controllers\Employee\SalesManagerDistributionController::class, 'index'])->name('distribution.index');
+            Route::post('distribution/{lead}/assign', [\App\Http\Controllers\Employee\SalesManagerDistributionController::class, 'assign'])->name('distribution.assign');
+            Route::get('org-chart', [\App\Http\Controllers\Employee\SalesManagerOrgChartController::class, 'index'])->name('org-chart.index');
             Route::get('follow-ups', [\App\Http\Controllers\Employee\SalesManagerFollowUpController::class, 'index'])->name('follow-ups.index');
             Route::get('transfer', [\App\Http\Controllers\Employee\SalesManagerTransferController::class, 'index'])->name('transfer.index');
             Route::post('transfer', [\App\Http\Controllers\Employee\SalesManagerTransferController::class, 'store'])->name('transfer.store');
@@ -1244,6 +1247,16 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('transfer', [\App\Http\Controllers\Admin\SalesTransferController::class, 'index'])->name('transfer.index');
             Route::post('transfer', [\App\Http\Controllers\Admin\SalesTransferController::class, 'store'])->name('transfer.store');
             Route::resource('sales-teams', \App\Http\Controllers\Admin\SalesTeamController::class)->except(['show']);
+            Route::get('interest-types', [\App\Http\Controllers\Admin\SalesInterestTypeController::class, 'index'])->name('interest-types.index');
+            Route::post('interest-types', [\App\Http\Controllers\Admin\SalesInterestTypeController::class, 'store'])->name('interest-types.store');
+            Route::put('interest-types/{interestType}', [\App\Http\Controllers\Admin\SalesInterestTypeController::class, 'update'])->name('interest-types.update');
+            Route::delete('interest-types/{interestType}', [\App\Http\Controllers\Admin\SalesInterestTypeController::class, 'destroy'])->name('interest-types.destroy');
+            Route::get('specialties', [\App\Http\Controllers\Admin\SalesSpecialtyController::class, 'index'])->name('specialties.index');
+            Route::put('specialties/{user}', [\App\Http\Controllers\Admin\SalesSpecialtyController::class, 'update'])->name('specialties.update')->whereNumber('user');
+            Route::get('distribution', [\App\Http\Controllers\Admin\SalesDistributionController::class, 'index'])->name('distribution.index');
+            Route::post('distribution/{lead}/assign', [\App\Http\Controllers\Admin\SalesDistributionController::class, 'assign'])->name('distribution.assign');
+            Route::get('org-chart', [\App\Http\Controllers\Admin\SalesOrgChartController::class, 'index'])->name('org-chart.index');
+            Route::put('org-chart/{user}', [\App\Http\Controllers\Admin\SalesOrgChartController::class, 'update'])->name('org-chart.update')->whereNumber('user');
             Route::get('team-daily-reports', [\App\Http\Controllers\Admin\SalesTeamDailyReportController::class, 'index'])->name('team-daily-reports.index');
             Route::get('team-daily-reports/{teamDailyReport}', [\App\Http\Controllers\Admin\SalesTeamDailyReportController::class, 'show'])->name('team-daily-reports.show');
             Route::get('kpi', [\App\Http\Controllers\Admin\SalesKpiController::class, 'index'])->name('kpi.index');

@@ -9,7 +9,6 @@ use App\Models\SalesTeam;
 use App\Models\User;
 use App\Models\WhatsAppConversation;
 use Illuminate\Http\Exceptions\HttpResponseException;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class SalesTeamService
@@ -144,35 +143,14 @@ class SalesTeamService
             ]);
         }
 
-        if ((int) $lead->assigned_to === $toUserId) {
-            throw ValidationException::withMessages([
-                'to_user_id' => 'العميل مسند بالفعل لهذا الموظف.',
-            ]);
-        }
-
-        return DB::transaction(function () use ($lead, $manager, $team, $toUserId, $reason) {
-            $fromId = (int) $lead->assigned_to;
-            $lead->update(['assigned_to' => $toUserId]);
-
-            $transfer = SalesLeadTransfer::create([
-                'sales_lead_id' => $lead->id,
-                'from_user_id' => $fromId ?: null,
-                'to_user_id' => $toUserId,
-                'transferred_by' => $manager->id,
-                'sales_team_id' => $team->id,
-                'reason' => $reason,
-            ]);
-
-            SalesAuditService::log(
-                'sales_lead_transferred',
-                $lead,
-                ['assigned_to' => $fromId],
-                ['assigned_to' => $toUserId],
-                'مدير المبيعات حوّل العميل «'.$lead->name.'» داخل الفريق'
-            );
-
-            return $transfer;
-        });
+        return app(SalesLeadTransferService::class)->assign(
+            $lead,
+            $toUserId,
+            $manager,
+            $reason,
+            SalesLeadTransferService::SOURCE_MANAGER,
+            (int) $team->id
+        );
     }
 
     public function syncMemberReportTeamId(User $member, SalesDailyReport $report): void

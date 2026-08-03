@@ -25,6 +25,8 @@ class SalesAuditController extends Controller
         'sales_leads_bulk_import',
         'sales_lead_csat_recorded',
         'sales_data_transferred',
+        'sales_lead_transferred',
+        'sales_commission_settled',
     ];
 
     public function index(Request $request)

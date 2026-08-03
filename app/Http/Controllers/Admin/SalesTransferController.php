@@ -372,15 +372,35 @@ class SalesTransferController extends Controller
      */
     private function applyLeadAssignments(array $assignment, int $fromId, array $moved): array
     {
+        $transferService = app(\App\Services\SalesLeadTransferService::class);
+        $actor = auth()->user();
+
         foreach ($assignment as $toId => $ids) {
             if ($ids === []) {
                 continue;
             }
 
-            $n = (int) SalesLead::query()
-                ->withTrashed()
-                ->whereIn('id', $ids)
-                ->update(['assigned_to' => $toId]);
+            $leads = SalesLead::query()->withTrashed()->whereIn('id', $ids)->get();
+            $n = 0;
+            foreach ($leads as $lead) {
+                if ((int) $lead->assigned_to === (int) $toId) {
+                    continue;
+                }
+                try {
+                    $transferService->assign(
+                        $lead,
+                        (int) $toId,
+                        $actor,
+                        'توزيع جماعي من الإدارة',
+                        \App\Services\SalesLeadTransferService::SOURCE_ADMIN_BULK
+                    );
+                    $n++;
+                } catch (\Throwable $e) {
+                    // fallback: direct update if transfer validation fails
+                    $lead->update(['assigned_to' => $toId]);
+                    $n++;
+                }
+            }
 
             $moved['leads_assigned'] += $n;
             $moved['per_rep'][$toId]['leads'] = ($moved['per_rep'][$toId]['leads'] ?? 0) + $n;

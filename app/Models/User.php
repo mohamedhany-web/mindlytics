@@ -45,6 +45,7 @@ class User extends Authenticatable
         'total_referrals',
         'completed_referrals',
         'employee_job_id',
+        'sales_reports_to_id',
         'employee_code',
         'hire_date',
         'weekly_off_day',
@@ -1138,6 +1139,22 @@ class User extends Authenticatable
     public function salesTeamMembership()
     {
         return $this->hasOne(SalesTeamMember::class, 'user_id');
+    }
+
+    public function salesInterestTypes()
+    {
+        return $this->belongsToMany(SalesInterestType::class, 'sales_user_specialties', 'user_id', 'interest_type_id')
+            ->withTimestamps();
+    }
+
+    public function salesReportsTo()
+    {
+        return $this->belongsTo(User::class, 'sales_reports_to_id');
+    }
+
+    public function salesDirectReports()
+    {
+        return $this->hasMany(User::class, 'sales_reports_to_id');
     }
 
     public function salesCourseCommissionAgreements()

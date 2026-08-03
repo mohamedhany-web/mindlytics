@@ -80,7 +80,17 @@
                        placeholder="01xxxxxxxxx" class="w-full px-3 py-2.5">
             </div>
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">الاهتمام</label>
+                <label class="block text-sm font-medium text-slate-700 mb-1">اهتمام العميل <span class="text-red-600">*</span></label>
+                <select name="interest_type_id" required class="w-full px-3 py-2.5 text-sm bg-white">
+                    <option value="">— اختر —</option>
+                    @foreach($interestTypes ?? \App\Models\SalesInterestType::active()->ordered()->get() as $itype)
+                        <option value="{{ $itype->id }}" @selected(old('interest_type_id') == $itype->id)>{{ $itype->name_ar }}</option>
+                    @endforeach
+                </select>
+                @error('interest_type_id')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">تفاصيل (اختياري)</label>
                 <input type="text" name="interest" value="{{ old('interest') }}"
                        placeholder="مثال: كورس Python" class="w-full px-3 py-2.5 text-sm">
             </div>

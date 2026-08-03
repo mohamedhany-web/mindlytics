@@ -126,12 +126,21 @@
                     </div>
                 </dl>
 
-                @if($lead->interest)
+                @if($lead->interestType || $lead->interest)
                     <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                        <p class="text-xs font-semibold text-slate-600 mb-1">الاهتمام</p>
-                        <p class="text-sm text-slate-700 whitespace-pre-wrap">{{ $lead->interest }}</p>
+                        <p class="text-xs font-semibold text-slate-600 mb-1">اهتمام العميل</p>
+                        @if($lead->interestType)
+                            <span class="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-semibold text-white mb-2" style="background:{{ $lead->interestType->color }}">
+                                {{ $lead->interestType->name_ar }}
+                            </span>
+                        @endif
+                        @if($lead->interest)
+                            <p class="text-sm text-slate-700 whitespace-pre-wrap">{{ $lead->interest }}</p>
+                        @endif
                     </div>
                 @endif
+
+                @include('sales._transfer_timeline', ['lead' => $lead, 'wrapperClass' => 'mt-4'])
 
                 @if($lead->notes)
                     <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">

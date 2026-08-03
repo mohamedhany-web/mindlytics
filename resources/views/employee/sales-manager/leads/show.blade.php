@@ -265,36 +265,6 @@
                     @endforelse
                 </div>
             </section>
-
-            {{-- Transfer history --}}
-            @if($lead->transfers->isNotEmpty())
-                <section class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                    <div class="px-4 sm:px-5 py-3 border-b border-slate-100 bg-slate-50/80">
-                        <h2 class="text-sm font-bold text-slate-900 flex items-center gap-2">
-                            <i class="fas fa-exchange-alt text-amber-600"></i>
-                            سجل التحويلات ({{ $lead->transfers->count() }})
-                        </h2>
-                    </div>
-                    <div class="divide-y divide-slate-100">
-                        @foreach($lead->transfers as $tr)
-                            <div class="px-4 sm:px-5 py-3 text-sm flex flex-wrap items-start justify-between gap-2">
-                                <div>
-                                    <p class="font-semibold text-slate-900">
-                                        {{ $tr->fromUser->name ?? '—' }}
-                                        <i class="fas fa-arrow-left text-slate-400 text-xs mx-1"></i>
-                                        {{ $tr->toUser->name ?? '—' }}
-                                    </p>
-                                    @if($tr->reason)
-                                        <p class="text-xs text-slate-600 mt-1">{{ $tr->reason }}</p>
-                                    @endif
-                                    <p class="text-[11px] text-slate-400 mt-1">بواسطة {{ $tr->transferredBy->name ?? '—' }}</p>
-                                </div>
-                                <time class="text-[11px] text-slate-500 tabular-nums">{{ $tr->created_at->format('Y-m-d H:i') }}</time>
-                            </div>
-                        @endforeach
-                    </div>
-                </section>
-            @endif
         </div>
 
         {{-- Sidebar --}}
@@ -357,12 +327,18 @@
                         @endif
                     </dl>
 
-                    @if($lead->interest)
+                    @if($lead->interestType || $lead->interest)
                         <div class="rounded-xl border border-amber-100 bg-amber-50/80 px-3 py-2.5">
-                            <p class="text-[11px] font-bold text-amber-900 mb-1">الاهتمام</p>
-                            <p class="text-sm text-slate-800 whitespace-pre-wrap">{{ $lead->interest }}</p>
+                            <p class="text-[11px] font-bold text-amber-900 mb-1">اهتمام العميل</p>
+                            @if($lead->interestType)
+                                <span class="inline-flex items-center rounded-lg px-2 py-0.5 text-[11px] font-bold text-white mb-1" style="background:{{ $lead->interestType->color }}">{{ $lead->interestType->name_ar }}</span>
+                            @endif
+                            @if($lead->interest)
+                                <p class="text-sm text-slate-800 whitespace-pre-wrap">{{ $lead->interest }}</p>
+                            @endif
                         </div>
                     @endif
+                    @include('sales._transfer_timeline', ['lead' => $lead])
                     @if($lead->notes)
                         <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
                             <p class="text-[11px] font-bold text-slate-600 mb-1">ملاحظات</p>

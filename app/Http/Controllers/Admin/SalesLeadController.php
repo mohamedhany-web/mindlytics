@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\SalesActivity;
+use App\Models\SalesInterestType;
 use App\Models\SalesLead;
 use App\Models\SalesLeadCategory;
 use App\Models\SalesLeadGroup;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\SalesAuditService;
+use App\Services\SalesLeadTransferService;
 use App\Services\SalesLeadsExcelExportService;
 use App\Services\SalesLeadsImportService;
 use App\Services\SalesNotificationService;
@@ -43,8 +45,9 @@ class SalesLeadController extends Controller
         $leads = $query->paginate(25)->withQueryString();
         $salesReps = User::salesEmployees()->orderBy('name')->get(['id', 'name']);
         $categories = SalesLeadCategory::active()->ordered()->get();
+        $interestTypes = SalesInterestType::active()->ordered()->get();
 
-        return view('admin.sales.leads.index', compact('leads', 'salesReps', 'stats', 'categories'));
+        return view('admin.sales.leads.index', compact('leads', 'salesReps', 'stats', 'categories', 'interestTypes'));
     }
 
     public function export(Request $request, SalesLeadsExcelExportService $excel): StreamedResponse
@@ -71,8 +74,9 @@ class SalesLeadController extends Controller
     {
         $salesReps = User::salesEmployees()->where('is_active', true)->orderBy('name')->get();
         $categories = SalesLeadCategory::active()->ordered()->get();
+        $interestTypes = SalesInterestType::active()->ordered()->get();
 
-        return view('admin.sales.leads.create', compact('salesReps', 'categories'));
+        return view('admin.sales.leads.create', compact('salesReps', 'categories', 'interestTypes'));
     }
 
     public function store(Request $request)
@@ -214,7 +218,16 @@ class SalesLeadController extends Controller
 
     public function show(SalesLead $lead)
     {
-        $lead->load(['activities.user', 'assignee', 'creator', 'category']);
+        $lead->load([
+            'activities.user',
+            'assignee',
+            'creator',
+            'category',
+            'interestType',
+            'transfers.fromUser',
+            'transfers.toUser',
+            'transfers.transferredBy',
+        ]);
 
         SalesAuditService::log(
             'sales_lead_viewed_admin',
@@ -231,8 +244,9 @@ class SalesLeadController extends Controller
     {
         $salesReps = User::salesEmployees()->where('is_active', true)->orderBy('name')->get();
         $categories = SalesLeadCategory::active()->ordered()->get();
+        $interestTypes = SalesInterestType::active()->ordered()->get();
 
-        return view('admin.sales.leads.edit', compact('lead', 'salesReps', 'categories'));
+        return view('admin.sales.leads.edit', compact('lead', 'salesReps', 'categories', 'interestTypes'));
     }
 
     public function update(Request $request, SalesLead $lead)
@@ -242,20 +256,23 @@ class SalesLeadController extends Controller
         $before = $lead->only(array_merge(array_keys($validated), ['assigned_to']));
         $oldStage = $lead->stage;
         $oldAssignee = $lead->assigned_to;
+        $newAssignee = (int) $validated['assigned_to'];
 
-        $lead->update($validated);
+        $data = $validated;
+        unset($data['assigned_to']);
+        $lead->update($data);
 
         if ($request->filled('csat_rating')) {
             $lead->forceFill(['csat_recorded_at' => now()])->save();
         }
 
-        if ((int) $oldAssignee !== (int) $lead->assigned_to) {
-            SalesAuditService::log(
-                'sales_lead_reassigned',
-                $lead,
-                ['assigned_to' => $oldAssignee],
-                ['assigned_to' => $lead->assigned_to],
-                'إعادة إسناد عميل: ' . $lead->name
+        if ((int) $oldAssignee !== $newAssignee) {
+            app(SalesLeadTransferService::class)->assign(
+                $lead->fresh(),
+                $newAssignee,
+                Auth::user(),
+                'إعادة إسناد من لوحة الإدارة',
+                SalesLeadTransferService::SOURCE_MANUAL
             );
             app(SalesNotificationService::class)->notifyLeadAssigned($lead->fresh(['assignee', 'category']), (int) $oldAssignee);
         }
@@ -378,10 +395,13 @@ class SalesLeadController extends Controller
 
     private function indexQuery(Request $request): Builder
     {
-        $query = SalesLead::query()->with(['assignee', 'creator', 'category']);
+        $query = SalesLead::query()->with(['assignee', 'creator', 'category', 'interestType']);
 
         if ($request->filled('category_id')) {
             $query->where('category_id', $request->category_id);
+        }
+        if ($request->filled('interest_type_id')) {
+            $query->where('interest_type_id', $request->interest_type_id);
         }
         if ($request->filled('import_batch')) {
             $query->where('import_batch', $request->import_batch);
@@ -509,6 +529,7 @@ class SalesLeadController extends Controller
             'source' => 'required|string|in:' . implode(',', array_keys(SalesLead::SOURCES)),
             'stage' => 'required|string|in:' . implode(',', array_keys(SalesLead::STAGES)),
             'priority' => 'required|string|in:' . implode(',', array_keys(SalesLead::PRIORITIES)),
+            'interest_type_id' => 'required|exists:sales_interest_types,id',
             'interest' => 'nullable|string|max:2000',
             'course_type' => 'nullable|string|in:' . implode(',', array_keys(SalesLead::COURSE_TYPES)),
             'course_ref_id' => 'nullable|integer|min:1',

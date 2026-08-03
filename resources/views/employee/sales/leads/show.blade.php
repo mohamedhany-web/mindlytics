@@ -305,12 +305,21 @@
                         @endif
                     </div>
                 @endif
-                @if($lead->interest)
+                @if($lead->interestType || $lead->interest)
                     <div class="rounded-xl bg-amber-50/80 border border-amber-100 p-3">
-                        <p class="text-xs font-semibold text-amber-900 mb-1">الاهتمام</p>
-                        <p class="text-sm text-gray-800 whitespace-pre-wrap">{{ $lead->interest }}</p>
+                        <p class="text-xs font-semibold text-amber-900 mb-1">اهتمام العميل</p>
+                        @if($lead->interestType)
+                            <span class="inline-flex items-center rounded-lg px-2 py-0.5 text-[11px] font-bold text-white mb-1" style="background:{{ $lead->interestType->color }}">{{ $lead->interestType->name_ar }}</span>
+                        @endif
+                        @if($lead->interest)
+                            <p class="text-sm text-gray-800 whitespace-pre-wrap">{{ $lead->interest }}</p>
+                        @endif
+                        @if($lead->creator)
+                            <p class="text-[11px] text-slate-500 mt-1">سجّله: {{ $lead->creator->name }}</p>
+                        @endif
                     </div>
                 @endif
+                @include('sales._transfer_timeline', ['lead' => $lead])
                 @if($lead->notes)
                     <div class="rounded-xl bg-gray-50 border border-gray-100 p-3">
                         <p class="text-xs font-semibold text-gray-600 mb-1">ملاحظات</p>

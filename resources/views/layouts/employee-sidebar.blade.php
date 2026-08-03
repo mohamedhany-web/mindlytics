@@ -176,6 +176,18 @@
                 <i class="fas fa-user-plus text-base"></i>
                 <span>عملاء الفريق</span>
             </a>
+            <a href="{{ route('employee.sales-manager.distribution.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.distribution.*') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-share-alt text-base"></i>
+                <span>توزيع الاهتمام</span>
+            </a>
+            <a href="{{ route('employee.sales-manager.org-chart.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.org-chart.*') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-sitemap text-base"></i>
+                <span>هيكل الفريق</span>
+            </a>
             <a href="{{ route('employee.sales-manager.follow-ups.index') }}"
                class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.follow-ups.*') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
                @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">

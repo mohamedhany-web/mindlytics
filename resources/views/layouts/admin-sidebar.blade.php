@@ -214,6 +214,38 @@
                         </a>
                     </li>
                     <li>
+                        <a href="{{ route('admin.sales.interest-types.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.interest-types.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-heart w-4"></i>
+                            <span>أنواع الاهتمام</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.sales.specialties.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.specialties.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-user-graduate w-4"></i>
+                            <span>تخصصات السيلز</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.sales.distribution.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.distribution.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-share-alt w-4"></i>
+                            <span>لوحة التوزيع</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.sales.org-chart.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.org-chart.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-sitemap w-4"></i>
+                            <span>هيكل السيلز</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="{{ route('admin.sales.leads.import') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.leads.import*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">

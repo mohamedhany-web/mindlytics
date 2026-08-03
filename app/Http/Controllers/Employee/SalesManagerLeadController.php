@@ -97,6 +97,7 @@ class SalesManagerLeadController extends Controller
             'assignee:id,name,email,phone',
             'creator:id,name',
             'category',
+            'interestType',
             'group',
             'advancedCourse:id,title,price',
             'offlineCourse:id,title,price',

@@ -87,7 +87,18 @@ class SalesLeadController extends Controller
     public function show(SalesLead $lead)
     {
         $this->authorizeOwn($lead);
-        $lead->load(['activities.user', 'creator', 'category', 'advancedCourse', 'offlineCourse', 'legacyCourse']);
+        $lead->load([
+            'activities.user',
+            'creator',
+            'category',
+            'interestType',
+            'advancedCourse',
+            'offlineCourse',
+            'legacyCourse',
+            'transfers.fromUser',
+            'transfers.toUser',
+            'transfers.transferredBy',
+        ]);
 
         SalesAuditService::log(
             'sales_lead_viewed',
@@ -538,7 +549,17 @@ class SalesLeadController extends Controller
 
     private function indexQuery(Request $request): Builder
     {
-        $query = SalesLead::query()->forAssignee(Auth::id())->with(['assignee', 'category']);
+        $query = SalesLead::query()->forAssignee(Auth::id())->with([
+            'assignee',
+            'category',
+            'creator:id,name',
+            'interestType',
+            'transfers' => fn ($q) => $q->latest()->limit(1)->with('fromUser:id,name'),
+        ]);
+
+        if ($request->filled('interest_type_id')) {
+            $query->where('interest_type_id', $request->interest_type_id);
+        }
 
         if ($request->filled('import_batch')) {
             $query->where('import_batch', $request->import_batch);
@@ -668,6 +689,7 @@ class SalesLeadController extends Controller
             'source' => 'required|string|in:' . implode(',', array_keys(SalesLead::SOURCES)),
             'stage' => 'required|string|in:' . implode(',', array_keys(SalesLead::STAGES)),
             'priority' => 'required|string|in:' . implode(',', array_keys(SalesLead::PRIORITIES)),
+            'interest_type_id' => 'required|exists:sales_interest_types,id',
             'interest' => 'nullable|string|max:2000',
             'course_type' => 'nullable|string|in:' . implode(',', array_keys(SalesLead::COURSE_TYPES)),
             'course_ref_id' => 'nullable|integer|min:1',

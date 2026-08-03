@@ -19,7 +19,7 @@
         'normal' => ['label' => null, 'classes' => 'bg-slate-100 text-slate-700 border border-slate-200'],
     ];
 
-    $hasFilters = request()->hasAny(['assigned_to', 'stage', 'priority', 'follow_up', 'sort', 'stale', 'search', 'category_id', 'import_batch']);
+    $hasFilters = request()->hasAny(['assigned_to', 'stage', 'priority', 'follow_up', 'sort', 'stale', 'search', 'category_id', 'interest_type_id', 'import_batch']);
 @endphp
 
 <div class="space-y-6">
@@ -130,6 +130,15 @@
                             <option value="">الكل</option>
                             @foreach($categories as $cat)
                                 <option value="{{ $cat->id }}" @selected(request('category_id') == $cat->id)>{{ $cat->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">الاهتمام</label>
+                        <select name="interest_type_id" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                            <option value="">الكل</option>
+                            @foreach($interestTypes ?? [] as $itype)
+                                <option value="{{ $itype->id }}" @selected(request('interest_type_id') == $itype->id)>{{ $itype->name_ar }}</option>
                             @endforeach
                         </select>
                     </div>

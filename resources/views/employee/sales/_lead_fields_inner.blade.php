@@ -69,8 +69,18 @@
     <input type="datetime-local" name="next_follow_up_at" value="{{ old('next_follow_up_at', ($lead && $lead->next_follow_up_at) ? $lead->next_follow_up_at->format('Y-m-d\TH:i') : '') }}" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
     @error('next_follow_up_at')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
 </div>
+<div>
+    <label class="block text-sm font-medium text-gray-700 mb-1">اهتمام العميل <span class="text-red-500">*</span></label>
+    <select name="interest_type_id" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+        <option value="">— اختر الاهتمام —</option>
+        @foreach($interestTypes ?? \App\Models\SalesInterestType::active()->ordered()->get() as $itype)
+            <option value="{{ $itype->id }}" @selected(old('interest_type_id', $lead->interest_type_id ?? '') == $itype->id)>{{ $itype->name_ar }}</option>
+        @endforeach
+    </select>
+    @error('interest_type_id')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
+</div>
 <div class="md:col-span-2">
-    <label class="block text-sm font-medium text-gray-700 mb-1">اهتمام / منتج</label>
+    <label class="block text-sm font-medium text-gray-700 mb-1">تفاصيل الاهتمام / منتج (اختياري)</label>
     <textarea name="interest" rows="2" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">{{ old('interest', $lead->interest ?? '') }}</textarea>
 </div>
 <div class="md:col-span-2">

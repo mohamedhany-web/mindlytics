@@ -230,8 +230,18 @@
                         <a href="{{ route('employee.sales.leads.show', $lead) }}" class="font-semibold text-slate-900 hover:underline">
                             {{ $lead->name }}
                         </a>
+                        @if($lead->interestType)
+                            <span class="inline-flex mt-0.5 items-center rounded px-1.5 py-0.5 text-[10px] font-bold text-white" style="background:{{ $lead->interestType->color }}">{{ $lead->interestType->name_ar }}</span>
+                        @endif
                         @if($lead->category)
                             <span class="block text-[11px] text-slate-500 mt-0.5">{{ $lead->category->name }}</span>
+                        @endif
+                        @if($lead->creator)
+                            <span class="block text-[10px] text-slate-400">سجّله: {{ $lead->creator->name }}</span>
+                        @endif
+                        @php $lastTr = $lead->transfers->first(); @endphp
+                        @if($lastTr && $lastTr->fromUser)
+                            <span class="block text-[10px] text-sky-600">حُوّل من: {{ $lastTr->fromUser->name }}</span>
                         @endif
                         <span class="lg:hidden block text-[11px] text-slate-500">{{ \App\Models\SalesLead::stageLabel($lead->stage) }}</span>
                     </td>

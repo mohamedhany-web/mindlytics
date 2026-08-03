@@ -164,6 +164,7 @@ class SalesLead extends Model
         'stage_entered_at',
         'priority',
         'interest',
+        'interest_type_id',
         'course_type',
         'advanced_course_id',
         'offline_course_id',
@@ -251,6 +252,11 @@ class SalesLead extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(SalesLeadCategory::class, 'category_id');
+    }
+
+    public function interestType(): BelongsTo
+    {
+        return $this->belongsTo(SalesInterestType::class, 'interest_type_id');
     }
 
     public function group(): BelongsTo
