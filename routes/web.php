@@ -1054,6 +1054,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('distribution', [\App\Http\Controllers\Employee\SalesManagerDistributionController::class, 'index'])->name('distribution.index');
             Route::post('distribution/{lead}/assign', [\App\Http\Controllers\Employee\SalesManagerDistributionController::class, 'assign'])->name('distribution.assign');
             Route::get('org-chart', [\App\Http\Controllers\Employee\SalesManagerOrgChartController::class, 'index'])->name('org-chart.index');
+            Route::get('schedule-calendar', [\App\Http\Controllers\Employee\SalesManagerScheduleCalendarController::class, 'index'])->name('schedule-calendar.index');
             Route::get('follow-ups', [\App\Http\Controllers\Employee\SalesManagerFollowUpController::class, 'index'])->name('follow-ups.index');
             Route::get('transfer', [\App\Http\Controllers\Employee\SalesManagerTransferController::class, 'index'])->name('transfer.index');
             Route::post('transfer', [\App\Http\Controllers\Employee\SalesManagerTransferController::class, 'store'])->name('transfer.store');
@@ -1257,6 +1258,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('distribution/{lead}/assign', [\App\Http\Controllers\Admin\SalesDistributionController::class, 'assign'])->name('distribution.assign');
             Route::get('org-chart', [\App\Http\Controllers\Admin\SalesOrgChartController::class, 'index'])->name('org-chart.index');
             Route::put('org-chart/{user}', [\App\Http\Controllers\Admin\SalesOrgChartController::class, 'update'])->name('org-chart.update')->whereNumber('user');
+            Route::get('schedule-calendar', [\App\Http\Controllers\Admin\SalesScheduleCalendarController::class, 'index'])->name('schedule-calendar.index');
             Route::get('team-daily-reports', [\App\Http\Controllers\Admin\SalesTeamDailyReportController::class, 'index'])->name('team-daily-reports.index');
             Route::get('team-daily-reports/{teamDailyReport}', [\App\Http\Controllers\Admin\SalesTeamDailyReportController::class, 'show'])->name('team-daily-reports.show');
             Route::get('kpi', [\App\Http\Controllers\Admin\SalesKpiController::class, 'index'])->name('kpi.index');
