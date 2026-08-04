@@ -84,17 +84,20 @@
 
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
     {{-- نشاط اليوم --}}
-    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden h-full">
-        <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+    <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden h-full" id="day-activity">
+        <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
                 <i class="fas fa-bolt text-amber-500"></i>
                 نشاط اليوم
             </h3>
+            <span class="text-xs font-semibold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
+                {{ ($dayActivities ?? collect())->count() }} حركة
+            </span>
         </div>
         <div class="p-4">
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                 @foreach($activityStats as $stat)
-                    <div class="rounded-xl border border-slate-200 bg-white p-4">
+                    <a href="#day-activity-list" class="rounded-xl border border-slate-200 bg-white p-4 hover:border-sky-300 hover:shadow-sm transition-all block">
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-xs font-semibold text-slate-600">{{ $stat['label'] }}</p>
@@ -104,12 +107,67 @@
                                 <i class="{{ $stat['icon'] }} text-xs"></i>
                             </div>
                         </div>
-                    </div>
+                    </a>
                 @endforeach
             </div>
+
+            <div id="day-activity-list" class="rounded-xl border border-slate-200 overflow-hidden mb-4">
+                <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-700 flex items-center justify-between">
+                    <span>سجل الحركات — اضغط للدخول على بيانات العميل</span>
+                </div>
+                <div class="divide-y divide-slate-100 max-h-[28rem] overflow-y-auto">
+                    @forelse(($dayActivities ?? collect()) as $activity)
+                        @php
+                            $lead = $activity->lead;
+                            $leadUrl = $lead ? route('admin.sales.leads.show', $lead) : null;
+                        @endphp
+                        <div class="px-3 py-3 hover:bg-sky-50/40 transition-colors flex gap-3 items-start">
+                            <div class="w-9 h-9 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center flex-shrink-0 text-xs font-bold tabular-nums">
+                                {{ $activity->created_at?->format('H:i') }}
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-bold text-slate-900">
+                                    {{ \App\Models\SalesActivity::typeLabel($activity->type) }}
+                                    @if($activity->title)
+                                        <span class="font-semibold text-slate-600">— {{ $activity->title }}</span>
+                                    @endif
+                                </p>
+                                @if($lead && $leadUrl)
+                                    <a href="{{ $leadUrl }}" class="inline-flex items-center gap-1.5 mt-1 text-sm font-semibold text-emerald-700 hover:text-emerald-900 hover:underline">
+                                        <i class="fas fa-external-link-alt text-[10px]"></i>
+                                        {{ $lead->name }}
+                                        @if($lead->phone)
+                                            <span class="text-slate-500 font-medium text-xs">({{ $lead->phone }})</span>
+                                        @endif
+                                    </a>
+                                    <p class="text-[11px] text-slate-500 mt-0.5">المرحلة: {{ \App\Models\SalesLead::stageLabel($lead->stage) }}</p>
+                                @else
+                                    <p class="text-xs text-slate-500 mt-1">بدون عميل مرتبط</p>
+                                @endif
+                                @if($activity->body)
+                                    <p class="text-xs text-slate-600 mt-1 line-clamp-2">{{ $activity->body }}</p>
+                                @endif
+                            </div>
+                            @if($leadUrl)
+                                <a href="{{ $leadUrl }}" class="inline-flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1.5 text-[11px] font-semibold text-white flex-shrink-0">
+                                    فتح
+                                </a>
+                            @endif
+                        </div>
+                    @empty
+                        <div class="px-4 py-8 text-center text-sm text-slate-500">
+                            لا توجد حركات مسجّلة في النظام لهذا اليوم.
+                            @if($report->activity_notes)
+                                <p class="text-xs mt-1">الملاحظات النصية موجودة بالأسفل.</p>
+                            @endif
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+
             @if($report->activity_notes)
                 <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                    <p class="text-xs font-semibold text-slate-600 mb-1">ملاحظات النشاط</p>
+                    <p class="text-xs font-semibold text-slate-600 mb-1">ملاحظات النشاط (نص)</p>
                     <p class="text-sm text-slate-700 whitespace-pre-wrap">{{ $report->activity_notes }}</p>
                 </div>
             @endif
@@ -161,9 +219,9 @@
         </div>
         <div class="divide-y divide-slate-100">
             @forelse($report->contacts as $c)
-                <div class="p-4 sm:p-5">
+                <div class="p-4 sm:p-5 hover:bg-slate-50/60 transition-colors">
                     <div class="flex flex-wrap items-start justify-between gap-2 mb-3">
-                        <div>
+                        <div class="min-w-0">
                             <p class="text-sm font-bold text-slate-900">
                                 {{ $c->interactionTypeLabel() }}
                                 @if($c->contact_name || $c->contact_phone)
@@ -174,12 +232,20 @@
                                 @endif
                             </p>
                             @if($c->lead)
-                                <p class="text-xs text-emerald-700 mt-1">
-                                    <i class="fas fa-user-tag ml-0.5"></i>
-                                    Lead: {{ $c->lead->name }}
-                                </p>
+                                <a href="{{ route('admin.sales.leads.show', $c->lead) }}"
+                                   class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-900 hover:underline mt-1.5">
+                                    <i class="fas fa-user-tag"></i>
+                                    فتح بيانات العميل: {{ $c->lead->name }}
+                                    <i class="fas fa-external-link-alt text-[9px]"></i>
+                                </a>
                             @endif
                         </div>
+                        @if($c->lead)
+                            <a href="{{ route('admin.sales.leads.show', $c->lead) }}"
+                               class="inline-flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white">
+                                التفاصيل
+                            </a>
+                        @endif
                     </div>
                     <dl class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                         <div class="rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2">

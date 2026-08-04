@@ -47,8 +47,11 @@ class SalesDailyReportController extends Controller
         $kpiComparison = $report->user
             ? $service->kpiComparisonForReport($report->user, $report, $report->report_date)
             : null;
+        $dayActivities = $report->user
+            ? $service->activitiesForUserOnDate($report->user, $report->report_date)
+            : collect();
 
-        return view('admin.sales.daily-reports.show', compact('report', 'kpiComparison'));
+        return view('admin.sales.daily-reports.show', compact('report', 'kpiComparison', 'dayActivities'));
     }
 
     public function export(Request $request, SalesDailyReportService $service, SalesDailyReportsExcelExportService $excel): StreamedResponse

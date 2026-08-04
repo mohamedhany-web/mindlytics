@@ -230,6 +230,24 @@ class SalesDailyReportService
     }
 
     /**
+     * أنشطة الموظف في يوم التقرير — للعرض القابل للتنقّل من لوحة الإدارة.
+     *
+     * @return \Illuminate\Support\Collection<int, SalesActivity>
+     */
+    public function activitiesForUserOnDate(User $user, Carbon $date): Collection
+    {
+        $start = $date->copy()->startOfDay();
+        $end = $date->copy()->endOfDay();
+
+        return SalesActivity::query()
+            ->where('user_id', $user->id)
+            ->whereBetween('created_at', [$start, $end])
+            ->with(['lead' => fn ($q) => $q->withTrashed()->select('id', 'name', 'phone', 'stage', 'assigned_to')])
+            ->orderByDesc('created_at')
+            ->get();
+    }
+
+    /**
      * يبني مسودة التقرير من نشاط الموظف (مكالمات، واتساب، متابعات، تغيير مراحل…).
      *
      * @return array{
@@ -242,15 +260,7 @@ class SalesDailyReportService
      */
     public function buildFromActivities(User $user, Carbon $date): array
     {
-        $start = $date->copy()->startOfDay();
-        $end = $date->copy()->endOfDay();
-
-        $activities = SalesActivity::query()
-            ->where('user_id', $user->id)
-            ->whereBetween('created_at', [$start, $end])
-            ->with(['lead' => fn ($q) => $q->withTrashed()])
-            ->orderBy('created_at')
-            ->get();
+        $activities = $this->activitiesForUserOnDate($user, $date)->sortBy('created_at')->values();
 
         $calls = $activities->where('type', 'call');
         $meetings = $activities->where('type', 'meeting');
