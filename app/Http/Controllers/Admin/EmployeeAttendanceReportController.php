@@ -121,6 +121,7 @@ class EmployeeAttendanceReportController extends Controller
             'incomplete_penalty_title' => 'required|string|max:255',
             'penalty_type' => 'required|in:tax,insurance,loan,penalty,other',
             'penalty_status' => 'required|in:pending,applied,cancelled',
+            'penalty_effective_from' => 'nullable|date',
         ]);
 
         EmployeeAttendanceSettings::save([
@@ -137,6 +138,7 @@ class EmployeeAttendanceReportController extends Controller
             'incomplete_penalty_title' => $validated['incomplete_penalty_title'],
             'penalty_type' => $validated['penalty_type'],
             'penalty_status' => $validated['penalty_status'],
+            'penalty_effective_from' => $validated['penalty_effective_from'] ?? null,
         ]);
 
         return back()->with('success', 'تم حفظ إعدادات خصومات الحضور.');

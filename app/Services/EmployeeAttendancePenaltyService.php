@@ -8,6 +8,7 @@ use App\Models\EmployeeSalaryDeduction;
 use App\Models\Notification;
 use App\Models\User;
 use App\Support\EmployeeAttendanceSettings;
+use App\Support\PenaltyWindow;
 use Carbon\Carbon;
 
 class EmployeeAttendancePenaltyService
@@ -24,6 +25,10 @@ class EmployeeAttendancePenaltyService
             || $record->late_deduction_id
             || $record->late_penalty_waived
         ) {
+            return null;
+        }
+
+        if (! $this->recordIsWithinEmployment($record)) {
             return null;
         }
 
@@ -68,6 +73,10 @@ class EmployeeAttendancePenaltyService
     public function applyAbsencePenalty(User $employee, Carbon $date): ?EmployeeSalaryDeduction
     {
         if (! EmployeeAttendanceSettings::absencePenaltyEnabled()) {
+            return null;
+        }
+
+        if (! PenaltyWindow::isChargeable(PenaltyWindow::ATTENDANCE, $employee, $date)) {
             return null;
         }
 
@@ -119,6 +128,10 @@ class EmployeeAttendancePenaltyService
             return null;
         }
 
+        if (! $this->recordIsWithinEmployment($record)) {
+            return null;
+        }
+
         $deduction = $this->createDeduction(
             $record->user ?? $record->user()->first(),
             Carbon::parse($record->work_date),
@@ -150,6 +163,10 @@ class EmployeeAttendancePenaltyService
             ->filter(fn (User $employee) => $employee->isSubjectToWorkSchedule());
 
         foreach ($employees as $employee) {
+            if (! PenaltyWindow::isChargeable(PenaltyWindow::ATTENDANCE, $employee, $date)) {
+                continue;
+            }
+
             if ($deduction = $this->applyAbsencePenalty($employee, $date)) {
                 $counts['absence']++;
             }
@@ -193,6 +210,10 @@ class EmployeeAttendancePenaltyService
             return null;
         }
 
+        if (! $this->recordIsWithinEmployment($record)) {
+            return null;
+        }
+
         $daily = \App\Models\EmployeePresenceDaily::query()
             ->where('user_id', $record->user_id)
             ->whereDate('work_date', $record->work_date)
@@ -217,6 +238,18 @@ class EmployeeAttendancePenaltyService
         $this->notifyEmployee($record->user, $deduction, 'انقطاع عن النظام');
 
         return $deduction;
+    }
+
+    private function recordIsWithinEmployment(EmployeeAttendanceRecord $record): bool
+    {
+        $employee = $record->user ?? $record->user()->first();
+
+        return $employee instanceof User
+            && PenaltyWindow::isChargeable(
+                PenaltyWindow::ATTENDANCE,
+                $employee,
+                Carbon::parse($record->work_date)
+            );
     }
 
     private function createDeduction(User $employee, Carbon $date, float $amount, string $title, string $description): EmployeeSalaryDeduction

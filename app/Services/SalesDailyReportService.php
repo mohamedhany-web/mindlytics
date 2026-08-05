@@ -9,6 +9,7 @@ use App\Models\SalesDailyReport;
 use App\Models\SalesDailyReportContact;
 use App\Models\SalesLead;
 use App\Models\User;
+use App\Support\PenaltyWindow;
 use App\Support\SalesDailyReportSettings;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -210,6 +211,10 @@ class SalesDailyReportService
      */
     public function isWorkDay(Carbon $date, ?User $employee = null): bool
     {
+        if ($employee && ! $employee->isEmployedOn($date)) {
+            return false;
+        }
+
         if (! SalesDailyReportSettings::all()['work_days_only']) {
             return true;
         }
@@ -296,10 +301,10 @@ class SalesDailyReportService
             $numbersWorked = $touchedLeadIds->count();
         }
 
+        // موحّد مع SalesDailyResultService / SalesActivity::ANSWERED_OUTCOMES
         $callsAnswered = $activities
-            ->whereIn('type', ['call', 'whatsapp'])
-            ->filter(fn (SalesActivity $a) => $a->lead && $a->lead->source === 'call')
-            ->unique('sales_lead_id')
+            ->where('type', 'call')
+            ->filter(fn (SalesActivity $a) => $a->sales_lead_id && $a->isAnsweredCall())
             ->count();
 
         $metrics = [
@@ -631,6 +636,11 @@ class SalesDailyReportService
         $cursor = $start->copy()->startOfDay();
         $endDay = $end->copy()->endOfDay();
 
+        // الأيام التي لم تأتِ بعد لا تُحتسب ضمن نسبة التسليم.
+        if ($endDay->gt(now())) {
+            $endDay = now()->endOfDay();
+        }
+
         while ($cursor->lte($endDay)) {
             if ($this->isWorkDay($cursor, $employee)) {
                 $workDays++;
@@ -662,6 +672,10 @@ class SalesDailyReportService
         }
 
         if (! $this->isWorkDay($date, $employee)) {
+            return null;
+        }
+
+        if (! PenaltyWindow::isChargeable(PenaltyWindow::SALES_DAILY_REPORT, $employee, $date)) {
             return null;
         }
 
@@ -753,18 +767,21 @@ class SalesDailyReportService
 
         $employees = $employees ?? User::salesEmployees()->where('is_active', true)->get();
         $count = 0;
-        $cursor = $from->copy()->startOfDay();
         $end = $to->copy()->startOfDay();
 
-        while ($cursor->lte($end)) {
-            if ($this->isPenaltyDueForDate($cursor)) {
-                foreach ($employees as $employee) {
-                    if ($this->applyPenaltyForDate($employee, $cursor)) {
-                        $count++;
-                    }
+        foreach ($employees as $employee) {
+            $cursor = PenaltyWindow::earliestChargeableDate(
+                PenaltyWindow::SALES_DAILY_REPORT,
+                $employee,
+                $from
+            );
+
+            while ($cursor->lte($end)) {
+                if ($this->isPenaltyDueForDate($cursor) && $this->applyPenaltyForDate($employee, $cursor)) {
+                    $count++;
                 }
+                $cursor->addDay();
             }
-            $cursor->addDay();
         }
 
         return $count;

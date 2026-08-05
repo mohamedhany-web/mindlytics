@@ -101,6 +101,7 @@ class EmployeeDailyReportAdminController extends Controller
             'penalty_amount' => 'nullable|numeric|min:0',
             'work_days_only' => 'nullable|boolean',
             'exclude_sales_employees' => 'nullable|boolean',
+            'penalty_effective_from' => 'nullable|date',
         ]);
 
         EmployeeDailyReportSettings::save([
@@ -109,6 +110,7 @@ class EmployeeDailyReportAdminController extends Controller
             'penalty_amount' => (float) ($validated['penalty_amount'] ?? EmployeeDailyReportSettings::penaltyAmount()),
             'work_days_only' => $request->boolean('work_days_only'),
             'exclude_sales_employees' => $request->boolean('exclude_sales_employees'),
+            'penalty_effective_from' => $validated['penalty_effective_from'] ?? null,
         ]);
 
         return back()->with('success', 'تم حفظ إعدادات التقارير اليومية.');

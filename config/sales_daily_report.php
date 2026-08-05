@@ -13,6 +13,8 @@ return [
     'penalty_description' => 'خصم تلقائي لعدم تسليم التقرير اليومي الإلزامي قبل نهاية اليوم.',
     'penalty_type' => 'penalty',
     'penalty_status' => 'applied',
+    /** لا تُحتسب أي غرامة لتاريخ أقدم من هذا اليوم (Y-m-d) — يمنع الخصم بأثر رجعي */
+    'penalty_effective_from' => null,
     /** نسبة أيام التقارير المسلّمة المطلوبة شهرياً (عمود الالتزام في KPI) */
     'kpi_submission_target_pct' => 95,
     /** تذكير قبل موعد التسليم (دقائق) */

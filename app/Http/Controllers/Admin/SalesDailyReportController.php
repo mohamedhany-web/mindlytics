@@ -104,6 +104,7 @@ class SalesDailyReportController extends Controller
             'penalty_type' => 'required|in:tax,insurance,loan,penalty,other',
             'penalty_status' => 'required|in:pending,applied,cancelled',
             'kpi_submission_target_pct' => 'required|numeric|min:50|max:100',
+            'penalty_effective_from' => 'nullable|date',
         ]);
 
         SalesDailyReportSettings::save([
@@ -117,6 +118,7 @@ class SalesDailyReportController extends Controller
             'penalty_type' => $validated['penalty_type'],
             'penalty_status' => $validated['penalty_status'],
             'kpi_submission_target_pct' => (float) $validated['kpi_submission_target_pct'],
+            'penalty_effective_from' => $validated['penalty_effective_from'] ?? null,
         ]);
 
         return redirect()->route('admin.sales.daily-reports.settings')

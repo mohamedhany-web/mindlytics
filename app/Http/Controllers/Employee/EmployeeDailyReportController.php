@@ -21,7 +21,7 @@ class EmployeeDailyReportController extends Controller
             : now()->startOfDay();
 
         $service->applyDuePenaltiesInRange(
-            now()->subDays(30)->startOfDay(),
+            now()->subDays(3)->startOfDay(),
             now()->startOfDay(),
             collect([$user])
         );

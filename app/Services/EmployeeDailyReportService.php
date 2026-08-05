@@ -7,6 +7,7 @@ use App\Models\EmployeeSalaryDeduction;
 use App\Models\Notification;
 use App\Models\User;
 use App\Support\EmployeeDailyReportSettings;
+use App\Support\PenaltyWindow;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -104,6 +105,10 @@ class EmployeeDailyReportService
             return null;
         }
 
+        if (! PenaltyWindow::isChargeable(PenaltyWindow::EMPLOYEE_DAILY_REPORT, $employee, $date)) {
+            return null;
+        }
+
         $report = EmployeeDailyReport::forUser($employee->id)
             ->whereDate('report_date', $date)
             ->first();
@@ -184,18 +189,21 @@ class EmployeeDailyReportService
 
         $employees = $employees ?? User::employees()->where('is_active', true)->get();
         $count = 0;
-        $cursor = $from->copy()->startOfDay();
         $end = $to->copy()->startOfDay();
 
-        while ($cursor->lte($end)) {
-            if ($this->isPenaltyDueForDate($cursor)) {
-                foreach ($employees as $employee) {
-                    if ($this->applyPenaltyForDate($employee, $cursor)) {
-                        $count++;
-                    }
+        foreach ($employees as $employee) {
+            $cursor = PenaltyWindow::earliestChargeableDate(
+                PenaltyWindow::EMPLOYEE_DAILY_REPORT,
+                $employee,
+                $from
+            );
+
+            while ($cursor->lte($end)) {
+                if ($this->isPenaltyDueForDate($cursor) && $this->applyPenaltyForDate($employee, $cursor)) {
+                    $count++;
                 }
+                $cursor->addDay();
             }
-            $cursor->addDay();
         }
 
         return $count;

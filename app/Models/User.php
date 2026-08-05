@@ -1285,11 +1285,36 @@ class User extends Authenticatable
     }
 
     /**
+     * هل كان الموظف على رأس العمل في هذا التاريخ؟
+     * تمنع احتساب أي التزامات أو خصومات قبل تاريخ التعيين أو بعد إنهاء الخدمة.
+     */
+    public function isEmployedOn(\Carbon\Carbon $date): bool
+    {
+        $day = $date->copy()->startOfDay();
+
+        $hireDate = $this->hire_date ? \Carbon\Carbon::parse($this->hire_date)->startOfDay() : null;
+        if ($hireDate && $day->lt($hireDate)) {
+            return false;
+        }
+
+        $terminationDate = $this->termination_date
+            ? \Carbon\Carbon::parse($this->termination_date)->startOfDay()
+            : null;
+        if ($terminationDate && $day->gt($terminationDate)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
      * هل يُطلَب من الموظف تقرير يومي في هذا التاريخ؟
      */
     public function requiresDailyReportOn(\Carbon\Carbon $date): bool
     {
-        return ! $this->isWeeklyOff($date) && ! $this->isOnApprovedLeave($date);
+        return $this->isEmployedOn($date)
+            && ! $this->isWeeklyOff($date)
+            && ! $this->isOnApprovedLeave($date);
     }
 
     /**

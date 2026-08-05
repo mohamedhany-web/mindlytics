@@ -14,6 +14,8 @@ return [
     'penalty_type' => 'penalty',
     'penalty_status' => 'applied',
     'notify_employee' => true,
+    /** لا تُحتسب أي غرامة لتاريخ أقدم من هذا اليوم (Y-m-d) — يمنع الخصم بأثر رجعي */
+    'penalty_effective_from' => null,
 
     /** قفل النظام + حضور/انصراف + خصومات الحضور — لموظفي المبيعات فقط */
     'sales_employees_only' => true,

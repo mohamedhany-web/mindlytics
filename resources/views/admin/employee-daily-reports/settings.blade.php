@@ -16,6 +16,11 @@
             <label class="block text-sm font-semibold mb-1">مبلغ الغرامة (ج.م)</label>
             <input type="number" name="penalty_amount" step="0.01" min="0" value="{{ $settings['penalty_amount'] ?? 50 }}" class="w-full rounded-xl border px-3 py-2 text-sm">
         </div>
+        <div>
+            <label class="block text-sm font-semibold mb-1">سريان الغرامة اعتباراً من</label>
+            <input type="date" name="penalty_effective_from" value="{{ $settings['penalty_effective_from'] ?? '' }}" class="w-full rounded-xl border px-3 py-2 text-sm">
+            <p class="text-xs text-slate-500 mt-1">اتركه فارغاً للاعتماد على تاريخ تعيين كل موظف. لن تُحتسب غرامة عن أي يوم قبل هذا التاريخ.</p>
+        </div>
         <button type="submit" class="px-6 py-2.5 bg-sky-600 text-white rounded-xl font-semibold text-sm">حفظ</button>
     </form>
 </div>

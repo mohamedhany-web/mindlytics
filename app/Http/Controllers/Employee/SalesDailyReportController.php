@@ -45,7 +45,7 @@ class SalesDailyReportController extends Controller
         }
 
         $service->applyDuePenaltiesInRange(
-            now()->subDays(30)->startOfDay(),
+            now()->subDays(3)->startOfDay(),
             now()->startOfDay(),
             collect([$user])
         );
