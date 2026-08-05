@@ -1045,6 +1045,13 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/', [\App\Http\Controllers\Employee\SalesManagerDashboardController::class, 'index'])->name('dashboard');
             Route::get('live-board', [\App\Http\Controllers\Employee\SalesManagerLiveBoardController::class, 'index'])->name('live-board');
             Route::get('pipeline', [\App\Http\Controllers\Employee\SalesManagerPipelineController::class, 'index'])->name('pipeline');
+            Route::get('kpi', [\App\Http\Controllers\Employee\SalesManagerKpiController::class, 'index'])->name('kpi.index');
+            Route::get('scorecard', [\App\Http\Controllers\Employee\SalesManagerScorecardController::class, 'index'])->name('scorecard.index');
+            Route::get('scorecard/pdf', [\App\Http\Controllers\Employee\SalesManagerScorecardController::class, 'exportPdf'])->name('scorecard.pdf');
+            Route::get('scorecard/excel', [\App\Http\Controllers\Employee\SalesManagerScorecardController::class, 'exportExcel'])->name('scorecard.excel');
+            Route::get('scorecard/{employee}', [\App\Http\Controllers\Employee\SalesManagerScorecardController::class, 'show'])->name('scorecard.show');
+            Route::post('scorecard/{employee}/review', [\App\Http\Controllers\Employee\SalesManagerScorecardController::class, 'review'])->name('scorecard.review');
+            Route::get('scorecard/{employee}/pdf', [\App\Http\Controllers\Employee\SalesManagerScorecardController::class, 'exportEmployeePdf'])->name('scorecard.employee.pdf');
             Route::get('team/{employee}', [\App\Http\Controllers\Employee\SalesManagerTeamController::class, 'show'])->name('team.show');
             Route::get('team/{employee}/report', [\App\Http\Controllers\Employee\SalesManagerTeamController::class, 'report'])->name('team.report');
             Route::get('team/{employee}/report/pdf', [\App\Http\Controllers\Employee\SalesManagerTeamController::class, 'reportPdf'])->name('team.report.pdf');

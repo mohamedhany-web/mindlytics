@@ -112,9 +112,11 @@ class SalesDailyResultService
      */
     public function metricsFor(int $userId, Carbon $from, Carbon $to): array
     {
+        // CRM verified: نشاط مرتبط بعميل (sales_lead_id) ومسجّل باسم الموظف.
         $callsQ = SalesActivity::query()
             ->where('user_id', $userId)
             ->where('type', 'call')
+            ->whereNotNull('sales_lead_id')
             ->whereBetween('created_at', [$from, $to]);
 
         $callAttempts = (clone $callsQ)->count();
@@ -126,6 +128,7 @@ class SalesDailyResultService
         $qualifiedFromStage = (int) SalesActivity::query()
             ->where('user_id', $userId)
             ->where('type', 'stage_change')
+            ->whereNotNull('sales_lead_id')
             ->whereBetween('created_at', [$from, $to])
             ->get()
             ->filter(fn (SalesActivity $a) => in_array($a->meta['to'] ?? null, ['qualification', 'qualified'], true))
@@ -141,12 +144,14 @@ class SalesDailyResultService
         $meetings = SalesActivity::query()
             ->where('user_id', $userId)
             ->where('type', 'meeting')
+            ->whereNotNull('sales_lead_id')
             ->whereBetween('created_at', [$from, $to])
             ->count();
 
         $proposals = SalesActivity::query()
             ->where('user_id', $userId)
             ->where('type', 'stage_change')
+            ->whereNotNull('sales_lead_id')
             ->whereBetween('created_at', [$from, $to])
             ->get()
             ->filter(fn (SalesActivity $a) => in_array($a->meta['to'] ?? null, ['offer_sent', 'proposal'], true))

@@ -45,7 +45,7 @@ class SalesKpiService
         $w = $this->metricsBucket($rep->id, $weekStart, $weekEnd);
         $m = $this->metricsBucket($rep->id, $monthStart, $monthEnd);
 
-        $monthlyScores = $this->scoreMonthlyPillars($rep->id, $monthStart, $monthEnd, $targets);
+        $monthlyScores = $this->scoreMonthlyPillars($rep->id, $monthStart, $monthEnd, $targets, $ref);
         $weights = config('sales_kpi.weights', []);
 
         $weightedTotal = 0.0;
@@ -90,6 +90,27 @@ class SalesKpiService
                 'avg_response_minutes' => $report['month']['avg_response_minutes'] ?? null,
             ];
         }
+
+        return $rows;
+    }
+
+    /**
+     * تقرير KPI لفترة محددة لكل عضو في الفريق — لمتابعة مدير المبيعات اليومية.
+     *
+     * @param  iterable<int, User>  $reps
+     * @return list<array{user: User, report: array<string, mixed>}>
+     */
+    public function teamOverview(iterable $reps, Carbon $start, Carbon $end): array
+    {
+        $rows = [];
+        foreach ($reps as $rep) {
+            $rows[] = [
+                'user' => $rep,
+                'report' => $this->buildPeriodReport($rep, $start, $end),
+            ];
+        }
+
+        usort($rows, fn ($a, $b) => $b['report']['composite'] <=> $a['report']['composite']);
 
         return $rows;
     }
@@ -171,9 +192,10 @@ class SalesKpiService
 
         $avgDeal = $wonClosed > 0 ? round($revenue / $wonClosed, 2) : null;
 
+        // نشاط موثّق: باسم الموظف ومرتبط بعميل — لا يختفي بعد نقل Lead لاحقاً.
         $activityQ = SalesActivity::query()
             ->where('user_id', $userId)
-            ->whereHas('lead', fn ($q) => $q->where('assigned_to', $userId))
+            ->whereNotNull('sales_lead_id')
             ->whereBetween('created_at', [$start, $end]);
 
         $calls = (clone $activityQ)->where('type', 'call')->count();
@@ -221,14 +243,14 @@ class SalesKpiService
 
         $distinctDays = SalesActivity::query()
             ->where('user_id', $userId)
-            ->whereHas('lead', fn ($q) => $q->where('assigned_to', $userId))
+            ->whereNotNull('sales_lead_id')
             ->whereBetween('created_at', [$start, $end])
             ->selectRaw('DATE(created_at) as d')
             ->distinct()
             ->pluck('d')
             ->count();
 
-        $workingDaysApprox = max(1, min($daysInRange, 31));
+        $workingDaysApprox = $this->workingDaysInRange($userId, $start, $end);
         $engagementPct = min(100.0, round($distinctDays / $workingDaysApprox * 100, 1));
 
         $dailyReportPct = app(SalesDailyReportService::class)->submissionRatePct($userId, $start, $end);
@@ -261,6 +283,31 @@ class SalesKpiService
             'stale_open_leads' => $staleCount,
             'overdue_followups' => $overdueFollowups,
         ];
+    }
+
+    /**
+     * أيام العمل الفعلية المنقضية داخل الفترة — تستبعد ما قبل التعيين وأيام الراحة والمستقبل.
+     */
+    private function workingDaysInRange(int $userId, Carbon $start, Carbon $end): int
+    {
+        $user = User::find($userId);
+
+        $cursor = $start->copy()->startOfDay();
+        $last = $end->copy()->startOfDay();
+        $today = Carbon::now()->startOfDay();
+        if ($last->gt($today)) {
+            $last = $today;
+        }
+
+        $days = 0;
+        while ($cursor->lte($last)) {
+            if (! $user || ($user->isEmployedOn($cursor) && ! $user->isWeeklyOff($cursor))) {
+                $days++;
+            }
+            $cursor->addDay();
+        }
+
+        return max(1, $days);
     }
 
     private function staleOpenCount(int $userId): int
@@ -369,13 +416,20 @@ class SalesKpiService
      * @param  array<string, mixed>  $t
      * @return array{pillars: array<string, array{score: float, label: string}>, lines: array<string, array<string, mixed>>}
      */
-    private function scoreMonthlyPillars(int $userId, Carbon $monthStart, Carbon $monthEnd, array $t): array
+    private function scoreMonthlyPillars(int $userId, Carbon $monthStart, Carbon $monthEnd, array $t, ?Carbon $reference = null): array
     {
         $m = $this->metricsBucket($userId, $monthStart, $monthEnd);
         $dim = (int) $monthStart->daysInMonth;
-        $activityDaysFactor = max(1, (int) round($dim * 22 / 30));
 
-        return $this->pillarLinesFromMetrics($m, $t, $activityDaysFactor, 1.0);
+        // شهر جارٍ: تُقاس النتائج مقابل الأيام المنقضية فقط، لا مقابل الشهر كاملاً.
+        $ref = ($reference ?? Carbon::now())->copy()->startOfDay();
+        $elapsedDays = $ref->betweenIncluded($monthStart->copy()->startOfDay(), $monthEnd->copy()->startOfDay())
+            ? max(1, (int) $monthStart->copy()->startOfDay()->diffInDays($ref) + 1)
+            : $dim;
+
+        $activityDaysFactor = max(1, (int) round($elapsedDays * 22 / 30));
+
+        return $this->pillarLinesFromMetrics($m, $t, $activityDaysFactor, $elapsedDays / $dim);
     }
 
     /**
