@@ -33,6 +33,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // File Upload Security - حماية رفع الملفات
         $middleware->appendToGroup('web', \App\Http\Middleware\FileUploadSecurityMiddleware::class);
         
+        $middleware->appendToGroup('web', \App\Http\Middleware\RecordMarketingRegionVisit::class);
+
         // إضافة Middleware مراقبة الأنشطة لجميع الطلبات
         $middleware->append(\App\Http\Middleware\LogActivityMiddleware::class);
         

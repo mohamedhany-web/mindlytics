@@ -2257,6 +2257,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('marketing-web-analytics', [\App\Http\Controllers\Admin\MarketingWebAnalyticsController::class, 'edit'])->name('marketing-web-analytics.settings');
         Route::put('marketing-web-analytics', [\App\Http\Controllers\Admin\MarketingWebAnalyticsController::class, 'update'])->name('marketing-web-analytics.settings.update');
 
+        Route::get('marketing-regions', [\App\Http\Controllers\Admin\MarketingRegionsController::class, 'index'])->name('marketing-regions.index');
+
         Route::prefix('meta-ads')->name('meta-ads.')->group(function () {
             Route::get('settings', [\App\Http\Controllers\Admin\MetaAdsSettingsController::class, 'edit'])->name('settings');
             Route::put('settings', [\App\Http\Controllers\Admin\MetaAdsSettingsController::class, 'update'])->name('settings.update');
