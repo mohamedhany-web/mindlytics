@@ -1280,6 +1280,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::put('course-commission-agreements/{agreement}', [\App\Http\Controllers\Admin\SalesCourseCommissionAgreementController::class, 'update'])->name('course-commission-agreements.update');
             Route::delete('course-commission-agreements/{agreement}', [\App\Http\Controllers\Admin\SalesCourseCommissionAgreementController::class, 'destroy'])->name('course-commission-agreements.destroy');
             Route::get('insights', [\App\Http\Controllers\Admin\SalesInsightsController::class, 'index'])->name('insights.index');
+            Route::get('crm-compliance', [\App\Http\Controllers\Admin\SalesCrmComplianceController::class, 'index'])->name('crm-compliance.index');
+            Route::get('crm-compliance/employees/{employee}', [\App\Http\Controllers\Admin\SalesCrmComplianceController::class, 'show'])->name('crm-compliance.show')->whereNumber('employee');
+            Route::get('crm-compliance/leads/{lead}', [\App\Http\Controllers\Admin\SalesCrmComplianceController::class, 'lead'])->name('crm-compliance.lead')->whereNumber('lead');
             Route::get('commissions', [\App\Http\Controllers\Admin\SalesCommissionController::class, 'index'])->name('commissions.index');
             Route::get('commissions/{user}', [\App\Http\Controllers\Admin\SalesCommissionController::class, 'show'])->name('commissions.show')->whereNumber('user');
             Route::post('commissions/{user}/settle', [\App\Http\Controllers\Admin\SalesCommissionController::class, 'settle'])->name('commissions.settle')->whereNumber('user');
