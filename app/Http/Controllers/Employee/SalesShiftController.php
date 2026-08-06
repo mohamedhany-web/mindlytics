@@ -18,7 +18,7 @@ class SalesShiftController extends Controller
     {
         $user = Auth::user();
         $weekStart = $shifts->resolveWeekStart($request->query('week'));
-        $board = $shifts->buildWeekBoard(null, $weekStart, $user->id);
+        $board = $shifts->buildWeekBoard(null, $weekStart, $user->id, [(int) $user->id]);
 
         $swaps = SalesShiftSwapRequest::query()
             ->where(function ($q) use ($user) {

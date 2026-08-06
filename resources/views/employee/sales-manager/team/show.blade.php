@@ -101,6 +101,60 @@
         </div>
     </section>
 
+    @php
+        $tm = $todayActivity['metrics'] ?? [];
+        $fmtDur = function (?int $sec) {
+            if (! $sec) return '—';
+            return sprintf('%d:%02d', intdiv($sec, 60), $sec % 60);
+        };
+    @endphp
+    <section class="rounded-2xl bg-white border border-violet-200 shadow-sm overflow-hidden">
+        <div class="px-4 sm:px-5 py-3 border-b border-violet-100 bg-violet-50/60 flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <i class="fas fa-bolt text-violet-600"></i>
+                Today's Activity
+            </h2>
+            @if(($todayActivity['shift']['current'] ?? null))
+                <span class="text-[11px] font-semibold text-violet-800">
+                    الآن: {{ $todayActivity['shift']['current']['channels_label'] }}
+                </span>
+            @endif
+        </div>
+        <div class="p-4 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
+            @foreach([
+                ['Calls', $tm['calls'] ?? 0],
+                ['Answered', $tm['answered'] ?? 0],
+                ['Qualified', $tm['qualified'] ?? 0],
+                ['Meetings', $tm['meetings'] ?? 0],
+                ['Proposals', $tm['proposals'] ?? 0],
+                ['Closed', $tm['closed'] ?? 0],
+                ['Revenue (شهر)', number_format((float) ($tm['revenue'] ?? 0), 0)],
+                ['Avg Call', $fmtDur($tm['avg_call_seconds'] ?? null)],
+                ['Response', isset($tm['avg_response_minutes']) ? $tm['avg_response_minutes'].' د' : '—'],
+                ['Follow-ups', ($tm['followups_pending'] ?? 0).' / متأخر '.($tm['followups_overdue'] ?? 0)],
+            ] as [$label, $value])
+                <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                    <p class="text-[11px] font-semibold text-slate-500">{{ $label }}</p>
+                    <p class="text-lg font-black text-slate-900 tabular-nums mt-0.5">{{ $value }}</p>
+                </div>
+            @endforeach
+        </div>
+        @if(! empty($todayActivity['activities']))
+            <div class="border-t border-slate-100 px-4 py-3">
+                <p class="text-xs font-bold text-slate-600 mb-2">آخر الأنشطة اليوم</p>
+                <ul class="space-y-1 max-h-40 overflow-y-auto">
+                    @foreach($todayActivity['activities'] as $ev)
+                        <li class="text-xs text-slate-600">
+                            <span class="tabular-nums font-semibold text-slate-800">{{ $ev['time'] }}</span>
+                            {{ $ev['type_label'] }}
+                            @if($ev['lead_name'] ?? null) · {{ $ev['lead_name'] }} @endif
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+    </section>
+
     <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
         {{-- Schedule + leaves --}}
         <div class="xl:col-span-7 space-y-5">

@@ -57,7 +57,7 @@
             'board' => $board,
             'navRoute' => 'employee.sales.shifts.index',
             'highlightUserId' => $user->id,
-            'title' => 'أسبوعي — شيفتات وقنوات',
+            'title' => 'أسبوعي — شيفتك والقنوات',
         ])
 
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">

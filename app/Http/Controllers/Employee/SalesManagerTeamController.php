@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\EmployeeAttendanceService;
 use App\Services\SalesEmployeeReportPdfService;
 use App\Services\SalesManagerEmployeeReportService;
+use App\Services\SalesManagerHubService;
 use App\Services\SalesTeamService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -24,6 +25,7 @@ class SalesManagerTeamController extends Controller
     public function __construct(
         private SalesTeamService $teamService,
         private EmployeeAttendanceService $attendance,
+        private SalesManagerHubService $hub,
     ) {
         $this->middleware('sales.manager');
     }
@@ -54,6 +56,8 @@ class SalesManagerTeamController extends Controller
                 ->where('next_follow_up_at', '<', now())
                 ->count(),
         ];
+
+        $todayActivity = $this->hub->employeeToday($employee);
 
         $leaves = LeaveRequest::query()
             ->where('employee_id', $employee->id)
@@ -94,6 +98,7 @@ class SalesManagerTeamController extends Controller
             'employee',
             'team',
             'leadStats',
+            'todayActivity',
             'leaves',
             'activeLeave',
             'pendingLeaves',
