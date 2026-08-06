@@ -310,7 +310,7 @@ class SalesManagerHubDashboardTest extends TestCase
         $response->assertSee('ترتيب أداء الفريق', false);
         $response->assertSee('مراقبة مباشرة', false);
         $response->assertSee($rep1->name, false);
-        $response->assertSee('Leaderboard', false);
+        $response->assertSee('لوحة الصدارة', false);
 
         Carbon::setTestNow();
     }

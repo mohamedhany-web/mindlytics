@@ -112,7 +112,7 @@
         <div class="px-4 sm:px-5 py-3 border-b border-violet-100 bg-violet-50/60 flex flex-wrap items-center justify-between gap-2">
             <h2 class="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <i class="fas fa-bolt text-violet-600"></i>
-                Today's Activity
+                نشاط اليوم
             </h2>
             @if(($todayActivity['shift']['current'] ?? null))
                 <span class="text-[11px] font-semibold text-violet-800">

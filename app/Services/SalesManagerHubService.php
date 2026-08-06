@@ -23,7 +23,6 @@ class SalesManagerHubService
         private SalesKpiService $kpi,
         private SalesManagerOpsBoardService $ops,
         private SalesShiftScheduleService $shifts,
-        private EmployeePresenceService $presence,
     ) {}
 
     /**
@@ -38,6 +37,10 @@ class SalesManagerHubService
         $monthStart = $date->copy()->startOfMonth();
         $monthEnd = $date->copy()->endOfMonth()->endOfDay();
 
+        if ($memberIds === []) {
+            return $this->emptyHub($team, $date);
+        }
+
         $members = User::query()
             ->whereIn('id', $memberIds)
             ->where('is_active', true)
@@ -49,9 +52,10 @@ class SalesManagerHubService
         $opsBoard = $this->ops->build($memberIds, $date);
         $opsRows = collect($opsBoard['rows'])->keyBy('user_id');
         $shiftLive = $this->shifts->buildTeamLivePanel($memberIds);
-        $shiftBoard = $this->shifts->buildWeekBoard(null, null, null, $memberIds);
+        $shiftBoard = $this->shifts->tablesReady() ? $this->shifts->buildWeekBoard(null, null, null, $memberIds) : null;
 
-        $ranking = $this->buildRanking($members, $from, $to, $monthStart, $monthEnd, $opsRows);
+        $monthStats = $this->batchMonthStats($memberIds, $monthStart, min($to, $monthEnd));
+        $ranking = $this->buildRanking($members, $from, $to, $monthStats, $opsRows);
         $kpis = $this->buildTeamKpis($memberIds, $ranking, $opsBoard['stats'] ?? [], $from, $to, $monthStart, $monthEnd);
         $liveStatus = $this->buildLiveStatus($members, $opsRows, $shiftLive, $from, $to);
         $pipeline = $this->buildPipeline($memberIds);
@@ -63,12 +67,6 @@ class SalesManagerHubService
         $analytics = $this->buildWeekAnalytics($memberIds, $date);
         $leaderboard = $this->buildLeaderboard($ranking);
         $compare = $this->buildCompare($ranking, $compareA, $compareB);
-
-        $pendingShiftSwaps = (int) ($approvals['shift_swaps'] ?? 0);
-        $memberShiftToday = [];
-        foreach ($memberIds as $mid) {
-            $memberShiftToday[$mid] = $this->shifts->memberShiftToday($mid);
-        }
 
         return [
             'date' => $date,
@@ -88,9 +86,68 @@ class SalesManagerHubService
             'compare' => $compare,
             'shift_live' => $shiftLive,
             'shift_board' => $shiftBoard,
-            'pending_shift_swaps' => $pendingShiftSwaps,
-            'member_shift_today' => $memberShiftToday,
+            'pending_shift_swaps' => (int) ($approvals['shift_swaps'] ?? 0),
             'ops_stats' => $opsBoard['stats'] ?? [],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function emptyHub(SalesTeam $team, Carbon $date): array
+    {
+        return [
+            'date' => $date,
+            'team' => $team,
+            'members' => collect(),
+            'kpis' => [
+                'team_members' => 0,
+                'online_now' => 0,
+                'calls_today' => 0,
+                'answered_today' => 0,
+                'qualified_today' => 0,
+                'meetings_today' => 0,
+                'proposals_today' => 0,
+                'won_today' => 0,
+                'lost_today' => 0,
+                'deals_today' => 0,
+                'revenue_today' => 0,
+                'revenue_month' => 0,
+                'target_pct' => 0,
+                'conversion_pct' => null,
+                'avg_response_minutes' => null,
+                'working_now' => 0,
+            ],
+            'live_status' => [],
+            'ranking' => [],
+            'pipeline' => ['new' => 0, 'contacted' => 0, 'qualified' => 0, 'meeting' => 0, 'proposal' => 0, 'negotiation' => 0, 'won' => 0, 'lost' => 0, 'raw' => []],
+            'tasks' => ['followups_today' => 0, 'completed_today' => 0, 'pending' => 0, 'overdue' => 0],
+            'timeline' => [],
+            'alerts' => [[
+                'level' => 'warning',
+                'user_id' => null,
+                'user_name' => null,
+                'message' => 'لا يوجد أعضاء في الفريق بعد — أضف موظفي مبيعات للفريق.',
+            ]],
+            'approvals' => ['attendance' => 0, 'shift_swaps' => 0, 'whatsapp_queue' => 0, 'total' => 0],
+            'attendance' => [
+                'working_minutes' => 0,
+                'working_label' => '0س 0د',
+                'idle_minutes' => 0,
+                'idle_label' => '0س 0د',
+                'productive_minutes' => 0,
+                'productive_label' => '0س 0د',
+                'working_count' => 0,
+                'not_clocked_in' => 0,
+                'pending_approval' => 0,
+            ],
+            'analytics' => ['labels' => [], 'calls' => [], 'meetings' => [], 'revenue' => []],
+            'leaderboard' => ['day' => null, 'month' => null],
+            'compare' => null,
+            'shift_live' => ['active_now' => [], 'ownership' => []],
+            'shift_board' => null,
+            'pending_shift_swaps' => 0,
+            'ops_stats' => [],
         ];
     }
 
@@ -161,21 +218,71 @@ class SalesManagerHubService
     }
 
     /**
+     * إحصاءات شهرية مجمّعة لكل أعضاء الفريق (بدل metricsForPeriod لكل فرد).
+     *
+     * @param  list<int>  $memberIds
+     * @return array<int, array{revenue: float, won: int, lost: int, new: int, conversion_pct: float|null}>
+     */
+    private function batchMonthStats(array $memberIds, Carbon $monthStart, Carbon $monthEnd): array
+    {
+        $revenue = SalesLead::query()
+            ->whereIn('assigned_to', $memberIds)
+            ->where('stage', SalesLead::WON_STAGE)
+            ->whereNotNull('closed_at')
+            ->whereBetween('closed_at', [$monthStart, $monthEnd])
+            ->selectRaw('assigned_to, COALESCE(SUM(expected_value), 0) as revenue, COUNT(*) as won')
+            ->groupBy('assigned_to')
+            ->get()
+            ->keyBy('assigned_to');
+
+        $lost = SalesLead::query()
+            ->whereIn('assigned_to', $memberIds)
+            ->where('stage', 'lost')
+            ->whereNotNull('closed_at')
+            ->whereBetween('closed_at', [$monthStart, $monthEnd])
+            ->selectRaw('assigned_to, COUNT(*) as c')
+            ->groupBy('assigned_to')
+            ->pluck('c', 'assigned_to');
+
+        $newLeads = SalesLead::query()
+            ->whereIn('assigned_to', $memberIds)
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->selectRaw('assigned_to, COUNT(*) as c')
+            ->groupBy('assigned_to')
+            ->pluck('c', 'assigned_to');
+
+        $out = [];
+        foreach ($memberIds as $id) {
+            $won = (int) ($revenue[$id]->won ?? 0);
+            $new = (int) ($newLeads[$id] ?? 0);
+            $out[$id] = [
+                'revenue' => (float) ($revenue[$id]->revenue ?? 0),
+                'won' => $won,
+                'lost' => (int) ($lost[$id] ?? 0),
+                'new' => $new,
+                'conversion_pct' => $new > 0 ? round($won / $new * 100, 1) : null,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
      * @param  Collection<int, User>  $members
+     * @param  array<int, array{revenue: float, won: int, lost: int, new: int, conversion_pct: float|null}>  $monthStats
      * @param  Collection<int, array<string, mixed>>  $opsRows
      * @return list<array<string, mixed>>
      */
-    private function buildRanking(Collection $members, Carbon $from, Carbon $to, Carbon $monthStart, Carbon $monthEnd, Collection $opsRows): array
+    private function buildRanking(Collection $members, Carbon $from, Carbon $to, array $monthStats, Collection $opsRows): array
     {
         $rows = [];
         foreach ($members as $member) {
             $sos = $this->dailyResults->comparisonFor($member, $from);
             $m = $sos['metrics'] ?? [];
-            $monthMetrics = $this->kpi->metricsForPeriod($member->id, $monthStart, min($to, $monthEnd));
+            $month = $monthStats[(int) $member->id] ?? ['revenue' => 0, 'won' => 0, 'lost' => 0, 'new' => 0, 'conversion_pct' => null];
             $ops = $opsRows->get($member->id) ?? [];
 
             $targetPct = (float) ($sos['overall_pct'] ?? 0);
-            $stars = $this->starsFromPct($targetPct);
 
             $rows[] = [
                 'user_id' => (int) $member->id,
@@ -186,17 +293,17 @@ class SalesManagerHubService
                 'meetings' => (int) ($m['discovery_sessions_daily'] ?? 0),
                 'proposals' => (int) ($m['proposals_daily'] ?? 0),
                 'deals' => (int) ($m['paid_enrollments_daily'] ?? 0),
-                'revenue' => (float) ($monthMetrics['revenue_closed'] ?? 0),
-                'revenue_today' => $this->revenueForPeriod((int) $member->id, $from, $to),
-                'won_month' => (int) ($monthMetrics['won_closed'] ?? 0),
-                'lost_month' => (int) ($monthMetrics['lost_closed'] ?? 0),
-                'conversion_pct' => $monthMetrics['conversion_pct'] ?? null,
-                'avg_response_minutes' => $monthMetrics['avg_response_minutes'] ?? null,
+                'revenue' => (float) ($month['revenue'] ?? 0),
+                'revenue_today' => 0.0,
+                'won_month' => (int) ($month['won'] ?? 0),
+                'lost_month' => (int) ($month['lost'] ?? 0),
+                'conversion_pct' => $month['conversion_pct'] ?? null,
+                'avg_response_minutes' => null,
                 'target_pct' => $targetPct,
                 'status' => $sos['status'] ?? 'behind',
                 'status_label' => $sos['status_label'] ?? '',
                 'score' => $targetPct,
-                'stars' => $stars,
+                'stars' => $this->starsFromPct($targetPct),
                 'presence_status' => $ops['presence_status'] ?? 'offline',
                 'presence_label' => $ops['presence_label'] ?? 'غير متصل',
                 'presence_color' => $ops['presence_color'] ?? 'slate',
@@ -470,15 +577,18 @@ class SalesManagerHubService
         $alerts = [];
         $twoHoursAgo = now()->subHours(2);
 
+        $lastCalls = SalesActivity::query()
+            ->whereIn('user_id', $memberIds)
+            ->where('type', 'call')
+            ->whereBetween('created_at', [$from, $to])
+            ->selectRaw('user_id, MAX(created_at) as last_at')
+            ->groupBy('user_id')
+            ->pluck('last_at', 'user_id');
+
         foreach ($ranking as $row) {
             $uid = (int) $row['user_id'];
             $ops = $opsRows->get($uid) ?? [];
-
-            $lastCall = SalesActivity::query()
-                ->where('user_id', $uid)
-                ->where('type', 'call')
-                ->whereBetween('created_at', [$from, $to])
-                ->max('created_at');
+            $lastCall = $lastCalls[$uid] ?? null;
 
             $isWorking = in_array($ops['attendance_filter'] ?? '', ['working', 'late'], true);
             if ($isWorking && ($row['calls'] === 0 || ($lastCall && Carbon::parse($lastCall)->lt($twoHoursAgo)))) {
@@ -501,16 +611,7 @@ class SalesManagerHubService
                 ];
             }
 
-            if (($row['avg_response_minutes'] ?? null) !== null && $row['avg_response_minutes'] > 30) {
-                $alerts[] = [
-                    'level' => 'warning',
-                    'user_id' => $uid,
-                    'user_name' => $row['name'],
-                    'message' => "{$row['name']}: متوسط زمن الرد مرتفع ({$row['avg_response_minutes']} د)",
-                ];
-            }
-
-            if (($row['conversion_pct'] ?? null) !== null && $row['conversion_pct'] < 10 && ($row['won_month'] + $row['lost_month']) >= 3) {
+            if (($row['conversion_pct'] ?? null) !== null && $row['conversion_pct'] < 10 && (($row['won_month'] + $row['lost_month']) >= 3)) {
                 $alerts[] = [
                     'level' => 'warning',
                     'user_id' => $uid,
@@ -639,6 +740,33 @@ class SalesManagerHubService
     private function buildWeekAnalytics(array $memberIds, Carbon $date): array
     {
         $start = $date->copy()->startOfWeek(Carbon::SATURDAY);
+        $end = $start->copy()->addDays(6)->endOfDay();
+
+        $callByDay = SalesActivity::query()
+            ->whereIn('user_id', $memberIds)
+            ->where('type', 'call')
+            ->whereBetween('created_at', [$start, $end])
+            ->selectRaw('DATE(created_at) as d, COUNT(*) as c')
+            ->groupBy('d')
+            ->pluck('c', 'd');
+
+        $meetingByDay = SalesActivity::query()
+            ->whereIn('user_id', $memberIds)
+            ->where('type', 'meeting')
+            ->whereBetween('created_at', [$start, $end])
+            ->selectRaw('DATE(created_at) as d, COUNT(*) as c')
+            ->groupBy('d')
+            ->pluck('c', 'd');
+
+        $revenueByDay = SalesLead::query()
+            ->whereIn('assigned_to', $memberIds)
+            ->where('stage', SalesLead::WON_STAGE)
+            ->whereNotNull('closed_at')
+            ->whereBetween('closed_at', [$start, $end])
+            ->selectRaw('DATE(closed_at) as d, COALESCE(SUM(expected_value), 0) as revenue')
+            ->groupBy('d')
+            ->pluck('revenue', 'd');
+
         $labels = [];
         $calls = [];
         $meetings = [];
@@ -646,28 +774,11 @@ class SalesManagerHubService
 
         for ($i = 0; $i < 7; $i++) {
             $day = $start->copy()->addDays($i);
+            $key = $day->toDateString();
             $labels[] = $day->copy()->locale('ar')->translatedFormat('D d');
-            $from = $day->copy()->startOfDay();
-            $to = $day->copy()->endOfDay();
-
-            $calls[] = SalesActivity::query()
-                ->whereIn('user_id', $memberIds)
-                ->where('type', 'call')
-                ->whereBetween('created_at', [$from, $to])
-                ->count();
-
-            $meetings[] = SalesActivity::query()
-                ->whereIn('user_id', $memberIds)
-                ->where('type', 'meeting')
-                ->whereBetween('created_at', [$from, $to])
-                ->count();
-
-            $revenue[] = (float) SalesLead::query()
-                ->whereIn('assigned_to', $memberIds)
-                ->where('stage', SalesLead::WON_STAGE)
-                ->whereNotNull('closed_at')
-                ->whereBetween('closed_at', [$from, $to])
-                ->sum('expected_value');
+            $calls[] = (int) ($callByDay[$key] ?? 0);
+            $meetings[] = (int) ($meetingByDay[$key] ?? 0);
+            $revenue[] = (float) ($revenueByDay[$key] ?? 0);
         }
 
         return compact('labels', 'calls', 'meetings', 'revenue');

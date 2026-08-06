@@ -87,7 +87,7 @@
         <ul class="space-y-2">
             @foreach($alerts as $alert)
                 <li class="flex items-start gap-2 text-sm {{ ($alert['level'] ?? '') === 'danger' ? 'text-rose-800' : 'text-amber-900' }}">
-                    <span class="mt-1">{{ ($alert['level'] ?? '') === 'danger' ? '🚨' : '⚠️' }}</span>
+                    <i class="fas {{ ($alert['level'] ?? '') === 'danger' ? 'fa-circle-exclamation text-rose-600' : 'fa-triangle-exclamation text-amber-600' }} mt-0.5"></i>
                     <span class="flex-1">{{ $alert['message'] }}</span>
                     @if(!empty($alert['user_id']))
                         <a href="{{ route('employee.sales-manager.team.show', $alert['user_id']) }}" class="text-xs font-bold text-slate-600 hover:underline">الملف</a>
@@ -98,14 +98,24 @@
     </section>
     @endif
 
+    {{-- Quick jump --}}
+    <nav class="flex flex-wrap gap-2 text-xs font-semibold">
+        <a href="#hub-kpis" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">المؤشرات</a>
+        <a href="#hub-live" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">المراقبة</a>
+        <a href="#hub-ranking" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">الترتيب</a>
+        <a href="#hub-pipeline" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">البايبلاين</a>
+        <a href="#hub-timeline" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">الجدول الزمني</a>
+        <a href="#hub-compare" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">مقارنة</a>
+    </nav>
+
     {{-- 1. Executive KPIs --}}
-    <section>
+    <section id="hub-kpis">
         <h3 class="text-sm font-black text-slate-800 mb-3">نظرة تنفيذية — اليوم</h3>
         <div class="kpi-grid">
             @php
                 $kpiCards = [
                     ['label' => 'أفراد الفريق', 'value' => $kpis['team_members'] ?? 0, 'icon' => 'fa-users'],
-                    ['label' => 'Online الآن', 'value' => $kpis['online_now'] ?? 0, 'icon' => 'fa-circle text-emerald-500'],
+                    ['label' => 'متصل الآن', 'value' => $kpis['online_now'] ?? 0, 'icon' => 'fa-circle text-emerald-500'],
                     ['label' => 'مكالمات اليوم', 'value' => $kpis['calls_today'] ?? 0, 'icon' => 'fa-phone'],
                     ['label' => 'محادثات مؤهلة', 'value' => $kpis['qualified_today'] ?? 0, 'icon' => 'fa-comments'],
                     ['label' => 'اجتماعات', 'value' => $kpis['meetings_today'] ?? 0, 'icon' => 'fa-handshake'],
@@ -115,7 +125,7 @@
                     ['label' => 'مبيعات اليوم', 'value' => $fmtMoney($kpis['revenue_today'] ?? 0), 'icon' => 'fa-coins'],
                     ['label' => 'مبيعات الشهر', 'value' => $fmtMoney($kpis['revenue_month'] ?? 0), 'icon' => 'fa-chart-line'],
                     ['label' => 'تحقيق التارجت', 'value' => ($kpis['target_pct'] ?? 0).'%', 'icon' => 'fa-bullseye'],
-                    ['label' => 'Conversion', 'value' => ($kpis['conversion_pct'] ?? '—').(isset($kpis['conversion_pct']) ? '%' : ''), 'icon' => 'fa-percent'],
+                    ['label' => 'نسبة التحويل', 'value' => ($kpis['conversion_pct'] ?? '—').(isset($kpis['conversion_pct']) ? '%' : ''), 'icon' => 'fa-percent'],
                     ['label' => 'متوسط زمن الرد', 'value' => isset($kpis['avg_response_minutes']) ? $kpis['avg_response_minutes'].' د' : '—', 'icon' => 'fa-clock'],
                     ['label' => 'يعملون الآن', 'value' => $kpis['working_now'] ?? 0, 'icon' => 'fa-briefcase'],
                 ];
@@ -160,16 +170,16 @@
                 <a href="{{ route('employee.sales-manager.attendance.index') }}" class="text-xs font-semibold text-emerald-700">التفاصيل</a>
             </div>
             <div class="space-y-2 text-sm">
-                <div class="flex justify-between"><span class="text-slate-500">Working</span><b class="tabular-nums">{{ $attendance['working_label'] ?? '0س 0د' }}</b></div>
-                <div class="flex justify-between"><span class="text-slate-500">Productive</span><b class="tabular-nums text-emerald-700">{{ $attendance['productive_label'] ?? '0س 0د' }}</b></div>
-                <div class="flex justify-between"><span class="text-slate-500">Idle / Away</span><b class="tabular-nums text-amber-700">{{ $attendance['idle_label'] ?? '0س 0د' }}</b></div>
+                <div class="flex justify-between"><span class="text-slate-500">وقت العمل</span><b class="tabular-nums">{{ $attendance['working_label'] ?? '0س 0د' }}</b></div>
+                <div class="flex justify-between"><span class="text-slate-500">وقت منتج</span><b class="tabular-nums text-emerald-700">{{ $attendance['productive_label'] ?? '0س 0د' }}</b></div>
+                <div class="flex justify-between"><span class="text-slate-500">خمول / بعيد</span><b class="tabular-nums text-amber-700">{{ $attendance['idle_label'] ?? '0س 0د' }}</b></div>
                 <p class="text-[11px] text-slate-500 pt-1">يعملون: {{ $attendance['working_count'] ?? 0 }} · لم يسجّلوا: {{ $attendance['not_clocked_in'] ?? 0 }}</p>
             </div>
         </section>
     </div>
 
     {{-- Shift live --}}
-    @if(! empty($shiftLive) && $shiftBoard)
+    @if($shiftBoard)
     <section class="dashboard-card border-violet-200 bg-gradient-to-l from-violet-50/80 to-white">
         <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
             <div>
@@ -207,7 +217,7 @@
     @endif
 
     {{-- 2. Live Activity + Tasks --}}
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+    <div id="hub-live" class="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <section class="panel-card xl:col-span-2">
             <div class="panel-card-head flex items-center justify-between">
                 <h3 class="font-bold text-slate-900">مراقبة مباشرة — نشاط الفريق</h3>
@@ -255,7 +265,7 @@
                     <a href="{{ route('employee.sales-manager.follow-ups.index') }}" class="text-xs font-semibold text-teal-700">المتابعات</a>
                 </div>
                 <div class="p-4 grid grid-cols-2 gap-3">
-                    <div class="rounded-lg bg-slate-50 p-3"><p class="text-[11px] text-slate-500">Follow-up اليوم</p><p class="text-xl font-black">{{ $tasks['followups_today'] ?? 0 }}</p></div>
+                    <div class="rounded-lg bg-slate-50 p-3"><p class="text-[11px] text-slate-500">متابعات اليوم</p><p class="text-xl font-black">{{ $tasks['followups_today'] ?? 0 }}</p></div>
                     <div class="rounded-lg bg-emerald-50 p-3"><p class="text-[11px] text-emerald-700">مكتمل</p><p class="text-xl font-black text-emerald-800">{{ $tasks['completed_today'] ?? 0 }}</p></div>
                     <div class="rounded-lg bg-amber-50 p-3"><p class="text-[11px] text-amber-700">قادم</p><p class="text-xl font-black text-amber-800">{{ $tasks['pending'] ?? 0 }}</p></div>
                     <div class="rounded-lg bg-rose-50 p-3"><p class="text-[11px] text-rose-700">متأخر</p><p class="text-xl font-black text-rose-800">{{ $tasks['overdue'] ?? 0 }}</p></div>
@@ -263,12 +273,12 @@
             </section>
 
             <section class="panel-card">
-                <div class="panel-card-head"><h3 class="font-bold text-slate-900">Leaderboard</h3></div>
+                <div class="panel-card-head"><h3 class="font-bold text-slate-900">لوحة الصدارة</h3></div>
                 <div class="p-4 space-y-3">
                     @if($leaderboard['day'] ?? null)
                         <div class="rounded-xl border border-amber-200 bg-amber-50/50 p-3">
                             <p class="text-[11px] font-bold text-amber-800">موظف اليوم</p>
-                            <p class="text-lg font-black text-slate-900">🏆 {{ $leaderboard['day']['name'] }}</p>
+                            <p class="text-lg font-black text-slate-900"><i class="fas fa-trophy text-amber-500 ml-1"></i>{{ $leaderboard['day']['name'] }}</p>
                             <p class="text-xs text-slate-600">تارجت {{ $leaderboard['day']['target_pct'] }}% · {{ $leaderboard['day']['calls'] }} مكالمة · {{ $leaderboard['day']['deals'] }} صفقة</p>
                         </div>
                     @endif
@@ -276,7 +286,7 @@
                         <div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3">
                             <p class="text-[11px] font-bold text-emerald-800">أعلى إيراد الشهر</p>
                             <p class="text-lg font-black text-slate-900">{{ $leaderboard['month']['name'] }}</p>
-                            <p class="text-xs text-slate-600">{{ $fmtMoney($leaderboard['month']['revenue']) }} · Conversion {{ $leaderboard['month']['conversion_pct'] ?? '—' }}%</p>
+                            <p class="text-xs text-slate-600">{{ $fmtMoney($leaderboard['month']['revenue']) }} · تحويل {{ $leaderboard['month']['conversion_pct'] ?? '—' }}%</p>
                         </div>
                     @endif
                 </div>
@@ -285,7 +295,7 @@
     </div>
 
     {{-- 3. Team Ranking --}}
-    <section class="panel-card">
+    <section id="hub-ranking" class="panel-card">
         <div class="panel-card-head flex flex-wrap items-center justify-between gap-2">
             <h3 class="font-bold text-slate-900">ترتيب أداء الفريق (اليوم)</h3>
             <a href="{{ route('employee.sales-manager.kpi.index') }}" class="text-xs font-semibold text-teal-700">KPI التفصيلي</a>
@@ -296,13 +306,13 @@
                     <tr>
                         <th class="text-right px-3 py-2 font-bold">#</th>
                         <th class="text-right px-3 py-2 font-bold">الموظف</th>
-                        <th class="text-right px-3 py-2 font-bold">Calls</th>
-                        <th class="text-right px-3 py-2 font-bold">Qualified</th>
-                        <th class="text-right px-3 py-2 font-bold">Meetings</th>
-                        <th class="text-right px-3 py-2 font-bold">Deals</th>
-                        <th class="text-right px-3 py-2 font-bold">Revenue</th>
-                        <th class="text-right px-3 py-2 font-bold">Target</th>
-                        <th class="text-right px-3 py-2 font-bold">Score</th>
+                        <th class="text-right px-3 py-2 font-bold">مكالمات</th>
+                        <th class="text-right px-3 py-2 font-bold">مؤهل</th>
+                        <th class="text-right px-3 py-2 font-bold">اجتماعات</th>
+                        <th class="text-right px-3 py-2 font-bold">صفقات</th>
+                        <th class="text-right px-3 py-2 font-bold">إيراد الشهر</th>
+                        <th class="text-right px-3 py-2 font-bold">التارجت</th>
+                        <th class="text-right px-3 py-2 font-bold">التقييم</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -327,22 +337,22 @@
     </section>
 
     {{-- Pipeline + Analytics + Compare --}}
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+    <div id="hub-pipeline" class="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <section class="panel-card">
             <div class="panel-card-head flex justify-between">
-                <h3 class="font-bold text-slate-900">Pipeline الفريق</h3>
+                <h3 class="font-bold text-slate-900">مسار العملاء (Pipeline)</h3>
                 <a href="{{ route('employee.sales-manager.pipeline') }}" class="text-xs font-semibold text-teal-700">التفاصيل</a>
             </div>
             <div class="p-4 grid grid-cols-2 gap-2 text-sm">
                 @foreach([
-                    'new' => 'New',
-                    'contacted' => 'Contacted',
-                    'qualified' => 'Qualified',
-                    'meeting' => 'Meeting',
-                    'proposal' => 'Proposal',
-                    'negotiation' => 'Negotiation',
-                    'won' => 'Won',
-                    'lost' => 'Lost',
+                    'new' => 'جديد',
+                    'contacted' => 'تم التواصل',
+                    'qualified' => 'مؤهل',
+                    'meeting' => 'اجتماع',
+                    'proposal' => 'عرض سعر',
+                    'negotiation' => 'تفاوض / دفع',
+                    'won' => 'فوز',
+                    'lost' => 'خسارة',
                 ] as $key => $label)
                     <div class="rounded-lg border border-slate-200 px-3 py-2 flex justify-between">
                         <span class="text-slate-500 text-xs">{{ $label }}</span>
@@ -353,7 +363,7 @@
         </section>
 
         <section class="panel-card">
-            <div class="panel-card-head"><h3 class="font-bold text-slate-900">Calls هذا الأسبوع</h3></div>
+            <div class="panel-card-head"><h3 class="font-bold text-slate-900">المكالمات هذا الأسبوع</h3></div>
             <div class="p-4">
                 @php
                     $callSeries = array_values($analytics['calls'] ?? []);
@@ -370,13 +380,13 @@
                     @endforeach
                 </div>
                 <p class="text-xs text-slate-600 mt-3">
-                    Meetings أسبوع: <b>{{ array_sum($analytics['meetings'] ?? []) }}</b>
-                    · إيراد أسبوع: <b>{{ $fmtMoney(array_sum($analytics['revenue'] ?? [])) }}</b>
+                    اجتماعات الأسبوع: <b>{{ array_sum($analytics['meetings'] ?? []) }}</b>
+                    · إيراد الأسبوع: <b>{{ $fmtMoney(array_sum($analytics['revenue'] ?? [])) }}</b>
                 </p>
             </div>
         </section>
 
-        <section class="panel-card">
+        <section id="hub-compare" class="panel-card">
             <div class="panel-card-head"><h3 class="font-bold text-slate-900">مقارنة موظفين</h3></div>
             <div class="p-4">
                 <form method="get" class="space-y-2 mb-3">
@@ -417,9 +427,9 @@
     </div>
 
     {{-- Timeline + Member cards --}}
-    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+    <div id="hub-timeline" class="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <section class="panel-card">
-            <div class="panel-card-head"><h3 class="font-bold text-slate-900">Daily Timeline — الفريق</h3></div>
+            <div class="panel-card-head"><h3 class="font-bold text-slate-900">الجدول الزمني اليومي — الفريق</h3></div>
             <ul class="divide-y divide-slate-100 max-h-96 overflow-y-auto">
                 @forelse($timeline as $ev)
                     <li class="px-4 py-2.5 text-sm flex gap-3">
