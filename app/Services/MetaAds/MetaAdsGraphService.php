@@ -19,27 +19,49 @@ class MetaAdsGraphService
     }
 
     /**
-     * @return array{success: bool, label: string, error?: string, account?: array<string, mixed>}
+     * @return array{success: bool, label: string, error?: string, account?: array<string, mixed>, token_source?: string}
      */
     public function connectionMeta(): array
     {
-        if (! MetaAdsSettings::isReady()) {
+        $tokenSource = MetaAdsSettings::tokenSource();
+        if (! MetaAdsSettings::hasAccessToken()) {
             return [
                 'success' => false,
-                'label' => 'غير مهيأ',
-                'error' => 'فعّل Meta Ads وأدخل Ad Account ID + Access Token في الإعدادات.',
+                'label' => 'غير مربوط',
+                'error' => 'اربط حساب Meta من السوشيال ميديا أولاً (أو أعد تسجيل الدخول بصلاحيات الإعلانات).',
+                'token_source' => $tokenSource,
             ];
         }
 
-        $result = $this->get(MetaAdsSettings::adAccountId(), [
+        if (! MetaAdsSettings::isEnabled()) {
+            return [
+                'success' => false,
+                'label' => 'Meta Ads معطّل',
+                'error' => 'فعّل Meta Ads من الإعدادات.',
+                'token_source' => $tokenSource,
+            ];
+        }
+
+        $accountId = MetaAdsSettings::adAccountId();
+        if ($accountId === '') {
+            return [
+                'success' => false,
+                'label' => 'اختر حساب إعلانات',
+                'error' => 'التوكن جاهز من السوشيال — اختر Ad Account من القائمة أدناه.',
+                'token_source' => $tokenSource,
+            ];
+        }
+
+        $result = $this->get($accountId, [
             'fields' => 'id,name,account_status,currency,timezone_name,business_name',
         ]);
 
         if (! ($result['success'] ?? false)) {
             return [
                 'success' => false,
-                'label' => 'فشل الاتصال',
-                'error' => $result['error'] ?? 'تعذر الوصول لحساب الإعلانات',
+                'label' => 'فشل الاتصال بحساب الإعلانات',
+                'error' => ($result['error'] ?? 'تعذر الوصول').' — إن ظهر خطأ صلاحيات، أعد ربط Meta Social بعد إضافة ads_management و ads_read.',
+                'token_source' => $tokenSource,
             ];
         }
 
@@ -47,9 +69,36 @@ class MetaAdsGraphService
 
         return [
             'success' => true,
-            'label' => 'متصل — '.((string) ($account['name'] ?? MetaAdsSettings::adAccountId())),
+            'label' => 'متصل — '.((string) ($account['name'] ?? $accountId)),
             'account' => $account,
+            'token_source' => $tokenSource,
         ];
+    }
+
+    /**
+     * List ad accounts available to the connected Meta user.
+     *
+     * @return array{success: bool, data?: list<array<string, mixed>>, error?: string}
+     */
+    public function listAdAccounts(int $limit = 50): array
+    {
+        if (! MetaAdsSettings::hasAccessToken()) {
+            return ['success' => false, 'error' => 'لا يوجد توكن — اربط Meta Social أولاً'];
+        }
+
+        $result = $this->get('me/adaccounts', [
+            'fields' => 'id,account_id,name,account_status,currency,timezone_name',
+            'limit' => max(1, min(100, $limit)),
+        ]);
+
+        if (! ($result['success'] ?? false)) {
+            return $result;
+        }
+
+        /** @var list<array<string, mixed>> $data */
+        $data = $result['data']['data'] ?? [];
+
+        return ['success' => true, 'data' => $data];
     }
 
     /**

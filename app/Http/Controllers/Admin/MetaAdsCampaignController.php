@@ -13,10 +13,16 @@ class MetaAdsCampaignController extends Controller
 {
     public function index(MetaAdsGraphService $metaAds): View|RedirectResponse
     {
+        if (! MetaAdsSettings::hasAccessToken()) {
+            return redirect()
+                ->route('admin.meta-ads.settings')
+                ->with('error', 'اربط Meta من السوشيال ميديا أولاً، ثم اختر Ad Account.');
+        }
+
         if (! MetaAdsSettings::isReady()) {
             return redirect()
                 ->route('admin.meta-ads.settings')
-                ->with('error', 'اضبط حساب Meta Ads أولاً (Ad Account + Token).');
+                ->with('error', 'اختر حساب إعلانات (Ad Account) من إعدادات Meta Ads.');
         }
 
         $connection = $metaAds->connectionMeta();
@@ -50,10 +56,16 @@ class MetaAdsCampaignController extends Controller
 
     public function create(): View|RedirectResponse
     {
+        if (! MetaAdsSettings::hasAccessToken()) {
+            return redirect()
+                ->route('admin.meta-ads.settings')
+                ->with('error', 'اربط Meta من السوشيال ميديا أولاً.');
+        }
+
         if (! MetaAdsSettings::isReady()) {
             return redirect()
                 ->route('admin.meta-ads.settings')
-                ->with('error', 'اضبط حساب Meta Ads أولاً.');
+                ->with('error', 'اختر حساب إعلانات من الإعدادات.');
         }
 
         return view('admin.marketing.meta-ads.campaigns.create', [

@@ -13,14 +13,25 @@ class MetaAdsSettingsController extends Controller
 {
     public function edit(MetaAdsGraphService $metaAds): View
     {
-        $connection = null;
-        if (MetaAdsSettings::isReady()) {
-            $connection = $metaAds->connectionMeta();
+        $settings = MetaAdsSettings::formValues();
+        $connection = $metaAds->connectionMeta();
+        $adAccounts = [];
+        $adAccountsError = null;
+
+        if (MetaAdsSettings::hasAccessToken()) {
+            $listed = $metaAds->listAdAccounts();
+            if ($listed['success'] ?? false) {
+                $adAccounts = $listed['data'] ?? [];
+            } else {
+                $adAccountsError = $listed['error'] ?? null;
+            }
         }
 
         return view('admin.marketing.meta-ads.settings', [
-            'settings' => MetaAdsSettings::formValues(),
+            'settings' => $settings,
             'connection' => $connection,
+            'adAccounts' => $adAccounts,
+            'adAccountsError' => $adAccountsError,
         ]);
     }
 
@@ -29,8 +40,6 @@ class MetaAdsSettingsController extends Controller
         $validated = $request->validate([
             'enabled' => ['nullable', 'boolean'],
             'ad_account_id' => ['nullable', 'string', 'max:64'],
-            'access_token' => ['nullable', 'string', 'max:5000'],
-            'api_url' => ['nullable', 'string', 'max:255'],
             'default_currency' => ['nullable', 'string', 'max:8'],
             'default_country' => ['nullable', 'string', 'max:8'],
             'page_id' => ['nullable', 'string', 'max:64'],
@@ -40,8 +49,6 @@ class MetaAdsSettingsController extends Controller
         MetaAdsSettings::save([
             'enabled' => $request->boolean('enabled'),
             'ad_account_id' => $validated['ad_account_id'] ?? '',
-            'access_token' => $validated['access_token'] ?? '',
-            'api_url' => $validated['api_url'] ?? 'https://graph.facebook.com/v21.0',
             'default_currency' => $validated['default_currency'] ?? 'EGP',
             'default_country' => $validated['default_country'] ?? 'EG',
             'page_id' => $validated['page_id'] ?? '',

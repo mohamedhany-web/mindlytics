@@ -2,11 +2,13 @@
 
 namespace App\Support;
 
+use App\Models\MetaSocialConnection;
+use App\Models\MetaSocialPage;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Meta Marketing API credentials (Ad Account + access token).
+ * Meta Ads preferences. Auth reuses Meta Social OAuth connection by default.
  */
 class MetaAdsSettings
 {
@@ -21,10 +23,11 @@ class MetaAdsSettings
     private static function defaults(): array
     {
         return [
-            'enabled' => false,
+            'enabled' => true,
             'ad_account_id' => '',
+            /** Optional override — leave empty to use Meta Social connection token. */
             'access_token' => '',
-            'api_url' => (string) config('services.meta_ads.api_url', 'https://graph.facebook.com/v21.0'),
+            'api_url' => '',
             'default_currency' => 'EGP',
             'default_country' => 'EG',
             'page_id' => '',
@@ -60,8 +63,7 @@ class MetaAdsSettings
             }
         }
 
-        $merged['enabled'] = filter_var($merged['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
-        $merged['api_url'] = rtrim((string) ($merged['api_url'] ?? self::defaults()['api_url']), '/');
+        $merged['enabled'] = filter_var($merged['enabled'] ?? true, FILTER_VALIDATE_BOOLEAN);
         $merged['ad_account_id'] = self::normalizeAdAccountId((string) ($merged['ad_account_id'] ?? ''));
 
         self::$cache = $merged;
@@ -70,24 +72,51 @@ class MetaAdsSettings
     }
 
     /**
-     * Safe values for Blade forms (never expose full token).
-     *
      * @return array<string, mixed>
      */
     public static function formValues(): array
     {
         $all = self::all();
+        $social = self::metaSocialConnectionSummary();
 
         return [
-            'enabled' => (bool) ($all['enabled'] ?? false),
+            'enabled' => (bool) ($all['enabled'] ?? true),
             'ad_account_id' => (string) ($all['ad_account_id'] ?? ''),
-            'api_url' => (string) ($all['api_url'] ?? self::defaults()['api_url']),
             'default_currency' => (string) ($all['default_currency'] ?? 'EGP'),
             'default_country' => (string) ($all['default_country'] ?? 'EG'),
-            'page_id' => (string) ($all['page_id'] ?? ''),
+            'page_id' => self::pageId(),
             'instagram_actor_id' => (string) ($all['instagram_actor_id'] ?? ''),
-            'has_access_token' => self::hasAccessToken(),
+            'has_override_token' => trim((string) ($all['access_token'] ?? '')) !== '',
+            'token_source' => self::tokenSource(),
+            'api_url' => self::apiUrl(),
             'is_ready' => self::isReady(),
+            'has_access_token' => self::hasAccessToken(),
+            'meta_social' => $social,
+        ];
+    }
+
+    /**
+     * @return array{connected: bool, user_name: ?string, label: string}
+     */
+    public static function metaSocialConnectionSummary(): array
+    {
+        try {
+            $connection = MetaSocialConnection::active();
+            if ($connection && trim((string) $connection->user_access_token) !== '') {
+                return [
+                    'connected' => true,
+                    'user_name' => $connection->meta_user_name,
+                    'label' => 'متصل عبر السوشيال ميديا — '.($connection->meta_user_name ?: 'Meta'),
+                ];
+            }
+        } catch (\Throwable) {
+            //
+        }
+
+        return [
+            'connected' => false,
+            'user_name' => null,
+            'label' => 'لا يوجد ربط Meta Social نشط',
         ];
     }
 
@@ -109,8 +138,7 @@ class MetaAdsSettings
             }
         }
 
-        $merged['enabled'] = filter_var($merged['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
-        $merged['api_url'] = rtrim((string) ($merged['api_url'] ?? self::defaults()['api_url']), '/');
+        $merged['enabled'] = filter_var($merged['enabled'] ?? true, FILTER_VALIDATE_BOOLEAN);
         $merged['ad_account_id'] = self::normalizeAdAccountId((string) ($merged['ad_account_id'] ?? ''));
         $merged['default_currency'] = strtoupper((string) ($merged['default_currency'] ?? 'EGP')) ?: 'EGP';
         $merged['default_country'] = strtoupper((string) ($merged['default_country'] ?? 'EG')) ?: 'EG';
@@ -145,12 +173,35 @@ class MetaAdsSettings
 
     public static function isEnabled(): bool
     {
-        return filter_var(self::all()['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        return filter_var(self::all()['enabled'] ?? true, FILTER_VALIDATE_BOOLEAN);
     }
 
     public static function hasAccessToken(): bool
     {
-        return trim((string) (self::all()['access_token'] ?? '')) !== '';
+        return self::accessToken() !== '';
+    }
+
+    /**
+     * @return 'meta_social'|'override'|'none'
+     */
+    public static function tokenSource(): string
+    {
+        try {
+            $connection = MetaSocialConnection::active();
+            if ($connection && trim((string) $connection->user_access_token) !== '') {
+                return 'meta_social';
+            }
+        } catch (\Throwable) {
+            //
+        }
+
+        if (trim((string) (self::all()['access_token'] ?? '')) !== '') {
+            return 'override';
+        }
+
+        $envToken = trim((string) config('services.meta_ads.access_token', ''));
+
+        return $envToken !== '' ? 'override' : 'none';
     }
 
     public static function isReady(): bool
@@ -162,17 +213,56 @@ class MetaAdsSettings
 
     public static function adAccountId(): string
     {
-        return (string) (self::all()['ad_account_id'] ?? '');
+        $fromSettings = (string) (self::all()['ad_account_id'] ?? '');
+        if ($fromSettings !== '') {
+            return $fromSettings;
+        }
+
+        return self::normalizeAdAccountId((string) config('services.meta_ads.ad_account_id', ''));
     }
 
+    /**
+     * Prefer Meta Social OAuth user token; optional Meta Ads override / env as fallback.
+     */
     public static function accessToken(): string
     {
-        return trim((string) (self::all()['access_token'] ?? ''));
+        try {
+            $connection = MetaSocialConnection::active();
+            if ($connection) {
+                $token = trim((string) $connection->user_access_token);
+                if ($token !== '') {
+                    return $token;
+                }
+            }
+        } catch (\Throwable) {
+            //
+        }
+
+        $override = trim((string) (self::all()['access_token'] ?? ''));
+        if ($override !== '') {
+            return $override;
+        }
+
+        return trim((string) config('services.meta_ads.access_token', ''));
     }
 
     public static function apiUrl(): string
     {
-        return rtrim((string) (self::all()['api_url'] ?? self::defaults()['api_url']), '/');
+        $custom = trim((string) (self::all()['api_url'] ?? ''));
+        if ($custom !== '') {
+            return rtrim($custom, '/');
+        }
+
+        try {
+            $social = MetaSocialSettings::apiUrl();
+            if ($social !== '') {
+                return rtrim($social, '/');
+            }
+        } catch (\Throwable) {
+            //
+        }
+
+        return rtrim((string) config('services.meta_ads.api_url', 'https://graph.facebook.com/v21.0'), '/');
     }
 
     public static function defaultCurrency(): string
@@ -187,7 +277,21 @@ class MetaAdsSettings
 
     public static function pageId(): string
     {
-        return trim((string) (self::all()['page_id'] ?? ''));
+        $saved = trim((string) (self::all()['page_id'] ?? ''));
+        if ($saved !== '') {
+            return $saved;
+        }
+
+        try {
+            $page = MetaSocialPage::query()->where('is_active', true)->orderByDesc('id')->first();
+            if ($page && trim((string) $page->page_id) !== '') {
+                return trim((string) $page->page_id);
+            }
+        } catch (\Throwable) {
+            //
+        }
+
+        return '';
     }
 
     public static function clearCache(): void

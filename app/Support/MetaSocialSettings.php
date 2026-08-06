@@ -40,6 +40,8 @@ class MetaSocialSettings
             'instagram_basic',
             'instagram_manage_messages',
             'business_management',
+            'ads_management',
+            'ads_read',
         ];
     }
 
