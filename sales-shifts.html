@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>جدول شيفتات وقنوات فريق المبيعات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#141A26; --surface:#1D2534; --surface-2:#232C3E;
+    --line:rgba(255,255,255,.10); --line-strong:rgba(255,255,255,.20);
+    --ink:#F2F5FA; --muted:#A3ADBF;
+    --shahd:#F5A623; --esraa:#EC6A9C; --mariam:#4DD0E1; --haneen:#8BD450;
+    --track-h:42px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:"Cairo","Tajawal","Segoe UI",Tahoma,sans-serif;
+    font-size:16px;line-height:1.7;padding:32px 20px 64px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+
+  header{margin-bottom:30px}
+  .eyebrow{font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+  h1{font-weight:800;font-size:clamp(28px,4.6vw,42px);line-height:1.3}
+  .window{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px 24px;align-items:baseline;color:var(--muted);font-size:15px}
+  .window b{color:var(--ink);font-weight:700}
+
+  .legend{display:flex;flex-wrap:wrap;gap:10px;margin:22px 0 28px}
+  .chip{
+    display:inline-flex;align-items:center;gap:9px;background:var(--surface);
+    border:1px solid var(--line);border-radius:999px;padding:7px 16px 7px 13px;
+    font-size:15px;font-weight:700;
+  }
+  .dot{width:11px;height:11px;border-radius:50%;flex:none}
+  .chip span{color:var(--muted);font-size:13px;font-weight:400}
+
+  .board{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px 18px 10px;overflow-x:auto}
+  .board-inner{min-width:980px}
+  .ruler{display:grid;grid-template-columns:92px 1fr;align-items:end;margin-bottom:10px}
+  .ticks{position:relative;height:22px;margin-inline-start:100px}
+  .tick{position:absolute;transform:translateX(50%);font-size:12.5px;font-weight:600;color:var(--muted);white-space:nowrap}
+
+  .row{display:grid;grid-template-columns:92px 1fr;gap:0;padding:14px 0;border-top:1px solid var(--line)}
+  .row:first-of-type{border-top:1px solid var(--line-strong)}
+  .daylabel .d{font-weight:700;font-size:17px}
+  .daylabel .badge{display:inline-block;margin-top:4px;font-size:12px;font-weight:600;color:var(--muted);border:1px solid var(--line-strong);border-radius:5px;padding:1px 8px}
+  .daylabel .off{display:block;margin-top:4px;font-size:13px;color:var(--muted)}
+
+  .lanes{display:flex;flex-direction:column;gap:6px}
+  .lane{display:grid;grid-template-columns:100px 1fr;align-items:center}
+  .who{padding-inline-end:10px}
+  .who b{display:block;font-weight:700;font-size:15px;color:var(--c);line-height:1.35}
+  .who i{display:block;font-style:normal;font-size:11.5px;color:var(--muted);line-height:1.35}
+  .track{
+    position:relative;height:var(--track-h);border-radius:8px;
+    background:linear-gradient(to left,rgba(255,255,255,.055) 0%,rgba(255,255,255,.03) 45%,rgba(0,0,0,.22) 100%);
+  }
+  .track::before,.track::after{content:"";position:absolute;top:0;bottom:0;width:1px;background:var(--line)}
+  .track::before{right:25%}
+  .track::after{right:50%}
+  .seg{
+    position:absolute;top:0;bottom:0;display:flex;align-items:center;justify-content:center;
+    padding:0 8px;color:#141A26;font-weight:700;font-size:12.5px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    box-shadow:inset 1px 0 0 rgba(0,0,0,.22);
+  }
+  .seg.first{box-shadow:none}
+  .seg.home{
+    background:transparent!important;border:2px dashed var(--c);color:var(--c);
+    font-size:11.5px;padding:0 4px;box-shadow:none;
+  }
+  .seg.night::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(to left,transparent 55%,rgba(0,0,0,.14))}
+
+  h2{font-weight:700;font-size:21px;margin:42px 0 16px}
+  .people{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(235px,1fr))}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;border-top:4px solid var(--c)}
+  .card h3{font-weight:800;font-size:19px;margin-bottom:12px;color:var(--c)}
+  .stat{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:7px 0;font-size:14.5px;color:var(--muted);border-top:1px solid var(--line)}
+  .stat:first-of-type{border-top:0}
+  .stat b{color:var(--ink);font-weight:700;font-size:14.5px;text-align:left}
+
+  .notes{margin-top:36px;background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:22px 24px}
+  .notes h2{margin:0 0 14px;font-size:19px}
+  .notes ul{list-style:none;display:flex;flex-direction:column;gap:13px}
+  .notes li{font-size:15px;color:#D2D9E4;padding-inline-start:22px;position:relative}
+  .notes li::before{content:"";position:absolute;right:0;top:11px;width:8px;height:8px;border-radius:2px;background:var(--muted)}
+  .notes li b{color:var(--ink);font-weight:700}
+
+  @media (max-width:620px){ body{padding:22px 14px 48px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">جدول أسبوعي</div>
+    <h1>شيفتات فريق المبيعات وتوزيع القنوات</h1>
+    <div class="window">
+      <span>يوم العمل من <b>10:00 ص</b> لـ <b>2:00 ص</b> — 16 ساعة</span>
+      <span>4 أفراد · 6 أيام عمل لكل فرد</span>
+    </div>
+  </header>
+
+  <div class="legend" id="legend"></div>
+
+  <div class="board">
+    <div class="board-inner">
+      <div class="ruler"><div></div><div class="ticks" id="ticks"></div></div>
+      <div id="rows"></div>
+    </div>
+  </div>
+
+  <h2>ملخص كل فرد</h2>
+  <div class="people" id="people"></div>
+
+  <div class="notes">
+    <h2>قواعد العمل</h2>
+    <ul>
+      <li><b>ممنوع حد يرد في وقت حد تاني إلا بإذنه</b> — الاستثناء الوحيد لو صاحب الشيفت عدّى 10 دقايق من غير ما يرد، ساعتها أي حد يقدر يدخل يرد.</li>
+      <li><b>أي خطأ يحصل في شيفت حد، هو المسؤول عنه</b> — الشيفت مسؤولية كاملة مش مشاركة.</li>
+      <li><b>اللي عايز يبدّل شيفت مع حد تاني يكتب على الجروب</b> — التبديل لازم يكون مكتوب ومتشاف، مش اتفاق شخصي.</li>
+      <li><b>كل واحد يعمل assign أو label للعميل بتاعه</b> — عشان يبان مين ماسك مين ومحدش يكرر الرد على نفس العميل.</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+const ALL = 'كل القنوات';
+const P = {
+  shahd : {n:'شهد',   hex:'#F5A623', off:'الخميس', base:'ماسنجر · انستا'},
+  esraa : {n:'إسراء', hex:'#EC6A9C', off:'الأربعاء', base:'مكالمات'},
+  mariam: {n:'مريم',  hex:'#4DD0E1', off:'الجمعة',  base:'واتساب · فولو أب'},
+  haneen: {n:'حنين',  hex:'#8BD450', off:'الجمعة',  base:'كومنتات'}
+};
+
+const OFF_CH = {
+  shahd :'ماسنجر · انستا',
+  mariam:'واتساب · فولو أب',
+  haneen:'كومنتات · مكالمات'
+};
+
+// lane = [person, [ [from, to, mode, channels], ... ] ]
+const officeDay = opener => {
+  const others = ['shahd','mariam','haneen'].filter(k => k !== opener);
+  return [
+    [opener, [[10,11,'home','بيت'],[11,19,'',OFF_CH[opener]]]],
+    ...others.map(k => [k, [[11,19,'',OFF_CH[k]]]]),
+    ['esraa', [[19,26,'',ALL]]]
+  ];
+};
+
+const DAYS = [
+  {n:'السبت',   badge:'من المقر', lanes:officeDay('shahd')},
+  {n:'الأحد',   badge:'من المقر', lanes:officeDay('mariam')},
+  {n:'الاثنين', badge:'من المقر', lanes:officeDay('haneen')},
+
+  {n:'الثلاثاء', lanes:[
+    ['shahd', [[10,14,'','ماسنجر · انستا · كومنتات'],[14,18,'','ماسنجر · انستا']]],
+    ['esraa', [[10,14,'','مكالمات · واتساب · فولو أب'],[14,18,'','مكالمات · كومنتات']]],
+    ['mariam',[[14,18,'','واتساب · فولو أب'],[18,22,'','واتساب · مكالمات · فولو أب']]],
+    ['haneen',[[18,22,'','ماسنجر · انستا · كومنتات'],[22,26,'',ALL]]]
+  ]},
+
+  {n:'الأربعاء', offToday:['esraa'], lanes:[
+    ['shahd', [[10,14,'',ALL],[14,18,'','ماسنجر · انستا · واتساب']]],
+    ['haneen',[[14,18,'','كومنتات · مكالمات · فولو أب'],[18,22,'','ماسنجر · انستا · كومنتات']]],
+    ['mariam',[[18,22,'','واتساب · مكالمات · فولو أب'],[22,26,'',ALL]]]
+  ]},
+
+  {n:'الخميس', offToday:['shahd'], lanes:[
+    ['esraa', [[10,14,'',ALL],[14,18,'','مكالمات · كومنتات · ماسنجر']]],
+    ['mariam',[[14,18,'','واتساب · انستا · فولو أب'],[18,22,'','واتساب · مكالمات · فولو أب']]],
+    ['haneen',[[18,22,'','ماسنجر · انستا · كومنتات'],[22,26,'',ALL]]]
+  ]},
+
+  {n:'الجمعة', offToday:['mariam','haneen'], lanes:[
+    ['esraa', [[10,18,'',ALL]]],
+    ['shahd', [[18,26,'',ALL]]]
+  ]}
+];
+
+const S = 10, E = 26, SPAN = E - S;
+const pos = h => ((h - S) / SPAN) * 100;
+const fmt = h => h === 12 ? '12 ظ' : h < 12 ? h + ' ص' : h < 24 ? (h - 12) + ' م' : ((h - 24) || 12) + ' ص';
+
+document.getElementById('legend').innerHTML = Object.values(P).map(p =>
+  `<div class="chip"><i class="dot" style="background:${p.hex}"></i>${p.n}<span>${p.base} · أجازة ${p.off}</span></div>`).join('');
+
+let ticks = '';
+for(let h = S; h <= E; h += 2) ticks += `<div class="tick" style="right:${pos(h)}%">${fmt(h)}</div>`;
+document.getElementById('ticks').innerHTML = ticks;
+
+document.getElementById('rows').innerHTML = DAYS.map(d => {
+  const lanes = d.lanes.map(([k, segs]) => {
+    const p = P[k];
+    const from = segs[0][0], to = segs[segs.length - 1][1];
+    const bars = segs.map(([a, b, mode, ch], i) => {
+      const first = i === 0, last = i === segs.length - 1;
+      const r = segs.length === 1 ? '8px' : first ? '0 8px 8px 0' : last ? '8px 0 0 8px' : '0';
+      const cls = 'seg' + (first ? ' first' : '') + (mode === 'home' ? ' home' : '') + (b > 21 ? ' night' : '');
+      const bg = mode === 'home' ? '' : `background:${p.hex};`;
+      return `<div class="${cls}" title="${p.n} — ${fmt(a)} إلى ${fmt(b)} — ${ch}"
+        style="right:${pos(a)}%;width:${pos(b)-pos(a)}%;border-radius:${r};--c:${p.hex};${bg}">${ch}</div>`;
+    }).join('');
+    return `<div class="lane" style="--c:${p.hex}">
+      <div class="who"><b>${p.n}</b><i>${fmt(from)} – ${fmt(to)}</i></div>
+      <div class="track">${bars}</div></div>`;
+  }).join('');
+
+  const offTxt = d.offToday ? `<span class="off">أجازة: ${d.offToday.map(k => P[k].n).join(' + ')}</span>` : '';
+  return `<div class="row">
+    <div class="daylabel"><div class="d">${d.n}</div>${d.badge ? `<span class="badge">${d.badge}</span>` : ''}${offTxt}</div>
+    <div class="lanes">${lanes}</div>
+  </div>`;
+}).join('');
+
+const sum = {};
+Object.keys(P).forEach(k => sum[k] = {hrs:0, days:0, nights:0});
+DAYS.forEach(d => d.lanes.forEach(([k, segs]) => {
+  sum[k].days++;
+  const to = segs[segs.length - 1][1];
+  if(to > 21) sum[k].nights++;
+  segs.forEach(([a, b]) => sum[k].hrs += b - a);
+}));
+
+document.getElementById('people').innerHTML = Object.entries(P).map(([k, p]) => {
+  const s = sum[k];
+  return `<div class="card" style="--c:${p.hex}">
+    <h3>${p.n}</h3>
+    <div class="stat"><span>القناة الأساسية</span><b>${p.base}</b></div>
+    <div class="stat"><span>أيام العمل</span><b>${s.days} أيام</b></div>
+    <div class="stat"><span>إجمالي الساعات</span><b>${s.hrs} ساعة</b></div>
+    <div class="stat"><span>الشيفت الليلي</span><b>${s.nights} ${s.nights === 1 ? 'ليلة' : 'ليالي'}</b></div>
+    <div class="stat"><span>الأجازة</span><b>${p.off}</b></div>
+  </div>`;
+}).join('');
+</script>
+</body>
+</html>

@@ -101,6 +101,54 @@
     </div>
     @endif
 
+    @php $shiftToday = $shiftBoard['my_today'] ?? null; @endphp
+    @if($shiftBoard && ($shiftToday['is_working_today'] ?? false))
+    <div class="dashboard-card border-violet-200 bg-violet-50/30">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            <div>
+                <p class="text-xs font-bold text-violet-800 uppercase tracking-wider">شيفتك اليوم — {{ $shiftToday['day_name'] ?? '' }}</p>
+                @if($shiftToday['current'] ?? null)
+                    <p class="text-xl font-black text-slate-900 mt-1">
+                        {{ $shiftToday['current']['channels_label'] }}
+                        <span class="text-sm font-semibold text-slate-500">→ {{ $shiftToday['current']['end_label'] }}</span>
+                    </p>
+                @elseif($shiftToday['next'] ?? null)
+                    <p class="text-lg font-bold text-slate-800 mt-1">يبدأ {{ $shiftToday['next']['start_label'] }}: {{ $shiftToday['next']['channels_label'] }}</p>
+                @else
+                    <p class="text-sm text-slate-600 mt-1">راجع جدول الأسبوع للتفاصيل</p>
+                @endif
+                @if(! empty($shiftBoard['ownership_now']))
+                    <p class="text-[11px] text-slate-500 mt-2">
+                        @foreach(array_slice($shiftBoard['ownership_now'], 0, 3) as $code => $own)
+                            {{ config("sales_shifts.channels.{$code}.label", $code) }}: {{ $own['owner_name'] }}@if(! $loop->last) · @endif
+                        @endforeach
+                    </p>
+                @endif
+            </div>
+            <a href="{{ route('employee.sales.shifts.index') }}"
+               class="inline-flex items-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold px-4 py-2 text-sm shrink-0">
+                <i class="fas fa-calendar-week"></i> أسبوعي كامل
+            </a>
+        </div>
+        @if(! empty($shiftToday['segments_today']))
+            <div class="mt-3 flex flex-wrap gap-2">
+                @foreach($shiftToday['segments_today'] as $seg)
+                    <span class="text-[11px] font-semibold rounded-lg px-2 py-1 border {{ !empty($seg['is_current']) ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-slate-700 border-slate-200' }}">
+                        {{ $seg['start_label'] }}–{{ $seg['end_label'] }}: {{ $seg['channels_label'] }}
+                    </span>
+                @endforeach
+            </div>
+        @endif
+    </div>
+    @elseif($shiftBoard)
+    <div class="dashboard-card border-slate-200">
+        <div class="flex items-center justify-between gap-3">
+            <p class="text-sm text-slate-600"><i class="fas fa-calendar-week text-violet-500 ml-2"></i> {{ $shiftToday['message'] ?? 'لا شيفت اليوم' }}</p>
+            <a href="{{ route('employee.sales.shifts.index') }}" class="text-sm font-semibold text-violet-700 hover:text-violet-900">جدول الأسبوع</a>
+        </div>
+    </div>
+    @endif
+
     @if($dr)
     <div class="dashboard-card">
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">

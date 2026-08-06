@@ -106,6 +106,7 @@ class SalesDashboardController extends Controller
         $kpiQuick = app(SalesKpiService::class)->buildReport($user);
         $dailyResults = app(SalesDailyResultService::class)->comparisonFor($user);
         $dayBlock = app(SalesDayBlockService::class)->snapshot();
+        $shiftBoard = app(\App\Services\SalesShiftScheduleService::class)->buildWeekBoard(null, null, $user->id);
 
         return view('employee.sales.dashboard', compact(
             'stats',
@@ -119,7 +120,8 @@ class SalesDashboardController extends Controller
             'slaCutoffHours',
             'kpiQuick',
             'dailyResults',
-            'dayBlock'
+            'dayBlock',
+            'shiftBoard'
         ));
     }
 

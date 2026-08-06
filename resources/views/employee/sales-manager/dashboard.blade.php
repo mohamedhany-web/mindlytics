@@ -35,6 +35,52 @@
         </div>
     </div>
 
+    @if(! empty($shiftLive) && ($shiftBoard ?? null))
+    <section class="dashboard-card border-violet-200 bg-gradient-to-l from-violet-50/80 to-white">
+        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+            <div>
+                <p class="text-xs font-bold text-violet-700 uppercase">شيفتات الفريق — {{ $shiftLive['day_name'] ?? '' }} · {{ $shiftLive['hour_label'] ?? '' }}</p>
+                <h3 class="text-lg font-black text-slate-900 mt-1">من على الشيفت الآن؟</h3>
+                @if(count($shiftLive['active_now'] ?? []) > 0)
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        @foreach($shiftLive['active_now'] as $row)
+                            <span class="text-xs font-semibold rounded-lg bg-white border border-emerald-200 text-emerald-900 px-2.5 py-1">
+                                {{ $row['user_name'] }}: {{ $row['channels_label'] }}
+                            </span>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-sm text-slate-500 mt-2">لا أحد على شيفت نشط في هذه الساعة.</p>
+                @endif
+                @if(! empty($shiftLive['ownership']))
+                    <p class="text-[11px] text-slate-500 mt-2">
+                        @foreach(array_slice($shiftLive['ownership'], 0, 4) as $code => $own)
+                            {{ config("sales_shifts.channels.{$code}.label", $code) }}→{{ $own['owner_name'] }}@if(! $loop->last) · @endif
+                        @endforeach
+                    </p>
+                @endif
+            </div>
+            <div class="flex flex-wrap gap-2 shrink-0">
+                <a href="{{ route('employee.sales-manager.shifts.index') }}"
+                   class="inline-flex items-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold px-4 py-2 text-sm">
+                    <i class="fas fa-calendar-week"></i> جدول الأسبوع
+                </a>
+                <a href="{{ route('employee.sales-manager.shift-swaps.index') }}"
+                   class="inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 font-semibold px-4 py-2 text-sm">
+                    تبديلات
+                    @if(($pendingShiftSwaps ?? 0) > 0)
+                        <span class="bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">{{ $pendingShiftSwaps }}</span>
+                    @endif
+                </a>
+            </div>
+        </div>
+    </section>
+    @elseif($shiftBoard === null)
+    <section class="dashboard-card border-amber-200 bg-amber-50/50 text-sm text-amber-900">
+        <p><i class="fas fa-info-circle ml-1"></i> خطة الشيفتات غير مفعّلة — اطلب من الإدارة استيراد الجدول.</p>
+    </section>
+    @endif
+
     <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         @php
             $statCards = [
@@ -97,6 +143,13 @@
                                     <i class="fas fa-users text-slate-400 ml-0.5"></i>
                                     {{ (int) ($leadCounts[$uid] ?? 0) }} عميل
                                 </span>
+                                @php $mShift = $memberShiftToday[$uid] ?? null; @endphp
+                                @if($mShift && ($mShift['is_working_today'] ?? false) && ($mShift['current'] ?? null))
+                                    <span class="text-violet-700 font-semibold">
+                                        <i class="fas fa-headset text-violet-500 ml-0.5"></i>
+                                        الآن: {{ $mShift['current']['channels_label'] }}
+                                    </span>
+                                @endif
                             </p>
                         </div>
                         <div class="flex flex-wrap items-center gap-2 shrink-0">
@@ -107,6 +160,10 @@
                             <a href="{{ route('employee.sales-manager.team.report', $uid) }}"
                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700">
                                 <i class="fas fa-chart-line"></i> تقرير الأداء
+                            </a>
+                            <a href="{{ route('employee.sales-manager.shifts.show', $uid) }}"
+                               class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-violet-200 text-violet-800 text-xs font-bold hover:bg-violet-50">
+                                <i class="fas fa-calendar-week"></i> الشيفت
                             </a>
                             <a href="{{ route('employee.sales-manager.attendance.employee', $uid) }}"
                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50">
@@ -122,6 +179,9 @@
         <div class="panel-card">
             <div class="panel-card-head"><h2 class="font-bold text-slate-900">اختصارات</h2></div>
             <div class="p-5 space-y-2">
+                <a href="{{ route('employee.sales-manager.shifts.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm font-medium text-slate-700"><i class="fas fa-calendar-week text-violet-600"></i> شيفتات وقنوات الفريق</a>
+                <a href="{{ route('employee.sales-manager.shift-swaps.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm font-medium text-slate-700"><i class="fas fa-right-left text-amber-600"></i> تبديل الشيفتات @if(($pendingShiftSwaps ?? 0) > 0)<span class="text-[10px] bg-amber-500 text-white px-1.5 rounded-full">{{ $pendingShiftSwaps }}</span>@endif</a>
+                <a href="{{ route('employee.sales-manager.scorecard.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm font-medium text-slate-700"><i class="fas fa-shield-halved text-teal-600"></i> مركز الرقابة</a>
                 <a href="{{ route('employee.sales-manager.whatsapp.inbox.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm font-medium text-slate-700"><i class="fab fa-whatsapp text-emerald-600"></i> محادثات الفريق</a>
                 <a href="{{ route('employee.sales-manager.follow-ups.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm font-medium text-slate-700"><i class="fas fa-clipboard-list text-teal-600"></i> رقابة المتابعات</a>
                 <a href="{{ route('employee.sales-manager.daily-reports.index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm font-medium text-slate-700"><i class="fas fa-clipboard-list text-sky-600"></i> تقارير الأعضاء</a>

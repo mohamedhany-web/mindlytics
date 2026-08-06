@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Employee;
 use App\Http\Controllers\Controller;
 use App\Models\LeaveRequest;
 use App\Models\SalesLead;
+use App\Models\SalesShiftSwapRequest;
+use App\Services\SalesShiftScheduleService;
 use App\Services\SalesTeamService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -132,7 +134,22 @@ class SalesManagerDashboardController extends Controller
             ->whereDate('end_date', '>=', today())
             ->pluck('employee_id')
             ->map(fn ($id) => (int) $id)
+            ->map(fn ($id) => (int) $id)
             ->all();
+
+        $shiftLive = app(SalesShiftScheduleService::class)->buildTeamLivePanel($memberIds);
+        $shiftBoard = app(SalesShiftScheduleService::class)->buildWeekBoard(null, null, null, $memberIds);
+        $pendingShiftSwaps = SalesShiftSwapRequest::query()
+            ->where('status', SalesShiftSwapRequest::STATUS_PENDING)
+            ->where(function ($q) use ($memberIds) {
+                $q->whereIn('requester_id', $memberIds)->orWhereIn('partner_id', $memberIds);
+            })
+            ->count();
+
+        $memberShiftToday = [];
+        foreach ($memberIds as $mid) {
+            $memberShiftToday[$mid] = app(SalesShiftScheduleService::class)->memberShiftToday($mid);
+        }
 
         return view('employee.sales-manager.dashboard', compact(
             'stats',
@@ -147,7 +164,11 @@ class SalesManagerDashboardController extends Controller
             'team',
             'members',
             'leadCounts',
-            'onLeaveIds'
+            'onLeaveIds',
+            'shiftLive',
+            'shiftBoard',
+            'pendingShiftSwaps',
+            'memberShiftToday',
         ));
     }
 

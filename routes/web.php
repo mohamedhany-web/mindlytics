@@ -1002,6 +1002,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('leads/{lead}/next-follow', [\App\Http\Controllers\Employee\SalesLeadController::class, 'setNextFollow'])->name('leads.next-follow');
             Route::post('leads/{lead}/csat', [\App\Http\Controllers\Employee\SalesLeadController::class, 'storeCsat'])->name('leads.csat.store');
             Route::get('follow-ups', [\App\Http\Controllers\Employee\SalesFollowUpController::class, 'index'])->name('follow-ups.index');
+            Route::get('shifts', [\App\Http\Controllers\Employee\SalesShiftController::class, 'index'])->name('shifts.index');
+            Route::post('shifts/swap', [\App\Http\Controllers\Employee\SalesShiftController::class, 'storeSwap'])->name('shifts.swap.store');
+            Route::delete('shifts/swap/{swap}', [\App\Http\Controllers\Employee\SalesShiftController::class, 'cancelSwap'])->name('shifts.swap.cancel')->whereNumber('swap');
             Route::resource('leads', \App\Http\Controllers\Employee\SalesLeadController::class);
 
             Route::prefix('whatsapp/inbox')->name('whatsapp.inbox.')->group(function () {
@@ -1062,6 +1065,10 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('distribution/{lead}/assign', [\App\Http\Controllers\Employee\SalesManagerDistributionController::class, 'assign'])->name('distribution.assign');
             Route::get('org-chart', [\App\Http\Controllers\Employee\SalesManagerOrgChartController::class, 'index'])->name('org-chart.index');
             Route::get('schedule-calendar', [\App\Http\Controllers\Employee\SalesManagerScheduleCalendarController::class, 'index'])->name('schedule-calendar.index');
+            Route::get('shifts', [\App\Http\Controllers\Employee\SalesManagerShiftController::class, 'index'])->name('shifts.index');
+            Route::get('shifts/{employee}', [\App\Http\Controllers\Employee\SalesManagerShiftController::class, 'show'])->name('shifts.show')->whereNumber('employee');
+            Route::get('shift-swaps', [\App\Http\Controllers\Employee\SalesManagerShiftSwapController::class, 'index'])->name('shift-swaps.index');
+            Route::post('shift-swaps/{swap}/review', [\App\Http\Controllers\Employee\SalesManagerShiftSwapController::class, 'review'])->name('shift-swaps.review')->whereNumber('swap');
             Route::get('follow-ups', [\App\Http\Controllers\Employee\SalesManagerFollowUpController::class, 'index'])->name('follow-ups.index');
             Route::get('transfer', [\App\Http\Controllers\Employee\SalesManagerTransferController::class, 'index'])->name('transfer.index');
             Route::post('transfer', [\App\Http\Controllers\Employee\SalesManagerTransferController::class, 'store'])->name('transfer.store');
@@ -1283,6 +1290,12 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('crm-compliance', [\App\Http\Controllers\Admin\SalesCrmComplianceController::class, 'index'])->name('crm-compliance.index');
             Route::get('crm-compliance/employees/{employee}', [\App\Http\Controllers\Admin\SalesCrmComplianceController::class, 'show'])->name('crm-compliance.show')->whereNumber('employee');
             Route::get('crm-compliance/leads/{lead}', [\App\Http\Controllers\Admin\SalesCrmComplianceController::class, 'lead'])->name('crm-compliance.lead')->whereNumber('lead');
+            Route::get('shifts', [\App\Http\Controllers\Admin\SalesShiftController::class, 'index'])->name('shifts.index');
+            Route::post('shifts/import-demo', [\App\Http\Controllers\Admin\SalesShiftController::class, 'importDemo'])->name('shifts.import-demo');
+            Route::put('shifts/plans/{plan}', [\App\Http\Controllers\Admin\SalesShiftController::class, 'updatePlan'])->name('shifts.update-plan')->whereNumber('plan');
+            Route::post('shifts/plans/{plan}/segments', [\App\Http\Controllers\Admin\SalesShiftController::class, 'storeSegment'])->name('shifts.segments.store')->whereNumber('plan');
+            Route::put('shifts/segments/{segment}', [\App\Http\Controllers\Admin\SalesShiftController::class, 'updateSegment'])->name('shifts.segments.update')->whereNumber('segment');
+            Route::delete('shifts/segments/{segment}', [\App\Http\Controllers\Admin\SalesShiftController::class, 'destroySegment'])->name('shifts.segments.destroy')->whereNumber('segment');
             Route::get('commissions', [\App\Http\Controllers\Admin\SalesCommissionController::class, 'index'])->name('commissions.index');
             Route::get('commissions/{user}', [\App\Http\Controllers\Admin\SalesCommissionController::class, 'show'])->name('commissions.show')->whereNumber('user');
             Route::post('commissions/{user}/settle', [\App\Http\Controllers\Admin\SalesCommissionController::class, 'settle'])->name('commissions.settle')->whereNumber('user');
