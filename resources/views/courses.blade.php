@@ -10,6 +10,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>{{ __('public.courses_page_title') }} - {{ __('public.site_suffix') }}</title>
+    <x-tracking-tags placement="head" />
 
     <!-- خط عربي موحّد مع الصفحة الرئيسية -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1028,6 +1029,7 @@
 <body class="bg-gray-50 text-gray-900"
       x-data="{ mobileMenu: false, searchQuery: '' }"
       :class="{ 'overflow-hidden': mobileMenu }">
+    <x-tracking-tags placement="body" />
 
     @include('components.unified-navbar')
     
@@ -1282,7 +1284,13 @@
                                     </span>
                                 @endif
                             </div>
-                            <a href="{{ route('public.course.show', $course['id']) }}" class="group/btn relative bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 flex items-center gap-1.5 overflow-hidden">
+                            <a href="{{ route('public.course.show', $course['id']) }}"
+                               class="group/btn relative bg-gradient-to-r from-blue-600 via-blue-500 to-green-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 flex items-center gap-1.5 overflow-hidden"
+                               data-ml-select-item
+                               data-ml-item-id="course:{{ $course['id'] }}"
+                               data-ml-item-name="{{ e($course['title'] ?? '') }}"
+                               data-ml-item-price="{{ (float) ($course['price'] ?? 0) }}"
+                               data-ml-item-index="{{ $index }}">
                                 <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300 btn-shimmer"></div>
                                 <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-400 to-green-400 rounded-lg blur opacity-0 group-hover/btn:opacity-50 transition-opacity duration-300"></div>
                                 <span class="relative z-10">{{ __('public.view_details') }}</span>
@@ -1446,6 +1454,20 @@
     <!-- Unified Footer -->
     @include('components.unified-footer')
 
+    @php
+        $__mlAnalytics = app(\App\Services\MarketingAnalyticsService::class);
+        $__mlListItems = [];
+        foreach (($courses ?? []) as $__mlIndex => $__mlCourse) {
+            if (is_array($__mlCourse) && ! empty($__mlCourse['id'])) {
+                $__mlListItems[] = $__mlAnalytics->itemFromCourseArray($__mlCourse, (int) $__mlIndex);
+            }
+        }
+        $__mlViewItemList = $__mlListItems !== []
+            ? $__mlAnalytics->viewItemList($__mlListItems, 'courses', 'Courses')
+            : null;
+    @endphp
+    <x-ecommerce-datalayer :payload="$__mlViewItemList" />
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             var navbar = document.getElementById('navbar');
@@ -1454,6 +1476,32 @@
                     navbar.classList.toggle('scrolled', window.pageYOffset > 100);
                 }, { passive: true });
             }
+
+            document.addEventListener('click', function (e) {
+                var link = e.target.closest('[data-ml-select-item]');
+                if (!link || typeof window.mindlyticsPushEcommerce !== 'function') {
+                    return;
+                }
+                window.mindlyticsPushEcommerce({
+                    event: 'select_item',
+                    ecommerce: {
+                        currency: @json(\App\Support\MarketingWebAnalyticsSettings::currency()),
+                        item_list_id: 'courses',
+                        item_list_name: 'Courses',
+                        items: [{
+                            item_id: link.getAttribute('data-ml-item-id'),
+                            item_name: link.getAttribute('data-ml-item-name') || '',
+                            price: parseFloat(link.getAttribute('data-ml-item-price') || '0') || 0,
+                            quantity: 1,
+                            index: parseInt(link.getAttribute('data-ml-item-index') || '0', 10) || 0,
+                            item_brand: @json(\App\Support\MarketingWebAnalyticsSettings::itemBrand()),
+                            item_category: 'online_course',
+                            item_list_id: 'courses',
+                            item_list_name: 'Courses'
+                        }]
+                    }
+                });
+            }, true);
         });
     </script>
 </body>

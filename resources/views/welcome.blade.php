@@ -56,6 +56,7 @@
         <meta name="application-name" content="Mindlytics">
         
         @include('components.favicon-meta')
+        <x-tracking-tags placement="head" />
         
         <!-- Preconnect for Performance -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2047,6 +2048,7 @@
 
 <body class="bg-gray-50 text-gray-900" 
       style="overflow-y: auto !important; overflow-x: hidden !important; position: relative !important; height: auto !important; min-height: 100vh !important;">
+    <x-tracking-tags placement="body" />
     <script>
         // حل فوري وقوي للتمرير بالماوس - يجب أن يكون في بداية body
         (function() {

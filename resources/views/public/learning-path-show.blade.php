@@ -10,6 +10,7 @@
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <title>{{ $learningPath->name ?? __('public.learning_path_detail_title') }} - {{ __('public.site_suffix') }}</title>
+        <x-tracking-tags placement="head" />
 
         <!-- خط عربي أصيل -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -309,6 +310,10 @@
 <body class="bg-gray-50 text-gray-900"
       x-data="{ mobileMenu: false }"
       :class="{ 'overflow-hidden': mobileMenu }">
+    <x-tracking-tags placement="body" />
+    @if(is_array(session('analytics_purchase')))
+        <x-ecommerce-datalayer :payload="session('analytics_purchase')" />
+    @endif
 
     @include('components.unified-navbar')
     

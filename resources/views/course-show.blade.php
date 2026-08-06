@@ -10,6 +10,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>{{ $course->localized('title') ?: __('public.course_detail_title') }} - {{ __('public.site_suffix') }}</title>
+    <x-tracking-tags placement="head" />
 
     <!-- خط عربي أصيل -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1233,6 +1234,7 @@
 <body class="bg-gray-50 text-gray-900"
       x-data="{ mobileMenu: false, searchQuery: '' }"
       :class="{ 'overflow-hidden': mobileMenu }">
+    <x-tracking-tags placement="body" />
 
     @include('components.unified-navbar')
 
@@ -1283,6 +1285,12 @@
             'seconds' => 5,
         ])
     @endif
+
+    @php
+        $__mlAnalytics = app(\App\Services\MarketingAnalyticsService::class);
+        $__mlViewItem = $__mlAnalytics->viewItem($__mlAnalytics->itemFromCourse($course));
+    @endphp
+    <x-ecommerce-datalayer :payload="$__mlViewItem" />
     
     <main class="pt-0 mt-0">
     {{-- رسائل النجاح / المعلومات / الأخطاء بعد إتمام الطلب أو أي إجراء --}}

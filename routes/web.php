@@ -2254,6 +2254,24 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('advertising-campaigns/reports/export', [\App\Http\Controllers\Admin\AdvertisingCampaignController::class, 'reportsExport'])->name('advertising-campaigns.reports.export');
         Route::resource('advertising-campaigns', \App\Http\Controllers\Admin\AdvertisingCampaignController::class)->except(['show']);
 
+        Route::get('marketing-web-analytics', [\App\Http\Controllers\Admin\MarketingWebAnalyticsController::class, 'edit'])->name('marketing-web-analytics.settings');
+        Route::put('marketing-web-analytics', [\App\Http\Controllers\Admin\MarketingWebAnalyticsController::class, 'update'])->name('marketing-web-analytics.settings.update');
+
+        Route::prefix('meta-ads')->name('meta-ads.')->group(function () {
+            Route::get('settings', [\App\Http\Controllers\Admin\MetaAdsSettingsController::class, 'edit'])->name('settings');
+            Route::put('settings', [\App\Http\Controllers\Admin\MetaAdsSettingsController::class, 'update'])->name('settings.update');
+            Route::post('settings/test', [\App\Http\Controllers\Admin\MetaAdsSettingsController::class, 'test'])->name('settings.test');
+
+            Route::get('campaigns', [\App\Http\Controllers\Admin\MetaAdsCampaignController::class, 'index'])->name('campaigns.index');
+            Route::get('campaigns/create', [\App\Http\Controllers\Admin\MetaAdsCampaignController::class, 'create'])->name('campaigns.create');
+            Route::post('campaigns', [\App\Http\Controllers\Admin\MetaAdsCampaignController::class, 'store'])->name('campaigns.store');
+            Route::get('campaigns/{campaign}', [\App\Http\Controllers\Admin\MetaAdsCampaignController::class, 'show'])->name('campaigns.show');
+            Route::post('campaigns/{campaign}/pause', [\App\Http\Controllers\Admin\MetaAdsCampaignController::class, 'pause'])->name('campaigns.pause');
+            Route::post('campaigns/{campaign}/resume', [\App\Http\Controllers\Admin\MetaAdsCampaignController::class, 'resume'])->name('campaigns.resume');
+            Route::put('campaigns/{campaign}/budget', [\App\Http\Controllers\Admin\MetaAdsCampaignController::class, 'updateBudget'])->name('campaigns.budget');
+            Route::put('campaigns/{campaign}/audience', [\App\Http\Controllers\Admin\MetaAdsCampaignController::class, 'updateAudience'])->name('campaigns.audience');
+        });
+
         Route::prefix('marketing-course-reviews')->name('marketing-course-reviews.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\MarketingCourseReviewController::class, 'index'])->name('index');
             Route::get('/create', [\App\Http\Controllers\Admin\MarketingCourseReviewController::class, 'create'])->name('create');

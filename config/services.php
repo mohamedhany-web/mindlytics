@@ -78,6 +78,12 @@ return [
         'api_url' => env('META_SOCIAL_API_URL', 'https://graph.facebook.com/v21.0'),
     ],
 
+    'meta_ads' => [
+        'api_url' => env('META_ADS_API_URL', 'https://graph.facebook.com/v21.0'),
+        'ad_account_id' => env('META_ADS_AD_ACCOUNT_ID'),
+        'access_token' => env('META_ADS_ACCESS_TOKEN'),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Platform Settings

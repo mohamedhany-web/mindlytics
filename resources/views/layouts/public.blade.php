@@ -11,6 +11,7 @@
     <title>@yield('title', config('app.name') . ' - ' . __('landing.nav.brand'))</title>
 
     @include('components.favicon-meta')
+    <x-tracking-tags placement="head" />
 
     <!-- الخطوط العربية - تحميل غير معطل للرسم (تحسين FCP/LCP) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -41,7 +42,8 @@
 <body class="bg-gray-50 text-gray-900"
       x-data="{ mobileMenu: false, searchQuery: '' }"
       :class="{ 'overflow-hidden': mobileMenu }">
-    
+    <x-tracking-tags placement="body" />
+
     <!-- Navigation Header - نفس الناف بار من الصفحة الرئيسية -->
     @include('components.unified-navbar')
 

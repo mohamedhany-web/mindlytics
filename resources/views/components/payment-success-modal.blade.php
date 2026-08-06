@@ -6,7 +6,13 @@
     if ($psSeconds < 1) {
         $psSeconds = 5;
     }
+    $analyticsPurchase = session('analytics_purchase');
 @endphp
+@if(is_array($analyticsPurchase))
+    {{-- Ensure GTM/dataLayer exist on student learn pages (outside public layout). --}}
+    <x-tracking-tags placement="head" />
+    <x-ecommerce-datalayer :payload="$analyticsPurchase" />
+@endif
 <div
     x-data="{
         open: true,

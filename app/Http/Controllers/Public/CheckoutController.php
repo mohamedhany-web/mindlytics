@@ -18,6 +18,7 @@ use App\Models\Transaction;
 use App\Services\FawaterakService;
 use App\Services\GatewayFeeCalculator;
 use App\Services\KashierService;
+use App\Services\MarketingAnalyticsService;
 use App\Services\PaymentGatewaySettings;
 use App\Support\BranchContext;
 use App\Support\PlatformSettings;
@@ -645,34 +646,58 @@ class CheckoutController extends Controller
 
         if ($order->academic_year_id) {
             $slug = Str::slug($order->learningPath->name ?? '');
-            return redirect()->route('public.learning-path.show', $slug)
+            $redirect = redirect()->route('public.learning-path.show', $slug)
                 ->with('success', 'تم الدفع بنجاح! تم تفعيل المسار التعليمي على حسابك.');
+
+            return $this->withPurchaseAnalytics($redirect, $order);
         }
 
         return $this->redirectAfterPaidCourseEnrollment(
             (int) $order->advanced_course_id,
-            'تم الدفع بنجاح! تم تفعيل الكورس على حسابك.'
+            'تم الدفع بنجاح! تم تفعيل الكورس على حسابك.',
+            $order
         );
     }
 
     /**
      * بعد شراء كورس بنجاح: الطالب → صفحة التعلم مع نافذة نجاح وعدّاد؛ غير الطالب → صفحة الكورس العامة ثم توجيه للتعلم بعد العدّاد.
      */
-    private function redirectAfterPaidCourseEnrollment(int $advancedCourseId, string $successMessage): RedirectResponse
+    private function redirectAfterPaidCourseEnrollment(int $advancedCourseId, string $successMessage, ?Order $order = null): RedirectResponse
     {
         $user = Auth::user();
         if ($user && $user->isStudent()) {
-            return redirect()
+            $redirect = redirect()
                 ->route('my-courses.learn', $advancedCourseId)
                 ->with('success', $successMessage)
                 ->with('payment_success_modal', true);
+
+            return $this->withPurchaseAnalytics($redirect, $order);
         }
 
-        return redirect()
+        $redirect = redirect()
             ->route('public.course.show', $advancedCourseId)
             ->with('success', $successMessage)
             ->with('payment_success_modal', true)
             ->with('payment_success_redirect_url', route('my-courses.learn', $advancedCourseId));
+
+        return $this->withPurchaseAnalytics($redirect, $order);
+    }
+
+    /**
+     * Flash GA4 purchase payload for a one-time dataLayer push on the next page.
+     */
+    private function withPurchaseAnalytics(RedirectResponse $redirect, ?Order $order): RedirectResponse
+    {
+        if (! $order) {
+            return $redirect;
+        }
+
+        $payload = app(MarketingAnalyticsService::class)->purchaseFromOrder($order);
+        if ($payload) {
+            $redirect->with('analytics_purchase', $payload);
+        }
+
+        return $redirect;
     }
 
     /**
@@ -977,7 +1002,8 @@ class CheckoutController extends Controller
 
         return $this->redirectAfterPaidCourseEnrollment(
             (int) $order->advanced_course_id,
-            'تم الدفع بنجاح! تم تفعيل الكورس. رقم الفاتورة المحلية: '.$invNo
+            'تم الدفع بنجاح! تم تفعيل الكورس. رقم الفاتورة المحلية: '.$invNo,
+            $order
         );
     }
 

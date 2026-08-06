@@ -11,6 +11,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>إتمام الطلب - {{ isset($course) ? $course->localized('title') : ($learningPath->name ?? 'الطلب') }} - Mindlytics</title>
+    <x-tracking-tags placement="head" />
 
     <!-- خط عربي -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -376,6 +377,34 @@
 <body class="bg-gray-50 text-gray-900"
       x-data="{ mobileMenu: false }"
       :class="{ 'overflow-hidden': mobileMenu }">
+    <x-tracking-tags placement="body" />
+
+    @php
+        $__mlAnalytics = app(\App\Services\MarketingAnalyticsService::class);
+        if (isset($course)) {
+            $__mlCheckoutPrice = (float) (($checkoutPricing['amount'] ?? null) ?? $course->effectivePrice());
+            $__mlCheckoutItem = $__mlAnalytics->itemFromCourse($course, 0, $__mlCheckoutPrice);
+            $__mlBeginCheckout = $__mlAnalytics->beginCheckout(
+                [$__mlCheckoutItem],
+                $__mlCheckoutPrice,
+                $personalCoupon->code ?? null
+            );
+        } elseif (isset($learningPath)) {
+            $__mlPathPrice = (float) (($checkoutPricing['amount'] ?? null) ?? ($learningPath->price ?? 0));
+            $__mlBeginCheckout = $__mlAnalytics->beginCheckout([
+                $__mlAnalytics->normalizeItem([
+                    'item_id' => 'learning_path:'.($learningPath->id ?? 0),
+                    'item_name' => (string) ($learningPath->name ?? 'Learning Path'),
+                    'price' => $__mlPathPrice,
+                    'quantity' => 1,
+                    'item_category' => 'learning_path',
+                ]),
+            ], $__mlPathPrice);
+        } else {
+            $__mlBeginCheckout = null;
+        }
+    @endphp
+    <x-ecommerce-datalayer :payload="$__mlBeginCheckout" />
 
     @include('components.unified-navbar')
     

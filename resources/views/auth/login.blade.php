@@ -8,6 +8,7 @@
     <title>{{ __('auth.login') }} - {{ config('app.name') }}</title>
 
     @include('components.favicon-meta')
+    <x-tracking-tags placement="head" />
 
     {{-- تحميل صورة الخلفية مبكراً لسرعة الظهور --}}
     <link rel="preload" href="{{ $authBackgroundUrl ?? asset('images/brainstorm-meeting.jpg') }}" as="image">
@@ -679,6 +680,7 @@
     </style>
 </head>
 <body x-data="{ showPassword: false }">
+    <x-tracking-tags placement="body" />
     <div class="login-nav-mobile-only">
         @include('components.unified-navbar')
     </div>

@@ -9,6 +9,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>حجز مجموعة {{ $bookingModeLabel ?? 'أوفلاين' }} — {{ $group->name }} | Mindlytics</title>
+    <x-tracking-tags placement="head" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -46,6 +47,15 @@
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900" x-data="{ mobileMenu: false, method: '{{ old('payment_method', 'bank_transfer') }}' }" :class="{ 'overflow-hidden': mobileMenu }">
+    <x-tracking-tags placement="body" />
+
+    @php
+        $__mlAnalytics = app(\App\Services\MarketingAnalyticsService::class);
+        $__mlBeginCheckout = $__mlAnalytics->beginCheckout([
+            $__mlAnalytics->itemFromOfflineCourse($course),
+        ], (float) ($course->price ?? 0));
+    @endphp
+    <x-ecommerce-datalayer :payload="$__mlBeginCheckout" />
 
     @include('components.unified-navbar')
 

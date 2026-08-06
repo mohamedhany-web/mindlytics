@@ -1084,7 +1084,7 @@
 
             <!-- إدارة التسويق -->
             @php
-                $marketingOpen = request()->routeIs('admin.coupons.*') || request()->routeIs('admin.referral-programs.*') || request()->routeIs('admin.workshop-promo-codes.*') || request()->routeIs('admin.referrals.*') || request()->routeIs('admin.loyalty.*') || request()->routeIs('admin.personal-branding.*') || request()->routeIs('admin.popup-ads.*') || request()->routeIs('admin.marketing-course-reviews.*') || request()->routeIs('admin.marketing-customer-surveys.*') || request()->routeIs('admin.advertising-campaigns.*');
+                $marketingOpen = request()->routeIs('admin.coupons.*') || request()->routeIs('admin.referral-programs.*') || request()->routeIs('admin.workshop-promo-codes.*') || request()->routeIs('admin.referrals.*') || request()->routeIs('admin.loyalty.*') || request()->routeIs('admin.personal-branding.*') || request()->routeIs('admin.popup-ads.*') || request()->routeIs('admin.marketing-course-reviews.*') || request()->routeIs('admin.marketing-customer-surveys.*') || request()->routeIs('admin.advertising-campaigns.*') || request()->routeIs('admin.marketing-web-analytics.*') || request()->routeIs('admin.meta-ads.*');
             @endphp
             <li x-data="{ open: {{ $marketingOpen ? 'true' : 'false' }} }">
                 <button type="button" @click="open = !open" :aria-expanded="open" 
@@ -1096,6 +1096,14 @@
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
                 <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
+                    <li>
+                        <a href="{{ route('admin.marketing-web-analytics.settings') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.marketing-web-analytics.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
+                            <i class="fas fa-chart-line w-4"></i>
+                            <span>تتبع التسويق (GTM / Meta)</span>
+                        </a>
+                    </li>
                     <li>
                         <a href="{{ route('admin.marketing-course-reviews.index') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -1118,6 +1126,22 @@
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.popup-ads.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
                             <i class="fas fa-bullhorn w-4"></i>
                             <span>{{ __('admin.popup_ads') }}</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.meta-ads.campaigns.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.meta-ads.campaigns.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
+                            <i class="fab fa-meta w-4"></i>
+                            <span>Meta Ads</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.meta-ads.settings') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.meta-ads.settings*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
+                            <i class="fas fa-sliders-h w-4"></i>
+                            <span>إعدادات Meta Ads</span>
                         </a>
                     </li>
                     <li>
