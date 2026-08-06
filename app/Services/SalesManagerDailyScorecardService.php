@@ -46,7 +46,7 @@ class SalesManagerDailyScorecardService
         $members = User::query()
             ->whereIn('id', $memberIds)
             ->where('is_active', true)
-            ->with('employeeJob:id,code,title')
+            ->with('employeeJob:id,code,name')
             ->orderBy('name')
             ->get();
 
@@ -161,7 +161,7 @@ class SalesManagerDailyScorecardService
             'user' => $employee,
             'employee_id' => $employee->id,
             'name' => $employee->name,
-            'job_title' => $employee->employeeJob->title ?? 'مبيعات',
+            'job_title' => $employee->employeeJob?->name ?? 'مبيعات',
             'verified_score' => $verifiedScore,
             'tone' => $tone,
             'pillars' => $pillars,

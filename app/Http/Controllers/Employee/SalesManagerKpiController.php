@@ -47,7 +47,7 @@ class SalesManagerKpiController extends Controller
         $members = User::query()
             ->whereIn('id', $memberIds)
             ->where('is_active', true)
-            ->with('employeeJob:id,code,title')
+            ->with('employeeJob:id,code,name')
             ->orderBy('name')
             ->get();
 
