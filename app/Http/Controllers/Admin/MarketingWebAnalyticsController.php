@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\MarketingRegionsService;
 use App\Support\MarketingWebAnalyticsSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -10,10 +11,24 @@ use Illuminate\View\View;
 
 class MarketingWebAnalyticsController extends Controller
 {
-    public function edit(): View
+    public function edit(MarketingRegionsService $regions): View
     {
+        $settings = MarketingWebAnalyticsSettings::all();
+        $egypt = $regions->egyptPresenceInsights();
+
+        $trackingStatus = [
+            'gtm' => trim((string) ($settings['gtm_container_id'] ?? '')) !== '',
+            'ga4' => trim((string) ($settings['ga4_measurement_id'] ?? '')) !== '',
+            'clarity' => trim((string) ($settings['clarity_project_id'] ?? '')) !== '',
+            'meta' => (bool) ($settings['meta_pixel_enabled'] ?? false)
+                && trim((string) ($settings['meta_pixel_id'] ?? '')) !== '',
+            'enabled' => (bool) ($settings['enabled'] ?? true),
+        ];
+
         return view('admin.marketing.web-analytics.settings', [
-            'settings' => MarketingWebAnalyticsSettings::all(),
+            'settings' => $settings,
+            'trackingStatus' => $trackingStatus,
+            'egypt' => $egypt,
         ]);
     }
 
@@ -32,7 +47,7 @@ class MarketingWebAnalyticsController extends Controller
 
         $normalizeId = static function (?string $value): string {
             $value = trim((string) $value);
-            // Strip accidental quotes / spaces from paste
+
             return trim($value, " \t\n\r\0\x0B\"'");
         };
 

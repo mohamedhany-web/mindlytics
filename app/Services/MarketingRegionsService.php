@@ -181,29 +181,244 @@ class MarketingRegionsService
     }
 
     /**
-     * @return list<array{name: string, count: int}>
+     * Automatic Egypt audience presence from surveys, phones, addresses, and EG login IPs.
+     *
+     * @return array{
+     *   summary: array<string, int>,
+     *   governorates: list<array{key: string, name: string, count: int, sources: list<string>}>,
+     *   cities: list<array{name: string, count: int}>,
+     *   top: list<array{name: string, count: int}>,
+     *   samples: list<array<string, mixed>>
+     * }
+     */
+    public function egyptPresenceInsights(?Carbon $from = null, ?Carbon $to = null): array
+    {
+        $to = $to?->copy()->endOfDay() ?? now()->endOfDay();
+        $from = $from?->copy()->startOfDay() ?? now()->subDays(90)->startOfDay();
+
+        $labels = class_exists(\App\Models\MarketingCustomerSurvey::class)
+            ? \App\Models\MarketingCustomerSurvey::governorates()
+            : [];
+
+        /** @var array<string, array{key: string, name: string, count: int, sources: array<string, bool>}> $gov */
+        $gov = [];
+        $bumpGov = function (string $key, int $n, string $source) use (&$gov, $labels) {
+            $key = strtolower(trim($key));
+            if ($key === '' || $key === 'outside_egypt') {
+                return;
+            }
+            if (! isset($gov[$key])) {
+                $gov[$key] = [
+                    'key' => $key,
+                    'name' => $labels[$key] ?? $key,
+                    'count' => 0,
+                    'sources' => [],
+                ];
+            }
+            $gov[$key]['count'] += $n;
+            $gov[$key]['sources'][$source] = true;
+        };
+
+        // 1) Surveys (strongest signal)
+        $surveyPeople = 0;
+        if (Schema::hasTable('marketing_customer_surveys')
+            && Schema::hasColumn('marketing_customer_surveys', 'governorate')) {
+            $rows = DB::table('marketing_customer_surveys')
+                ->whereNotNull('governorate')
+                ->where('governorate', '!=', '')
+                ->where('governorate', '!=', 'outside_egypt')
+                ->whereBetween('created_at', [$from, $to])
+                ->select('governorate', DB::raw('COUNT(*) as cnt'))
+                ->groupBy('governorate')
+                ->get();
+            foreach ($rows as $r) {
+                $surveyPeople += (int) $r->cnt;
+                $bumpGov((string) $r->governorate, (int) $r->cnt, 'survey');
+            }
+        }
+
+        // 2) users.address text match against Arabic governorate names
+        if (Schema::hasTable('users') && Schema::hasColumn('users', 'address')) {
+            $users = User::query()
+                ->whereNotNull('address')
+                ->where('address', '!=', '')
+                ->whereBetween('created_at', [$from, $to])
+                ->when(Schema::hasColumn('users', 'role'), fn ($q) => $q->where(function ($qq) {
+                    $qq->where('role', 'student')->orWhereNull('role');
+                }))
+                ->select(['id', 'address'])
+                ->limit(5000)
+                ->get();
+
+            foreach ($users as $user) {
+                $matched = $this->matchGovernorateFromText((string) $user->address, $labels);
+                if ($matched) {
+                    $bumpGov($matched, 1, 'address');
+                }
+            }
+        }
+
+        // 3) Egyptian phone registrations volume (national, not governorate)
+        $egyptianPhones = 0;
+        if (Schema::hasTable('users')) {
+            $egyptianPhones = (int) User::query()
+                ->whereNotNull('phone')
+                ->where(function ($q) {
+                    $q->where('phone', 'like', '+20%')
+                        ->orWhere('phone', 'like', '20%');
+                })
+                ->whereBetween('created_at', [$from, $to])
+                ->when(Schema::hasColumn('users', 'role'), fn ($q) => $q->where(function ($qq) {
+                    $qq->where('role', 'student')->orWhereNull('role');
+                }))
+                ->count();
+        }
+
+        // 4) Login IPs resolved to EG cities / regionName
+        $cities = [];
+        $samples = [];
+        if (Schema::hasTable('activity_logs')) {
+            $ipRows = DB::table('activity_logs')
+                ->where('action', 'login')
+                ->whereNotNull('ip_address')
+                ->where('ip_address', '!=', '')
+                ->whereBetween('created_at', [$from, $to])
+                ->select('ip_address', DB::raw('COUNT(*) as cnt'))
+                ->groupBy('ip_address')
+                ->orderByDesc('cnt')
+                ->limit(200)
+                ->get();
+
+            $lookups = $this->geoIp->lookupMany($ipRows->pluck('ip_address')->all(), 50);
+            foreach ($ipRows as $row) {
+                $ip = (string) $row->ip_address;
+                $geo = $lookups[$ip] ?? [];
+                if (strtoupper((string) ($geo['country_code'] ?? '')) !== 'EG') {
+                    continue;
+                }
+                $city = trim((string) ($geo['city'] ?? ''));
+                $region = trim((string) ($geo['region_name'] ?? ''));
+                $place = $city !== '' ? $city : $region;
+                if ($place !== '') {
+                    $cities[$place] = ($cities[$place] ?? 0) + (int) $row->cnt;
+                }
+                $govKey = $this->matchGovernorateFromText($region.' '.$city, $labels);
+                if ($govKey) {
+                    $bumpGov($govKey, (int) $row->cnt, 'login_ip');
+                }
+            }
+
+            $samples = $this->recentLoginSamples($from, $to, 15);
+            $samples = array_values(array_filter(
+                $samples,
+                static fn ($s) => ($s['country_code'] ?? null) === 'EG' || ($s['phone_country'] ?? null) === 'EG'
+            ));
+        }
+
+        $governorates = array_map(static function ($row) {
+            $row['sources'] = array_keys($row['sources']);
+
+            return $row;
+        }, array_values($gov));
+        usort($governorates, static fn ($a, $b) => $b['count'] <=> $a['count']);
+
+        $cityList = [];
+        foreach ($cities as $name => $count) {
+            $cityList[] = ['name' => $name, 'count' => $count];
+        }
+        usort($cityList, static fn ($a, $b) => $b['count'] <=> $a['count']);
+
+        $top = array_slice(array_map(static fn ($g) => [
+            'name' => $g['name'],
+            'count' => $g['count'],
+        ], $governorates), 0, 10);
+
+        return [
+            'summary' => [
+                'governorates' => count($governorates),
+                'survey_people' => $surveyPeople,
+                'egyptian_phones' => $egyptianPhones,
+                'eg_login_cities' => count($cityList),
+            ],
+            'governorates' => $governorates,
+            'cities' => array_slice($cityList, 0, 15),
+            'top' => $top,
+            'samples' => array_slice($samples, 0, 12),
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+        ];
+    }
+
+    /**
+     * @param  array<string, string>  $labels  key => Arabic name
+     */
+    protected function matchGovernorateFromText(string $text, array $labels): ?string
+    {
+        $text = trim($text);
+        if ($text === '') {
+            return null;
+        }
+        $normalized = mb_strtolower($text);
+
+        foreach ($labels as $key => $ar) {
+            if ($key === 'outside_egypt') {
+                continue;
+            }
+            $arNorm = mb_strtolower((string) $ar);
+            if ($arNorm !== '' && str_contains($normalized, $arNorm)) {
+                return (string) $key;
+            }
+            if (str_contains($normalized, str_replace('_', ' ', (string) $key))) {
+                return (string) $key;
+            }
+        }
+
+        $enAliases = [
+            'cairo' => 'cairo',
+            'giza' => 'giza',
+            'al jizah' => 'giza',
+            'alexandria' => 'alexandria',
+            'al iskandariyah' => 'alexandria',
+            'qalyubia' => 'qalyubia',
+            'sharqia' => 'sharqia',
+            'dakahlia' => 'dakahlia',
+            'gharbia' => 'gharbia',
+            'monufia' => 'monufia',
+            'port said' => 'port_said',
+            'suez' => 'suez',
+            'aswan' => 'aswan',
+            'luxor' => 'luxor',
+            'assiut' => 'assiut',
+            'asyut' => 'assiut',
+            'fayoum' => 'fayoum',
+            'faiyum' => 'fayoum',
+            'minya' => 'minya',
+            'sohag' => 'sohag',
+            'qena' => 'qena',
+            'ismailia' => 'ismailia',
+            'damietta' => 'damietta',
+        ];
+        foreach ($enAliases as $alias => $govKey) {
+            if (isset($labels[$govKey]) && str_contains($normalized, $alias)) {
+                return $govKey;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return list<array{name: string, count: int, key?: string}>
      */
     public function egyptGovernorates(Carbon $from, Carbon $to): array
     {
-        if (! Schema::hasTable('marketing_customer_surveys')
-            || ! Schema::hasColumn('marketing_customer_surveys', 'governorate')) {
-            return [];
-        }
+        $insights = $this->egyptPresenceInsights($from, $to);
 
-        $rows = DB::table('marketing_customer_surveys')
-            ->whereNotNull('governorate')
-            ->where('governorate', '!=', '')
-            ->whereBetween('created_at', [$from, $to])
-            ->select('governorate', DB::raw('COUNT(*) as cnt'))
-            ->groupBy('governorate')
-            ->orderByDesc('cnt')
-            ->limit(40)
-            ->get();
-
-        return $rows->map(fn ($r) => [
-            'name' => (string) $r->governorate,
-            'count' => (int) $r->cnt,
-        ])->all();
+        return array_map(static fn ($g) => [
+            'key' => $g['key'],
+            'name' => $g['name'],
+            'count' => $g['count'],
+        ], $insights['governorates']);
     }
 
     /**
