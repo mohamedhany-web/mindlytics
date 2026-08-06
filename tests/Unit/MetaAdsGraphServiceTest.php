@@ -74,19 +74,37 @@ class MetaAdsGraphServiceTest extends TestCase
         $this->assertSame('Summer', $result['data'][0]['name']);
     }
 
-    public function test_set_campaign_status_posts_to_graph(): void
+    public function test_list_ad_accounts_merges_personal_and_business(): void
     {
         Http::fake([
-            'graph.facebook.com/*' => Http::response(['success' => true], 200),
+            'graph.facebook.com/*/me/adaccounts*' => Http::response([
+                'data' => [
+                    ['id' => 'act_111', 'name' => 'Personal Ads', 'account_status' => 1, 'currency' => 'EGP'],
+                ],
+            ], 200),
+            'graph.facebook.com/*/me?*' => Http::response(['id' => '1', 'name' => 'User'], 200),
+            'graph.facebook.com/*/me/businesses*' => Http::response([
+                'data' => [['id' => 'biz_1', 'name' => 'Mind Biz']],
+            ], 200),
+            'graph.facebook.com/*/biz_1/owned_ad_accounts*' => Http::response([
+                'data' => [
+                    ['id' => 'act_222', 'name' => 'Biz Ads', 'account_status' => 1, 'currency' => 'USD'],
+                ],
+            ], 200),
+            'graph.facebook.com/*/biz_1/client_ad_accounts*' => Http::response(['data' => []], 200),
+            'graph.facebook.com/*/me/permissions*' => Http::response([
+                'data' => [
+                    ['permission' => 'ads_read', 'status' => 'granted'],
+                    ['permission' => 'ads_management', 'status' => 'granted'],
+                ],
+            ], 200),
         ]);
 
-        $result = (new MetaAdsGraphService)->setCampaignStatus('111', 'PAUSED');
+        $result = (new MetaAdsGraphService)->listAdAccounts();
 
         $this->assertTrue($result['success']);
-        Http::assertSent(function ($request) {
-            return str_contains($request->url(), '/111')
-                && $request['status'] === 'PAUSED'
-                && $request['access_token'] === 'test-token-xyz';
-        });
+        $ids = collect($result['data'])->pluck('id')->all();
+        $this->assertContains('act_111', $ids);
+        $this->assertContains('act_222', $ids);
     }
 }

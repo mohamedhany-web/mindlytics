@@ -2263,6 +2263,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('settings', [\App\Http\Controllers\Admin\MetaAdsSettingsController::class, 'edit'])->name('settings');
             Route::put('settings', [\App\Http\Controllers\Admin\MetaAdsSettingsController::class, 'update'])->name('settings.update');
             Route::post('settings/test', [\App\Http\Controllers\Admin\MetaAdsSettingsController::class, 'test'])->name('settings.test');
+            Route::post('settings/select-account', [\App\Http\Controllers\Admin\MetaAdsSettingsController::class, 'selectAccount'])->name('settings.select-account');
 
             Route::get('campaigns', [\App\Http\Controllers\Admin\MetaAdsCampaignController::class, 'index'])->name('campaigns.index');
             Route::get('campaigns/create', [\App\Http\Controllers\Admin\MetaAdsCampaignController::class, 'create'])->name('campaigns.create');

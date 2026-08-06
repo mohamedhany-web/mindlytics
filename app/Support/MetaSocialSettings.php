@@ -193,8 +193,46 @@ class MetaSocialSettings
     public static function oauthScopes(): string
     {
         $scopes = trim((string) (self::all()['oauth_scopes'] ?? ''));
+        if ($scopes === '') {
+            $scopes = implode(',', self::defaultOAuthScopes());
+        }
 
-        return $scopes !== '' ? $scopes : implode(',', self::defaultOAuthScopes());
+        return self::withRequiredAdsScopes($scopes);
+    }
+
+    /**
+     * Ensure ads scopes are always present for Meta Ads + Social shared OAuth.
+     */
+    public static function withRequiredAdsScopes(string $scopes): string
+    {
+        $list = array_values(array_unique(array_filter(array_map(
+            static fn ($s) => trim((string) $s),
+            explode(',', $scopes)
+        ), static fn ($s) => $s !== '')));
+
+        foreach (['ads_management', 'ads_read'] as $needed) {
+            if (! in_array($needed, $list, true)) {
+                $list[] = $needed;
+            }
+        }
+
+        return implode(',', $list);
+    }
+
+    /**
+     * Persist ads scopes into saved settings so the admin form and next OAuth include them.
+     */
+    public static function ensureAdsScopesPersisted(): bool
+    {
+        $before = trim((string) (self::all()['oauth_scopes'] ?? ''));
+        $after = self::withRequiredAdsScopes($before !== '' ? $before : implode(',', self::defaultOAuthScopes()));
+        if ($before === $after) {
+            return false;
+        }
+
+        self::save(['oauth_scopes' => $after]);
+
+        return true;
     }
 
     public static function publicBaseUrl(): string

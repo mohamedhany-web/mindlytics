@@ -77,8 +77,9 @@ class MetaAdsGraphService
 
     /**
      * List ad accounts available to the connected Meta user.
+     * Tries personal adaccounts + business owned/client accounts.
      *
-     * @return array{success: bool, data?: list<array<string, mixed>>, error?: string}
+     * @return array{success: bool, data?: list<array<string, mixed>>, error?: string, permissions?: list<string>}
      */
     public function listAdAccounts(int $limit = 50): array
     {
@@ -86,19 +87,135 @@ class MetaAdsGraphService
             return ['success' => false, 'error' => 'لا يوجد توكن — اربط Meta Social أولاً'];
         }
 
-        $result = $this->get('me/adaccounts', [
-            'fields' => 'id,account_id,name,account_status,currency,timezone_name',
-            'limit' => max(1, min(100, $limit)),
-        ]);
+        $limit = max(1, min(100, $limit));
+        $byId = [];
+        $errors = [];
 
-        if (! ($result['success'] ?? false)) {
-            return $result;
+        $personal = $this->get('me/adaccounts', [
+            'fields' => 'id,account_id,name,account_status,currency,timezone_name,business',
+            'limit' => $limit,
+        ]);
+        if ($personal['success'] ?? false) {
+            foreach (($personal['data']['data'] ?? []) as $row) {
+                if (is_array($row)) {
+                    $this->indexAdAccount($byId, $row, 'personal');
+                }
+            }
+        } else {
+            $errors[] = 'me/adaccounts: '.($personal['error'] ?? 'فشل');
         }
 
-        /** @var list<array<string, mixed>> $data */
-        $data = $result['data']['data'] ?? [];
+        // Nested edge as alternate shape
+        $meNested = $this->get('me', [
+            'fields' => 'id,name,adaccounts.limit('.$limit.'){id,account_id,name,account_status,currency,timezone_name}',
+        ]);
+        if ($meNested['success'] ?? false) {
+            foreach (($meNested['data']['adaccounts']['data'] ?? []) as $row) {
+                if (is_array($row)) {
+                    $this->indexAdAccount($byId, $row, 'personal');
+                }
+            }
+        }
 
-        return ['success' => true, 'data' => $data];
+        $businesses = $this->get('me/businesses', [
+            'fields' => 'id,name',
+            'limit' => 25,
+        ]);
+        if ($businesses['success'] ?? false) {
+            foreach (($businesses['data']['data'] ?? []) as $biz) {
+                $bizId = (string) ($biz['id'] ?? '');
+                if ($bizId === '') {
+                    continue;
+                }
+                foreach (['owned_ad_accounts', 'client_ad_accounts'] as $edge) {
+                    $res = $this->get($bizId.'/'.$edge, [
+                        'fields' => 'id,account_id,name,account_status,currency,timezone_name',
+                        'limit' => $limit,
+                    ]);
+                    if (! ($res['success'] ?? false)) {
+                        $errors[] = $edge.'@'.$bizId.': '.($res['error'] ?? 'فشل');
+                        continue;
+                    }
+                    foreach (($res['data']['data'] ?? []) as $row) {
+                        if (is_array($row)) {
+                            $this->indexAdAccount($byId, $row, $edge, (string) ($biz['name'] ?? $bizId));
+                        }
+                    }
+                }
+            }
+        } else {
+            $errors[] = 'me/businesses: '.($businesses['error'] ?? 'فشل');
+        }
+
+        $permissions = $this->grantedPermissionNames();
+
+        if ($byId === []) {
+            $hint = 'لم يُعثر على حسابات إعلانات.';
+            if ($permissions !== [] && ! in_array('ads_management', $permissions, true) && ! in_array('ads_read', $permissions, true)) {
+                $hint .= ' التوكن الحالي بدون صلاحيات ads_read / ads_management — أعد ربط Meta Social للموافقة على صلاحيات الإعلانات.';
+            } elseif ($errors !== []) {
+                $hint .= ' '.implode(' | ', array_slice($errors, 0, 3));
+            }
+
+            return [
+                'success' => false,
+                'error' => $hint,
+                'permissions' => $permissions,
+                'data' => [],
+            ];
+        }
+
+        $data = array_values($byId);
+        usort($data, static fn ($a, $b) => strcmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? '')));
+
+        return [
+            'success' => true,
+            'data' => $data,
+            'permissions' => $permissions,
+        ];
+    }
+
+    /**
+     * @param  array<string, array<string, mixed>>  $byId
+     * @param  array<string, mixed>  $row
+     */
+    protected function indexAdAccount(array &$byId, array $row, string $source, string $businessName = ''): void
+    {
+        $id = MetaAdsSettings::normalizeAdAccountId((string) ($row['id'] ?? $row['account_id'] ?? ''));
+        if ($id === '') {
+            return;
+        }
+
+        $existing = $byId[$id] ?? [];
+        $byId[$id] = array_merge($existing, $row, [
+            'id' => $id,
+            'account_id' => preg_replace('/^act_/', '', $id),
+            'source' => $source,
+            'business_name' => $businessName !== '' ? $businessName : ($existing['business_name'] ?? ($row['business']['name'] ?? '')),
+        ]);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function grantedPermissionNames(): array
+    {
+        $res = $this->get('me/permissions');
+        if (! ($res['success'] ?? false)) {
+            return [];
+        }
+
+        $names = [];
+        foreach (($res['data']['data'] ?? []) as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            if (($row['status'] ?? '') === 'granted' && ! empty($row['permission'])) {
+                $names[] = (string) $row['permission'];
+            }
+        }
+
+        return $names;
     }
 
     /**
