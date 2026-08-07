@@ -20,6 +20,7 @@ class StudentCourseEnrollment extends Model
         'activated_by',
         'status',
         'progress',
+        'curriculum_completed_at',
         'notes',
         'invoice_id',
         'payment_id',
@@ -36,6 +37,7 @@ class StudentCourseEnrollment extends Model
     protected $casts = [
         'enrolled_at' => 'datetime',
         'activated_at' => 'datetime',
+        'curriculum_completed_at' => 'datetime',
         'progress' => 'decimal:2',
         'hide_from_instructor' => 'boolean',
     ];
@@ -142,11 +144,31 @@ class StudentCourseEnrollment extends Model
     }
 
     /**
-     * تحديد ما إذا كان التسجيل مكتمل
+     * تحديد ما إذا كان التسجيل مكتمل (حالة إدارية)
      */
     public function isCompleted(): bool
     {
         return $this->status === 'completed';
+    }
+
+    /**
+     * أنهى المنهج فعلياً (جاهز للشهادة) — بناءً على النسبة أو تاريخ اكتمال المنهج.
+     */
+    public function hasFinishedCurriculum(): bool
+    {
+        if ($this->curriculum_completed_at !== null) {
+            return true;
+        }
+
+        return (float) ($this->progress ?? 0) >= 100.0;
+    }
+
+    public function scopeFinishedCurriculum($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNotNull('curriculum_completed_at')
+                ->orWhere('progress', '>=', 100);
+        });
     }
 
     /**

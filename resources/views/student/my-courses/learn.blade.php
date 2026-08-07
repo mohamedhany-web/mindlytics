@@ -462,7 +462,11 @@ function courseFocusMode() {
                         if (wrapper && data.total_items != null) wrapper.dataset.totalItems = data.total_items;
                         if (wrapper && data.completed_items != null) wrapper.dataset.completedItems = data.completed_items;
                         if (forceCompleted || pct >= 90) this.currentLessonCompleted = true;
-                        if (typeof updateProgressBar === 'function') updateProgressBar();
+                        if (window.__learnPageComponent && typeof window.__learnPageComponent.updateProgressBar === 'function') {
+                            window.__learnPageComponent.updateProgressBar();
+                        } else if (typeof this.updateProgressBar === 'function') {
+                            this.updateProgressBar();
+                        }
                         if (typeof this.refreshSidebarLocks === 'function') await this.refreshSidebarLocks();
                     }
                 }
@@ -548,8 +552,12 @@ function courseFocusMode() {
                         if (wrapper && data.course_progress != null) wrapper.dataset.courseProgress = data.course_progress;
                         if (wrapper && data.total_items != null) wrapper.dataset.totalItems = data.total_items;
                         if (wrapper && data.completed_items != null) wrapper.dataset.completedItems = data.completed_items;
-                        if (typeof updateProgressBar === 'function') updateProgressBar();
                         if (typeof data.progress_percent === 'number') this.lectureProgressPercent = data.progress_percent;
+                        if (window.__learnPageComponent && typeof window.__learnPageComponent.updateProgressBar === 'function') {
+                            window.__learnPageComponent.updateProgressBar();
+                        } else if (typeof this.updateProgressBar === 'function') {
+                            this.updateProgressBar();
+                        }
                         if (typeof this.refreshSidebarLocks === 'function') await this.refreshSidebarLocks();
                     }
                 }
@@ -588,7 +596,11 @@ function courseFocusMode() {
                             if (data.total_items != null) wrapper.dataset.totalItems = data.total_items;
                             if (data.completed_items != null) wrapper.dataset.completedItems = data.completed_items;
                             if (pct >= 90) this.currentLessonCompleted = true;
-                            updateProgressBar();
+                            if (window.__learnPageComponent && typeof window.__learnPageComponent.updateProgressBar === 'function') {
+                                window.__learnPageComponent.updateProgressBar();
+                            } else if (typeof this.updateProgressBar === 'function') {
+                                this.updateProgressBar();
+                            }
                         }
                     }
                 } catch (e) { console.error('Error tracking progress:', e); }
@@ -1019,7 +1031,10 @@ function courseFocusMode() {
                             this.$el.dataset.courseProgress = data.course_progress;
                         if (data.total_items != null) this.$el.dataset.totalItems = data.total_items;
                         if (data.completed_items != null) this.$el.dataset.completedItems = data.completed_items;
-                        updateProgressBar();
+                        if (typeof this.updateProgressBar === 'function') this.updateProgressBar();
+                        else if (window.__learnPageComponent && typeof window.__learnPageComponent.updateProgressBar === 'function') {
+                            window.__learnPageComponent.updateProgressBar();
+                        }
                     }
                 }
             } catch (e) { console.error(e); }
@@ -1612,7 +1627,9 @@ function videoPlayer() {
             if (wrapper && data.course_progress != null) wrapper.dataset.courseProgress = data.course_progress;
             if (wrapper && data.total_items != null) wrapper.dataset.totalItems = data.total_items;
             if (wrapper && data.completed_items != null) wrapper.dataset.completedItems = data.completed_items;
-            if (typeof updateProgressBar === 'function') updateProgressBar();
+            if (window.__learnPageComponent && typeof window.__learnPageComponent.updateProgressBar === 'function') {
+                window.__learnPageComponent.updateProgressBar();
+            }
             if (typeof data.progress_percent === 'number') {
                 window.dispatchEvent(new CustomEvent('learn-lecture-progress', { detail: { progress_percent: data.progress_percent, lectureId: lectureId } }));
             }
@@ -1650,7 +1667,7 @@ function videoPlayer() {
         function postLectureProgressServer(currentSec, durationSec, onDone) {
             var dur = resolveDurationSec(durationSec);
             var cs = Math.max(0, Number(currentSec) || 0);
-            if (!dur && cs > 0) dur = cs;
+            // لا نستخدم currentSec كمدة — هذا كان يكمّل المحاضرة زوراً عند جهل المدة
             if (!dur) { if (onDone) onDone(null); return; }
             cs = Math.min(cs, dur);
             var pct = Math.min(100, Math.round((cs / dur) * 100));
@@ -1669,10 +1686,10 @@ function videoPlayer() {
         function forceSaveProgressAtEnd(callback) {
             var finish = function(cs, ds) {
                 var dur = resolveDurationSec(ds);
-                if (!dur && cs > 0) dur = cs;
-                if (!dur && fallbackDurationSec > 0) { dur = fallbackDurationSec; cs = dur; }
+                if (!dur && fallbackDurationSec > 0) { dur = fallbackDurationSec; cs = Math.max(cs || 0, dur); }
+                if (!dur && savedDurationSec > 0) { dur = savedDurationSec; cs = Math.max(cs || 0, dur); }
                 if (!dur) { if (callback) callback(null); return; }
-                postLectureProgressServer(Math.max(cs, dur), dur, callback);
+                postLectureProgressServer(Math.max(cs || 0, dur), dur, callback);
             };
             if (platform === 'youtube' && player && player.getCurrentTime) {
                 finish(player.getCurrentTime(), (player.getDuration && player.getDuration()) || 0);

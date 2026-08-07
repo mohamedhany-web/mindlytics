@@ -69,6 +69,11 @@ class StudentEnrollmentController extends Controller
             $courseTitle = AdvancedCourse::query()->whereKey($request->course_id)->value('title');
             $filterParts[] = 'الكورس: '.($courseTitle ?: '#'.$request->course_id);
         }
+        if ($request->filled('completion')) {
+            $filterParts[] = $request->completion === 'finished'
+                ? 'أنهى المنهج (100%)'
+                : 'لم يُنه المنهج بعد';
+        }
 
         return $excel->streamDownload(
             $query,
@@ -100,6 +105,17 @@ class StudentEnrollmentController extends Controller
 
         if ($request->filled('course_id')) {
             $query->where('advanced_course_id', $request->course_id);
+        }
+
+        if ($request->filled('completion')) {
+            if ($request->completion === 'finished') {
+                $query->finishedCurriculum();
+            } elseif ($request->completion === 'in_progress') {
+                $query->whereNull('curriculum_completed_at')
+                    ->where(function ($q) {
+                        $q->whereNull('progress')->orWhere('progress', '<', 100);
+                    });
+            }
         }
 
         return $query;
@@ -508,7 +524,10 @@ class StudentEnrollmentController extends Controller
 
         // إذا وصل التقدم إلى 100%، تغيير الحالة إلى مكتمل
         if ($request->progress == 100) {
-            $enrollment->update(['status' => 'completed']);
+            $enrollment->update([
+                'status' => 'completed',
+                'curriculum_completed_at' => $enrollment->curriculum_completed_at ?? now(),
+            ]);
         }
 
         return back()->with('success', 'تم تحديث تقدم الطالب');

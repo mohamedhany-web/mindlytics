@@ -519,9 +519,10 @@ class MyCourseController extends Controller
             'user_id' => $user->id,
         ]);
         $minPercent = $lecture->min_watch_percent_to_unlock_next;
-        $progress->updateFromSample($currentSec, $durationSec, $minPercent);
-
-        $this->updateCourseProgress($user->id, (int) $courseId);
+        $expectedDurationSec = $lecture->duration_minutes
+            ? (int) round(((float) $lecture->duration_minutes) * 60)
+            : null;
+        $progress->updateFromSample($currentSec, $durationSec, $minPercent, $expectedDurationSec);
 
         $sectionsForProgress = $course->activeSections()
             ->with([
@@ -531,8 +532,11 @@ class MyCourseController extends Controller
             ->orderBy('order')
             ->get();
         $sectionsForProgress = $this->scholarshipVisibility->filterSectionsForStudent($sectionsForProgress, $user, $course);
-        $this->courseProgress->loadCurriculumProgressForUser($sectionsForProgress, $user);
-        list($courseProgressPct, $totalItems, $completedItems) = $this->courseProgress->calculateFromSections($user, $course, $sectionsForProgress);
+        list($courseProgressPct, $totalItems, $completedItems) = $this->courseProgress->recalculateAndSync(
+            $user,
+            $course,
+            $sectionsForProgress
+        );
 
         return response()->json([
             'success' => true,
@@ -569,11 +573,16 @@ class MyCourseController extends Controller
             'answered_at' => now(),
         ]);
 
+        // إجابة أسئلة الفيديو قد تُكمل المحاضرة ضمن حساب تقدّم الكورس
+        $this->updateCourseProgress($user->id, (int) $courseId);
+        $courseProgressPct = $this->getCourseProgress($user->id, (int) $courseId);
+
         return response()->json([
             'correct' => $isCorrect,
             'score_earned' => $scoreEarned,
             'on_wrong' => $videoQuestion->on_wrong,
             'rewind_seconds' => $videoQuestion->rewind_seconds,
+            'course_progress' => $courseProgressPct,
         ]);
     }
 
@@ -676,9 +685,6 @@ class MyCourseController extends Controller
         );
 
         // تحديث التقدم الإجمالي للكورس
-        $this->updateCourseProgress($user->id, $courseId);
-
-        $course = $user->activeCourses()->findOrFail($courseId);
         $sections = $course->activeSections()
             ->with([
                 'visibleStudents:id', 'visibleGroups.members:id',
@@ -687,8 +693,11 @@ class MyCourseController extends Controller
             ->orderBy('order')
             ->get();
         $sections = $this->scholarshipVisibility->filterSectionsForStudent($sections, $user, $course);
-        $this->courseProgress->loadCurriculumProgressForUser($sections, $user);
-        list($progressPct, $totalItems, $completedItems) = $this->courseProgress->calculateFromSections($user, $course, $sections);
+        list($progressPct, $totalItems, $completedItems) = $this->courseProgress->recalculateAndSync(
+            $user,
+            $course,
+            $sections
+        );
 
         return response()->json([
             'success' => true,

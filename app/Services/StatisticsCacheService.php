@@ -65,6 +65,7 @@ class StatisticsCacheService
                 'pending' => StudentCourseEnrollment::nonScholarship()->where('status', 'pending')->count(),
                 'active' => StudentCourseEnrollment::nonScholarship()->where('status', 'active')->count(),
                 'completed' => StudentCourseEnrollment::nonScholarship()->where('status', 'completed')->count(),
+                'finished_curriculum' => StudentCourseEnrollment::nonScholarship()->finishedCurriculum()->count(),
             ];
         });
     }

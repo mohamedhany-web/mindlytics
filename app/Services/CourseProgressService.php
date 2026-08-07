@@ -6,6 +6,7 @@ use App\Models\AdvancedCourse;
 use App\Models\AdvancedExam;
 use App\Models\Assignment;
 use App\Models\CourseLesson;
+use App\Models\Exam;
 use App\Models\Lecture;
 use App\Models\LectureVideoQuestionAnswer;
 use App\Models\LectureWatchProgress;
@@ -39,13 +40,23 @@ class CourseProgressService
                     $entity->load(['watchProgress' => fn ($q) => $q->where('user_id', $user->id)]);
                 } elseif ($entity instanceof LearningPattern) {
                     $entity->load(['attempts' => fn ($q) => $q->where('user_id', $user->id)->latest()]);
-                } elseif ($entity instanceof AdvancedExam) {
+                } elseif ($entity instanceof AdvancedExam || $entity instanceof Exam) {
                     $entity->load(['attempts' => fn ($q) => $q->where('user_id', $user->id)->whereNotNull('submitted_at')]);
                 } elseif ($entity instanceof Assignment) {
                     $entity->load(['submissions' => fn ($q) => $q->where('student_id', $user->id)]);
                 }
             }
         }
+    }
+
+    public function isRecognizedCurriculumEntity(mixed $entity): bool
+    {
+        return $entity instanceof CourseLesson
+            || $entity instanceof Lecture
+            || $entity instanceof Assignment
+            || $entity instanceof LearningPattern
+            || $entity instanceof AdvancedExam
+            || $entity instanceof Exam;
     }
 
     /**
@@ -77,43 +88,56 @@ class CourseProgressService
             return $best && $best->status === 'completed';
         }
 
-        if ($entity instanceof AdvancedExam) {
-            $passing = (float) ($entity->passing_marks ?? 0);
-            if ($entity->relationLoaded('attempts')) {
-                return $entity->attempts->contains(
-                    fn ($a) => $a->score !== null && (float) $a->score >= $passing
-                );
-            }
-
-            return $entity->attempts()
-                ->where('user_id', $user->id)
-                ->whereNotNull('submitted_at')
-                ->whereNotNull('score')
-                ->where('score', '>=', $passing)
-                ->exists();
+        if ($entity instanceof AdvancedExam || $entity instanceof Exam) {
+            return $this->isExamPassedForUser($entity, $user);
         }
 
         return false;
     }
 
+    /**
+     * هل نجح الطالب في الامتحان (AdvancedExam و Exam نفس جدول exams)؟
+     */
+    public function isExamPassedForUser(AdvancedExam|Exam $exam, User $user): bool
+    {
+        $passing = (float) ($exam->passing_marks ?? 0);
+        if ($exam->relationLoaded('attempts')) {
+            return $exam->attempts->contains(
+                fn ($a) => $a->score !== null && (float) $a->score >= $passing
+            );
+        }
+
+        return $exam->attempts()
+            ->where('user_id', $user->id)
+            ->whereNotNull('submitted_at')
+            ->whereNotNull('score')
+            ->where('score', '>=', $passing)
+            ->exists();
+    }
+
+    /**
+     * اكتمال المحاضرة: مشاهدة كافية (+ كل أسئلة الفيديو إن وُجدت).
+     * لا نعتبر الإجابة على الأسئلة وحدها إكمالاً بدون مشاهدة — مهم للشهادات.
+     */
     public function isLectureCompletedForUser(Lecture $lecture, User $user): bool
     {
         $wp = $this->watchProgressForUser($lecture, $user);
         $threshold = $this->lectureCompletionThreshold($lecture);
+        $watchedEnough = $wp && ((bool) $wp->is_completed || (int) $wp->progress_percent >= $threshold);
 
-        if ($wp && ((bool) $wp->is_completed || (int) $wp->progress_percent >= $threshold)) {
-            return true;
+        if (! $watchedEnough) {
+            return false;
         }
 
         $vqIds = $lecture->videoQuestions()->pluck('id');
         if ($vqIds->isEmpty()) {
-            return false;
+            return true;
         }
 
         $answered = LectureVideoQuestionAnswer::query()
             ->where('user_id', $user->id)
             ->whereIn('lecture_video_question_id', $vqIds)
-            ->distinct('lecture_video_question_id')
+            ->distinct()
             ->count('lecture_video_question_id');
 
         return $answered >= $vqIds->count();
@@ -124,6 +148,27 @@ class CourseProgressService
         $minPercent = $lecture->min_watch_percent_to_unlock_next;
 
         return $minPercent !== null ? (int) $minPercent : 90;
+    }
+
+    /**
+     * نسبة دقيقة: 100% فقط عندما completed === total.
+     */
+    public function percentFromCounts(int $completed, int $total): float
+    {
+        if ($total <= 0) {
+            return 0.0;
+        }
+
+        if ($completed >= $total) {
+            return 100.0;
+        }
+
+        return round(($completed / $total) * 100, 2);
+    }
+
+    public function isFinishedPercent(float $progress): bool
+    {
+        return $progress >= 100.0;
     }
 
     /**
@@ -139,7 +184,7 @@ class CourseProgressService
                 ->whereIn('course_lesson_id', $lessonIds)
                 ->where('is_completed', true)
                 ->count();
-            $progress = $total > 0 ? round(($completed / $total) * 100, 2) : 0.0;
+            $progress = $this->percentFromCounts($completed, $total);
 
             return [$progress, $total, $completed];
         }
@@ -153,19 +198,16 @@ class CourseProgressService
                 : ($section->items ?? collect());
 
             foreach ($items as $item) {
-                $entity = $item->item ?? null;
-                if (! $entity) {
-                    continue;
-                }
-
+                // كل عنصر منهج نشط يدخل المقام — العناصر المكسورة/غير المعروفة تُحسب ناقصة (fail-closed للشهادات)
                 $totalItems++;
-                if ($this->isItemCompletedForUser($entity, $user)) {
+                $entity = $item->item ?? null;
+                if ($entity && $this->isRecognizedCurriculumEntity($entity) && $this->isItemCompletedForUser($entity, $user)) {
                     $completedItems++;
                 }
             }
         }
 
-        $progress = $totalItems > 0 ? round(($completedItems / $totalItems) * 100, 2) : 0.0;
+        $progress = $this->percentFromCounts($completedItems, $totalItems);
 
         return [$progress, $totalItems, $completedItems];
     }
@@ -179,24 +221,61 @@ class CourseProgressService
     }
 
     /**
-     * تحديث النسبة المخزّنة في التسجيل.
-     * افتراضياً: لا نخفّض النسبة (منع مسح تقدّم ظاهر بسبب اختلاف طريقة الحساب).
+     * إعادة حساب تقدّم المنهج وتخزينه في التسجيل.
+     *
+     * @return array{0: float, 1: int, 2: int} [progress%, total, completed]
+     */
+    public function recalculateAndSync(
+        User $user,
+        AdvancedCourse $course,
+        Collection $sections,
+        bool $allowDecrease = false,
+    ): array {
+        $this->loadCurriculumProgressForUser($sections, $user);
+        [$progress, $total, $completed] = $this->calculateFromSections($user, $course, $sections);
+        $this->syncEnrollmentProgress((int) $user->id, (int) $course->id, (float) $progress, $allowDecrease);
+
+        return [(float) $progress, (int) $total, (int) $completed];
+    }
+
+    /**
+     * تحديث النسبة المخزّنة في التسجيل + تعليم اكتمال المنهج بدون تغيير status
+     * (حتى يبقى الطالب داخل activeCourses للشهادة لاحقاً).
      */
     public function syncEnrollmentProgress(int $userId, int $courseId, float $progress, bool $allowDecrease = false): void
     {
-        // لا نغيّر status إلى completed هنا — activeCourses يعتمد على status=active.
-        $query = StudentCourseEnrollment::query()
-            ->where('user_id', $userId)
-            ->where('advanced_course_id', $courseId);
+        $progress = round(min(100, max(0, $progress)), 2);
+        $finished = $this->isFinishedPercent($progress);
 
-        if (! $allowDecrease) {
-            $query->where(function ($q) use ($progress) {
-                $q->whereNull('progress')
-                    ->orWhere('progress', '<', $progress);
-            });
+        $enrollment = StudentCourseEnrollment::query()
+            ->where('user_id', $userId)
+            ->where('advanced_course_id', $courseId)
+            ->first();
+
+        if (! $enrollment) {
+            return;
         }
 
-        $query->update(['progress' => $progress]);
+        $current = $enrollment->progress !== null ? (float) $enrollment->progress : null;
+
+        if (! $allowDecrease && $current !== null && $current >= $progress) {
+            // لو النسبة أصلاً 100 ومفيش تاريخ اكتمال — ثبّته الآن
+            if ($current >= 100.0 && $enrollment->curriculum_completed_at === null) {
+                $enrollment->forceFill(['curriculum_completed_at' => now()])->save();
+            }
+
+            return;
+        }
+
+        $payload = ['progress' => $progress];
+
+        if ($finished) {
+            $payload['curriculum_completed_at'] = $enrollment->curriculum_completed_at ?? now();
+        } elseif ($allowDecrease) {
+            $payload['curriculum_completed_at'] = null;
+        }
+
+        $enrollment->forceFill($payload)->save();
     }
 
     private function watchProgressForUser(Lecture $lecture, User $user): ?LectureWatchProgress

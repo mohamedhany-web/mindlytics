@@ -254,4 +254,134 @@ class CourseProgressServiceTest extends TestCase
         $this->assertTrue((bool) $progress->is_completed);
         $this->assertSame(90, (int) $progress->watch_time_seconds);
     }
+
+    public function test_short_wrong_duration_does_not_complete_when_expected_duration_known(): void
+    {
+        $user = $this->makeUser('short@test.local');
+        $course = $this->makeCourse('Short');
+        $lecture = $this->makeLecture((int) $course->id, 'L');
+
+        $progress = LectureWatchProgress::query()->create([
+            'lecture_id' => $lecture->id,
+            'user_id' => $user->id,
+            'watch_time_seconds' => 0,
+            'video_duration_seconds' => 0,
+            'progress_percent' => 0,
+            'is_completed' => false,
+        ]);
+
+        // Player wrongly reports 5s duration while curriculum says 10 minutes
+        $progress->updateFromSample(5, 5, 90, 600);
+        $progress->refresh();
+
+        $this->assertSame(1, (int) $progress->progress_percent);
+        $this->assertFalse((bool) $progress->is_completed);
+        $this->assertSame(600, (int) $progress->video_duration_seconds);
+    }
+
+    public function test_sync_enrollment_progress_only_increases_by_default(): void
+    {
+        Schema::dropIfExists('student_course_enrollments');
+        Schema::create('student_course_enrollments', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('advanced_course_id');
+            $table->decimal('progress', 5, 2)->nullable();
+            $table->timestamp('curriculum_completed_at')->nullable();
+            $table->string('status')->default('active');
+            $table->timestamps();
+        });
+
+        $user = $this->makeUser('enroll@test.local');
+        $course = $this->makeCourse('Enroll');
+
+        $enrollmentId = \DB::table('student_course_enrollments')->insertGetId([
+            'user_id' => $user->id,
+            'advanced_course_id' => $course->id,
+            'progress' => 80,
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $service = app(CourseProgressService::class);
+        $service->syncEnrollmentProgress((int) $user->id, (int) $course->id, 50.0);
+        $this->assertSame(80.0, (float) \DB::table('student_course_enrollments')->where('id', $enrollmentId)->value('progress'));
+
+        $service->syncEnrollmentProgress((int) $user->id, (int) $course->id, 90.0);
+        $this->assertSame(90.0, (float) \DB::table('student_course_enrollments')->where('id', $enrollmentId)->value('progress'));
+        $this->assertNull(\DB::table('student_course_enrollments')->where('id', $enrollmentId)->value('curriculum_completed_at'));
+
+        $service->syncEnrollmentProgress((int) $user->id, (int) $course->id, 100.0);
+        $row = \DB::table('student_course_enrollments')->where('id', $enrollmentId)->first();
+        $this->assertSame(100.0, (float) $row->progress);
+        $this->assertNotNull($row->curriculum_completed_at);
+
+        $service->syncEnrollmentProgress((int) $user->id, (int) $course->id, 40.0, true);
+        $row = \DB::table('student_course_enrollments')->where('id', $enrollmentId)->first();
+        $this->assertSame(40.0, (float) $row->progress);
+        $this->assertNull($row->curriculum_completed_at);
+    }
+
+    public function test_percent_is_100_only_when_all_items_complete(): void
+    {
+        $service = app(CourseProgressService::class);
+        $this->assertSame(100.0, $service->percentFromCounts(5, 5));
+        $this->assertSame(0.0, $service->percentFromCounts(0, 0));
+        $this->assertSame(66.67, $service->percentFromCounts(2, 3));
+        $this->assertTrue($service->isFinishedPercent(100.0));
+        $this->assertFalse($service->isFinishedPercent(99.99));
+    }
+
+    public function test_broken_curriculum_item_prevents_100_percent(): void
+    {
+        $course = $this->makeCourse('Broken');
+        $section = CourseSection::query()->create([
+            'advanced_course_id' => $course->id,
+            'title' => 'S1',
+            'order' => 1,
+            'is_active' => true,
+        ]);
+
+        $user = $this->makeUser('broken@test.local');
+        $lecture = $this->makeLecture((int) $course->id, 'L1');
+        CurriculumItem::query()->create([
+            'course_section_id' => $section->id,
+            'item_type' => Lecture::class,
+            'item_id' => $lecture->id,
+            'order' => 1,
+            'is_active' => true,
+        ]);
+        // عنصر مكسور (morph غير موجود)
+        CurriculumItem::query()->create([
+            'course_section_id' => $section->id,
+            'item_type' => Lecture::class,
+            'item_id' => 999999,
+            'order' => 2,
+            'is_active' => true,
+        ]);
+
+        LectureWatchProgress::query()->create([
+            'lecture_id' => $lecture->id,
+            'user_id' => $user->id,
+            'watch_time_seconds' => 100,
+            'video_duration_seconds' => 100,
+            'progress_percent' => 100,
+            'is_completed' => true,
+        ]);
+
+        $sections = CourseSection::query()
+            ->where('advanced_course_id', $course->id)
+            ->with(['activeItems.item'])
+            ->get();
+
+        $service = app(CourseProgressService::class);
+        $service->loadCurriculumProgressForUser($sections, $user);
+        [$progress, $total, $completed] = $service->calculateFromSections($user, $course, $sections);
+
+        $this->assertSame(2, $total);
+        $this->assertSame(1, $completed);
+        $this->assertSame(50.0, $progress);
+        $this->assertFalse($service->isFinishedPercent($progress));
+    }
 }

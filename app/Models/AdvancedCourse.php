@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\AssignsDefaultBranchOnCreate;
 use App\Models\Concerns\QueriesByBranch;
 use App\Models\Concerns\VisibleOnCurrentHostScope;
+use App\Services\CourseProgressService;
 use App\Support\BranchContext;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -386,15 +387,17 @@ class AdvancedCourse extends Model
 
     public function getProgressForUser($userId)
     {
-        $totalLessons = $this->lessons()->count();
-        if ($totalLessons === 0) return 0;
+        $user = User::query()->find($userId);
+        if (! $user) {
+            return 0.0;
+        }
 
-        $completedLessons = LessonProgress::where('user_id', $userId)
-            ->whereIn('course_lesson_id', $this->lessons()->pluck('id'))
-            ->where('is_completed', true)
-            ->count();
+        $sections = $this->activeSections()
+            ->with(['activeItems.item'])
+            ->orderBy('order')
+            ->get();
 
-        return round(($completedLessons / $totalLessons) * 100, 2);
+        return app(CourseProgressService::class)->getCourseProgress($user, $this, $sections);
     }
 
     public function getLevelBadgeAttribute()

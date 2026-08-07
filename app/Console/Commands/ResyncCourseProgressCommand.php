@@ -108,7 +108,12 @@ class ResyncCourseProgressCommand extends Command
                         $updated++;
                         $this->line("user {$enrollment->user_id} course {$courseId}: {$before}% → {$after}%");
                         if (! $dryRun) {
-                            $progressService->syncEnrollmentProgress((int) $user->id, $courseId, $after);
+                            $progressService->syncEnrollmentProgress(
+                                (int) $user->id,
+                                $courseId,
+                                $after,
+                                ! $onlyIncrease
+                            );
                         }
                     } else {
                         $unchanged++;

@@ -6,7 +6,7 @@
 @section('content')
 <div class="space-y-6">
     <!-- إحصائيات سريعة -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
         <!-- إجمالي التسجيلات -->
         <div class="dashboard-card rounded-2xl p-5 sm:p-6 card-hover-effect relative overflow-hidden group border-2 border-blue-200/50 hover:border-blue-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 249, 255, 0.95) 50%, rgba(224, 242, 254, 0.9) 100%);">
             <div class="relative z-10">
@@ -24,7 +24,7 @@
         </div>
 
         <!-- في الانتظار -->
-        <div class="dashboard-card rounded-2xl p-5 sm:p-6 card-hover-effect relative overflow-hidden group border-2 border-yellow-200/50 hover:border-yellow-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 251, 235, 0.95) 50%, rgba(254, 243, 199, 0.9) 100%);">
+        <a href="{{ route('admin.online-enrollments.index', ['status' => 'pending']) }}" class="dashboard-card rounded-2xl p-5 sm:p-6 card-hover-effect relative overflow-hidden group border-2 border-yellow-200/50 hover:border-yellow-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 251, 235, 0.95) 50%, rgba(254, 243, 199, 0.9) 100%);">
             <div class="relative z-10">
                 <div class="flex items-center justify-between mb-4">
                     <div>
@@ -37,10 +37,10 @@
                 </div>
                 <p class="text-xs text-yellow-600">بحاجة للتفعيل</p>
             </div>
-        </div>
+        </a>
 
         <!-- نشط -->
-        <div class="dashboard-card rounded-2xl p-5 sm:p-6 card-hover-effect relative overflow-hidden group border-2 border-green-200/50 hover:border-green-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 253, 250, 0.95) 50%, rgba(209, 250, 229, 0.9) 100%);">
+        <a href="{{ route('admin.online-enrollments.index', ['status' => 'active']) }}" class="dashboard-card rounded-2xl p-5 sm:p-6 card-hover-effect relative overflow-hidden group border-2 border-green-200/50 hover:border-green-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 253, 250, 0.95) 50%, rgba(209, 250, 229, 0.9) 100%);">
             <div class="relative z-10">
                 <div class="flex items-center justify-between mb-4">
                     <div>
@@ -53,23 +53,39 @@
                 </div>
                 <p class="text-xs text-green-600">مفعل ويتعلم</p>
             </div>
-        </div>
+        </a>
 
-        <!-- مكتمل -->
-        <div class="dashboard-card rounded-2xl p-5 sm:p-6 card-hover-effect relative overflow-hidden group border-2 border-purple-200/50 hover:border-purple-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 245, 255, 0.95) 50%, rgba(243, 232, 255, 0.9) 100%);">
+        <!-- أنهى المنهج (للتقدم 100% — جاهز للشهادة) -->
+        <a href="{{ route('admin.online-enrollments.index', ['completion' => 'finished']) }}" class="dashboard-card rounded-2xl p-5 sm:p-6 card-hover-effect relative overflow-hidden group border-2 border-emerald-200/50 hover:border-emerald-300/70 shadow-xl hover:shadow-2xl transition-all duration-300 {{ request('completion') === 'finished' ? 'ring-2 ring-emerald-500' : '' }}" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(236, 253, 245, 0.95) 50%, rgba(209, 250, 229, 0.9) 100%);">
             <div class="relative z-10">
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <p class="text-sm font-semibold text-gray-600 mb-1">مكتمل</p>
+                        <p class="text-sm font-semibold text-gray-600 mb-1">أنهى المنهج</p>
+                        <p class="text-3xl font-black text-emerald-700">{{ number_format($stats['finished_curriculum'] ?? 0) }}</p>
+                    </div>
+                    <div class="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
+                        <i class="fas fa-certificate text-2xl"></i>
+                    </div>
+                </div>
+                <p class="text-xs text-emerald-700">تقدّم 100% — جاهز للشهادة</p>
+            </div>
+        </a>
+
+        <!-- مكتمل (حالة إدارية) -->
+        <a href="{{ route('admin.online-enrollments.index', ['status' => 'completed']) }}" class="dashboard-card rounded-2xl p-5 sm:p-6 card-hover-effect relative overflow-hidden group border-2 border-purple-200/50 hover:border-purple-300/70 shadow-xl hover:shadow-2xl transition-all duration-300" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 245, 255, 0.95) 50%, rgba(243, 232, 255, 0.9) 100%);">
+            <div class="relative z-10">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-600 mb-1">حالة مكتمل</p>
                         <p class="text-3xl font-black text-purple-700">{{ number_format($stats['completed']) }}</p>
                     </div>
                     <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
                         <i class="fas fa-graduation-cap text-2xl"></i>
                     </div>
                 </div>
-                <p class="text-xs text-purple-600">أنهى الكورس</p>
+                <p class="text-xs text-purple-600">status = completed</p>
             </div>
-        </div>
+        </a>
     </div>
 
     <!-- تفعيل سريع بالبريد الإلكتروني -->
@@ -261,7 +277,7 @@
             </div>
         </div>
         
-        <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
                 <label for="search" class="block text-sm font-medium text-gray-700 mb-2">البحث</label>
                 <input type="text" name="search" id="search" value="{{ request('search') }}" 
@@ -277,6 +293,15 @@
                     <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>نشط</option>
                     <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>مكتمل</option>
                     <option value="suspended" {{ request('status') == 'suspended' ? 'selected' : '' }}>معلق</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="completion" class="block text-sm font-medium text-gray-700 mb-2">اكتمال المنهج</label>
+                <select name="completion" id="completion" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                    <option value="">الكل</option>
+                    <option value="finished" {{ request('completion') == 'finished' ? 'selected' : '' }}>أنهى المنهج (100%)</option>
+                    <option value="in_progress" {{ request('completion') == 'in_progress' ? 'selected' : '' }}>لم يُنه بعد</option>
                 </select>
             </div>
 
@@ -303,6 +328,16 @@
             </div>
         </form>
     </div>
+
+    @if(request('completion') === 'finished')
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 flex items-start gap-3">
+            <i class="fas fa-certificate mt-0.5 text-emerald-600"></i>
+            <div>
+                <p class="font-bold">عرض الطلاب الذين أنهوا المنهج (تقدّم 100%)</p>
+                <p class="text-emerald-800/90 mt-0.5">هؤلاء جاهزون لموديول إصدار الشهادة التلقائي. الحالة الإدارية قد تظل «نشط» حتى يبقى لهم وصول للكورس.</p>
+            </div>
+        </div>
+    @endif
 
     <!-- البحث السريع بالهاتف -->
     <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
@@ -375,12 +410,24 @@
                                 </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <div class="w-full bg-gray-200 rounded-full h-2 mr-2">
-                                        <div class="bg-blue-600 h-2 rounded-full" style="width: {{ $enrollment->progress }}%"></div>
+                                @php
+                                    $pct = (float) ($enrollment->progress ?? 0);
+                                    $finished = $enrollment->hasFinishedCurriculum();
+                                @endphp
+                                <div class="flex items-center gap-2">
+                                    <div class="w-24 bg-gray-200 rounded-full h-2">
+                                        <div class="{{ $finished ? 'bg-emerald-500' : 'bg-blue-600' }} h-2 rounded-full" style="width: {{ min($pct, 100) }}%"></div>
                                     </div>
-                                    <span class="text-sm text-gray-600">{{ $enrollment->progress }}%</span>
+                                    <span class="text-sm font-semibold {{ $finished ? 'text-emerald-700' : 'text-gray-600' }}">{{ number_format($pct, 0) }}%</span>
                                 </div>
+                                @if($finished)
+                                    <span class="inline-flex mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                        أنهى المنهج
+                                        @if($enrollment->curriculum_completed_at)
+                                            · {{ $enrollment->curriculum_completed_at->format('d/m/Y') }}
+                                        @endif
+                                    </span>
+                                @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {{ $enrollment->enrolled_at->format('d/m/Y') }}

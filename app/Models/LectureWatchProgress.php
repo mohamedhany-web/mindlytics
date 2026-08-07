@@ -38,16 +38,29 @@ class LectureWatchProgress extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function updateFromSample(int $currentSec, int $durationSec, ?int $minPercentToComplete = null): void
-    {
-        $durationSec = max(1, $durationSec);
-        $currentSec = max(0, min($currentSec, $durationSec));
-        $samplePercent = (int) min(100, round(($currentSec / $durationSec) * 100));
+    /**
+     * تحديث عيّنة مشاهدة.
+     *
+     * @param  int|null  $expectedDurationSec  مدة متوقعة من المنهج (duration_minutes) لتجنّب اكتمال زائف بمدة قصيرة خاطئة
+     */
+    public function updateFromSample(
+        int $currentSec,
+        int $durationSec,
+        ?int $minPercentToComplete = null,
+        ?int $expectedDurationSec = null,
+    ): void {
+        $reportedDuration = max(1, $durationSec);
+        $expected = max(0, (int) ($expectedDurationSec ?? 0));
+        $storedDuration = max((int) ($this->video_duration_seconds ?? 0), $reportedDuration, $expected);
+
+        // احسب النسبة على أطول مدة معروفة حتى لا تُكمَّل المحاضرة بعيّنة duration خاطئة (مثلاً 5 ثوانٍ).
+        $effectiveDuration = max($storedDuration, 1);
+        $currentSec = max(0, min($currentSec, $effectiveDuration));
+        $samplePercent = (int) min(100, round(($currentSec / $effectiveDuration) * 100));
 
         // لا ننقص النسبة أبداً (Seek للخلف / عيّنة خاطئة لا تلغي إنجاز الطالب)
         $percent = max((int) ($this->progress_percent ?? 0), $samplePercent);
         $watchTime = max((int) ($this->watch_time_seconds ?? 0), $currentSec);
-        $storedDuration = max((int) ($this->video_duration_seconds ?? 0), $durationSec);
 
         $threshold = $minPercentToComplete ?? 90;
         $completed = (bool) ($this->is_completed) || $percent >= $threshold;
@@ -60,4 +73,3 @@ class LectureWatchProgress extends Model
         ])->save();
     }
 }
-
