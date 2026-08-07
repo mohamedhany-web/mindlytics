@@ -25,13 +25,19 @@ class StudentEnrollmentController extends Controller
     /**
      * عرض صفحة إدارة تسجيل الطلاب (الأونلاين)
      */
-    public function index(Request $request)
-    {
+    public function index(
+        Request $request,
+        CourseProgressService $progressService,
+        ScholarshipCurriculumVisibilityService $visibility,
+    ) {
         $query = $this->filteredEnrollmentsQuery($request);
 
         $enrollments = $query->with(['student', 'course.academicYear', 'course.academicSubject', 'activatedBy'])
             ->latest('enrolled_at')
             ->paginate(20);
+
+        // النسبة الحقيقية من المنهج (وتصحيح المخزّن لو كان متضخّم/قديم)
+        $progressService->hydrateEnrollmentsWithLiveProgress($enrollments->getCollection(), $visibility, true);
 
         // البيانات المساعدة للفلاتر - استخدام الكاش
         $courses = Cache::remember('active_courses_list', now()->addHours(1), function () {
@@ -43,6 +49,7 @@ class StudentEnrollmentController extends Controller
         
         // استخدام خدمة الكاش للإحصائيات
         $statsService = app(\App\Services\StatisticsCacheService::class);
+        $statsService->clearStats('enrollment_stats');
         $stats = $statsService->getEnrollmentStats();
 
         $wallets = Wallet::academyWallets()
@@ -51,6 +58,31 @@ class StudentEnrollmentController extends Controller
             ->get(['id', 'name', 'type', 'balance']);
 
         return view('admin.online-enrollments.index', compact('enrollments', 'courses', 'stats', 'wallets'));
+    }
+
+    /**
+     * إعادة حساب النسب الفعلية لكل التسجيلات المطابقة للفلتر الحالي.
+     */
+    public function resyncProgress(
+        Request $request,
+        CourseProgressService $progressService,
+        ScholarshipCurriculumVisibilityService $visibility,
+    ) {
+        $query = $this->filteredEnrollmentsQuery($request);
+        $updated = 0;
+
+        $query->with(['student', 'course'])
+            ->orderBy('id')
+            ->chunkById(50, function ($rows) use ($progressService, $visibility, &$updated) {
+                $progressService->hydrateEnrollmentsWithLiveProgress($rows, $visibility, true);
+                $updated += $rows->count();
+            });
+
+        app(\App\Services\StatisticsCacheService::class)->clearStats('enrollment_stats');
+
+        return redirect()
+            ->route('admin.online-enrollments.index', $request->query())
+            ->with('success', "تم تحديث النسبة الفعلية لـ {$updated} تسجيل من المنهج الحقيقي (مشاهدة الفيديوهات والعناصر).");
     }
 
     /**
@@ -340,13 +372,15 @@ class StudentEnrollmentController extends Controller
             $sections = $visibility->filterSectionsForStudent($sections, $student, $course);
             $progressBreakdown = $progressService->buildProgressBreakdown($student, $course, $sections);
 
-            // مزامنة النسبة المخزّنة مع الحساب الحي (زيادة فقط)
+            // مزامنة الحقيقة (مسموح بالتخفيض لو النسبة المخزّنة كانت خاطئة/متضخّمة)
             $progressService->syncEnrollmentProgress(
                 (int) $student->id,
                 (int) $course->id,
-                (float) $progressBreakdown['progress']
+                (float) $progressBreakdown['progress'],
+                true
             );
             $enrollment->refresh();
+            app(\App\Services\StatisticsCacheService::class)->clearStats('enrollment_stats');
         }
 
         return view('admin.online-enrollments.show', compact('enrollment', 'progressBreakdown'));

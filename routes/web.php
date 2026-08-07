@@ -1709,6 +1709,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::prefix('online-enrollments')->name('online-enrollments.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\StudentEnrollmentController::class, 'index'])->name('index');
             Route::get('/export', [\App\Http\Controllers\Admin\StudentEnrollmentController::class, 'export'])->name('export');
+            Route::post('/resync-progress', [\App\Http\Controllers\Admin\StudentEnrollmentController::class, 'resyncProgress'])->name('resync-progress');
             Route::get('/create', [\App\Http\Controllers\Admin\StudentEnrollmentController::class, 'create'])->name('create');
             Route::post('/', [\App\Http\Controllers\Admin\StudentEnrollmentController::class, 'store'])->name('store');
             Route::post('/quick-activate', [\App\Http\Controllers\Admin\StudentEnrollmentController::class, 'quickActivate'])->name('quick-activate');

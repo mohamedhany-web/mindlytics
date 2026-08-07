@@ -264,6 +264,15 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <h3 class="text-lg font-semibold text-gray-900">البحث والفلترة</h3>
             <div class="flex flex-wrap items-center gap-2">
+                <form method="POST" action="{{ route('admin.online-enrollments.resync-progress', request()->query()) }}"
+                      onsubmit="return confirm('إعادة حساب النسبة الفعلية لكل التسجيلات الظاهرة بالفلتر الحالي؟ قد تنخفض النسب المتضخّمة القديمة.');">
+                    @csrf
+                    <button type="submit"
+                            class="inline-flex items-center px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors duration-200">
+                        <i class="fas fa-sync-alt mr-2"></i>
+                        تحديث النسب الفعلية
+                    </button>
+                </form>
                 <a href="{{ route('admin.online-enrollments.export', request()->query()) }}"
                    class="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors duration-200">
                     <i class="fas fa-file-excel mr-2"></i>
@@ -411,8 +420,10 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 @php
-                                    $pct = (float) ($enrollment->progress ?? 0);
-                                    $finished = $enrollment->hasFinishedCurriculum();
+                                    $pct = (float) ($enrollment->live_progress ?? $enrollment->progress ?? 0);
+                                    $finished = $pct >= 100.0 || $enrollment->hasFinishedCurriculum();
+                                    $avgWatch = $enrollment->avg_lecture_watch_percent;
+                                    $stale = (bool) ($enrollment->progress_was_stale ?? false);
                                 @endphp
                                 <div class="flex items-center gap-2">
                                     <div class="w-24 bg-gray-200 rounded-full h-2">
@@ -420,6 +431,12 @@
                                     </div>
                                     <span class="text-sm font-semibold {{ $finished ? 'text-emerald-700' : 'text-gray-600' }}">{{ number_format($pct, 0) }}%</span>
                                 </div>
+                                @if($enrollment->live_total !== null)
+                                    <p class="text-[10px] text-slate-500 mt-1">{{ $enrollment->live_completed }} / {{ $enrollment->live_total }} عناصر</p>
+                                @endif
+                                @if($avgWatch !== null)
+                                    <p class="text-[10px] text-sky-700 mt-0.5">متوسط مشاهدة الفيديو: {{ number_format($avgWatch, 0) }}%</p>
+                                @endif
                                 @if($finished)
                                     <span class="inline-flex mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
                                         أنهى المنهج
@@ -427,6 +444,8 @@
                                             · {{ $enrollment->curriculum_completed_at->format('d/m/Y') }}
                                         @endif
                                     </span>
+                                @elseif($stale)
+                                    <span class="inline-flex mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">تم تصحيح نسبة قديمة</span>
                                 @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

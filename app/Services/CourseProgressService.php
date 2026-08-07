@@ -355,7 +355,142 @@ class CourseProgressService
             'remaining' => max(0, $totalItems - $completedItems),
             'next_item' => $nextItem,
             'sections' => $sectionRows,
+            'avg_lecture_watch_percent' => $this->averageLectureWatchPercentFromBreakdown($sectionRows),
+            'lectures_total' => $this->countBreakdownItemsByType($sectionRows, 'lecture'),
+            'lectures_completed' => $this->countBreakdownCompletedByType($sectionRows, 'lecture'),
         ];
+    }
+
+    /**
+     * حساب النسبة الحية لمجموعة تسجيلات (مع كاش أقسام لكل كورس) وتخزين الحقيقة.
+     * allowDecrease=true حتى تختفي النسب المتضخّمة القديمة من القائمة.
+     *
+     * @param  iterable<StudentCourseEnrollment>  $enrollments
+     */
+    public function hydrateEnrollmentsWithLiveProgress(
+        iterable $enrollments,
+        ScholarshipCurriculumVisibilityService $visibility,
+        bool $persist = true,
+    ): void {
+        $sectionsByCourse = [];
+
+        foreach ($enrollments as $enrollment) {
+            /** @var StudentCourseEnrollment $enrollment */
+            $course = $enrollment->course;
+            $student = $enrollment->student;
+            if (! $course || ! $student) {
+                $enrollment->setAttribute('live_progress', (float) ($enrollment->progress ?? 0));
+                $enrollment->setAttribute('live_completed', null);
+                $enrollment->setAttribute('live_total', null);
+                $enrollment->setAttribute('avg_lecture_watch_percent', null);
+                $enrollment->setAttribute('progress_was_stale', false);
+
+                continue;
+            }
+
+            $courseId = (int) $course->id;
+            if (! isset($sectionsByCourse[$courseId])) {
+                $sectionsByCourse[$courseId] = $course->activeSections()
+                    ->with([
+                        'visibleStudents:id',
+                        'visibleGroups.members:id',
+                        'activeItems' => fn ($q) => $q->orderBy('order')->with([
+                            'item',
+                            'visibleStudents:id',
+                            'visibleGroups.members:id',
+                        ]),
+                    ])
+                    ->orderBy('order')
+                    ->get();
+            }
+
+            $sections = $visibility->filterSectionsForStudent(
+                $sectionsByCourse[$courseId],
+                $student,
+                $course
+            );
+
+            $breakdown = $this->buildProgressBreakdown($student, $course, $sections);
+            $live = (float) $breakdown['progress'];
+            $stored = $enrollment->progress !== null ? (float) $enrollment->progress : null;
+            $stale = $stored !== null && abs($stored - $live) > 0.5;
+
+            $enrollment->setAttribute('live_progress', $live);
+            $enrollment->setAttribute('live_completed', (int) $breakdown['completed']);
+            $enrollment->setAttribute('live_total', (int) $breakdown['total']);
+            $enrollment->setAttribute('avg_lecture_watch_percent', $breakdown['avg_lecture_watch_percent']);
+            $enrollment->setAttribute('progress_was_stale', $stale);
+
+            if ($persist) {
+                $this->syncEnrollmentProgress((int) $student->id, $courseId, $live, true);
+                $enrollment->progress = $live;
+                if ($live >= 100.0) {
+                    $enrollment->curriculum_completed_at = $enrollment->curriculum_completed_at ?? now();
+                } elseif ($stale && $live < 100.0) {
+                    $enrollment->curriculum_completed_at = null;
+                }
+            }
+        }
+    }
+
+    /**
+     * @param  list<array{items: list<array{type: string, completed: bool, detail: ?string}>}>  $sectionRows
+     */
+    private function averageLectureWatchPercentFromBreakdown(array $sectionRows): ?float
+    {
+        $sum = 0;
+        $count = 0;
+        foreach ($sectionRows as $section) {
+            foreach ($section['items'] as $item) {
+                if (($item['type'] ?? '') !== 'lecture') {
+                    continue;
+                }
+                $count++;
+                if (preg_match('/(\d+)%/', (string) ($item['detail'] ?? ''), $m)) {
+                    $sum += (int) $m[1];
+                }
+            }
+        }
+
+        if ($count === 0) {
+            return null;
+        }
+
+        return round($sum / $count, 1);
+    }
+
+    /**
+     * @param  list<array{items: list<array{type: string, completed: bool}>}>  $sectionRows
+     */
+    private function countBreakdownItemsByType(array $sectionRows, string $type): int
+    {
+        $n = 0;
+        foreach ($sectionRows as $section) {
+            foreach ($section['items'] as $item) {
+                if (($item['type'] ?? '') === $type) {
+                    $n++;
+                }
+            }
+        }
+
+        return $n;
+    }
+
+    /**
+     * @param  list<array{items: list<array{type: string, completed: bool}>}>  $sectionRows
+     */
+    private function countBreakdownCompletedByType(array $sectionRows, string $type): int
+    {
+        $n = 0;
+        foreach ($sectionRows as $section) {
+            foreach ($section['items'] as $item) {
+                if (($item['type'] ?? '') === $type && ! empty($item['completed'])) {
+                    $n++;
+                }
+            }
+        }
+
+        return $n;
     }
 
     private function entityTypeKey(mixed $entity): string

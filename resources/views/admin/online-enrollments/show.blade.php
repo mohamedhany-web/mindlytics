@@ -102,6 +102,13 @@
                                         @endif
                                     </p>
                                 @endif
+                                @if($progressBreakdown && $progressBreakdown['avg_lecture_watch_percent'] !== null)
+                                    <p class="text-xs text-sky-700 mt-1.5">
+                                        متوسط مشاهدة المحاضرات:
+                                        <span class="font-bold">{{ number_format($progressBreakdown['avg_lecture_watch_percent'], 0) }}%</span>
+                                        · مكتمل منها {{ $progressBreakdown['lectures_completed'] }}/{{ $progressBreakdown['lectures_total'] }}
+                                    </p>
+                                @endif
                             </div>
                         </div>
                     </div>
