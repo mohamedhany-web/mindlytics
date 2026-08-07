@@ -7,8 +7,10 @@ use App\Models\User;
 use App\Models\AdvancedCourse;
 use App\Models\StudentCourseEnrollment;
 use App\Models\Wallet;
+use App\Services\CourseProgressService;
 use App\Services\InstructorCoursePercentageService;
 use App\Services\OnlineEnrollmentsExcelExportService;
+use App\Services\ScholarshipCurriculumVisibilityService;
 use App\Support\OnlineEnrollmentProvisioner;
 use App\Mail\CourseEnrollmentActivatedMail;
 use Illuminate\Http\Request;
@@ -310,11 +312,44 @@ class StudentEnrollmentController extends Controller
     /**
      * عرض تفاصيل التسجيل
      */
-    public function show(StudentCourseEnrollment $enrollment)
-    {
+    public function show(
+        StudentCourseEnrollment $enrollment,
+        CourseProgressService $progressService,
+        ScholarshipCurriculumVisibilityService $visibility,
+    ) {
         $enrollment->load(['student', 'course.academicYear', 'course.academicSubject', 'activatedBy']);
-        
-        return view('admin.online-enrollments.show', compact('enrollment'));
+
+        $course = $enrollment->course;
+        $student = $enrollment->student;
+        $progressBreakdown = null;
+
+        if ($course && $student) {
+            $sections = $course->activeSections()
+                ->with([
+                    'visibleStudents:id',
+                    'visibleGroups.members:id',
+                    'activeItems' => fn ($q) => $q->orderBy('order')->with([
+                        'item',
+                        'visibleStudents:id',
+                        'visibleGroups.members:id',
+                    ]),
+                ])
+                ->orderBy('order')
+                ->get();
+
+            $sections = $visibility->filterSectionsForStudent($sections, $student, $course);
+            $progressBreakdown = $progressService->buildProgressBreakdown($student, $course, $sections);
+
+            // مزامنة النسبة المخزّنة مع الحساب الحي (زيادة فقط)
+            $progressService->syncEnrollmentProgress(
+                (int) $student->id,
+                (int) $course->id,
+                (float) $progressBreakdown['progress']
+            );
+            $enrollment->refresh();
+        }
+
+        return view('admin.online-enrollments.show', compact('enrollment', 'progressBreakdown'));
     }
 
     /**

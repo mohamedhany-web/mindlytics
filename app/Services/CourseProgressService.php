@@ -212,6 +212,241 @@ class CourseProgressService
         return [$progress, $totalItems, $completedItems];
     }
 
+    /**
+     * تفصيل موقف الطالب في المنهج (للوحة الإدارة).
+     *
+     * @return array{
+     *   progress: float,
+     *   total: int,
+     *   completed: int,
+     *   remaining: int,
+     *   next_item: ?array{type: string, type_label: string, title: string, section: string},
+     *   sections: list<array{
+     *     id: int,
+     *     title: string,
+     *     completed: int,
+     *     total: int,
+     *     items: list<array{
+     *       type: string,
+     *       type_label: string,
+     *       title: string,
+     *       completed: bool,
+     *       detail: ?string,
+     *       missing: bool
+     *     }>
+     *   }>
+     * }
+     */
+    public function buildProgressBreakdown(User $user, AdvancedCourse $course, Collection $sections): array
+    {
+        $this->loadCurriculumProgressForUser($sections, $user);
+
+        $sectionRows = [];
+        $totalItems = 0;
+        $completedItems = 0;
+        $nextItem = null;
+
+        foreach ($sections as $section) {
+            $items = $section->relationLoaded('activeItems')
+                ? $section->activeItems
+                : ($section->items ?? collect());
+
+            $rowItems = [];
+            $sectionCompleted = 0;
+            $sectionTotal = 0;
+
+            foreach ($items as $curriculumItem) {
+                $entity = $curriculumItem->item ?? null;
+                $sectionTotal++;
+                $totalItems++;
+
+                $type = $this->entityTypeKey($entity);
+                $typeLabel = $this->entityTypeLabel($type);
+                $title = $entity
+                    ? (string) ($entity->title ?? $entity->name ?? ('#'.($entity->id ?? '')))
+                    : 'عنصر غير موجود في المنهج';
+                $completed = $entity
+                    && $this->isRecognizedCurriculumEntity($entity)
+                    && $this->isItemCompletedForUser($entity, $user);
+                $detail = $entity ? $this->itemProgressDetail($entity, $user) : 'مورف مكسور أو محذوف';
+
+                if ($completed) {
+                    $sectionCompleted++;
+                    $completedItems++;
+                } elseif ($nextItem === null) {
+                    $nextItem = [
+                        'type' => $type,
+                        'type_label' => $typeLabel,
+                        'title' => $title,
+                        'section' => (string) ($section->title ?? ''),
+                    ];
+                }
+
+                $rowItems[] = [
+                    'type' => $type,
+                    'type_label' => $typeLabel,
+                    'title' => $title,
+                    'completed' => $completed,
+                    'detail' => $detail,
+                    'missing' => ! $entity,
+                ];
+            }
+
+            if ($sectionTotal === 0) {
+                continue;
+            }
+
+            $sectionRows[] = [
+                'id' => (int) $section->id,
+                'title' => (string) ($section->title ?? 'قسم'),
+                'completed' => $sectionCompleted,
+                'total' => $sectionTotal,
+                'items' => $rowItems,
+            ];
+        }
+
+        // Fallback بدون أقسام: دروس الكورس فقط
+        if ($sectionRows === [] && $sections->isEmpty()) {
+            $lessons = $course->lessons()->where('is_active', true)->orderBy('order')->get();
+            $rowItems = [];
+            foreach ($lessons as $lesson) {
+                $totalItems++;
+                $p = LessonProgress::query()
+                    ->where('user_id', $user->id)
+                    ->where('course_lesson_id', $lesson->id)
+                    ->first();
+                $completed = $p && $p->is_completed;
+                if ($completed) {
+                    $completedItems++;
+                } elseif ($nextItem === null) {
+                    $nextItem = [
+                        'type' => 'lesson',
+                        'type_label' => 'درس',
+                        'title' => (string) $lesson->title,
+                        'section' => 'دروس الكورس',
+                    ];
+                }
+                $rowItems[] = [
+                    'type' => 'lesson',
+                    'type_label' => 'درس',
+                    'title' => (string) $lesson->title,
+                    'completed' => (bool) $completed,
+                    'detail' => $p
+                        ? ((int) $p->progress_percent).'%'.($p->is_completed ? ' · مكتمل' : '')
+                        : 'لم يبدأ',
+                    'missing' => false,
+                ];
+            }
+            if ($rowItems !== []) {
+                $sectionRows[] = [
+                    'id' => 0,
+                    'title' => 'دروس الكورس',
+                    'completed' => $completedItems,
+                    'total' => $totalItems,
+                    'items' => $rowItems,
+                ];
+            }
+        }
+
+        return [
+            'progress' => $this->percentFromCounts($completedItems, $totalItems),
+            'total' => $totalItems,
+            'completed' => $completedItems,
+            'remaining' => max(0, $totalItems - $completedItems),
+            'next_item' => $nextItem,
+            'sections' => $sectionRows,
+        ];
+    }
+
+    private function entityTypeKey(mixed $entity): string
+    {
+        if ($entity instanceof Lecture) {
+            return 'lecture';
+        }
+        if ($entity instanceof CourseLesson) {
+            return 'lesson';
+        }
+        if ($entity instanceof Assignment) {
+            return 'assignment';
+        }
+        if ($entity instanceof LearningPattern) {
+            return 'pattern';
+        }
+        if ($entity instanceof AdvancedExam || $entity instanceof Exam) {
+            return 'exam';
+        }
+
+        return 'unknown';
+    }
+
+    private function entityTypeLabel(string $type): string
+    {
+        return match ($type) {
+            'lecture' => 'محاضرة',
+            'lesson' => 'درس',
+            'assignment' => 'واجب',
+            'pattern' => 'نمط تعلّم',
+            'exam' => 'امتحان',
+            default => 'غير معروف',
+        };
+    }
+
+    private function itemProgressDetail(mixed $entity, User $user): ?string
+    {
+        if ($entity instanceof Lecture) {
+            $wp = $this->watchProgressForUser($entity, $user);
+            $threshold = $this->lectureCompletionThreshold($entity);
+            if (! $wp) {
+                return 'لم يشاهد بعد · مطلوب ≥'.$threshold.'%';
+            }
+
+            return (int) $wp->progress_percent.'% مشاهدة'
+                .( $wp->is_completed || (int) $wp->progress_percent >= $threshold ? ' · مكتمل' : ' · مطلوب ≥'.$threshold.'%');
+        }
+
+        if ($entity instanceof CourseLesson) {
+            $p = $this->lessonProgressForUser($entity, $user);
+            if (! $p) {
+                return 'لم يبدأ';
+            }
+
+            return (int) $p->progress_percent.'%'.($p->is_completed ? ' · مكتمل' : '');
+        }
+
+        if ($entity instanceof Assignment) {
+            $has = $entity->relationLoaded('submissions')
+                ? $entity->submissions->where('student_id', $user->id)->isNotEmpty()
+                : $entity->submissions()->where('student_id', $user->id)->exists();
+
+            return $has ? 'تم التسليم' : 'لم يُسلَّم';
+        }
+
+        if ($entity instanceof LearningPattern) {
+            $best = $entity->getUserBestAttempt($user->id);
+
+            return $best ? ('محاولة: '.$best->status) : 'لا توجد محاولة';
+        }
+
+        if ($entity instanceof AdvancedExam || $entity instanceof Exam) {
+            $passing = (float) ($entity->passing_marks ?? 0);
+            $attempt = $entity->attempts()
+                ->where('user_id', $user->id)
+                ->whereNotNull('submitted_at')
+                ->orderByDesc('score')
+                ->first();
+            if (! $attempt) {
+                return 'لم يؤدِّ الامتحان · النجاح من '.$passing;
+            }
+
+            $score = $attempt->score !== null ? (float) $attempt->score : null;
+
+            return 'درجة: '.($score ?? '—').' · مطلوب ≥'.$passing
+                .($score !== null && $score >= $passing ? ' · ناجح' : ' · لم ينجح');
+        }
+
+        return null;
+    }
+
     public function getCourseProgress(User $user, AdvancedCourse $course, Collection $sections): float
     {
         $this->loadCurriculumProgressForUser($sections, $user);

@@ -69,14 +69,39 @@
                         </div>
                         <div>
                             <div class="mb-4">
-                                <label class="block text-sm font-medium text-gray-500 mb-1">التقدم</label>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">التقدم في المنهج</label>
+                                @php
+                                    $storedPct = (float) ($enrollment->progress ?? 0);
+                                    $livePct = (float) ($progressBreakdown['progress'] ?? $storedPct);
+                                    $finished = $enrollment->hasFinishedCurriculum();
+                                @endphp
                                 <div class="flex items-center justify-between text-sm mb-2">
-                                    <span class="text-gray-600">{{ $enrollment->progress }}%</span>
+                                    <span class="font-bold {{ $finished ? 'text-emerald-700' : 'text-gray-800' }}">{{ number_format($livePct, 1) }}%</span>
+                                    @if($progressBreakdown)
+                                        <span class="text-gray-500">{{ $progressBreakdown['completed'] }} / {{ $progressBreakdown['total'] }} عنصر مكتمل</span>
+                                    @endif
                                 </div>
                                 <div class="w-full bg-gray-200 rounded-full h-3">
-                                    <div class="bg-primary-600 h-3 rounded-full transition-all duration-300" 
-                                         style="width: {{ $enrollment->progress }}%"></div>
+                                    <div class="{{ $finished ? 'bg-emerald-500' : 'bg-primary-600' }} h-3 rounded-full transition-all duration-300"
+                                         style="width: {{ min($livePct, 100) }}%"></div>
                                 </div>
+                                @if($finished)
+                                    <p class="text-xs text-emerald-700 font-semibold mt-2">
+                                        أنهى المنهج
+                                        @if($enrollment->curriculum_completed_at)
+                                            · {{ $enrollment->curriculum_completed_at->format('Y-m-d H:i') }}
+                                        @endif
+                                    </p>
+                                @elseif($progressBreakdown && $progressBreakdown['next_item'])
+                                    <p class="text-xs text-amber-700 mt-2">
+                                        واقف عند:
+                                        <span class="font-bold">{{ $progressBreakdown['next_item']['type_label'] }}</span>
+                                        — {{ $progressBreakdown['next_item']['title'] }}
+                                        @if($progressBreakdown['next_item']['section'])
+                                            <span class="text-gray-500">({{ $progressBreakdown['next_item']['section'] }})</span>
+                                        @endif
+                                    </p>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -111,6 +136,56 @@
                     @endif
                 </div>
             </div>
+
+            @if($progressBreakdown)
+                <div class="bg-white shadow-sm rounded-lg border border-gray-200 mt-6">
+                    <div class="px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900">موقف الطالب في المنهج</h3>
+                            <p class="text-xs text-gray-500 mt-0.5">تفصيل حي من عناصر المنهج — مكتمل / متبقي</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 text-xs font-semibold">
+                            <span class="inline-flex px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">مكتمل: {{ $progressBreakdown['completed'] }}</span>
+                            <span class="inline-flex px-2.5 py-1 rounded-full bg-amber-100 text-amber-800">متبقي: {{ $progressBreakdown['remaining'] }}</span>
+                            <span class="inline-flex px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">الإجمالي: {{ $progressBreakdown['total'] }}</span>
+                        </div>
+                    </div>
+                    <div class="p-4 sm:p-6 space-y-5">
+                        @forelse($progressBreakdown['sections'] as $section)
+                            <div class="rounded-xl border border-slate-200 overflow-hidden">
+                                <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-3">
+                                    <h4 class="font-bold text-slate-900">{{ $section['title'] }}</h4>
+                                    <span class="text-xs font-semibold text-slate-600">{{ $section['completed'] }} / {{ $section['total'] }}</span>
+                                </div>
+                                <ul class="divide-y divide-slate-100">
+                                    @foreach($section['items'] as $item)
+                                        <li class="px-4 py-3 flex items-start gap-3 {{ $item['completed'] ? 'bg-emerald-50/40' : ($item['missing'] ? 'bg-rose-50/50' : '') }}">
+                                            <span class="mt-0.5 w-6 h-6 rounded-full flex items-center justify-center shrink-0
+                                                {{ $item['completed'] ? 'bg-emerald-500 text-white' : ($item['missing'] ? 'bg-rose-500 text-white' : 'bg-slate-200 text-slate-600') }}">
+                                                <i class="fas {{ $item['completed'] ? 'fa-check' : ($item['missing'] ? 'fa-exclamation' : 'fa-minus') }} text-[10px]"></i>
+                                            </span>
+                                            <div class="min-w-0 flex-1">
+                                                <div class="flex flex-wrap items-center gap-2">
+                                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">{{ $item['type_label'] }}</span>
+                                                    <p class="font-semibold text-slate-900 truncate">{{ $item['title'] }}</p>
+                                                </div>
+                                                @if($item['detail'])
+                                                    <p class="text-xs text-slate-500 mt-0.5">{{ $item['detail'] }}</p>
+                                                @endif
+                                            </div>
+                                            <span class="text-[11px] font-bold shrink-0 {{ $item['completed'] ? 'text-emerald-700' : 'text-amber-700' }}">
+                                                {{ $item['completed'] ? 'مكتمل' : 'لم يكتمل' }}
+                                            </span>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @empty
+                            <p class="text-sm text-slate-500 text-center py-8">لا توجد عناصر منهج نشطة لهذا الكورس.</p>
+                        @endforelse
+                    </div>
+                </div>
+            @endif
         </div>
 
         <!-- إجراءات سريعة -->
