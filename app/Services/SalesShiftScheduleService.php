@@ -531,4 +531,139 @@ class SalesShiftScheduleService
 
         return $this->employeeTodaySnapshot($plan, $userId, $at);
     }
+
+    /**
+     * هل للموظف شيفت من المقر (غير من البيت) في هذا التاريخ؟
+     */
+    public function isOfficeShiftDay(int $userId, Carbon $date, ?SalesShiftPlan $plan = null): bool
+    {
+        $plan = $plan ?? $this->activePlan();
+        if (! $plan) {
+            return false;
+        }
+
+        return $plan->segments()
+            ->where('day_of_week', $this->salesDayIndex($date))
+            ->where('user_id', $userId)
+            ->where('mode', '!=', SalesShiftSegment::MODE_HOME)
+            ->exists();
+    }
+
+    /**
+     * قائمة أعضاء الفريق المجدولين من المقر في يوم معيّن (يستبعد mode=home).
+     *
+     * @param  list<int>  $memberIds
+     * @return array{
+     *   plan: ?SalesShiftPlan,
+     *   date: Carbon,
+     *   day_index: int,
+     *   day_name: string,
+     *   members: list<array<string, mixed>>,
+     *   empty_reason: ?string
+     * }
+     */
+    public function officeRosterForDate(Carbon $date, array $memberIds): array
+    {
+        $date = $date->copy()->startOfDay();
+        $dayIndex = $this->salesDayIndex($date);
+        $plan = $this->activePlan();
+
+        $base = [
+            'plan' => $plan,
+            'date' => $date,
+            'day_index' => $dayIndex,
+            'day_name' => (string) config('sales_shifts.day_names.'.$dayIndex, $date->copy()->locale('ar')->translatedFormat('l')),
+            'members' => [],
+            'empty_reason' => null,
+        ];
+
+        if (! $plan) {
+            $base['empty_reason'] = 'no_plan';
+
+            return $base;
+        }
+
+        $memberIds = array_values(array_unique(array_map('intval', $memberIds)));
+        if ($memberIds === []) {
+            $base['empty_reason'] = 'no_members';
+
+            return $base;
+        }
+
+        $segments = $plan->segments()
+            ->with('user:id,name')
+            ->where('day_of_week', $dayIndex)
+            ->whereIn('user_id', $memberIds)
+            ->where('mode', '!=', SalesShiftSegment::MODE_HOME)
+            ->orderBy('start_hour')
+            ->get();
+
+        if ($segments->isEmpty()) {
+            $base['empty_reason'] = 'no_office_shifts';
+
+            return $base;
+        }
+
+        $byUser = $segments->groupBy(fn ($s) => (int) $s->user_id);
+        $records = \App\Models\EmployeeAttendanceRecord::query()
+            ->whereIn('user_id', $byUser->keys()->all())
+            ->whereDate('work_date', $date->toDateString())
+            ->get()
+            ->keyBy(fn ($r) => (int) $r->user_id);
+
+        $members = [];
+        foreach ($byUser as $userId => $userSegs) {
+            /** @var Collection<int, SalesShiftSegment> $userSegs */
+            $user = $userSegs->first()?->user;
+            $startHour = (int) $userSegs->min('start_hour');
+            $endHour = (int) $userSegs->max('end_hour');
+            $badge = $userSegs->first(fn ($s) => filled($s->location_badge))?->location_badge
+                ?? $userSegs->first()?->location_badge;
+            if ($badge === 'from_office') {
+                $badge = 'من المقر';
+            }
+
+            $record = $records->get((int) $userId);
+            $managerConfirmed = $record
+                && $record->attendance_approval_status === \App\Models\EmployeeAttendanceRecord::APPROVAL_APPROVED
+                && filled($record->approved_by);
+            $isLate = (bool) ($record?->is_late);
+            $pendingRequest = $record?->isAwaitingManagerApproval() ?? false;
+
+            $statusKey = 'awaiting';
+            if ($managerConfirmed && $isLate) {
+                $statusKey = 'confirmed_late';
+            } elseif ($managerConfirmed) {
+                $statusKey = 'confirmed_on_time';
+            } elseif ($pendingRequest) {
+                $statusKey = 'pending_request';
+            } elseif ($record?->clock_in_at) {
+                $statusKey = 'clocked_unconfirmed';
+            }
+
+            $members[] = [
+                'user_id' => (int) $userId,
+                'name' => (string) ($user?->name ?? '—'),
+                'start_hour' => $startHour,
+                'end_hour' => $endHour,
+                'start_label' => $this->formatHourLabel($startHour),
+                'end_label' => $this->formatHourLabel($endHour),
+                'location_badge' => $badge,
+                'channels_label' => $userSegs->map(fn ($s) => $s->channelsLabel())->unique()->implode(' · '),
+                'segments_count' => $userSegs->count(),
+                'record' => $record,
+                'status_key' => $statusKey,
+                'manager_confirmed' => $managerConfirmed,
+                'is_late' => $isLate,
+                'clock_in_at' => $record?->clock_in_at,
+                'deduction_id' => $record?->late_deduction_id,
+            ];
+        }
+
+        usort($members, fn ($a, $b) => [$a['start_hour'], $a['name']] <=> [$b['start_hour'], $b['name']]);
+
+        $base['members'] = $members;
+
+        return $base;
+    }
 }

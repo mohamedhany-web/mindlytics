@@ -306,4 +306,121 @@ class SalesShiftScheduleTest extends TestCase
 
         Carbon::setTestNow();
     }
+
+    public function test_office_roster_excludes_home_and_includes_office_modes(): void
+    {
+        Schema::dropIfExists('employee_attendance_records');
+        Schema::create('employee_attendance_records', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('work_schedule_id')->nullable();
+            $table->date('work_date');
+            $table->dateTime('scheduled_start')->nullable();
+            $table->dateTime('scheduled_end')->nullable();
+            $table->unsignedSmallInteger('required_minutes')->default(480);
+            $table->dateTime('clock_in_at')->nullable();
+            $table->dateTime('clock_out_at')->nullable();
+            $table->unsignedInteger('worked_minutes')->nullable();
+            $table->string('status')->default('pending');
+            $table->boolean('is_late')->default(false);
+            $table->string('attendance_approval_status', 30)->default('not_required');
+            $table->dateTime('attendance_requested_at')->nullable();
+            $table->unsignedBigInteger('approved_by')->nullable();
+            $table->dateTime('approved_at')->nullable();
+            $table->string('manager_lateness_decision', 30)->nullable();
+            $table->boolean('late_penalty_waived')->default(false);
+            $table->unsignedBigInteger('late_deduction_id')->nullable();
+            $table->json('metadata')->nullable();
+            $table->timestamps();
+        });
+
+        $job = EmployeeJob::create(['name' => 'Sales', 'code' => 'sales', 'is_active' => true]);
+        $office = User::create([
+            'name' => 'Office Rep',
+            'email' => 'office-roster@test.local',
+            'password' => Hash::make('x'),
+            'is_employee' => true,
+            'is_active' => true,
+            'employee_job_id' => $job->id,
+            'branch_id' => 1,
+        ]);
+        $home = User::create([
+            'name' => 'Home Rep',
+            'email' => 'home-roster@test.local',
+            'password' => Hash::make('x'),
+            'is_employee' => true,
+            'is_active' => true,
+            'employee_job_id' => $job->id,
+            'branch_id' => 1,
+        ]);
+        $fromOffice = User::create([
+            'name' => 'From Office',
+            'email' => 'from-office-roster@test.local',
+            'password' => Hash::make('x'),
+            'is_employee' => true,
+            'is_active' => true,
+            'employee_job_id' => $job->id,
+            'branch_id' => 1,
+        ]);
+
+        $plan = SalesShiftPlan::create([
+            'name' => 'Roster Plan',
+            'work_start_hour' => 10,
+            'work_end_hour' => 26,
+            'takeover_grace_minutes' => 10,
+            'is_active' => true,
+        ]);
+
+        $date = Carbon::parse('2026-08-08')->startOfDay();
+        $svc = app(SalesShiftScheduleService::class);
+        $dow = $svc->salesDayIndex($date);
+
+        SalesShiftSegment::create([
+            'sales_shift_plan_id' => $plan->id,
+            'day_of_week' => $dow,
+            'user_id' => $office->id,
+            'start_hour' => 11,
+            'end_hour' => 19,
+            'mode' => SalesShiftSegment::MODE_NORMAL,
+            'channels' => ['whatsapp'],
+            'location_badge' => 'من المقر',
+            'sort_order' => 0,
+        ]);
+        SalesShiftSegment::create([
+            'sales_shift_plan_id' => $plan->id,
+            'day_of_week' => $dow,
+            'user_id' => $home->id,
+            'start_hour' => 11,
+            'end_hour' => 19,
+            'mode' => SalesShiftSegment::MODE_HOME,
+            'channels' => ['whatsapp'],
+            'location_badge' => 'من البيت',
+            'sort_order' => 0,
+        ]);
+        SalesShiftSegment::create([
+            'sales_shift_plan_id' => $plan->id,
+            'day_of_week' => $dow,
+            'user_id' => $fromOffice->id,
+            'start_hour' => 12,
+            'end_hour' => 20,
+            'mode' => 'from_office',
+            'channels' => ['calls'],
+            'location_badge' => 'from_office',
+            'sort_order' => 0,
+        ]);
+
+        $roster = $svc->officeRosterForDate($date, [
+            (int) $office->id,
+            (int) $home->id,
+            (int) $fromOffice->id,
+        ]);
+
+        $ids = collect($roster['members'])->pluck('user_id')->all();
+        $this->assertContains((int) $office->id, $ids);
+        $this->assertContains((int) $fromOffice->id, $ids);
+        $this->assertNotContains((int) $home->id, $ids);
+        $this->assertTrue($svc->isOfficeShiftDay((int) $office->id, $date));
+        $this->assertFalse($svc->isOfficeShiftDay((int) $home->id, $date));
+        $this->assertNull($roster['empty_reason']);
+    }
 }

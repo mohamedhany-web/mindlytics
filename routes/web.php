@@ -1073,6 +1073,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('transfer', [\App\Http\Controllers\Employee\SalesManagerTransferController::class, 'index'])->name('transfer.index');
             Route::post('transfer', [\App\Http\Controllers\Employee\SalesManagerTransferController::class, 'store'])->name('transfer.store');
             Route::get('attendance', [\App\Http\Controllers\Employee\SalesManagerAttendanceController::class, 'index'])->name('attendance.index');
+            Route::get('attendance/offline-day', [\App\Http\Controllers\Employee\SalesManagerAttendanceController::class, 'offlineDay'])->name('attendance.offline-day');
+            Route::post('attendance/offline-day/confirm', [\App\Http\Controllers\Employee\SalesManagerAttendanceController::class, 'confirmOfflineDay'])->name('attendance.offline-day.confirm');
             Route::get('attendance/employees/{employee}', [\App\Http\Controllers\Employee\SalesManagerAttendanceController::class, 'employee'])->name('attendance.employee');
             Route::post('attendance/employees/{employee}/unlock', [\App\Http\Controllers\Employee\SalesManagerAttendanceController::class, 'unlock'])->name('attendance.unlock');
             Route::post('attendance/employees/{employee}/unlocks/{unlock}/revoke', [\App\Http\Controllers\Employee\SalesManagerAttendanceController::class, 'revokeUnlock'])->name('attendance.unlock.revoke');
@@ -1709,6 +1711,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::prefix('online-enrollments')->name('online-enrollments.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\StudentEnrollmentController::class, 'index'])->name('index');
             Route::get('/export', [\App\Http\Controllers\Admin\StudentEnrollmentController::class, 'export'])->name('export');
+            Route::get('/export-pdf', [\App\Http\Controllers\Admin\StudentEnrollmentController::class, 'exportPdf'])->name('export-pdf');
             Route::post('/resync-progress', [\App\Http\Controllers\Admin\StudentEnrollmentController::class, 'resyncProgress'])->name('resync-progress');
             Route::get('/create', [\App\Http\Controllers\Admin\StudentEnrollmentController::class, 'create'])->name('create');
             Route::post('/', [\App\Http\Controllers\Admin\StudentEnrollmentController::class, 'store'])->name('store');

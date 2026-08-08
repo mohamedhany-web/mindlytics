@@ -7,7 +7,10 @@ use App\Models\EmployeeAttendanceRecord;
 use App\Models\EmployeeWorkUnlock;
 use App\Models\User;
 use App\Services\EmployeeAttendanceService;
+use App\Services\SalesShiftScheduleService;
 use App\Services\SalesTeamService;
+use App\Support\EmployeeAttendanceSettings;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,6 +21,7 @@ class SalesManagerAttendanceController extends Controller
     public function __construct(
         private SalesTeamService $teamService,
         private EmployeeAttendanceService $attendance,
+        private SalesShiftScheduleService $shifts,
     ) {
         $this->middleware('sales.manager');
     }
@@ -256,5 +260,79 @@ class SalesManagerAttendanceController extends Controller
         $this->attendance->waiveLatePenalty($record, $manager, $data['note'] ?? null);
 
         return back()->with('success', 'تم إعفاء خصم التأخير لـ «'.($record->user?->name ?? 'الموظف').'».');
+    }
+
+    public function offlineDay(Request $request): View
+    {
+        $team = $this->teamService->managedTeamOrFail(Auth::user());
+        $memberIds = $this->teamService->memberUserIds($team);
+
+        $date = $request->filled('date')
+            ? Carbon::parse($request->input('date'))->startOfDay()
+            : today()->startOfDay();
+
+        $roster = $this->shifts->officeRosterForDate($date, $memberIds);
+        $members = $roster['members'];
+
+        $stats = [
+            'office' => count($members),
+            'confirmed' => count(array_filter($members, fn ($m) => $m['manager_confirmed'])),
+            'late' => count(array_filter($members, fn ($m) => $m['manager_confirmed'] && $m['is_late'])),
+            'awaiting' => count(array_filter($members, fn ($m) => ! $m['manager_confirmed'])),
+        ];
+
+        return view('employee.sales-manager.attendance.offline-day', [
+            'team' => $team,
+            'date' => $date,
+            'roster' => $roster,
+            'stats' => $stats,
+            'defaultDeduction' => EmployeeAttendanceSettings::latePenaltyAmount(),
+        ]);
+    }
+
+    public function confirmOfflineDay(Request $request): RedirectResponse
+    {
+        $manager = Auth::user();
+        $team = $this->teamService->managedTeamOrFail($manager);
+        $memberIds = $this->teamService->memberUserIds($team);
+
+        $data = $request->validate([
+            'employee_id' => ['required', 'integer'],
+            'date' => ['required', 'date'],
+            'decision' => ['required', 'in:on_time,late'],
+            'deduction_amount' => ['required_if:decision,late', 'nullable', 'numeric', 'min:0'],
+        ], [
+            'employee_id.required' => 'الموظف مطلوب.',
+            'decision.required' => 'اختر: في الميعاد أو متأخر.',
+            'decision.in' => 'قرار الحضور غير صالح.',
+            'deduction_amount.required_if' => 'أدخل مبلغ الخصم عند التأخير.',
+            'deduction_amount.numeric' => 'مبلغ الخصم يجب أن يكون رقمًا.',
+            'deduction_amount.min' => 'مبلغ الخصم لا يمكن أن يكون سالبًا.',
+        ]);
+
+        abort_unless(in_array((int) $data['employee_id'], $memberIds, true), 403);
+
+        $employee = User::query()->findOrFail((int) $data['employee_id']);
+        $date = Carbon::parse($data['date'])->startOfDay();
+        $amount = $data['decision'] === 'late'
+            ? (float) ($data['deduction_amount'] ?? 0)
+            : null;
+
+        $this->attendance->confirmOfficeShiftPresence(
+            $employee,
+            $manager,
+            $date,
+            $data['decision'],
+            $amount,
+            $request->ip(),
+        );
+
+        $label = $data['decision'] === 'late'
+            ? 'متأخر (خصم '.number_format((float) $amount, 2).' ج.م)'
+            : 'في الميعاد';
+
+        return redirect()
+            ->route('employee.sales-manager.attendance.offline-day', ['date' => $date->toDateString()])
+            ->with('success', 'تم تأكيد حضور «'.$employee->name.'» — '.$label);
     }
 }

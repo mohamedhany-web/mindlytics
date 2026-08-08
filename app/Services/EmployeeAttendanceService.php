@@ -6,6 +6,7 @@ use App\Models\EmployeeAttendanceRecord;
 use App\Models\EmployeeWorkUnlock;
 use App\Models\User;
 use App\Models\WorkSchedule;
+use App\Services\SalesShiftScheduleService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -560,38 +561,149 @@ class EmployeeAttendanceService
         });
     }
 
-    public function ensureTodayRecord(User $user, WorkSchedule $schedule, Carbon $now): EmployeeAttendanceRecord
+    /**
+     * تأكيد حضور شيفت المقر يدويًا من مدير المبيعات (في الميعاد / متأخر + مبلغ خصم).
+     *
+     * @param  'on_time'|'late'  $decision
+     */
+    public function confirmOfficeShiftPresence(
+        User $employee,
+        User $manager,
+        Carbon $date,
+        string $decision,
+        ?float $deductionAmount = null,
+        ?string $ip = null,
+    ): EmployeeAttendanceRecord {
+        if (! in_array($decision, ['on_time', 'late'], true)) {
+            throw ValidationException::withMessages([
+                'decision' => 'اختر: في الميعاد أو متأخر.',
+            ]);
+        }
+
+        if ($decision === 'late' && ($deductionAmount === null || $deductionAmount < 0)) {
+            throw ValidationException::withMessages([
+                'deduction_amount' => 'أدخل مبلغ الخصم عند التأخير (0 أو أكثر).',
+            ]);
+        }
+
+        $shiftService = app(SalesShiftScheduleService::class);
+        if (! $shiftService->isOfficeShiftDay((int) $employee->id, $date)) {
+            throw ValidationException::withMessages([
+                'employee_id' => 'هذا الموظف ليس لديه شيفت من المقر في اليوم المحدد.',
+            ]);
+        }
+
+        $schedule = $this->resolveSchedule($employee);
+        if (! $schedule) {
+            throw ValidationException::withMessages([
+                'employee_id' => 'لا يوجد جدول عمل مرتبط بالموظف.',
+            ]);
+        }
+
+        $workDate = $date->copy()->startOfDay();
+        $latenessDecision = $decision === 'late'
+            ? EmployeeAttendanceRecord::LATENESS_CONFIRMED
+            : EmployeeAttendanceRecord::LATENESS_ON_TIME;
+
+        return DB::transaction(function () use (
+            $employee,
+            $manager,
+            $workDate,
+            $schedule,
+            $decision,
+            $latenessDecision,
+            $deductionAmount,
+            $ip
+        ) {
+            $record = $this->ensureRecordForDate($employee, $schedule, $workDate);
+            $record = EmployeeAttendanceRecord::query()->whereKey($record->id)->lockForUpdate()->firstOrFail();
+
+            $clockInAt = $record->clock_in_at
+                ?? $record->attendance_requested_at
+                ?? now();
+
+            $markLate = $decision === 'late';
+
+            $record->update([
+                'clock_in_at' => $clockInAt,
+                'clock_in_ip' => $ip ?: $record->clock_in_ip,
+                'status' => $record->clock_out_at ? ($record->status === 'completed' ? 'completed' : 'active') : 'active',
+                'is_late' => $markLate,
+                'attendance_approval_status' => EmployeeAttendanceRecord::APPROVAL_APPROVED,
+                'approved_by' => $manager->id,
+                'approved_at' => now(),
+                'manager_lateness_decision' => $latenessDecision,
+                'late_penalty_waived' => ! $markLate,
+                'approval_rejection_reason' => null,
+                'metadata' => array_merge($record->metadata ?? [], [
+                    'office_shift_confirm' => true,
+                    'confirmed_by_manager' => $manager->id,
+                    'confirmed_at' => now()->toIso8601String(),
+                    'lateness_decision' => $latenessDecision,
+                    'custom_deduction_amount' => $markLate ? $deductionAmount : null,
+                ]),
+            ]);
+
+            $record = $record->fresh(['user']);
+            $penalties = app(EmployeeAttendancePenaltyService::class);
+
+            if (! $markLate) {
+                $penalties->revokeLatePenalty($record);
+            } else {
+                $record->update(['late_penalty_waived' => false]);
+                $record = $record->fresh(['user']);
+                $penalties->applyLatePenalty($record, (float) $deductionAmount);
+            }
+
+            $record->user?->forceFill([
+                'presence_last_seen_at' => now(),
+                'presence_status' => 'online',
+            ])->save();
+
+            return $record->fresh(['user', 'lateDeduction']);
+        });
+    }
+
+    /**
+     * ضمان سجل حضور لتاريخ معيّن (وليس بالضرورة اليوم الحالي).
+     */
+    public function ensureRecordForDate(User $user, WorkSchedule $schedule, Carbon $date): EmployeeAttendanceRecord
     {
+        $date = $date->copy()->startOfDay();
+
         $existing = EmployeeAttendanceRecord::query()
             ->where('user_id', $user->id)
-            ->whereDate('work_date', $now->toDateString())
+            ->whereDate('work_date', $date->toDateString())
             ->first();
 
         if ($existing) {
-            return $this->syncDayStatusFromEmployeeFile($user, $existing, $now);
+            return $this->syncDayStatusFromEmployeeFile($user, $existing, $date);
         }
 
-        $window = $this->scheduleWindowForUser($user, $schedule, $now);
-        $requiredMinutes = $window['required_minutes'];
+        $window = $this->scheduleWindowForUser($user, $schedule, $date);
         $base = [
             'user_id' => $user->id,
             'work_schedule_id' => $schedule->id,
-            'work_date' => $now->toDateString(),
+            'work_date' => $date->toDateString(),
             'scheduled_start' => $window['shift_starts_at'],
             'scheduled_end' => $window['shift_ends_at'],
-            'required_minutes' => $requiredMinutes,
+            'required_minutes' => $window['required_minutes'],
         ];
 
-        // يوم الراحة من ملف الموظف (أوفلاين بأيام محددة أو weekly_off_day)
-        if ($user->isAttendanceOffDay($now)) {
+        if ($user->isAttendanceOffDay($date)) {
             return EmployeeAttendanceRecord::create($base + ['status' => 'off_day']);
         }
 
-        if ($user->isOnApprovedLeave($now)) {
+        if ($user->isOnApprovedLeave($date)) {
             return EmployeeAttendanceRecord::create($base + ['status' => 'on_leave']);
         }
 
         return EmployeeAttendanceRecord::create($base + ['status' => 'pending']);
+    }
+
+    public function ensureTodayRecord(User $user, WorkSchedule $schedule, Carbon $now): EmployeeAttendanceRecord
+    {
+        return $this->ensureRecordForDate($user, $schedule, $now);
     }
 
     /**

@@ -17,14 +17,24 @@ class EmployeeAttendancePenaltyService
         private EmployeeAttendanceService $attendance,
     ) {}
 
-    public function applyLatePenalty(EmployeeAttendanceRecord $record): ?EmployeeSalaryDeduction
+    public function applyLatePenalty(EmployeeAttendanceRecord $record, ?float $amount = null): ?EmployeeSalaryDeduction
     {
         if (
-            ! EmployeeAttendanceSettings::latePenaltyEnabled()
-            || ! $record->is_late
-            || $record->late_deduction_id
-            || $record->late_penalty_waived
+            $amount === null
+            && (
+                ! EmployeeAttendanceSettings::latePenaltyEnabled()
+                || ! $record->is_late
+                || $record->late_penalty_waived
+            )
         ) {
+            return null;
+        }
+
+        if ($amount === null && $record->late_deduction_id) {
+            return null;
+        }
+
+        if (! $record->is_late || $record->late_penalty_waived) {
             return null;
         }
 
@@ -32,12 +42,35 @@ class EmployeeAttendancePenaltyService
             return null;
         }
 
+        $penaltyAmount = $amount !== null
+            ? max(0, round($amount, 2))
+            : EmployeeAttendanceSettings::latePenaltyAmount();
+
+        if ($penaltyAmount <= 0) {
+            return null;
+        }
+
+        if ($record->late_deduction_id) {
+            $existing = EmployeeSalaryDeduction::query()->find($record->late_deduction_id);
+            if ($existing && $existing->status !== 'cancelled') {
+                $existing->update([
+                    'amount' => $penaltyAmount,
+                    'description' => 'تأخر عن موعد الدوام — '.$record->work_date->format('Y-m-d')
+                        .' (تأكيد مدير المبيعات — مبلغ مخصص)',
+                    'notes' => trim(($existing->notes ? $existing->notes."\n" : '').'تم تحديث مبلغ خصم التأخير بواسطة المدير.'),
+                ]);
+
+                return $existing->fresh();
+            }
+        }
+
         $deduction = $this->createDeduction(
             $record->user ?? $record->user()->first(),
             Carbon::parse($record->work_date),
-            EmployeeAttendanceSettings::latePenaltyAmount(),
+            $penaltyAmount,
             (string) config('employee_attendance.late_penalty_title', 'غرامة تأخير حضور'),
             'تأخر عن موعد الدوام — '.$record->work_date->format('Y-m-d')
+            .($amount !== null ? ' (مبلغ حدّده مدير المبيعات)' : '')
         );
 
         $record->update(['late_deduction_id' => $deduction->id]);
