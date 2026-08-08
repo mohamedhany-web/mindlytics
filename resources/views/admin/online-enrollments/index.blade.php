@@ -264,7 +264,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <h3 class="text-lg font-semibold text-gray-900">البحث والفلترة</h3>
             <div class="flex flex-wrap items-center gap-2">
-                <form method="POST" action="{{ route('admin.online-enrollments.resync-progress', request()->query()) }}"
+                <form method="POST" action="{{ route('admin.online-enrollments.resync-progress', request()->only(['search', 'status', 'course_id', 'completion'])) }}"
                       onsubmit="return confirm('إعادة حساب النسبة الفعلية لكل التسجيلات الظاهرة بالفلتر الحالي؟ قد تنخفض النسب المتضخّمة القديمة.');">
                     @csrf
                     <button type="submit"
@@ -273,16 +273,6 @@
                         تحديث النسب الفعلية
                     </button>
                 </form>
-                <a href="{{ route('admin.online-enrollments.export-pdf', request()->query()) }}"
-                   class="inline-flex items-center px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors duration-200">
-                    <i class="fas fa-file-pdf mr-2"></i>
-                    طباعة PDF
-                </a>
-                <a href="{{ route('admin.online-enrollments.export', request()->query()) }}"
-                   class="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors duration-200">
-                    <i class="fas fa-file-excel mr-2"></i>
-                    استخراج Excel
-                </a>
                 <a href="{{ route('admin.online-enrollments.create') }}"
                    class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
                     <i class="fas fa-plus mr-2"></i>
@@ -291,7 +281,7 @@
             </div>
         </div>
         
-        <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <form id="online-enrollments-filter-form" method="GET" action="{{ route('admin.online-enrollments.index') }}" class="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
                 <label for="search" class="block text-sm font-medium text-gray-700 mb-2">البحث</label>
                 <input type="text" name="search" id="search" value="{{ request('search') }}" 
@@ -324,23 +314,50 @@
                 <select name="course_id" id="course_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="">جميع الكورسات</option>
                     @foreach($courses as $course)
-                        <option value="{{ $course->id }}" {{ request('course_id') == $course->id ? 'selected' : '' }}>
+                        <option value="{{ $course->id }}" {{ (string) request('course_id') === (string) $course->id ? 'selected' : '' }}>
                             {{ $course->title }}
                         </option>
                     @endforeach
                 </select>
             </div>
 
-            <div class="flex gap-2 items-end">
-                <button type="submit" class="btn-primary flex-1">
+            <div class="flex flex-wrap gap-2 items-end">
+                <button type="submit" class="btn-primary flex-1 min-w-[7rem]">
                     <i class="fas fa-search mr-2"></i>
                     بحث
+                </button>
+                <button type="submit"
+                        formaction="{{ route('admin.online-enrollments.export-pdf') }}"
+                        class="inline-flex items-center justify-center px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors duration-200"
+                        title="يصدّر بنفس الفلاتر المختارة (بما فيها الكورس)">
+                    <i class="fas fa-file-pdf mr-2"></i>
+                    PDF
+                </button>
+                <button type="submit"
+                        formaction="{{ route('admin.online-enrollments.export') }}"
+                        class="inline-flex items-center justify-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors duration-200"
+                        title="يستخرج Excel بنفس الفلاتر المختارة">
+                    <i class="fas fa-file-excel mr-2"></i>
+                    Excel
                 </button>
                 <a href="{{ route('admin.online-enrollments.index') }}" class="btn-secondary">
                     <i class="fas fa-refresh"></i>
                 </a>
             </div>
         </form>
+        @if(request()->filled('course_id') || request()->filled('status') || request()->filled('search') || request()->filled('completion'))
+            <p class="mt-3 text-xs text-slate-500">
+                الفلتر الحالي يُطبَّق على PDF وExcel:
+                @if(request()->filled('course_id'))
+                    كورس #{{ request('course_id') }}
+                    @php $selectedCourse = $courses->firstWhere('id', (int) request('course_id')); @endphp
+                    @if($selectedCourse) — {{ $selectedCourse->title }} @endif
+                @endif
+                @if(request()->filled('status')) · حالة: {{ request('status') }} @endif
+                @if(request()->filled('search')) · بحث: {{ request('search') }} @endif
+                @if(request()->filled('completion')) · اكتمال: {{ request('completion') }} @endif
+            </p>
+        @endif
     </div>
 
     @if(request('completion') === 'finished')

@@ -163,7 +163,7 @@ class StudentEnrollmentController extends Controller
         }
 
         if ($request->filled('course_id')) {
-            $query->where('advanced_course_id', $request->course_id);
+            $query->where('advanced_course_id', (int) $request->course_id);
         }
 
         if ($request->filled('completion')) {
