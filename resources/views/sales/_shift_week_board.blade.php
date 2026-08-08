@@ -9,6 +9,7 @@
     $span = max(1, $workEnd - $workStart);
     $highlightUserId = $highlightUserId ?? null;
     $compact = $compact ?? false;
+    $editable = $editable ?? false;
     $schedule = app(\App\Services\SalesShiftScheduleService::class);
 @endphp
 
@@ -106,12 +107,33 @@
                                     <span class="absolute top-0 bottom-0 w-px bg-slate-200" style="right: 25%"></span>
                                     <span class="absolute top-0 bottom-0 w-px bg-slate-200" style="right: 50%"></span>
                                     @foreach($lane['segments'] as $seg)
-                                        <div class="absolute top-0 bottom-0 flex items-center justify-center text-[10px] font-bold overflow-hidden px-1
-                                            {{ $seg['is_home'] ? 'border-2 border-dashed text-slate-700' : 'text-slate-900 shadow-inner' }}"
+                                        @php
+                                            $segPayload = [
+                                                'id' => $seg['id'] ?? null,
+                                                'day_of_week' => $day['day_of_week'] ?? 0,
+                                                'user_id' => $lane['user_id'],
+                                                'user_name' => $lane['user_name'],
+                                                'start_hour' => $seg['start_hour'],
+                                                'end_hour' => $seg['end_hour'],
+                                                'mode' => $seg['mode'] ?? 'normal',
+                                                'channels' => $seg['channels'] ?? [],
+                                                'location_badge' => $seg['location_badge'] ?? '',
+                                                'sort_order' => $seg['sort_order'] ?? 0,
+                                            ];
+                                            $barClasses = 'absolute top-0 bottom-0 flex items-center justify-center text-[10px] font-bold overflow-hidden px-1 '
+                                                .(($seg['is_home'] ?? false) ? 'border-2 border-dashed text-slate-700 ' : 'text-slate-900 shadow-inner ')
+                                                .($editable && ! empty($seg['id']) ? 'cursor-pointer hover:brightness-95 hover:ring-2 hover:ring-white/70 ' : '');
+                                        @endphp
+                                        <div class="{{ $barClasses }}"
                                              style="right: {{ $seg['left_pct'] }}%; width: {{ $seg['width_pct'] }}%;
-                                                    {{ $seg['is_home'] ? "border-color: {$color}; color: {$color};" : "background: {$color};" }}"
-                                             title="{{ $seg['channels_label'] }}">
-                                            <span class="truncate">{{ $seg['channels_label'] }}</span>
+                                                    {{ ($seg['is_home'] ?? false) ? "border-color: {$color}; color: {$color};" : "background: {$color};" }}"
+                                             title="{{ $seg['channels_label'] }}{{ $editable ? ' — اضغط للتعديل' : '' }}{{ ($seg['is_home'] ?? false) ? ' (من البيت)' : ' (من المقر)' }}"
+                                             @if($editable && ! empty($seg['id']))
+                                                role="button"
+                                                tabindex="0"
+                                                @click="$dispatch('edit-shift-segment', {{ \Illuminate\Support\Js::from($segPayload) }})"
+                                             @endif>
+                                            <span class="truncate">{{ $seg['channels_label'] }}{{ ($seg['is_home'] ?? false) ? ' · بيت' : '' }}</span>
                                         </div>
                                     @endforeach
                                 </div>

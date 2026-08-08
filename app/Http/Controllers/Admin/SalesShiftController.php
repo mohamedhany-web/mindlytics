@@ -25,6 +25,12 @@ class SalesShiftController extends Controller
             'board' => $board,
             'weekStart' => $weekStart,
             'salesReps' => User::salesEmployees()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'segments' => $plan
+                ? $plan->segments()->with('user:id,name')->orderBy('day_of_week')->orderBy('start_hour')->orderBy('sort_order')->get()
+                : collect(),
+            'dayNames' => config('sales_shifts.day_names', []),
+            'channelLabels' => collect(config('sales_shifts.channels', []))->mapWithKeys(fn ($ch, $code) => [$code => $ch['label'] ?? $code])->all(),
+            'modeLabels' => config('sales_shifts.segment_modes', []),
         ]);
     }
 
@@ -67,22 +73,24 @@ class SalesShiftController extends Controller
         $validated = $this->validateSegment($request);
         $plan->segments()->create($validated);
 
-        return back()->with('success', 'تمت إضافة segment.');
+        return back()->with('success', 'تمت إضافة الشيفت.');
     }
 
     public function updateSegment(Request $request, SalesShiftSegment $segment): RedirectResponse
     {
         $validated = $this->validateSegment($request);
+        // لا تُغيَّر الخطة من هنا — ابقَ على خطة الـ segment الحالية
+        $validated['sales_shift_plan_id'] = $segment->sales_shift_plan_id;
         $segment->update($validated);
 
-        return back()->with('success', 'تم تحديث segment.');
+        return back()->with('success', 'تم تحديث الشيفت.');
     }
 
     public function destroySegment(SalesShiftSegment $segment): RedirectResponse
     {
         $segment->delete();
 
-        return back()->with('success', 'تم حذف segment.');
+        return back()->with('success', 'تم حذف الشيفت.');
     }
 
     /**
