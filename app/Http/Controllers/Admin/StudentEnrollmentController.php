@@ -10,6 +10,7 @@ use App\Models\Wallet;
 use App\Services\CourseProgressService;
 use App\Services\InstructorCoursePercentageService;
 use App\Services\OnlineEnrollmentsExcelExportService;
+use App\Services\OnlineEnrollmentsPdfExportService;
 use App\Services\ScholarshipCurriculumVisibilityService;
 use App\Support\OnlineEnrollmentProvisioner;
 use App\Mail\CourseEnrollmentActivatedMail;
@@ -91,6 +92,34 @@ class StudentEnrollmentController extends Controller
     public function export(Request $request, OnlineEnrollmentsExcelExportService $excel): StreamedResponse
     {
         $query = $this->filteredEnrollmentsQuery($request);
+        $filterParts = $this->filterSummaryParts($request);
+
+        return $excel->streamDownload(
+            $query,
+            implode(' | ', $filterParts),
+            'online-enrollments-'.now()->format('Y-m-d_His').'.xlsx'
+        );
+    }
+
+    /**
+     * طباعة PDF عربي واضح بنفس فلاتر الصفحة.
+     */
+    public function exportPdf(Request $request, OnlineEnrollmentsPdfExportService $pdf): StreamedResponse
+    {
+        $query = $this->filteredEnrollmentsQuery($request);
+        $filterParts = $this->filterSummaryParts($request);
+
+        return $pdf->streamDownload(
+            $query,
+            implode(' | ', $filterParts)
+        );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function filterSummaryParts(Request $request): array
+    {
         $filterParts = [];
 
         if ($request->filled('search')) {
@@ -109,11 +138,7 @@ class StudentEnrollmentController extends Controller
                 : 'لم يُنه المنهج بعد';
         }
 
-        return $excel->streamDownload(
-            $query,
-            implode(' | ', $filterParts),
-            'online-enrollments-'.now()->format('Y-m-d_His').'.xlsx'
-        );
+        return $filterParts;
     }
 
     /**

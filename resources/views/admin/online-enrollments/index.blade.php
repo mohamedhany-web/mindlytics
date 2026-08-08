@@ -273,6 +273,11 @@
                         تحديث النسب الفعلية
                     </button>
                 </form>
+                <a href="{{ route('admin.online-enrollments.export-pdf', request()->query()) }}"
+                   class="inline-flex items-center px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors duration-200">
+                    <i class="fas fa-file-pdf mr-2"></i>
+                    طباعة PDF
+                </a>
                 <a href="{{ route('admin.online-enrollments.export', request()->query()) }}"
                    class="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors duration-200">
                     <i class="fas fa-file-excel mr-2"></i>
