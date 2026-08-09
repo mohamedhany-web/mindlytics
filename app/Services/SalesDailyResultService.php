@@ -21,12 +21,12 @@ class SalesDailyResultService
         $defaults = config('sales_kpi.defaults', []);
 
         return [
-            'call_attempts_daily' => (int) ($defaults['call_attempts_daily'] ?? 120),
-            'calls_answered_daily' => (int) ($defaults['calls_answered_daily'] ?? 35),
-            'qualified_conversations_daily' => (int) ($defaults['qualified_conversations_daily'] ?? 15),
-            'discovery_sessions_daily' => (int) ($defaults['discovery_sessions_daily'] ?? 8),
-            'proposals_daily' => (int) ($defaults['proposals_daily'] ?? 5),
-            'paid_enrollments_daily' => (int) ($defaults['paid_enrollments_daily'] ?? 2),
+            'call_attempts_daily' => (int) ($defaults['call_attempts_daily'] ?? 50),
+            'calls_answered_daily' => (int) ($defaults['calls_answered_daily'] ?? 20),
+            'qualified_conversations_daily' => (int) ($defaults['qualified_conversations_daily'] ?? 8),
+            'discovery_sessions_daily' => (int) ($defaults['discovery_sessions_daily'] ?? 3),
+            'proposals_daily' => (int) ($defaults['proposals_daily'] ?? 2),
+            'paid_enrollments_daily' => (int) ($defaults['paid_enrollments_daily'] ?? 1),
         ];
     }
 

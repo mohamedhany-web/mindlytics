@@ -13,6 +13,7 @@ return [
     ],
 
     'daily_targets' => [
+        /** متوافق مع config/sales_kpi.php defaults (SOS) */
         'call_attempts' => 50,
         'calls_answered' => 20,
         'qualified' => 8,

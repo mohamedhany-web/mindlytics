@@ -287,6 +287,14 @@ class SalesKpiController extends Controller
             }
         }
 
+        // توحيد المعايير المتكررة: المكالمات = محاولات الاتصال، والاجتماعات = جلسات الاكتشاف
+        if (isset($payload['call_attempts_daily'])) {
+            $payload['calls_daily'] = $payload['call_attempts_daily'];
+        }
+        if (isset($payload['discovery_sessions_daily'])) {
+            $payload['meetings_daily'] = $payload['discovery_sessions_daily'];
+        }
+
         $saveFor = [$rep];
         if ($request->boolean('apply_to_all_team')) {
             $saveFor = User::salesEmployees()->where('is_active', true)->orderBy('name')->get()->all();

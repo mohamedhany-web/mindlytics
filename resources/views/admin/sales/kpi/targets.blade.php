@@ -5,18 +5,18 @@
 
 @php
     $labels = [
-        'leads_daily' => 'Leads جديدة / يوم',
+        'leads_daily' => 'Leads جديدة مسنودة/اليوم (CRM)',
         'leads_weekly' => 'Leads جديدة / أسبوع',
-        'deals_weekly' => 'صفقات مغلقة / أسبوع',
-        'revenue_monthly' => 'إيراد شهري (ج.م) — قيمة متوقعة مكتملة',
-        'calls_daily' => 'مكالمات / يوم',
-        'meetings_daily' => 'اجتماعات أو ديمو / يوم',
-        'followups_daily' => 'متابعات مسجّلة / يوم',
+        'deals_weekly' => 'صفقات فوز مؤكدة / أسبوع',
+        'revenue_monthly' => 'إيراد شهري أدنى (ج.م من قيمة الصفقات الفائزة)',
+        'calls_daily' => 'مكالمات موثّقة / يوم (= محاولات الاتصال)',
+        'meetings_daily' => 'اجتماعات/جلسات موثّقة / يوم',
+        'followups_daily' => 'متابعات موثّقة / يوم',
         'call_attempts_daily' => 'محاولات اتصال / يوم (SOS)',
         'calls_answered_daily' => 'مكالمات تم الرد / يوم (SOS)',
         'qualified_conversations_daily' => 'محادثات مؤهلة / يوم (SOS)',
-        'discovery_sessions_daily' => 'جلسات تعريف / يوم (SOS)',
-        'proposals_daily' => 'عروض سعر / يوم (SOS)',
+        'discovery_sessions_daily' => 'اجتماعات / جلسات / يوم (SOS)',
+        'proposals_daily' => 'عروض سعر مُرسلة / يوم (SOS)',
         'paid_enrollments_daily' => 'تسجيلات مدفوعة / يوم (SOS)',
         'response_minutes_max' => 'أقصى متوسط أول رد (دقيقة)',
         'closing_ratio_pct_min' => 'أدنى نسبة إغلاق won/(won+lost) %',
@@ -27,11 +27,11 @@
         'crm_activities_daily_min' => 'أدنى أنشطة CRM / يوم',
         'data_fresh_open_pct_min' => 'أدنى % فرص محدّثة خلال 7 أيام',
         'engagement_days_pct_min' => 'أدنى % أيام بتفاعل مسجّل',
-        'conversion_pct_target' => 'هدف نسبة تحويل % (شهري)',
+        'conversion_pct_target' => 'هدف تحويل تقريبي % (نفس الشهر)',
     ];
     $groups = [
-        'نتائج SOS اليومية' => ['icon' => 'fas fa-phone-volume text-teal-600', 'keys' => ['call_attempts_daily', 'calls_answered_daily', 'qualified_conversations_daily', 'discovery_sessions_daily', 'proposals_daily', 'paid_enrollments_daily']],
-        'النشاط اليومي' => ['icon' => 'fas fa-bolt text-amber-600', 'keys' => ['leads_daily', 'leads_weekly', 'calls_daily', 'meetings_daily', 'followups_daily', 'crm_activities_daily_min']],
+        'قمع النتائج اليومي (SOS) — أساس المحاسبة' => ['icon' => 'fas fa-phone-volume text-teal-600', 'keys' => ['call_attempts_daily', 'calls_answered_daily', 'qualified_conversations_daily', 'discovery_sessions_daily', 'proposals_daily', 'paid_enrollments_daily']],
+        'النشاط اليومي/الأسبوعي' => ['icon' => 'fas fa-bolt text-amber-600', 'keys' => ['leads_daily', 'leads_weekly', 'calls_daily', 'meetings_daily', 'followups_daily', 'crm_activities_daily_min']],
         'النتائج والإيراد' => ['icon' => 'fas fa-coins text-emerald-600', 'keys' => ['deals_weekly', 'revenue_monthly', 'closing_ratio_pct_min', 'conversion_pct_target']],
         'الجودة والالتزام' => ['icon' => 'fas fa-star text-sky-600', 'keys' => ['response_minutes_max', 'csat_min', 'loss_ratio_max_pct', 'sales_cycle_max_days', 'engagement_days_pct_min']],
         'الأنبوب والبيانات' => ['icon' => 'fas fa-filter text-violet-600', 'keys' => ['open_opportunities_min', 'data_fresh_open_pct_min']],
@@ -151,6 +151,26 @@
                 </form>
             </div>
         </section>
+
+        @php
+            $rationale = config('sales_kpi.rationale', []);
+        @endphp
+        @if(!empty($rationale['points']))
+            <section class="rounded-2xl border border-teal-200 bg-teal-50/80 px-4 py-4 text-sm text-teal-950">
+                <h3 class="font-black mb-2 flex items-center gap-2">
+                    <i class="fas fa-balance-scale text-teal-700"></i>
+                    {{ $rationale['title'] ?? 'أساس المحاسبة' }}
+                </h3>
+                <ul class="list-disc pe-5 space-y-1 text-xs sm:text-sm text-teal-900/90">
+                    @foreach($rationale['points'] as $point)
+                        <li>{{ $point }}</li>
+                    @endforeach
+                </ul>
+                <p class="text-[11px] text-teal-800 mt-3">
+                    الأرقام الافتراضية بالأسفل جاهزة للمحاسبة. عدّلها لموظف معيّن لو مستواه/شيفته مختلف، ثم احفظ — أو طبّقها على كل الفريق.
+                </p>
+            </section>
+        @endif
 
         @php
             $hasCustomTargets = $hasCustomTargets ?? false;
