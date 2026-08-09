@@ -1285,6 +1285,30 @@ class User extends Authenticatable
     }
 
     /**
+     * إذن غياب يوم صادر من مدير المبيعات (للأوفلاين).
+     */
+    public function hasSalesDayAbsencePermission(\Carbon\Carbon $date): bool
+    {
+        return SalesAttendancePermission::hasDayAbsence((int) $this->id, $date);
+    }
+
+    /**
+     * إذن انصراف مبكر صادر من مدير المبيعات.
+     */
+    public function hasSalesEarlyDeparturePermission(\Carbon\Carbon $date): bool
+    {
+        return SalesAttendancePermission::hasEarlyDeparture((int) $this->id, $date);
+    }
+
+    /**
+     * معفي من الحضور لهذا اليوم (إجازة إدارية أو إذن غياب يوم).
+     */
+    public function isAttendanceExcused(\Carbon\Carbon $date): bool
+    {
+        return $this->isOnApprovedLeave($date) || $this->hasSalesDayAbsencePermission($date);
+    }
+
+    /**
      * هل كان الموظف على رأس العمل في هذا التاريخ؟
      * تمنع احتساب أي التزامات أو خصومات قبل تاريخ التعيين أو بعد إنهاء الخدمة.
      */
@@ -1314,7 +1338,7 @@ class User extends Authenticatable
     {
         return $this->isEmployedOn($date)
             && ! $this->isWeeklyOff($date)
-            && ! $this->isOnApprovedLeave($date);
+            && ! $this->isAttendanceExcused($date);
     }
 
     /**

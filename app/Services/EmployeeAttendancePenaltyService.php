@@ -124,6 +124,10 @@ class EmployeeAttendancePenaltyService
             return null;
         }
 
+        if ($employee->isAttendanceExcused($date)) {
+            return null;
+        }
+
         if ($record->clock_in_at || $record->absence_deduction_id) {
             return null;
         }
@@ -165,8 +169,13 @@ class EmployeeAttendancePenaltyService
             return null;
         }
 
+        $employee = $record->user ?? $record->user()->first();
+        if ($employee && $employee->hasSalesEarlyDeparturePermission(Carbon::parse($record->work_date))) {
+            return null;
+        }
+
         $deduction = $this->createDeduction(
-            $record->user ?? $record->user()->first(),
+            $employee,
             Carbon::parse($record->work_date),
             EmployeeAttendanceSettings::incompletePenaltyAmount(),
             (string) config('employee_attendance.incomplete_penalty_title', 'غرامة عدم إكمال ساعات العمل'),
@@ -177,7 +186,7 @@ class EmployeeAttendancePenaltyService
 
         $record->update(['incomplete_deduction_id' => $deduction->id]);
 
-        $this->notifyEmployee($record->user, $deduction, 'عدم إكمال الساعات');
+        $this->notifyEmployee($employee, $deduction, 'عدم إكمال الساعات');
 
         return $deduction;
     }

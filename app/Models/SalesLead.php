@@ -75,6 +75,40 @@ class SalesLead extends Model
         'other' => 'أخرى',
     ];
 
+    /** فئات عمرية للتأهيل (بدل رقم سن واحد) */
+    public const AGE_RANGES = [
+        'under_18' => 'أقل من 18',
+        '18_24' => '18 – 24',
+        '25_30' => '25 – 30',
+        '31_35' => '31 – 35',
+        '36_40' => '36 – 40',
+        '41_50' => '41 – 50',
+        'over_50' => 'أكثر من 50',
+    ];
+
+    public static function ageRangeMidpoint(string $range): ?int
+    {
+        return match ($range) {
+            'under_18' => 16,
+            '18_24' => 21,
+            '25_30' => 27,
+            '31_35' => 33,
+            '36_40' => 38,
+            '41_50' => 45,
+            'over_50' => 55,
+            default => null,
+        };
+    }
+
+    public static function ageRangeLabel(?string $range): string
+    {
+        if (! $range) {
+            return '—';
+        }
+
+        return self::AGE_RANGES[$range] ?? $range;
+    }
+
     public const INTEREST_PCTS = [40, 60, 80, 100];
 
     public const OBJECTION_REASONS = [
@@ -180,6 +214,7 @@ class SalesLead extends Model
         'connected_disposition',
         'profile_type',
         'age',
+        'age_range',
         'field_domain',
         'experience_level',
         'course_motivation',

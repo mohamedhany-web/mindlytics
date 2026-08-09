@@ -393,6 +393,7 @@ class SalesLeadController extends Controller
             'connected_disposition' => 'nullable|string|in:'.implode(',', array_keys(SalesLead::CONNECTED_DISPOSITIONS)),
             'profile_type' => 'nullable|string|in:'.implode(',', array_keys(SalesLead::PROFILE_TYPES)),
             'age' => 'nullable|integer|min:10|max:90',
+            'age_range' => 'nullable|string|in:'.implode(',', array_keys(SalesLead::AGE_RANGES)),
             'field_domain' => 'nullable|string|max:120',
             'experience_level' => 'nullable|string|max:80',
             'course_motivation' => 'nullable|string|max:2000',

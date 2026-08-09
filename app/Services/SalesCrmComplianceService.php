@@ -961,7 +961,7 @@ class SalesCrmComplianceService
         }
 
         try {
-            if ($employee->isOnApprovedLeave($date)) {
+            if ($employee->isAttendanceExcused($date)) {
                 return false;
             }
         } catch (\Throwable) {

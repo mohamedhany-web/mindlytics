@@ -285,13 +285,24 @@ class EmployeeAttendanceService
 
         $workedSeconds = (int) $record->clock_in_at->diffInSeconds($now);
         $requiredSeconds = $record->required_minutes * 60;
-        $canClockOut = $workedSeconds >= $requiredSeconds || $now->gte($window['shift_ends_at']) || (bool) $unlock;
+        $earlyDeparture = $user->hasSalesEarlyDeparturePermission($now);
+        $canClockOut = $workedSeconds >= $requiredSeconds
+            || $now->gte($window['shift_ends_at'])
+            || (bool) $unlock
+            || $earlyDeparture;
+
+        $workingMessage = $unlock
+            ? 'نظام مفتوح بتصريح المدير حتى '.$unlock->expires_at->format('H:i').'.'
+            : ($earlyDeparture
+                ? 'لديك إذن انصراف مبكر — يمكنك إنهاء يوم العمل الآن.'
+                : ($canClockOut ? 'يمكنك إنهاء يوم العمل الآن.' : 'استمر في العمل حتى إكمال الساعات المطلوبة.'));
 
         return $this->state(array_merge([
             'mode' => $unlock ? 'manager_unlocked_working' : 'working',
             'can_access' => true,
             'can_clock_in' => false,
             'can_clock_out' => $canClockOut,
+            'early_departure_permission' => $earlyDeparture,
             'schedule' => $schedule,
             'record' => $record,
             'worked_seconds' => $workedSeconds,
@@ -299,9 +310,7 @@ class EmployeeAttendanceService
             'shift_starts_at' => $window['shift_starts_at']->toIso8601String(),
             'shift_ends_at' => $window['shift_ends_at']->toIso8601String(),
             'clock_in_at' => $record->clock_in_at->toIso8601String(),
-            'message' => $unlock
-                ? 'نظام مفتوح بتصريح المدير حتى '.$unlock->expires_at->format('H:i').'.'
-                : ($canClockOut ? 'يمكنك إنهاء يوم العمل الآن.' : 'استمر في العمل حتى إكمال الساعات المطلوبة.'),
+            'message' => $workingMessage,
             'work_mode' => $user->work_mode ?? User::WORK_MODE_ONLINE,
             'day_attendance_mode' => $user->attendanceModeFor($now),
         ], $unlockMeta));
@@ -541,9 +550,19 @@ class EmployeeAttendanceService
             }
 
             $workedMinutes = (int) $record->clock_in_at->diffInMinutes($now);
+            $earlyDeparture = $user->hasSalesEarlyDeparturePermission($now);
             $status = $workedMinutes >= $record->required_minutes ? 'completed' : 'incomplete';
+            if ($earlyDeparture && $status === 'incomplete') {
+                $status = 'completed';
+            }
             if ($record->is_late && $status === 'completed') {
                 $status = 'late';
+            }
+
+            $metadata = $record->metadata ?? [];
+            if ($earlyDeparture) {
+                $metadata['early_departure_permission'] = true;
+                $metadata['early_departure_at'] = $now->toIso8601String();
             }
 
             $record->update([
@@ -551,10 +570,13 @@ class EmployeeAttendanceService
                 'clock_out_ip' => $ip,
                 'worked_minutes' => $workedMinutes,
                 'status' => $status,
+                'metadata' => $metadata,
             ]);
 
             $record = $record->fresh(['user']);
-            app(EmployeeAttendancePenaltyService::class)->applyIncompletePenalty($record);
+            if (! $earlyDeparture) {
+                app(EmployeeAttendancePenaltyService::class)->applyIncompletePenalty($record);
+            }
             app(EmployeePresenceService::class)->closeViolationsOnClockOut($user);
 
             return $record->fresh();
@@ -694,7 +716,7 @@ class EmployeeAttendanceService
             return EmployeeAttendanceRecord::create($base + ['status' => 'off_day']);
         }
 
-        if ($user->isOnApprovedLeave($date)) {
+        if ($user->isAttendanceExcused($date)) {
             return EmployeeAttendanceRecord::create($base + ['status' => 'on_leave']);
         }
 
@@ -794,7 +816,7 @@ class EmployeeAttendanceService
             return 'off_day';
         }
 
-        if ($user->isOnApprovedLeave($now)) {
+        if ($user->isAttendanceExcused($now)) {
             return 'on_leave';
         }
 

@@ -1076,6 +1076,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('attendance', [\App\Http\Controllers\Employee\SalesManagerAttendanceController::class, 'index'])->name('attendance.index');
             Route::get('attendance/offline-day', [\App\Http\Controllers\Employee\SalesManagerAttendanceController::class, 'offlineDay'])->name('attendance.offline-day');
             Route::post('attendance/offline-day/confirm', [\App\Http\Controllers\Employee\SalesManagerAttendanceController::class, 'confirmOfflineDay'])->name('attendance.offline-day.confirm');
+            Route::get('attendance/permissions', [\App\Http\Controllers\Employee\SalesManagerAttendancePermissionController::class, 'index'])->name('attendance.permissions.index');
+            Route::post('attendance/permissions', [\App\Http\Controllers\Employee\SalesManagerAttendancePermissionController::class, 'store'])->name('attendance.permissions.store');
+            Route::post('attendance/permissions/{permission}/revoke', [\App\Http\Controllers\Employee\SalesManagerAttendancePermissionController::class, 'revoke'])->name('attendance.permissions.revoke')->whereNumber('permission');
             Route::get('attendance/employees/{employee}', [\App\Http\Controllers\Employee\SalesManagerAttendanceController::class, 'employee'])->name('attendance.employee');
             Route::post('attendance/employees/{employee}/unlock', [\App\Http\Controllers\Employee\SalesManagerAttendanceController::class, 'unlock'])->name('attendance.unlock');
             Route::post('attendance/employees/{employee}/unlocks/{unlock}/revoke', [\App\Http\Controllers\Employee\SalesManagerAttendanceController::class, 'revokeUnlock'])->name('attendance.unlock.revoke');

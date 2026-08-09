@@ -108,9 +108,12 @@
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" x-show="stage === 'qualification'" x-cloak>
+            <div class="sm:col-span-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-600">
+                حقول التأهيل <strong>اختيارية</strong> — املأ المتاح فقط. ملاحظات الانتقال بالأعلى إلزامية.
+            </div>
             <div>
-                <label class="block text-xs font-bold mb-1">الحالة *</label>
-                <select name="profile_type" class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm">
+                <label class="block text-xs font-bold mb-1">الحالة <span class="text-slate-400 font-normal">(اختياري)</span></label>
+                <select name="profile_type" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
                     <option value="">—</option>
                     @foreach(\App\Models\SalesLead::PROFILE_TYPES as $k => $lab)
                         <option value="{{ $k }}" @selected($lead->profile_type === $k)>{{ $lab }}</option>
@@ -118,28 +121,33 @@
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-bold mb-1">السن *</label>
-                <input type="number" name="age" value="{{ $lead->age }}" class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm">
+                <label class="block text-xs font-bold mb-1">السن (مدى) <span class="text-slate-400 font-normal">(اختياري)</span></label>
+                <select name="age_range" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
+                    <option value="">— اختر المدى —</option>
+                    @foreach(\App\Models\SalesLead::AGE_RANGES as $k => $lab)
+                        <option value="{{ $k }}" @selected(old('age_range', $lead->age_range) === $k)>{{ $lab }}</option>
+                    @endforeach
+                </select>
             </div>
             <div>
-                <label class="block text-xs font-bold mb-1">المجال *</label>
-                <input type="text" name="field_domain" value="{{ $lead->field_domain }}" class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm">
+                <label class="block text-xs font-bold mb-1">المجال <span class="text-slate-400 font-normal">(اختياري)</span></label>
+                <input type="text" name="field_domain" value="{{ $lead->field_domain }}" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
             </div>
             <div>
-                <label class="block text-xs font-bold mb-1">مستوى الخبرة *</label>
-                <input type="text" name="experience_level" value="{{ $lead->experience_level }}" class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm">
+                <label class="block text-xs font-bold mb-1">مستوى الخبرة <span class="text-slate-400 font-normal">(اختياري)</span></label>
+                <input type="text" name="experience_level" value="{{ $lead->experience_level }}" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
             </div>
             <div class="sm:col-span-2">
-                <label class="block text-xs font-bold mb-1">لماذا يريد الكورس؟ *</label>
-                <textarea name="course_motivation" rows="2" class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm">{{ $lead->course_motivation }}</textarea>
+                <label class="block text-xs font-bold mb-1">لماذا يريد الكورس؟ <span class="text-slate-400 font-normal">(اختياري)</span></label>
+                <textarea name="course_motivation" rows="2" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">{{ $lead->course_motivation }}</textarea>
             </div>
             <div>
-                <label class="block text-xs font-bold mb-1">متى يريد البدء؟ *</label>
-                <input type="text" name="start_preference" value="{{ $lead->start_preference }}" class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm">
+                <label class="block text-xs font-bold mb-1">متى يريد البدء؟ <span class="text-slate-400 font-normal">(اختياري)</span></label>
+                <input type="text" name="start_preference" value="{{ $lead->start_preference }}" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
             </div>
             <div>
-                <label class="block text-xs font-bold mb-1">هل يستطيع الدفع؟ *</label>
-                <select name="can_pay" class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm">
+                <label class="block text-xs font-bold mb-1">هل يستطيع الدفع؟ <span class="text-slate-400 font-normal">(اختياري)</span></label>
+                <select name="can_pay" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
                     <option value="">—</option>
                     <option value="1" @selected($lead->can_pay === true)>نعم</option>
                     <option value="0" @selected($lead->can_pay === false)>لا</option>

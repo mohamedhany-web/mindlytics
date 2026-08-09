@@ -33,7 +33,7 @@ class SalesDailyReportController extends Controller
         $settings = SalesDailyReportSettings::all();
         $isWorkDayToday = $service->isWorkDay($date, $user);
         $isWeeklyOffToday = $user->isWeeklyOff($date);
-        $isLeaveToday = $user->isOnApprovedLeave($date);
+        $isLeaveToday = $user->isAttendanceExcused($date);
 
         $autoSynced = false;
         if ($date->isToday() && $isWorkDayToday && ! ($report?->isSubmitted())) {
@@ -83,8 +83,8 @@ class SalesDailyReportController extends Controller
         }
 
         if (! app(SalesDailyReportService::class)->isWorkDay($date, $user)) {
-            $reason = $user->isOnApprovedLeave($date)
-                ? 'أنت في إجازة معتمدة في هذا التاريخ.'
+            $reason = $user->isAttendanceExcused($date)
+                ? 'أنت في إجازة / إذن غياب معتمد في هذا التاريخ.'
                 : 'هذا اليوم يوافق إجازتك الأسبوعية ('.($user->weeklyOffDayLabel() ?? 'عطلة').').';
 
             return redirect()->route('employee.sales.daily-reports.index', ['date' => $date->toDateString()])

@@ -389,7 +389,7 @@ class SalesManagerDailyScorecardService
         }
 
         try {
-            $isOff = $employee->isAttendanceOffDay($date) || $employee->isOnApprovedLeave($date);
+            $isOff = $employee->isAttendanceOffDay($date) || $employee->isAttendanceExcused($date);
         } catch (\Throwable) {
             $isOff = $employee->isWeeklyOff($date);
         }

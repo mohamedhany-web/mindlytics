@@ -103,13 +103,7 @@ class SalesPipelineService
                 'connected_disposition' => 'نتيجة الاتصال',
             ],
             'qualification' => [
-                'profile_type' => 'الحالة (طالب/خريج/موظف)',
-                'age' => 'السن',
-                'field_domain' => 'المجال',
-                'experience_level' => 'مستوى الخبرة',
-                'course_motivation' => 'لماذا يريد الكورس؟',
-                'start_preference' => 'متى يريد البدء؟',
-                'can_pay' => 'هل يستطيع الدفع؟',
+                // كل حقول التأهيل اختيارية — الملاحظات العامة للانتقال كافية
             ],
             'interested' => [
                 'interest_pct' => 'نسبة الاهتمام',
@@ -362,13 +356,21 @@ class SalesPipelineService
         $updates = ['stage' => $toStage];
 
         foreach ([
-            'connected_disposition', 'profile_type', 'age', 'field_domain', 'experience_level',
+            'connected_disposition', 'profile_type', 'age', 'age_range', 'field_domain', 'experience_level',
             'course_motivation', 'start_preference', 'interest_pct', 'objection_reason',
             'objection_notes', 'follow_up_channel', 'offer_discount', 'offer_installment_plan',
             'offer_notes', 'payment_method', 'payment_txn_ref', 'lost_reason',
         ] as $key) {
             if (array_key_exists($key, $payload) && $payload[$key] !== null && $payload[$key] !== '') {
                 $updates[$key] = $payload[$key];
+            }
+        }
+
+        if (! empty($payload['age_range']) && array_key_exists((string) $payload['age_range'], SalesLead::AGE_RANGES)) {
+            $updates['age_range'] = (string) $payload['age_range'];
+            $mid = SalesLead::ageRangeMidpoint((string) $payload['age_range']);
+            if ($mid !== null) {
+                $updates['age'] = $mid;
             }
         }
 
