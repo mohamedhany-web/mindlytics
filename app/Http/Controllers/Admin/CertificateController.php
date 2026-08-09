@@ -191,6 +191,11 @@ class CertificateController extends Controller
         ]);
 
         try {
+            $fkFixer = app(\App\Support\CertificateCourseForeignKey::class);
+            if ($fkFixer->referencesLegacyCourses()) {
+                $fkFixer->fix();
+            }
+
             $branding = CertificateBranding::current();
             $template = $validated['template'] ?? $branding->default_template ?? 'emerald-classic';
             if (! array_key_exists($template, Certificate::availableTemplates())) {
@@ -243,7 +248,18 @@ class CertificateController extends Controller
                 }
             }
 
-            $certificate = Certificate::create($payload);
+            try {
+                $certificate = Certificate::create($payload);
+            } catch (\Illuminate\Database\QueryException $e) {
+                // Self-heal: production may still FK course_id → legacy `courses`.
+                if (str_contains($e->getMessage(), 'certificates_course_id_foreign')
+                    || str_contains($e->getMessage(), 'REFERENCES `courses`')) {
+                    $fkFixer->fix();
+                    $certificate = Certificate::create($payload);
+                } else {
+                    throw $e;
+                }
+            }
 
             if (($validated['status'] ?? '') === 'issued') {
                 $updates = [];
