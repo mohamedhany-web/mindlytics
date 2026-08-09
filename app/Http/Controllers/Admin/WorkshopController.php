@@ -278,7 +278,7 @@ class WorkshopController extends Controller
                     continue;
                 }
 
-                $lead = SalesLead::create([
+                $lead = SalesLead::create(app(\App\Services\SalesLeadMovementPolicy::class)->withCreateDefaults([
                     'assigned_to' => $assigneeId,
                     'created_by' => auth()->id(),
                     'sales_lead_group_id' => $groupId,
@@ -291,7 +291,7 @@ class WorkshopController extends Controller
                     'priority' => 'normal',
                     'interest' => 'الاهتمام بورشة: '.$workshop->title,
                     'notes' => $notes,
-                ]);
+                ]));
 
                 $this->markRegistrationConverted($reg, $lead->id, $hasConversionColumn);
 

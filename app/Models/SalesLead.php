@@ -92,9 +92,9 @@ class SalesLead extends Model
     ];
 
     public const FOLLOW_UP_CHANNELS = [
-        'call' => 'Call',
-        'whatsapp' => 'WhatsApp',
-        'meeting' => 'Meeting',
+        'call' => 'اتصال (Call)',
+        'whatsapp' => 'واتساب',
+        'meeting' => 'اجتماع',
     ];
 
     public const PAYMENT_METHODS = [

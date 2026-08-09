@@ -67,6 +67,7 @@ class SalesManagerHubService
         $analytics = $this->buildWeekAnalytics($memberIds, $date);
         $leaderboard = $this->buildLeaderboard($ranking);
         $compare = $this->buildCompare($ranking, $compareA, $compareB);
+        $dailySos = $this->buildTeamDailySos($members, $date);
 
         return [
             'date' => $date,
@@ -76,6 +77,7 @@ class SalesManagerHubService
             'live_status' => $liveStatus,
             'ranking' => $ranking,
             'pipeline' => $pipeline,
+            'daily_sos' => $dailySos,
             'tasks' => $tasks,
             'timeline' => $timeline,
             'alerts' => $alerts,
@@ -120,7 +122,8 @@ class SalesManagerHubService
             ],
             'live_status' => [],
             'ranking' => [],
-            'pipeline' => ['new' => 0, 'contacted' => 0, 'qualified' => 0, 'meeting' => 0, 'proposal' => 0, 'negotiation' => 0, 'won' => 0, 'lost' => 0, 'raw' => []],
+            'pipeline' => ['new' => 0, 'contacted' => 0, 'qualified' => 0, 'meeting' => 0, 'proposal' => 0, 'negotiation' => 0, 'won' => 0, 'lost' => 0, 'raw' => [], 'entered_total' => 0, 'contacted_total' => 0, 'no_contact' => 0],
+            'daily_sos' => ['threshold' => 70, 'team_overall_pct' => 0, 'lines' => [], 'members' => []],
             'tasks' => ['followups_today' => 0, 'completed_today' => 0, 'pending' => 0, 'overdue' => 0],
             'timeline' => [],
             'alerts' => [[
@@ -513,8 +516,80 @@ class SalesManagerHubService
         }
 
         $out['raw'] = $counts;
+        $out['entered_total'] = (int) array_sum(array_map('intval', $counts));
+        $out['contacted_total'] = $out['contacted'] + $out['qualified'] + $out['meeting'] + $out['proposal'] + $out['negotiation'] + $out['won'];
+        $out['no_contact'] = (int) SalesLead::query()
+            ->whereIn('assigned_to', $memberIds)
+            ->where('stage', 'new_lead')
+            ->whereNull('last_contacted_at')
+            ->count();
 
         return $out;
+    }
+
+    /**
+     * تحقيق KPI اليومي (SOS) لكل أفراد الفريق.
+     *
+     * @param  \Illuminate\Support\Collection<int, User>  $members
+     * @return array{threshold: float, team_overall_pct: float, lines: list<array<string, mixed>>, members: list<array<string, mixed>>}
+     */
+    private function buildTeamDailySos($members, Carbon $date): array
+    {
+        $daily = $this->dailyResults;
+        $threshold = (float) config('sales_kpi.daily_kpi_penalty.threshold_pct', 70);
+        $memberRows = [];
+        $metricTotals = [];
+
+        foreach ($members as $member) {
+            $cmp = $daily->comparisonFor($member, $date);
+            $memberRows[] = [
+                'user_id' => $member->id,
+                'name' => $member->name,
+                'overall_pct' => $cmp['overall_pct'] ?? 0,
+                'status' => $cmp['status'] ?? 'behind',
+                'status_label' => $cmp['status_label'] ?? '',
+                'lines' => $cmp['lines'] ?? [],
+            ];
+            foreach ($cmp['lines'] ?? [] as $line) {
+                $key = $line['key'];
+                if (! isset($metricTotals[$key])) {
+                    $metricTotals[$key] = [
+                        'key' => $key,
+                        'label' => $line['label'],
+                        'actual' => 0,
+                        'target' => 0,
+                    ];
+                }
+                $metricTotals[$key]['actual'] += (int) ($line['actual'] ?? 0);
+                $metricTotals[$key]['target'] += (float) ($line['target'] ?? 0);
+            }
+        }
+
+        $lines = [];
+        foreach ($metricTotals as $row) {
+            $pct = $row['target'] > 0
+                ? min(100.0, round($row['actual'] / $row['target'] * 100, 1))
+                : 0.0;
+            $lines[] = [
+                'key' => $row['key'],
+                'label' => $row['label'],
+                'actual' => $row['actual'],
+                'target' => $row['target'],
+                'pct' => $pct,
+                'status' => $pct >= 100 ? 'met' : ($pct >= $threshold ? 'near' : 'behind'),
+            ];
+        }
+
+        $overall = count($lines)
+            ? round(collect($lines)->avg('pct'), 1)
+            : 0.0;
+
+        return [
+            'threshold' => $threshold,
+            'team_overall_pct' => $overall,
+            'lines' => $lines,
+            'members' => collect($memberRows)->sortBy('overall_pct')->values()->all(),
+        ];
     }
 
     /**

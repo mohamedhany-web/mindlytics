@@ -9,6 +9,7 @@ use App\Models\SalesLeadCategory;
 use App\Models\SalesLeadGroup;
 use App\Services\SalesAuditService;
 use App\Services\SalesDailyReportService;
+use App\Services\SalesLeadMovementPolicy;
 use App\Services\SalesNotificationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -55,6 +56,7 @@ class SalesLeadController extends Controller
     public function store(Request $request)
     {
         $validated = $this->validatedLead($request);
+        app(SalesLeadMovementPolicy::class)->assertOpenLeadHasMovement($validated);
 
         $validated['assigned_to'] = Auth::id();
         $validated['created_by'] = Auth::id();
@@ -412,9 +414,14 @@ class SalesLeadController extends Controller
             'paid_at' => 'nullable|date',
             'expected_value' => 'nullable|numeric|min:0',
             'lost_reason' => 'nullable|string|in:'.implode(',', array_keys(SalesLead::LOSS_REASONS)),
-            'notes' => 'nullable|string|max:2000',
+            'notes' => 'required|string|min:8|max:2000',
             'duration_seconds' => 'nullable|integer|min:0|max:7200',
             'recording_url' => 'nullable|url|max:500',
+            'course_type' => 'nullable|string|in:'.implode(',', array_keys(SalesLead::COURSE_TYPES)),
+            'course_ref_id' => 'nullable|integer|min:1',
+        ], [
+            'notes.required' => 'الملاحظات إلزامية عند كل انتقال.',
+            'notes.min' => 'اكتب ملاحظة أوضح (8 أحرف على الأقل).',
         ]);
 
         $stage = $validated['stage'];
@@ -438,37 +445,45 @@ class SalesLeadController extends Controller
 
         $validated = $request->validate([
             'next_follow_up_at' => 'required|date|after:now',
+            'follow_up_channel' => 'required|string|in:'.implode(',', array_keys(SalesLead::FOLLOW_UP_CHANNELS)),
             'note' => 'nullable|string|max:500',
         ], [
             'next_follow_up_at.required' => 'حدد موعد المتابعة التالية.',
             'next_follow_up_at.after' => 'موعد المتابعة يجب أن يكون في المستقبل.',
+            'follow_up_channel.required' => 'حدد الإجراء التالي (Next Action).',
         ]);
 
         $previous = $lead->next_follow_up_at?->toDateTimeString();
+        $previousChannel = $lead->follow_up_channel;
         $nextAt = \Carbon\Carbon::parse($validated['next_follow_up_at']);
 
         $lead->update([
             'next_follow_up_at' => $nextAt,
+            'follow_up_channel' => $validated['follow_up_channel'],
         ]);
+
+        $channelLabel = SalesLead::FOLLOW_UP_CHANNELS[$validated['follow_up_channel']] ?? $validated['follow_up_channel'];
 
         $activity = SalesActivity::create([
             'sales_lead_id' => $lead->id,
             'user_id' => Auth::id(),
             'type' => 'follow_up',
             'title' => 'تحديد Next Follow',
-            'body' => trim(($validated['note'] ?? '')."\nموعد المتابعة: ".$nextAt->format('Y-m-d H:i')),
+            'body' => trim(($validated['note'] ?? '')."\nالإجراء: ".$channelLabel."\nموعد المتابعة: ".$nextAt->format('Y-m-d H:i')),
             'meta' => [
                 'previous_next_follow_up_at' => $previous,
                 'next_follow_up_at' => $nextAt->toDateTimeString(),
+                'follow_up_channel' => $validated['follow_up_channel'],
+                'previous_follow_up_channel' => $previousChannel,
             ],
         ]);
 
         SalesAuditService::log(
             'sales_next_follow_set',
             $lead,
-            ['next_follow_up_at' => $previous],
-            ['next_follow_up_at' => $nextAt->toDateTimeString()],
-            'Next Follow: '.$lead->name.' → '.$nextAt->format('Y-m-d H:i')
+            ['next_follow_up_at' => $previous, 'follow_up_channel' => $previousChannel],
+            ['next_follow_up_at' => $nextAt->toDateTimeString(), 'follow_up_channel' => $validated['follow_up_channel']],
+            'Next Follow: '.$lead->name.' → '.$channelLabel.' @ '.$nextAt->format('Y-m-d H:i')
         );
 
         $this->syncTodayDailyReport();
@@ -697,6 +712,7 @@ class SalesLeadController extends Controller
             'expected_value' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string|max:5000',
             'next_follow_up_at' => 'nullable|date',
+            'follow_up_channel' => 'nullable|string|in:'.implode(',', array_keys(SalesLead::FOLLOW_UP_CHANNELS)),
             'sales_lead_group_id' => 'nullable|integer',
             'lost_reason' => 'nullable|string|max:500',
             'lost_reason_code' => 'nullable|string|in:' . implode(',', array_keys(SalesLead::LOSS_REASONS)),
@@ -823,39 +839,21 @@ class SalesLeadController extends Controller
     private function enforcePolicies(SalesLead $lead, array $validated, string $oldStage): void
     {
         $newStage = (string) ($validated['stage'] ?? $lead->stage);
-        $nextFollow = $validated['next_follow_up_at'] ?? $lead->next_follow_up_at;
         $expectedValue = $validated['expected_value'] ?? $lead->expected_value;
 
         $isOpenNewStage = ! in_array($newStage, [...SalesLead::CLOSED_STAGES, SalesLead::WON_STAGE], true);
 
-        // 1) أي Lead خرج من new_lead إلى مراحل أعمق يجب أن يكون له موعد متابعة (ما عدا no_answer المبكر)
-        if ($isOpenNewStage && ! in_array($newStage, ['new_lead', 'first_contact', 'no_answer'], true)) {
-            if (empty($nextFollow)) {
-                throw ValidationException::withMessages([
-                    'next_follow_up_at' => ['موعد المتابعة مطلوب عند اختيار مرحلة أعمق في الرحلة.'],
-                ]);
-            }
+        // تغيير المرحلة فقط عبر Pipeline (مسار إلزامي + ملاحظات)
+        if ($newStage !== $oldStage) {
+            throw ValidationException::withMessages([
+                'stage' => ['غيّر المرحلة من نموذج «رحلة العميل / Pipeline» فقط — خطوة بخطوة مع ملاحظات.'],
+            ]);
         }
 
-        // 2) إذا كان موعد المتابعة متأخر، لا تسمح بالحفظ بدون موعد جديد في المستقبل
-        if ($lead->isOpen() && $lead->isFollowUpOverdue()) {
-            $nf = $validated['next_follow_up_at'] ?? null;
-            if ($nf === null || $nf === '') {
-                throw ValidationException::withMessages([
-                    'next_follow_up_at' => ['لا يمكن الحفظ والمتابعة متأخرة بدون تحديد موعد متابعة جديد.'],
-                ]);
-            }
+        // 1) Lead مفتوح = Status + Next Action + موعد متابعة (الكل إلزامي)
+        app(SalesLeadMovementPolicy::class)->assertOpenLeadHasMovement($validated, $lead);
 
-            $parsedFollowUp = \Carbon\Carbon::parse($nf);
-
-            if ($parsedFollowUp->isPast()) {
-                throw ValidationException::withMessages([
-                    'next_follow_up_at' => ['موعد المتابعة متأخر — حدّد موعداً جديداً في المستقبل قبل الحفظ.'],
-                ]);
-            }
-        }
-
-        // 3) الإغلاق (enrollment/lost) يتطلب نشاط حديث + قيمة متوقعة + سبب خسارة عند lost
+        // 2) الإغلاق (enrollment/lost) يتطلب نشاط حديث + قيمة متوقعة + سبب خسارة عند lost
         if (in_array($newStage, [SalesLead::WON_STAGE, 'lost'], true)) {
             if ($expectedValue === null || (float) $expectedValue <= 0) {
                 throw ValidationException::withMessages([
@@ -890,7 +888,7 @@ class SalesLeadController extends Controller
             }
         }
 
-        // 4) حماية: لا تسمح بإعادة فتح من closed/won
+        // 3) حماية: لا تسمح بإعادة فتح من closed/won
         if (in_array($oldStage, [...SalesLead::CLOSED_STAGES, SalesLead::WON_STAGE], true) && $isOpenNewStage) {
             throw ValidationException::withMessages([
                 'stage' => ['لا يمكن إعادة فتح Lead مُغلَق من واجهة الموظف. تواصل مع الإدارة.'],

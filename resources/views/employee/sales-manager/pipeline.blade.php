@@ -16,19 +16,34 @@
         <a href="{{ route('employee.sales-manager.live-board') }}" class="px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold hover:bg-slate-50">اللوحة الحية SOS</a>
     </div>
 
-    <div class="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+    <div class="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-3">
         @foreach([
-            ['New Leads', $h['new_leads'] ?? 0, 'sky'],
+            ['دخلوا السيستم', $h['entered_total'] ?? 0, 'sky'],
+            ['دخول الشهر', $h['entered_month'] ?? 0, 'indigo'],
+            ['تم التواصل', $h['contacted'] ?? 0, 'teal'],
+            ['تواصل اليوم', $h['contacted_today'] ?? 0, 'cyan'],
             ['بدون تواصل', $h['no_contact'] ?? 0, 'amber'],
-            ['Qualification', $h['qualification'] ?? 0, 'violet'],
-            ['Objection', $h['objection'] ?? 0, 'rose'],
-            ['Payment Pending', $h['payment_pending'] ?? 0, 'orange'],
+            ['مؤهل / مهتم', ($h['qualification'] ?? 0) + ($h['interested'] ?? 0), 'violet'],
+            ['عروض مُرسلة', $h['offer_sent'] ?? 0, 'orange'],
             ['دفعوا اليوم', $h['paid_today'] ?? 0, 'emerald'],
-            ['Dormant', $h['dormant'] ?? 0, 'slate'],
         ] as [$label, $val, $color])
             <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <p class="text-[11px] font-semibold text-slate-500">{{ $label }}</p>
                 <p class="text-2xl font-black text-slate-900 tabular-nums mt-1">{{ number_format($val) }}</p>
+            </div>
+        @endforeach
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        @foreach([
+            ['Payment Pending', $h['payment_pending'] ?? 0],
+            ['تسجيلات / فوز', $h['won'] ?? 0],
+            ['خسارة', $h['lost'] ?? 0],
+            ['حجز بلا كورس (تحذير)', $h['without_course_at_payment'] ?? 0],
+        ] as [$label, $val])
+            <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p class="text-[11px] font-semibold text-slate-500">{{ $label }}</p>
+                <p class="text-xl font-black tabular-nums">{{ number_format($val) }}</p>
             </div>
         @endforeach
     </div>

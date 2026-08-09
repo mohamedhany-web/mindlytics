@@ -739,9 +739,16 @@ trait HandlesWhatsAppInbox
 
         $validated = $request->validate([
             'stage' => 'required|in:' . implode(',', array_keys(SalesLead::STAGES)),
+            'notes' => 'nullable|string|min:8|max:2000',
         ]);
 
-        $crm->updateLeadStage($conversation, $validated['stage'], auth()->id(), $this->inboxAudience() === 'employee');
+        $crm->updateLeadStage(
+            $conversation,
+            $validated['stage'],
+            auth()->id(),
+            $this->inboxAudience() === 'employee',
+            $validated['notes'] ?? null
+        );
 
         return response()->json([
             'success' => true,
@@ -764,10 +771,12 @@ trait HandlesWhatsAppInbox
 
         $validated = $request->validate([
             'next_follow_up_at' => 'required|date|after:now',
+            'follow_up_channel' => 'required|string|in:'.implode(',', array_keys(\App\Models\SalesLead::FOLLOW_UP_CHANNELS)),
             'note' => 'nullable|string|max:500',
         ], [
             'next_follow_up_at.required' => 'حدد موعد المتابعة التالية.',
             'next_follow_up_at.after' => 'موعد المتابعة يجب أن يكون في المستقبل.',
+            'follow_up_channel.required' => 'حدد الإجراء التالي (Next Action).',
         ]);
 
         $crm->setNextFollow(
@@ -775,7 +784,8 @@ trait HandlesWhatsAppInbox
             $validated['next_follow_up_at'],
             $validated['note'] ?? null,
             auth()->id(),
-            $this->inboxAudience() === 'employee'
+            $this->inboxAudience() === 'employee',
+            $validated['follow_up_channel']
         );
 
         return response()->json([

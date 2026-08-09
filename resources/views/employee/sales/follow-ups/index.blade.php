@@ -163,6 +163,14 @@
                        class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
             </div>
             <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">الإجراء التالي (Next Action)</label>
+                <select name="follow_up_channel" id="nf-channel" required class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+                    @foreach(\App\Models\SalesLead::FOLLOW_UP_CHANNELS as $k => $label)
+                        <option value="{{ $k }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
                 <label class="block text-xs font-bold text-slate-600 mb-1">ملاحظة (اختياري)</label>
                 <input type="text" name="note" maxlength="500" placeholder="مثال: متابعة عرض السعر"
                        class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">

@@ -252,7 +252,7 @@ class WhatsAppQueueService
             return $existing->fresh();
         }
 
-        return SalesLead::create([
+        return SalesLead::create(app(SalesLeadMovementPolicy::class)->withCreateDefaults([
             'name' => $conversation->displayName(),
             'phone' => '+'.ltrim($conversation->phone_number, '+'),
             'source' => 'whatsapp',
@@ -263,7 +263,7 @@ class WhatsAppQueueService
             'category_id' => SalesLeadCategory::defaultGeneralId(),
             'last_contacted_at' => $conversation->last_message_at ?? now(),
             'notes' => 'أُنشئ تلقائياً من طابور واتساب (توزيع المدير).',
-        ]);
+        ]));
     }
 
     private function linkLead(WhatsAppConversation $conversation, SalesLead $lead): void

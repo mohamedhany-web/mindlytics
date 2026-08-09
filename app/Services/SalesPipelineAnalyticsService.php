@@ -31,17 +31,40 @@ class SalesPipelineAnalyticsService
 
         $highlights = [
             'new_leads' => $stageCounts['new_lead'] ?? 0,
+            'entered_total' => (int) (clone $base)->count(),
+            'entered_month' => (int) (clone $base)->whereBetween('created_at', [$day->copy()->startOfMonth(), $end])->count(),
+            'contacted' => (int) (clone $base)->whereIn('stage', ['first_contact', 'no_answer', 'connected', 'qualification', 'interested', 'objection', 'follow_up_scheduled', 'offer_sent', 'payment_pending', 'payment_received', SalesLead::WON_STAGE, 'upsell'])->count()
+                + (int) (clone $base)->whereNotNull('last_contacted_at')->where('stage', 'new_lead')->count(),
+            'contacted_today' => (int) (clone $base)->whereNotNull('last_contacted_at')->whereBetween('last_contacted_at', [$day, $end])->count(),
             'no_contact' => (int) (clone $base)->whereIn('stage', ['new_lead'])->whereNull('last_contacted_at')->count(),
             'qualification' => $stageCounts['qualification'] ?? 0,
+            'interested' => $stageCounts['interested'] ?? 0,
             'objection' => $stageCounts['objection'] ?? 0,
+            'offer_sent' => $stageCounts['offer_sent'] ?? 0,
             'payment_pending' => $stageCounts['payment_pending'] ?? 0,
             'paid_today' => (int) (clone $base)->whereIn('stage', SalesLead::PAID_STAGES)
                 ->where(function ($q) use ($day, $end) {
                     $q->whereBetween('paid_at', [$day, $end])
                         ->orWhereBetween('closed_at', [$day, $end]);
                 })->count(),
+            'won' => ($stageCounts[SalesLead::WON_STAGE] ?? 0) + ($stageCounts['upsell'] ?? 0),
             'dormant' => $stageCounts['dormant'] ?? 0,
             'lost' => $stageCounts['lost'] ?? 0,
+            'without_course_at_payment' => (int) (clone $base)
+                ->whereIn('stage', ['payment_pending', 'payment_received', SalesLead::WON_STAGE])
+                ->where(function ($q) {
+                    $q->whereNull('course_type')
+                        ->orWhere(function ($q2) {
+                            $q2->where('course_type', 'advanced')->whereNull('advanced_course_id');
+                        })
+                        ->orWhere(function ($q2) {
+                            $q2->whereIn('course_type', ['online', 'offline'])->whereNull('offline_course_id');
+                        })
+                        ->orWhere(function ($q2) {
+                            $q2->where('course_type', 'legacy')->whereNull('course_id');
+                        });
+                })
+                ->count(),
         ];
 
         $conversions = $this->stageConversions($memberIds, $day->copy()->subDays(30), $end);

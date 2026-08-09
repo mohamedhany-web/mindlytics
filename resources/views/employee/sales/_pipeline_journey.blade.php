@@ -1,48 +1,45 @@
 @php
     $pipeline = $pipeline ?? app(\App\Services\SalesPipelineService::class);
-    $suggested = $pipeline->suggestedNextStages($lead);
-    $currentIdx = $lead->journeyIndex();
-    $stages = \App\Models\SalesLead::STAGES;
+    $allowed = $pipeline->allowedNextStages($lead);
+    $buckets = $pipeline->journeyBuckets();
+    $currentBucket = $pipeline->bucketForStage($lead->stage);
+    $bucketKeys = array_keys($buckets);
+    $currentBucketIdx = array_search($currentBucket, $bucketKeys, true);
+    $hasCourse = (bool) $lead->linkedCourseId();
 @endphp
-<div class="rounded-2xl border border-teal-200 bg-white shadow-sm overflow-hidden" x-data="pipelineForm(@js($suggested[0] ?? $lead->stage))">
+<div class="rounded-2xl border border-teal-200 bg-white shadow-sm overflow-hidden" x-data="pipelineForm(@js($allowed[0] ?? $lead->stage))">
     <div class="px-4 py-3 border-b border-teal-100 bg-teal-50/60 flex flex-wrap items-center justify-between gap-2">
         <div>
             <h3 class="font-black text-slate-900">Lead Status — رحلة العميل</h3>
-            <p class="text-xs text-slate-600 mt-0.5">المرحلة الحالية: <strong>{{ \App\Models\SalesLead::stageLabel($lead->stage) }}</strong>
+            <p class="text-xs text-slate-600 mt-0.5">المرحلة: <strong>{{ \App\Models\SalesLead::stageLabel($lead->stage) }}</strong>
+                · المسار: <strong>{{ $buckets[$currentBucket] ?? '—' }}</strong>
                 @if($lead->contact_attempts)
                     · محاولات: {{ $lead->contact_attempts }}/3
                 @endif
-                @if($lead->next_attempt_due_at)
-                    · المحاولة التالية: {{ $lead->next_attempt_due_at->format('Y-m-d H:i') }}
-                @endif
             </p>
+            <p class="text-[11px] text-teal-800 mt-1 font-semibold">كل مرحلة تؤدي للتالية فقط — ملاحظات إلزامية — قبل الحجز لازم كورس/دبلومة</p>
         </div>
     </div>
 
-    <div class="p-4 overflow-x-auto">
-        <ol class="flex gap-1 min-w-max">
-            @foreach($stages as $key => $label)
+    <div class="p-4">
+        <ol class="flex flex-wrap gap-2">
+            @foreach($buckets as $bKey => $bLabel)
                 @php
-                    $idx = array_search($key, array_keys($stages), true);
-                    $done = $idx < $currentIdx;
-                    $current = $key === $lead->stage;
+                    $bIdx = array_search($bKey, $bucketKeys, true);
+                    $done = is_int($currentBucketIdx) && is_int($bIdx) && $bIdx < $currentBucketIdx;
+                    $current = $bKey === $currentBucket;
                 @endphp
-                <li class="flex items-center gap-1">
-                    <span class="inline-flex flex-col items-center w-[4.5rem] text-center">
-                        <span @class([
-                            'w-3 h-3 rounded-full border-2',
-                            'bg-emerald-500 border-emerald-600' => $done || $current,
-                            'bg-white border-slate-300' => ! $done && ! $current,
-                        ])></span>
-                        <span @class([
-                            'text-[9px] mt-1 leading-tight font-semibold',
-                            'text-emerald-800' => $current,
-                            'text-slate-500' => ! $current,
-                        ])>{{ $label }}</span>
-                    </span>
-                    @if(! $loop->last)
-                        <span class="w-3 h-0.5 bg-slate-200 mb-4"></span>
-                    @endif
+                <li @class([
+                    'inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold',
+                    'border-emerald-300 bg-emerald-50 text-emerald-900' => $done || $current,
+                    'border-slate-200 bg-slate-50 text-slate-500' => ! $done && ! $current,
+                ])>
+                    <span @class([
+                        'w-2.5 h-2.5 rounded-full',
+                        'bg-emerald-500' => $done || $current,
+                        'bg-slate-300' => ! $done && ! $current,
+                    ])></span>
+                    {{ $bLabel }}
                 </li>
             @endforeach
         </ol>
@@ -52,27 +49,40 @@
     @unless(!empty($pipelineReadonly))
     <form method="post" action="{{ route('employee.sales.leads.pipeline', $lead) }}" class="p-4 border-t border-slate-100 space-y-3 bg-slate-50/40">
         @csrf
+        @if($errors->any())
+            <div class="rounded-xl bg-rose-50 border border-rose-200 text-rose-800 px-3 py-2 text-xs">
+                <ul class="list-disc list-inside space-y-0.5">
+                    @foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach
+                </ul>
+            </div>
+        @endif
+
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1">الانتقال إلى</label>
-                <select name="stage" x-model="stage" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold">
-                    @foreach($suggested as $s)
-                        <option value="{{ $s }}">{{ \App\Models\SalesLead::stageLabel($s) }}</option>
-                    @endforeach
-                    @foreach($stages as $k => $lab)
-                        @if(! in_array($k, $suggested, true) && $k !== $lead->stage)
-                            <option value="{{ $k }}">{{ $lab }}</option>
-                        @endif
-                    @endforeach
-                </select>
+                <label class="block text-xs font-bold text-slate-600 mb-1">الخطوة التالية المسموحة</label>
+                @if($allowed === [])
+                    <p class="text-sm text-slate-500">لا انتقالات متاحة من هذه المرحلة.</p>
+                @else
+                    <select name="stage" x-model="stage" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold">
+                        @foreach($allowed as $s)
+                            <option value="{{ $s }}">{{ \App\Models\SalesLead::stageLabel($s) }}</option>
+                        @endforeach
+                    </select>
+                @endif
             </div>
             <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1">ملاحظات / مدة المكالمة</label>
+                <label class="block text-xs font-bold text-slate-600 mb-1">مدة المكالمة / تسجيل</label>
                 <div class="flex gap-2">
                     <input type="number" name="duration_seconds" min="0" placeholder="ثواني" class="w-28 rounded-xl border border-slate-200 px-2 py-2 text-sm">
                     <input type="url" name="recording_url" placeholder="رابط التسجيل (اختياري)" class="flex-1 rounded-xl border border-slate-200 px-2 py-2 text-sm">
                 </div>
             </div>
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">ملاحظات الانتقال <span class="text-rose-600">*</span></label>
+            <textarea name="notes" rows="2" required minlength="8" class="w-full rounded-xl border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm" placeholder="اكتب ماذا حصل في هذه الخطوة وما الإجراء التالي (إلزامي)">{{ old('notes') }}</textarea>
+            @error('notes')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" x-show="stage === 'first_contact'" x-cloak>
@@ -163,17 +173,24 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" x-show="stage === 'follow_up_scheduled'" x-cloak>
-            <div>
-                <label class="block text-xs font-bold mb-1">موعد المتابعة *</label>
-                <input type="datetime-local" name="next_follow_up_at" class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-xl border border-teal-200 bg-teal-50/40 p-3"
+             x-show="stage && !['lost','dormant','enrollment_completed'].includes(stage)" x-cloak>
+            <div class="sm:col-span-2">
+                <p class="text-xs font-black text-teal-900">حركة إلزامية — Status + Next Action + موعد</p>
+                <p class="text-[11px] text-teal-800/80">ممنوع Lead مفتوح بدون إجراء تالي وموعد متابعة.</p>
             </div>
             <div>
-                <label class="block text-xs font-bold mb-1">القناة *</label>
-                <select name="follow_up_channel" class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm">
-                    <option value="">—</option>
+                <label class="block text-xs font-bold mb-1">موعد المتابعة *</label>
+                <input type="datetime-local" name="next_follow_up_at"
+                       value="{{ old('next_follow_up_at', $lead->next_follow_up_at && $lead->next_follow_up_at->isFuture() ? $lead->next_follow_up_at->format('Y-m-d\TH:i') : now()->addDay()->setTime(10, 0)->format('Y-m-d\TH:i')) }}"
+                       class="w-full rounded-xl border border-teal-200 bg-white px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-bold mb-1">الإجراء التالي (Next Action) *</label>
+                <select name="follow_up_channel" class="w-full rounded-xl border border-teal-200 bg-white px-3 py-2 text-sm">
+                    <option value="">— اختر —</option>
                     @foreach(\App\Models\SalesLead::FOLLOW_UP_CHANNELS as $k => $lab)
-                        <option value="{{ $k }}">{{ $lab }}</option>
+                        <option value="{{ $k }}" @selected(old('follow_up_channel', $lead->follow_up_channel) === $k)>{{ $lab }}</option>
                     @endforeach
                 </select>
             </div>
@@ -196,6 +213,23 @@
                 <label class="block text-xs font-bold mb-1">ملاحظات العرض</label>
                 <input type="text" name="offer_notes" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
             </div>
+        </div>
+
+        <div class="rounded-xl border border-violet-200 bg-violet-50/50 p-3 space-y-2"
+             x-show="['payment_pending','payment_received','enrollment_completed'].includes(stage)" x-cloak>
+            <p class="text-xs font-black text-violet-950">ربط كورس / دبلومة قبل الحجز <span class="text-rose-600">*</span></p>
+            @if($hasCourse)
+                <p class="text-xs text-emerald-800 font-semibold">مرتبط حالياً: {{ $lead->linkedCourseTitle() }} ({{ $lead->linkedCourseTypeLabel() }})</p>
+            @else
+                <p class="text-xs text-rose-700 font-semibold">غير مربوط — اختر كورساً أو دبلومة من الكتالوج بالأسفل.</p>
+            @endif
+            @include('sales._course_picker', [
+                'lead' => $lead,
+                'coursesCatalogUrl' => route('employee.sales.courses.index'),
+                'inputClass' => 'w-full rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm',
+                'labelClass' => 'block text-xs font-bold text-violet-900 mb-1',
+            ])
+            @error('course_ref_id')<p class="text-xs text-rose-600">{{ $message }}</p>@enderror
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" x-show="stage === 'payment_pending'" x-cloak>
@@ -248,13 +282,8 @@
             </select>
         </div>
 
-        <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">ملاحظات الانتقال</label>
-            <textarea name="notes" rows="2" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="اختياري"></textarea>
-        </div>
-
-        <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold">
-            <i class="fas fa-route"></i> تحديث المرحلة
+        <button type="submit" @disabled($allowed === []) class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-sm font-bold">
+            <i class="fas fa-route"></i> تحديث للمرحلة التالية
         </button>
     </form>
     @endunless

@@ -86,13 +86,14 @@ class WorkshopPromoSalesService
                     'assigned_to' => $assigneeId,
                     'sales_lead_group_id' => $groupId ?? $existing->sales_lead_group_id,
                     'next_follow_up_at' => $followUpAt,
+                    'follow_up_channel' => $existing->follow_up_channel ?: 'call',
                     'notes' => trim(($existing->notes ?? '')."\n\n".$notesBlock),
                     'interest' => $existing->interest ?: 'كود خصم ورشة: '.($promo?->code ?? '—'),
                 ]);
                 $lead = $existing->fresh(['assignee']);
             } else {
                 $user = $activation->user;
-                $lead = SalesLead::create([
+                $lead = SalesLead::create(app(SalesLeadMovementPolicy::class)->withCreateDefaults([
                     'assigned_to' => $assigneeId,
                     'created_by' => auth()->id(),
                     'sales_lead_group_id' => $groupId,
@@ -106,7 +107,8 @@ class WorkshopPromoSalesService
                     'interest' => 'كود خصم ورشة: '.($promo?->code ?? '—').' — '.$workshopTitle,
                     'notes' => $notesBlock,
                     'next_follow_up_at' => $followUpAt,
-                ]);
+                    'follow_up_channel' => 'call',
+                ]));
             }
 
             if (Schema::hasColumn('workshop_promo_activations', 'sales_lead_id')) {

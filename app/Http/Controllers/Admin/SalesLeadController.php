@@ -11,6 +11,7 @@ use App\Models\SalesLeadGroup;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\SalesAuditService;
+use App\Services\SalesLeadMovementPolicy;
 use App\Services\SalesLeadTransferService;
 use App\Services\SalesLeadsExcelExportService;
 use App\Services\SalesLeadsImportService;
@@ -83,6 +84,7 @@ class SalesLeadController extends Controller
     {
         $validated = $this->validatedLead($request, true);
         $this->assertSalesRep($validated['assigned_to']);
+        app(SalesLeadMovementPolicy::class)->assertOpenLeadHasMovement($validated);
         $validated['created_by'] = auth()->id();
 
         $lead = SalesLead::create($validated);
@@ -253,6 +255,7 @@ class SalesLeadController extends Controller
     {
         $validated = $this->validatedLead($request, true);
         $this->assertSalesRep($validated['assigned_to']);
+        app(SalesLeadMovementPolicy::class)->assertOpenLeadHasMovement($validated, $lead);
         $before = $lead->only(array_merge(array_keys($validated), ['assigned_to']));
         $oldStage = $lead->stage;
         $oldAssignee = $lead->assigned_to;
@@ -536,6 +539,7 @@ class SalesLeadController extends Controller
             'expected_value' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string|max:5000',
             'next_follow_up_at' => 'nullable|date',
+            'follow_up_channel' => 'nullable|string|in:'.implode(',', array_keys(SalesLead::FOLLOW_UP_CHANNELS)),
             'lost_reason' => 'nullable|string|max:500',
             'lost_reason_code' => 'nullable|string|in:' . implode(',', array_keys(SalesLead::LOSS_REASONS)),
             'lost_reason_custom' => 'nullable|string|max:500',

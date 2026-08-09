@@ -97,7 +97,7 @@ class SalesLeadsImportService
                     isset($map['interest_type']) ? trim((string) ($row[$map['interest_type']] ?? '')) : null
                 );
 
-                SalesLead::create([
+                SalesLead::create(app(SalesLeadMovementPolicy::class)->withCreateDefaults([
                     'assigned_to' => $assignedTo,
                     'created_by' => $createdBy,
                     'category_id' => $category->id,
@@ -115,7 +115,8 @@ class SalesLeadsImportService
                     'stage' => 'new_lead',
                     'priority' => $this->parsePriority($row[$map['priority'] ?? ''] ?? null, $defaultPriority),
                     'next_follow_up_at' => now()->addDay()->setTime(10, 0),
-                ]);
+                    'follow_up_channel' => 'call',
+                ]));
                 $created++;
                 if ($assignedTo !== null) {
                     $perRep[$assignedTo] = ($perRep[$assignedTo] ?? 0) + 1;

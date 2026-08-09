@@ -357,7 +357,8 @@ class WhatsAppCrmService
         WhatsAppConversation $conversation,
         string $stage,
         ?int $userId = null,
-        bool $employeeScope = false
+        bool $employeeScope = false,
+        ?string $notes = null,
     ): ?SalesLead {
         if (! $conversation->sales_lead_id) {
             return null;
@@ -368,56 +369,38 @@ class WhatsAppCrmService
             return null;
         }
 
-        if ($employeeScope && (int) $lead->assigned_to !== (int) ($userId ?? auth()->id())) {
+        $actorId = $userId ?? auth()->id();
+        if ($employeeScope && (int) $lead->assigned_to !== (int) $actorId) {
             abort(403, 'لا يمكنك تعديل مرحلة عميل غير مخصص لك.');
+        }
+
+        $actor = User::query()->find($actorId) ?? auth()->user();
+        if (! $actor) {
+            abort(403);
         }
 
         $oldStage = $lead->stage;
         $stage = SalesLead::normalizeStage($stage);
-        $lead->update([
-            'stage' => $stage,
-            'stage_entered_at' => now(),
-        ]);
 
-        if (! in_array($stage, ['new_lead'], true)) {
-            $lead->update(['last_contacted_at' => now()]);
-        }
-
-        if (in_array($stage, [...SalesLead::CLOSED_STAGES, SalesLead::WON_STAGE], true)) {
-            if (! $lead->closed_at) {
-                $lead->forceFill(['closed_at' => now()])->save();
-            }
-        } elseif ($lead->closed_at && ! in_array($stage, SalesLead::WON_LIKE_STAGES, true)) {
-            $lead->forceFill(['closed_at' => null])->save();
-        }
-
-        SalesActivity::create([
-            'sales_lead_id' => $lead->id,
-            'user_id' => $userId ?? auth()->id(),
-            'type' => 'stage_change',
-            'title' => 'تغيير مرحلة من المحادثات',
-            'body' => SalesLead::stageLabel($oldStage).' → '.SalesLead::stageLabel($stage),
-            'meta' => ['conversation_id' => $conversation->id, 'from' => $oldStage, 'to' => $stage],
-        ]);
+        $updated = app(SalesPipelineService::class)->transition(
+            $lead,
+            $stage,
+            [
+                'notes' => $notes ?: ('تحديث مرحلة من واتساب: '.SalesLead::stageLabel($oldStage).' → '.SalesLead::stageLabel($stage)),
+            ],
+            $actor
+        );
 
         $this->logEvent(
             $conversation,
             WhatsAppConversationEvent::TYPE_STATUS_CHANGED,
             'مرحلة Pipeline',
-            SalesLead::stageLabel($oldStage).' → '.SalesLead::stageLabel($stage),
-            ['lead_stage_from' => $oldStage, 'lead_stage_to' => $stage],
-            $userId
+            SalesLead::stageLabel($oldStage).' → '.SalesLead::stageLabel($updated->stage),
+            ['lead_stage_from' => $oldStage, 'lead_stage_to' => $updated->stage],
+            $actorId
         );
 
-        if ($stage === SalesLead::WON_STAGE && $oldStage !== SalesLead::WON_STAGE) {
-            try {
-                app(SalesNotificationService::class)->notifyWinPendingApproval($lead->fresh(['assignee']));
-            } catch (\Throwable) {
-                // ignore
-            }
-        }
-
-        return $lead->fresh();
+        return $updated;
     }
 
     public function setNextFollow(
@@ -425,7 +408,8 @@ class WhatsAppCrmService
         string $nextFollowUpAt,
         ?string $note = null,
         ?int $userId = null,
-        bool $employeeScope = false
+        bool $employeeScope = false,
+        ?string $followUpChannel = null,
     ): ?SalesLead {
         if (! $conversation->sales_lead_id) {
             return null;
@@ -447,15 +431,24 @@ class WhatsAppCrmService
             }
         }
 
+        $channel = $followUpChannel ?: ($lead->follow_up_channel ?: 'call');
+        if (! array_key_exists($channel, SalesLead::FOLLOW_UP_CHANNELS)) {
+            $channel = 'call';
+        }
+
         $previous = $lead->next_follow_up_at?->toDateTimeString();
+        $previousChannel = $lead->follow_up_channel;
         $nextAt = \Carbon\Carbon::parse($nextFollowUpAt);
 
         $lead->update([
             'next_follow_up_at' => $nextAt,
+            'follow_up_channel' => $channel,
         ]);
 
+        $channelLabel = SalesLead::FOLLOW_UP_CHANNELS[$channel] ?? $channel;
         $bodyParts = array_filter([
             trim((string) $note),
+            'الإجراء: '.$channelLabel,
             'موعد المتابعة: '.$nextAt->format('Y-m-d H:i'),
         ]);
 
@@ -469,25 +462,28 @@ class WhatsAppCrmService
                 'conversation_id' => $conversation->id,
                 'previous_next_follow_up_at' => $previous,
                 'next_follow_up_at' => $nextAt->toDateTimeString(),
+                'follow_up_channel' => $channel,
+                'previous_follow_up_channel' => $previousChannel,
             ],
         ]);
 
         SalesAuditService::log(
             'sales_next_follow_set',
             $lead,
-            ['next_follow_up_at' => $previous],
-            ['next_follow_up_at' => $nextAt->toDateTimeString()],
-            'Next Follow (WhatsApp): '.$lead->name.' → '.$nextAt->format('Y-m-d H:i')
+            ['next_follow_up_at' => $previous, 'follow_up_channel' => $previousChannel],
+            ['next_follow_up_at' => $nextAt->toDateTimeString(), 'follow_up_channel' => $channel],
+            'Next Follow (WhatsApp): '.$lead->name.' → '.$channelLabel.' @ '.$nextAt->format('Y-m-d H:i')
         );
 
         $this->logEvent(
             $conversation,
             WhatsAppConversationEvent::TYPE_NOTE_ADDED,
             'تحديد Next Follow',
-            'متابعة تالية: '.$nextAt->format('Y-m-d H:i').($note ? ' — '.$note : ''),
+            'متابعة تالية: '.$channelLabel.' @ '.$nextAt->format('Y-m-d H:i').($note ? ' — '.$note : ''),
             [
                 'previous_next_follow_up_at' => $previous,
                 'next_follow_up_at' => $nextAt->toDateTimeString(),
+                'follow_up_channel' => $channel,
             ],
             $actorId
         );

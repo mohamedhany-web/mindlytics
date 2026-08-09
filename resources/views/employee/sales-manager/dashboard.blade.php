@@ -337,28 +337,87 @@
     </section>
 
     {{-- Pipeline + Analytics + Compare --}}
+    @php $dailySos = $hub['daily_sos'] ?? ['threshold' => 70, 'team_overall_pct' => 0, 'lines' => [], 'members' => []]; @endphp
+    <section class="panel-card" id="hub-daily-kpi">
+        <div class="panel-card-head flex flex-wrap items-center justify-between gap-2">
+            <div>
+                <h3 class="font-bold text-slate-900">تحقيق KPI اليومي للفريق (SOS)</h3>
+                <p class="text-xs text-slate-500">بدون اجتماعات · الحد الأدنى {{ number_format($dailySos['threshold'] ?? 70, 0) }}٪</p>
+            </div>
+            <p class="text-2xl font-black tabular-nums {{ ($dailySos['team_overall_pct'] ?? 0) >= 100 ? 'text-emerald-700' : (($dailySos['team_overall_pct'] ?? 0) >= ($dailySos['threshold'] ?? 70) ? 'text-amber-700' : 'text-rose-700') }}">
+                {{ number_format($dailySos['team_overall_pct'] ?? 0, 0) }}%
+            </p>
+        </div>
+        <div class="p-4 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2">
+            @forelse($dailySos['lines'] ?? [] as $line)
+                <div class="rounded-lg border border-slate-200 px-3 py-2">
+                    <p class="text-[11px] text-slate-500 truncate">{{ $line['label'] }}</p>
+                    <p class="text-sm font-black tabular-nums">{{ $line['actual'] }}/{{ number_format($line['target'], 0) }}</p>
+                    <p class="text-[10px] font-bold {{ ($line['pct'] ?? 0) >= 100 ? 'text-emerald-700' : (($line['pct'] ?? 0) >= ($dailySos['threshold'] ?? 70) ? 'text-amber-700' : 'text-rose-700') }}">{{ $line['pct'] }}%</p>
+                </div>
+            @empty
+                <p class="text-sm text-slate-400 col-span-full">لا بيانات KPI اليوم بعد.</p>
+            @endforelse
+        </div>
+        @if(!empty($dailySos['members']))
+            <div class="px-4 pb-4 overflow-x-auto">
+                <table class="min-w-full text-xs">
+                    <thead>
+                        <tr class="text-slate-500 border-b border-slate-100">
+                            <th class="text-right py-2 font-semibold">الموظف</th>
+                            <th class="text-left py-2 font-semibold">التحقيق</th>
+                            <th class="text-left py-2 font-semibold">الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($dailySos['members'] as $m)
+                            <tr class="border-b border-slate-50">
+                                <td class="py-1.5 font-semibold text-slate-800">{{ $m['name'] }}</td>
+                                <td class="py-1.5 tabular-nums font-bold {{ ($m['overall_pct'] ?? 0) >= 100 ? 'text-emerald-700' : (($m['overall_pct'] ?? 0) >= ($dailySos['threshold'] ?? 70) ? 'text-amber-700' : 'text-rose-700') }}">{{ $m['overall_pct'] }}%</td>
+                                <td class="py-1.5 text-slate-500">{{ $m['status_label'] }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </section>
+
     <div id="hub-pipeline" class="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <section class="panel-card">
             <div class="panel-card-head flex justify-between">
                 <h3 class="font-bold text-slate-900">مسار العملاء (Pipeline)</h3>
                 <a href="{{ route('employee.sales-manager.pipeline') }}" class="text-xs font-semibold text-teal-700">التفاصيل</a>
             </div>
-            <div class="p-4 grid grid-cols-2 gap-2 text-sm">
+            <div class="p-4 space-y-2">
+                <div class="grid grid-cols-2 gap-2 text-sm mb-2">
+                    <div class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2">
+                        <p class="text-[10px] text-sky-700 font-semibold">دخلوا السيستم</p>
+                        <p class="text-lg font-black tabular-nums">{{ $pipeline['entered_total'] ?? 0 }}</p>
+                    </div>
+                    <div class="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2">
+                        <p class="text-[10px] text-teal-700 font-semibold">تم التواصل</p>
+                        <p class="text-lg font-black tabular-nums">{{ $pipeline['contacted_total'] ?? 0 }}</p>
+                    </div>
+                </div>
                 @foreach([
-                    'new' => 'جديد',
+                    'new' => 'جديد (بدون تقدم)',
                     'contacted' => 'تم التواصل',
                     'qualified' => 'مؤهل',
-                    'meeting' => 'اجتماع',
+                    'meeting' => 'متابعة/اعتراض',
                     'proposal' => 'عرض سعر',
                     'negotiation' => 'تفاوض / دفع',
                     'won' => 'فوز',
                     'lost' => 'خسارة',
                 ] as $key => $label)
-                    <div class="rounded-lg border border-slate-200 px-3 py-2 flex justify-between">
+                    <div class="rounded-lg border border-slate-200 px-3 py-2 flex justify-between text-sm">
                         <span class="text-slate-500 text-xs">{{ $label }}</span>
                         <b class="tabular-nums">{{ $pipeline[$key] ?? 0 }}</b>
                     </div>
                 @endforeach
+                @if(($pipeline['no_contact'] ?? 0) > 0)
+                    <p class="text-[11px] text-amber-800 font-semibold pt-1">{{ $pipeline['no_contact'] }} عميل جديد بلا أي تواصل مسجّل</p>
+                @endif
             </div>
         </section>
 

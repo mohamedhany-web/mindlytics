@@ -78,11 +78,22 @@
         'labelClass' => $labelClass,
     ])
     <div>
-        <label class="{{ $labelClass }}">متابعة تالية</label>
+        <label class="{{ $labelClass }}">متابعة تالية <span class="text-rose-600">*</span></label>
         <input type="datetime-local" name="next_follow_up_at"
-               value="{{ old('next_follow_up_at', ($lead && $lead->next_follow_up_at) ? $lead->next_follow_up_at->format('Y-m-d\TH:i') : '') }}"
+               value="{{ old('next_follow_up_at', ($lead && $lead->next_follow_up_at) ? $lead->next_follow_up_at->format('Y-m-d\TH:i') : now()->addDay()->setTime(10, 0)->format('Y-m-d\TH:i')) }}"
                class="{{ $inputClass }}">
         @error('next_follow_up_at')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
+    </div>
+    <div>
+        <label class="{{ $labelClass }}">الإجراء التالي (Next Action) <span class="text-rose-600">*</span></label>
+        <select name="follow_up_channel" class="{{ $inputClass }}">
+            <option value="">— اختر —</option>
+            @foreach(\App\Models\SalesLead::FOLLOW_UP_CHANNELS as $k => $label)
+                <option value="{{ $k }}" @selected(old('follow_up_channel', $lead->follow_up_channel ?? 'call') === $k)>{{ $label }}</option>
+            @endforeach
+        </select>
+        @error('follow_up_channel')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
+        <p class="text-xs text-slate-500 mt-1">إلزامي لأي Lead مفتوح. عند الخسارة/Enrollment غير مطلوب.</p>
     </div>
 
     <div>

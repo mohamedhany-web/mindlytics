@@ -35,6 +35,7 @@
 
 <div class="space-y-4" x-data="fastLeadCreate({
     followPreset: @json($defaultFollow),
+    followChannel: @json(old('follow_up_channel', 'call')),
     customFollow: @json(old('next_follow_up_at', '')),
     showDetails: {{ old('email') || old('company') || old('notes') ? 'true' : 'false' }},
 })">
@@ -42,7 +43,7 @@
     <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
             <h2 class="text-xl font-bold text-slate-900">تسجيل عميل جديد</h2>
-            <p class="text-sm text-slate-500 mt-0.5">الاسم مطلوب — الباقي اختياري · Ctrl+Enter للحفظ</p>
+            <p class="text-sm text-slate-500 mt-0.5">Status + Next Action + موعد متابعة إلزامي · Ctrl+Enter للحفظ</p>
         </div>
         <a href="{{ route('employee.sales.leads.index') }}" class="text-sm text-slate-600 hover:text-slate-900">
             <i class="fas fa-arrow-right ml-1"></i> قائمة العملاء
@@ -64,6 +65,7 @@
         <input type="hidden" name="stage" value="new_lead">
         <input type="hidden" name="follow_preset" :value="followPreset">
         <input type="hidden" name="next_follow_up_at" :value="resolvedFollowUp()">
+        <input type="hidden" name="follow_up_channel" :value="followChannel">
 
         <div class="xl:col-span-9 lead-form-panel p-5 sm:p-6 space-y-5">
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -96,7 +98,7 @@
             </div>
         </div>
 
-        <div class="border-t border-slate-100 pt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="border-t border-slate-100 pt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">المصدر</label>
                 <select name="source" class="w-full px-3 py-2.5 text-sm bg-white">
@@ -114,15 +116,24 @@
                 </select>
             </div>
             <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">متابعة</label>
+                <label class="block text-sm font-medium text-slate-700 mb-1">موعد المتابعة <span class="text-red-600">*</span></label>
                 <select x-model="followPreset" class="w-full px-3 py-2.5 text-sm bg-white">
-                    <option value="none">بدون موعد</option>
                     <option value="today">اليوم 17:00</option>
                     <option value="tomorrow">غداً 10:00</option>
                     <option value="3days">بعد 3 أيام</option>
                     <option value="week">بعد أسبوع</option>
                     <option value="custom">موعد مخصص</option>
                 </select>
+                @error('next_follow_up_at')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Next Action <span class="text-red-600">*</span></label>
+                <select x-model="followChannel" class="w-full px-3 py-2.5 text-sm bg-white">
+                    @foreach(\App\Models\SalesLead::FOLLOW_UP_CHANNELS as $k => $label)
+                        <option value="{{ $k }}" @selected(old('follow_up_channel', 'call') === $k)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                @error('follow_up_channel')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
             </div>
         </div>
 
@@ -147,9 +158,8 @@
         </div>
 
         <div x-show="followPreset === 'custom'" x-cloak>
-            <label class="block text-sm font-medium text-slate-700 mb-1">الموعد المخصص</label>
+            <label class="block text-sm font-medium text-slate-700 mb-1">الموعد المخصص <span class="text-red-600">*</span></label>
             <input type="datetime-local" x-model="customFollow" class="w-full max-w-xs px-3 py-2.5 text-sm">
-            @error('next_follow_up_at')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
         </div>
 
         <div class="border-t border-slate-100 pt-5 space-y-4">
@@ -212,7 +222,8 @@
             <div class="lead-form-panel p-4 text-sm text-slate-600 space-y-2">
                 <p class="font-semibold text-slate-800">تسجيل سريع</p>
                 <p><kbd class="px-1 py-0.5 bg-slate-100 rounded text-xs">Ctrl</kbd>+<kbd class="px-1 py-0.5 bg-slate-100 rounded text-xs">Enter</kbd> للحفظ</p>
-                <p>المرحلة تُسجّل «جديد» تلقائياً</p>
+                <p>المرحلة تُسجّل «جديد» تلقائياً (Status)</p>
+                <p class="text-teal-800 font-medium">موعد متابعة + Next Action إلزامي — ممنوع Lead سايب</p>
                 <p>«حفظ وإضافة آخر» لتسجيل عدة عملاء</p>
                 <p class="pt-2 border-t border-slate-100">اختر <strong>مجموعة</strong> لتنظيم العملاء</p>
                 <a href="{{ route('employee.sales.groups.index') }}" class="inline-block text-slate-800 font-medium hover:underline">إدارة المجموعات</a>
@@ -231,7 +242,6 @@ function fastLeadCreate(config) {
     const pad = (n) => String(n).padStart(2, '0');
     const fmtLocal = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     const presets = {
-        none: () => '',
         today: () => { const d = new Date(); d.setHours(17, 0, 0, 0); return fmtLocal(d); },
         tomorrow: () => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(10, 0, 0, 0); return fmtLocal(d); },
         '3days': () => { const d = new Date(); d.setDate(d.getDate() + 3); d.setHours(10, 0, 0, 0); return fmtLocal(d); },
@@ -239,12 +249,13 @@ function fastLeadCreate(config) {
         custom: () => config.customFollow || '',
     };
     return {
-        followPreset: config.followPreset || 'tomorrow',
+        followPreset: config.followPreset === 'none' ? 'tomorrow' : (config.followPreset || 'tomorrow'),
+        followChannel: config.followChannel || 'call',
         customFollow: config.customFollow || '',
         showDetails: !!config.showDetails,
         resolvedFollowUp() {
             const fn = presets[this.followPreset];
-            return fn ? fn() : '';
+            return fn ? fn() : presets.tomorrow();
         },
     };
 }

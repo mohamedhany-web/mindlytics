@@ -12,27 +12,81 @@ use Illuminate\Validation\ValidationException;
 class SalesPipelineService
 {
     /**
+     * مراحل الحجز/الدفع — يلزم ربط كورس أو دبلومة قبلها.
+     *
      * @return list<string>
      */
-    public function suggestedNextStages(SalesLead $lead): array
+    public function bookingStages(): array
+    {
+        return ['payment_pending', 'payment_received', SalesLead::WON_STAGE];
+    }
+
+    /**
+     * المراحل المسموح الانتقال إليها فقط (مسار إلزامي — ممنوع تخطّي الرحلة).
+     *
+     * @return list<string>
+     */
+    public function allowedNextStages(SalesLead $lead): array
     {
         return match ($lead->stage) {
-            'new_lead' => ['first_contact', 'no_answer', 'connected', 'lost'],
+            'new_lead' => ['first_contact', 'no_answer', 'lost'],
             'first_contact' => ['connected', 'no_answer', 'lost'],
             'no_answer' => ['no_answer', 'connected', 'dormant', 'lost'],
-            'connected' => ['qualification', 'interested', 'follow_up_scheduled', 'objection', 'lost'],
-            'qualification' => ['interested', 'objection', 'follow_up_scheduled', 'offer_sent', 'lost'],
-            'interested' => ['objection', 'follow_up_scheduled', 'offer_sent', 'payment_pending', 'lost'],
-            'objection' => ['follow_up_scheduled', 'interested', 'offer_sent', 'lost'],
-            'follow_up_scheduled' => ['offer_sent', 'interested', 'objection', 'connected', 'lost'],
+            'connected' => ['qualification', 'follow_up_scheduled', 'objection', 'lost'],
+            'qualification' => ['interested', 'objection', 'follow_up_scheduled', 'lost'],
+            'interested' => ['offer_sent', 'objection', 'follow_up_scheduled', 'lost'],
+            'objection' => ['follow_up_scheduled', 'interested', 'lost'],
+            'follow_up_scheduled' => ['connected', 'qualification', 'interested', 'offer_sent', 'objection', 'lost'],
             'offer_sent' => ['payment_pending', 'objection', 'follow_up_scheduled', 'lost'],
             'payment_pending' => ['payment_received', 'follow_up_scheduled', 'lost'],
-            'payment_received' => ['enrollment_completed', 'lost'],
+            'payment_received' => [SalesLead::WON_STAGE, 'lost'],
             'enrollment_completed' => ['upsell'],
             'upsell' => ['upsell'],
             'dormant' => ['first_contact', 'connected', 'lost'],
             'lost' => [],
-            default => array_keys(SalesLead::STAGES),
+            default => [],
+        };
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function suggestedNextStages(SalesLead $lead): array
+    {
+        return $this->allowedNextStages($lead);
+    }
+
+    /**
+     * قمع مختصر للعرض (بدل 15 نقطة).
+     *
+     * @return array<string, string>
+     */
+    public function journeyBuckets(): array
+    {
+        return [
+            'entered' => 'دخول',
+            'contacted' => 'تواصل',
+            'qualified' => 'تأهيل',
+            'offer' => 'عرض',
+            'payment' => 'حجز/دفع',
+            'won' => 'تسجيل',
+            'lost' => 'خروج',
+        ];
+    }
+
+    public function bucketForStage(string $stage): string
+    {
+        $stage = SalesLead::normalizeStage($stage);
+
+        return match ($stage) {
+            'new_lead' => 'entered',
+            'first_contact', 'no_answer', 'connected' => 'contacted',
+            'qualification', 'interested', 'objection', 'follow_up_scheduled' => 'qualified',
+            'offer_sent' => 'offer',
+            'payment_pending', 'payment_received' => 'payment',
+            'enrollment_completed', 'upsell' => 'won',
+            'lost', 'dormant' => 'lost',
+            default => 'entered',
         };
     }
 
@@ -100,7 +154,6 @@ class SalesPipelineService
             throw ValidationException::withMessages(['stage' => 'مرحلة غير معروفة.']);
         }
 
-        // first_contact with no answer → no_answer path
         if ($toStage === 'first_contact' && array_key_exists('call_answered', $payload)
             && ! filter_var($payload['call_answered'], FILTER_VALIDATE_BOOLEAN)) {
             $toStage = 'no_answer';
@@ -110,7 +163,18 @@ class SalesPipelineService
             throw ValidationException::withMessages(['stage' => 'العميل بالفعل في هذه المرحلة.']);
         }
 
+        $allowed = $this->allowedNextStages($lead);
+        if ($toStage !== $lead->stage && ! in_array($toStage, $allowed, true)) {
+            throw ValidationException::withMessages([
+                'stage' => ['ممنوع تخطّي الـ Pipeline. انتقل للمرحلة التالية فقط من: '
+                    .collect($allowed)->map(fn ($s) => SalesLead::stageLabel($s))->implode(' · ')],
+            ]);
+        }
+
+        $this->assertTransitionNotes($payload);
         $this->assertRequired($toStage, $payload);
+        $this->applyCourseFromPayload($lead, $payload);
+        $this->assertCourseLinkedForBooking($lead, $toStage);
 
         return DB::transaction(function () use ($lead, $toStage, $payload, $actor) {
             $from = $lead->stage;
@@ -143,6 +207,15 @@ class SalesPipelineService
             } elseif (! in_array($toStage, SalesLead::WON_LIKE_STAGES, true)) {
                 $updates['closed_at'] = null;
             }
+
+            app(SalesLeadMovementPolicy::class)->assertOpenLeadHasMovement(
+                array_merge([
+                    'stage' => $lead->stage,
+                    'next_follow_up_at' => $lead->next_follow_up_at,
+                    'follow_up_channel' => $lead->follow_up_channel,
+                ], $updates),
+                $lead
+            );
 
             $before = $lead->only(array_keys($updates));
             $lead->fill($updates);
@@ -185,12 +258,52 @@ class SalesPipelineService
                 try {
                     app(SalesNotificationService::class)->notifyWinPendingApproval($lead->fresh(['assignee']));
                 } catch (\Throwable) {
-                    // ignore notification failures
+                    // ignore
                 }
             }
 
             return $lead->fresh();
         });
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function assertTransitionNotes(array $payload): void
+    {
+        $notes = trim((string) ($payload['notes'] ?? ''));
+        if (mb_strlen($notes) < 8) {
+            throw ValidationException::withMessages([
+                'notes' => ['الملاحظات إلزامية عند كل انتقال في الـ Pipeline (8 أحرف على الأقل).'],
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function applyCourseFromPayload(SalesLead $lead, array $payload): void
+    {
+        $type = $payload['course_type'] ?? null;
+        $ref = $payload['course_ref_id'] ?? null;
+        if ($type && $ref) {
+            $lead->applyCourseSelection((string) $type, (int) $ref);
+            $lead->save();
+        }
+    }
+
+    private function assertCourseLinkedForBooking(SalesLead $lead, string $toStage): void
+    {
+        if (! in_array($toStage, $this->bookingStages(), true)) {
+            return;
+        }
+
+        $lead->refresh();
+        if (! $lead->linkedCourseId()) {
+            throw ValidationException::withMessages([
+                'course_ref_id' => ['قبل الحجز/الدفع لازم تربط العميل بكورس أو دبلومة معيّنة من الكتالوج.'],
+            ]);
+        }
     }
 
     /**
@@ -202,7 +315,6 @@ class SalesPipelineService
             throw ValidationException::withMessages(['call_answered' => 'حدّد هل تم الرد أم لا.']);
         }
 
-        // no_answer path skips other first_contact fields
         if ($stage === 'no_answer') {
             return;
         }
@@ -317,9 +429,12 @@ class SalesPipelineService
             $updates['closed_at'] = now();
         } else {
             $updates['stage'] = 'no_answer';
-            $updates['next_attempt_due_at'] = $attempt === 1
+            $due = $attempt === 1
                 ? now()->addHours(2)
                 : now()->addDay()->startOfDay()->setTime(10, 0);
+            $updates['next_attempt_due_at'] = $due;
+            $updates['next_follow_up_at'] = $due;
+            $updates['follow_up_channel'] = $updates['follow_up_channel'] ?? 'call';
         }
     }
 }
