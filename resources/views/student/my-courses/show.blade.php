@@ -874,6 +874,13 @@
                                 <div class="h-full bg-sky-500 rounded-full transition-all duration-500" style="width: {{ min($progress, 100) }}%;"></div>
                             </div>
                             <p class="text-xs text-gray-500 mt-1">{{ $progress }}% مكتمل</p>
+                            @if($progress >= 100)
+                                <a href="{{ route('student.certificates.claim', $course) }}"
+                                   class="mt-3 inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2.5 shadow-sm">
+                                    <i class="fas fa-certificate"></i>
+                                    اختر تصميم الشهادة ونزّلها
+                                </a>
+                            @endif
                         </div>
                         <div class="flex gap-4">
                             <div class="text-center px-4 py-2 bg-amber-50 rounded-lg border border-amber-100">

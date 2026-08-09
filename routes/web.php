@@ -2380,6 +2380,14 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             ->name('invoices.payment-proof');
         Route::resource('wallet', \App\Http\Controllers\Student\WalletController::class)->only(['index', 'show']);
         Route::post('wallet/transfer', [\App\Http\Controllers\Student\WalletController::class, 'transfer'])->name('wallet.transfer');
+        Route::get('certificates/designs/{key}/preview', [\App\Http\Controllers\Student\CertificateController::class, 'designPreview'])
+            ->name('certificates.design-preview');
+        Route::get('certificates/claim/{course}', [\App\Http\Controllers\Student\CertificateController::class, 'claim'])
+            ->name('certificates.claim')
+            ->whereNumber('course');
+        Route::post('certificates/claim/{course}', [\App\Http\Controllers\Student\CertificateController::class, 'storeClaim'])
+            ->name('certificates.claim.store')
+            ->whereNumber('course');
         Route::resource('certificates', \App\Http\Controllers\Student\CertificateController::class)->only(['index', 'show']);
         Route::resource('achievements', \App\Http\Controllers\Student\AchievementController::class)->only(['index', 'show']);
         Route::resource('assignments', \App\Http\Controllers\Student\AssignmentController::class)->only(['index', 'show']);

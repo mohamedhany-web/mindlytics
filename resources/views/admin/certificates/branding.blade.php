@@ -50,6 +50,20 @@
                            class="w-full px-3 py-2.5 border border-gray-200 rounded-xl">
                 </div>
                 <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">الرقم الضريبي</label>
+                    <input type="text" name="tax_number" value="{{ old('tax_number', $branding->tax_number ?: '774-128-949') }}"
+                           class="w-full px-3 py-2.5 border border-gray-200 rounded-xl font-mono" dir="ltr">
+                    <p class="text-xs text-slate-500 mt-1">يظهر على الختم الإلكتروني الرسمي لكل شهادة.</p>
+                </div>
+                <div class="flex items-end">
+                    <label class="inline-flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2.5">
+                        <input type="hidden" name="stamp_enabled" value="0">
+                        <input type="checkbox" name="stamp_enabled" value="1" class="rounded border-gray-300 text-emerald-600"
+                               @checked(old('stamp_enabled', $branding->stamp_enabled ?? true))>
+                        تفعيل الختم الإلكتروني على الشهادات
+                    </label>
+                </div>
+                <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">اسم صاحب الإمضاء</label>
                     <input type="text" name="signature_name" value="{{ old('signature_name', $branding->signature_name) }}"
                            class="w-full px-3 py-2.5 border border-gray-200 rounded-xl">
@@ -86,7 +100,7 @@
             @foreach([
                 'logo' => ['label' => 'لوجو الأكاديمية', 'field' => 'logo_path', 'url' => $branding->logoUrl(), 'hint' => 'PNG شفاف مفضّل'],
                 'signature' => ['label' => 'الإمضاء', 'field' => 'signature_path', 'url' => $branding->signatureUrl(), 'hint' => 'صورة الإمضاء'],
-                'stamp' => ['label' => 'الختم', 'field' => 'stamp_path', 'url' => $branding->stampUrl(), 'hint' => 'ختم دائري أو شعار الختم'],
+                'stamp' => ['label' => 'صورة ختم بديلة (اختياري)', 'field' => 'stamp_path', 'url' => $branding->stampUrl(), 'hint' => 'لو رفعت صورة تُستخدم بدل الختم الإلكتروني التلقائي'],
             ] as $input => $meta)
                 <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-5 space-y-3">
                     <h3 class="font-bold text-gray-900">{{ $meta['label'] }}</h3>

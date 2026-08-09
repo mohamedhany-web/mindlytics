@@ -10,112 +10,139 @@
     <title>التحقق من الشهادة - Mindlytics</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    @include('components.certificate-styles')
 </head>
-<body class="bg-gray-50">
+<body class="bg-slate-50">
     <div class="min-h-screen py-12 px-4">
-        <div class="max-w-4xl mx-auto">
-            <!-- Header -->
+        <div class="max-w-5xl mx-auto">
             <div class="text-center mb-8">
-                <h1 class="text-4xl font-black text-gray-900 mb-2">التحقق من الشهادة</h1>
-                <p class="text-gray-600">أدخل رمز التحقق أو السيريال للتحقق من صحة الشهادة</p>
+                <h1 class="text-3xl sm:text-4xl font-black text-slate-900 mb-2">التحقق من الشهادة</h1>
+                <p class="text-slate-600">أدخل الرقم التسلسلي (Serial) المطبوع على الشهادة لعرض بيانات الحاصل عليها</p>
             </div>
 
-            <!-- Verification Form -->
-            <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
-                <form method="GET" action="{{ route('public.certificates.verify') }}" class="flex gap-4">
-                    <input type="text" 
-                           name="code" 
+            <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-8 mb-8 border border-slate-100">
+                <form method="GET" action="{{ route('public.certificates.verify') }}" class="flex flex-col sm:flex-row gap-3">
+                    <input type="text"
+                           name="code"
                            value="{{ request('code') }}"
-                           placeholder="أدخل رمز التحقق أو السيريال" 
-                           class="flex-1 px-6 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg">
-                    <button type="submit" 
-                            class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 shadow-lg shadow-blue-500/30 hover:shadow-xl">
+                           placeholder="مثال: MIND-2026-XXXXXXXX-1234"
+                           class="flex-1 px-5 py-3.5 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-base font-mono">
+                    <button type="submit"
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3.5 rounded-xl font-bold transition shadow-lg shadow-emerald-600/20">
                         <i class="fas fa-search ml-2"></i>
-                        التحقق
+                        تحقق
                     </button>
                 </form>
             </div>
 
-            <!-- Results -->
-            @if(isset($certificate))
-                @if($certificate && $isValid)
-                <!-- Valid Certificate -->
-                <div class="bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-green-500">
-                    <div class="bg-gradient-to-r from-green-500 to-green-600 p-6 text-white">
+            @if(isset($certificate) && $certificate && ($isValid ?? false))
+                @php $user = $certificate->user; @endphp
+                <div class="bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-emerald-500 mb-8">
+                    <div class="bg-gradient-to-r from-emerald-500 to-teal-600 p-6 text-white">
                         <div class="flex items-center gap-4">
-                            <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-                                <i class="fas fa-check-circle text-3xl"></i>
+                            <div class="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center">
+                                <i class="fas fa-check-circle text-2xl"></i>
                             </div>
                             <div>
-                                <h2 class="text-2xl font-black">شهادة صحيحة ومعتمدة</h2>
-                                <p class="text-green-100">تم التحقق من صحة هذه الشهادة</p>
+                                <h2 class="text-2xl font-black">شهادة صحيحة وموثّقة</h2>
+                                <p class="text-emerald-50 font-mono text-sm mt-1">{{ $certificate->serial_number ?? $certificate->certificate_number }}</p>
                             </div>
                         </div>
                     </div>
 
-                    <div class="p-8">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                            <div>
-                                <h3 class="text-lg font-bold text-gray-900 mb-4">معلومات الطالب</h3>
-                                <div class="space-y-2 text-sm">
-                                    <div><span class="text-gray-600">الاسم:</span> <span class="font-semibold text-gray-900">{{ $certificate->user->name ?? 'غير معروف' }}</span></div>
-                                    <div><span class="text-gray-600">البريد:</span> <span class="font-semibold text-gray-900">{{ $certificate->user->email ?? '-' }}</span></div>
+                    <div class="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h3 class="text-base font-black text-slate-900 mb-4 flex items-center gap-2">
+                                <i class="fas fa-user text-emerald-600"></i> بيانات الحاصل على الشهادة
+                            </h3>
+                            <dl class="space-y-3 text-sm">
+                                <div class="flex justify-between gap-4 border-b border-slate-100 pb-2">
+                                    <dt class="text-slate-500">الاسم</dt>
+                                    <dd class="font-bold text-slate-900 text-end">{{ data_get($certificate->metadata, 'display_name') ?: ($user->name ?? '—') }}</dd>
                                 </div>
-                            </div>
-                            <div>
-                                <h3 class="text-lg font-bold text-gray-900 mb-4">معلومات الشهادة</h3>
-                                <div class="space-y-2 text-sm">
-                                    <div><span class="text-gray-600">رقم الشهادة:</span> <span class="font-semibold text-gray-900 font-mono">{{ $certificate->certificate_number }}</span></div>
-                                    @if($certificate->serial_number)
-                                    <div><span class="text-gray-600">السيريال:</span> <span class="font-semibold text-gray-900 font-mono">{{ $certificate->serial_number }}</span></div>
-                                    @endif
-                                    <div><span class="text-gray-600">تاريخ الإصدار:</span> <span class="font-semibold text-gray-900">{{ $certificate->issued_at ? $certificate->issued_at->format('Y-m-d') : '-' }}</span></div>
-                                    <div><span class="text-gray-600">الحالة:</span> 
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                            مُصدرة ومعتمدة
-                                        </span>
-                                    </div>
+                                <div class="flex justify-between gap-4 border-b border-slate-100 pb-2">
+                                    <dt class="text-slate-500">البريد الإلكتروني</dt>
+                                    <dd class="font-semibold text-slate-900 text-end break-all">{{ $user->email ?? '—' }}</dd>
                                 </div>
-                            </div>
+                                <div class="flex justify-between gap-4 border-b border-slate-100 pb-2">
+                                    <dt class="text-slate-500">الهاتف</dt>
+                                    <dd class="font-semibold text-slate-900 text-end" dir="ltr">{{ $user->phone ?? '—' }}</dd>
+                                </div>
+                                <div class="flex justify-between gap-4 border-b border-slate-100 pb-2">
+                                    <dt class="text-slate-500">معرف المستخدم</dt>
+                                    <dd class="font-mono text-slate-800">#{{ $user->id ?? '—' }}</dd>
+                                </div>
+                            </dl>
                         </div>
 
-                        <!-- Certificate Preview -->
-                        <div class="border-t border-gray-200 pt-8">
-                            <h3 class="text-lg font-bold text-gray-900 mb-4">معاينة الشهادة</h3>
-                            <div class="certificate-container">
-                                @include('components.certificate-templates', [
-                                    'certificate' => $certificate,
-                                    'branding' => $branding ?? null,
-                                    'template' => $certificate->template ?? 'achievement'
-                                ])
-                            </div>
+                        <div>
+                            <h3 class="text-base font-black text-slate-900 mb-4 flex items-center gap-2">
+                                <i class="fas fa-certificate text-emerald-600"></i> بيانات الشهادة والكورس
+                            </h3>
+                            <dl class="space-y-3 text-sm">
+                                <div class="flex justify-between gap-4 border-b border-slate-100 pb-2">
+                                    <dt class="text-slate-500">الكورس</dt>
+                                    <dd class="font-bold text-slate-900 text-end">{{ $certificate->course?->title ?? $certificate->course_name ?? '—' }}</dd>
+                                </div>
+                                <div class="flex justify-between gap-4 border-b border-slate-100 pb-2">
+                                    <dt class="text-slate-500">المدرب</dt>
+                                    <dd class="font-semibold text-slate-900 text-end">{{ $certificate->instructor_signature_name ?? $certificate->instructor?->name ?? $certificate->course?->instructor?->name ?? '—' }}</dd>
+                                </div>
+                                <div class="flex justify-between gap-4 border-b border-slate-100 pb-2">
+                                    <dt class="text-slate-500">رقم الشهادة</dt>
+                                    <dd class="font-mono text-slate-800 text-end">{{ $certificate->certificate_number }}</dd>
+                                </div>
+                                <div class="flex justify-between gap-4 border-b border-slate-100 pb-2">
+                                    <dt class="text-slate-500">الرقم التسلسلي</dt>
+                                    <dd class="font-mono font-bold text-emerald-800 text-end">{{ $certificate->serial_number }}</dd>
+                                </div>
+                                <div class="flex justify-between gap-4 border-b border-slate-100 pb-2">
+                                    <dt class="text-slate-500">تاريخ الإصدار</dt>
+                                    <dd class="font-semibold text-slate-900">{{ optional($certificate->issued_at ?? $certificate->issue_date)->format('Y-m-d') ?? '—' }}</dd>
+                                </div>
+                                <div class="flex justify-between gap-4 border-b border-slate-100 pb-2">
+                                    <dt class="text-slate-500">التصميم</dt>
+                                    <dd class="font-semibold text-slate-900">{{ \App\Models\Certificate::availableTemplates()[$certificate->template]['name'] ?? $certificate->template }}</dd>
+                                </div>
+                                <div class="flex justify-between gap-4">
+                                    <dt class="text-slate-500">الحالة</dt>
+                                    <dd><span class="inline-flex rounded-full bg-emerald-100 text-emerald-800 px-2.5 py-0.5 text-xs font-bold">مُصدرة ومعتمدة</span></dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-slate-100 p-6 sm:p-8 bg-slate-50">
+                        <h3 class="text-base font-black text-slate-900 mb-4">معاينة الشهادة</h3>
+                        <div class="overflow-auto rounded-xl bg-slate-900 p-3">
+                            @include('components.certificate-templates', [
+                                'certificate' => $certificate,
+                                'branding' => $branding ?? null,
+                                'template' => $certificate->template ?? 'emerald-classic',
+                                'templateDomId' => 'verify-certificate-template',
+                            ])
                         </div>
                     </div>
                 </div>
-                @else
-                <!-- Invalid Certificate -->
-                <div class="bg-white rounded-2xl shadow-xl p-8 border-2 border-red-500">
+            @elseif(isset($certificate) && $certificate && !($isValid ?? false))
+                <div class="bg-white rounded-2xl shadow-xl p-8 border-2 border-rose-500">
                     <div class="text-center">
-                        <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-times-circle text-red-600 text-4xl"></i>
+                        <div class="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-times-circle text-rose-600 text-4xl"></i>
                         </div>
-                        <h2 class="text-2xl font-black text-gray-900 mb-2">شهادة غير صحيحة</h2>
-                        <p class="text-red-600 font-semibold">{{ $error ?? 'تم اكتشاف تلاعب في الشهادة أو الشهادة غير موجودة' }}</p>
+                        <h2 class="text-2xl font-black text-slate-900 mb-2">شهادة غير صالحة</h2>
+                        <p class="text-rose-600 font-semibold">{{ $error ?? 'تعذر التحقق من الشهادة' }}</p>
                     </div>
                 </div>
-                @endif
             @elseif(isset($error))
-            <!-- Error Message -->
-            <div class="bg-white rounded-2xl shadow-xl p-8 border-2 border-yellow-500">
-                <div class="text-center">
-                    <div class="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-exclamation-triangle text-yellow-600 text-4xl"></i>
+                <div class="bg-white rounded-2xl shadow-xl p-8 border-2 border-amber-400">
+                    <div class="text-center">
+                        <div class="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-exclamation-triangle text-amber-600 text-4xl"></i>
+                        </div>
+                        <h2 class="text-2xl font-black text-slate-900 mb-2">تنبيه</h2>
+                        <p class="text-amber-700 font-semibold">{{ $error }}</p>
                     </div>
-                    <h2 class="text-2xl font-black text-gray-900 mb-2">تنبيه</h2>
-                    <p class="text-yellow-600 font-semibold">{{ $error }}</p>
                 </div>
-            </div>
             @endif
         </div>
     </div>

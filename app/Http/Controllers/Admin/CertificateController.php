@@ -74,11 +74,13 @@ class CertificateController extends Controller
         $validated = $request->validate([
             'academy_name' => 'required|string|max:120',
             'academy_tagline' => 'nullable|string|max:180',
+            'tax_number' => 'nullable|string|max:40',
             'signature_name' => 'nullable|string|max:120',
             'signature_title' => 'nullable|string|max:120',
             'seal_label' => 'nullable|string|max:80',
             'seal_since' => 'nullable|string|max:20',
             'default_template' => 'required|in:' . implode(',', array_keys(Certificate::availableTemplates())),
+            'stamp_enabled' => 'nullable|boolean',
             'logo' => 'nullable|image|mimes:png,jpg,jpeg,webp,svg|max:4096',
             'signature' => 'nullable|image|mimes:png,jpg,jpeg,webp,svg|max:4096',
             'stamp' => 'nullable|image|mimes:png,jpg,jpeg,webp,svg|max:4096',
@@ -90,11 +92,13 @@ class CertificateController extends Controller
         $branding->fill([
             'academy_name' => $validated['academy_name'],
             'academy_tagline' => $validated['academy_tagline'] ?? null,
+            'tax_number' => $validated['tax_number'] ?? '774-128-949',
             'signature_name' => $validated['signature_name'] ?? null,
             'signature_title' => $validated['signature_title'] ?? null,
             'seal_label' => $validated['seal_label'] ?? 'CERTIFICATION',
             'seal_since' => $validated['seal_since'] ?? null,
             'default_template' => $validated['default_template'],
+            'stamp_enabled' => $request->boolean('stamp_enabled', true),
         ]);
 
         if ($request->boolean('remove_logo')) {
@@ -124,19 +128,44 @@ class CertificateController extends Controller
 
     public function create()
     {
-        $users = User::where('role', 'student')->where('is_active', true)->get();
-        $courses = AdvancedCourse::where('is_active', true)->get();
+        $users = User::where('role', 'student')->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'phone']);
+        $courses = AdvancedCourse::where('is_active', true)
+            ->with('instructor:id,name')
+            ->orderBy('title')
+            ->get(['id', 'title', 'instructor_id']);
         $branding = CertificateBranding::current();
         $templates = Certificate::availableTemplates();
 
-        return view('admin.certificates.create', compact('users', 'courses', 'branding', 'templates'));
+        $studentPayload = $users->map(fn (User $u) => [
+            'id' => $u->id,
+            'name' => $u->name,
+            'email' => $u->email,
+            'phone' => $u->phone,
+        ])->values();
+
+        $coursePayload = $courses->map(fn (AdvancedCourse $c) => [
+            'id' => $c->id,
+            'title' => $c->title,
+            'instructor' => $c->instructor?->name,
+        ])->values();
+
+        return view('admin.certificates.create', compact(
+            'users',
+            'courses',
+            'branding',
+            'templates',
+            'studentPayload',
+            'coursePayload'
+        ));
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
-            'course_id' => 'nullable|exists:advanced_courses,id',
+            'course_id' => 'required|exists:advanced_courses,id',
             'title' => 'required|string',
             'description' => 'nullable|string',
             'issued_at' => 'nullable|date',
@@ -145,16 +174,23 @@ class CertificateController extends Controller
         ]);
 
         $branding = CertificateBranding::current();
-        $template = $validated['template'] ?? $branding->default_template ?? 'achievement';
+        $template = $validated['template'] ?? $branding->default_template ?? 'emerald-classic';
+        if (! array_key_exists($template, Certificate::availableTemplates())) {
+            $template = 'emerald-classic';
+        }
+
+        $course = AdvancedCourse::with('instructor')->findOrFail($validated['course_id']);
+        $student = User::findOrFail($validated['user_id']);
+        $serial = Certificate::generateSerialNumber();
 
         $certificate = Certificate::create([
             'certificate_number' => 'CERT-' . str_pad((int) Certificate::max('id') + 1, 8, '0', STR_PAD_LEFT),
-            'serial_number' => Certificate::generateSerialNumber(),
-            'user_id' => $validated['user_id'],
-            'course_id' => $validated['course_id'] ?? null,
-            'course_name' => $validated['course_id'] ? (AdvancedCourse::find($validated['course_id'])->title ?? '') : ($validated['title'] ?? ''),
+            'serial_number' => $serial,
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'course_name' => $course->title,
             'certificate_type' => 'completion',
-            'title' => $validated['title'] ?? '',
+            'title' => $validated['title'] ?: ('شهادة إتمام — '.$course->title),
             'description' => $validated['description'] ?? null,
             'issue_date' => $validated['issued_at'] ?? now(),
             'issued_at' => $validated['issued_at'] ?? now(),
@@ -163,19 +199,25 @@ class CertificateController extends Controller
             'is_verified' => ($validated['status'] ?? '') === 'issued',
             'template' => $template,
             'academy_signature' => $branding->signature_path,
-            'academy_signature_name' => $branding->signature_name ?: 'المدير العام',
-            'academy_signature_title' => $branding->signature_title ?: 'Mindlytics Academy',
+            'academy_signature_name' => $serial,
+            'academy_signature_title' => 'Serial Number',
             'logo_path' => $branding->logo_path,
             'stamp_path' => $branding->stamp_path,
+            'instructor_id' => $course->instructor_id,
+            'instructor_signature_name' => $course->instructor?->name ?? ($branding->signature_name ?: 'Instructor'),
+            'instructor_signature_title' => 'Instructor',
+            'metadata' => [
+                'issued_via' => 'admin',
+                'display_name' => $student->name,
+                'tax_number' => $branding->tax_number ?: '774-128-949',
+                'academy_name' => $branding->academy_name,
+            ],
         ]);
 
         if (($validated['status'] ?? '') === 'issued') {
             $certificate->certificate_hash = $certificate->generateHash();
-            $certificate->verification_url = $certificate->verification_url;
+            $certificate->verification_url = route('public.certificates.verify.code', ['code' => $serial]);
             $certificate->certified_at = now();
-            if (! $certificate->serial_number) {
-                $certificate->serial_number = Certificate::generateSerialNumber();
-            }
             $certificate->save();
         }
 

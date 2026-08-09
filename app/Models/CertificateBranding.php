@@ -10,15 +10,24 @@ class CertificateBranding extends Model
     protected $fillable = [
         'academy_name',
         'academy_tagline',
+        'tax_number',
         'logo_path',
         'signature_path',
         'stamp_path',
+        'stamp_enabled',
         'signature_name',
         'signature_title',
         'seal_label',
         'seal_since',
         'default_template',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'stamp_enabled' => 'boolean',
+        ];
+    }
 
     /**
      * Singleton branding settings used on all certificates.
@@ -27,17 +36,24 @@ class CertificateBranding extends Model
     {
         $row = static::query()->first();
         if ($row) {
+            if (! $row->tax_number) {
+                $row->tax_number = '774-128-949';
+                $row->save();
+            }
+
             return $row;
         }
 
         return static::create([
-            'academy_name' => config('app.name', 'Mindlytics'),
+            'academy_name' => config('app.name', 'Mindlytics Academy'),
             'academy_tagline' => 'أكاديمية البرمجة',
+            'tax_number' => '774-128-949',
             'signature_name' => 'المدير العام',
             'signature_title' => 'Mindlytics Academy',
             'seal_label' => 'CERTIFICATION',
             'seal_since' => '2020',
-            'default_template' => 'achievement',
+            'stamp_enabled' => true,
+            'default_template' => 'emerald-classic',
         ]);
     }
 

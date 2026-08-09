@@ -97,9 +97,9 @@ class Certificate extends Model
     }
 
     /**
-     * Available certificate templates (achievement family only).
+     * Legacy achievement templates (kept for old certificates).
      */
-    public static function availableTemplates(): array
+    public static function legacyTemplates(): array
     {
         return [
             'achievement' => [
@@ -118,6 +118,24 @@ class Certificate extends Model
                 'theme' => 'deep',
             ],
         ];
+    }
+
+    /**
+     * Available certificate templates (Mindlytics design set + legacy).
+     */
+    public static function availableTemplates(): array
+    {
+        $designs = [];
+        foreach (\App\Services\CertificateIssueService::designCatalog() as $key => $meta) {
+            $designs[$key] = [
+                'name' => $meta['name'],
+                'description' => $meta['description'],
+                'theme' => $key,
+                'rtl' => $meta['rtl'] ?? false,
+            ];
+        }
+
+        return $designs + self::legacyTemplates();
     }
 
     /**

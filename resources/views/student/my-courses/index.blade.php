@@ -220,8 +220,7 @@
                 $subjectName = $course->academicSubject->name ?? __('student.course_fallback');
                 $teacherName = $course->teacher->name ?? '—';
             @endphp
-            <a href="{{ route('my-courses.show', $course) }}"
-               class="course-card block"
+            <div class="course-card block"
                data-title="{{ mb_strtolower((string) $course->localized('title')) }}"
                data-teacher="{{ mb_strtolower((string) $teacherName) }}"
                data-subject="{{ mb_strtolower((string) $subjectName) }}"
@@ -229,6 +228,7 @@
                x-show="matches($el)"
                x-transition.opacity.duration.150ms
             >
+                <a href="{{ route('my-courses.show', $course) }}" class="block">
                 <div class="course-thumb h-36 flex items-center justify-center relative">
                     @if($course->thumbnail)
                         <img src="{{ asset('storage/' . $course->thumbnail) }}" alt="{{ $course->localized('title') }}" class="w-full h-full object-cover">
@@ -267,12 +267,24 @@
                         <div class="h-full bg-sky-500 rounded-full transition-all duration-500" style="width: {{ min($progress, 100) }}%;"></div>
                     </div>
 
-                    <span class="mt-3 inline-flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-black transition-colors shadow-sm">
-                        <i class="fas fa-play text-xs"></i>
-                        {{ __('student.continue_learning') }}
-                    </span>
+                    @unless($isCompleted)
+                        <span class="mt-3 inline-flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-black transition-colors shadow-sm">
+                            <i class="fas fa-play text-xs"></i>
+                            {{ __('student.continue_learning') }}
+                        </span>
+                    @endunless
                 </div>
-            </a>
+                </a>
+                @if($isCompleted)
+                    <div class="px-4 pb-4 -mt-1">
+                        <a href="{{ route('student.certificates.claim', $course) }}"
+                           class="inline-flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black transition-colors shadow-sm">
+                            <i class="fas fa-certificate text-xs"></i>
+                            احصل على شهادتك
+                        </a>
+                    </div>
+                @endif
+            </div>
             @endforeach
         </div>
 

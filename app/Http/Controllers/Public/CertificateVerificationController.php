@@ -10,30 +10,35 @@ class CertificateVerificationController extends Controller
 {
     public function verify(Request $request, $code = null)
     {
-        $verificationCode = $code ?? $request->input('code');
-        
-        if (!$verificationCode) {
+        $verificationCode = trim((string) ($code ?? $request->input('code', '')));
+
+        if ($verificationCode === '') {
             return view('public.certificates.verify', [
                 'certificate' => null,
-                'error' => 'الرجاء إدخال رمز التحقق'
+                'error' => 'الرجاء إدخال الرقم التسلسلي أو رمز التحقق',
             ]);
         }
 
-        $certificate = Certificate::where('verification_code', $verificationCode)
-            ->orWhere('serial_number', $verificationCode)
-            ->with(['user', 'course', 'instructor'])
+        $certificate = Certificate::query()
+            ->where(function ($q) use ($verificationCode) {
+                $q->where('serial_number', $verificationCode)
+                    ->orWhere('verification_code', $verificationCode)
+                    ->orWhere('certificate_number', $verificationCode);
+            })
+            ->with(['user', 'course.instructor', 'instructor'])
             ->first();
 
-        if (!$certificate) {
+        if (! $certificate) {
             return view('public.certificates.verify', [
                 'certificate' => null,
-                'error' => 'الشهادة غير موجودة أو رمز التحقق غير صحيح'
+                'error' => 'الشهادة غير موجودة — تأكد من الرقم التسلسلي',
             ]);
         }
 
-        // Verify hash if exists
         $isValid = true;
-        if ($certificate->certificate_hash) {
+        if ($certificate->status === 'revoked') {
+            $isValid = false;
+        } elseif ($certificate->certificate_hash) {
             $isValid = $certificate->verifyHash();
         }
 
@@ -41,7 +46,9 @@ class CertificateVerificationController extends Controller
             'certificate' => $certificate,
             'branding' => \App\Models\CertificateBranding::current(),
             'isValid' => $isValid,
-            'error' => $isValid ? null : 'تم اكتشاف تلاعب في الشهادة'
+            'error' => $isValid ? null : ($certificate->status === 'revoked'
+                ? 'هذه الشهادة ملغاة'
+                : 'تم اكتشاف تلاعب في بيانات الشهادة'),
         ]);
     }
 }
