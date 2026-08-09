@@ -57,7 +57,7 @@
                 </div>
                 <div>
                     <h2 class="text-xl font-black text-slate-900">أهداف KPIs المبيعات</h2>
-                    <p class="text-xs text-slate-600">ضبط الأهداف الشهرية وإعدادات الكوميشن لكل موظف.</p>
+                    <p class="text-xs text-slate-600">ضبط أهداف شهرية ملزمة لكل موظف، ومتابعة ما حقّقه مقابل الهدف.</p>
                 </div>
             </div>
             <div class="flex flex-wrap items-center gap-2">
@@ -151,6 +151,137 @@
                 </form>
             </div>
         </section>
+
+        @php
+            $hasCustomTargets = $hasCustomTargets ?? false;
+            $achievement = $achievement ?? null;
+            $dailyResults = $dailyResults ?? null;
+            $teamTargetStatus = $teamTargetStatus ?? collect();
+            $requiredKeys = $requiredKeys ?? array_keys(config('sales_kpi.defaults', []));
+        @endphp
+
+        {{-- حالة الفريق لهذا الشهر --}}
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex flex-wrap items-center justify-between gap-2">
+                <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                    <i class="fas fa-users-cog text-violet-600"></i>
+                    تغطية الأهداف الملزمة — {{ $yearMonth }}
+                </h3>
+                <span class="text-xs font-semibold text-slate-600">
+                    {{ $teamTargetStatus->where('configured', true)->count() }} / {{ $teamTargetStatus->count() }} محفوظة
+                </span>
+            </div>
+            <div class="p-4 overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-600 text-xs">
+                            <th class="text-start px-3 py-2">الموظف</th>
+                            <th class="text-start px-3 py-2">حالة الأهداف</th>
+                            <th class="text-start px-3 py-2">المؤشر المركّب</th>
+                            <th class="text-start px-3 py-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @foreach($teamTargetStatus as $row)
+                            <tr class="{{ (int) $userId === (int) $row['user']->id ? 'bg-sky-50/70' : '' }}">
+                                <td class="px-3 py-2.5 font-semibold text-slate-900">{{ $row['user']->name }}</td>
+                                <td class="px-3 py-2.5">
+                                    @if($row['configured'])
+                                        <span class="inline-flex rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 text-[11px] font-bold">محفوظة وملزمة</span>
+                                    @else
+                                        <span class="inline-flex rounded-lg bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 text-[11px] font-bold">افتراضي النظام فقط</span>
+                                    @endif
+                                </td>
+                                <td class="px-3 py-2.5 tabular-nums font-bold {{ $row['composite'] >= 65 ? 'text-emerald-700' : ($row['composite'] >= 45 ? 'text-amber-700' : 'text-rose-700') }}">
+                                    {{ $row['composite'] }}/100
+                                </td>
+                                <td class="px-3 py-2.5">
+                                    <a href="{{ route('admin.sales.kpi.targets', ['user_id' => $row['user']->id, 'year_month' => $yearMonth]) }}"
+                                       class="text-xs font-bold text-sky-700 hover:underline">ضبط</a>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        @if($achievement)
+            <section class="rounded-2xl bg-white border border-emerald-200 shadow-lg overflow-hidden">
+                <div class="px-4 py-3 border-b border-emerald-100 bg-emerald-50/80 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <h3 class="text-base font-black text-emerald-950 flex items-center gap-2">
+                            <i class="fas fa-chart-pie text-emerald-600"></i>
+                            ما حقّقه {{ $rep?->name }} مقابل الأهداف
+                        </h3>
+                        <p class="text-xs text-emerald-900/80 mt-0.5">
+                            @if($hasCustomTargets)
+                                أهداف محفوظة لهذا الشهر
+                            @else
+                                حالياً يعتمد على افتراضيات النظام — احفظ أهدافاً ملزمة بالأسفل
+                            @endif
+                        </p>
+                    </div>
+                    <div class="text-end">
+                        <p class="text-[11px] text-emerald-800 font-semibold">المؤشر المركّب</p>
+                        <p class="text-3xl font-black text-emerald-900 tabular-nums">{{ $achievement['composite_month'] }}<span class="text-lg">/100</span></p>
+                    </div>
+                </div>
+                <div class="p-4 grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    @if($dailyResults)
+                        <div class="rounded-xl border border-slate-200 overflow-hidden">
+                            <div class="px-3 py-2 bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-700">نتائج اليوم (SOS) — {{ number_format($dailyResults['overall_pct'], 0) }}%</div>
+                            <div class="divide-y divide-slate-100">
+                                @foreach($dailyResults['lines'] as $line)
+                                    <div class="px-3 py-2 flex items-center justify-between gap-3 text-sm">
+                                        <div class="min-w-0">
+                                            <p class="font-semibold text-slate-800 truncate">{{ $line['label'] }}</p>
+                                            <p class="text-[11px] text-slate-500 tabular-nums">{{ $line['actual'] }} / {{ number_format($line['target'], 0) }}</p>
+                                        </div>
+                                        <div class="w-28 shrink-0">
+                                            <div class="h-2 rounded-full bg-slate-100 overflow-hidden">
+                                                <div class="h-full rounded-full {{ $line['pct'] >= 100 ? 'bg-emerald-500' : ($line['pct'] >= 70 ? 'bg-amber-500' : 'bg-rose-500') }}"
+                                                     style="width: {{ min(100, $line['pct']) }}%"></div>
+                                            </div>
+                                            <p class="text-[10px] font-bold text-end mt-0.5 tabular-nums">{{ $line['pct'] }}%</p>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                    <div class="rounded-xl border border-slate-200 overflow-hidden">
+                        <div class="px-3 py-2 bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-700">مؤشرات الشهر مقابل الهدف</div>
+                        <div class="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                            @foreach(($achievement['month']['kpi_lines'] ?? []) as $line)
+                                @continue(($line['target'] ?? null) === null)
+                                <div class="px-3 py-2 flex items-center justify-between gap-3 text-sm">
+                                    <div class="min-w-0">
+                                        <p class="font-semibold text-slate-800 truncate">{{ $line['label'] }}</p>
+                                        <p class="text-[11px] text-slate-500 tabular-nums">
+                                            {{ is_numeric($line['actual'] ?? null) ? number_format((float) $line['actual'], is_float($line['actual'] ?? null) ? 1 : 0) : '—' }}
+                                            /
+                                            {{ is_numeric($line['target'] ?? null) ? number_format((float) $line['target'], 0) : '—' }}
+                                        </p>
+                                    </div>
+                                    <div class="w-28 shrink-0">
+                                        @if(($line['pct'] ?? null) !== null)
+                                            <div class="h-2 rounded-full bg-slate-100 overflow-hidden">
+                                                <div class="h-full rounded-full {{ $line['pct'] >= 100 ? 'bg-emerald-500' : ($line['pct'] >= 70 ? 'bg-amber-500' : 'bg-rose-500') }}"
+                                                     style="width: {{ min(100, (float) $line['pct']) }}%"></div>
+                                            </div>
+                                            <p class="text-[10px] font-bold text-end mt-0.5 tabular-nums">{{ $line['pct'] }}%</p>
+                                        @else
+                                            <p class="text-[10px] text-slate-400 text-end">—</p>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </section>
+        @endif
 
         <form method="post" action="{{ route('admin.sales.kpi.targets.update') }}">
             @csrf
@@ -269,10 +400,19 @@
                     <div class="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                         @foreach($group['keys'] as $key)
                             <div class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-                                <label class="block text-sm font-semibold text-slate-700 mb-2" for="t_{{ $key }}">{{ $labels[$key] ?? $key }}</label>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2" for="t_{{ $key }}">
+                                    {{ $labels[$key] ?? $key }}
+                                    @if(in_array($key, $requiredKeys, true))
+                                        <span class="text-rose-600">*</span>
+                                    @endif
+                                </label>
                                 <input type="number" step="any" name="{{ $key }}" id="t_{{ $key }}"
                                        value="{{ old($key, $targets[$key] ?? '') }}"
-                                       class="{{ $inputClass }}">
+                                       @if(in_array($key, $requiredKeys, true)) required @endif
+                                       class="{{ $inputClass }} @error($key) border-rose-400 @enderror">
+                                @error($key)
+                                    <p class="text-[11px] text-rose-600 mt-1">{{ $message }}</p>
+                                @enderror
                             </div>
                         @endforeach
                     </div>
@@ -281,13 +421,19 @@
 
             <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
                 <div class="px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <p class="text-xs text-slate-600">
-                        <i class="fas fa-info-circle text-sky-600 ml-1"></i>
-                        الحفظ يطبّق على <strong>{{ $rep?->name }}</strong> — {{ $yearMonth }}
-                    </p>
+                    <div class="space-y-2">
+                        <p class="text-xs text-slate-600">
+                            <i class="fas fa-info-circle text-sky-600 ml-1"></i>
+                            الحفظ يطبّق على <strong>{{ $rep?->name }}</strong> — {{ $yearMonth }} — كل الحقول المعلّمة بـ * إلزامية.
+                        </p>
+                        <label class="inline-flex items-center gap-2 text-xs font-semibold text-violet-900 bg-violet-50 border border-violet-200 rounded-lg px-3 py-2">
+                            <input type="checkbox" name="apply_to_all_team" value="1" class="rounded border-violet-300">
+                            تطبيق نفس الأهداف على كل فريق المبيعات لهذا الشهر
+                        </label>
+                    </div>
                     <button type="submit" class="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold">
                         <i class="fas fa-save"></i>
-                        حفظ الأهداف
+                        حفظ الأهداف الملزمة
                     </button>
                 </div>
             </section>

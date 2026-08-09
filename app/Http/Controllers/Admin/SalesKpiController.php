@@ -179,9 +179,46 @@ class SalesKpiController extends Controller
             $rep = $salesReps->firstWhere('id', $uid) ?? $salesReps->first();
         }
 
+        $monthCarbon = Carbon::createFromFormat('Y-m-d', $yearMonth.'-01')->startOfMonth();
+        $kpi = app(SalesKpiService::class);
         $merged = $rep
-            ? app(SalesKpiService::class)->mergedTargets($rep, \Carbon\Carbon::createFromFormat('Y-m-d', $yearMonth.'-01'))
+            ? $kpi->mergedTargets($rep, $monthCarbon)
             : config('sales_kpi.defaults');
+
+        $savedRow = $rep
+            ? SalesKpiTarget::query()
+                ->where('user_id', $rep->id)
+                ->where('year_month', $yearMonth)
+                ->first()
+            : null;
+
+        $achievement = null;
+        $dailyResults = null;
+        if ($rep) {
+            $achievement = $kpi->buildReport($rep, $monthCarbon->isCurrentMonth() ? now() : $monthCarbon->copy()->endOfMonth());
+            $dailyResults = app(\App\Services\SalesDailyResultService::class)->comparisonFor(
+                $rep,
+                $monthCarbon->isCurrentMonth() ? today() : $monthCarbon
+            );
+        }
+
+        $configuredIds = SalesKpiTarget::query()
+            ->where('year_month', $yearMonth)
+            ->whereIn('user_id', $salesReps->pluck('id'))
+            ->pluck('user_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $teamTargetStatus = $salesReps->map(function (User $r) use ($configuredIds, $kpi, $monthCarbon) {
+            $configured = in_array((int) $r->id, $configuredIds, true);
+            $report = $kpi->buildReport($r, $monthCarbon->isCurrentMonth() ? now() : $monthCarbon->copy()->endOfMonth());
+
+            return [
+                'user' => $r,
+                'configured' => $configured,
+                'composite' => $report['composite_month'],
+            ];
+        })->values();
 
         $agreements = $rep
             ? $rep->salesCourseCommissionAgreements()
@@ -200,14 +237,26 @@ class SalesKpiController extends Controller
             'rep' => $rep,
             'agreements' => $agreements,
             'defaultTiers' => $defaultTiers,
+            'hasCustomTargets' => (bool) $savedRow,
+            'achievement' => $achievement,
+            'dailyResults' => $dailyResults,
+            'teamTargetStatus' => $teamTargetStatus,
+            'requiredKeys' => config('sales_kpi.required_on_save', array_keys(config('sales_kpi.defaults', []))),
         ]);
     }
 
     public function updateTargets(Request $request)
     {
-        $validated = $request->validate([
+        $requiredKeys = config('sales_kpi.required_on_save', array_keys(config('sales_kpi.defaults', [])));
+        $targetRules = [];
+        foreach ($requiredKeys as $key) {
+            $targetRules[$key] = ['required', 'numeric', 'min:0'];
+        }
+
+        $validated = $request->validate(array_merge([
             'user_id' => ['required', 'integer', Rule::exists('users', 'id')],
             'year_month' => ['required', 'regex:/^\d{4}-\d{2}$/'],
+            'apply_to_all_team' => ['nullable', 'boolean'],
             'sales_commission_mode' => ['nullable', Rule::in(['none', 'percent', 'fixed', 'tier'])],
             'sales_commission_value' => ['nullable', 'numeric', 'min:0'],
             'sales_commission_tier_period' => ['nullable', Rule::in(['month', 'all'])],
@@ -221,7 +270,9 @@ class SalesKpiController extends Controller
             'tier_bonus.*' => ['nullable', 'numeric', 'min:0'],
             'tier_bonus_at' => ['nullable', 'array'],
             'tier_bonus_at.*' => ['nullable', 'integer', 'min:1'],
-        ]);
+        ], $targetRules), collect($requiredKeys)->mapWithKeys(
+            fn ($key) => [$key.'.required' => 'هذا الهدف مطلوب — الأرقام ملزمة للموظف.']
+        )->all());
 
         $rep = User::query()->findOrFail($validated['user_id']);
         if (! $rep->isSalesEmployee()) {
@@ -229,27 +280,29 @@ class SalesKpiController extends Controller
         }
 
         $keys = array_keys(config('sales_kpi.defaults', []));
-        $existing = SalesKpiTarget::where('user_id', $rep->id)
-            ->where('year_month', $validated['year_month'])
-            ->value('targets');
-        $existing = is_array($existing) ? $existing : [];
-
-        $payload = $existing;
+        $payload = [];
         foreach ($keys as $key) {
             if ($request->has($key) && $request->input($key) !== '' && $request->input($key) !== null) {
                 $payload[$key] = (float) $request->input($key);
             }
         }
 
-        SalesKpiTarget::updateOrCreate(
-            [
-                'user_id' => $rep->id,
-                'year_month' => $validated['year_month'],
-            ],
-            ['targets' => $payload]
-        );
+        $saveFor = [$rep];
+        if ($request->boolean('apply_to_all_team')) {
+            $saveFor = User::salesEmployees()->where('is_active', true)->orderBy('name')->get()->all();
+        }
 
-        // تحديث إعداد الكوميشن على مستوى الموظف (ليس شهرياً)
+        foreach ($saveFor as $employee) {
+            SalesKpiTarget::updateOrCreate(
+                [
+                    'user_id' => $employee->id,
+                    'year_month' => $validated['year_month'],
+                ],
+                ['targets' => $payload]
+            );
+        }
+
+        // تحديث إعداد الكوميشن على مستوى الموظف (ليس شهرياً) — للموظف المحدد فقط
         if ($request->has('sales_commission_mode')) {
             $mode = (string) ($validated['sales_commission_mode'] ?? 'none');
             $val = $validated['sales_commission_value'] ?? null;
@@ -292,14 +345,19 @@ class SalesKpiController extends Controller
             [
                 'year_month' => $validated['year_month'],
                 'keys' => array_keys($payload),
+                'apply_to_all_team' => $request->boolean('apply_to_all_team'),
                 'sales_commission_mode' => $rep->sales_commission_mode ?? null,
                 'sales_commission_value' => $rep->sales_commission_value ?? null,
             ],
             'تحديث أهداف KPIs مبيعات للموظف: '.($rep->name ?? '').' — '.$validated['year_month'].' — بواسطة '.(Auth::user()->name ?? '')
         );
 
+        $msg = $request->boolean('apply_to_all_team')
+            ? 'تم حفظ الأهداف الملزمة لكل فريق المبيعات — '.$validated['year_month']
+            : 'تم حفظ الأهداف الملزمة لـ «'.$rep->name.'» — '.$validated['year_month'];
+
         return redirect()
             ->route('admin.sales.kpi.targets', ['user_id' => $rep->id, 'year_month' => $validated['year_month']])
-            ->with('success', 'تم حفظ الأهداف.');
+            ->with('success', $msg);
     }
 }

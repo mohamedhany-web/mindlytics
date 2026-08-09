@@ -468,6 +468,26 @@ class SalesKpiService
             ],
         ];
 
+        $lowerIsBetter = ['response', 'loss_ratio', 'cycle'];
+        foreach ($lines as $key => &$line) {
+            $actual = $line['actual'];
+            $target = $line['target'];
+            if ($actual === null || $target === null || $target === '') {
+                $line['pct'] = null;
+                $line['direction'] = 'none';
+
+                continue;
+            }
+            if (in_array($key, $lowerIsBetter, true)) {
+                $line['pct'] = round($this->achievementDown((float) $actual, (float) $target), 1);
+                $line['direction'] = 'down';
+            } else {
+                $line['pct'] = round($this->achievementUp((float) $actual, (float) $target), 1);
+                $line['direction'] = 'up';
+            }
+        }
+        unset($line);
+
         $results = $this->meanScores([
             $this->achievementUp((float) $m['revenue_closed'], max(1.0, $revenueTarget)),
             $this->achievementUp((float) $m['won_closed'], max(1.0, $dealsMonthlyTarget)),
