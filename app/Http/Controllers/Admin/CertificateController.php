@@ -59,6 +59,20 @@ class CertificateController extends Controller
         return view('admin.certificates.index', compact('certificates', 'stats', 'branding', 'templates'));
     }
 
+    public function designPreview(string $key)
+    {
+        $designs = \App\Services\CertificateIssueService::designCatalog();
+        abort_unless(isset($designs[$key]), 404);
+
+        return response()->view('student.certificates.design-preview', [
+            'key' => $key,
+            'design' => $designs[$key],
+            'sampleName' => 'Ahmed Mohamed',
+            'sampleCourse' => 'Full Stack Development',
+            'sampleInstructor' => 'Instructor',
+        ]);
+    }
+
     public function branding()
     {
         $branding = CertificateBranding::current();

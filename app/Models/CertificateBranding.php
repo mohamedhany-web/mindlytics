@@ -36,25 +36,40 @@ class CertificateBranding extends Model
     {
         $row = static::query()->first();
         if ($row) {
-            if (! $row->tax_number) {
-                $row->tax_number = '774-128-949';
-                $row->save();
+            try {
+                if (\Illuminate\Support\Facades\Schema::hasColumn('certificate_brandings', 'tax_number')
+                    && blank($row->tax_number)) {
+                    $row->forceFill(['tax_number' => '774-128-949'])->save();
+                }
+            } catch (\Throwable) {
+                // ignore until migration is applied
             }
 
             return $row;
         }
 
-        return static::create([
+        $payload = [
             'academy_name' => config('app.name', 'Mindlytics Academy'),
             'academy_tagline' => 'أكاديمية البرمجة',
-            'tax_number' => '774-128-949',
             'signature_name' => 'المدير العام',
             'signature_title' => 'Mindlytics Academy',
             'seal_label' => 'CERTIFICATION',
             'seal_since' => '2020',
-            'stamp_enabled' => true,
             'default_template' => 'emerald-classic',
-        ]);
+        ];
+
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('certificate_brandings', 'tax_number')) {
+                $payload['tax_number'] = '774-128-949';
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('certificate_brandings', 'stamp_enabled')) {
+                $payload['stamp_enabled'] = true;
+            }
+        } catch (\Throwable) {
+            // ignore
+        }
+
+        return static::create($payload);
     }
 
     public function logoUrl(): ?string
