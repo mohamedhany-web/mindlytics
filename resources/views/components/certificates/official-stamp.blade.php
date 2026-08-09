@@ -1,57 +1,69 @@
-{{-- ختم إلكتروني بطابع حبر رسمي — اسم الأكاديمية + الرقم الضريبي --}}
+{{-- ختم إلكتروني بطابع حبر أزرق — على نمط ختم الشركات الدائري --}}
 @php
     $branding = $branding ?? \App\Models\CertificateBranding::current();
-    $academyName = $stampAcademyName ?? ($branding->academy_name ?: 'Mindlytics Academy');
+    $academyEn = $stampAcademyNameEn
+        ?? (filled($branding->academy_name) ? $branding->academy_name : 'Mindlytics Academy');
+    $academyAr = $stampAcademyNameAr
+        ?? (filled($branding->academy_tagline) && preg_match('/\p{Arabic}/u', (string) $branding->academy_tagline)
+            ? $branding->academy_tagline
+            : 'أكاديمية مايندليتكس');
     $taxNumber = $stampTaxNumber ?? ($branding->tax_number ?: '774-128-949');
-    $stampId = 'ink-stamp-'.($templateDomId ?? 'cert').'-'.substr(md5($academyName.$taxNumber.uniqid('', true)), 0, 8);
+    $location = $stampLocation ?? 'Cairo - Egypt';
+    $stampId = 'seal-'.($templateDomId ?? 'cert').'-'.substr(md5($academyEn.$taxNumber), 0, 8);
     $showStamp = ($branding->stamp_enabled ?? true) !== false;
+    $ink = '#1a4f9c';
 @endphp
 @if($showStamp)
 <div class="official-ink-stamp" aria-label="Official academy stamp">
   @if($branding->stampUrl())
     <img src="{{ $branding->stampUrl() }}" alt="ختم الأكاديمية" class="official-ink-stamp__img">
   @else
-    <svg class="official-ink-stamp__svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img">
+    <svg class="official-ink-stamp__svg" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg" role="img">
       <defs>
-        <filter id="{{ $stampId }}-ink" x="-20%" y="-20%" width="140%" height="140%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="noise" seed="7"/>
-          <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.4" xChannelSelector="R" yChannelSelector="G"/>
-        </filter>
+        <path id="{{ $stampId }}-top" d="M 38,110 A 72,72 0 0 1 182,110" fill="none"/>
+        <path id="{{ $stampId }}-bottom" d="M 182,118 A 72,72 0 0 1 38,118" fill="none"/>
       </defs>
-      <g filter="url(#{{ $stampId }}-ink)" fill="none" stroke="#9b1c1c" stroke-opacity="0.88">
-        <circle cx="100" cy="100" r="92" stroke-width="3.2"/>
-        <circle cx="100" cy="100" r="84" stroke-width="1.4"/>
-        <circle cx="100" cy="100" r="52" stroke-width="2"/>
-        <circle cx="100" cy="100" r="46" stroke-width="1"/>
+
+      {{-- حلقات الختم --}}
+      <circle cx="110" cy="110" r="104" fill="none" stroke="{{ $ink }}" stroke-width="2.4"/>
+      <circle cx="110" cy="110" r="98" fill="none" stroke="{{ $ink }}" stroke-width="1.5"/>
+      <circle cx="110" cy="110" r="62" fill="none" stroke="{{ $ink }}" stroke-width="1.6"/>
+
+      {{-- نجوم فاصلة يمين ويسار --}}
+      <g fill="{{ $ink }}">
+        <path transform="translate(18,110) scale(0.55) translate(-12,-12)"
+              d="M12 2.2l2.9 6.1 6.7.7-5 4.6 1.4 6.6L12 16.8 6 20.2l1.4-6.6-5-4.6 6.7-.7z"/>
+        <path transform="translate(202,110) scale(0.55) translate(-12,-12)"
+              d="M12 2.2l2.9 6.1 6.7.7-5 4.6 1.4 6.6L12 16.8 6 20.2l1.4-6.6-5-4.6 6.7-.7z"/>
       </g>
-      <defs>
-        <path id="{{ $stampId }}-top" d="M 28 100 A 72 72 0 0 1 172 100"/>
-        <path id="{{ $stampId }}-bottom" d="M 168 108 A 68 68 0 0 1 32 108"/>
-      </defs>
-      <text fill="#9b1c1c" fill-opacity="0.9" font-family="Georgia, 'Times New Roman', serif" font-size="13" font-weight="700" letter-spacing="1.5">
-        <textPath href="#{{ $stampId }}-top" startOffset="50%" text-anchor="middle">{{ strtoupper($academyName) }}</textPath>
+
+      {{-- الاسم العربي أعلى القوس --}}
+      <text fill="{{ $ink }}" font-family="Tahoma, 'Segoe UI', Arial, sans-serif" font-size="13.5" font-weight="700" letter-spacing="0.5">
+        <textPath href="#{{ $stampId }}-top" startOffset="50%" text-anchor="middle">{{ $academyAr }}</textPath>
       </text>
-      <text fill="#9b1c1c" fill-opacity="0.88" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11" font-weight="700" letter-spacing="0.5">
-        <textPath href="#{{ $stampId }}-bottom" startOffset="50%" text-anchor="middle">TAX {{ $taxNumber }}</textPath>
+
+      {{-- الاسم الإنجليزي أسفل القوس --}}
+      <text fill="{{ $ink }}" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" letter-spacing="0.8">
+        <textPath href="#{{ $stampId }}-bottom" startOffset="50%" text-anchor="middle">{{ $academyEn }}</textPath>
       </text>
-      <text x="100" y="92" text-anchor="middle" fill="#9b1c1c" fill-opacity="0.92"
-            font-family="Georgia, serif" font-size="11" font-weight="700" letter-spacing="2">OFFICIAL</text>
-      <text x="100" y="110" text-anchor="middle" fill="#9b1c1c" fill-opacity="0.92"
-            font-family="Georgia, serif" font-size="10" font-weight="700" letter-spacing="1.5">SEAL</text>
-      <text x="100" y="128" text-anchor="middle" fill="#9b1c1c" fill-opacity="0.85"
-            font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" font-weight="700">{{ $taxNumber }}</text>
+
+      {{-- المركز: الرقم الضريبي والموقع --}}
+      <text x="110" y="102" text-anchor="middle" fill="{{ $ink }}"
+            font-family="Arial, Helvetica, sans-serif" font-size="11.5" font-weight="700">Tax No.: {{ $taxNumber }}</text>
+      <text x="110" y="124" text-anchor="middle" fill="{{ $ink }}"
+            font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700">{{ $location }}</text>
     </svg>
   @endif
 </div>
 <style>
 .official-ink-stamp{
-  width:90px;height:90px;position:relative;
-  filter:drop-shadow(0 2px 2px rgba(120,20,20,.18));
-  transform:rotate(-8deg);
+  width:96px;height:96px;position:relative;
+  transform:rotate(-6deg);
 }
 .official-ink-stamp__svg,.official-ink-stamp__img{
   width:100%;height:100%;display:block;object-fit:contain;
   mix-blend-mode:multiply;
+  opacity:.92;
 }
 </style>
 @endif
