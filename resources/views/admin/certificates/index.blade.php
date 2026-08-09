@@ -26,7 +26,7 @@
         </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden" x-data="{ activeTab: 'list' }">
+    <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden" x-data="{ activeTab: @js(request('tab', 'list')) }">
         <div class="border-b border-gray-200 flex">
             <button type="button" @click="activeTab = 'list'"
                     :class="activeTab === 'list' ? 'border-b-2 border-sky-600 text-sky-700 font-semibold' : 'text-gray-600 hover:text-gray-900'"
@@ -42,7 +42,7 @@
             </button>
         </div>
 
-        <div x-show="activeTab === 'list'" x-cloak class="p-6">
+        <div x-show="activeTab === 'list'" class="p-6">
             @if(isset($stats))
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div class="rounded-xl p-5 border border-sky-100 bg-sky-50">
@@ -129,11 +129,12 @@
             @endif
         </div>
 
-        <div x-show="activeTab === 'templates'" x-cloak class="p-6">
+        <div x-show="activeTab === 'templates'" class="p-6" x-cloak>
+            @php $designCatalog = \App\Services\CertificateIssueService::designCatalog(); @endphp
             <div class="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                    <h2 class="text-xl font-bold text-gray-900 mb-1">تصاميم الشهادات ({{ count($templates) }})</h2>
-                    <p class="text-sm text-gray-600">معاينة خفيفة — الضغط يفتح التصميم كامل في نافذة منفصلة بدون تخريب الصفحة.</p>
+                    <h2 class="text-xl font-bold text-gray-900 mb-1">تصاميم الشهادات ({{ count($designCatalog) }})</h2>
+                    <p class="text-sm text-gray-600">10 تصاميم جاهزة — المعاينة بالألوان، والزر يفتح الشهادة كاملة.</p>
                 </div>
                 <a href="{{ route('admin.certificates.branding') }}"
                    class="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-sm">
@@ -142,40 +143,35 @@
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                @foreach($templates as $key => $tpl)
+                @foreach($designCatalog as $key => $design)
                     @php
-                        $isDesign = isset(\App\Services\CertificateIssueService::designCatalog()[$key]);
-                        $previewUrl = $isDesign
-                            ? route('admin.certificates.design-preview', $key)
-                            : null;
+                        $staticPreview = asset('certification/'.($design['file'] ?? ''));
+                        $livePreview = route('admin.certificates.design-preview', $key);
                     @endphp
-                    <div class="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
-                        <div class="h-44 bg-slate-900 relative overflow-hidden">
-                            @if($previewUrl)
-                                <iframe src="{{ $previewUrl }}"
-                                        class="pointer-events-none absolute inset-0 w-[1122px] h-[793px] origin-top-left border-0"
-                                        style="transform: scale(0.28);"
-                                        loading="lazy"
-                                        tabindex="-1"></iframe>
-                            @else
-                                <div class="absolute inset-0 flex items-center justify-center text-slate-300 text-sm font-semibold px-4 text-center">
-                                    {{ $tpl['name'] }}
-                                </div>
-                            @endif
+                    <div class="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                        <div class="h-40 relative overflow-hidden" style="background: {{ $design['swatch'] ?? '#0f172a' }};">
+                            <iframe src="{{ $staticPreview }}"
+                                    class="pointer-events-none absolute inset-0 w-[1122px] h-[793px] origin-top-left border-0 opacity-95"
+                                    style="transform: scale(0.30);"
+                                    loading="lazy"
+                                    tabindex="-1"></iframe>
+                            <div class="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/50 to-transparent pointer-events-none"></div>
+                            <span class="absolute top-2 start-2 rounded-lg bg-white/90 text-slate-800 text-[10px] font-black px-2 py-1">
+                                {{ str_pad((string) (array_search($key, array_keys($designCatalog), true) + 1), 2, '0', STR_PAD_LEFT) }}
+                            </span>
                         </div>
                         <div class="p-4">
-                            <p class="font-bold text-gray-900">{{ $tpl['name'] }}</p>
-                            <p class="text-xs text-gray-500 mt-1 line-clamp-2">{{ $tpl['description'] ?? '' }}</p>
-                            <div class="mt-3 flex gap-2">
-                                @if($previewUrl)
-                                    <a href="{{ $previewUrl }}" target="_blank"
-                                       class="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold px-3 py-2 hover:bg-slate-800">
-                                        <i class="fas fa-expand"></i> معاينة كاملة
-                                    </a>
-                                @endif
-                                <span class="inline-flex items-center rounded-lg bg-emerald-50 text-emerald-800 text-xs font-bold px-2.5 py-2">
-                                    {{ $key }}
-                                </span>
+                            <p class="font-bold text-gray-900">{{ $design['name'] }}</p>
+                            <p class="text-xs text-gray-500 mt-1">{{ $design['description'] }}</p>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <a href="{{ $livePreview }}" target="_blank" rel="noopener"
+                                   class="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold px-3 py-2 hover:bg-slate-800">
+                                    <i class="fas fa-expand"></i> معاينة بالنظام
+                                </a>
+                                <a href="{{ $staticPreview }}" target="_blank" rel="noopener"
+                                   class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 text-emerald-800 text-xs font-bold px-3 py-2 hover:bg-emerald-100">
+                                    التصميم الأصلي
+                                </a>
                             </div>
                         </div>
                     </div>

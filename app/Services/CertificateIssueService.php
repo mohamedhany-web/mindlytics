@@ -24,6 +24,8 @@ class CertificateIssueService
                 'name' => 'Emerald Classic',
                 'description' => 'أخضر زمردي مع شريط ذهبي كلاسيكي',
                 'preview' => asset('certification/01-emerald-classic.html'),
+                'file' => '01-emerald-classic.html',
+                'swatch' => 'linear-gradient(135deg,#0b6d4e,#075a41)',
                 'rtl' => false,
             ],
             'navy-deco' => [
@@ -31,6 +33,8 @@ class CertificateIssueService
                 'name' => 'Royal Navy Deco',
                 'description' => 'كحلي آرت ديكو فاخر',
                 'preview' => asset('certification/02-navy-deco.html'),
+                'file' => '02-navy-deco.html',
+                'swatch' => 'linear-gradient(135deg,#0b1d3a,#1a365d)',
                 'rtl' => false,
             ],
             'burgundy-academy' => [
@@ -38,6 +42,8 @@ class CertificateIssueService
                 'name' => 'Burgundy Academy',
                 'description' => 'أكاديمي بورجوندي تقليدي',
                 'preview' => asset('certification/03-burgundy-academy.html'),
+                'file' => '03-burgundy-academy.html',
+                'swatch' => 'linear-gradient(135deg,#5c0a1f,#8b1e3f)',
                 'rtl' => false,
             ],
             'ivory-minimal' => [
@@ -45,6 +51,8 @@ class CertificateIssueService
                 'name' => 'Ivory Minimal',
                 'description' => 'بسيط وأنيق على خلفية عاجية',
                 'preview' => asset('certification/04-ivory-minimal.html'),
+                'file' => '04-ivory-minimal.html',
+                'swatch' => 'linear-gradient(135deg,#f5f0e6,#e8dfd0)',
                 'rtl' => false,
             ],
             'midnight-champagne' => [
@@ -52,6 +60,8 @@ class CertificateIssueService
                 'name' => 'Midnight Champagne',
                 'description' => 'داكن مع لمسات شامبانيا',
                 'preview' => asset('certification/05-midnight-champagne.html'),
+                'file' => '05-midnight-champagne.html',
+                'swatch' => 'linear-gradient(135deg,#1a1a1a,#3d3426)',
                 'rtl' => false,
             ],
             'tech-gradient' => [
@@ -59,6 +69,8 @@ class CertificateIssueService
                 'name' => 'Tech Gradient',
                 'description' => 'تقني بألوان سيان–بنفسجي',
                 'preview' => asset('certification/06-tech-gradient.html'),
+                'file' => '06-tech-gradient.html',
+                'swatch' => 'linear-gradient(135deg,#06b6d4,#7c3aed)',
                 'rtl' => false,
             ],
             'platinum-noir' => [
@@ -66,6 +78,8 @@ class CertificateIssueService
                 'name' => 'Platinum Noir',
                 'description' => 'أسود وفضي فاخر',
                 'preview' => asset('certification/07-platinum-noir.html'),
+                'file' => '07-platinum-noir.html',
+                'swatch' => 'linear-gradient(135deg,#0a0a0a,#525252)',
                 'rtl' => false,
             ],
             'imperial-purple' => [
@@ -73,6 +87,8 @@ class CertificateIssueService
                 'name' => 'Imperial Purple',
                 'description' => 'بنفسجي إمبراطوري مزخرف',
                 'preview' => asset('certification/08-imperial-purple.html'),
+                'file' => '08-imperial-purple.html',
+                'swatch' => 'linear-gradient(135deg,#4c1d95,#7e22ce)',
                 'rtl' => false,
             ],
             'cairo-gold-arabic' => [
@@ -80,6 +96,8 @@ class CertificateIssueService
                 'name' => 'Cairo Gold — عربي',
                 'description' => 'تصميم عربي RTL بذهبي',
                 'preview' => asset('certification/09-cairo-gold-arabic.html'),
+                'file' => '09-cairo-gold-arabic.html',
+                'swatch' => 'linear-gradient(135deg,#8a6a1a,#d4af37)',
                 'rtl' => true,
             ],
             'mindlytics-modern' => [
@@ -87,6 +105,8 @@ class CertificateIssueService
                 'name' => 'Mindlytics Modern',
                 'description' => 'حديث بهوية Mindlytics',
                 'preview' => asset('certification/10-mindlytics-modern.html'),
+                'file' => '10-mindlytics-modern.html',
+                'swatch' => 'linear-gradient(135deg,#059669,#10b981)',
                 'rtl' => false,
             ],
         ];
