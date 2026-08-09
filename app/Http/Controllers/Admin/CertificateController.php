@@ -180,63 +180,114 @@ class CertificateController extends Controller
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'course_id' => 'required|exists:advanced_courses,id',
-            'title' => 'required|string',
-            'description' => 'nullable|string',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string|max:5000',
             'issued_at' => 'nullable|date',
             'status' => 'required|in:pending,issued,revoked',
-            'template' => 'nullable|in:' . implode(',', array_keys(Certificate::availableTemplates())),
+            'template' => 'nullable|in:'.implode(',', array_keys(Certificate::availableTemplates())),
+        ], [
+            'user_id.required' => 'يجب اختيار الطالب (ابحث بالإيميل ثم اختر من القائمة).',
+            'course_id.required' => 'يجب اختيار الكورس.',
         ]);
 
-        $branding = CertificateBranding::current();
-        $template = $validated['template'] ?? $branding->default_template ?? 'emerald-classic';
-        if (! array_key_exists($template, Certificate::availableTemplates())) {
-            $template = 'emerald-classic';
+        try {
+            $branding = CertificateBranding::current();
+            $template = $validated['template'] ?? $branding->default_template ?? 'emerald-classic';
+            if (! array_key_exists($template, Certificate::availableTemplates())) {
+                $template = 'emerald-classic';
+            }
+
+            $course = AdvancedCourse::with('instructor')->findOrFail($validated['course_id']);
+            $student = User::findOrFail($validated['user_id']);
+            $serial = Certificate::generateSerialNumber();
+            $issuedAt = $validated['issued_at'] ?? now()->toDateString();
+
+            $payload = [
+                'certificate_number' => $this->uniqueCertificateNumber(),
+                'user_id' => $student->id,
+                'course_id' => $course->id,
+                'course_name' => $course->title,
+                'certificate_type' => 'completion',
+                'title' => $validated['title'] ?: ('شهادة إتمام — '.$course->title),
+                'description' => $validated['description'] ?? null,
+                'issue_date' => $issuedAt,
+                'verification_code' => $this->uniqueVerificationCode(),
+                'status' => $validated['status'] ?? 'pending',
+                'is_verified' => ($validated['status'] ?? '') === 'issued',
+                'template' => $template,
+                'metadata' => [
+                    'issued_via' => 'admin',
+                    'display_name' => $student->name,
+                    'tax_number' => $branding->tax_number ?: '774-128-949',
+                    'academy_name' => $branding->academy_name,
+                ],
+            ];
+
+            // Fill optional columns only when present in DB (older productions may miss some).
+            $optional = [
+                'serial_number' => $serial,
+                'issued_at' => $issuedAt,
+                'academy_signature' => $branding->signature_path,
+                'academy_signature_name' => $serial,
+                'academy_signature_title' => 'Serial Number',
+                'logo_path' => $branding->logo_path,
+                'stamp_path' => $branding->stamp_path,
+                'instructor_id' => $course->instructor_id,
+                'instructor_signature_name' => $course->instructor?->name ?? ($branding->signature_name ?: 'Instructor'),
+                'instructor_signature_title' => 'Instructor',
+            ];
+
+            foreach ($optional as $column => $value) {
+                if (\Illuminate\Support\Facades\Schema::hasColumn('certificates', $column)) {
+                    $payload[$column] = $value;
+                }
+            }
+
+            $certificate = Certificate::create($payload);
+
+            if (($validated['status'] ?? '') === 'issued') {
+                $updates = [];
+                if (\Illuminate\Support\Facades\Schema::hasColumn('certificates', 'certificate_hash')) {
+                    $updates['certificate_hash'] = $certificate->generateHash();
+                }
+                if (\Illuminate\Support\Facades\Schema::hasColumn('certificates', 'verification_url')) {
+                    $updates['verification_url'] = route('public.certificates.verify', ['code' => $serial]);
+                }
+                if (\Illuminate\Support\Facades\Schema::hasColumn('certificates', 'certified_at')) {
+                    $updates['certified_at'] = now();
+                }
+                if ($updates !== []) {
+                    $certificate->forceFill($updates)->save();
+                }
+            }
+
+            return redirect()->route('admin.certificates.show', $certificate)
+                ->with('success', 'تم إنشاء الشهادة بنجاح — السيريال: '.($certificate->serial_number ?? $certificate->certificate_number));
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()
+                ->withInput()
+                ->with('error', 'فشل إصدار الشهادة: '.$e->getMessage());
         }
+    }
 
-        $course = AdvancedCourse::with('instructor')->findOrFail($validated['course_id']);
-        $student = User::findOrFail($validated['user_id']);
-        $serial = Certificate::generateSerialNumber();
+    private function uniqueCertificateNumber(): string
+    {
+        do {
+            $number = 'CERT-'.strtoupper(\Illuminate\Support\Str::random(8));
+        } while (Certificate::where('certificate_number', $number)->exists());
 
-        $certificate = Certificate::create([
-            'certificate_number' => 'CERT-' . str_pad((int) Certificate::max('id') + 1, 8, '0', STR_PAD_LEFT),
-            'serial_number' => $serial,
-            'user_id' => $student->id,
-            'course_id' => $course->id,
-            'course_name' => $course->title,
-            'certificate_type' => 'completion',
-            'title' => $validated['title'] ?: ('شهادة إتمام — '.$course->title),
-            'description' => $validated['description'] ?? null,
-            'issue_date' => $validated['issued_at'] ?? now(),
-            'issued_at' => $validated['issued_at'] ?? now(),
-            'verification_code' => strtoupper(uniqid('CERT')),
-            'status' => $validated['status'] ?? 'pending',
-            'is_verified' => ($validated['status'] ?? '') === 'issued',
-            'template' => $template,
-            'academy_signature' => $branding->signature_path,
-            'academy_signature_name' => $serial,
-            'academy_signature_title' => 'Serial Number',
-            'logo_path' => $branding->logo_path,
-            'stamp_path' => $branding->stamp_path,
-            'instructor_id' => $course->instructor_id,
-            'instructor_signature_name' => $course->instructor?->name ?? ($branding->signature_name ?: 'Instructor'),
-            'instructor_signature_title' => 'Instructor',
-            'metadata' => [
-                'issued_via' => 'admin',
-                'display_name' => $student->name,
-                'tax_number' => $branding->tax_number ?: '774-128-949',
-                'academy_name' => $branding->academy_name,
-            ],
-        ]);
+        return $number;
+    }
 
-        if (($validated['status'] ?? '') === 'issued') {
-            $certificate->certificate_hash = $certificate->generateHash();
-            $certificate->verification_url = route('public.certificates.verify.code', ['code' => $serial]);
-            $certificate->certified_at = now();
-            $certificate->save();
-        }
+    private function uniqueVerificationCode(): string
+    {
+        do {
+            $code = strtoupper(\Illuminate\Support\Str::random(12));
+        } while (Certificate::where('verification_code', $code)->exists());
 
-        return redirect()->route('admin.certificates.show', $certificate)
-            ->with('success', 'تم إنشاء الشهادة بنجاح — السيريال: ' . $certificate->serial_number);
+        return $code;
     }
 
     public function show(Certificate $certificate)

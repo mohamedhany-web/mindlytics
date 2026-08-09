@@ -13,6 +13,19 @@
         <h1 class="text-2xl font-bold text-gray-900 mb-2">إصدار شهادة من النظام</h1>
         <p class="text-sm text-slate-500 mb-6">ابحث بالإيميل أو الاسم، اختَر الكورس — باقي البيانات والسيريال والختم يتملّوا تلقائيًا.</p>
 
+        @if(session('error'))
+            <div class="mb-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm">{{ session('error') }}</div>
+        @endif
+        @if($errors->any())
+            <div class="mb-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm">
+                <ul class="list-disc pe-5 space-y-1">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         <form action="{{ route('admin.certificates.store') }}" method="POST" class="space-y-6">
             @csrf
             <input type="hidden" name="user_id" :value="userId" required>
