@@ -93,7 +93,7 @@
             <dl class="space-y-2 text-sm">
                 <div class="flex justify-between"><dt class="text-gray-500">Leads جديدة</dt><dd class="font-bold">{{ $d['new_leads'] }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500">مكالمات</dt><dd class="font-bold">{{ $d['calls'] }}</dd></div>
-                <div class="flex justify-between"><dt class="text-gray-500">اجتماعات / ديمو</dt><dd class="font-bold">{{ $d['meetings'] }}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500">اجتماعات (غير محاسب)</dt><dd class="font-bold">{{ $d['meetings'] }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500">متابعات</dt><dd class="font-bold">{{ $d['followups'] }}</dd></div>
             </dl>
             @if(!empty($d['scores']))

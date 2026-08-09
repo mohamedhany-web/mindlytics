@@ -230,6 +230,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('sales:remind-daily-report')->everyFifteenMinutes();
         $schedule->command('sales:evaluate-enforcement')->dailyAt('09:30');
         $schedule->command('sales:apply-daily-report-penalties')->dailyAt('01:30');
+        $schedule->command('sales:apply-daily-kpi-penalties')->dailyAt('01:45');
         $schedule->command('sales:enforce-import-contact')->dailyAt('10:00');
         $schedule->command('employees:remind-daily-report')->dailyAt('16:30');
         $schedule->command('employees:apply-daily-report-penalties')->dailyAt('02:00');

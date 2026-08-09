@@ -77,7 +77,13 @@ class SalesDailyResultService
         foreach ($labels as $key => $label) {
             $actual = (int) ($metrics[$key] ?? 0);
             $target = max(0.0, (float) ($targets[$key] ?? 0));
-            $pct = $target > 0 ? min(100.0, round($actual / $target * 100, 1)) : ($actual > 0 ? 100.0 : 0.0);
+
+            // هدف 0 = غير مطلوب (مثل الاجتماعات) — لا يدخل التقييم ولا الخصم
+            if ($target <= 0) {
+                continue;
+            }
+
+            $pct = min(100.0, round($actual / $target * 100, 1));
             $status = $pct >= 100 ? 'met' : ($pct >= 70 ? 'near' : 'behind');
             $lines[] = [
                 'key' => $key,

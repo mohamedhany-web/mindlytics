@@ -88,7 +88,8 @@
         {{-- KPI sidebar --}}
         <aside class="xl:col-span-3 space-y-4 xl:sticky xl:top-4">
             <div class="dr-panel p-4">
-                <h3 class="font-bold text-slate-900 text-sm mb-2"><i class="fas fa-bullseye ml-1"></i> مقارنة KPI اليوم</h3>
+                <h3 class="font-bold text-slate-900 text-sm mb-2"><i class="fas fa-bullseye ml-1"></i> KPI اليوم من CRM</h3>
+                <p class="text-[11px] text-slate-500 mb-2">أرقام موثّقة من النشاط المرتبط بعميل — بدون اجتماعات للمحاسبة</p>
                 <p class="text-2xl font-black {{ $kpiClass }}">{{ $kpi['overall_pct'] ?? 0 }}%</p>
                 <p class="text-xs font-semibold {{ $kpiClass }} mt-1">{{ $kpi['status_label'] ?? '' }}</p>
                 <ul class="mt-4 space-y-2 text-xs">
@@ -100,25 +101,8 @@
                         </li>
                     @endforeach
                 </ul>
+                <a href="{{ route('employee.sales.penalties.index') }}" class="mt-3 inline-flex text-[11px] font-bold text-rose-700 hover:underline">خصومات KPI والتقرير ←</a>
             </div>
-
-            @php $sos = $dailyResults ?? null; @endphp
-            @if($sos)
-            <div class="dr-panel p-4">
-                <h3 class="font-bold text-slate-900 text-sm mb-1"><i class="fas fa-chart-line ml-1"></i> نتائج اليوم مقابل الهدف</h3>
-                <p class="text-[11px] text-slate-500 mb-2">قراءة فقط من CRM (مكالمات بنتائج + مراحل)</p>
-                <p class="text-xl font-black {{ match($sos['status'] ?? '') { 'met' => 'kpi-met', 'near' => 'kpi-near', default => 'kpi-behind' } }}">{{ $sos['overall_pct'] ?? 0 }}%</p>
-                <ul class="mt-3 space-y-2 text-xs">
-                    @foreach($sos['lines'] ?? [] as $line)
-                        @php $lc = match($line['status']){ 'met'=>'text-emerald-700','near'=>'text-amber-700',default=>'text-rose-700' }; @endphp
-                        <li class="flex justify-between gap-2 border-b border-slate-100 pb-1">
-                            <span class="text-slate-600">{{ $line['label'] }}</span>
-                            <span class="font-bold {{ $lc }}">{{ $line['actual'] }}/{{ (int) $line['target'] }}</span>
-                        </li>
-                    @endforeach
-                </ul>
-            </div>
-            @endif
 
             <div class="dr-panel p-4 text-xs text-slate-700 space-y-2">
                 <p class="font-bold text-slate-900">ما يُحسب تلقائياً</p>

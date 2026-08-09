@@ -265,22 +265,28 @@ class SalesDailyReportService
      */
     public function buildFromActivities(User $user, Carbon $date): array
     {
-        $activities = $this->activitiesForUserOnDate($user, $date)->sortBy('created_at')->values();
+        // نشاط موثّق فقط (مربوط بعميل) — نفس قاعدة SOS/KPI
+        $activities = $this->activitiesForUserOnDate($user, $date)
+            ->filter(fn (SalesActivity $a) => filled($a->sales_lead_id))
+            ->sortBy('created_at')
+            ->values();
 
-        $calls = $activities->where('type', 'call');
-        $meetings = $activities->where('type', 'meeting');
+        $sos = app(SalesDailyResultService::class)->metricsFor(
+            (int) $user->id,
+            $date->copy()->startOfDay(),
+            $date->copy()->endOfDay()
+        );
+
         $followUps = $activities->where('type', 'follow_up');
         $messages = $activities->whereIn('type', ['whatsapp', 'email']);
 
         $stageChanges = $activities->where('type', 'stage_change');
-        $qualified = $stageChanges
-            ->filter(fn (SalesActivity $a) => in_array($a->meta['to'] ?? null, ['qualification', 'qualified'], true))
-            ->unique('sales_lead_id')
-            ->count();
-        $bookings = $stageChanges
-            ->filter(fn (SalesActivity $a) => in_array($a->meta['to'] ?? null, ['enrollment_completed', 'payment_received', 'offer_sent', 'won', 'proposal'], true))
-            ->unique('sales_lead_id')
-            ->count();
+        $qualified = (int) ($sos['qualified_conversations_daily'] ?? 0);
+        $bookings = (int) ($sos['paid_enrollments_daily'] ?? 0)
+            + $stageChanges
+                ->filter(fn (SalesActivity $a) => in_array($a->meta['to'] ?? null, ['offer_sent', 'proposal'], true))
+                ->unique('sales_lead_id')
+                ->count();
 
         $touchTypes = ['call', 'meeting', 'follow_up', 'whatsapp', 'email', 'note', 'other'];
         $touchedLeadIds = $activities
@@ -301,21 +307,16 @@ class SalesDailyReportService
             $numbersWorked = $touchedLeadIds->count();
         }
 
-        // موحّد مع SalesDailyResultService / SalesActivity::ANSWERED_OUTCOMES
-        $callsAnswered = $activities
-            ->where('type', 'call')
-            ->filter(fn (SalesActivity $a) => $a->sales_lead_id && $a->isAnsweredCall())
-            ->count();
-
         $metrics = [
             'messages_replied' => $messages->count(),
             'leads_qualified' => $qualified,
             'bookings_from_leads' => $bookings,
             'numbers_worked' => $numbersWorked,
             'followups_done' => $followUps->count(),
-            'calls_made' => $calls->count(),
-            'meetings_held' => $meetings->count(),
-            'calls_answered' => $callsAnswered,
+            // موحّد مع SOS
+            'calls_made' => (int) ($sos['call_attempts_daily'] ?? 0),
+            'meetings_held' => (int) ($sos['discovery_sessions_daily'] ?? 0),
+            'calls_answered' => (int) ($sos['calls_answered_daily'] ?? 0),
         ];
 
         $contacts = $this->buildContactRowsFromActivities($activities);
@@ -326,6 +327,7 @@ class SalesDailyReportService
             'activity_notes' => $this->buildActivityNotesTimeline($activities),
             'productivity_notes' => $this->buildProductivityNotes($metrics, $activities),
             'activity_count' => $activities->count(),
+            'sos_metrics' => $sos,
         ];
     }
 
@@ -521,50 +523,22 @@ class SalesDailyReportService
      */
     public function kpiComparisonForReport(User $user, array|SalesDailyReport $report, Carbon $date): array
     {
-        $metrics = $report instanceof SalesDailyReport
-            ? [
-                'calls_made' => (int) ($report->calls_made ?? 0),
-                'meetings_held' => (int) ($report->meetings_held ?? 0),
-                'followups_done' => (int) ($report->followups_done ?? 0),
-                'numbers_worked' => (int) ($report->numbers_worked ?? 0),
-                'leads_qualified' => (int) ($report->leads_qualified ?? 0),
-                'bookings_from_leads' => (int) ($report->bookings_from_leads ?? 0),
-            ]
-            : $report;
-
-        $targets = app(SalesKpiService::class)->mergedTargets($user, $date->copy()->startOfMonth());
-
-        $map = [
-            ['key' => 'calls', 'label' => 'مكالمات', 'actual' => $metrics['calls_made'] ?? 0, 'target' => (int) ($targets['calls_daily'] ?? 0)],
-            ['key' => 'meetings', 'label' => 'اجتماعات', 'actual' => $metrics['meetings_held'] ?? 0, 'target' => (int) ($targets['meetings_daily'] ?? 0)],
-            ['key' => 'followups', 'label' => 'متابعات', 'actual' => $metrics['followups_done'] ?? 0, 'target' => (int) ($targets['followups_daily'] ?? 0)],
-            ['key' => 'leads', 'label' => 'تأهيل/Leads', 'actual' => $metrics['leads_qualified'] ?? 0, 'target' => max(1, (int) round(((float) ($targets['leads_daily'] ?? 20)) / 10))],
-        ];
-
-        $lines = [];
-        $pcts = [];
-        foreach ($map as $row) {
-            $target = max(0, $row['target']);
-            $actual = max(0, (int) $row['actual']);
-            $pct = $target > 0 ? min(100.0, round($actual / $target * 100, 1)) : ($actual > 0 ? 100.0 : 0.0);
-            $status = $pct >= 100 ? 'met' : ($pct >= 70 ? 'near' : 'behind');
-            $lines[] = array_merge($row, ['pct' => $pct, 'status' => $status]);
-            $pcts[] = $pct;
-        }
-
-        $overall = count($pcts) ? round(array_sum($pcts) / count($pcts), 1) : 0.0;
-        $status = $overall >= 100 ? 'met' : ($overall >= 70 ? 'near' : 'behind');
-        $statusLabel = match ($status) {
-            'met' => 'تحقيق الأهداف — ممتاز',
-            'near' => 'قريب من الهدف — يحتاج دفعة',
-            default => 'أقل من الهدف — يحتاج متابعة',
-        };
+        // مصدر الحقيقة: CRM SOS (موثّق) — مش الأرقام اليدوية وحدها
+        $sos = app(SalesDailyResultService::class)->comparisonFor($user, $date);
 
         return [
-            'status' => $status,
-            'status_label' => $statusLabel,
-            'overall_pct' => $overall,
-            'lines' => $lines,
+            'status' => $sos['status'],
+            'status_label' => $sos['status_label'],
+            'overall_pct' => $sos['overall_pct'],
+            'lines' => collect($sos['lines'])->map(fn ($line) => [
+                'key' => $line['key'],
+                'label' => $line['label'],
+                'actual' => $line['actual'],
+                'target' => (int) $line['target'],
+                'pct' => $line['pct'],
+                'status' => $line['status'],
+            ])->values()->all(),
+            'source' => 'crm_sos',
         ];
     }
 

@@ -382,14 +382,18 @@ class SalesKpiService
      */
     private function scoreDay(array $m, array $t): array
     {
-        return [
-            'scores' => [
-                'leads' => round($this->achievementUp((float) $m['new_leads'], (float) $t['leads_daily']), 1),
-                'calls' => round($this->achievementUp((float) $m['calls'], (float) $t['calls_daily']), 1),
-                'meetings' => round($this->achievementUp((float) $m['meetings'], (float) $t['meetings_daily']), 1),
-                'followups' => round($this->achievementUp((float) $m['followups'], (float) $t['followups_daily']), 1),
-            ],
+        $scores = [
+            'leads' => round($this->achievementUp((float) $m['new_leads'], (float) $t['leads_daily']), 1),
+            'calls' => round($this->achievementUp((float) $m['calls'], (float) $t['calls_daily']), 1),
+            'followups' => round($this->achievementUp((float) $m['followups'], (float) $t['followups_daily']), 1),
         ];
+
+        // اجتماعات: فقط إن كان الهدف > 0
+        if ((float) ($t['meetings_daily'] ?? 0) > 0) {
+            $scores['meetings'] = round($this->achievementUp((float) $m['meetings'], (float) $t['meetings_daily']), 1);
+        }
+
+        return ['scores' => $scores];
     }
 
     /**
@@ -449,7 +453,7 @@ class SalesKpiService
             'won_deals' => ['label' => 'صفقات مغلقة (فوز)', 'actual' => $m['won_closed'], 'target' => round($dealsMonthlyTarget, 0)],
             'avg_deal' => ['label' => 'متوسط قيمة الصفقة', 'actual' => $m['avg_deal_size'], 'target' => null],
             'calls_month' => ['label' => 'مكالمات', 'actual' => $m['calls'], 'target' => round((float) $t['calls_daily'] * $activityDaysFactor, 0)],
-            'meetings_month' => ['label' => 'اجتماعات / ديمو', 'actual' => $m['meetings'], 'target' => round((float) $t['meetings_daily'] * $activityDaysFactor, 0)],
+            'meetings_month' => ['label' => 'اجتماعات / ديمو', 'actual' => $m['meetings'], 'target' => ((float) ($t['meetings_daily'] ?? 0) > 0) ? round((float) $t['meetings_daily'] * $activityDaysFactor, 0) : null],
             'followups_month' => ['label' => 'متابعات مسجّلة', 'actual' => $m['followups'], 'target' => round((float) $t['followups_daily'] * $activityDaysFactor, 0)],
             'conversion' => ['label' => 'نسبة التحويل %', 'actual' => $m['conversion_pct'], 'target' => $t['conversion_pct_target']],
             'response' => ['label' => 'متوسط أول رد (دقيقة)', 'actual' => $m['avg_response_minutes'], 'target' => $t['response_minutes_max']],
@@ -497,11 +501,14 @@ class SalesKpiService
                 : 50.0,
         ]);
 
-        $activity = $this->meanScores([
+        $activityParts = [
             $this->achievementUp((float) $m['calls'], max(1.0, (float) $t['calls_daily'] * $activityDaysFactor)),
-            $this->achievementUp((float) $m['meetings'], max(1.0, (float) $t['meetings_daily'] * $activityDaysFactor)),
             $this->achievementUp((float) $m['followups'], max(1.0, (float) $t['followups_daily'] * $activityDaysFactor)),
-        ]);
+        ];
+        if ((float) ($t['meetings_daily'] ?? 0) > 0) {
+            $activityParts[] = $this->achievementUp((float) $m['meetings'], max(1.0, (float) $t['meetings_daily'] * $activityDaysFactor));
+        }
+        $activity = $this->meanScores($activityParts);
 
         $qualityCore = $this->meanScores([
             $m['closing_ratio_pct'] !== null

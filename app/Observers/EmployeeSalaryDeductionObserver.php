@@ -23,6 +23,12 @@ class EmployeeSalaryDeductionObserver
             ->where('auto_deduction_id', $deduction->id)
             ->update(['penalty_waived_at' => $waivedAt]);
 
+        if (class_exists(\App\Models\SalesDailyKpiPenalty::class)) {
+            \App\Models\SalesDailyKpiPenalty::query()
+                ->where('deduction_id', $deduction->id)
+                ->update(['waived_at' => $waivedAt, 'deduction_id' => null]);
+        }
+
         $this->waiveDailyReportForAutoPenalty($deduction, $waivedAt);
     }
 

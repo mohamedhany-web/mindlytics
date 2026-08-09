@@ -107,6 +107,9 @@ class SalesDashboardController extends Controller
         $dailyResults = app(SalesDailyResultService::class)->comparisonFor($user);
         $dayBlock = app(SalesDayBlockService::class)->snapshot();
         $shiftBoard = app(\App\Services\SalesShiftScheduleService::class)->buildWeekBoard(null, null, $user->id);
+        $penalties = app(\App\Services\SalesDailyKpiPenaltyService::class);
+        $penaltiesHub = $penalties->employeeDeductionsHub($user, now()->startOfMonth(), now());
+        $kpiPenaltyThreshold = $penalties->thresholdPct();
 
         return view('employee.sales.dashboard', compact(
             'stats',
@@ -121,7 +124,9 @@ class SalesDashboardController extends Controller
             'kpiQuick',
             'dailyResults',
             'dayBlock',
-            'shiftBoard'
+            'shiftBoard',
+            'penaltiesHub',
+            'kpiPenaltyThreshold'
         ));
     }
 

@@ -158,12 +158,18 @@
                     {{ $dr['overall_pct'] ?? 0 }}%
                 </p>
                 <p class="text-xs font-semibold text-slate-600">{{ $dr['status_label'] ?? '' }}</p>
+                <p class="text-[11px] text-slate-500 mt-1">بدون اجتماعات · أقل من {{ number_format($kpiPenaltyThreshold ?? 70, 0) }}٪ على مؤشر = خصم تلقائي بعد نهاية اليوم</p>
             </div>
-            <a href="{{ route('employee.sales.daily-reports.edit') }}" class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 border border-slate-200 rounded-lg px-4 py-2 hover:bg-slate-50">
-                التقرير اليومي
-            </a>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('employee.sales.penalties.index') }}" class="inline-flex items-center gap-2 text-sm font-semibold text-rose-800 border border-rose-200 bg-rose-50 rounded-lg px-4 py-2 hover:bg-rose-100">
+                    خصوماتي @if(($penaltiesHub['count'] ?? 0) > 0)<span class="tabular-nums">({{ number_format($penaltiesHub['total_amount'] ?? 0, 0) }} ج.م)</span>@endif
+                </a>
+                <a href="{{ route('employee.sales.daily-reports.edit') }}" class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 border border-slate-200 rounded-lg px-4 py-2 hover:bg-slate-50">
+                    التقرير اليومي
+                </a>
+            </div>
         </div>
-        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
+        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2">
             @foreach($dr['lines'] ?? [] as $line)
                 @php
                     $lc = match($line['status'] ?? '') {

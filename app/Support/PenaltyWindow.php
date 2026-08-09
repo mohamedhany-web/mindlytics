@@ -19,12 +19,15 @@ class PenaltyWindow
 
     public const ATTENDANCE = 'attendance';
 
+    public const SALES_DAILY_KPI = 'sales_daily_kpi';
+
     public static function effectiveFrom(string $subsystem): ?Carbon
     {
         $raw = match ($subsystem) {
             self::SALES_DAILY_REPORT => SalesDailyReportSettings::all()['penalty_effective_from'] ?? null,
             self::EMPLOYEE_DAILY_REPORT => EmployeeDailyReportSettings::all()['penalty_effective_from'] ?? null,
             self::ATTENDANCE => EmployeeAttendanceSettings::all()['penalty_effective_from'] ?? null,
+            self::SALES_DAILY_KPI => config('sales_kpi.daily_kpi_penalty.penalty_effective_from'),
             default => null,
         };
 

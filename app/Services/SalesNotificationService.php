@@ -176,7 +176,7 @@ class SalesNotificationService
         $this->sendOnceToday(
             (int) $rep->id,
             $title,
-            route('employee.sales.daily-reports.index'),
+            route('employee.sales.penalties.index'),
             fn () => Notification::create([
                 'user_id' => $rep->id,
                 'sender_id' => null,
@@ -185,13 +185,44 @@ class SalesNotificationService
                 'type' => 'warning',
                 'priority' => 'high',
                 'audience' => 'employee',
-                'action_url' => route('employee.sales.daily-reports.index'),
-                'action_text' => 'التقرير اليومي',
+                'action_url' => route('employee.sales.penalties.index'),
+                'action_text' => 'خصوماتي',
                 'data' => [
                     'kind' => 'sales_daily_report_penalty',
                     'deduction_id' => $deduction->id,
                     'amount' => (float) $deduction->amount,
                     'date' => $dateLabel,
+                ],
+            ])
+        );
+    }
+
+    public function notifyDailyKpiPenalty(User $rep, EmployeeSalaryDeduction $deduction, string $dateLabel, string $metricLabel): void
+    {
+        $title = 'غرامة KPI يومي — '.$metricLabel;
+        $message = 'لم يُحقَّق هدف «'.$metricLabel.'» بتاريخ '.$dateLabel
+            .'. خصم '.number_format((float) $deduction->amount, 2).' ج.م. راجع نشاطك في الـ CRM.';
+
+        $this->sendOnceToday(
+            (int) $rep->id,
+            $title.' '.$dateLabel,
+            route('employee.sales.penalties.index'),
+            fn () => Notification::create([
+                'user_id' => $rep->id,
+                'sender_id' => null,
+                'title' => $title,
+                'message' => $message,
+                'type' => 'warning',
+                'priority' => 'high',
+                'audience' => 'employee',
+                'action_url' => route('employee.sales.penalties.index'),
+                'action_text' => 'خصوماتي',
+                'data' => [
+                    'kind' => 'sales_daily_kpi_penalty',
+                    'deduction_id' => $deduction->id,
+                    'amount' => (float) $deduction->amount,
+                    'date' => $dateLabel,
+                    'metric' => $metricLabel,
                 ],
             ])
         );

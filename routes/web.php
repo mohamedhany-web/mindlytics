@@ -984,6 +984,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::middleware('sales.employee')->prefix('sales')->name('sales.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Employee\SalesDashboardController::class, 'index'])->name('dashboard');
             Route::get('kpi', [\App\Http\Controllers\Employee\SalesKpiController::class, 'index'])->name('kpi.index');
+            Route::get('penalties', [\App\Http\Controllers\Employee\SalesPenaltiesController::class, 'index'])->name('penalties.index');
             Route::get('commissions', [\App\Http\Controllers\Employee\SalesCommissionController::class, 'index'])->name('commissions.index');
             Route::get('courses', [\App\Http\Controllers\Employee\SalesCourseCatalogController::class, 'index'])->name('courses.index');
             Route::get('reports', [\App\Http\Controllers\Employee\SalesReportController::class, 'index'])->name('reports.index');

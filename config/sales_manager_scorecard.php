@@ -13,11 +13,11 @@ return [
     ],
 
     'daily_targets' => [
-        /** متوافق مع config/sales_kpi.php defaults (SOS) */
+        /** متوافق مع sales_kpi — بدون اجتماعات للمحاسبة */
         'call_attempts' => 50,
         'calls_answered' => 20,
         'qualified' => 8,
-        'meetings' => 3,
+        'meetings' => 0,
         'followups' => 10,
         'whatsapp_linked' => 15,
         'cold_worked_pct' => 70,
