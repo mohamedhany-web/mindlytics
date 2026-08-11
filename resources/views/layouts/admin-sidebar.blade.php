@@ -573,6 +573,46 @@
             </li>
 
             @php
+                $internshipsMenuOpen = request()->routeIs('admin.internships.*') || request()->routeIs('admin.internship-applications.*');
+            @endphp
+            <li x-data="{ open: {{ $internshipsMenuOpen ? 'true' : 'false' }} }">
+                <button type="button" @click="open = !open" :aria-expanded="open"
+                        class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-user-graduate w-5 text-cyan-400 group-hover:text-white"></i>
+                        <span class="font-medium">التدريب</span>
+                    </div>
+                    <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
+                </button>
+                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
+                    <li>
+                        <a href="{{ route('admin.internships.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.internships.*') ? 'bg-cyan-600/30 text-white font-semibold border-r-2 border-cyan-400' : '' }}">
+                            <i class="fas fa-list w-4"></i>
+                            <span>فرص التدريب</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.internships.create') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.internships.create') ? 'bg-cyan-600/30 text-white font-semibold border-r-2 border-cyan-400' : '' }}">
+                            <i class="fas fa-plus w-4"></i>
+                            <span>إضافة فرصة</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.internship-applications.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.internship-applications.*') ? 'bg-cyan-600/30 text-white font-semibold border-r-2 border-cyan-400' : '' }}">
+                            <i class="fas fa-inbox w-4"></i>
+                            <span>طلبات التدريب</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @php
                 $scholarshipsMenuOpen = request()->routeIs('admin.scholarships.*');
             @endphp
             <li x-data="{ open: {{ $scholarshipsMenuOpen ? 'true' : 'false' }} }">
@@ -2005,7 +2045,7 @@
 
             <!-- إدارة الصفحات الخارجية -->
             @php
-                $blogOpen = request()->routeIs('admin.blog.*') || request()->routeIs('admin.contact-messages.*') || request()->routeIs('admin.packages.*') || request()->routeIs('admin.portfolio.*') || request()->routeIs('admin.journey-analytics.*') || request()->routeIs('admin.internships.*') || request()->routeIs('admin.internship-applications.*');
+                $blogOpen = request()->routeIs('admin.blog.*') || request()->routeIs('admin.contact-messages.*') || request()->routeIs('admin.packages.*') || request()->routeIs('admin.portfolio.*') || request()->routeIs('admin.journey-analytics.*');
             @endphp
             <li x-data="{ open: {{ $blogOpen ? 'true' : 'false' }} }">
                 <button type="button" @click="open = !open" :aria-expanded="open" 
@@ -2039,22 +2079,6 @@
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.journey-analytics.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
                             <i class="fas fa-chart-line w-4"></i>
                             <span>تحليلات Journey</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.internships.index') }}" 
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.internships.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
-                            <i class="fas fa-user-graduate w-4"></i>
-                            <span>التدريب</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.internship-applications.index') }}" 
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.internship-applications.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
-                            <i class="fas fa-inbox w-4"></i>
-                            <span>طلبات التدريب</span>
                         </a>
                     </li>
                     <li>
