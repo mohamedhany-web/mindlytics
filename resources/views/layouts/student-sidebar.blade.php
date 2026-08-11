@@ -413,11 +413,11 @@
                class="nav-card block {{ request()->routeIs('student.portfolio.*') ? 'active' : '' }}">
                 <div class="flex items-center gap-3">
                     <div class="nav-icon bg-emerald-500 text-white flex-shrink-0">
-                        <i class="fas fa-briefcase text-sm"></i>
+                        <i class="fas fa-route text-sm"></i>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.my_projects') }}</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ __('student.portfolio') }}</div>
+                        <div class="font-black text-gray-900 text-sm leading-tight">رحلتي</div>
+                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">Journey · مشاريع موثّقة</div>
                     </div>
                     <i class="fas fa-chevron-left text-gray-400 text-xs flex-shrink-0"></i>
                 </div>

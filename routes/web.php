@@ -111,6 +111,14 @@ Route::post('/careers/{job}/apply', [\App\Http\Controllers\CareersController::cl
     ->middleware('throttle:20,1')
     ->name('careers.apply');
 
+// Internships / التدريب (Public)
+Route::get('/internships', [\App\Http\Controllers\Public\InternshipController::class, 'index'])->name('public.internships.index');
+Route::get('/internships/{slug}', [\App\Http\Controllers\Public\InternshipController::class, 'show'])->name('public.internships.show')->where('slug', '[A-Za-z0-9\-]+');
+Route::post('/internships/{slug}/apply', [\App\Http\Controllers\Public\InternshipController::class, 'apply'])
+    ->middleware('throttle:20,1')
+    ->name('public.internships.apply')
+    ->where('slug', '[A-Za-z0-9\-]+');
+
 // Sitemap Route
 Route::get('/sitemap.xml', function() {
     $sitemap = '<?xml version="1.0" encoding="UTF-8"?>
@@ -253,9 +261,14 @@ Route::get('/bookings', [\App\Http\Controllers\Public\PageController::class, 'bo
 Route::get('/blog', [\App\Http\Controllers\Public\BlogController::class, 'index'])->name('public.blog.index');
 Route::get('/blog/{slug}', [\App\Http\Controllers\Public\BlogController::class, 'show'])->name('public.blog.show');
 
-// Mindlytics Portfolio (معرض أعمال الطلاب)
+// Mindlytics Journey / Portfolio (معرض مشاريع + دليل مواهب + رحلة الطالب + Share Cards)
 Route::get('/portfolio', [\App\Http\Controllers\Public\PortfolioController::class, 'index'])->name('public.portfolio.index');
+Route::get('/portfolio/talent', [\App\Http\Controllers\Public\PortfolioController::class, 'talent'])->name('public.portfolio.talent');
+Route::get('/portfolio/{id}/share-card', [\App\Http\Controllers\Public\JourneyShareCardController::class, 'project'])->name('public.portfolio.share-card')->where('id', '[0-9]+');
 Route::get('/portfolio/{id}', [\App\Http\Controllers\Public\PortfolioController::class, 'show'])->name('public.portfolio.show')->where('id', '[0-9]+');
+Route::get('/j/{slug}/share-card', [\App\Http\Controllers\Public\JourneyShareCardController::class, 'profile'])->name('public.journey.share-card')->where('slug', '[A-Za-z0-9\-]+');
+Route::get('/j/{slug}', [\App\Http\Controllers\Public\JourneyController::class, 'show'])->name('public.journey.show')->where('slug', '[A-Za-z0-9\-]+');
+Route::post('/journey/share-track', [\App\Http\Controllers\Public\JourneyShareCardController::class, 'trackShare'])->name('public.journey.share-track');
 
 // مجتمع البيانات والذكاء الاصطناعي (مسابقات، داتاسيت، مجتمع)
 Route::get('/community', [\App\Http\Controllers\Public\CommunityController::class, 'index'])->name('public.community.index');
@@ -950,11 +963,15 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('/api/notifications/recent', [\App\Http\Controllers\Student\NotificationController::class, 'getRecent'])->name('notifications.recent');
         Route::get('/calendar', [\App\Http\Controllers\Student\CalendarController::class, 'index'])->name('calendar');
         Route::get('/api/calendar/events', [\App\Http\Controllers\Student\CalendarController::class, 'getEvents'])->name('calendar.events');
-        // البورتفوليو - مشاريع الطالب (مسار /my-portfolio لتفادي التعارض مع البورتفوليو العام /portfolio)
+        // رحلة التعلم / البورتفوليو - مشاريع الطالب
         Route::prefix('my-portfolio')->name('student.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Student\PortfolioProjectController::class, 'index'])->name('portfolio.index');
+            Route::get('/journey', [\App\Http\Controllers\Student\PortfolioProjectController::class, 'editJourney'])->name('portfolio.journey');
+            Route::put('/journey', [\App\Http\Controllers\Student\PortfolioProjectController::class, 'updateJourney'])->name('portfolio.journey.update');
             Route::get('/create', [\App\Http\Controllers\Student\PortfolioProjectController::class, 'create'])->name('portfolio.create');
             Route::post('/', [\App\Http\Controllers\Student\PortfolioProjectController::class, 'store'])->name('portfolio.store');
+            Route::get('/{project}/edit', [\App\Http\Controllers\Student\PortfolioProjectController::class, 'edit'])->name('portfolio.edit');
+            Route::put('/{project}', [\App\Http\Controllers\Student\PortfolioProjectController::class, 'update'])->name('portfolio.update');
         });
     });
 
@@ -1630,6 +1647,15 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('portfolio', [\App\Http\Controllers\Admin\PortfolioController::class, 'index'])->name('portfolio.index');
         Route::get('portfolio/{project}', [\App\Http\Controllers\Admin\PortfolioController::class, 'show'])->name('portfolio.show');
         Route::post('portfolio/{project}/toggle-visibility', [\App\Http\Controllers\Admin\PortfolioController::class, 'toggleVisibility'])->name('portfolio.toggle-visibility');
+        Route::post('portfolio/{project}/toggle-featured', [\App\Http\Controllers\Admin\PortfolioController::class, 'toggleFeatured'])->name('portfolio.toggle-featured');
+        Route::get('journey-analytics', [\App\Http\Controllers\Admin\JourneyAnalyticsController::class, 'index'])->name('journey-analytics.index');
+
+        // قسم التدريب — Internships
+        Route::resource('internships', \App\Http\Controllers\Admin\InternshipController::class)->except(['show']);
+        Route::get('internship-applications', [\App\Http\Controllers\Admin\InternshipApplicationController::class, 'index'])->name('internship-applications.index');
+        Route::get('internship-applications/{application}', [\App\Http\Controllers\Admin\InternshipApplicationController::class, 'show'])->name('internship-applications.show');
+        Route::put('internship-applications/{application}/status', [\App\Http\Controllers\Admin\InternshipApplicationController::class, 'updateStatus'])->name('internship-applications.status');
+        Route::delete('internship-applications/{application}', [\App\Http\Controllers\Admin\InternshipApplicationController::class, 'destroy'])->name('internship-applications.destroy');
 
         // مجتمع البيانات والذكاء الاصطناعي — للإدارة العليا فقط (صلاحية super_admin أو admin)
         Route::prefix('community')->name('community.')->middleware('role:super_admin')->group(function () {
@@ -2572,13 +2598,15 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('/{withdrawal}/cancel', [\App\Http\Controllers\Instructor\WithdrawalRequestController::class, 'cancel'])->name('cancel');
         });
 
-        // مراجعة مشاريع البورتفوليو (المدرب يراجع ثم ينشر)
+        // مراجعة مشاريع الرحلة / البورتفوليو (المدرب يراجع ثم ينشر)
         Route::prefix('portfolio')->name('portfolio.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Instructor\PortfolioReviewController::class, 'index'])->name('index');
             Route::get('/{project}', [\App\Http\Controllers\Instructor\PortfolioReviewController::class, 'show'])->name('show');
             Route::post('/{project}/approve', [\App\Http\Controllers\Instructor\PortfolioReviewController::class, 'approve'])->name('approve');
             Route::post('/{project}/reject', [\App\Http\Controllers\Instructor\PortfolioReviewController::class, 'reject'])->name('reject');
+            Route::post('/{project}/request-changes', [\App\Http\Controllers\Instructor\PortfolioReviewController::class, 'requestChanges'])->name('request-changes');
             Route::post('/{project}/publish', [\App\Http\Controllers\Instructor\PortfolioReviewController::class, 'publish'])->name('publish');
+            Route::post('/{project}/toggle-featured', [\App\Http\Controllers\Instructor\PortfolioReviewController::class, 'toggleFeatured'])->name('toggle-featured');
         });
     });
 });

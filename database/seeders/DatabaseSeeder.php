@@ -111,6 +111,14 @@ class DatabaseSeeder extends Seeder
             $this->command->newLine();
         }
 
+        // 8. إنجازات Mindlytics Journey
+        $this->command->info('🏆 8. تهيئة إنجازات الرحلة...');
+        $this->call([
+            JourneyAchievementsSeeder::class,
+        ]);
+        $this->command->info('✅ تم تهيئة إنجازات الرحلة');
+        $this->command->newLine();
+
         $this->command->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         $this->command->info('✨ تم إكمال عملية Seed بنجاح!');
         $this->command->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

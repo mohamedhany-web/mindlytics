@@ -2005,7 +2005,7 @@
 
             <!-- إدارة الصفحات الخارجية -->
             @php
-                $blogOpen = request()->routeIs('admin.blog.*') || request()->routeIs('admin.contact-messages.*') || request()->routeIs('admin.packages.*');
+                $blogOpen = request()->routeIs('admin.blog.*') || request()->routeIs('admin.contact-messages.*') || request()->routeIs('admin.packages.*') || request()->routeIs('admin.portfolio.*') || request()->routeIs('admin.journey-analytics.*') || request()->routeIs('admin.internships.*') || request()->routeIs('admin.internship-applications.*');
             @endphp
             <li x-data="{ open: {{ $blogOpen ? 'true' : 'false' }} }">
                 <button type="button" @click="open = !open" :aria-expanded="open" 
@@ -2031,6 +2031,30 @@
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.portfolio.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
                             <i class="fas fa-briefcase w-4"></i>
                             <span>{{ __('admin.portfolio') }}</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.journey-analytics.index') }}" 
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.journey-analytics.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
+                            <i class="fas fa-chart-line w-4"></i>
+                            <span>تحليلات Journey</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.internships.index') }}" 
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.internships.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
+                            <i class="fas fa-user-graduate w-4"></i>
+                            <span>التدريب</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.internship-applications.index') }}" 
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.internship-applications.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
+                            <i class="fas fa-inbox w-4"></i>
+                            <span>طلبات التدريب</span>
                         </a>
                     </li>
                     <li>

@@ -47,6 +47,15 @@
                     {{ $project->is_visible ? 'إخفاء من المعرض' : 'إظهار في المعرض' }}
                 </button>
             </form>
+            @if($project->status === 'published')
+                <form action="{{ route('admin.portfolio.toggle-featured', $project) }}" method="POST" class="inline mr-2">
+                    @csrf
+                    <button type="submit" class="inline-flex items-center gap-2 {{ $project->is_featured ? 'bg-amber-500 hover:bg-amber-600' : 'bg-slate-700 hover:bg-slate-800' }} text-white px-6 py-2.5 rounded-xl font-bold">
+                        <i class="fas fa-star"></i>
+                        {{ $project->is_featured ? 'إلغاء Featured' : 'تمييز Featured' }}
+                    </button>
+                </form>
+            @endif
         </div>
     </div>
 </div>

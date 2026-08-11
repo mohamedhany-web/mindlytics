@@ -514,6 +514,26 @@ class User extends Authenticatable
     }
 
     /**
+     * ملف رحلة التعلم العام (Mindlytics Journey)
+     */
+    public function journeyProfile()
+    {
+        return $this->hasOne(JourneyProfile::class, 'user_id');
+    }
+
+    public function userAchievements()
+    {
+        return $this->hasMany(UserAchievement::class, 'user_id');
+    }
+
+    public function achievements()
+    {
+        return $this->belongsToMany(Achievement::class, 'user_achievements')
+            ->withPivot(['earned_at', 'points_earned', 'progress', 'metadata', 'course_id'])
+            ->withTimestamps();
+    }
+
+    /**
      * علاقة مع الكورسات الأوفلاين (كمدرب)
      */
     public function offlineCourses()

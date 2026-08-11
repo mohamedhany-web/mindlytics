@@ -76,8 +76,12 @@
                     <span>{{ __('landing.nav.community') }}</span>
                 </a>
                 <a href="{{ route('public.portfolio.index') }}" class="nav-link-modern inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-[15px] transition-all duration-200 hover:bg-white/10 flex-shrink-0">
-                    <i class="fas fa-briefcase text-sm {{ app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2' }} opacity-90 flex-shrink-0"></i>
+                    <i class="fas fa-route text-sm {{ app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2' }} opacity-90 flex-shrink-0"></i>
                     <span>{{ __('landing.nav.portfolio') }}</span>
+                </a>
+                <a href="{{ route('public.internships.index') }}" class="nav-link-modern inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-[15px] transition-all duration-200 hover:bg-white/10 flex-shrink-0">
+                    <i class="fas fa-user-graduate text-sm {{ app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2' }} opacity-90 flex-shrink-0"></i>
+                    <span>{{ __('landing.nav.internships') }}</span>
                 </a>
                 <a href="{{ route('public.instructors.index') }}" class="nav-link-modern inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-[15px] transition-all duration-200 hover:bg-white/10 flex-shrink-0">
                     <i class="fas fa-user-tie text-sm {{ app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2' }} opacity-90 flex-shrink-0"></i>
@@ -198,8 +202,13 @@
                     <i class="fas fa-chevron-{{ app()->getLocale() === 'ar' ? 'left' : 'right' }} text-white/40 text-sm flex-shrink-0"></i>
                 </a>
                 <a href="{{ route('public.portfolio.index') }}" class="mobile-sidebar-link flex items-center gap-4 text-white hover:bg-white/12 active:bg-white/18 rounded-2xl px-4 min-h-[52px] touch-manipulation transition-colors">
-                    <span class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0"><i class="fas fa-briefcase text-white text-lg"></i></span>
+                    <span class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0"><i class="fas fa-route text-white text-lg"></i></span>
                     <span class="flex-1 font-bold text-[17px]">{{ __('landing.nav.portfolio') }}</span>
+                    <i class="fas fa-chevron-{{ app()->getLocale() === 'ar' ? 'left' : 'right' }} text-white/40 text-sm flex-shrink-0"></i>
+                </a>
+                <a href="{{ route('public.internships.index') }}" class="mobile-sidebar-link flex items-center gap-4 text-white hover:bg-white/12 active:bg-white/18 rounded-2xl px-4 min-h-[52px] touch-manipulation transition-colors">
+                    <span class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0"><i class="fas fa-user-graduate text-white text-lg"></i></span>
+                    <span class="flex-1 font-bold text-[17px]">{{ __('landing.nav.internships') }}</span>
                     <i class="fas fa-chevron-{{ app()->getLocale() === 'ar' ? 'left' : 'right' }} text-white/40 text-sm flex-shrink-0"></i>
                 </a>
                 <a href="{{ route('public.instructors.index') }}" class="mobile-sidebar-link flex items-center gap-4 text-white hover:bg-white/12 active:bg-white/18 rounded-2xl px-4 min-h-[52px] touch-manipulation transition-colors">

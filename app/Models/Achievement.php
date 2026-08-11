@@ -10,23 +10,32 @@ class Achievement extends Model
     use HasFactory;
 
     protected $fillable = [
+        'code',
         'name',
         'description',
-        'category',
         'icon',
-        'points',
+        'type',
+        'requirements',
+        'points_reward',
         'is_active',
+        'sort_order',
+        // legacy aliases kept for older admin forms if present
+        'category',
+        'points',
     ];
 
     protected $casts = [
+        'requirements' => 'array',
+        'points_reward' => 'integer',
         'points' => 'integer',
         'is_active' => 'boolean',
+        'sort_order' => 'integer',
     ];
 
     public function users()
     {
         return $this->belongsToMany(User::class, 'user_achievements')
-            ->withPivot(['earned_at', 'points_earned'])
+            ->withPivot(['earned_at', 'points_earned', 'progress', 'metadata', 'course_id'])
             ->withTimestamps();
     }
 
