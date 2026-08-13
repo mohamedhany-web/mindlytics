@@ -21,10 +21,7 @@
         background: #f8fafc;
         border-bottom: 1px solid #e2e8f0;
     }
-    .policy-doc-shell {
-        max-width: 72rem;
-        margin: 0 auto;
-    }
+    .policy-doc-shell { width: 100%; }
     .policy-toc-link {
         display: flex;
         align-items: flex-start;
@@ -107,6 +104,11 @@
         font-weight: 700;
         background: rgba(255, 255, 255, 0.14);
         border: 1px solid rgba(255, 255, 255, 0.22);
+    }
+    @media (min-width: 1280px) {
+        .policy-rules-grid > article:nth-child(odd) {
+            border-left: 1px solid #f1f5f9;
+        }
     }
 </style>
 @endpush
@@ -200,9 +202,9 @@
                         </div>
                     </div>
 
-                    <div class="divide-y divide-slate-100">
+                    <div class="policy-rules-grid grid xl:grid-cols-2 divide-y divide-slate-100 xl:divide-y-0">
                         @foreach($section->activeRules as $rule)
-                            <article id="rule-{{ $rule->id }}" class="policy-rule-block px-5 sm:px-6 py-5">
+                            <article id="rule-{{ $rule->id }}" class="policy-rule-block px-5 sm:px-6 py-5 xl:border-b xl:border-slate-100">
                                 <div class="flex items-start gap-3 sm:gap-4">
                                     <span class="policy-rule-num">{{ $rule->displayNumber() }}</span>
                                     <div class="min-w-0 flex-1">
