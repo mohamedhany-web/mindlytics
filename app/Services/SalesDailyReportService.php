@@ -197,7 +197,7 @@ class SalesDailyReportService
             'messages_replied' => 'ردود على الرسائل',
             'leads_qualified' => 'عملاء مؤهّلين',
             'bookings_from_leads' => 'حجوزات من Leads',
-            'numbers_worked' => 'أرقام تم العمل عليها',
+            'numbers_worked' => 'أشخاص تم العمل عليهم',
             'followups_done' => 'متابعات منفّذة',
             'calls_made' => 'مكالمات أُجريت',
             'meetings_held' => 'اجتماعات / ميتينج',
@@ -288,24 +288,7 @@ class SalesDailyReportService
                 ->unique('sales_lead_id')
                 ->count();
 
-        $touchTypes = ['call', 'meeting', 'follow_up', 'whatsapp', 'email', 'note', 'other'];
-        $touchedLeadIds = $activities
-            ->whereIn('type', $touchTypes)
-            ->pluck('sales_lead_id')
-            ->filter()
-            ->unique();
-
-        $numbersWorked = SalesLead::query()
-            ->whereIn('id', $touchedLeadIds)
-            ->where('assigned_to', $user->id)
-            ->whereNotNull('phone')
-            ->where('phone', '!=', '')
-            ->distinct()
-            ->count('phone');
-
-        if ($numbersWorked === 0) {
-            $numbersWorked = $touchedLeadIds->count();
-        }
+        $numbersWorked = (int) ($sos['people_worked_daily'] ?? 0);
 
         $metrics = [
             'messages_replied' => $messages->count(),
@@ -591,7 +574,7 @@ class SalesDailyReportService
             'ردود: '.$metrics['calls_answered'],
             'متابعات: '.$metrics['followups_done'],
             'اجتماعات: '.$metrics['meetings_held'],
-            'أرقام: '.$metrics['numbers_worked'],
+            'أشخاص: '.$metrics['numbers_worked'],
             'رسائل: '.$metrics['messages_replied'],
         ];
 

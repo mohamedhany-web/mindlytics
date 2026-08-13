@@ -1144,6 +1144,19 @@ class User extends Authenticatable
     }
 
     /**
+     * موظف مونتاج فيديو (رمز الوظيفة video_editing).
+     */
+    public function isVideoEditingEmployee(): bool
+    {
+        if (! $this->isEmployee()) {
+            return false;
+        }
+        $this->loadMissing('employeeJob');
+
+        return $this->employeeJob && strtolower((string) $this->employeeJob->code) === 'video_editing';
+    }
+
+    /**
      * العملاء المحتملون المسندون لموظف المبيعات
      */
     public function assignedSalesLeads()
@@ -1407,6 +1420,13 @@ class User extends Authenticatable
     {
         return $query->employees()->whereHas('employeeJob', function ($q) {
             $q->whereRaw('LOWER(code) = ?', ['designer']);
+        });
+    }
+
+    public function scopeVideoEditingEmployees($query)
+    {
+        return $query->employees()->whereHas('employeeJob', function ($q) {
+            $q->whereRaw('LOWER(code) = ?', ['video_editing']);
         });
     }
 

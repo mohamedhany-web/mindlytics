@@ -23,6 +23,8 @@ class EmployeeTask extends Model
         'notes',
         'design_cycle_id',
         'marketing_event_id',
+        'montage_request_id',
+        'flexible_video_delivery',
     ];
 
     protected $casts = [
@@ -30,6 +32,7 @@ class EmployeeTask extends Model
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
         'progress' => 'integer',
+        'flexible_video_delivery' => 'boolean',
     ];
 
     /**
@@ -66,6 +69,11 @@ class EmployeeTask extends Model
         return $this->belongsTo(ModeratorMarketingCalendarEvent::class, 'marketing_event_id');
     }
 
+    public function montageRequest(): BelongsTo
+    {
+        return $this->belongsTo(ModeratorMontageRequest::class, 'montage_request_id');
+    }
+
     /**
      * Scope للمهام المعلقة
      */
@@ -96,6 +104,15 @@ class EmployeeTask extends Model
     public function isVideoEditing(): bool
     {
         return $this->task_type === 'video_editing';
+    }
+
+    /**
+     * مهام مونتاج مسموح فيها Drive أو رفع ملف (طلبات مشرف المحتوى)
+     * دون تغيير سلوك مهام المونتاج الإدارية التي تتطلب Bunny.
+     */
+    public function allowsFlexibleVideoDelivery(): bool
+    {
+        return $this->isVideoEditing() && (bool) $this->flexible_video_delivery;
     }
 
     /**

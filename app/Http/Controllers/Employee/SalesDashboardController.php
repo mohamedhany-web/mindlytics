@@ -49,6 +49,10 @@ class SalesDashboardController extends Controller
             $funnel[$stageKey] = (clone $base)->where('stage', $stageKey)->count();
         }
 
+        $pipeline = app(\App\Services\SalesPipelineService::class);
+        $funnelBuckets = $pipeline->bucketCountsFromStageCounts($funnel);
+        $journeyBuckets = $pipeline->journeyBuckets();
+
         $followupsToday = $open()
             ->whereNotNull('next_follow_up_at')
             ->whereDate('next_follow_up_at', today())
@@ -114,6 +118,8 @@ class SalesDashboardController extends Controller
         return view('employee.sales.dashboard', compact(
             'stats',
             'funnel',
+            'funnelBuckets',
+            'journeyBuckets',
             'followupsToday',
             'recentLeads',
             'overdueLeads',

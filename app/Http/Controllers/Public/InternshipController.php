@@ -75,12 +75,11 @@ class InternshipController extends Controller
             'github_url' => 'nullable|url|max:500',
             'linkedin_url' => 'nullable|url|max:500',
             'cover_letter' => 'nullable|string|max:5000',
-            'cv' => 'required|file|mimes:pdf,doc,docx|max:5120',
+            'cv' => 'nullable|file|mimes:pdf,doc,docx|max:5120',
         ], [
             'name.required' => 'الاسم مطلوب.',
             'email.required' => 'البريد الإلكتروني مطلوب.',
             'email.email' => 'صيغة البريد غير صحيحة.',
-            'cv.required' => 'يرجى رفع السيرة الذاتية.',
             'cv.mimes' => 'صيغة السيرة الذاتية يجب أن تكون PDF أو Word.',
             'cv.max' => 'حجم ملف السيرة الذاتية حد أقصى 5 ميجابايت.',
         ]);
@@ -96,8 +95,6 @@ class InternshipController extends Controller
                 ->withErrors(['email' => 'لقد قدّمت بالفعل على هذه الفرصة بهذا البريد.']);
         }
 
-        $cvPath = $this->storeCv($request);
-
         InternshipApplication::create([
             'internship_id' => $internship->id,
             'name' => $data['name'],
@@ -110,7 +107,7 @@ class InternshipController extends Controller
             'github_url' => $data['github_url'] ?? null,
             'linkedin_url' => $data['linkedin_url'] ?? null,
             'cover_letter' => $data['cover_letter'] ?? null,
-            'cv_path' => $cvPath,
+            'cv_path' => $this->storeCv($request),
             'status' => InternshipApplication::STATUS_PENDING,
             'source' => 'website',
         ]);
@@ -120,8 +117,12 @@ class InternshipController extends Controller
             ->with('success', 'تم إرسال طلبك بنجاح. سيتواصل معك فريق التدريب بعد المراجعة.');
     }
 
-    private function storeCv(Request $request): string
+    private function storeCv(Request $request): ?string
     {
+        if (! $request->hasFile('cv')) {
+            return null;
+        }
+
         $dir = public_path('internships/cvs');
         File::ensureDirectoryExists($dir);
 

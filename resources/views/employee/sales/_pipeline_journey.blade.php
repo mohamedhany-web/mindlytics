@@ -17,7 +17,7 @@
                     · محاولات: {{ $lead->contact_attempts }}/3
                 @endif
             </p>
-            <p class="text-[11px] text-teal-800 mt-1 font-semibold">كل مرحلة تؤدي للتالية فقط — ملاحظات إلزامية — قبل الحجز لازم كورس/دبلومة</p>
+            <p class="text-[11px] text-teal-800 mt-1 font-semibold">مسار مختصر: يمكن تخطّي الخطوات الدقيقة داخل التواصل/التأهيل — ملاحظات قصيرة إلزامية — قبل الحجز لازم كورس</p>
         </div>
     </div>
 
@@ -81,7 +81,7 @@
 
         <div>
             <label class="block text-xs font-bold text-slate-600 mb-1">ملاحظات الانتقال <span class="text-rose-600">*</span></label>
-            <textarea name="notes" rows="2" required minlength="8" class="w-full rounded-xl border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm" placeholder="اكتب ماذا حصل في هذه الخطوة وما الإجراء التالي (إلزامي)">{{ old('notes') }}</textarea>
+            <textarea name="notes" rows="2" required minlength="5" class="w-full rounded-xl border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm" placeholder="ماذا حصل؟ وما التالي؟ (5 أحرف على الأقل)">{{ old('notes') }}</textarea>
             @error('notes')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
         </div>
 

@@ -185,7 +185,7 @@
                             </div>
                             <p class="text-xs text-slate-500">
                                 <i class="fas fa-shield-alt text-sky-500 ml-1"></i>
-                                املأ النموذج وارفع سيرتك الذاتية — سنراجع طلبك ونتواصل معك.
+                                املأ النموذج وقدّم — رفع السيرة الذاتية اختياري وسنراجع طلبك ونتواصل معك.
                             </p>
                         </div>
 
@@ -251,17 +251,17 @@
                                         <textarea name="cover_letter" rows="4" class="careers-input">{{ old('cover_letter') }}</textarea>
                                     </div>
                                     <div>
-                                        <label class="careers-label">السيرة الذاتية (PDF/Word) <span class="text-rose-500">*</span></label>
+                                        <label class="careers-label">السيرة الذاتية (PDF/Word) <span class="text-slate-400 font-medium">(اختياري)</span></label>
                                         <label class="upload-zone block cursor-pointer">
-                                            <input type="file" name="cv" accept=".pdf,.doc,.docx,application/pdf" required class="hidden"
+                                            <input type="file" name="cv" accept=".pdf,.doc,.docx,application/pdf" class="hidden"
                                                    @change="cvName = $event.target.files[0]?.name || ''">
                                             <div class="flex items-center gap-3">
                                                 <div class="w-11 h-11 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
                                                     <i class="fas fa-cloud-upload-alt"></i>
                                                 </div>
                                                 <div class="min-w-0">
-                                                    <p class="text-sm font-bold text-slate-800" x-text="cvName || 'اضغط لاختيار الملف'"></p>
-                                                    <p class="text-xs text-slate-500 mt-0.5">حد أقصى 5 ميجابايت</p>
+                                                    <p class="text-sm font-bold text-slate-800" x-text="cvName || 'اضغط لاختيار الملف (اختياري)'"></p>
+                                                    <p class="text-xs text-slate-500 mt-0.5">حد أقصى 5 ميجابايت — يمكنك التقديم بدون رفع CV</p>
                                                 </div>
                                             </div>
                                         </label>
@@ -302,8 +302,8 @@
                         <div class="step-item">
                             <span class="step-num">2</span>
                             <div>
-                                <p class="text-sm font-bold text-slate-800">ارفع السيرة الذاتية</p>
-                                <p class="text-xs text-slate-500">PDF أو Word بحجم مناسب</p>
+                                <p class="text-sm font-bold text-slate-800">أضف روابطك أو السيرة (اختياري)</p>
+                                <p class="text-xs text-slate-500">Portfolio / GitHub / CV إن رغبت</p>
                             </div>
                         </div>
                         <div class="step-item">

@@ -144,7 +144,7 @@
                 <section class="dr-panel dr-auto p-5">
                     <h2 class="font-bold text-slate-900 mb-1">٢ — الإنتاجية <span class="text-xs font-normal text-slate-500">(تلقائي)</span></h2>
                     <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-3 mt-3">
-                        @foreach(['numbers_worked' => 'أرقام', 'followups_done' => 'متابعات', 'calls_made' => 'مكالمات', 'meetings_held' => 'اجتماعات', 'calls_answered' => 'ردود مكالمات'] as $key => $label)
+                        @foreach(['numbers_worked' => 'أشخاص تم العمل عليهم', 'followups_done' => 'متابعات', 'calls_made' => 'مكالمات', 'meetings_held' => 'اجتماعات', 'calls_answered' => 'ردود مكالمات'] as $key => $label)
                             <div>
                                 <label class="block text-xs font-medium text-slate-600 mb-1">{{ $label }}</label>
                                 <input type="number" min="0" name="{{ $key }}" value="{{ old($key, $r?->$key ?? 0) }}" required class="dr-input px-3 py-2 text-sm">

@@ -9,7 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * KPI يومي قائم على النتائج (محاولات، ردود، مؤهل، جلسات، عروض، تسجيلات).
+ * KPI يومي: أشخاص تم العمل عليهم + قمع الاتصال/التأهيل/العرض/التسجيل.
  */
 class SalesDailyResultService
 {
@@ -21,6 +21,7 @@ class SalesDailyResultService
         $defaults = config('sales_kpi.defaults', []);
 
         return [
+            'people_worked_daily' => (int) ($defaults['people_worked_daily'] ?? 100),
             'call_attempts_daily' => (int) ($defaults['call_attempts_daily'] ?? 50),
             'calls_answered_daily' => (int) ($defaults['calls_answered_daily'] ?? 20),
             'qualified_conversations_daily' => (int) ($defaults['qualified_conversations_daily'] ?? 8),
@@ -64,6 +65,7 @@ class SalesDailyResultService
         $metrics = $this->metricsFor($user->id, $day, $day->copy()->endOfDay());
 
         $labels = [
+            'people_worked_daily' => 'أشخاص تم العمل عليهم (إدخال/تحديث/Pipeline)',
             'call_attempts_daily' => 'محاولات اتصال',
             'calls_answered_daily' => 'مكالمات تم الرد',
             'qualified_conversations_daily' => 'محادثات مؤهلة',
@@ -178,6 +180,7 @@ class SalesDailyResultService
             ->count();
 
         return [
+            'people_worked_daily' => $this->countPeopleWorked($userId, $from, $to),
             'call_attempts_daily' => $callAttempts,
             'calls_answered_daily' => $answered,
             'qualified_conversations_daily' => $qualified,
@@ -185,6 +188,41 @@ class SalesDailyResultService
             'proposals_daily' => $proposals,
             'paid_enrollments_daily' => $paid,
         ];
+    }
+
+    /**
+     * عدد الأشخاص الفريدين الذين تعامل معهم الموظف اليوم:
+     * - عملاء جدد أُدخلوا (created + assigned)
+     * - أو أي نشاط CRM مرتبط بعميل (اتصال / تحريك Pipeline / متابعة / واتساب / ملاحظة…)
+     * - أو انتقال مرحلة (stage_entered_at) لنفس اليوم
+     */
+    public function countPeopleWorked(int $userId, Carbon $from, Carbon $to): int
+    {
+        $ids = collect();
+
+        $createdIds = SalesLead::query()
+            ->where('assigned_to', $userId)
+            ->whereBetween('created_at', [$from, $to])
+            ->pluck('id');
+        $ids = $ids->merge($createdIds);
+
+        $activityIds = SalesActivity::query()
+            ->where('user_id', $userId)
+            ->whereNotNull('sales_lead_id')
+            ->whereBetween('created_at', [$from, $to])
+            ->distinct()
+            ->pluck('sales_lead_id');
+        $ids = $ids->merge($activityIds);
+
+        if (Schema::hasColumn('sales_leads', 'stage_entered_at')) {
+            $stageIds = SalesLead::query()
+                ->where('assigned_to', $userId)
+                ->whereBetween('stage_entered_at', [$from, $to])
+                ->pluck('id');
+            $ids = $ids->merge($stageIds);
+        }
+
+        return $ids->filter()->unique()->count();
     }
 
     /**

@@ -36,9 +36,20 @@ class SalesPipelineServiceTest extends TestCase
         $allowed = $service->allowedNextStages($lead);
 
         $this->assertContains('first_contact', $allowed);
+        $this->assertContains('connected', $allowed);
         $this->assertNotContains('offer_sent', $allowed);
         $this->assertNotContains('payment_pending', $allowed);
-        $this->assertNotContains('connected', $allowed);
+    }
+
+    public function test_connected_can_fast_track_to_offer(): void
+    {
+        $service = new SalesPipelineService;
+        $lead = $this->leadAt('connected');
+        $allowed = $service->allowedNextStages($lead);
+
+        $this->assertContains('offer_sent', $allowed);
+        $this->assertContains('interested', $allowed);
+        $this->assertNotContains('payment_pending', $allowed);
     }
 
     public function test_interested_cannot_jump_to_payment(): void
@@ -63,7 +74,7 @@ class SalesPipelineServiceTest extends TestCase
 
         $service->transition($lead, 'first_contact', [
             'call_answered' => '1',
-            'notes' => 'قصير',
+            'notes' => 'قص',
             'next_follow_up_at' => now()->addDay()->toDateTimeString(),
             'follow_up_channel' => 'call',
         ], $actor);

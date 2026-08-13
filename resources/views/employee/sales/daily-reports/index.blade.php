@@ -79,7 +79,7 @@
                 <div>
                     <h2 class="font-bold text-gray-900 mb-3"><i class="fas fa-phone text-slate-500 ml-1"></i> الإنتاجية <span class="text-xs font-normal text-slate-500">(تلقائي)</span></h2>
                     <dl class="text-sm space-y-1">
-                        <div class="flex justify-between"><dt>أرقام</dt><dd class="font-bold">{{ $report->numbers_worked ?? '—' }}</dd></div>
+                        <div class="flex justify-between"><dt>أشخاص تم العمل عليهم</dt><dd class="font-bold">{{ $report->numbers_worked ?? '—' }}</dd></div>
                         <div class="flex justify-between"><dt>متابعات</dt><dd class="font-bold">{{ $report->followups_done ?? '—' }}</dd></div>
                         <div class="flex justify-between"><dt>مكالمات / اجتماعات / ردود</dt><dd class="font-bold">{{ $report->calls_made ?? '—' }} / {{ $report->meetings_held ?? '—' }} / {{ $report->calls_answered ?? '—' }}</dd></div>
                     </dl>

@@ -318,6 +318,14 @@
                         </a>
                     </li>
                     <li>
+                        <a href="{{ route('admin.sales.policy.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.policy.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-scale-balanced w-4"></i>
+                            <span>قواعد السيلز</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="{{ route('admin.sales.kpi.index') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.kpi.index') && !request()->routeIs('admin.sales.kpi.targets*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
@@ -1296,7 +1304,7 @@
 
             <!-- إدارة المحتوى -->
             @php
-                $contentManagementOpen = request()->routeIs('admin.academic-years.*') || request()->routeIs('admin.learning-paths.*') || request()->routeIs('admin.academic-subjects.*') || request()->routeIs('admin.advanced-courses.*') || request()->routeIs('admin.curriculum.*') || request()->routeIs('admin.exams.*') || request()->routeIs('admin.practice.*') || request()->routeIs('admin.question-bank.*') || request()->routeIs('admin.question-categories.*') || request()->routeIs('admin.lectures.*') || request()->routeIs('admin.groups.*') || request()->routeIs('admin.assignments.*');
+                $contentManagementOpen = request()->routeIs('admin.academic-years.*') || request()->routeIs('admin.learning-paths.*') || request()->routeIs('admin.academic-subjects.*') || request()->routeIs('admin.advanced-courses.*') || request()->routeIs('admin.sales-course-board.*') || request()->routeIs('admin.curriculum.*') || request()->routeIs('admin.exams.*') || request()->routeIs('admin.practice.*') || request()->routeIs('admin.question-bank.*') || request()->routeIs('admin.question-categories.*') || request()->routeIs('admin.lectures.*') || request()->routeIs('admin.groups.*') || request()->routeIs('admin.assignments.*');
             @endphp
             <li x-data="{ open: {{ $contentManagementOpen ? 'true' : 'false' }} }">
                 <button type="button" @click="open = !open" :aria-expanded="open" 
@@ -1355,6 +1363,14 @@
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ $advancedCoursesActive ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">
                             <i class="fas fa-graduation-cap w-4"></i>
                             <span>{{ __('admin.courses_management') }}</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.sales-course-board.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales-course-board.*') ? 'bg-emerald-600/30 text-white font-semibold shadow-md border-r-2 border-emerald-500' : '' }}">
+                            <i class="fas fa-table w-4"></i>
+                            <span>معلومات الكورسات — المبيعات</span>
                         </a>
                     </li>
                     <li>

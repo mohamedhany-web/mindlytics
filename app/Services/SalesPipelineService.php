@@ -22,22 +22,23 @@ class SalesPipelineService
     }
 
     /**
-     * المراحل المسموح الانتقال إليها فقط (مسار إلزامي — ممنوع تخطّي الرحلة).
+     * المراحل المسموح الانتقال إليها (مسار مختصر — يتخطى الخطوات الدقيقة داخل نفس المرحلة الكبرى).
+     * ما زال ممنوعاً القفز لعرض/دفع/تسجيل بدون المرور بالمسار المنطقي.
      *
      * @return list<string>
      */
     public function allowedNextStages(SalesLead $lead): array
     {
         return match ($lead->stage) {
-            'new_lead' => ['first_contact', 'no_answer', 'lost'],
+            'new_lead' => ['first_contact', 'connected', 'no_answer', 'lost'],
             'first_contact' => ['connected', 'no_answer', 'lost'],
-            'no_answer' => ['no_answer', 'connected', 'dormant', 'lost'],
-            'connected' => ['qualification', 'follow_up_scheduled', 'objection', 'lost'],
-            'qualification' => ['interested', 'objection', 'follow_up_scheduled', 'lost'],
-            'interested' => ['offer_sent', 'objection', 'follow_up_scheduled', 'lost'],
-            'objection' => ['follow_up_scheduled', 'interested', 'lost'],
+            'no_answer' => ['no_answer', 'connected', 'first_contact', 'dormant', 'lost'],
+            'connected' => ['qualification', 'interested', 'offer_sent', 'follow_up_scheduled', 'objection', 'lost'],
+            'qualification' => ['interested', 'offer_sent', 'follow_up_scheduled', 'objection', 'lost'],
+            'interested' => ['offer_sent', 'follow_up_scheduled', 'objection', 'lost'],
+            'objection' => ['follow_up_scheduled', 'interested', 'offer_sent', 'lost'],
             'follow_up_scheduled' => ['connected', 'qualification', 'interested', 'offer_sent', 'objection', 'lost'],
-            'offer_sent' => ['payment_pending', 'objection', 'follow_up_scheduled', 'lost'],
+            'offer_sent' => ['payment_pending', 'follow_up_scheduled', 'objection', 'lost'],
             'payment_pending' => ['payment_received', 'follow_up_scheduled', 'lost'],
             'payment_received' => [SalesLead::WON_STAGE, 'lost'],
             'enrollment_completed' => ['upsell'],
@@ -49,15 +50,7 @@ class SalesPipelineService
     }
 
     /**
-     * @return list<string>
-     */
-    public function suggestedNextStages(SalesLead $lead): array
-    {
-        return $this->allowedNextStages($lead);
-    }
-
-    /**
-     * قمع مختصر للعرض (بدل 15 نقطة).
+     * قمع مختصر للعرض (7 مراحل بدل 15).
      *
      * @return array<string, string>
      */
@@ -72,6 +65,31 @@ class SalesPipelineService
             'won' => 'تسجيل',
             'lost' => 'خروج',
         ];
+    }
+
+    /**
+     * تجميع أعداد العملاء حسب القمع المختصر.
+     *
+     * @param  array<string, int>  $stageCounts  stage => count
+     * @return array<string, int>
+     */
+    public function bucketCountsFromStageCounts(array $stageCounts): array
+    {
+        $buckets = array_fill_keys(array_keys($this->journeyBuckets()), 0);
+        foreach ($stageCounts as $stage => $count) {
+            $bucket = $this->bucketForStage((string) $stage);
+            $buckets[$bucket] = ($buckets[$bucket] ?? 0) + (int) $count;
+        }
+
+        return $buckets;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function suggestedNextStages(SalesLead $lead): array
+    {
+        return $this->allowedNextStages($lead);
     }
 
     public function bucketForStage(string $stage): string
@@ -160,7 +178,7 @@ class SalesPipelineService
         $allowed = $this->allowedNextStages($lead);
         if ($toStage !== $lead->stage && ! in_array($toStage, $allowed, true)) {
             throw ValidationException::withMessages([
-                'stage' => ['ممنوع تخطّي الـ Pipeline. انتقل للمرحلة التالية فقط من: '
+                'stage' => ['انتقال غير مسموح من المرحلة الحالية. الخيارات المتاحة: '
                     .collect($allowed)->map(fn ($s) => SalesLead::stageLabel($s))->implode(' · ')],
             ]);
         }
@@ -266,9 +284,9 @@ class SalesPipelineService
     private function assertTransitionNotes(array $payload): void
     {
         $notes = trim((string) ($payload['notes'] ?? ''));
-        if (mb_strlen($notes) < 8) {
+        if (mb_strlen($notes) < 5) {
             throw ValidationException::withMessages([
-                'notes' => ['الملاحظات إلزامية عند كل انتقال في الـ Pipeline (8 أحرف على الأقل).'],
+                'notes' => ['الملاحظات إلزامية عند كل انتقال (5 أحرف على الأقل) — اكتب ماذا حصل باختصار.'],
             ]);
         }
     }

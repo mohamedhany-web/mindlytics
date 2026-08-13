@@ -95,6 +95,10 @@ class SalesAttendancePermission extends Model
 
     public static function hasDayAbsence(int $employeeId, Carbon|string $date): bool
     {
+        if (! \Illuminate\Support\Facades\Schema::hasTable((new static)->getTable())) {
+            return false;
+        }
+
         return static::query()
             ->approved()
             ->forEmployeeDate($employeeId, $date)
@@ -104,6 +108,10 @@ class SalesAttendancePermission extends Model
 
     public static function hasEarlyDeparture(int $employeeId, Carbon|string $date): bool
     {
+        if (! \Illuminate\Support\Facades\Schema::hasTable((new static)->getTable())) {
+            return false;
+        }
+
         return static::query()
             ->approved()
             ->forEmployeeDate($employeeId, $date)
@@ -113,6 +121,10 @@ class SalesAttendancePermission extends Model
 
     public static function earlyDepartureFor(int $employeeId, Carbon|string $date): ?self
     {
+        if (! \Illuminate\Support\Facades\Schema::hasTable((new static)->getTable())) {
+            return null;
+        }
+
         return static::query()
             ->approved()
             ->forEmployeeDate($employeeId, $date)

@@ -150,7 +150,10 @@
     @endif
 
     @if($dr)
-    <div class="dashboard-card">
+    @php
+        $peopleLine = collect($dr['lines'] ?? [])->firstWhere('key', 'people_worked_daily');
+    @endphp
+    <div class="dashboard-card border-teal-200">
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
             <div>
                 <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">نتائج اليوم مقابل الهدف (SOS)</p>
@@ -158,7 +161,7 @@
                     {{ $dr['overall_pct'] ?? 0 }}%
                 </p>
                 <p class="text-xs font-semibold text-slate-600">{{ $dr['status_label'] ?? '' }}</p>
-                <p class="text-[11px] text-slate-500 mt-1">بدون اجتماعات · أقل من {{ number_format($kpiPenaltyThreshold ?? 70, 0) }}٪ على مؤشر = خصم تلقائي بعد نهاية اليوم</p>
+                <p class="text-[11px] text-slate-500 mt-1">أقل من {{ number_format($kpiPenaltyThreshold ?? 70, 0) }}٪ على مؤشر = خصم تلقائي بعد نهاية اليوم</p>
             </div>
             <div class="flex flex-wrap gap-2">
                 <a href="{{ route('employee.sales.penalties.index') }}" class="inline-flex items-center gap-2 text-sm font-semibold text-rose-800 border border-rose-200 bg-rose-50 rounded-lg px-4 py-2 hover:bg-rose-100">
@@ -167,9 +170,37 @@
                 <a href="{{ route('employee.sales.daily-reports.edit') }}" class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 border border-slate-200 rounded-lg px-4 py-2 hover:bg-slate-50">
                     التقرير اليومي
                 </a>
+                <a href="{{ route('employee.sales.leads.create') }}" class="inline-flex items-center gap-2 text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-lg px-4 py-2">
+                    <i class="fas fa-plus"></i> تسجيل عميل
+                </a>
             </div>
         </div>
-        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2">
+
+        @if($peopleLine)
+            @php
+                $pActual = (int) ($peopleLine['actual'] ?? 0);
+                $pTarget = max(1, (int) ($peopleLine['target'] ?? 100));
+                $pPct = min(100, round($pActual / $pTarget * 100));
+                $pStatus = $peopleLine['status'] ?? 'behind';
+            @endphp
+            <div class="mb-4 rounded-2xl border border-teal-200 bg-gradient-to-l from-teal-50 to-white p-4">
+                <div class="flex flex-wrap items-end justify-between gap-3 mb-2">
+                    <div>
+                        <p class="text-xs font-bold text-teal-800 uppercase tracking-wider">هدف اليوم — أشخاص تم العمل عليهم</p>
+                        <p class="text-sm text-slate-600 mt-1">كل عميل تدخل بياناته أو تحرّكه في الـ Pipeline يُحسب مرة واحدة</p>
+                    </div>
+                    <p class="text-3xl font-black tabular-nums {{ $pStatus === 'met' ? 'text-emerald-700' : ($pStatus === 'near' ? 'text-amber-700' : 'text-rose-700') }}">
+                        {{ $pActual }}<span class="text-lg text-slate-500 font-bold">/{{ $pTarget }}</span>
+                    </p>
+                </div>
+                <div class="h-3 rounded-full bg-slate-100 overflow-hidden">
+                    <div class="h-full rounded-full {{ $pStatus === 'met' ? 'bg-emerald-500' : ($pStatus === 'near' ? 'bg-amber-500' : 'bg-rose-500') }}" style="width: {{ $pPct }}%"></div>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-2">{{ $pPct }}٪ من الهدف · متبقي {{ max(0, $pTarget - $pActual) }} شخص</p>
+            </div>
+        @endif
+
+        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
             @foreach($dr['lines'] ?? [] as $line)
                 @php
                     $lc = match($line['status'] ?? '') {
@@ -270,23 +301,38 @@
     </div>
 
     <div class="dashboard-card">
-        <h2 class="text-xl font-bold text-slate-900 mb-1">قمع المراحل</h2>
-        <p class="text-sm text-slate-500 mb-4">عدد العملاء في كل مرحلة — يساعد على معرفة أين يتراكم العمل.</p>
-        @php $maxF = max($funnel) ?: 1; @endphp
+        <h2 class="text-xl font-bold text-slate-900 mb-1">قمع المبيعات</h2>
+        <p class="text-sm text-slate-500 mb-4">7 مراحل مختصرة — أين يتراكم العملاء الآن.</p>
+        @php
+            $bucketFunnel = $funnelBuckets ?? [];
+            $maxF = max(array_values($bucketFunnel) ?: [1]) ?: 1;
+            $bucketLabels = $journeyBuckets ?? app(\App\Services\SalesPipelineService::class)->journeyBuckets();
+        @endphp
         <div class="space-y-3">
-            @foreach(\App\Models\SalesLead::STAGES as $key => $label)
-                @php $c = $funnel[$key] ?? 0; $pct = round(($c / $maxF) * 100); @endphp
+            @foreach($bucketLabels as $key => $label)
+                @php $c = $bucketFunnel[$key] ?? 0; $pct = round(($c / $maxF) * 100); @endphp
                 <div>
                     <div class="flex justify-between text-sm mb-1">
-                        <span class="font-medium text-slate-800">{{ $label }}</span>
-                        <span class="text-slate-500 tabular-nums">{{ $c }}</span>
+                        <span class="font-semibold text-slate-800">{{ $label }}</span>
+                        <span class="text-slate-500 tabular-nums font-bold">{{ $c }}</span>
                     </div>
-                    <div class="h-2 rounded-full bg-slate-100 overflow-hidden">
-                        <div class="h-full rounded-full bg-slate-500" style="width: {{ $pct }}%"></div>
+                    <div class="h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                        <div class="h-full rounded-full bg-gradient-to-l from-teal-500 to-cyan-500" style="width: {{ $pct }}%"></div>
                     </div>
                 </div>
             @endforeach
         </div>
+        <details class="mt-4 pt-3 border-t border-slate-100">
+            <summary class="text-xs font-semibold text-slate-500 cursor-pointer hover:text-slate-800">تفاصيل كل مرحلة فرعية</summary>
+            <div class="mt-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                @foreach(\App\Models\SalesLead::STAGES as $key => $label)
+                    <div class="rounded-lg bg-slate-50 border border-slate-100 px-2.5 py-2 text-center">
+                        <p class="text-[10px] text-slate-500 leading-tight">{{ $label }}</p>
+                        <p class="text-sm font-bold text-slate-800 tabular-nums">{{ $funnel[$key] ?? 0 }}</p>
+                    </div>
+                @endforeach
+            </div>
+        </details>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">

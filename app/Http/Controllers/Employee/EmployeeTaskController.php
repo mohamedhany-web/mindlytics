@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DesignTaskCycle;
 use App\Models\EmployeeTask;
 use App\Models\EmployeeTaskDeliverable;
+use App\Models\ModeratorMontageRequest;
 use App\Services\EmployeeDeliverableStorageService;
 use App\Services\EmployeeTaskDeliverableService;
 use App\Support\MontageVideoHelper;
@@ -115,8 +116,14 @@ class EmployeeTaskController extends Controller
         if (($validated['status'] ?? '') === 'in_progress' && $task->isDesign()) {
             DesignTaskCycle::syncDesignerTaskInProgress($task);
         }
+        if (($validated['status'] ?? '') === 'in_progress' && $task->isVideoEditing()) {
+            ModeratorMontageRequest::syncTaskInProgress($task);
+        }
         if (($validated['status'] ?? '') === 'completed' && $task->isDesignModeratorDelivery()) {
             DesignTaskCycle::syncAfterModeratorDeliveryCompleted($task);
+        }
+        if (($validated['status'] ?? '') === 'completed' && $task->isVideoEditing()) {
+            ModeratorMontageRequest::syncTaskCompleted($task);
         }
 
         return back()->with('success', 'تم تحديث حالة المهمة بنجاح');
@@ -135,8 +142,23 @@ class EmployeeTaskController extends Controller
 
         $isVideoEditing = $task->isVideoEditing()
             || $request->input('task_type_context') === 'video_editing';
+        $isFlexibleVideo = $isVideoEditing && $task->allowsFlexibleVideoDelivery();
 
-        if ($isVideoEditing) {
+        if ($isFlexibleVideo) {
+            $validated = $request->validate([
+                'title' => 'nullable|string|max:255',
+                'description' => 'nullable|string',
+                'delivery_type' => 'required|in:link,file',
+                'link_url' => 'nullable|url|required_if:delivery_type,link|max:2000',
+                'file' => 'nullable|file|max:102400|required_if:delivery_type,file',
+                'received_from' => 'nullable|string|max:255',
+            ], [
+                'delivery_type.required' => 'اختر طريقة التسليم (رابط أو رفع ملف).',
+                'link_url.required_if' => 'أدخل رابط Drive أو أي رابط للفيديو.',
+                'file.required_if' => 'ارفع ملف الفيديو.',
+                'file.max' => 'حجم الملف حد أقصى 100 ميجابايت — للملفات الأكبر استخدم رابط Drive.',
+            ]);
+        } elseif ($isVideoEditing) {
             $validated = $request->validate([
                 'title' => 'nullable|string|max:255',
                 'description' => 'nullable|string',
@@ -193,7 +215,22 @@ class EmployeeTaskController extends Controller
         $beforeMin = null;
         $afterMin = null;
 
-        if ($isVideoEditing) {
+        if ($isFlexibleVideo) {
+            $deliveryType = $validated['delivery_type'];
+            $receivedFrom = $validated['received_from'] ?? null;
+            if ($deliveryType === 'link') {
+                $linkUrl = $validated['link_url'];
+            }
+            if ($deliveryType === 'file' && $request->hasFile('file')) {
+                $file = $request->file('file');
+                $fileName = $file->getClientOriginalName();
+                $fileType = $file->getClientMimeType();
+                $fileSize = $file->getSize();
+                $stored = $this->deliverableStorage->storeUploadedFile($file, 'file');
+                $filePath = $stored['path'];
+                $fileDisk = $stored['disk'];
+            }
+        } elseif ($isVideoEditing) {
             $linkUrl = $validated['video_link_url'];
             $deliveryType = 'link';
             $receivedFrom = $validated['received_from'] ?? null;
@@ -234,7 +271,7 @@ class EmployeeTaskController extends Controller
             'title' => $validated['title'] ?? ('تسليم مونتاج '.now()->format('Y-m-d H:i')),
             'description' => $validated['description'] ?? null,
             'delivery_type' => $deliveryType,
-            'link_url' => $linkUrl ?? ($isVideoEditing ? $validated['video_link_url'] : null),
+            'link_url' => $linkUrl,
             'file_path' => $filePath,
             'file_disk' => $fileDisk,
             'file_name' => $fileName,
@@ -246,7 +283,7 @@ class EmployeeTaskController extends Controller
             'status' => 'submitted',
             'submitted_at' => now(),
         ];
-        if ($isVideoEditing) {
+        if ($isVideoEditing && ! $isFlexibleVideo) {
             $createPayload['duration_before_minutes'] = $beforeMin ?? null;
             $createPayload['duration_after_minutes'] = $afterMin ?? null;
         }
@@ -258,6 +295,7 @@ class EmployeeTaskController extends Controller
 
         $task->refresh();
         DesignTaskCycle::syncAfterDesignerDeliverable($task);
+        ModeratorMontageRequest::syncAfterMontageDeliverable($task);
 
         $message = $isVideoEditing
             ? 'تم تسليم المونتاج بنجاح'

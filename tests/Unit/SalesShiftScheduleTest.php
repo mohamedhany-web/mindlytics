@@ -149,7 +149,47 @@ class SalesShiftScheduleTest extends TestCase
 
         $plan = app(SalesShiftPlanImporter::class)->importDefaultPlan(true);
         $this->assertTrue($plan->is_active);
-        $this->assertGreaterThan(20, $plan->segments()->count());
+        $this->assertSame(24, $plan->segments()->count());
+    }
+
+    public function test_importer_matches_current_team_rotation(): void
+    {
+        $job = EmployeeJob::create(['name' => 'Sales', 'code' => 'sales', 'is_active' => true]);
+        $names = ['شهد', 'حنين', 'مريم', 'إسراء'];
+        $users = [];
+        foreach ($names as $i => $name) {
+            $users[$name] = User::create([
+                'name' => $name,
+                'email' => "rot-{$i}@test.local",
+                'password' => Hash::make('x'),
+                'is_employee' => true,
+                'is_active' => true,
+                'employee_job_id' => $job->id,
+                'branch_id' => 1,
+            ]);
+        }
+
+        $plan = app(SalesShiftPlanImporter::class)->importDefaultPlan(true);
+        $svc = app(SalesShiftScheduleService::class);
+        $board = $svc->buildWeekBoard($plan, Carbon::parse('2026-08-08')->startOfWeek(Carbon::SATURDAY));
+
+        $this->assertNotNull($board);
+        $byDay = collect($board['days'])->keyBy('day_of_week');
+
+        // أربعاء: إسراء + حنين أجازة
+        $wedOff = collect($byDay[4]['off_today'])->pluck('name')->all();
+        $this->assertContains('إسراء', $wedOff);
+        $this->assertContains('حنين', $wedOff);
+
+        // جمعة: شهد + مريم أجازة
+        $friOff = collect($byDay[6]['off_today'])->pluck('name')->all();
+        $this->assertContains('شهد', $friOff);
+        $this->assertContains('مريم', $friOff);
+
+        // سبت: 4 lanes, كل القنوات
+        $sat = $byDay[0];
+        $this->assertCount(4, $sat['lanes']);
+        $this->assertSame('كل القنوات', $sat['lanes'][0]['segments'][0]['channels_label']);
     }
 
     public function test_channel_owner_resolves_for_active_segment(): void

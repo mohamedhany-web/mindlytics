@@ -224,6 +224,7 @@ class SalesDailyKpiPenaltyService
     public function metricLabel(string $key): string
     {
         return match ($key) {
+            'people_worked_daily' => 'أشخاص تم العمل عليهم',
             'call_attempts_daily' => 'محاولات اتصال',
             'calls_answered_daily' => 'مكالمات تم الرد',
             'qualified_conversations_daily' => 'محادثات مؤهلة',

@@ -700,7 +700,7 @@ class SalesLeadController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'phone' => 'nullable|string|max:50',
+            'phone' => 'required|string|max:50',
             'email' => 'nullable|email|max:255',
             'company' => 'nullable|string|max:255',
             'source' => 'required|string|in:' . implode(',', array_keys(SalesLead::SOURCES)),
@@ -718,6 +718,11 @@ class SalesLeadController extends Controller
             'lost_reason' => 'nullable|string|max:500',
             'lost_reason_code' => 'nullable|string|in:' . implode(',', array_keys(SalesLead::LOSS_REASONS)),
             'lost_reason_custom' => 'nullable|string|max:500',
+        ], [
+            'name.required' => 'اسم العميل مطلوب.',
+            'phone.required' => 'رقم الهاتف مطلوب لتسريع المتابعة.',
+            'interest_type_id.required' => 'اختر اهتمام العميل.',
+            'source.required' => 'المصدر مطلوب.',
         ]);
 
         $validated = $this->normalizeCourseFields($validated);

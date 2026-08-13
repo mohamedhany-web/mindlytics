@@ -9,21 +9,15 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 /**
- * يستورد خطة الشيفتات الافتراضية من sales-shifts.html
+ * يستورد جدول شيفتات فريق المبيعات الحالي (شهد · حنين · مريم · إسراء — كل القنوات).
  */
 class SalesShiftPlanImporter
 {
     private const PERSON_META = [
-        'shahd' => ['match' => ['شهد', 'shahd'], 'color' => '#F5A623', 'base' => 'ماسنجر · انستا', 'weekly_off' => 4],
-        'esraa' => ['match' => ['إسراء', 'اسراء', 'esraa'], 'color' => '#EC6A9C', 'base' => 'مكالمات', 'weekly_off' => 3],
-        'mariam' => ['match' => ['مريم', 'mariam'], 'color' => '#4DD0E1', 'base' => 'واتساب · فولو أب', 'weekly_off' => 5],
-        'haneen' => ['match' => ['حنين', 'haneen'], 'color' => '#8BD450', 'base' => 'كومنتات', 'weekly_off' => 5],
-    ];
-
-    private const OFF_CHANNELS = [
-        'shahd' => ['messenger', 'instagram'],
-        'mariam' => ['whatsapp', 'followup'],
-        'haneen' => ['comments', 'calls'],
+        'shahd' => ['match' => ['شهد', 'shahd'], 'color' => '#F5A623', 'base' => 'كل القنوات'],
+        'haneen' => ['match' => ['حنين', 'haneen', 'hanin'], 'color' => '#8BD450', 'base' => 'كل القنوات'],
+        'mariam' => ['match' => ['مريم', 'mariam', 'maryam'], 'color' => '#4DD0E1', 'base' => 'كل القنوات'],
+        'esraa' => ['match' => ['إسراء', 'اسراء', 'esraa', 'israa'], 'color' => '#EC6A9C', 'base' => 'كل القنوات'],
     ];
 
     public function importDefaultPlan(bool $activate = true): SalesShiftPlan
@@ -35,7 +29,7 @@ class SalesShiftPlanImporter
 
             $plan = SalesShiftPlan::create([
                 'name' => 'جدول شيفتات فريق المبيعات',
-                'description' => 'مستورد من sales-shifts.html — 10 ص إلى 2 ص، توزيع قنوات',
+                'description' => 'شهد · حنين · مريم · إسراء — 10 ص إلى 2 ص، كل القنوات',
                 'work_start_hour' => 10,
                 'work_end_hour' => 26,
                 'takeover_grace_minutes' => (int) config('sales_shifts.takeover_grace_minutes', 10),
@@ -57,7 +51,9 @@ class SalesShiftPlanImporter
                             'user_id' => $lane['user_id'],
                             'start_hour' => $seg[0],
                             'end_hour' => $seg[1],
-                            'mode' => $seg[2] === 'home' ? SalesShiftSegment::MODE_HOME : SalesShiftSegment::MODE_NORMAL,
+                            'mode' => ($seg[2] ?? '') === 'home'
+                                ? SalesShiftSegment::MODE_HOME
+                                : SalesShiftSegment::MODE_NORMAL,
                             'channels' => $this->parseChannels($seg[3]),
                             'location_badge' => $day['location_badge'] ?? null,
                             'sort_order' => $sort++,
@@ -100,9 +96,6 @@ class SalesShiftPlanImporter
 
             if ($found) {
                 $used[] = $found->id;
-                if ($meta['weekly_off'] !== null) {
-                    $found->forceFill(['weekly_off_day' => $meta['weekly_off']])->save();
-                }
                 $map[$key] = $found;
             }
         }
@@ -132,63 +125,57 @@ class SalesShiftPlanImporter
     }
 
     /**
+     * 0=سبت … 6=جمعة — مطابق لجدول Mindlytics الحالي.
+     *
      * @param  array<string, User>  $users
      * @return list<array{day_of_week: int, location_badge: ?string, lanes: list<array{user_id: int, segments: list<array>}>}>
      */
     private function dayDefinitions(array $users): array
     {
         $u = fn (string $k) => $users[$k]->id ?? null;
-        $off = fn (string $k) => self::OFF_CHANNELS[$k] ?? [];
-        $all = ['all'];
+        $allLabel = 'كل القنوات';
 
-        $office = function (string $opener) use ($u, $off, $all) {
+        /** @param list{0: string, 1: string, 2: string, 3: string} $rotation person keys for 10-14, 14-18, 18-22, 22-26 */
+        $fourShifts = function (string $p10, string $p14, string $p18, string $p22) use ($u, $allLabel): array {
             $lanes = [];
-            if ($uid = $u($opener)) {
-                $lanes[] = [
-                    'user_id' => $uid,
-                    'segments' => [
-                        [10, 11, 'home', implode(' · ', array_map(fn ($c) => config("sales_shifts.channels.{$c}.label", $c), $off($opener)))],
-                        [11, 19, '', implode(' · ', array_map(fn ($c) => config("sales_shifts.channels.{$c}.label", $c), $off($opener)))],
-                    ],
-                ];
-            }
-            foreach (['shahd', 'mariam', 'haneen'] as $k) {
-                if ($k === $opener || ! ($uid = $u($k))) {
-                    continue;
+            foreach ([[$p10, 10, 14], [$p14, 14, 18], [$p18, 18, 22], [$p22, 22, 26]] as [$person, $start, $end]) {
+                if ($uid = $u($person)) {
+                    $lanes[] = [
+                        'user_id' => $uid,
+                        'segments' => [[$start, $end, 'normal', $allLabel]],
+                    ];
                 }
-                $lanes[] = ['user_id' => $uid, 'segments' => [[11, 19, '', implode(' · ', array_map(fn ($c) => config("sales_shifts.channels.{$c}.label", $c), $off($k)))]]];
-            }
-            if ($uid = $u('esraa')) {
-                $lanes[] = ['user_id' => $uid, 'segments' => [[19, 26, '', 'كل القنوات']]];
             }
 
             return $lanes;
         };
 
         return [
-            ['day_of_week' => 0, 'location_badge' => 'from_office', 'lanes' => $office('shahd')],
-            ['day_of_week' => 1, 'location_badge' => 'from_office', 'lanes' => $office('mariam')],
-            ['day_of_week' => 2, 'location_badge' => 'from_office', 'lanes' => $office('haneen')],
-            ['day_of_week' => 3, 'location_badge' => null, 'lanes' => array_values(array_filter([
-                $u('shahd') ? ['user_id' => $u('shahd'), 'segments' => [[10, 14, '', 'ماسنجر · انستا · كومنتات'], [14, 18, '', 'ماسنجر · انستا']]] : null,
-                $u('esraa') ? ['user_id' => $u('esraa'), 'segments' => [[10, 14, '', 'مكالمات · واتساب · فولو أب'], [14, 18, '', 'مكالمات · كومنتات']]] : null,
-                $u('mariam') ? ['user_id' => $u('mariam'), 'segments' => [[14, 18, '', 'واتساب · فولو أب'], [18, 22, '', 'واتساب · مكالمات · فولو أب']]] : null,
-                $u('haneen') ? ['user_id' => $u('haneen'), 'segments' => [[18, 22, '', 'ماسنجر · انستا · كومنتات'], [22, 26, '', 'كل القنوات']]] : null,
-            ]))],
-            ['day_of_week' => 4, 'location_badge' => null, 'lanes' => array_values(array_filter([
-                $u('shahd') ? ['user_id' => $u('shahd'), 'segments' => [[10, 14, '', 'كل القنوات'], [14, 18, '', 'ماسنجر · انستا · واتساب']]] : null,
-                $u('haneen') ? ['user_id' => $u('haneen'), 'segments' => [[14, 18, '', 'كومنتات · مكالمات · فولو أب'], [18, 22, '', 'ماسنجر · انستا · كومنتات']]] : null,
-                $u('mariam') ? ['user_id' => $u('mariam'), 'segments' => [[18, 22, '', 'واتساب · مكالمات · فولو أب'], [22, 26, '', 'كل القنوات']]] : null,
-            ]))],
-            ['day_of_week' => 5, 'location_badge' => null, 'lanes' => array_values(array_filter([
-                $u('esraa') ? ['user_id' => $u('esraa'), 'segments' => [[10, 14, '', 'كل القنوات'], [14, 18, '', 'مكالمات · كومنتات · ماسنجر']]] : null,
-                $u('mariam') ? ['user_id' => $u('mariam'), 'segments' => [[14, 18, '', 'واتساب · انستا · فولو أب'], [18, 22, '', 'واتساب · مكالمات · فولو أب']]] : null,
-                $u('haneen') ? ['user_id' => $u('haneen'), 'segments' => [[18, 22, '', 'ماسنجر · انستا · كومنتات'], [22, 26, '', 'كل القنوات']]] : null,
-            ]))],
-            ['day_of_week' => 6, 'location_badge' => null, 'lanes' => array_values(array_filter([
-                $u('esraa') ? ['user_id' => $u('esraa'), 'segments' => [[10, 18, '', 'كل القنوات']]] : null,
-                $u('shahd') ? ['user_id' => $u('shahd'), 'segments' => [[18, 26, '', 'كل القنوات']]] : null,
-            ]))],
+            // سبت · أحد · اثنين — نفس الدوران
+            ['day_of_week' => 0, 'location_badge' => null, 'lanes' => $fourShifts('shahd', 'haneen', 'mariam', 'esraa')],
+            ['day_of_week' => 1, 'location_badge' => null, 'lanes' => $fourShifts('shahd', 'haneen', 'mariam', 'esraa')],
+            ['day_of_week' => 2, 'location_badge' => null, 'lanes' => $fourShifts('shahd', 'haneen', 'mariam', 'esraa')],
+            // ثلاثاء · خميس — إسراء مساءً ومريم ليلاً
+            ['day_of_week' => 3, 'location_badge' => null, 'lanes' => $fourShifts('shahd', 'haneen', 'esraa', 'mariam')],
+            // أربعاء — شهد 10-6 · مريم 6-2 · إسراء+حنين أجازة
+            [
+                'day_of_week' => 4,
+                'location_badge' => null,
+                'lanes' => array_values(array_filter([
+                    $u('shahd') ? ['user_id' => $u('shahd'), 'segments' => [[10, 18, 'normal', $allLabel]]] : null,
+                    $u('mariam') ? ['user_id' => $u('mariam'), 'segments' => [[18, 26, 'normal', $allLabel]]] : null,
+                ])),
+            ],
+            ['day_of_week' => 5, 'location_badge' => null, 'lanes' => $fourShifts('shahd', 'haneen', 'esraa', 'mariam')],
+            // جمعة — حنين 10-6 · إسراء 6-2 · شهد+مريم أجازة
+            [
+                'day_of_week' => 6,
+                'location_badge' => null,
+                'lanes' => array_values(array_filter([
+                    $u('haneen') ? ['user_id' => $u('haneen'), 'segments' => [[10, 18, 'normal', $allLabel]]] : null,
+                    $u('esraa') ? ['user_id' => $u('esraa'), 'segments' => [[18, 26, 'normal', $allLabel]]] : null,
+                ])),
+            ],
         ];
     }
 

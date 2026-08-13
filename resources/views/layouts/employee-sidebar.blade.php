@@ -36,12 +36,18 @@
 
         @if(auth()->user()->isModeratorEmployee())
         <div class="border-t border-slate-700/50 my-2 pt-2">
-            <p class="px-4 text-xs font-semibold text-fuchsia-400/90 uppercase tracking-wider mb-1">المشرف — التصميم</p>
+            <p class="px-4 text-xs font-semibold text-fuchsia-400/90 uppercase tracking-wider mb-1">المشرف — التصميم والمونتاج</p>
             <a href="{{ route('employee.design-cycles.index') }}"
                class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.design-cycles.*') ? 'bg-fuchsia-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
                @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
                 <i class="fas fa-palette text-base"></i>
                 <span>طلبات التصميم</span>
+            </a>
+            <a href="{{ route('employee.montage-requests.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.montage-requests.*') ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-film text-base"></i>
+                <span>طلبات المونتاج</span>
             </a>
             <a href="{{ route('employee.marketing-plans.index') }}"
                class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.marketing-plans.*') ? 'bg-pink-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
@@ -116,6 +122,18 @@
                @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
             <i class="fas fa-chart-bar text-base"></i>
             <span>تقارير الأداء</span>
+            </a>
+            <a href="{{ route('employee.sales.course-board.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.course-board.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-book-open text-base"></i>
+                <span>معلومات الكورسات</span>
+            </a>
+            <a href="{{ route('employee.sales.policy.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.policy.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-scale-balanced text-base"></i>
+                <span>قواعد وسياسات المبيعات</span>
             </a>
             <a href="{{ route('employee.sales.leads.index') }}"
                title="العملاء المحتملون"
@@ -194,6 +212,18 @@
                @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
                 <i class="fas fa-broadcast-tower text-base"></i>
                 <span>متابعة الفريق اليوم</span>
+            </a>
+            <a href="{{ route('employee.sales.course-board.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.course-board.*') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-book-open text-base"></i>
+                <span>معلومات الكورسات</span>
+            </a>
+            <a href="{{ route('employee.sales.policy.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.policy.*') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-scale-balanced text-base"></i>
+                <span>قواعد وسياسات المبيعات</span>
             </a>
             <a href="{{ route('employee.sales-manager.leads.index') }}"
                class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.leads.*') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"

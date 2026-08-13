@@ -161,7 +161,60 @@
                 </summary>
                 <div class="px-6 pb-6 pt-2 bg-slate-50/50 border-t border-slate-100">
             <!-- نموذج التسليم (فوق) -->
-            @if($task->isVideoEditing())
+            @if($task->isVideoEditing() && $task->allowsFlexibleVideoDelivery())
+                <div class="bg-cyan-50/40 border-2 border-cyan-200 rounded-xl p-6 mb-6" x-data="{ deliveryType: 'link' }">
+                    <h4 class="text-base font-semibold text-gray-900 mb-2">
+                        <i class="fas fa-plus-circle text-cyan-600 mr-2"></i>تسليم فيديو المونتاج
+                    </h4>
+                    <p class="text-xs text-cyan-800 mb-4">يمكنك التسليم برابط Google Drive (أو أي رابط) أو برفع الملف مباشرة — حتى 100 ميجابايت.</p>
+                    <form action="{{ route('employee.tasks.submit-deliverable', $task) }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        <input type="hidden" name="task_type_context" value="video_editing">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">عنوان التسليم (اختياري)</label>
+                                <input type="text" name="title" value="{{ old('title') }}" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500" placeholder="مثال: فيديو الحملة — النسخة النهائية">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">طريقة التسليم *</label>
+                                <div class="flex flex-wrap gap-3">
+                                    <label class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-cyan-200 bg-white cursor-pointer">
+                                        <input type="radio" name="delivery_type" value="link" x-model="deliveryType" {{ old('delivery_type', 'link') === 'link' ? 'checked' : '' }}>
+                                        <span class="text-sm font-semibold">رابط Drive / رابط</span>
+                                    </label>
+                                    <label class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-cyan-200 bg-white cursor-pointer">
+                                        <input type="radio" name="delivery_type" value="file" x-model="deliveryType" {{ old('delivery_type') === 'file' ? 'checked' : '' }}>
+                                        <span class="text-sm font-semibold">رفع ملف</span>
+                                    </label>
+                                </div>
+                                @error('delivery_type')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                            </div>
+                            <div class="md:col-span-2" x-show="deliveryType === 'link'" x-cloak>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">رابط الفيديو *</label>
+                                <input type="url" name="link_url" value="{{ old('link_url') }}" dir="ltr" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500" placeholder="https://drive.google.com/...">
+                                @error('link_url')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                            </div>
+                            <div class="md:col-span-2" x-show="deliveryType === 'file'" x-cloak>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">ملف الفيديو *</label>
+                                <input type="file" name="file" accept="video/*,.mp4,.mov,.webm,.mkv,.avi" class="w-full text-sm">
+                                <p class="text-xs text-gray-500 mt-1">حد أقصى 100 ميجابايت — للملفات الأكبر استخدم Drive.</p>
+                                @error('file')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">ممن استلمته (اختياري)</label>
+                                <input type="text" name="received_from" value="{{ old('received_from') }}" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500" placeholder="مشرف المحتوى / المصدر">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">ملاحظات (اختياري)</label>
+                                <textarea name="description" rows="2" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500">{{ old('description') }}</textarea>
+                            </div>
+                        </div>
+                        <button type="submit" class="mt-4 w-full md:w-auto px-6 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-medium transition-colors">
+                            <i class="fas fa-upload mr-2"></i>تسليم الفيديو
+                        </button>
+                    </form>
+                </div>
+            @elseif($task->isVideoEditing())
                 <div class="bg-violet-50/30 border-2 border-violet-200 rounded-xl p-6 mb-6">
                     <h4 class="text-base font-semibold text-gray-900 mb-4">
                         <i class="fas fa-plus-circle text-violet-600 mr-2"></i>تسليم مونتاج جديد

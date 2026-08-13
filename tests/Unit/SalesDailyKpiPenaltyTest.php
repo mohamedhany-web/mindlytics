@@ -229,8 +229,78 @@ class SalesDailyKpiPenaltyTest extends TestCase
         $keys = collect($comparison['lines'])->pluck('key')->all();
 
         $this->assertNotContains('discovery_sessions_daily', $keys);
+        $this->assertContains('people_worked_daily', $keys);
         $this->assertContains('call_attempts_daily', $keys);
         $this->assertContains('paid_enrollments_daily', $keys);
+
+        $peopleLine = collect($comparison['lines'])->firstWhere('key', 'people_worked_daily');
+        $this->assertSame(100.0, (float) $peopleLine['target']);
+    }
+
+    public function test_people_worked_counts_unique_leads_from_create_and_activity(): void
+    {
+        $rep = $this->makeRep();
+        $day = Carbon::parse('2026-08-06')->startOfDay();
+
+        $leadA = SalesLead::create([
+            'name' => 'A',
+            'phone' => '01000000011',
+            'stage' => 'new_lead',
+            'assigned_to' => $rep->id,
+        ]);
+        $leadA->timestamps = false;
+        $leadA->forceFill([
+            'created_at' => $day->copy()->setTime(9, 0),
+            'updated_at' => $day->copy()->setTime(9, 0),
+        ])->save();
+
+        $leadB = SalesLead::create([
+            'name' => 'B',
+            'phone' => '01000000012',
+            'stage' => 'new_lead',
+            'assigned_to' => $rep->id,
+        ]);
+        $leadB->timestamps = false;
+        $leadB->forceFill([
+            'created_at' => $day->copy()->subDay(),
+            'updated_at' => $day->copy()->subDay(),
+        ])->save();
+
+        // نفس leadA مرة تانية + leadB عبر نشاط = شخصين فريدين
+        $this->createActivityAt($rep->id, $leadA->id, 'call', 'no_answer', $day->copy()->setTime(10, 0));
+        $this->createActivityAt($rep->id, $leadB->id, 'stage_change', null, $day->copy()->setTime(11, 0));
+        $this->createActivityAt($rep->id, $leadB->id, 'follow_up', null, $day->copy()->setTime(12, 0));
+
+        $svc = app(SalesDailyResultService::class);
+        $from = $day->copy()->startOfDay();
+        $to = $day->copy()->endOfDay();
+
+        $this->assertSame(2, $svc->countPeopleWorked((int) $rep->id, $from, $to));
+
+        $sos = $svc->metricsFor((int) $rep->id, $from, $to);
+        $this->assertSame(2, $sos['people_worked_daily']);
+
+        $built = app(SalesDailyReportService::class)->buildFromActivities($rep, $day);
+        $this->assertSame(2, $built['metrics']['numbers_worked']);
+        $this->assertSame(2, $built['sos_metrics']['people_worked_daily']);
+    }
+
+    public function test_people_worked_is_chargeable_metric(): void
+    {
+        config([
+            'sales_kpi.daily_kpi_penalty.metrics' => array_merge(
+                config('sales_kpi.daily_kpi_penalty.metrics', []),
+                [
+                    'people_worked_daily' => [
+                        'amount' => 40,
+                        'title' => 'غرامة KPI يومي — أشخاص تم العمل عليهم',
+                    ],
+                ]
+            ),
+        ]);
+
+        $chargeable = array_keys(app(SalesDailyKpiPenaltyService::class)->chargeableMetrics());
+        $this->assertContains('people_worked_daily', $chargeable);
     }
 
     public function test_kpi_miss_creates_deduction_and_is_idempotent(): void

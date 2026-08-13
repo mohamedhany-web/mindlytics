@@ -13,21 +13,21 @@ class SalesLead extends Model
 
     /** Academy sales journey */
     public const STAGES = [
-        'new_lead' => 'New Lead',
-        'first_contact' => 'First Contact',
-        'no_answer' => 'No Answer',
-        'connected' => 'Connected',
-        'qualification' => 'Qualification',
-        'interested' => 'Interested',
-        'objection' => 'Objection',
-        'follow_up_scheduled' => 'Follow-up Scheduled',
-        'offer_sent' => 'Offer Sent',
-        'payment_pending' => 'Payment Pending',
-        'payment_received' => 'Payment Received',
-        'enrollment_completed' => 'Enrollment Completed',
-        'upsell' => 'Upsell',
-        'dormant' => 'Dormant Lead',
-        'lost' => 'Lost',
+        'new_lead' => 'عميل جديد',
+        'first_contact' => 'أول تواصل',
+        'no_answer' => 'لم يرد',
+        'connected' => 'تم التواصل',
+        'qualification' => 'تأهيل',
+        'interested' => 'مهتم',
+        'objection' => 'اعتراض',
+        'follow_up_scheduled' => 'متابعة مجدولة',
+        'offer_sent' => 'عرض سعر',
+        'payment_pending' => 'بانتظار الدفع',
+        'payment_received' => 'تم الدفع',
+        'enrollment_completed' => 'تسجيل مكتمل',
+        'upsell' => 'بيع إضافي',
+        'dormant' => 'راكد',
+        'lost' => 'خسارة',
     ];
 
     /** مراحل مغلقة خارج الأنبوب النشط */

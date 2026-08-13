@@ -500,6 +500,9 @@ Route::get('/course/{id}', function ($id) {
 Route::get('/course/{course}/mind-map', [\App\Http\Controllers\Public\CourseMindMapController::class, 'show'])
     ->name('public.course.mind-map');
 
+Route::get('/course-info/{slug}', [\App\Http\Controllers\Public\SalesCourseBoardLandingController::class, 'show'])
+    ->name('public.sales-course-board.show');
+
 Route::post('/course/{courseId}/reviews', [\App\Http\Controllers\Public\PublicReviewController::class, 'storeCourse'])
     ->middleware('auth')
     ->name('public.course.reviews.store');
@@ -1046,6 +1049,11 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             });
         });
 
+        Route::middleware('sales.staff')->prefix('sales')->name('sales.')->group(function () {
+            Route::get('course-board', [\App\Http\Controllers\Employee\SalesCourseBoardController::class, 'index'])->name('course-board.index');
+            Route::get('policy', [\App\Http\Controllers\Employee\SalesPolicyController::class, 'index'])->name('policy.index');
+        });
+
         // Messenger & Instagram لموظفي/مديري المبيعات (كل الرسايل — الربط عند الرد/الأكشن)
         Route::middleware('sales.staff')->prefix('sales/meta-social/inbox')->name('sales.meta-social.inbox.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Employee\SalesMetaSocialInboxController::class, 'index'])->name('index');
@@ -1150,6 +1158,14 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/{design_task_cycle}', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'show'])->name('show');
             Route::post('/{design_task_cycle}/moderator-delivery', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'storeModeratorDelivery'])->name('moderator-delivery.store');
             Route::post('/{design_task_cycle}/cancel', [\App\Http\Controllers\Employee\DesignTaskCycleController::class, 'cancel'])->name('cancel');
+        });
+
+        Route::middleware('moderator.employee')->prefix('montage-requests')->name('montage-requests.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Employee\ModeratorMontageRequestController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Employee\ModeratorMontageRequestController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Employee\ModeratorMontageRequestController::class, 'store'])->name('store');
+            Route::get('/{montage_request}', [\App\Http\Controllers\Employee\ModeratorMontageRequestController::class, 'show'])->name('show');
+            Route::post('/{montage_request}/cancel', [\App\Http\Controllers\Employee\ModeratorMontageRequestController::class, 'cancel'])->name('cancel');
         });
 
         Route::middleware('moderator.employee')->prefix('marketing-plans')->name('marketing-plans.')->group(function () {
@@ -1289,6 +1305,16 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('interest-types', [\App\Http\Controllers\Admin\SalesInterestTypeController::class, 'store'])->name('interest-types.store');
             Route::put('interest-types/{interestType}', [\App\Http\Controllers\Admin\SalesInterestTypeController::class, 'update'])->name('interest-types.update');
             Route::delete('interest-types/{interestType}', [\App\Http\Controllers\Admin\SalesInterestTypeController::class, 'destroy'])->name('interest-types.destroy');
+            Route::get('policy', [\App\Http\Controllers\Admin\SalesPolicyController::class, 'index'])->name('policy.index');
+            Route::put('policy/settings', [\App\Http\Controllers\Admin\SalesPolicyController::class, 'updateSettings'])->name('policy.settings');
+            Route::post('policy/sections', [\App\Http\Controllers\Admin\SalesPolicyController::class, 'storeSection'])->name('policy.sections.store');
+            Route::put('policy/sections/{section}', [\App\Http\Controllers\Admin\SalesPolicyController::class, 'updateSection'])->name('policy.sections.update');
+            Route::delete('policy/sections/{section}', [\App\Http\Controllers\Admin\SalesPolicyController::class, 'destroySection'])->name('policy.sections.destroy');
+            Route::get('policy/rules/create', [\App\Http\Controllers\Admin\SalesPolicyController::class, 'createRule'])->name('policy.rules.create');
+            Route::post('policy/rules', [\App\Http\Controllers\Admin\SalesPolicyController::class, 'storeRule'])->name('policy.rules.store');
+            Route::get('policy/rules/{rule}/edit', [\App\Http\Controllers\Admin\SalesPolicyController::class, 'editRule'])->name('policy.rules.edit');
+            Route::put('policy/rules/{rule}', [\App\Http\Controllers\Admin\SalesPolicyController::class, 'updateRule'])->name('policy.rules.update');
+            Route::delete('policy/rules/{rule}', [\App\Http\Controllers\Admin\SalesPolicyController::class, 'destroyRule'])->name('policy.rules.destroy');
             Route::get('specialties', [\App\Http\Controllers\Admin\SalesSpecialtyController::class, 'index'])->name('specialties.index');
             Route::put('specialties/{user}', [\App\Http\Controllers\Admin\SalesSpecialtyController::class, 'update'])->name('specialties.update')->whereNumber('user');
             Route::get('distribution', [\App\Http\Controllers\Admin\SalesDistributionController::class, 'index'])->name('distribution.index');
@@ -1445,6 +1471,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('/advanced-courses/{advancedCourse}/statistics', [\App\Http\Controllers\Admin\AdvancedCourseController::class, 'statistics'])->name('advanced-courses.statistics');
         Route::post('/advanced-courses/{advancedCourse}/duplicate', [\App\Http\Controllers\Admin\AdvancedCourseController::class, 'duplicate'])->name('advanced-courses.duplicate');
         Route::get('/get-subjects-by-year', [\App\Http\Controllers\Admin\AdvancedCourseController::class, 'getSubjectsByYear'])->name('advanced-courses.get-subjects-by-year');
+
+        Route::resource('sales-course-board', \App\Http\Controllers\Admin\SalesCourseBoardController::class)->except(['show']);
 
         // بناء المنهج (أدمن) + سياسة فتح الفيديوهات
         Route::get('/curriculum', [\App\Http\Controllers\Admin\CurriculumController::class, 'hub'])->name('curriculum.hub');
