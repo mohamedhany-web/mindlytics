@@ -1120,6 +1120,14 @@
                         </ul>
                     </li>
                     <li>
+                        <a href="{{ route('admin.accounting.financial-analysis') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.accounting.financial-analysis*') ? 'bg-emerald-600/30 text-white font-semibold shadow-md border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-file-invoice-dollar w-4"></i>
+                            <span>التحليل المالي الشامل</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="{{ route('admin.accounting.reports') }}" 
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.accounting.reports') || request()->routeIs('admin.accounting.reports.*') ? 'bg-blue-600/30 text-white font-semibold shadow-md border-r-2 border-blue-500' : '' }}">

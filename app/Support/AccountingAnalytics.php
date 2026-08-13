@@ -297,4 +297,372 @@ class AccountingAnalytics
             'bucket_minutes' => $bucketMinutes,
         ];
     }
+
+    public static function invoiceTypeLabels(): array
+    {
+        return [
+            'course' => 'كورسات أونلاين',
+            'offline_course' => 'كورسات أوفلاين',
+            'learning_path' => 'مسارات تعليمية',
+            'subscription' => 'اشتراكات',
+            'membership' => 'عضويات',
+            'installment' => 'أقساط',
+            'other' => 'أخرى / عام',
+        ];
+    }
+
+    public static function invoiceTypeLabel(?string $type): string
+    {
+        return self::invoiceTypeLabels()[$type] ?? ($type ?: 'غير مصنّف');
+    }
+
+    public static function paymentMethodLabel(?string $method): string
+    {
+        return match (strtolower((string) $method)) {
+            'online' => 'أونلاين (بوابة)',
+            'cash' => 'نقدي',
+            'bank_transfer', 'bank' => 'تحويل بنكي',
+            'wallet' => 'محفظة',
+            'manual' => 'يدوي / إداري',
+            'installment' => 'تقسيط',
+            'other' => 'أخرى',
+            default => $method ? (string) $method : '—',
+        };
+    }
+
+    public static function isOnlineCollection(Payment $payment): bool
+    {
+        return $payment->status === 'completed'
+            && strtolower((string) $payment->payment_method) === 'online'
+            && filled($payment->payment_gateway)
+            && strtolower((string) $payment->payment_gateway) !== 'manual';
+    }
+
+    /**
+     * @return array{
+     *     channel: string,
+     *     channel_label: string,
+     *     sub_channel: string,
+     *     sub_channel_label: string
+     * }
+     */
+    public static function classifyCollectionChannel(Payment $payment): array
+    {
+        if (self::isOnlineCollection($payment)) {
+            return [
+                'channel' => 'online',
+                'channel_label' => 'تحصيل أونلاين',
+                'sub_channel' => (string) ($payment->payment_gateway ?? 'other'),
+                'sub_channel_label' => Payment::gatewayLabel($payment->payment_gateway),
+            ];
+        }
+
+        $method = strtolower((string) ($payment->payment_method ?? 'other'));
+
+        return [
+            'channel' => 'offline',
+            'channel_label' => 'تحصيل أوفلاين / يدوي',
+            'sub_channel' => $method ?: 'other',
+            'sub_channel_label' => self::paymentMethodLabel($payment->payment_method),
+        ];
+    }
+
+    /**
+     * @return array{
+     *     revenue_type: string,
+     *     revenue_type_label: string,
+     *     product_name: string,
+     *     enrollment_channel: string|null,
+     *     client_name: string,
+     *     invoice_number: string|null,
+     *     description: string
+     * }
+     */
+    public static function revenueSourceForPayment(
+        Payment $payment,
+        ?OfflineCourseEnrollment $offlineEnrollment = null
+    ): array {
+        $invoice = $payment->invoice;
+        $order = $payment->order;
+
+        $revenueType = $invoice?->type;
+        if (! $revenueType && $order) {
+            $revenueType = $order->advanced_course_id ? 'course' : ($order->academic_year_id ? 'learning_path' : 'other');
+        }
+        $revenueType = $revenueType ?: 'other';
+
+        $productName = '—';
+        if ($offlineEnrollment?->course) {
+            $productName = (string) $offlineEnrollment->course->title;
+        } elseif ($order?->course) {
+            $productName = (string) $order->course->title;
+        } elseif ($order?->learningPath) {
+            $productName = (string) ($order->learningPath->name ?? $order->learningPath->title ?? 'مسار تعليمي');
+        } elseif ($invoice) {
+            $productName = trim((string) ($invoice->description ?? ''));
+            if ($productName === '' || $productName === '-') {
+                $items = $invoice->items;
+                if (is_array($items) && ! empty($items[0]['name'])) {
+                    $productName = (string) $items[0]['name'];
+                }
+            }
+        }
+
+        if ($productName === '' || $productName === '-') {
+            $productName = self::invoiceTypeLabel($revenueType);
+        }
+
+        $clientName = $invoice
+            ? $invoice->clientDisplayName()
+            : (string) ($payment->user?->name ?? '—');
+
+        return [
+            'revenue_type' => $revenueType,
+            'revenue_type_label' => self::invoiceTypeLabel($revenueType),
+            'product_name' => $productName,
+            'enrollment_channel' => $offlineEnrollment?->enrollment_channel,
+            'client_name' => $clientName,
+            'invoice_number' => $invoice?->invoice_number,
+            'description' => (string) ($invoice?->description ?? $payment->notes ?? '—'),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function comprehensiveReport(Carbon $start, Carbon $end): array
+    {
+        $breakEven = self::breakEvenAnalysis($start, $end);
+        $daily = self::dailySeries($start, $end);
+
+        $expenses = Expense::query()
+            ->approved()
+            ->with(['offlineLocation', 'wallet', 'createdBy'])
+            ->whereBetween('expense_date', [$start->toDateString(), $end->toDateString()])
+            ->orderBy('expense_date')
+            ->get();
+
+        $payments = Payment::query()
+            ->with(['invoice', 'user', 'order.course', 'order.learningPath', 'branch'])
+            ->where('status', 'completed')
+            ->whereBetween('paid_at', [$start, $end])
+            ->orderBy('paid_at')
+            ->get();
+
+        $invoiceIds = $payments->pluck('invoice_id')->filter()->unique()->values();
+        $offlineByInvoice = OfflineCourseEnrollment::query()
+            ->with('course')
+            ->whereIn('invoice_id', $invoiceIds)
+            ->get()
+            ->keyBy('invoice_id');
+
+        $paymentRows = [];
+        $revenueByType = [];
+        $revenueByProduct = [];
+        $revenueByTypeAndChannel = [];
+        $collectionsOnline = ['total' => 0.0, 'count' => 0, 'by_gateway' => []];
+        $collectionsOffline = ['total' => 0.0, 'count' => 0, 'by_method' => []];
+        $offlineCourseCollections = ['total' => 0.0, 'count' => 0, 'by_channel' => []];
+
+        foreach ($payments as $payment) {
+            $amount = (float) $payment->amount;
+            $offlineEnrollment = $payment->invoice_id
+                ? $offlineByInvoice->get($payment->invoice_id)
+                : null;
+
+            $source = self::revenueSourceForPayment($payment, $offlineEnrollment);
+            $collection = self::classifyCollectionChannel($payment);
+
+            $typeKey = $source['revenue_type'];
+            $productKey = $typeKey.'|'.$source['product_name'];
+            $typeChannelKey = $typeKey.'|'.$collection['channel'];
+
+            $revenueByType[$typeKey] = ($revenueByType[$typeKey] ?? ['label' => $source['revenue_type_label'], 'total' => 0.0, 'count' => 0]);
+            $revenueByType[$typeKey]['total'] += $amount;
+            $revenueByType[$typeKey]['count']++;
+
+            $revenueByProduct[$productKey] = ($revenueByProduct[$productKey] ?? [
+                'type' => $typeKey,
+                'type_label' => $source['revenue_type_label'],
+                'product_name' => $source['product_name'],
+                'total' => 0.0,
+                'count' => 0,
+                'online' => 0.0,
+                'offline' => 0.0,
+            ]);
+            $revenueByProduct[$productKey]['total'] += $amount;
+            $revenueByProduct[$productKey]['count']++;
+            $revenueByProduct[$productKey][$collection['channel']] += $amount;
+
+            $revenueByTypeAndChannel[$typeChannelKey] = ($revenueByTypeAndChannel[$typeChannelKey] ?? [
+                'type' => $typeKey,
+                'type_label' => $source['revenue_type_label'],
+                'channel' => $collection['channel'],
+                'channel_label' => $collection['channel_label'],
+                'total' => 0.0,
+                'count' => 0,
+            ]);
+            $revenueByTypeAndChannel[$typeChannelKey]['total'] += $amount;
+            $revenueByTypeAndChannel[$typeChannelKey]['count']++;
+
+            if ($collection['channel'] === 'online') {
+                $collectionsOnline['total'] += $amount;
+                $collectionsOnline['count']++;
+                $gw = $collection['sub_channel'];
+                $collectionsOnline['by_gateway'][$gw] = ($collectionsOnline['by_gateway'][$gw] ?? [
+                    'label' => $collection['sub_channel_label'],
+                    'total' => 0.0,
+                    'count' => 0,
+                ]);
+                $collectionsOnline['by_gateway'][$gw]['total'] += $amount;
+                $collectionsOnline['by_gateway'][$gw]['count']++;
+            } else {
+                $collectionsOffline['total'] += $amount;
+                $collectionsOffline['count']++;
+                $method = $collection['sub_channel'];
+                $collectionsOffline['by_method'][$method] = ($collectionsOffline['by_method'][$method] ?? [
+                    'label' => $collection['sub_channel_label'],
+                    'total' => 0.0,
+                    'count' => 0,
+                ]);
+                $collectionsOffline['by_method'][$method]['total'] += $amount;
+                $collectionsOffline['by_method'][$method]['count']++;
+            }
+
+            if ($typeKey === 'offline_course') {
+                $offlineCourseCollections['total'] += $amount;
+                $offlineCourseCollections['count']++;
+                $enrollChannel = $source['enrollment_channel'] ?: 'غير محدد';
+                $offlineCourseCollections['by_channel'][$enrollChannel] = ($offlineCourseCollections['by_channel'][$enrollChannel] ?? [
+                    'total' => 0.0,
+                    'count' => 0,
+                ]);
+                $offlineCourseCollections['by_channel'][$enrollChannel]['total'] += $amount;
+                $offlineCourseCollections['by_channel'][$enrollChannel]['count']++;
+            }
+
+            $paymentRows[] = array_merge($source, $collection, [
+                'payment_id' => $payment->id,
+                'payment_number' => $payment->payment_number,
+                'amount' => $amount,
+                'gateway_fee' => (float) ($payment->gateway_fee_amount ?? 0),
+                'net_amount' => round($amount - (float) ($payment->gateway_fee_amount ?? 0), 2),
+                'paid_at' => $payment->paid_at?->format('Y-m-d H:i'),
+                'branch' => $payment->branch?->name,
+                'reference' => $payment->reference_number ?? $payment->transaction_id,
+            ]);
+        }
+
+        $totalRevenue = round((float) $payments->sum('amount'), 2);
+        $totalExpenses = round((float) $expenses->sum('amount'), 2);
+
+        $expensesByCategory = [];
+        $expensesByFunding = [];
+        $expenseRows = [];
+
+        foreach ($expenses as $expense) {
+            $amount = (float) $expense->amount;
+            $category = $expense->category ?: 'other';
+            $funding = $expense->funding_source ?: 'unknown';
+
+            $expensesByCategory[$category] = ($expensesByCategory[$category] ?? [
+                'label' => Expense::categoryLabel($category),
+                'total' => 0.0,
+                'count' => 0,
+            ]);
+            $expensesByCategory[$category]['total'] += $amount;
+            $expensesByCategory[$category]['count']++;
+
+            $expensesByFunding[$funding] = ($expensesByFunding[$funding] ?? [
+                'label' => self::fundingSourceLabel($funding),
+                'total' => 0.0,
+                'count' => 0,
+            ]);
+            $expensesByFunding[$funding]['total'] += $amount;
+            $expensesByFunding[$funding]['count']++;
+
+            $expenseRows[] = [
+                'expense_number' => $expense->expense_number,
+                'title' => $expense->title,
+                'category' => Expense::categoryLabel($expense->category),
+                'amount' => $amount,
+                'funding_source' => self::fundingSourceLabel($expense->funding_source),
+                'payment_method' => self::paymentMethodLabel($expense->payment_method),
+                'location' => $expense->offlineLocation?->name,
+                'expense_date' => $expense->expense_date?->format('Y-m-d'),
+                'created_by' => $expense->createdBy?->name,
+            ];
+        }
+
+        uasort($revenueByType, fn ($a, $b) => $b['total'] <=> $a['total']);
+        uasort($revenueByProduct, fn ($a, $b) => $b['total'] <=> $a['total']);
+
+        $monthly = self::monthlySeries($start, $end);
+
+        return [
+            'period' => [
+                'start' => $start->format('Y-m-d'),
+                'end' => $end->format('Y-m-d'),
+                'label' => $start->format('Y-m-d').' → '.$end->format('Y-m-d'),
+            ],
+            'summary' => [
+                'total_revenue' => $totalRevenue,
+                'total_expenses' => $totalExpenses,
+                'net_profit' => round($totalRevenue - $totalExpenses, 2),
+                'payments_count' => $payments->count(),
+                'expenses_count' => $expenses->count(),
+                'online_collections' => round($collectionsOnline['total'], 2),
+                'offline_collections' => round($collectionsOffline['total'], 2),
+                'online_pct' => $totalRevenue > 0 ? round(($collectionsOnline['total'] / $totalRevenue) * 100, 1) : 0,
+                'offline_pct' => $totalRevenue > 0 ? round(($collectionsOffline['total'] / $totalRevenue) * 100, 1) : 0,
+                'gateway_fees' => round((float) $payments->sum('gateway_fee_amount'), 2),
+            ],
+            'break_even' => $breakEven,
+            'revenue_by_type' => array_values($revenueByType),
+            'revenue_by_product' => array_values($revenueByProduct),
+            'revenue_by_type_channel' => array_values($revenueByTypeAndChannel),
+            'collections' => [
+                'online' => $collectionsOnline,
+                'offline' => $collectionsOffline,
+                'offline_courses' => $offlineCourseCollections,
+            ],
+            'expenses_by_category' => array_values($expensesByCategory),
+            'expenses_by_funding' => array_values($expensesByFunding),
+            'payment_rows' => $paymentRows,
+            'expense_rows' => $expenseRows,
+            'daily' => $daily,
+            'monthly' => $monthly,
+        ];
+    }
+
+    /**
+     * @return array{labels: list<string>, revenue: list<float>, expenses: list<float>, net: list<float>}
+     */
+    public static function monthlySeries(Carbon $start, Carbon $end): array
+    {
+        $labels = [];
+        $revenue = [];
+        $expenses = [];
+        $net = [];
+
+        $cursor = $start->copy()->startOfMonth();
+        $endMonth = $end->copy()->endOfMonth();
+
+        while ($cursor->lte($endMonth)) {
+            $mStart = $cursor->copy()->startOfMonth()->max($start);
+            $mEnd = $cursor->copy()->endOfMonth()->min($end);
+
+            $r = self::revenueBetween($mStart, $mEnd);
+            $e = self::expensesBetween($mStart, $mEnd);
+
+            $labels[] = $cursor->format('Y-m');
+            $revenue[] = round($r, 2);
+            $expenses[] = round($e, 2);
+            $net[] = round($r - $e, 2);
+
+            $cursor->addMonth();
+        }
+
+        return compact('labels', 'revenue', 'expenses', 'net');
+    }
 }

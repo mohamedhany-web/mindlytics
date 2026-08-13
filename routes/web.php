@@ -2181,6 +2181,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('/accounting/gateway-operations', [\App\Http\Controllers\Admin\AccountingGatewayOperationsController::class, 'index'])->name('accounting.gateway-operations');
 
         Route::get('/accounting/reports', [\App\Http\Controllers\Admin\AccountingReportsController::class, 'index'])->name('accounting.reports');
+        Route::get('/accounting/financial-analysis', [\App\Http\Controllers\Admin\AccountingReportsController::class, 'financialAnalysis'])->name('accounting.financial-analysis');
+        Route::get('/accounting/financial-analysis/export', [\App\Http\Controllers\Admin\AccountingReportsController::class, 'exportFinancialAnalysis'])->name('accounting.financial-analysis.export');
         Route::get('/accounting/reports/export', [\App\Http\Controllers\Admin\AccountingReportsController::class, 'export'])->name('accounting.reports.export');
         Route::get('/accounting/reports/invoices', [\App\Http\Controllers\Admin\AccountingReportsController::class, 'invoices'])->name('accounting.reports.invoices');
         Route::get('/accounting/reports/payments', [\App\Http\Controllers\Admin\AccountingReportsController::class, 'payments'])->name('accounting.reports.payments');

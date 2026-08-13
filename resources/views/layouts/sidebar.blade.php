@@ -104,7 +104,7 @@
             @hasAnyPermission('manage.invoices', 'manage.payments', 'manage.transactions', 'manage.wallets', 'manage.subscriptions', 'manage.installments', 'manage.expenses')
                 <!-- إدارة المحاسبة -->
                 @php
-                    $accountingOpen = request()->routeIs('admin.invoices.*') || request()->routeIs('admin.payments.*') || request()->routeIs('admin.transactions.*') || request()->routeIs('admin.wallets.*') || request()->routeIs('admin.subscriptions.*') || request()->routeIs('admin.installments.*') || request()->routeIs('admin.expenses.*') || request()->routeIs('admin.accounting.reports') || request()->routeIs('admin.accounting.reports.*') || request()->routeIs('admin.accounting.hub') || request()->routeIs('admin.accounting.chart');
+                    $accountingOpen = request()->routeIs('admin.invoices.*') || request()->routeIs('admin.payments.*') || request()->routeIs('admin.transactions.*') || request()->routeIs('admin.wallets.*') || request()->routeIs('admin.subscriptions.*') || request()->routeIs('admin.installments.*') || request()->routeIs('admin.expenses.*') || request()->routeIs('admin.accounting.reports') || request()->routeIs('admin.accounting.reports.*') || request()->routeIs('admin.accounting.financial-analysis*') || request()->routeIs('admin.accounting.hub') || request()->routeIs('admin.accounting.chart');
                 @endphp
                 <li x-data="{ open: {{ $accountingOpen ? 'true' : 'false' }} }">
                     <button @click="open = !open" 
@@ -157,6 +157,10 @@
                         </a></li>
                         @endhasPermission
                         @if(auth()->user()->isAdmin() || auth()->user()->hasAnyPermission('manage.invoices', 'manage.payments', 'manage.transactions'))
+                        <li><a href="{{ route('admin.accounting.financial-analysis') }}" class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-gradient-to-r hover:from-sky-50 hover:to-slate-50 dark:hover:from-gray-700 dark:hover:to-gray-800 transition-all duration-300 text-gray-600 dark:text-gray-400 hover:text-emerald-700 dark:hover:text-emerald-300 {{ request()->routeIs('admin.accounting.financial-analysis*') ? 'bg-gradient-to-r from-emerald-100 to-slate-100 dark:from-emerald-900/30 dark:to-slate-900/30 text-emerald-700 dark:text-emerald-300 font-semibold' : '' }}">
+                            <i class="fas fa-file-invoice-dollar w-4"></i>
+                            <span>التحليل المالي الشامل</span>
+                        </a></li>
                         <li><a href="{{ route('admin.accounting.reports') }}" class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-gradient-to-r hover:from-sky-50 hover:to-slate-50 dark:hover:from-gray-700 dark:hover:to-gray-800 transition-all duration-300 text-gray-600 dark:text-gray-400 hover:text-sky-700 dark:hover:text-sky-300 {{ request()->routeIs('admin.accounting.reports') || request()->routeIs('admin.accounting.reports.*') ? 'bg-gradient-to-r from-sky-100 to-slate-100 dark:from-sky-900/30 dark:to-slate-900/30 text-sky-700 dark:text-sky-300 font-semibold' : '' }}">
                             <i class="fas fa-chart-pie w-4"></i>
                             <span>التقارير المحاسبية</span>

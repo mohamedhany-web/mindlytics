@@ -15,6 +15,7 @@ use App\Models\Transaction;
 use App\Models\Wallet;
 use App\Models\WithdrawalRequest;
 use App\Support\AccountingAnalytics;
+use App\Services\AccountingComprehensiveExcelExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -62,6 +63,38 @@ class AccountingReportsController extends Controller
             'periodLabel',
             'filter'
         ));
+    }
+
+    public function financialAnalysis(Request $request)
+    {
+        $filter = $this->resolvePeriodAndDates($request);
+        $period = $filter['period'];
+        $startDate = $filter['startDate'];
+        $endDate = $filter['endDate'];
+        $periodLabel = $filter['periodLabel'];
+
+        $report = AccountingAnalytics::comprehensiveReport($startDate, $endDate);
+
+        return view('admin.accounting.financial-analysis', compact(
+            'report',
+            'period',
+            'startDate',
+            'endDate',
+            'periodLabel',
+            'filter'
+        ));
+    }
+
+    public function exportFinancialAnalysis(Request $request)
+    {
+        $filter = $this->resolvePeriodAndDates($request);
+        $startDate = $filter['startDate'];
+        $endDate = $filter['endDate'];
+
+        $report = AccountingAnalytics::comprehensiveReport($startDate, $endDate);
+
+        return app(AccountingComprehensiveExcelExportService::class)
+            ->download($report, $startDate, $endDate);
     }
 
     public function invoices(Request $request)
