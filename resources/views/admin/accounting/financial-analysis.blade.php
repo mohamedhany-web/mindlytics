@@ -38,7 +38,7 @@
             <div>
                 <h2 class="text-2xl font-black text-slate-900">التحليل المالي الشامل</h2>
                 <p class="text-sm text-slate-500 mt-1">{{ $periodLabel }} — إيرادات مفصّلة، مصروفات، وتحصيلات أونلاين/أوفلاين</p>
-                <p class="text-xs text-slate-400 mt-1">مصدر الإيراد: مدفوعات مكتملة (paid_at) — بدون ازدواجية مع تسجيلات أوفلاين</p>
+                <p class="text-xs text-slate-400 mt-1">المنتج = مسجّل / جروب أونلاين / جروب أوفلاين — التحصيل = بوابة دفع أو نقدي/تحويل. بدون ازدواجية.</p>
             </div>
             <a href="{{ route('admin.accounting.financial-analysis.export', $reportQuery) }}"
                class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-lg hover:bg-emerald-700 transition">
@@ -72,10 +72,34 @@
         </div>
     </div>
 
+    {{-- نوع المنتج: مسجّل vs جروبات --}}
+    <section class="rounded-2xl border border-slate-200 bg-white shadow-lg p-6">
+        <h3 class="text-lg font-black text-slate-900 mb-1"><i class="fas fa-layer-group text-emerald-600 ml-1"></i> الإيراد حسب نوع المنتج</h3>
+        <p class="text-xs text-slate-500 mb-4">الجروب الواحد ممكن يكون أونلاين أو أوفلاين حسب قناة حضور الطالب — مش حسب نوع الفاتورة فقط.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="rounded-xl border border-sky-200 bg-sky-50 p-4">
+                <p class="text-xs font-bold text-sky-700">كورسات مسجّلة</p>
+                <p class="mt-1 text-2xl font-black text-sky-900 tabular-nums">{{ number_format($summary['recorded_course'] ?? 0, 2) }}</p>
+                <p class="text-xs text-sky-700 mt-1">{{ $summary['recorded_course_count'] ?? 0 }} عملية — {{ number_format((($summary['recorded_course'] ?? 0) / $totalRev) * 100, 1) }}%</p>
+            </div>
+            <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+                <p class="text-xs font-bold text-indigo-700">جروبات أونلاين (لايف)</p>
+                <p class="mt-1 text-2xl font-black text-indigo-900 tabular-nums">{{ number_format($summary['live_online_group'] ?? 0, 2) }}</p>
+                <p class="text-xs text-indigo-700 mt-1">{{ $summary['live_online_group_count'] ?? 0 }} عملية — {{ number_format((($summary['live_online_group'] ?? 0) / $totalRev) * 100, 1) }}%</p>
+            </div>
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <p class="text-xs font-bold text-amber-800">جروبات أوفلاين (حضور)</p>
+                <p class="mt-1 text-2xl font-black text-amber-900 tabular-nums">{{ number_format($summary['live_offline_group'] ?? 0, 2) }}</p>
+                <p class="text-xs text-amber-800 mt-1">{{ $summary['live_offline_group_count'] ?? 0 }} عملية — {{ number_format((($summary['live_offline_group'] ?? 0) / $totalRev) * 100, 1) }}%</p>
+            </div>
+        </div>
+    </section>
+
     {{-- التحصيلات أونلاين vs أوفلاين --}}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <section class="rounded-2xl border border-slate-200 bg-white shadow-lg p-6">
-            <h3 class="text-lg font-black text-slate-900 mb-4"><i class="fas fa-globe text-blue-600 ml-1"></i> التحصيلات — أونلاين vs أوفلاين</h3>
+            <h3 class="text-lg font-black text-slate-900 mb-4"><i class="fas fa-globe text-blue-600 ml-1"></i> طريقة التحصيل — بوابة vs نقدي/تحويل</h3>
+            <p class="text-xs text-slate-500 mb-4">ده مش نوع الكورس. أونلاين هنا = دفع ببوابة (كاشير/فواتيرك). أوفلاين = نقدي أو تحويل أو محفظة.</p>
             <div class="grid grid-cols-2 gap-4 mb-6">
                 <div class="rounded-xl bg-blue-50 border border-blue-200 p-4 text-center">
                     <p class="text-xs text-blue-700 font-semibold">أونلاين (بوابات)</p>
@@ -100,7 +124,7 @@
         </section>
 
         <section class="rounded-2xl border border-slate-200 bg-white shadow-lg p-6">
-            <h3 class="text-lg font-black text-slate-900 mb-4"><i class="fas fa-sitemap text-emerald-600 ml-1"></i> الإيرادات حسب المصدر</h3>
+            <h3 class="text-lg font-black text-slate-900 mb-4"><i class="fas fa-sitemap text-emerald-600 ml-1"></i> الإيرادات حسب نوع المنتج</h3>
             <div class="relative h-56 mb-4">
                 <canvas id="revenueTypeChart"></canvas>
             </div>
@@ -133,18 +157,18 @@
     <section class="rounded-2xl border border-slate-200 bg-white shadow-lg overflow-hidden">
         <div class="px-6 py-4 border-b border-slate-200 bg-slate-50">
             <h3 class="text-lg font-black text-slate-900"><i class="fas fa-search-dollar text-emerald-600 ml-1"></i> من أين جاء كل إيراد — تفصيل دقيق</h3>
-            <p class="text-xs text-slate-500 mt-1">كل عملية تحصيل مرتبطة بنوع الفاتورة، المنتج، وقناة الدفع</p>
+            <p class="text-xs text-slate-500 mt-1">مسجّل / جروب أونلاين / جروب أوفلاين — وأعمدة أونلاين/أوفلاين هنا تعني طريقة الدفع</p>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead class="bg-slate-800 text-white">
                     <tr>
-                        <th class="px-4 py-3 text-right font-semibold">نوع الإيراد</th>
-                        <th class="px-4 py-3 text-right font-semibold">المنتج / الخدمة</th>
+                        <th class="px-4 py-3 text-right font-semibold">نوع المنتج</th>
+                        <th class="px-4 py-3 text-right font-semibold">المنتج / الجروب</th>
                         <th class="px-4 py-3 text-center font-semibold">عمليات</th>
                         <th class="px-4 py-3 text-left font-semibold">إجمالي</th>
-                        <th class="px-4 py-3 text-left font-semibold">أونلاين</th>
-                        <th class="px-4 py-3 text-left font-semibold">أوفلاين</th>
+                        <th class="px-4 py-3 text-left font-semibold">تحصيل بوابة</th>
+                        <th class="px-4 py-3 text-left font-semibold">تحصيل نقدي/تحويل</th>
                         <th class="px-4 py-3 text-left font-semibold">%</th>
                     </tr>
                 </thead>
@@ -205,6 +229,24 @@
             </ul>
         </section>
     </div>
+
+    @php $groupChannels = $collections['groups']['by_channel'] ?? []; @endphp
+    @if(count($groupChannels))
+    <section class="rounded-2xl border border-indigo-200 bg-white shadow-lg p-6">
+        <h3 class="text-base font-black text-indigo-900 mb-4"><i class="fas fa-users ml-1"></i> تحصيلات الجروبات حسب قناة الحضور</h3>
+        <ul class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            @foreach($groupChannels as $ch)
+            <li class="flex items-center justify-between rounded-xl bg-indigo-50 border border-indigo-100 px-4 py-3">
+                <span class="font-semibold text-indigo-900">{{ $ch['label'] ?? 'غير محدد' }}</span>
+                <div class="text-left">
+                    <span class="font-black text-indigo-800 tabular-nums">{{ number_format($ch['total'], 2) }}</span>
+                    <span class="text-xs text-indigo-600 mr-2">({{ $ch['count'] }} عملية)</span>
+                </div>
+            </li>
+            @endforeach
+        </ul>
+    </section>
+    @endif
 
     {{-- المصروفات --}}
     <section class="rounded-2xl border border-rose-200 bg-white shadow-lg overflow-hidden">
@@ -267,7 +309,7 @@ document.addEventListener('DOMContentLoaded', function () {
     new Chart(document.getElementById('collectionsChart'), {
         type: 'doughnut',
         data: {
-            labels: ['أونلاين', 'أوفلاين / يدوي'],
+            labels: ['تحصيل بوابة', 'تحصيل نقدي/تحويل'],
             datasets: [{
                 data: [{{ $summary['online_collections'] }}, {{ $summary['offline_collections'] }}],
                 backgroundColor: ['#2563EB', '#7C3AED'],

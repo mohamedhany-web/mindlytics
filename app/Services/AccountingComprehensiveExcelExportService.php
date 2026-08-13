@@ -79,8 +79,11 @@ class AccountingComprehensiveExcelExportService
             ['إجمالي الإيرادات المحصّلة', $summary['total_revenue'], $this->colors['accent_green']],
             ['إجمالي المصروفات', $summary['total_expenses'], $this->colors['accent_red']],
             ['صافي الربح / الخسارة', $summary['net_profit'], $summary['net_profit'] >= 0 ? $this->colors['accent_green'] : $this->colors['accent_red']],
-            ['تحصيل أونلاين', $summary['online_collections'], $this->colors['primary']],
-            ['تحصيل أوفلاين / يدوي', $summary['offline_collections'], $this->colors['accent_violet']],
+            ['كورسات مسجّلة', $summary['recorded_course'] ?? 0, $this->colors['primary']],
+            ['جروبات أونلاين', $summary['live_online_group'] ?? 0, $this->colors['accent_violet']],
+            ['جروبات أوفلاين', $summary['live_offline_group'] ?? 0, $this->colors['accent_amber']],
+            ['تحصيل بوابة', $summary['online_collections'], $this->colors['primary']],
+            ['تحصيل نقدي/تحويل', $summary['offline_collections'], $this->colors['accent_violet']],
             ['عمولات البوابات', $summary['gateway_fees'], $this->colors['accent_amber']],
         ];
 
@@ -97,7 +100,7 @@ class AccountingComprehensiveExcelExportService
             $col += 3;
         }
 
-        $row += 6;
+        $row += 8;
         $sheet->setCellValue('A'.$row, 'تحليل بر الأمان');
         $sheet->mergeCells('A'.$row.':D'.$row);
         $this->styleSectionTitle($sheet, 'A'.$row.':D'.$row);
@@ -122,12 +125,12 @@ class AccountingComprehensiveExcelExportService
         }
 
         $row += 1;
-        $sheet->setCellValue('A'.$row, 'توزيع الإيرادات حسب المصدر');
+        $sheet->setCellValue('A'.$row, 'توزيع الإيرادات حسب نوع المنتج');
         $sheet->mergeCells('A'.$row.':E'.$row);
         $this->styleSectionTitle($sheet, 'A'.$row.':E'.$row);
         $row++;
 
-        $headers = ['مصدر الإيراد', 'عدد العمليات', 'المبلغ', 'النسبة %'];
+        $headers = ['نوع المنتج', 'عدد العمليات', 'المبلغ', 'النسبة %'];
         $this->writeTableHeader($sheet, $row, $headers, 'A');
         $row++;
 
@@ -270,15 +273,17 @@ class AccountingComprehensiveExcelExportService
         }
 
         $row += 2;
-        $sheet->setCellValue('A'.$row, 'تحصيلات الكورسات الأوفلاين (حسب قناة التسجيل)');
+        $sheet->setCellValue('A'.$row, 'تحصيلات الجروبات حسب قناة الحضور (أونلاين لايف vs حضور)');
         $sheet->mergeCells('A'.$row.':D'.$row);
         $this->styleSectionTitle($sheet, 'A'.$row.':D'.$row);
         $row++;
 
-        $this->writeTableHeader($sheet, $row, ['قناة التسجيل', 'عدد', 'المبلغ'], 'A');
+        $this->writeTableHeader($sheet, $row, ['قناة الحضور', 'عدد', 'المبلغ'], 'A');
         $row++;
-        foreach ($collections['offline_courses']['by_channel'] as $channel => $data) {
-            $this->writeTableRow($sheet, $row, [$channel, $data['count'], (float) $data['total']], 'A', $row % 2 === 0);
+        $groupChannels = $collections['groups']['by_channel'] ?? $collections['offline_courses']['by_channel'] ?? [];
+        foreach ($groupChannels as $channel => $data) {
+            $label = $data['label'] ?? (is_string($channel) ? $channel : 'غير محدد');
+            $this->writeTableRow($sheet, $row, [$label, $data['count'], (float) $data['total']], 'A', $row % 2 === 0);
             $sheet->getStyle('C'.$row)->getNumberFormat()->setFormatCode('#,##0.00');
             $row++;
         }
@@ -382,8 +387,8 @@ class AccountingComprehensiveExcelExportService
         $sheet->setRightToLeft(true);
 
         $headers = [
-            'رقم الدفعة', 'التاريخ', 'العميل', 'نوع الإيراد', 'المنتج', 'قناة التحصيل',
-            'البوابة/الطريقة', 'المبلغ', 'عمولة', 'صافي', 'فاتورة', 'فرع', 'مرجع',
+            'رقم الدفعة', 'التاريخ', 'العميل', 'نوع المنتج', 'المنتج / الجروب', 'قناة الحضور',
+            'قناة التحصيل', 'البوابة/الطريقة', 'المبلغ', 'عمولة', 'صافي', 'فاتورة', 'فرع', 'مرجع',
         ];
         $row = 1;
         $this->writeTableHeader($sheet, $row, $headers, 'A');
@@ -396,6 +401,7 @@ class AccountingComprehensiveExcelExportService
                 $p['client_name'],
                 $p['revenue_type_label'],
                 $p['product_name'],
+                $p['enrollment_channel_label'] ?? '—',
                 $p['channel_label'],
                 $p['sub_channel_label'],
                 (float) $p['amount'],
@@ -405,13 +411,13 @@ class AccountingComprehensiveExcelExportService
                 $p['branch'] ?? '—',
                 $p['reference'] ?? '—',
             ], 'A', $row % 2 === 0);
-            foreach (['H', 'I', 'J'] as $c) {
+            foreach (['I', 'J', 'K'] as $c) {
                 $sheet->getStyle($c.$row)->getNumberFormat()->setFormatCode('#,##0.00');
             }
             $row++;
         }
 
-        for ($c = 1; $c <= 13; $c++) {
+        for ($c = 1; $c <= 14; $c++) {
             $sheet->getColumnDimensionByColumn($c)->setAutoSize(true);
         }
     }

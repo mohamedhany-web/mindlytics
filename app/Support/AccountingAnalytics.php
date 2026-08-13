@@ -8,6 +8,7 @@ use App\Models\Invoice;
 use App\Models\OfflineCourseEnrollment;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\StudentCourseEnrollment;
 use App\Models\WithdrawalRequest;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -301,8 +302,8 @@ class AccountingAnalytics
     public static function invoiceTypeLabels(): array
     {
         return [
-            'course' => 'كورسات أونلاين',
-            'offline_course' => 'كورسات أوفلاين',
+            'course' => 'كورسات مسجّلة',
+            'offline_course' => 'جروبات (لايف)',
             'learning_path' => 'مسارات تعليمية',
             'subscription' => 'اشتراكات',
             'membership' => 'عضويات',
@@ -314,6 +315,35 @@ class AccountingAnalytics
     public static function invoiceTypeLabel(?string $type): string
     {
         return self::invoiceTypeLabels()[$type] ?? ($type ?: 'غير مصنّف');
+    }
+
+    public static function revenueSourceLabels(): array
+    {
+        return [
+            'recorded_course' => 'كورسات مسجّلة',
+            'live_online_group' => 'جروبات أونلاين',
+            'live_offline_group' => 'جروبات أوفلاين',
+            'live_group_unknown' => 'جروبات (قناة غير محددة)',
+            'learning_path' => 'مسارات تعليمية',
+            'subscription' => 'اشتراكات',
+            'membership' => 'عضويات',
+            'installment' => 'أقساط',
+            'other' => 'أخرى / عام',
+        ];
+    }
+
+    public static function revenueSourceLabel(?string $type): string
+    {
+        return self::revenueSourceLabels()[$type] ?? ($type ?: 'غير مصنّف');
+    }
+
+    public static function enrollmentChannelLabel(?string $channel): string
+    {
+        return match (strtolower((string) $channel)) {
+            'online' => 'أونلاين (لايف)',
+            'offline' => 'أوفلاين (حضور)',
+            default => $channel ? (string) $channel : 'غير محدد',
+        };
     }
 
     public static function paymentMethodLabel(?string $method): string
@@ -371,8 +401,11 @@ class AccountingAnalytics
      * @return array{
      *     revenue_type: string,
      *     revenue_type_label: string,
+     *     invoice_type: string|null,
      *     product_name: string,
+     *     group_name: string|null,
      *     enrollment_channel: string|null,
+     *     enrollment_channel_label: string|null,
      *     client_name: string,
      *     invoice_number: string|null,
      *     description: string
@@ -380,20 +413,53 @@ class AccountingAnalytics
      */
     public static function revenueSourceForPayment(
         Payment $payment,
-        ?OfflineCourseEnrollment $offlineEnrollment = null
+        ?OfflineCourseEnrollment $offlineEnrollment = null,
+        ?StudentCourseEnrollment $recordedEnrollment = null
     ): array {
         $invoice = $payment->invoice;
         $order = $payment->order;
+        $invoiceType = $invoice?->type;
 
-        $revenueType = $invoice?->type;
-        if (! $revenueType && $order) {
-            $revenueType = $order->advanced_course_id ? 'course' : ($order->academic_year_id ? 'learning_path' : 'other');
+        if (! $invoiceType && $order) {
+            $invoiceType = $order->advanced_course_id ? 'course' : ($order->academic_year_id ? 'learning_path' : 'other');
         }
-        $revenueType = $revenueType ?: 'other';
+        $invoiceType = $invoiceType ?: 'other';
+
+        $channel = $offlineEnrollment?->enrollment_channel;
+        if (! $channel && $invoiceType === 'offline_course') {
+            $channel = self::inferLiveChannelFromText(
+                (string) ($invoice?->description ?? ''),
+                $invoice?->items
+            );
+            if (! $channel && $offlineEnrollment?->course?->online_only) {
+                $channel = 'online';
+            }
+        }
+
+        $revenueType = match ($invoiceType) {
+            'course' => 'recorded_course',
+            'offline_course' => match ($channel) {
+                'online' => 'live_online_group',
+                'offline' => 'live_offline_group',
+                default => 'live_group_unknown',
+            },
+            'learning_path' => 'learning_path',
+            'subscription' => 'subscription',
+            'membership' => 'membership',
+            'installment' => 'installment',
+            default => 'other',
+        };
 
         $productName = '—';
+        $groupName = $offlineEnrollment?->group?->name;
+
         if ($offlineEnrollment?->course) {
             $productName = (string) $offlineEnrollment->course->title;
+            if ($groupName) {
+                $productName .= ' — '.$groupName;
+            }
+        } elseif ($recordedEnrollment?->course) {
+            $productName = (string) $recordedEnrollment->course->title;
         } elseif ($order?->course) {
             $productName = (string) $order->course->title;
         } elseif ($order?->learningPath) {
@@ -402,14 +468,14 @@ class AccountingAnalytics
             $productName = trim((string) ($invoice->description ?? ''));
             if ($productName === '' || $productName === '-') {
                 $items = $invoice->items;
-                if (is_array($items) && ! empty($items[0]['name'])) {
-                    $productName = (string) $items[0]['name'];
+                if (is_array($items) && ! empty($items[0]['name'] ?? $items[0]['description'] ?? null)) {
+                    $productName = (string) ($items[0]['name'] ?? $items[0]['description']);
                 }
             }
         }
 
         if ($productName === '' || $productName === '-') {
-            $productName = self::invoiceTypeLabel($revenueType);
+            $productName = self::revenueSourceLabel($revenueType);
         }
 
         $clientName = $invoice
@@ -418,13 +484,40 @@ class AccountingAnalytics
 
         return [
             'revenue_type' => $revenueType,
-            'revenue_type_label' => self::invoiceTypeLabel($revenueType),
+            'revenue_type_label' => self::revenueSourceLabel($revenueType),
+            'invoice_type' => $invoiceType,
             'product_name' => $productName,
-            'enrollment_channel' => $offlineEnrollment?->enrollment_channel,
+            'group_name' => $groupName,
+            'enrollment_channel' => $channel,
+            'enrollment_channel_label' => $channel ? self::enrollmentChannelLabel($channel) : null,
             'client_name' => $clientName,
             'invoice_number' => $invoice?->invoice_number,
             'description' => (string) ($invoice?->description ?? $payment->notes ?? '—'),
         ];
+    }
+
+    /**
+     * @param  mixed  $items
+     */
+    public static function inferLiveChannelFromText(string $text, mixed $items = null): ?string
+    {
+        $blob = $text;
+        if (is_array($items)) {
+            foreach ($items as $item) {
+                if (is_array($item)) {
+                    $blob .= ' '.($item['description'] ?? '').' '.($item['name'] ?? '');
+                }
+            }
+        }
+
+        if (preg_match('/أونلاين|اونلاين|online/iu', $blob)) {
+            return 'online';
+        }
+        if (preg_match('/أوفلاين|اوفلاين|offline|حضور/iu', $blob)) {
+            return 'offline';
+        }
+
+        return null;
     }
 
     /**
@@ -450,11 +543,25 @@ class AccountingAnalytics
             ->get();
 
         $invoiceIds = $payments->pluck('invoice_id')->filter()->unique()->values();
+        $paymentIds = $payments->pluck('id')->filter()->unique()->values();
+
         $offlineByInvoice = OfflineCourseEnrollment::query()
+            ->with(['course', 'group'])
+            ->whereIn('invoice_id', $invoiceIds)
+            ->get()
+            ->keyBy('invoice_id');
+
+        $recordedByInvoice = StudentCourseEnrollment::query()
             ->with('course')
             ->whereIn('invoice_id', $invoiceIds)
             ->get()
             ->keyBy('invoice_id');
+
+        $recordedByPayment = StudentCourseEnrollment::query()
+            ->with('course')
+            ->whereIn('payment_id', $paymentIds)
+            ->get()
+            ->keyBy('payment_id');
 
         $paymentRows = [];
         $revenueByType = [];
@@ -462,15 +569,26 @@ class AccountingAnalytics
         $revenueByTypeAndChannel = [];
         $collectionsOnline = ['total' => 0.0, 'count' => 0, 'by_gateway' => []];
         $collectionsOffline = ['total' => 0.0, 'count' => 0, 'by_method' => []];
-        $offlineCourseCollections = ['total' => 0.0, 'count' => 0, 'by_channel' => []];
+        $groupCollections = ['total' => 0.0, 'count' => 0, 'by_channel' => []];
+        $productMix = [
+            'recorded_course' => ['total' => 0.0, 'count' => 0],
+            'live_online_group' => ['total' => 0.0, 'count' => 0],
+            'live_offline_group' => ['total' => 0.0, 'count' => 0],
+        ];
 
         foreach ($payments as $payment) {
             $amount = (float) $payment->amount;
             $offlineEnrollment = $payment->invoice_id
                 ? $offlineByInvoice->get($payment->invoice_id)
                 : null;
+            $recordedEnrollment = $payment->invoice_id
+                ? $recordedByInvoice->get($payment->invoice_id)
+                : null;
+            if (! $recordedEnrollment) {
+                $recordedEnrollment = $recordedByPayment->get($payment->id);
+            }
 
-            $source = self::revenueSourceForPayment($payment, $offlineEnrollment);
+            $source = self::revenueSourceForPayment($payment, $offlineEnrollment, $recordedEnrollment);
             $collection = self::classifyCollectionChannel($payment);
 
             $typeKey = $source['revenue_type'];
@@ -529,16 +647,22 @@ class AccountingAnalytics
                 $collectionsOffline['by_method'][$method]['count']++;
             }
 
-            if ($typeKey === 'offline_course') {
-                $offlineCourseCollections['total'] += $amount;
-                $offlineCourseCollections['count']++;
-                $enrollChannel = $source['enrollment_channel'] ?: 'غير محدد';
-                $offlineCourseCollections['by_channel'][$enrollChannel] = ($offlineCourseCollections['by_channel'][$enrollChannel] ?? [
+            if (isset($productMix[$typeKey])) {
+                $productMix[$typeKey]['total'] += $amount;
+                $productMix[$typeKey]['count']++;
+            }
+
+            if (in_array($typeKey, ['live_online_group', 'live_offline_group', 'live_group_unknown'], true)) {
+                $groupCollections['total'] += $amount;
+                $groupCollections['count']++;
+                $enrollChannel = $source['enrollment_channel'] ?: 'unknown';
+                $groupCollections['by_channel'][$enrollChannel] = ($groupCollections['by_channel'][$enrollChannel] ?? [
+                    'label' => self::enrollmentChannelLabel($enrollChannel === 'unknown' ? null : $enrollChannel),
                     'total' => 0.0,
                     'count' => 0,
                 ]);
-                $offlineCourseCollections['by_channel'][$enrollChannel]['total'] += $amount;
-                $offlineCourseCollections['by_channel'][$enrollChannel]['count']++;
+                $groupCollections['by_channel'][$enrollChannel]['total'] += $amount;
+                $groupCollections['by_channel'][$enrollChannel]['count']++;
             }
 
             $paymentRows[] = array_merge($source, $collection, [
@@ -616,6 +740,12 @@ class AccountingAnalytics
                 'online_pct' => $totalRevenue > 0 ? round(($collectionsOnline['total'] / $totalRevenue) * 100, 1) : 0,
                 'offline_pct' => $totalRevenue > 0 ? round(($collectionsOffline['total'] / $totalRevenue) * 100, 1) : 0,
                 'gateway_fees' => round((float) $payments->sum('gateway_fee_amount'), 2),
+                'recorded_course' => round($productMix['recorded_course']['total'], 2),
+                'recorded_course_count' => $productMix['recorded_course']['count'],
+                'live_online_group' => round($productMix['live_online_group']['total'], 2),
+                'live_online_group_count' => $productMix['live_online_group']['count'],
+                'live_offline_group' => round($productMix['live_offline_group']['total'], 2),
+                'live_offline_group_count' => $productMix['live_offline_group']['count'],
             ],
             'break_even' => $breakEven,
             'revenue_by_type' => array_values($revenueByType),
@@ -624,7 +754,8 @@ class AccountingAnalytics
             'collections' => [
                 'online' => $collectionsOnline,
                 'offline' => $collectionsOffline,
-                'offline_courses' => $offlineCourseCollections,
+                'groups' => $groupCollections,
+                'offline_courses' => $groupCollections,
             ],
             'expenses_by_category' => array_values($expensesByCategory),
             'expenses_by_funding' => array_values($expensesByFunding),
