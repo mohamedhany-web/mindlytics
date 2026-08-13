@@ -13,6 +13,7 @@ return [
         'learning_paths' => 'المسارات التعليمية',
         'courses' => 'الكورسات',
         'community' => 'مجتمع البيانات والذكاء الاصطناعي',
+        'community_short' => 'مجتمع البيانات',
         'portfolio' => 'الرحلة',
         'internships' => 'التدريب',
         'instructors' => 'المدربون',

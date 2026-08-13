@@ -13,6 +13,7 @@ return [
         'learning_paths' => 'Learning Paths',
         'courses' => 'Courses',
         'community' => 'Data & AI Community',
+        'community_short' => 'Community',
         'portfolio' => 'Journey',
         'internships' => 'Internships',
         'instructors' => 'Instructors',

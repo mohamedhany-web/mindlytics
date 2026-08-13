@@ -39,8 +39,8 @@
     </div>
     <div class="absolute inset-0 opacity-80 pointer-events-none" style="background: linear-gradient(135deg, rgba(30, 64, 175, 0.95) 0%, rgba(30, 58, 138, 0.98) 50%, rgba(5, 150, 105, 0.08) 100%);"></div>
     
-    <div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 overflow-visible">
-        <div class="flex justify-between items-center h-16 lg:h-20 gap-4 lg:gap-6 overflow-visible min-w-0">
+    <div class="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 overflow-visible">
+        <div class="flex justify-between items-center h-16 lg:h-20 gap-6 lg:gap-8 overflow-visible min-w-0">
             <!-- الشعار والعلامة -->
             <div class="flex items-center gap-3 gap-reverse flex-shrink-0">
                 <a href="{{ route('home') }}" class="flex items-center gap-3 gap-reverse group nav-brand">
@@ -62,28 +62,28 @@
             </div>
 
             <!-- روابط سطح المكتب -->
-            <div class="hidden lg:flex items-center gap-0.5 flex-1 justify-center max-w-5xl mx-auto min-w-0 shrink" style="font-family: 'Tajawal', 'Cairo', sans-serif;">
-                <a href="{{ route('public.learning-paths.index') }}" class="nav-link-modern inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-[15px] transition-all duration-200 hover:bg-white/10 flex-shrink-0">
+            <div class="hidden lg:flex items-center gap-2 xl:gap-3 flex-1 justify-center min-w-0" style="font-family: 'Tajawal', 'Cairo', sans-serif;">
+                <a href="{{ route('public.learning-paths.index') }}" class="nav-link-modern inline-flex items-center whitespace-nowrap px-3 xl:px-3.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-sm xl:text-[15px] transition-all duration-200 hover:bg-white/10">
                     <i class="fas fa-route text-sm {{ app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2' }} opacity-90 flex-shrink-0"></i>
                     <span>{{ __('landing.nav.learning_paths') }}</span>
                 </a>
-                <a href="{{ route('public.courses') }}" class="nav-link-modern inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-[15px] transition-all duration-200 hover:bg-white/10 flex-shrink-0">
+                <a href="{{ route('public.courses') }}" class="nav-link-modern inline-flex items-center whitespace-nowrap px-3 xl:px-3.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-sm xl:text-[15px] transition-all duration-200 hover:bg-white/10">
                     <i class="fas fa-book text-sm {{ app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2' }} opacity-90 flex-shrink-0"></i>
                     <span>{{ __('landing.nav.courses') }}</span>
                 </a>
-                <a href="{{ route('public.community.index') }}" class="nav-link-modern inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-[15px] transition-all duration-200 hover:bg-white/10 flex-shrink-0">
+                <a href="{{ route('public.community.index') }}" class="nav-link-modern inline-flex items-center whitespace-nowrap px-3 xl:px-3.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-sm xl:text-[15px] transition-all duration-200 hover:bg-white/10" title="{{ __('landing.nav.community') }}">
                     <i class="fas fa-users-cog text-sm {{ app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2' }} opacity-90 flex-shrink-0"></i>
-                    <span>{{ __('landing.nav.community') }}</span>
+                    <span>{{ __('landing.nav.community_short') }}</span>
                 </a>
-                <a href="{{ route('public.portfolio.index') }}" class="nav-link-modern inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-[15px] transition-all duration-200 hover:bg-white/10 flex-shrink-0">
+                <a href="{{ route('public.portfolio.index') }}" class="nav-link-modern inline-flex items-center whitespace-nowrap px-3 xl:px-3.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-sm xl:text-[15px] transition-all duration-200 hover:bg-white/10">
                     <i class="fas fa-route text-sm {{ app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2' }} opacity-90 flex-shrink-0"></i>
                     <span>{{ __('landing.nav.portfolio') }}</span>
                 </a>
-                <a href="{{ route('public.internships.index') }}" class="nav-link-modern inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-[15px] transition-all duration-200 hover:bg-white/10 flex-shrink-0">
+                <a href="{{ route('public.internships.index') }}" class="nav-link-modern inline-flex items-center whitespace-nowrap px-3 xl:px-3.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-sm xl:text-[15px] transition-all duration-200 hover:bg-white/10">
                     <i class="fas fa-user-graduate text-sm {{ app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2' }} opacity-90 flex-shrink-0"></i>
                     <span>{{ __('landing.nav.internships') }}</span>
                 </a>
-                <a href="{{ route('public.instructors.index') }}" class="nav-link-modern inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-[15px] transition-all duration-200 hover:bg-white/10 flex-shrink-0">
+                <a href="{{ route('public.instructors.index') }}" class="nav-link-modern inline-flex items-center whitespace-nowrap px-3 xl:px-3.5 py-2 rounded-xl text-white/90 hover:text-white font-bold text-sm xl:text-[15px] transition-all duration-200 hover:bg-white/10">
                     <i class="fas fa-user-tie text-sm {{ app()->getLocale() === 'ar' ? 'ml-2' : 'mr-2' }} opacity-90 flex-shrink-0"></i>
                     <span>{{ __('landing.nav.instructors') }}</span>
                 </a>
@@ -142,6 +142,7 @@
                 <span id="menu-times-icon" style="display: none;" class="relative z-10"><i class="fas fa-times text-lg"></i></span>
             </button>
         </div>
+    </div>
     </nav>
 
     <!-- Mobile Menu Overlay -->
