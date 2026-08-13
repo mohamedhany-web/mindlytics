@@ -6,161 +6,228 @@
     $bucketKeys = array_keys($buckets);
     $currentBucketIdx = array_search($currentBucket, $bucketKeys, true);
     $hasCourse = (bool) $lead->linkedCourseId();
+    $exitStages = ['lost', 'dormant'];
+    $forwardStages = array_values(array_filter($allowed, fn ($s) => ! in_array($s, $exitStages, true)));
+    $closeStages = array_values(array_filter($allowed, fn ($s) => in_array($s, $exitStages, true)));
+    $defaultStage = $forwardStages[0] ?? ($allowed[0] ?? $lead->stage);
+    $input = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500';
+    $inputReq = 'w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500';
 @endphp
-<div class="rounded-2xl border border-teal-200 bg-white shadow-sm overflow-hidden" x-data="pipelineForm(@js($allowed[0] ?? $lead->stage))">
-    <div class="px-4 py-3 border-b border-teal-100 bg-teal-50/60 flex flex-wrap items-center justify-between gap-2">
-        <div>
-            <h3 class="font-black text-slate-900">Lead Status — رحلة العميل</h3>
-            <p class="text-xs text-slate-600 mt-0.5">المرحلة: <strong>{{ \App\Models\SalesLead::stageLabel($lead->stage) }}</strong>
-                · المسار: <strong>{{ $buckets[$currentBucket] ?? '—' }}</strong>
+@once
+<style>
+    .pipeline-wrap { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+    .pipeline-wrap .panel-card-head { background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+    [x-cloak] { display: none !important; }
+</style>
+@endonce
+<div class="pipeline-wrap panel-card overflow-hidden" x-data="pipelineForm(@js($defaultStage))">
+    <div class="panel-card-head px-4 sm:px-5 py-3 flex flex-wrap items-center justify-between gap-2">
+        <div class="min-w-0">
+            <h3 class="font-bold text-slate-900">رحلة العميل</h3>
+            <p class="text-xs text-slate-500 mt-0.5">
+                الآن: <strong class="text-teal-800">{{ \App\Models\SalesLead::stageLabel($lead->stage) }}</strong>
                 @if($lead->contact_attempts)
-                    · محاولات: {{ $lead->contact_attempts }}/3
+                    · محاولات {{ $lead->contact_attempts }}/3
                 @endif
             </p>
-            <p class="text-[11px] text-teal-800 mt-1 font-semibold">مسار مختصر: يمكن تخطّي الخطوات الدقيقة داخل التواصل/التأهيل — ملاحظات قصيرة إلزامية — قبل الحجز لازم كورس</p>
         </div>
     </div>
 
-    <div class="p-4">
-        <ol class="flex flex-wrap gap-2">
+    <div class="px-3 sm:px-5 py-4 border-b border-slate-100">
+        <ol class="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
             @foreach($buckets as $bKey => $bLabel)
                 @php
                     $bIdx = array_search($bKey, $bucketKeys, true);
                     $done = is_int($currentBucketIdx) && is_int($bIdx) && $bIdx < $currentBucketIdx;
                     $current = $bKey === $currentBucket;
+                    $isLost = $bKey === 'lost';
                 @endphp
-                <li @class([
-                    'inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold',
-                    'border-emerald-300 bg-emerald-50 text-emerald-900' => $done || $current,
-                    'border-slate-200 bg-slate-50 text-slate-500' => ! $done && ! $current,
-                ])>
-                    <span @class([
-                        'w-2.5 h-2.5 rounded-full',
-                        'bg-emerald-500' => $done || $current,
-                        'bg-slate-300' => ! $done && ! $current,
-                    ])></span>
-                    {{ $bLabel }}
+                <li class="min-w-0">
+                    <div @class([
+                        'flex flex-col items-center text-center rounded-xl border px-1.5 py-2.5',
+                        'border-emerald-300 bg-emerald-50' => $done && ! $isLost,
+                        'border-teal-500 bg-teal-600 text-white shadow-sm' => $current && ! $isLost,
+                        'border-rose-300 bg-rose-50' => $current && $isLost,
+                        'border-slate-200 bg-slate-50' => ! $done && ! $current,
+                    ])>
+                        <span @class([
+                            'w-6 h-6 rounded-full text-[11px] font-black flex items-center justify-center mb-1',
+                            'bg-emerald-500 text-white' => $done && ! $isLost,
+                            'bg-white text-teal-700' => $current && ! $isLost,
+                            'bg-rose-500 text-white' => $current && $isLost,
+                            'bg-slate-200 text-slate-500' => ! $done && ! $current,
+                        ])>
+                            @if($done && ! $current)
+                                <i class="fas fa-check text-[10px]"></i>
+                            @else
+                                {{ $loop->iteration }}
+                            @endif
+                        </span>
+                        <span @class([
+                            'text-[11px] sm:text-xs font-bold leading-tight',
+                            'text-white' => $current && ! $isLost,
+                            'text-emerald-800' => $done && ! $current,
+                            'text-rose-800' => $current && $isLost,
+                            'text-slate-500' => ! $done && ! $current,
+                        ])>{{ $bLabel }}</span>
+                    </div>
                 </li>
             @endforeach
         </ol>
     </div>
 
-    @if($lead->isOpen() || $lead->stage === 'enrollment_completed')
-    @unless(!empty($pipelineReadonly))
-    <form method="post" action="{{ route('employee.sales.leads.pipeline', $lead) }}" class="p-4 border-t border-slate-100 space-y-3 bg-slate-50/40">
+    @if(($lead->isOpen() || $lead->stage === 'enrollment_completed') && empty($pipelineReadonly))
+    <form method="post" action="{{ route('employee.sales.leads.pipeline', $lead) }}" class="p-4 sm:p-5 space-y-4">
         @csrf
         @if($errors->any())
-            <div class="rounded-xl bg-rose-50 border border-rose-200 text-rose-800 px-3 py-2 text-xs">
+            <div class="rounded-lg bg-rose-50 border border-rose-200 text-rose-800 px-3 py-2 text-xs">
                 <ul class="list-disc list-inside space-y-0.5">
                     @foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach
                 </ul>
             </div>
         @endif
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        @if($allowed === [])
+            <p class="text-sm text-slate-500">لا انتقالات متاحة من هذه المرحلة.</p>
+        @else
             <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1">الخطوة التالية المسموحة</label>
-                @if($allowed === [])
-                    <p class="text-sm text-slate-500">لا انتقالات متاحة من هذه المرحلة.</p>
-                @else
-                    <select name="stage" x-model="stage" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold">
-                        @foreach($allowed as $s)
-                            <option value="{{ $s }}">{{ \App\Models\SalesLead::stageLabel($s) }}</option>
+                <p class="text-xs font-bold text-slate-600 mb-2">اختر الخطوة التالية</p>
+                <input type="hidden" name="stage" value="{{ $defaultStage }}" x-model="stage">
+                <div class="flex flex-wrap gap-2">
+                    @foreach($forwardStages as $s)
+                        <button type="button" @click="stage = '{{ $s }}'"
+                                :class="stage === '{{ $s }}'
+                                    ? 'bg-slate-800 text-white border-slate-800'
+                                    : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'"
+                                class="inline-flex items-center px-3 py-2 rounded-lg border text-sm font-semibold transition-colors">
+                            {{ \App\Models\SalesLead::stageLabel($s) }}
+                        </button>
+                    @endforeach
+                    @foreach($closeStages as $s)
+                        <button type="button" @click="stage = '{{ $s }}'"
+                                :class="stage === '{{ $s }}'
+                                    ? 'bg-rose-600 text-white border-rose-600'
+                                    : 'bg-white text-rose-700 border-rose-200 hover:border-rose-400'"
+                                class="inline-flex items-center px-3 py-2 rounded-lg border text-sm font-semibold transition-colors">
+                            {{ \App\Models\SalesLead::stageLabel($s) }}
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">ماذا حصل؟ <span class="text-rose-600">*</span></label>
+                <textarea name="notes" rows="3" required minlength="8" class="{{ $inputReq }}" placeholder="ماذا حصل؟ وما الخطوة التالية؟ (8 أحرف على الأقل)">{{ old('notes') }}</textarea>
+                @error('notes')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
+            </div>
+
+            <div class="space-y-3" x-show="stage && !['lost','dormant','enrollment_completed'].includes(stage)" x-cloak>
+                <p class="text-xs font-bold text-slate-600">المتابعة التالية</p>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">الموعد *</label>
+                    <input type="datetime-local" name="next_follow_up_at"
+                           value="{{ old('next_follow_up_at', $lead->next_follow_up_at && $lead->next_follow_up_at->isFuture() ? $lead->next_follow_up_at->format('Y-m-d\TH:i') : now()->addDay()->setTime(10, 0)->format('Y-m-d\TH:i')) }}"
+                           class="{{ $input }}">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">الإجراء *</label>
+                    <select name="follow_up_channel" class="{{ $input }}">
+                        <option value="">— اختر —</option>
+                        @foreach(\App\Models\SalesLead::FOLLOW_UP_CHANNELS as $k => $lab)
+                            <option value="{{ $k }}" @selected(old('follow_up_channel', $lead->follow_up_channel) === $k)>{{ $lab }}</option>
                         @endforeach
                     </select>
-                @endif
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1">مدة المكالمة / تسجيل</label>
-                <div class="flex gap-2">
-                    <input type="number" name="duration_seconds" min="0" placeholder="ثواني" class="w-28 rounded-xl border border-slate-200 px-2 py-2 text-sm">
-                    <input type="url" name="recording_url" placeholder="رابط التسجيل (اختياري)" class="flex-1 rounded-xl border border-slate-200 px-2 py-2 text-sm">
                 </div>
             </div>
         </div>
 
-        <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">ملاحظات الانتقال <span class="text-rose-600">*</span></label>
-            <textarea name="notes" rows="2" required minlength="5" class="w-full rounded-xl border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm" placeholder="ماذا حصل؟ وما التالي؟ (5 أحرف على الأقل)">{{ old('notes') }}</textarea>
-            @error('notes')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" x-show="stage === 'first_contact'" x-cloak>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" x-show="['first_contact','connected','no_answer'].includes(stage)" x-cloak>
             <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1">هل تم الرد؟ *</label>
-                <select name="call_answered" class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm">
-                    <option value="1">تم الرد</option>
-                    <option value="0">لم يرد → No Answer</option>
-                </select>
+                <label class="block text-xs font-bold text-slate-600 mb-1">مدة المكالمة (ثواني)</label>
+                <input type="number" name="duration_seconds" min="0" placeholder="اختياري" class="{{ $input }}">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">رابط التسجيل</label>
+                <input type="url" name="recording_url" placeholder="اختياري" class="{{ $input }}">
             </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" x-show="stage === 'connected'" x-cloak>
-            <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1">نتيجة الاتصال *</label>
-                <select name="connected_disposition" class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm">
-                    <option value="">—</option>
-                    @foreach(\App\Models\SalesLead::CONNECTED_DISPOSITIONS as $k => $lab)
-                        <option value="{{ $k }}">{{ $lab }}</option>
-                    @endforeach
-                </select>
-            </div>
+        <div x-show="stage === 'first_contact'" x-cloak>
+            <label class="block text-xs font-bold text-slate-600 mb-1">هل تم الرد؟ *</label>
+            <select name="call_answered" class="{{ $inputReq }} max-w-xs">
+                <option value="1">تم الرد</option>
+                <option value="0">لم يرد → No Answer</option>
+            </select>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" x-show="stage === 'qualification'" x-cloak>
-            <div class="sm:col-span-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-600">
-                حقول التأهيل <strong>اختيارية</strong> — املأ المتاح فقط. ملاحظات الانتقال بالأعلى إلزامية.
-            </div>
-            <div>
-                <label class="block text-xs font-bold mb-1">الحالة <span class="text-slate-400 font-normal">(اختياري)</span></label>
-                <select name="profile_type" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
-                    <option value="">—</option>
-                    @foreach(\App\Models\SalesLead::PROFILE_TYPES as $k => $lab)
-                        <option value="{{ $k }}" @selected($lead->profile_type === $k)>{{ $lab }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-bold mb-1">السن (مدى) <span class="text-slate-400 font-normal">(اختياري)</span></label>
-                <select name="age_range" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
-                    <option value="">— اختر المدى —</option>
-                    @foreach(\App\Models\SalesLead::AGE_RANGES as $k => $lab)
-                        <option value="{{ $k }}" @selected(old('age_range', $lead->age_range) === $k)>{{ $lab }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-bold mb-1">المجال <span class="text-slate-400 font-normal">(اختياري)</span></label>
-                <input type="text" name="field_domain" value="{{ $lead->field_domain }}" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
-            </div>
-            <div>
-                <label class="block text-xs font-bold mb-1">مستوى الخبرة <span class="text-slate-400 font-normal">(اختياري)</span></label>
-                <input type="text" name="experience_level" value="{{ $lead->experience_level }}" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
-            </div>
-            <div class="sm:col-span-2">
-                <label class="block text-xs font-bold mb-1">لماذا يريد الكورس؟ <span class="text-slate-400 font-normal">(اختياري)</span></label>
-                <textarea name="course_motivation" rows="2" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">{{ $lead->course_motivation }}</textarea>
-            </div>
-            <div>
-                <label class="block text-xs font-bold mb-1">متى يريد البدء؟ <span class="text-slate-400 font-normal">(اختياري)</span></label>
-                <input type="text" name="start_preference" value="{{ $lead->start_preference }}" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
-            </div>
-            <div>
-                <label class="block text-xs font-bold mb-1">هل يستطيع الدفع؟ <span class="text-slate-400 font-normal">(اختياري)</span></label>
-                <select name="can_pay" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
-                    <option value="">—</option>
-                    <option value="1" @selected($lead->can_pay === true)>نعم</option>
-                    <option value="0" @selected($lead->can_pay === false)>لا</option>
-                </select>
-            </div>
+        <div x-show="stage === 'connected'" x-cloak>
+            <label class="block text-xs font-bold text-slate-600 mb-1">نتيجة الاتصال *</label>
+            <select name="connected_disposition" class="{{ $inputReq }} max-w-md">
+                <option value="">—</option>
+                @foreach(\App\Models\SalesLead::CONNECTED_DISPOSITIONS as $k => $lab)
+                    <option value="{{ $k }}">{{ $lab }}</option>
+                @endforeach
+            </select>
+        </div>
+
+        <div x-show="stage === 'qualification'" x-cloak>
+            <details class="rounded-lg border border-slate-200 bg-slate-50/60 px-4 py-3">
+                <summary class="text-xs font-bold text-slate-700 cursor-pointer">حقول التأهيل (اختياري)</summary>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">الحالة</label>
+                        <select name="profile_type" class="{{ $input }}">
+                            <option value="">—</option>
+                            @foreach(\App\Models\SalesLead::PROFILE_TYPES as $k => $lab)
+                                <option value="{{ $k }}" @selected($lead->profile_type === $k)>{{ $lab }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">السن</label>
+                        <select name="age_range" class="{{ $input }}">
+                            <option value="">—</option>
+                            @foreach(\App\Models\SalesLead::AGE_RANGES as $k => $lab)
+                                <option value="{{ $k }}" @selected(old('age_range', $lead->age_range) === $k)>{{ $lab }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">المجال</label>
+                        <input type="text" name="field_domain" value="{{ $lead->field_domain }}" class="{{ $input }}">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">مستوى الخبرة</label>
+                        <input type="text" name="experience_level" value="{{ $lead->experience_level }}" class="{{ $input }}">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold mb-1">لماذا يريد الكورس؟</label>
+                        <textarea name="course_motivation" rows="2" class="{{ $input }}">{{ $lead->course_motivation }}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">متى يريد البدء؟</label>
+                        <input type="text" name="start_preference" value="{{ $lead->start_preference }}" class="{{ $input }}">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">هل يستطيع الدفع؟</label>
+                        <select name="can_pay" class="{{ $input }}">
+                            <option value="">—</option>
+                            <option value="1" @selected($lead->can_pay === true)>نعم</option>
+                            <option value="0" @selected($lead->can_pay === false)>لا</option>
+                        </select>
+                    </div>
+                </div>
+            </details>
         </div>
 
         <div x-show="stage === 'interested'" x-cloak>
             <label class="block text-xs font-bold mb-1">نسبة الاهتمام *</label>
-            <select name="interest_pct" class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm">
+            <select name="interest_pct" class="{{ $inputReq }} max-w-xs">
                 <option value="">—</option>
                 @foreach(\App\Models\SalesLead::INTEREST_PCTS as $p)
-                    <option value="{{ $p }}" @selected((int)$lead->interest_pct === $p)>{{ $p }}%</option>
+                    <option value="{{ $p }}" @selected((int) $lead->interest_pct === $p)>{{ $p }}%</option>
                 @endforeach
             </select>
         </div>
@@ -168,7 +235,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" x-show="stage === 'objection'" x-cloak>
             <div>
                 <label class="block text-xs font-bold mb-1">سبب الاعتراض *</label>
-                <select name="objection_reason" class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm">
+                <select name="objection_reason" class="{{ $inputReq }}">
                     <option value="">—</option>
                     @foreach(\App\Models\SalesLead::OBJECTION_REASONS as $k => $lab)
                         <option value="{{ $k }}">{{ $lab }}</option>
@@ -176,74 +243,51 @@
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-bold mb-1">Notes</label>
-                <input type="text" name="objection_notes" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                <label class="block text-xs font-bold mb-1">ملاحظة</label>
+                <input type="text" name="objection_notes" class="{{ $input }}">
             </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-xl border border-teal-200 bg-teal-50/40 p-3"
-             x-show="stage && !['lost','dormant','enrollment_completed'].includes(stage)" x-cloak>
-            <div class="sm:col-span-2">
-                <p class="text-xs font-black text-teal-900">حركة إلزامية — Status + Next Action + موعد</p>
-                <p class="text-[11px] text-teal-800/80">ممنوع Lead مفتوح بدون إجراء تالي وموعد متابعة.</p>
-            </div>
-            <div>
-                <label class="block text-xs font-bold mb-1">موعد المتابعة *</label>
-                <input type="datetime-local" name="next_follow_up_at"
-                       value="{{ old('next_follow_up_at', $lead->next_follow_up_at && $lead->next_follow_up_at->isFuture() ? $lead->next_follow_up_at->format('Y-m-d\TH:i') : now()->addDay()->setTime(10, 0)->format('Y-m-d\TH:i')) }}"
-                       class="w-full rounded-xl border border-teal-200 bg-white px-3 py-2 text-sm">
-            </div>
-            <div>
-                <label class="block text-xs font-bold mb-1">الإجراء التالي (Next Action) *</label>
-                <select name="follow_up_channel" class="w-full rounded-xl border border-teal-200 bg-white px-3 py-2 text-sm">
-                    <option value="">— اختر —</option>
-                    @foreach(\App\Models\SalesLead::FOLLOW_UP_CHANNELS as $k => $lab)
-                        <option value="{{ $k }}" @selected(old('follow_up_channel', $lead->follow_up_channel) === $k)>{{ $lab }}</option>
-                    @endforeach
-                </select>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" x-show="stage === 'offer_sent'" x-cloak>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" x-show="stage === 'offer_sent'" x-cloak>
             <div>
                 <label class="block text-xs font-bold mb-1">السعر *</label>
-                <input type="number" step="0.01" name="offer_price" value="{{ $lead->offer_price }}" class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm">
+                <input type="number" step="0.01" name="offer_price" value="{{ $lead->offer_price }}" class="{{ $inputReq }}">
             </div>
             <div>
                 <label class="block text-xs font-bold mb-1">الخصم</label>
-                <input type="text" name="offer_discount" value="{{ $lead->offer_discount }}" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                <input type="text" name="offer_discount" value="{{ $lead->offer_discount }}" class="{{ $input }}">
             </div>
             <div>
                 <label class="block text-xs font-bold mb-1">خطة التقسيط</label>
-                <input type="text" name="offer_installment_plan" value="{{ $lead->offer_installment_plan }}" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                <input type="text" name="offer_installment_plan" value="{{ $lead->offer_installment_plan }}" class="{{ $input }}">
             </div>
             <div>
                 <label class="block text-xs font-bold mb-1">ملاحظات العرض</label>
-                <input type="text" name="offer_notes" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                <input type="text" name="offer_notes" class="{{ $input }}">
             </div>
         </div>
 
-        <div class="rounded-xl border border-violet-200 bg-violet-50/50 p-3 space-y-2"
+        <div class="rounded-lg border border-violet-200 bg-violet-50/50 p-3 space-y-2"
              x-show="['payment_pending','payment_received','enrollment_completed'].includes(stage)" x-cloak>
-            <p class="text-xs font-black text-violet-950">ربط كورس / دبلومة قبل الحجز <span class="text-rose-600">*</span></p>
+            <p class="text-xs font-bold text-violet-950">ربط كورس قبل الحجز <span class="text-rose-600">*</span></p>
             @if($hasCourse)
-                <p class="text-xs text-emerald-800 font-semibold">مرتبط حالياً: {{ $lead->linkedCourseTitle() }} ({{ $lead->linkedCourseTypeLabel() }})</p>
+                <p class="text-xs text-emerald-800 font-semibold">مرتبط: {{ $lead->linkedCourseTitle() }} ({{ $lead->linkedCourseTypeLabel() }})</p>
             @else
-                <p class="text-xs text-rose-700 font-semibold">غير مربوط — اختر كورساً أو دبلومة من الكتالوج بالأسفل.</p>
+                <p class="text-xs text-rose-700 font-semibold">غير مربوط — اختر كورساً أو دبلومة.</p>
             @endif
             @include('sales._course_picker', [
                 'lead' => $lead,
                 'coursesCatalogUrl' => route('employee.sales.courses.index'),
-                'inputClass' => 'w-full rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm',
+                'inputClass' => $input,
                 'labelClass' => 'block text-xs font-bold text-violet-900 mb-1',
             ])
             @error('course_ref_id')<p class="text-xs text-rose-600">{{ $message }}</p>@enderror
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" x-show="stage === 'payment_pending'" x-cloak>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" x-show="stage === 'payment_pending'" x-cloak>
             <div>
                 <label class="block text-xs font-bold mb-1">طريقة الدفع *</label>
-                <select name="payment_method" class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm">
+                <select name="payment_method" class="{{ $inputReq }}">
                     <option value="">—</option>
                     @foreach(\App\Models\SalesLead::PAYMENT_METHODS as $k => $lab)
                         <option value="{{ $k }}">{{ $lab }}</option>
@@ -252,37 +296,37 @@
             </div>
             <div>
                 <label class="block text-xs font-bold mb-1">القيمة *</label>
-                <input type="number" step="0.01" name="payment_amount" class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm">
+                <input type="number" step="0.01" name="payment_amount" class="{{ $inputReq }}">
             </div>
             <div>
                 <label class="block text-xs font-bold mb-1">تاريخ الاستحقاق *</label>
-                <input type="datetime-local" name="payment_due_at" class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm">
+                <input type="datetime-local" name="payment_due_at" class="{{ $inputReq }}">
             </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" x-show="stage === 'payment_received'" x-cloak>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" x-show="stage === 'payment_received'" x-cloak>
             <div>
                 <label class="block text-xs font-bold mb-1">رقم العملية *</label>
-                <input type="text" name="payment_txn_ref" class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm">
+                <input type="text" name="payment_txn_ref" class="{{ $inputReq }}">
             </div>
             <div>
                 <label class="block text-xs font-bold mb-1">المبلغ *</label>
-                <input type="number" step="0.01" name="payment_amount" class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm">
+                <input type="number" step="0.01" name="payment_amount" class="{{ $inputReq }}">
             </div>
             <div>
                 <label class="block text-xs font-bold mb-1">تاريخ الدفع *</label>
-                <input type="datetime-local" name="paid_at" class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm">
+                <input type="datetime-local" name="paid_at" class="{{ $inputReq }}">
             </div>
         </div>
 
         <div x-show="stage === 'enrollment_completed'" x-cloak>
             <label class="block text-xs font-bold mb-1">قيمة الصفقة *</label>
-            <input type="number" step="0.01" name="expected_value" value="{{ $lead->expected_value }}" class="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm">
+            <input type="number" step="0.01" name="expected_value" value="{{ $lead->expected_value }}" class="{{ $inputReq }} max-w-xs">
         </div>
 
         <div x-show="stage === 'lost'" x-cloak>
             <label class="block text-xs font-bold mb-1">سبب الخسارة *</label>
-            <select name="lost_reason" class="w-full rounded-xl border border-rose-200 bg-rose-50/50 px-3 py-2 text-sm">
+            <select name="lost_reason" class="{{ $inputReq }} max-w-md">
                 <option value="">—</option>
                 @foreach(\App\Models\SalesLead::LOSS_REASONS as $k => $lab)
                     <option value="{{ $k }}">{{ $lab }}</option>
@@ -290,11 +334,13 @@
             </select>
         </div>
 
-        <button type="submit" @disabled($allowed === []) class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-sm font-bold">
-            <i class="fas fa-route"></i> تحديث للمرحلة التالية
-        </button>
+        <div class="flex flex-wrap items-center gap-3 pt-1">
+            <button type="submit" @disabled($allowed === []) class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white text-sm font-bold">
+                <i class="fas fa-arrow-left"></i> نقل للمرحلة المختارة
+            </button>
+            <p class="text-xs text-slate-500">تظهر الحقول المطلوبة حسب الخطوة فقط.</p>
+        </div>
     </form>
-    @endunless
     @endif
 </div>
 <script>
