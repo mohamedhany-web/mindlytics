@@ -350,26 +350,42 @@ class SalesLeadController extends Controller
 
         try {
             match ($outcome) {
-                'no_answer' => $pipeline->transition($lead, 'no_answer', [], Auth::user()),
+                'no_answer' => $pipeline->transition($lead, 'no_answer', [
+                    'notes' => 'تسجيل تلقائي: لم يرد على المكالمة.',
+                ], Auth::user()),
                 'interested' => $pipeline->transition($lead, 'connected', [
                     'connected_disposition' => 'interested',
+                    'notes' => 'تسجيل تلقائي: مهتم بعد المكالمة.',
                 ], Auth::user()),
                 'follow_up' => $pipeline->transition(
                     $lead,
                     in_array($lead->stage, ['new_lead', 'first_contact', 'no_answer'], true) ? 'connected' : 'follow_up_scheduled',
-                    in_array($lead->stage, ['new_lead', 'first_contact', 'no_answer'], true)
-                        ? ['connected_disposition' => 'callback']
-                        : [
-                            'next_follow_up_at' => now()->addDay()->setTime(10, 0)->format('Y-m-d\TH:i'),
-                            'follow_up_channel' => 'call',
-                        ],
+                    array_merge(
+                        ['notes' => 'تسجيل تلقائي: يحتاج متابعة بعد المكالمة.'],
+                        in_array($lead->stage, ['new_lead', 'first_contact', 'no_answer'], true)
+                            ? ['connected_disposition' => 'callback']
+                            : [
+                                'next_follow_up_at' => now()->addDay()->setTime(10, 0)->format('Y-m-d\TH:i'),
+                                'follow_up_channel' => 'whatsapp',
+                            ]
+                    ),
                     Auth::user()
                 ),
-                'not_interested' => $pipeline->transition($lead, 'lost', ['lost_reason' => 'no_need'], Auth::user()),
-                'wrong_number' => $pipeline->transition($lead, 'lost', ['lost_reason' => 'wrong_number'], Auth::user()),
-                'closed_lost' => $pipeline->transition($lead, 'lost', ['lost_reason' => 'other'], Auth::user()),
+                'not_interested' => $pipeline->transition($lead, 'lost', [
+                    'lost_reason' => 'no_need',
+                    'notes' => 'تسجيل تلقائي: غير مهتم.',
+                ], Auth::user()),
+                'wrong_number' => $pipeline->transition($lead, 'lost', [
+                    'lost_reason' => 'wrong_number',
+                    'notes' => 'تسجيل تلقائي: رقم خطأ.',
+                ], Auth::user()),
+                'closed_lost' => $pipeline->transition($lead, 'lost', [
+                    'lost_reason' => 'other',
+                    'notes' => 'تسجيل تلقائي: إغلاق خسارة.',
+                ], Auth::user()),
                 'closed_won' => $pipeline->transition($lead, SalesLead::WON_STAGE, [
                     'expected_value' => $lead->expected_value ?: $lead->offer_price ?: $lead->payment_amount ?: 1,
+                    'notes' => 'تسجيل تلقائي: إغلاق ناجح من المكالمة.',
                 ], Auth::user()),
                 default => null,
             };

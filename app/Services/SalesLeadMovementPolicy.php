@@ -22,7 +22,14 @@ class SalesLeadMovementPolicy
 
         $stage = SalesLead::normalizeStage($stage);
 
-        return ! in_array($stage, [...SalesLead::CLOSED_STAGES, SalesLead::WON_STAGE], true);
+        // الحجز/الدفع/التسجيل ليهم معاد دفع أو قفل صفقة — مش لازم Next Follow في كل نقرة
+        return ! in_array($stage, [
+            ...SalesLead::CLOSED_STAGES,
+            SalesLead::WON_STAGE,
+            'payment_pending',
+            'payment_received',
+            'upsell',
+        ], true);
     }
 
     /**

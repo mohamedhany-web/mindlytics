@@ -22,31 +22,91 @@ class SalesPipelineService
     }
 
     /**
-     * المراحل المسموح الانتقال إليها (مسار مختصر — يتخطى الخطوات الدقيقة داخل نفس المرحلة الكبرى).
-     * ما زال ممنوعاً القفز لعرض/دفع/تسجيل بدون المرور بالمسار المنطقي.
+     * نتائج مسموحة من المرحلة الحالية.
+     * العميل ممكن يحجز من أول مكالمة أو من الشات بعدين — مش لازم يعدّي كل خطوة.
      *
      * @return list<string>
      */
     public function allowedNextStages(SalesLead $lead): array
     {
+        $close = ['payment_pending', 'payment_received', SalesLead::WON_STAGE];
+        $progress = ['qualification', 'interested', 'offer_sent', 'follow_up_scheduled', 'objection'];
+
         return match ($lead->stage) {
-            'new_lead' => ['first_contact', 'connected', 'no_answer', 'lost'],
-            'first_contact' => ['connected', 'no_answer', 'lost'],
-            'no_answer' => ['no_answer', 'connected', 'first_contact', 'dormant', 'lost'],
-            'connected' => ['qualification', 'interested', 'offer_sent', 'follow_up_scheduled', 'objection', 'lost'],
-            'qualification' => ['interested', 'offer_sent', 'follow_up_scheduled', 'objection', 'lost'],
-            'interested' => ['offer_sent', 'follow_up_scheduled', 'objection', 'lost'],
-            'objection' => ['follow_up_scheduled', 'interested', 'offer_sent', 'lost'],
-            'follow_up_scheduled' => ['connected', 'qualification', 'interested', 'offer_sent', 'objection', 'lost'],
-            'offer_sent' => ['payment_pending', 'follow_up_scheduled', 'objection', 'lost'],
-            'payment_pending' => ['payment_received', 'follow_up_scheduled', 'lost'],
+            'new_lead' => array_values(array_unique(['first_contact', 'connected', 'no_answer', ...$progress, ...$close, 'lost'])),
+            'first_contact' => array_values(array_unique(['connected', 'no_answer', ...$progress, ...$close, 'lost'])),
+            'no_answer' => array_values(array_unique(['no_answer', 'connected', 'first_contact', ...$progress, ...$close, 'dormant', 'lost'])),
+            'connected' => array_values(array_unique([...$progress, ...$close, 'lost'])),
+            'qualification' => array_values(array_unique(['interested', 'offer_sent', 'follow_up_scheduled', 'objection', ...$close, 'lost'])),
+            'interested' => array_values(array_unique(['offer_sent', 'follow_up_scheduled', 'objection', ...$close, 'lost'])),
+            'objection' => array_values(array_unique(['follow_up_scheduled', 'interested', 'offer_sent', ...$close, 'lost'])),
+            'follow_up_scheduled' => array_values(array_unique(['connected', 'qualification', 'interested', 'offer_sent', 'objection', ...$close, 'lost'])),
+            'offer_sent' => array_values(array_unique([...$close, 'follow_up_scheduled', 'objection', 'lost'])),
+            'payment_pending' => ['payment_received', SalesLead::WON_STAGE, 'follow_up_scheduled', 'lost'],
             'payment_received' => [SalesLead::WON_STAGE, 'lost'],
             'enrollment_completed' => ['upsell'],
             'upsell' => ['upsell'],
-            'dormant' => ['first_contact', 'connected', 'lost'],
+            'dormant' => array_values(array_unique(['first_contact', 'connected', ...$close, 'lost'])),
             'lost' => [],
             default => [],
         };
+    }
+
+    /**
+     * أزرار النتيجة للموظف — مجموعات عملية مش مسار إجباري.
+     *
+     * @return list<array{stage: string, label: string, hint: string, group: string, tone: string}>
+     */
+    public function outcomeActions(SalesLead $lead): array
+    {
+        $allowed = $this->allowedNextStages($lead);
+        $catalog = [
+            'payment_pending' => ['label' => 'حجز — بانتظار الدفع', 'hint' => 'من المكالمة أو الشات', 'group' => 'close', 'tone' => 'success'],
+            'payment_received' => ['label' => 'تم الدفع', 'hint' => 'حوّل / إنستاباي', 'group' => 'close', 'tone' => 'success'],
+            'enrollment_completed' => ['label' => 'تسجيل مكتمل', 'hint' => 'اتقفلت الصفقة', 'group' => 'close', 'tone' => 'success'],
+            'connected' => ['label' => 'تم الرد / تواصل', 'hint' => 'اتكلمنا', 'group' => 'contact', 'tone' => 'neutral'],
+            'no_answer' => ['label' => 'ما ردّش', 'hint' => 'محاولة تانية', 'group' => 'contact', 'tone' => 'neutral'],
+            'first_contact' => ['label' => 'أول تواصل', 'hint' => 'اتصلنا', 'group' => 'contact', 'tone' => 'neutral'],
+            'interested' => ['label' => 'مهتم', 'hint' => 'لسه بيفكّر', 'group' => 'progress', 'tone' => 'neutral'],
+            'qualification' => ['label' => 'تأهيل', 'hint' => 'بيانات أكتر', 'group' => 'progress', 'tone' => 'neutral'],
+            'offer_sent' => ['label' => 'بعت عرض', 'hint' => 'سعر / تقسيط', 'group' => 'progress', 'tone' => 'neutral'],
+            'follow_up_scheduled' => ['label' => 'هتابع لاحقاً', 'hint' => 'حدد الموعد هنا بس', 'group' => 'later', 'tone' => 'neutral'],
+            'objection' => ['label' => 'اعتراض', 'hint' => 'سعر / وقت / أهل', 'group' => 'later', 'tone' => 'warn'],
+            'lost' => ['label' => 'خسارة', 'hint' => 'قفّل الملف', 'group' => 'exit', 'tone' => 'danger'],
+            'dormant' => ['label' => 'راكد', 'hint' => 'بعد 3 محاولات', 'group' => 'exit', 'tone' => 'danger'],
+            'upsell' => ['label' => 'بيع إضافي', 'hint' => 'كورس تاني', 'group' => 'close', 'tone' => 'success'],
+        ];
+
+        $actions = [];
+        foreach ($catalog as $stage => $meta) {
+            if (! in_array($stage, $allowed, true)) {
+                continue;
+            }
+            $actions[] = ['stage' => $stage] + $meta;
+        }
+
+        return $actions;
+    }
+
+    public function suggestedDefaultStage(SalesLead $lead): string
+    {
+        $allowed = $this->allowedNextStages($lead);
+        $preferred = match ($lead->stage) {
+            'new_lead', 'first_contact', 'no_answer', 'dormant' => ['connected', 'no_answer', 'payment_pending'],
+            'connected', 'qualification' => ['interested', 'payment_pending', 'offer_sent'],
+            'interested', 'offer_sent', 'objection', 'follow_up_scheduled' => ['payment_pending', 'follow_up_scheduled'],
+            'payment_pending' => ['payment_received', SalesLead::WON_STAGE],
+            'payment_received' => [SalesLead::WON_STAGE],
+            default => [],
+        };
+
+        foreach ($preferred as $stage) {
+            if (in_array($stage, $allowed, true)) {
+                return $stage;
+            }
+        }
+
+        return $allowed[0] ?? $lead->stage;
     }
 
     /**
@@ -191,6 +251,7 @@ class SalesPipelineService
         return DB::transaction(function () use ($lead, $toStage, $payload, $actor) {
             $from = $lead->stage;
             $updates = $this->buildUpdates($toStage, $payload);
+            $this->ensureMovementDefaults($lead, $toStage, $updates, $payload);
 
             if ($toStage === 'no_answer') {
                 $this->applyNoAnswerBump($lead, $updates);
@@ -422,6 +483,10 @@ class SalesPipelineService
 
         if (! empty($payload['payment_due_at'])) {
             $updates['payment_due_at'] = Carbon::parse($payload['payment_due_at']);
+            if ($toStage === 'payment_pending' && empty($payload['next_follow_up_at'])) {
+                $updates['next_follow_up_at'] = $updates['payment_due_at'];
+                $updates['follow_up_channel'] = $updates['follow_up_channel'] ?? 'whatsapp';
+            }
         }
 
         if (! empty($payload['paid_at'])) {
@@ -455,6 +520,37 @@ class SalesPipelineService
             $updates['next_attempt_due_at'] = $due;
             $updates['next_follow_up_at'] = $due;
             $updates['follow_up_channel'] = $updates['follow_up_channel'] ?? 'call';
+        }
+    }
+
+    /**
+     * المتابعة إلزامية فقط لما النتيجة «هتابع لاحقاً».
+     * باقي النقلات: نكمّل معاد موجود، أو بكرة 10ص واتساب من غير ما الموظف يملأ الحقل كل مرة.
+     *
+     * @param  array<string, mixed>  $updates
+     * @param  array<string, mixed>  $payload
+     */
+    private function ensureMovementDefaults(SalesLead $lead, string $toStage, array &$updates, array $payload): void
+    {
+        if ($toStage === 'follow_up_scheduled') {
+            return;
+        }
+
+        if (! app(SalesLeadMovementPolicy::class)->requiresActiveMovement($toStage)) {
+            return;
+        }
+
+        $hasFollow = ! empty($updates['next_follow_up_at']) || ! empty($payload['next_follow_up_at']);
+        $existingFollow = $lead->next_follow_up_at;
+        $existingIsFuture = $existingFollow instanceof Carbon && $existingFollow->isFuture();
+
+        if (! $hasFollow && ! $existingIsFuture) {
+            $updates['next_follow_up_at'] = now()->addDay()->setTime(10, 0);
+        }
+
+        $channel = $updates['follow_up_channel'] ?? $payload['follow_up_channel'] ?? $lead->follow_up_channel;
+        if ($channel === null || $channel === '' || ! array_key_exists((string) $channel, SalesLead::FOLLOW_UP_CHANNELS)) {
+            $updates['follow_up_channel'] = 'whatsapp';
         }
     }
 }

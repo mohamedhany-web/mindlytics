@@ -62,6 +62,18 @@ class SalesLeadMovementPolicyTest extends TestCase
         $this->assertFalse($policy->requiresActiveMovement('lost'));
         $this->assertFalse($policy->requiresActiveMovement(SalesLead::WON_STAGE));
         $this->assertTrue($policy->requiresActiveMovement('new_lead'));
+        $this->assertFalse($policy->requiresActiveMovement('payment_pending'));
+        $this->assertFalse($policy->requiresActiveMovement('payment_received'));
+    }
+
+    public function test_booking_stages_do_not_require_next_follow(): void
+    {
+        $policy = new SalesLeadMovementPolicy;
+
+        $policy->assertOpenLeadHasMovement(['stage' => 'payment_pending']);
+        $policy->assertOpenLeadHasMovement(['stage' => 'payment_received']);
+
+        $this->assertTrue(true);
     }
 
     public function test_with_create_defaults_fills_missing_movement_fields(): void

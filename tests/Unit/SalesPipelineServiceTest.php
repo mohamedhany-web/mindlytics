@@ -29,7 +29,7 @@ class SalesPipelineServiceTest extends TestCase
         return $lead;
     }
 
-    public function test_employee_cannot_skip_from_new_lead_to_offer(): void
+    public function test_new_lead_can_jump_to_booking_or_offer(): void
     {
         $service = new SalesPipelineService;
         $lead = $this->leadAt('new_lead');
@@ -37,11 +37,13 @@ class SalesPipelineServiceTest extends TestCase
 
         $this->assertContains('first_contact', $allowed);
         $this->assertContains('connected', $allowed);
-        $this->assertNotContains('offer_sent', $allowed);
-        $this->assertNotContains('payment_pending', $allowed);
+        $this->assertContains('offer_sent', $allowed);
+        $this->assertContains('payment_pending', $allowed);
+        $this->assertContains('payment_received', $allowed);
+        $this->assertContains(SalesLead::WON_STAGE, $allowed);
     }
 
-    public function test_connected_can_fast_track_to_offer(): void
+    public function test_connected_can_fast_track_to_offer_or_booking(): void
     {
         $service = new SalesPipelineService;
         $lead = $this->leadAt('connected');
@@ -49,18 +51,31 @@ class SalesPipelineServiceTest extends TestCase
 
         $this->assertContains('offer_sent', $allowed);
         $this->assertContains('interested', $allowed);
-        $this->assertNotContains('payment_pending', $allowed);
+        $this->assertContains('payment_pending', $allowed);
+        $this->assertContains('payment_received', $allowed);
     }
 
-    public function test_interested_cannot_jump_to_payment(): void
+    public function test_interested_can_jump_to_payment(): void
     {
         $service = new SalesPipelineService;
         $lead = $this->leadAt('interested');
         $allowed = $service->allowedNextStages($lead);
 
         $this->assertContains('offer_sent', $allowed);
-        $this->assertNotContains('payment_pending', $allowed);
-        $this->assertNotContains('enrollment_completed', $allowed);
+        $this->assertContains('payment_pending', $allowed);
+        $this->assertContains('payment_received', $allowed);
+        $this->assertContains(SalesLead::WON_STAGE, $allowed);
+    }
+
+    public function test_outcome_actions_surface_booking_from_first_contact(): void
+    {
+        $service = new SalesPipelineService;
+        $lead = $this->leadAt('new_lead');
+        $stages = collect($service->outcomeActions($lead))->pluck('stage')->all();
+
+        $this->assertContains('payment_pending', $stages);
+        $this->assertContains('follow_up_scheduled', $stages);
+        $this->assertContains('connected', $stages);
     }
 
     public function test_transition_requires_notes(): void

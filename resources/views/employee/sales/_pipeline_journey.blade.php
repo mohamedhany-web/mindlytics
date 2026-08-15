@@ -1,17 +1,26 @@
 @php
     $pipeline = $pipeline ?? app(\App\Services\SalesPipelineService::class);
     $allowed = $pipeline->allowedNextStages($lead);
+    $actions = $pipeline->outcomeActions($lead);
     $buckets = $pipeline->journeyBuckets();
     $currentBucket = $pipeline->bucketForStage($lead->stage);
     $bucketKeys = array_keys($buckets);
     $currentBucketIdx = array_search($currentBucket, $bucketKeys, true);
     $hasCourse = (bool) $lead->linkedCourseId();
-    $exitStages = ['lost', 'dormant'];
-    $forwardStages = array_values(array_filter($allowed, fn ($s) => ! in_array($s, $exitStages, true)));
-    $closeStages = array_values(array_filter($allowed, fn ($s) => in_array($s, $exitStages, true)));
-    $defaultStage = $forwardStages[0] ?? ($allowed[0] ?? $lead->stage);
+    $defaultStage = old('stage', $pipeline->suggestedDefaultStage($lead));
     $input = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500';
     $inputReq = 'w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500';
+    $groups = [
+        'close' => 'إقفال الصفقة — من أول مكالمة أو من الشات',
+        'contact' => 'التواصل',
+        'progress' => 'التقدم',
+        'later' => 'لاحقاً',
+        'exit' => 'خروج',
+    ];
+    $grouped = [];
+    foreach ($actions as $action) {
+        $grouped[$action['group']][] = $action;
+    }
 @endphp
 @once
 <style>
@@ -29,6 +38,7 @@
                 @if($lead->contact_attempts)
                     · محاولات {{ $lead->contact_attempts }}/3
                 @endif
+                · سجّل اللي حصل فعلياً — مش لازم تعدّي كل خطوة
             </p>
         </div>
     </div>
@@ -90,53 +100,52 @@
         @if($allowed === [])
             <p class="text-sm text-slate-500">لا انتقالات متاحة من هذه المرحلة.</p>
         @else
-            <div>
-                <p class="text-xs font-bold text-slate-600 mb-2">اختر الخطوة التالية</p>
-                <input type="hidden" name="stage" value="{{ $defaultStage }}" x-model="stage">
-                <div class="flex flex-wrap gap-2">
-                    @foreach($forwardStages as $s)
-                        <button type="button" @click="stage = '{{ $s }}'"
-                                :class="stage === '{{ $s }}'
-                                    ? 'bg-slate-800 text-white border-slate-800'
-                                    : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'"
-                                class="inline-flex items-center px-3 py-2 rounded-lg border text-sm font-semibold transition-colors">
-                            {{ \App\Models\SalesLead::stageLabel($s) }}
-                        </button>
-                    @endforeach
-                    @foreach($closeStages as $s)
-                        <button type="button" @click="stage = '{{ $s }}'"
-                                :class="stage === '{{ $s }}'
-                                    ? 'bg-rose-600 text-white border-rose-600'
-                                    : 'bg-white text-rose-700 border-rose-200 hover:border-rose-400'"
-                                class="inline-flex items-center px-3 py-2 rounded-lg border text-sm font-semibold transition-colors">
-                            {{ \App\Models\SalesLead::stageLabel($s) }}
-                        </button>
-                    @endforeach
+            <input type="hidden" name="stage" value="{{ $defaultStage }}" x-model="stage">
+            @foreach($groups as $gKey => $gLabel)
+                @continue(empty($grouped[$gKey]))
+                <div>
+                    <p class="text-xs font-bold text-slate-600 mb-2">{{ $gLabel }}</p>
+                    <div class="flex flex-wrap gap-2">
+                        @foreach($grouped[$gKey] as $action)
+                            <button type="button" @click="stage = '{{ $action['stage'] }}'"
+                                    :class="stage === '{{ $action['stage'] }}'
+                                        ? '{{ $action['tone'] === 'success' ? 'bg-emerald-700 text-white border-emerald-700' : ($action['tone'] === 'danger' ? 'bg-rose-600 text-white border-rose-600' : ($action['tone'] === 'warn' ? 'bg-amber-600 text-white border-amber-600' : 'bg-slate-800 text-white border-slate-800')) }}'
+                                        : '{{ $action['tone'] === 'success' ? 'bg-white text-emerald-800 border-emerald-200 hover:border-emerald-400' : ($action['tone'] === 'danger' ? 'bg-white text-rose-700 border-rose-200 hover:border-rose-400' : ($action['tone'] === 'warn' ? 'bg-white text-amber-800 border-amber-200 hover:border-amber-400' : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400')) }}'"
+                                    class="inline-flex flex-col items-start px-3 py-2 rounded-lg border text-sm font-semibold transition-colors min-w-[9.5rem]">
+                                <span>{{ $action['label'] }}</span>
+                                @if($action['hint'])
+                                    <span class="text-[10px] font-medium opacity-80 mt-0.5">{{ $action['hint'] }}</span>
+                                @endif
+                            </button>
+                        @endforeach
+                    </div>
                 </div>
-            </div>
+            @endforeach
         @endif
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1">ماذا حصل؟ <span class="text-rose-600">*</span></label>
-                <textarea name="notes" rows="3" required minlength="8" class="{{ $inputReq }}" placeholder="ماذا حصل؟ وما الخطوة التالية؟ (8 أحرف على الأقل)">{{ old('notes') }}</textarea>
-                @error('notes')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
-            </div>
+        <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">ماذا حصل؟ <span class="text-rose-600">*</span></label>
+            <textarea name="notes" rows="2" required minlength="8" class="{{ $inputReq }}" placeholder="مثال: حجز من أول مكالمة / هيدفع من الشات بعد شوية / هكلمه بكرة">{{ old('notes') }}</textarea>
+            @error('notes')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
+        </div>
 
-            <div class="space-y-3" x-show="stage && !['lost','dormant','enrollment_completed'].includes(stage)" x-cloak>
-                <p class="text-xs font-bold text-slate-600">المتابعة التالية</p>
+        <div class="rounded-lg border border-slate-200 bg-slate-50/70 p-3 space-y-3"
+             x-show="stage === 'follow_up_scheduled'" x-cloak>
+            <p class="text-xs font-bold text-slate-700">المتابعة التالية — مطلوبة هنا فقط</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                     <label class="block text-xs font-semibold text-slate-500 mb-1">الموعد *</label>
                     <input type="datetime-local" name="next_follow_up_at"
+                           :disabled="stage !== 'follow_up_scheduled'"
                            value="{{ old('next_follow_up_at', $lead->next_follow_up_at && $lead->next_follow_up_at->isFuture() ? $lead->next_follow_up_at->format('Y-m-d\TH:i') : now()->addDay()->setTime(10, 0)->format('Y-m-d\TH:i')) }}"
-                           class="{{ $input }}">
+                           class="{{ $inputReq }}">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-500 mb-1">الإجراء *</label>
-                    <select name="follow_up_channel" class="{{ $input }}">
+                    <select name="follow_up_channel" class="{{ $inputReq }}" :disabled="stage !== 'follow_up_scheduled'">
                         <option value="">— اختر —</option>
                         @foreach(\App\Models\SalesLead::FOLLOW_UP_CHANNELS as $k => $lab)
-                            <option value="{{ $k }}" @selected(old('follow_up_channel', $lead->follow_up_channel) === $k)>{{ $lab }}</option>
+                            <option value="{{ $k }}" @selected(old('follow_up_channel', $lead->follow_up_channel ?? 'whatsapp') === $k)>{{ $lab }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -156,7 +165,7 @@
 
         <div x-show="stage === 'first_contact'" x-cloak>
             <label class="block text-xs font-bold text-slate-600 mb-1">هل تم الرد؟ *</label>
-            <select name="call_answered" class="{{ $inputReq }} max-w-xs">
+            <select name="call_answered" class="{{ $inputReq }} max-w-xs" :disabled="stage !== 'first_contact'">
                 <option value="1">تم الرد</option>
                 <option value="0">لم يرد → No Answer</option>
             </select>
@@ -164,10 +173,10 @@
 
         <div x-show="stage === 'connected'" x-cloak>
             <label class="block text-xs font-bold text-slate-600 mb-1">نتيجة الاتصال *</label>
-            <select name="connected_disposition" class="{{ $inputReq }} max-w-md">
+            <select name="connected_disposition" class="{{ $inputReq }} max-w-md" :disabled="stage !== 'connected'">
                 <option value="">—</option>
                 @foreach(\App\Models\SalesLead::CONNECTED_DISPOSITIONS as $k => $lab)
-                    <option value="{{ $k }}">{{ $lab }}</option>
+                    <option value="{{ $k }}" @selected(old('connected_disposition') === $k)>{{ $lab }}</option>
                 @endforeach
             </select>
         </div>
@@ -224,7 +233,7 @@
 
         <div x-show="stage === 'interested'" x-cloak>
             <label class="block text-xs font-bold mb-1">نسبة الاهتمام *</label>
-            <select name="interest_pct" class="{{ $inputReq }} max-w-xs">
+            <select name="interest_pct" class="{{ $inputReq }} max-w-xs" :disabled="stage !== 'interested'">
                 <option value="">—</option>
                 @foreach(\App\Models\SalesLead::INTEREST_PCTS as $p)
                     <option value="{{ $p }}" @selected((int) $lead->interest_pct === $p)>{{ $p }}%</option>
@@ -235,7 +244,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" x-show="stage === 'objection'" x-cloak>
             <div>
                 <label class="block text-xs font-bold mb-1">سبب الاعتراض *</label>
-                <select name="objection_reason" class="{{ $inputReq }}">
+                <select name="objection_reason" class="{{ $inputReq }}" :disabled="stage !== 'objection'">
                     <option value="">—</option>
                     @foreach(\App\Models\SalesLead::OBJECTION_REASONS as $k => $lab)
                         <option value="{{ $k }}">{{ $lab }}</option>
@@ -251,7 +260,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" x-show="stage === 'offer_sent'" x-cloak>
             <div>
                 <label class="block text-xs font-bold mb-1">السعر *</label>
-                <input type="number" step="0.01" name="offer_price" value="{{ $lead->offer_price }}" class="{{ $inputReq }}">
+                <input type="number" step="0.01" name="offer_price" value="{{ $lead->offer_price }}" class="{{ $inputReq }}" :disabled="stage !== 'offer_sent'">
             </div>
             <div>
                 <label class="block text-xs font-bold mb-1">الخصم</label>
@@ -287,7 +296,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" x-show="stage === 'payment_pending'" x-cloak>
             <div>
                 <label class="block text-xs font-bold mb-1">طريقة الدفع *</label>
-                <select name="payment_method" class="{{ $inputReq }}">
+                <select name="payment_method" class="{{ $inputReq }}" :disabled="stage !== 'payment_pending'">
                     <option value="">—</option>
                     @foreach(\App\Models\SalesLead::PAYMENT_METHODS as $k => $lab)
                         <option value="{{ $k }}">{{ $lab }}</option>
@@ -296,37 +305,37 @@
             </div>
             <div>
                 <label class="block text-xs font-bold mb-1">القيمة *</label>
-                <input type="number" step="0.01" name="payment_amount" class="{{ $inputReq }}">
+                <input type="number" step="0.01" name="payment_amount" class="{{ $inputReq }}" :disabled="stage !== 'payment_pending'">
             </div>
             <div>
                 <label class="block text-xs font-bold mb-1">تاريخ الاستحقاق *</label>
-                <input type="datetime-local" name="payment_due_at" class="{{ $inputReq }}">
+                <input type="datetime-local" name="payment_due_at" class="{{ $inputReq }}" :disabled="stage !== 'payment_pending'">
             </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" x-show="stage === 'payment_received'" x-cloak>
             <div>
                 <label class="block text-xs font-bold mb-1">رقم العملية *</label>
-                <input type="text" name="payment_txn_ref" class="{{ $inputReq }}">
+                <input type="text" name="payment_txn_ref" class="{{ $inputReq }}" :disabled="stage !== 'payment_received'">
             </div>
             <div>
                 <label class="block text-xs font-bold mb-1">المبلغ *</label>
-                <input type="number" step="0.01" name="payment_amount" class="{{ $inputReq }}">
+                <input type="number" step="0.01" name="payment_amount" class="{{ $inputReq }}" :disabled="stage !== 'payment_received'">
             </div>
             <div>
                 <label class="block text-xs font-bold mb-1">تاريخ الدفع *</label>
-                <input type="datetime-local" name="paid_at" class="{{ $inputReq }}">
+                <input type="datetime-local" name="paid_at" class="{{ $inputReq }}" :disabled="stage !== 'payment_received'">
             </div>
         </div>
 
         <div x-show="stage === 'enrollment_completed'" x-cloak>
             <label class="block text-xs font-bold mb-1">قيمة الصفقة *</label>
-            <input type="number" step="0.01" name="expected_value" value="{{ $lead->expected_value }}" class="{{ $inputReq }} max-w-xs">
+            <input type="number" step="0.01" name="expected_value" value="{{ $lead->expected_value }}" class="{{ $inputReq }} max-w-xs" :disabled="stage !== 'enrollment_completed'">
         </div>
 
         <div x-show="stage === 'lost'" x-cloak>
             <label class="block text-xs font-bold mb-1">سبب الخسارة *</label>
-            <select name="lost_reason" class="{{ $inputReq }} max-w-md">
+            <select name="lost_reason" class="{{ $inputReq }} max-w-md" :disabled="stage !== 'lost'">
                 <option value="">—</option>
                 @foreach(\App\Models\SalesLead::LOSS_REASONS as $k => $lab)
                     <option value="{{ $k }}">{{ $lab }}</option>
@@ -336,15 +345,15 @@
 
         <div class="flex flex-wrap items-center gap-3 pt-1">
             <button type="submit" @disabled($allowed === []) class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white text-sm font-bold">
-                <i class="fas fa-arrow-left"></i> نقل للمرحلة المختارة
+                <i class="fas fa-check"></i> حفظ النتيجة
             </button>
-            <p class="text-xs text-slate-500">تظهر الحقول المطلوبة حسب الخطوة فقط.</p>
+            <p class="text-xs text-slate-500">المتابعة تظهر فقط لو اخترت «هتابع لاحقاً». غير كده النظام يكمّل لوحده.</p>
         </div>
     </form>
     @endif
 </div>
 <script>
 function pipelineForm(initial) {
-    return { stage: initial || 'first_contact' };
+    return { stage: initial || 'connected' };
 }
 </script>

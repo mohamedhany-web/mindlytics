@@ -97,7 +97,7 @@
     @if($needsMovement && ($missingFollow || $missingAction || $lead->isStaleContact()))
         <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
             @if($missingFollow || $missingAction)
-                <p class="font-bold">العميل يحتاج حركة — حدّد المرحلة التالية والمتابعة من الصندوق أدناه.</p>
+                <p class="font-bold">العميل يحتاج حركة — سجّل اللي حصل (حجز، دفع، متابعة، أو خسارة) من الصندوق أدناه.</p>
             @endif
             @if($lead->isFollowUpOverdue())
                 <p>موعد المتابعة متأخر.</p>
