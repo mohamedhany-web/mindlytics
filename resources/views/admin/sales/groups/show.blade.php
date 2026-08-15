@@ -157,6 +157,56 @@
         </div>
     </section>
 
+    @if($group->members->isNotEmpty() || $group->assigned_to || $group->leads->contains(fn ($l) => blank($l->assigned_to)))
+                    الموظفون وسحب البيانات
+                </h3>
+                <p class="text-xs text-slate-600 mt-0.5">سحب العملاء من محفظة الموظف يخليهم عند المجموعة بكل ملاحظاته وأنشطته، ويختفوا من عنده. شيل الموظف من المجموعة بيعمل نفس السحب تلقائياً.</p>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-600">
+                            <th class="px-4 py-3 text-right font-semibold">الموظف</th>
+                            <th class="px-4 py-3 text-right font-semibold">عملاء المجموعة عنده</th>
+                            <th class="px-4 py-3 text-right font-semibold">إجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @foreach(($group->members->isNotEmpty() ? $group->members : collect([$group->assignee])) as $member)
+                            @if($member)
+                                @php $memberLeadCount = $group->leads->where('assigned_to', $member->id)->count(); @endphp
+                                <tr class="hover:bg-slate-50/80">
+                                    <td class="px-4 py-3 font-semibold text-slate-900">{{ $member->name }}</td>
+                                    <td class="px-4 py-3 tabular-nums text-slate-700">{{ number_format($memberLeadCount) }}</td>
+                                    <td class="px-4 py-3">
+                                        <form method="post" action="{{ route('admin.sales.groups.reclaim', $group) }}"
+                                              onsubmit="return confirm(@json('سحب كل عملاء هذه المجموعة من محفظة '.$member->name.'؟'."\n".'هتتشال من عنده وتفضل هنا بكل الملاحظات والأنشطة.'));">
+                                            @csrf
+                                            <input type="hidden" name="employee_id" value="{{ $member->id }}">
+                                            <button type="submit" @disabled($memberLeadCount === 0)
+                                                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold border {{ $memberLeadCount === 0 ? 'border-slate-200 text-slate-400 bg-slate-50 cursor-not-allowed' : 'border-amber-300 text-amber-900 bg-amber-50 hover:bg-amber-100' }}">
+                                                <i class="fas fa-inbox"></i>
+                                                سحب البيانات
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            @endif
+                        @endforeach
+                        @php $unassignedCount = $group->leads->whereNull('assigned_to')->count(); @endphp
+                        @if($unassignedCount > 0)
+                            <tr class="bg-emerald-50/70">
+                                <td class="px-4 py-3 font-semibold text-emerald-900">عند المجموعة (بدون موظف)</td>
+                                <td class="px-4 py-3 tabular-nums text-emerald-800">{{ number_format($unassignedCount) }}</td>
+                                <td class="px-4 py-3 text-xs text-emerald-700">محفوظة بكل الملاحظات</td>
+                            </tr>
+                        @endif
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    @endif
+
     @if($group->members->isNotEmpty() || $group->assigned_to)
         <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
             <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
@@ -224,7 +274,7 @@
                     @endforeach
                 </div>
                 @error('member_ids')<p class="text-rose-600 text-xs mt-1">{{ $message }}</p>@enderror
-                <p class="text-[11px] text-slate-500 mt-1">ليس إلزامياً. عند الإسناد: كل موظف يرى عملاءه المسندين إليه داخل هذه المجموعة فقط.</p>
+                <p class="text-[11px] text-slate-500 mt-1">اختياري. شيل الموظف من المجموعة = عملاء المجموعة يتشالوا من محفظته وتفضل هنا بكل ملاحظاته. زر «سحب البيانات» يعمل نفس الشيء من غير ما تشيله من المجموعة.</p>
             </div>
 
             <div>
@@ -239,8 +289,10 @@
                                 @checked(old('lead_ids') ? in_array($lead->id, old('lead_ids', [])) : (int) $lead->sales_lead_group_id === (int) $group->id)>
                             <span class="font-medium text-slate-800">{{ $lead->name }}</span>
                             <span class="text-slate-400 text-xs font-mono" dir="ltr">{{ $lead->phone }}</span>
-                            @if($lead->assignee)
+                                @if($lead->assignee)
                                 <span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-100">{{ $lead->assignee->name }}</span>
+                            @elseif((int) $lead->sales_lead_group_id === (int) $group->id)
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-100">عند المجموعة</span>
                             @endif
                         </label>
                     @empty
@@ -281,7 +333,13 @@
                             <tr class="hover:bg-slate-50/80">
                                 <td class="px-4 py-3 font-semibold text-slate-900">{{ $lead->name }}</td>
                                 <td class="px-4 py-3 text-xs font-mono text-slate-500" dir="ltr">{{ $lead->phone ?: '—' }}</td>
-                                <td class="px-4 py-3 text-xs text-slate-600">{{ $lead->assignee->name ?? '—' }}</td>
+                                <td class="px-4 py-3 text-xs text-slate-600">
+                                    @if($lead->assignee)
+                                        {{ $lead->assignee->name }}
+                                    @else
+                                        <span class="text-emerald-800 font-semibold">عند المجموعة</span>
+                                    @endif
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>

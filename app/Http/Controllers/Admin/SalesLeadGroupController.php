@@ -7,6 +7,7 @@ use App\Models\SalesLead;
 use App\Models\SalesLeadGroup;
 use App\Models\User;
 use App\Services\SalesGroupPrintPdfService;
+use App\Services\SalesLeadGroupReclaimService;
 use App\Services\SalesLeadWhatsAppBatchService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -106,9 +107,15 @@ class SalesLeadGroupController extends Controller
 
         $availableLeads = SalesLead::query()
             ->with('assignee:id,name')
-            ->when($memberIds !== [], fn ($q) => $q->whereIn('assigned_to', $memberIds))
+            ->where(function ($q) use ($memberIds, $group) {
+                $q->where('sales_lead_group_id', $group->id);
+                if ($memberIds !== []) {
+                    $q->orWhereIn('assigned_to', $memberIds);
+                }
+            })
+            ->orderByRaw('CASE WHEN assigned_to IS NULL THEN 0 ELSE 1 END')
             ->orderBy('name')
-            ->limit(500)
+            ->limit(800)
             ->get(['id', 'name', 'phone', 'assigned_to', 'sales_lead_group_id']);
 
         $latestBatch = app(SalesLeadWhatsAppBatchService::class)->latestForGroup($group->id);
@@ -133,6 +140,8 @@ class SalesLeadGroupController extends Controller
             return back()->withErrors(['member_ids' => 'اختيار الموظفين غير صالح — اختر موظفي مبيعات فعّالين فقط، أو اترك الحقل فارغاً.'])->withInput();
         }
 
+        $previousMemberIds = $group->memberIds()->map(fn ($id) => (int) $id)->all();
+
         $group->update([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
@@ -140,10 +149,50 @@ class SalesLeadGroupController extends Controller
         ]);
 
         $group->syncMembers($memberIds);
-        $this->syncGroupLeads($group, $validated['lead_ids'] ?? [], $memberIds);
+
+        $reclaimed = app(SalesLeadGroupReclaimService::class)->reclaimFromRemovedMembers(
+            $group->fresh(),
+            $previousMemberIds,
+            $memberIds,
+            Auth::user()
+        );
+
+        $this->syncGroupLeads($group->fresh(), $validated['lead_ids'] ?? [], $memberIds);
+
+        $msg = 'تم تحديث المجموعة';
+        if ($reclaimed > 0) {
+            $msg .= ' — اتشال '.$reclaimed.' عميل من محفظة الموظف/الموظفين وتفضلوا في المجموعة بكل الملاحظات.';
+        }
 
         return redirect()->route('admin.sales.groups.show', $group)
-            ->with('success', 'تم تحديث المجموعة');
+            ->with('success', $msg);
+    }
+
+    public function reclaim(Request $request, SalesLeadGroup $group, SalesLeadGroupReclaimService $reclaim): RedirectResponse
+    {
+        $validated = $request->validate([
+            'employee_id' => 'required|integer|exists:users,id',
+        ]);
+
+        $employeeId = (int) $validated['employee_id'];
+        $employee = User::query()->find($employeeId);
+        $count = $group->leads()->where('assigned_to', $employeeId)->count();
+
+        if ($count === 0) {
+            return back()->with('error', 'لا يوجد عملاء لهذه المجموعة في محفظة '.($employee?->name ?? 'الموظف').'.');
+        }
+
+        $reclaimed = $reclaim->reclaimFromEmployee(
+            $group,
+            $employeeId,
+            Auth::user(),
+            'سحب يدوي من صفحة المجموعة'
+        );
+
+        return back()->with(
+            'success',
+            'اتشال '.$reclaimed.' عميل من محفظة '.($employee?->name ?? 'الموظف').' وتفضلوا في المجموعة بكل الملاحظات والأنشطة.'
+        );
     }
 
     public function destroy(SalesLeadGroup $group): RedirectResponse
@@ -247,9 +296,12 @@ class SalesLeadGroupController extends Controller
 
         $query = SalesLead::query()->whereIn('id', $ids);
 
-        // عند وجود موظفين: اربط فقط عملاء محافظهم. بدون موظفين (مجموعة إدارية): اربط أي Lead محدد.
+        // عند وجود موظفين: اربط محافظهم + عملاء المجموعة الحاليين (بما فيهم المسحوبين بدون موظف).
         if ($memberIds !== []) {
-            $query->whereIn('assigned_to', $memberIds);
+            $query->where(function ($q) use ($memberIds, $group) {
+                $q->whereIn('assigned_to', $memberIds)
+                    ->orWhere('sales_lead_group_id', $group->id);
+            });
         }
 
         $query->update(['sales_lead_group_id' => $group->id]);
