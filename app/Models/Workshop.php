@@ -89,5 +89,12 @@ class Workshop extends Model
 
         return max($this->seats_offline - $count, 0);
     }
+
+    public function publicWhatsappGroupUrl(): ?string
+    {
+        $link = trim((string) ($this->whatsapp_group_link ?? ''));
+
+        return $link !== '' ? $link : null;
+    }
 }
 

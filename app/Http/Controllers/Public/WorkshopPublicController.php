@@ -66,7 +66,14 @@ class WorkshopPublicController extends Controller
 
         WorkshopRegistration::create($data);
 
-        return back()->with('success', 'تم استلام طلب التسجيل في الورشة بنجاح. سنقوم بالتواصل معك في حال وجود أي تفاصيل إضافية.');
+        $message = 'تم استلام طلب التسجيل في الورشة بنجاح.';
+        if ($workshop->publicWhatsappGroupUrl()) {
+            $message .= ' انضم الآن إلى جروب الواتساب لمتابعة التفاصيل.';
+        } else {
+            $message .= ' سنقوم بالتواصل معك في حال وجود أي تفاصيل إضافية.';
+        }
+
+        return back()->with('success', $message)->with('workshop_registered', true);
     }
 
     public function showConfirm(string $slug)

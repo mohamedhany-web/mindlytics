@@ -84,12 +84,6 @@
 
             <!-- فورم التسجيل -->
             <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 p-6">
-                @if(session('success'))
-                    <div class="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-center gap-2">
-                        <i class="fas fa-check-circle"></i>
-                        <span>{{ session('success') }}</span>
-                    </div>
-                @endif
                 @if(session('error'))
                     <div class="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-center gap-2">
                         <i class="fas fa-exclamation-circle"></i>
@@ -106,7 +100,25 @@
                     </div>
                 @endif
 
-                @if(!is_null($remaining) && $remaining <= 0)
+                @if(session('workshop_registered') || session('success'))
+                    <div class="text-center space-y-4 py-2">
+                        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600">
+                            <i class="fas fa-check text-2xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-lg font-black text-slate-900">تم استلام طلبك</p>
+                            <p class="text-sm text-slate-600 mt-1 leading-relaxed">{{ session('success') }}</p>
+                        </div>
+                        @if($workshop->publicWhatsappGroupUrl())
+                            <a href="{{ $workshop->publicWhatsappGroupUrl() }}" target="_blank" rel="noopener noreferrer"
+                               class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] px-6 py-3.5 text-sm font-bold text-white shadow-lg">
+                                <i class="fab fa-whatsapp text-xl"></i>
+                                <span>انضم إلى جروب الواتساب</span>
+                            </a>
+                            <p class="text-xs text-slate-500">اضغط الزر للدخول مباشرة إلى جروب الورشة على واتساب.</p>
+                        @endif
+                    </div>
+                @elseif(!is_null($remaining) && $remaining <= 0)
                     <p class="text-sm text-rose-600 font-semibold">
                         تم اكتمال العدد في هذه الورشة، ولا يمكن استقبال تسجيلات جديدة حالياً.
                     </p>
