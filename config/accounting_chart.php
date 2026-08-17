@@ -89,6 +89,7 @@ return [
             'description' => 'صافي أصول الأكاديمية (يُستنتج من القوائم والإدارة اليدوية).',
             'children' => [
                 ['code' => '31', 'name' => 'رأس المال والاحتياطيات', 'type' => 'equity', 'description' => 'تُدار خارج النظام أو عبر تقارير مخصصة.', 'icon' => 'fa-balance-scale'],
+                ['code' => '32', 'name' => 'تمويل المؤسسين (من الجيب)', 'type' => 'equity', 'description' => 'مصروفات دُفعت من جيب الشركة — تُصنَّف رأس مال لا التزاماً على الأكاديمية.', 'source' => 'founder_capital', 'route' => 'admin.expenses.index', 'icon' => 'fa-seedling'],
             ],
         ],
         [

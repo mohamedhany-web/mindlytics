@@ -41,6 +41,7 @@ class AccountingComprehensiveExcelExportService
             ->setSubject('إيرادات — مصروفات — تحصيلات');
 
         $this->buildDashboardSheet($spreadsheet->getActiveSheet(), $report, $start, $end);
+        $this->buildStatementsSheet($spreadsheet->createSheet(), $report, $start, $end);
         $this->buildRevenueSheet($spreadsheet->createSheet(), $report);
         $this->buildCollectionsSheet($spreadsheet->createSheet(), $report);
         $this->buildExpensesSheet($spreadsheet->createSheet(), $report);
@@ -79,6 +80,8 @@ class AccountingComprehensiveExcelExportService
             ['إجمالي الإيرادات المحصّلة', $summary['total_revenue'], $this->colors['accent_green']],
             ['إجمالي المصروفات', $summary['total_expenses'], $this->colors['accent_red']],
             ['صافي الربح / الخسارة', $summary['net_profit'], $summary['net_profit'] >= 0 ? $this->colors['accent_green'] : $this->colors['accent_red']],
+            ['مجمل الربح', $summary['gross_profit'] ?? 0, $this->colors['accent_violet']],
+            ['الربح التشغيلي', $summary['operating_profit'] ?? 0, $this->colors['primary']],
             ['كورسات مسجّلة', $summary['recorded_course'] ?? 0, $this->colors['primary']],
             ['جروبات أونلاين', $summary['live_online_group'] ?? 0, $this->colors['accent_violet']],
             ['جروبات أوفلاين', $summary['live_offline_group'] ?? 0, $this->colors['accent_amber']],
@@ -150,6 +153,208 @@ class AccountingComprehensiveExcelExportService
         foreach (range('A', 'E') as $c) {
             $sheet->getColumnDimension($c)->setAutoSize(true);
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $report
+     */
+    protected function buildStatementsSheet(Worksheet $sheet, array $report, Carbon $start, Carbon $end): void
+    {
+        $sheet->setTitle('القوائم والنسب');
+        $sheet->setRightToLeft(true);
+
+        $st = $report['statements'] ?? [];
+        $this->writeTitleBlock($sheet, 'Mindlytics — قائمة الدخل والمركز المالي والنسب', $start, $end, 'A1:H3');
+
+        $row = 5;
+        $sheet->setCellValue('A'.$row, 'قائمة الدخل — تحليل أفقي ورأسي');
+        $sheet->mergeCells('A'.$row.':H'.$row);
+        $this->styleSectionTitle($sheet, 'A'.$row.':H'.$row);
+        $row++;
+
+        $prior = $st['prior_period'] ?? [];
+        $sheet->setCellValue('A'.$row, 'الفترة السابقة: '.($prior['start'] ?? '—').' → '.($prior['end'] ?? '—').'  |  '.($st['basis'] ?? ''));
+        $sheet->mergeCells('A'.$row.':H'.$row);
+        $sheet->getStyle('A'.$row)->getFont()->setSize(10)->getColor()->setRGB('64748B');
+        $row += 2;
+
+        $headers = ['البند', 'الفترة السابقة', 'الفترة الحالية', 'التغيّر', 'أفقي %', 'رأسي سابق %', 'رأسي حالي %'];
+        $this->writeTableHeader($sheet, $row, $headers, 'A');
+        $row++;
+
+        foreach ($st['income_compare'] ?? [] as $line) {
+            $label = (! empty($line['indent']) ? '    ' : '').$line['label'];
+            $changePct = $line['change_pct'];
+            $this->writeTableRow($sheet, $row, [
+                $label,
+                (float) $line['prior'],
+                (float) $line['current'],
+                (float) $line['change'],
+                $changePct === null ? 'n.m.' : $changePct / 100,
+                $line['vertical_prior'] === null ? '—' : ((float) $line['vertical_prior']) / 100,
+                $line['vertical_current'] === null ? '—' : ((float) $line['vertical_current']) / 100,
+            ], 'A', $row % 2 === 0);
+            foreach (['B', 'C', 'D'] as $c) {
+                $sheet->getStyle($c.$row)->getNumberFormat()->setFormatCode('#,##0.00');
+            }
+            if ($changePct !== null) {
+                $sheet->getStyle('E'.$row)->getNumberFormat()->setFormatCode('0.0%');
+            }
+            if ($line['vertical_prior'] !== null) {
+                $sheet->getStyle('F'.$row)->getNumberFormat()->setFormatCode('0.0%');
+            }
+            if ($line['vertical_current'] !== null) {
+                $sheet->getStyle('G'.$row)->getNumberFormat()->setFormatCode('0.0%');
+            }
+            if (! empty($line['emphasis'])) {
+                $sheet->getStyle('A'.$row.':G'.$row)->getFont()->setBold(true);
+            }
+            $row++;
+        }
+
+        $row += 2;
+        $sheet->setCellValue('A'.$row, 'لقطة المركز المالي');
+        $sheet->mergeCells('A'.$row.':D'.$row);
+        $this->styleSectionTitle($sheet, 'A'.$row.':D'.$row);
+        $row++;
+
+        $this->writeTableHeader($sheet, $row, ['البند', 'المبلغ'], 'A');
+        $row++;
+        foreach ($st['position']['lines'] ?? [] as $pos) {
+            $this->writeTableRow($sheet, $row, [
+                $pos['label'],
+                (float) $pos['amount'],
+            ], 'A', $row % 2 === 0);
+            $sheet->getStyle('B'.$row)->getNumberFormat()->setFormatCode('#,##0.00" ج.م"');
+            if (! empty($pos['emphasis'])) {
+                $sheet->getStyle('A'.$row.':B'.$row)->getFont()->setBold(true);
+            }
+            $row++;
+        }
+
+        $row += 2;
+        $sheet->setCellValue('A'.$row, 'النسب المالية');
+        $sheet->mergeCells('A'.$row.':F'.$row);
+        $this->styleSectionTitle($sheet, 'A'.$row.':F'.$row);
+        $row++;
+
+        $this->writeTableHeader($sheet, $row, ['المجموعة', 'النسبة', 'الحالي', 'السابق', 'المعيار', 'التغيّر %', 'التعريف'], 'A');
+        $row++;
+
+        $groupLabels = [
+            'profitability' => 'الربحية',
+            'liquidity' => 'السيولة',
+            'solvency' => 'الملاءة',
+            'efficiency' => 'الكفاءة',
+            'coverage' => 'التغطية',
+        ];
+        foreach ($groupLabels as $group => $groupLabel) {
+            foreach ($st['ratios'][$group] ?? [] as $ratio) {
+                $unit = $ratio['unit'] ?? '';
+                $this->writeTableRow($sheet, $row, [
+                    $groupLabel,
+                    $ratio['label'],
+                    $this->formatRatioCell($ratio['current'] ?? null, $unit),
+                    $this->formatRatioCell($ratio['prior'] ?? null, $unit),
+                    $ratio['benchmark'] ?? '—',
+                    $ratio['change_pct'] === null ? 'n.m.' : ((float) $ratio['change_pct']) / 100,
+                    $ratio['note'] ?? '',
+                ], 'A', $row % 2 === 0);
+                if ($ratio['change_pct'] !== null) {
+                    $sheet->getStyle('F'.$row)->getNumberFormat()->setFormatCode('0.0%');
+                }
+                $row++;
+            }
+        }
+
+        $row += 2;
+        $sheet->setCellValue('A'.$row, 'قائمة التدفقات النقدية');
+        $sheet->mergeCells('A'.$row.':E'.$row);
+        $this->styleSectionTitle($sheet, 'A'.$row.':E'.$row);
+        $row++;
+        $this->writeTableHeader($sheet, $row, ['البند', 'السابق', 'الحالي', 'التغيّر', 'أفقي %'], 'A');
+        $row++;
+        foreach ($st['cash_compare'] ?? [] as $line) {
+            $this->writeTableRow($sheet, $row, [
+                $line['label'],
+                (float) $line['prior'],
+                (float) $line['current'],
+                (float) $line['change'],
+                $line['change_pct'] === null ? 'n.m.' : ((float) $line['change_pct']) / 100,
+            ], 'A', $row % 2 === 0);
+            foreach (['B', 'C', 'D'] as $c) {
+                $sheet->getStyle($c.$row)->getNumberFormat()->setFormatCode('#,##0.00');
+            }
+            if ($line['change_pct'] !== null) {
+                $sheet->getStyle('E'.$row)->getNumberFormat()->setFormatCode('0.0%');
+            }
+            if (! empty($line['emphasis'])) {
+                $sheet->getStyle('A'.$row.':E'.$row)->getFont()->setBold(true);
+            }
+            $row++;
+        }
+
+        if (! empty($st['dupont']['current'])) {
+            $row += 2;
+            $sheet->setCellValue('A'.$row, 'تحليل دوبونت لـ ROE');
+            $sheet->mergeCells('A'.$row.':C'.$row);
+            $this->styleSectionTitle($sheet, 'A'.$row.':C'.$row);
+            $row++;
+            $this->writeTableHeader($sheet, $row, ['المكوّن', 'السابق', 'الحالي'], 'A');
+            $row++;
+            $dupontRows = [
+                ['هامش صافي الربح', ($st['dupont']['prior']['npm'] ?? 0).'%', ($st['dupont']['current']['npm'] ?? 0).'%'],
+                ['دوران الأصول', ($st['dupont']['prior']['asset_turnover'] ?? 0).'×', ($st['dupont']['current']['asset_turnover'] ?? 0).'×'],
+                ['مضاعف الملكية', ($st['dupont']['prior']['equity_multiplier'] ?? 0).'×', ($st['dupont']['current']['equity_multiplier'] ?? 0).'×'],
+                ['ROE', ($st['dupont']['prior']['roe'] ?? 0).'%', ($st['dupont']['current']['roe'] ?? 0).'%'],
+            ];
+            foreach ($dupontRows as $dRow) {
+                $this->writeTableRow($sheet, $row, $dRow, 'A', $row % 2 === 0);
+                $row++;
+            }
+        }
+
+        $row += 2;
+        $sheet->setCellValue('A'.$row, 'المذكرة التنفيذية والتوصيات');
+        $sheet->mergeCells('A'.$row.':B'.$row);
+        $this->styleSectionTitle($sheet, 'A'.$row.':B'.$row);
+        $row++;
+        $exec = $st['executive'] ?? [];
+        foreach ([
+            ['الغرض', $exec['purpose'] ?? ''],
+            ['النتائج', $exec['findings'] ?? ''],
+            ['المحركات', $exec['drivers'] ?? ''],
+        ] as [$label, $value]) {
+            $this->writeTableRow($sheet, $row, [$label, $value], 'A', $row % 2 === 0);
+            $row++;
+        }
+        foreach ($st['recommendations'] ?? [] as $i => $item) {
+            $this->writeTableRow($sheet, $row, ['توصية '.($i + 1), $item], 'A', $row % 2 === 0);
+            $row++;
+        }
+
+        foreach (range('A', 'H') as $c) {
+            $sheet->getColumnDimension($c)->setAutoSize(true);
+        }
+    }
+
+    protected function formatRatioCell(mixed $value, string $unit): string
+    {
+        if ($value === null) {
+            return '—';
+        }
+        $num = (float) $value;
+        if ($unit === '%') {
+            return number_format($num, 1).'%';
+        }
+        if ($unit === '×') {
+            return number_format($num, 2).'×';
+        }
+        if ($unit === 'يوم') {
+            return number_format($num, 1).' يوم';
+        }
+
+        return number_format($num, 2);
     }
 
     /**

@@ -19,7 +19,7 @@
                 </div>
                 <div>
                     <h2 class="text-xl font-black text-slate-900">المديونية والذمم المالية</h2>
-                    <p class="text-xs text-slate-600">ذمم مدينة، ديون مسجّلة، تمويل ذاتي — مع تتبع من استلفت منه وإيداع في المحفظة.</p>
+                    <p class="text-xs text-slate-600">ذمم مدينة، ديون مسجّلة، ورأس مال المؤسسين — تمويل الجيب ليس ديناً.</p>
                 </div>
             </div>
             <div class="flex flex-wrap items-center gap-2">
@@ -148,7 +148,7 @@
         <div class="dashboard-stat-card rounded-2xl border-2 border-rose-200/70 bg-gradient-to-br from-white via-white to-rose-50/60 p-5 shadow-lg">
             <p class="text-xs font-bold text-rose-800/80">التزامات (علينا)</p>
             <p class="text-2xl font-black text-rose-700 mt-2">{{ number_format($pay['total'] ?? 0, 2) }}</p>
-            <p class="text-[11px] text-rose-700/70 mt-1">سحوبات + تمويل ذاتي + ديون مستلفة</p>
+            <p class="text-[11px] text-rose-700/70 mt-1">سحوبات معلّقة + ديون مستلفة فقط</p>
         </div>
         <div class="dashboard-stat-card rounded-2xl border-2 border-amber-200/70 bg-gradient-to-br from-white via-white to-amber-50/60 p-5 shadow-lg">
             <p class="text-xs font-bold text-amber-800/80">ديون مستلفة (مسجّلة)</p>
@@ -171,7 +171,7 @@
                 <p class="text-sm text-slate-700 mt-1">{{ $breakEven['detail'] ?? '' }}</p>
             </div>
             <div class="text-sm space-y-1 text-left">
-                <p>تمويل ذاتي تراكمي: <strong class="text-amber-700">{{ number_format($pocketExpensesTotal, 2) }}</strong> ج.م</p>
+                <p>رأس مال المؤسسين (تمويل الجيب): <strong class="text-amber-700">{{ number_format($pocketExpensesTotal, 2) }}</strong> ج.م</p>
                 <p>ديون مستلفة متبقية: <strong class="text-rose-700">{{ number_format($debtStats['payable_remaining'] ?? 0, 2) }}</strong> ج.م</p>
             </div>
         </div>

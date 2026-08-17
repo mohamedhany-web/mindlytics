@@ -308,27 +308,10 @@ class AccountingReportsController extends Controller
 
     private function getGeneralStats($startDate, $endDate)
     {
-        // إجمالي الإيرادات من المدفوعات المكتملة (مصدر موحّد لتجنب الازدواج مع المعاملات)
-        $totalRevenue = (float) Payment::where('status', 'completed')
-            ->whereBetween('paid_at', [$startDate, $endDate])
-            ->sum('amount');
-
-        // إجمالي المصروفات المعتمدة
-        $totalExpenses = (float) Expense::where('status', 'approved')
-            ->whereBetween('expense_date', [$startDate, $endDate])
-            ->sum('amount');
-
-        // مصروفات إضافية من معاملات مدينة غير مرتبطة بمصروف مسجّل
-        $totalExpensesFromTransactions = (float) Transaction::where('type', 'debit')
-            ->where('status', 'completed')
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->whereNotIn('category', ['expense', 'expense_payment'])
-            ->sum('amount');
-
-        $totalExpenses += $totalExpensesFromTransactions;
-
-        // الربح الصافي
-        $netProfit = $totalRevenue - $totalExpenses;
+        $incomeStatement = AccountingAnalytics::incomeStatement($startDate, $endDate);
+        $totalRevenue = $incomeStatement['net_sales'];
+        $totalExpenses = $incomeStatement['expenses_recorded'];
+        $netProfit = $incomeStatement['net_income'];
 
         // عدد الفواتير
         $totalInvoices = Invoice::whereBetween('created_at', [$startDate, $endDate])->count();
@@ -484,22 +467,23 @@ class AccountingReportsController extends Controller
             ->limit(15)
             ->get();
 
+        $statement = AccountingAnalytics::incomeStatement($startDate, $endDate);
+        $expensesFromRevenue = AccountingAnalytics::expensesBetween($startDate, $endDate, AccountingAnalytics::FUNDING_REVENUE);
         $profitLoss = [
-            'revenue' => (float) Payment::where('status', 'completed')
-                ->whereBetween('paid_at', [$startDate, $endDate])
-                ->sum('amount'),
-            'expenses' => (float) Expense::where('status', 'approved')
-                ->whereBetween('expense_date', [$startDate, $endDate])
-                ->sum('amount'),
-            'expenses_from_revenue' => AccountingAnalytics::expensesBetween($startDate, $endDate, AccountingAnalytics::FUNDING_REVENUE),
+            'revenue' => $statement['net_sales'],
+            'expenses' => $statement['expenses_recorded'],
+            'expenses_from_revenue' => $expensesFromRevenue,
             'expenses_out_of_pocket' => AccountingAnalytics::expensesBetween($startDate, $endDate, AccountingAnalytics::FUNDING_OUT_OF_POCKET),
-            'withdrawals' => (float) WithdrawalRequest::where('status', WithdrawalRequest::STATUS_COMPLETED)
-                ->whereBetween('processed_at', [$startDate, $endDate])
-                ->sum('amount'),
+            'withdrawals' => $statement['instructor_withdrawals'],
+            'gateway_fees' => $statement['gateway_fees'],
+            'cogs' => $statement['cogs'],
+            'gross_profit' => $statement['gross_profit'],
+            'operating_profit' => $statement['operating_profit'],
+            'net' => $statement['net_income'],
+            'operational_net' => $statement['net_sales'] - $expensesFromRevenue,
+            'break_even' => AccountingAnalytics::breakEvenAnalysis($startDate, $endDate),
+            'statement' => $statement,
         ];
-        $profitLoss['net'] = $profitLoss['revenue'] - $profitLoss['expenses'] - $profitLoss['withdrawals'];
-        $profitLoss['operational_net'] = $profitLoss['revenue'] - $profitLoss['expenses_from_revenue'];
-        $profitLoss['break_even'] = AccountingAnalytics::breakEvenAnalysis($startDate, $endDate);
 
         return [
             'invoice_by_status' => $invoiceByStatus,

@@ -388,7 +388,7 @@
     <section class="rounded-3xl bg-white/95 backdrop-blur border border-slate-200 shadow-lg overflow-hidden">
         <div class="px-5 py-6 sm:px-8 border-b border-slate-200">
             <h3 class="text-lg font-bold text-slate-900">قائمة الدخل (الفترة)</h3>
-            <p class="text-sm text-slate-500 mt-1">ملخص الإيرادات والمصروفات والسحوبات خلال الفترة المحددة</p>
+            <p class="text-sm text-slate-500 mt-1">صافي المبيعات ثم تكلفة الخدمة ثم مجمل الربح ثم مصروفات البيع والتشغيل (شاملة عمولات البوابات) ثم صافي الدخل. تمويل الجيب يظهر كمصروف في القائمة لكنه رأس مال في المركز المالي.</p>
         </div>
         <div class="p-5 sm:p-8 overflow-x-auto">
             <table class="min-w-full text-sm">
@@ -399,14 +399,26 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                    <tr><td class="py-3 px-4 text-emerald-700 font-medium">+ إيرادات محصّلة (مدفوعات مكتملة)</td><td class="py-3 px-4 text-left font-bold text-emerald-700">{{ number_format($pl['revenue'] ?? 0, 2) }}</td></tr>
-                    <tr><td class="py-3 px-4 text-slate-700 font-medium">− مصروفات من إيرادات الكورسات</td><td class="py-3 px-4 text-left font-bold">{{ number_format($pl['expenses_from_revenue'] ?? 0, 2) }}</td></tr>
-                    <tr class="bg-emerald-50/50"><td class="py-3 px-4 font-semibold text-emerald-900">= صافي تشغيلي (بر الأمان)</td><td class="py-3 px-4 text-left font-bold {{ ($pl['operational_net'] ?? 0) >= 0 ? 'text-emerald-800' : 'text-rose-800' }}">{{ number_format($pl['operational_net'] ?? 0, 2) }}</td></tr>
-                    <tr><td class="py-3 px-4 text-amber-700 font-medium">− مصروفات من جيب الشركة (تمويل ذاتي)</td><td class="py-3 px-4 text-left font-bold text-amber-700">{{ number_format($pl['expenses_out_of_pocket'] ?? 0, 2) }}</td></tr>
-                    <tr><td class="py-3 px-4 text-rose-700 font-medium">− سحوبات مدربين مكتملة</td><td class="py-3 px-4 text-left font-bold text-rose-700">{{ number_format($pl['withdrawals'] ?? 0, 2) }}</td></tr>
-                    <tr class="bg-sky-50"><td class="py-3 px-4 font-bold text-sky-900">= صافي نهائي</td><td class="py-3 px-4 text-left font-black text-sky-900">{{ number_format($pl['net'] ?? 0, 2) }}</td></tr>
+                    @php $stmt = $pl['statement'] ?? null; @endphp
+                    @if(!empty($stmt['lines']))
+                        @foreach($stmt['lines'] as $line)
+                            <tr class="{{ !empty($line['emphasis']) ? 'bg-sky-50' : '' }}">
+                                <td class="py-3 px-4 {{ !empty($line['indent']) ? 'pr-10 text-slate-600' : 'font-medium text-slate-800' }} {{ !empty($line['emphasis']) ? 'font-bold text-sky-900' : '' }}">{{ $line['label'] }}</td>
+                                <td class="py-3 px-4 text-left tabular-nums {{ !empty($line['emphasis']) ? 'font-black' : 'font-bold' }}">{{ number_format($line['amount'], 2) }}</td>
+                            </tr>
+                        @endforeach
+                    @else
+                        <tr><td class="py-3 px-4 text-emerald-700 font-medium">+ إيرادات محصّلة (مدفوعات مكتملة)</td><td class="py-3 px-4 text-left font-bold text-emerald-700">{{ number_format($pl['revenue'] ?? 0, 2) }}</td></tr>
+                        <tr><td class="py-3 px-4 text-slate-700 font-medium">− مصروفات من إيرادات الكورسات</td><td class="py-3 px-4 text-left font-bold">{{ number_format($pl['expenses_from_revenue'] ?? 0, 2) }}</td></tr>
+                        <tr class="bg-emerald-50/50"><td class="py-3 px-4 font-semibold text-emerald-900">= صافي تشغيلي (بر الأمان)</td><td class="py-3 px-4 text-left font-bold {{ ($pl['operational_net'] ?? 0) >= 0 ? 'text-emerald-800' : 'text-rose-800' }}">{{ number_format($pl['operational_net'] ?? 0, 2) }}</td></tr>
+                        <tr><td class="py-3 px-4 text-amber-700 font-medium">− مصروفات من جيب الشركة (تمويل ذاتي)</td><td class="py-3 px-4 text-left font-bold text-amber-700">{{ number_format($pl['expenses_out_of_pocket'] ?? 0, 2) }}</td></tr>
+                        <tr><td class="py-3 px-4 text-rose-700 font-medium">− سحوبات مدربين مكتملة</td><td class="py-3 px-4 text-left font-bold text-rose-700">{{ number_format($pl['withdrawals'] ?? 0, 2) }}</td></tr>
+                        <tr><td class="py-3 px-4 text-amber-800 font-medium">− عمولات بوابات الدفع</td><td class="py-3 px-4 text-left font-bold text-amber-800">{{ number_format($pl['gateway_fees'] ?? 0, 2) }}</td></tr>
+                        <tr class="bg-sky-50"><td class="py-3 px-4 font-bold text-sky-900">= صافي نهائي</td><td class="py-3 px-4 text-left font-black text-sky-900">{{ number_format($pl['net'] ?? 0, 2) }}</td></tr>
+                    @endif
                 </tbody>
             </table>
+            <p class="mt-3 text-xs text-slate-500">بر الأمان التشغيلي (إيراد − مصروف ممول من الإيراد فقط): <strong>{{ number_format($pl['operational_net'] ?? 0, 2) }}</strong> ج.م — تمويل الجيب في الفترة: <strong>{{ number_format($pl['expenses_out_of_pocket'] ?? 0, 2) }}</strong> ج.م.</p>
             @if(!empty($pl['break_even']['label']))
             <p class="mt-4 text-sm rounded-xl border px-4 py-3 {{ ($pl['break_even']['tone'] ?? '') === 'good' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : (($pl['break_even']['tone'] ?? '') === 'bad' ? 'border-rose-200 bg-rose-50 text-rose-900' : 'border-amber-200 bg-amber-50 text-amber-900') }}">
                 <strong>بر الأمان:</strong> {{ $pl['break_even']['label'] }} — {{ $pl['break_even']['detail'] ?? '' }}

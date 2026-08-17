@@ -3,6 +3,16 @@
 @section('title', 'التحليل المالي الشامل')
 @section('header', 'التحليل المالي الشامل')
 
+@push('styles')
+<style>
+@media print {
+    .admin-sidebar-root, header, footer, .print\\:hidden { display: none !important; }
+    main, .w-full { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
+    body { background: #fff !important; }
+}
+</style>
+@endpush
+
 @section('content')
 @php
     $summary = $report['summary'];
@@ -18,7 +28,7 @@
 
 <div class="w-full space-y-6">
     {{-- شريط التنقل --}}
-    <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-sky-200 bg-sky-50/80 px-4 py-3 text-sm">
+    <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-sky-200 bg-sky-50/80 px-4 py-3 text-sm print:hidden">
         <a href="{{ route('admin.accounting.hub') }}" class="inline-flex items-center gap-2 font-semibold text-sky-800 hover:text-sky-950">
             <i class="fas fa-th-large"></i> مركز المحاسبة
         </a>
@@ -37,16 +47,23 @@
         <div class="px-5 py-6 sm:px-8 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
                 <h2 class="text-2xl font-black text-slate-900">التحليل المالي الشامل</h2>
-                <p class="text-sm text-slate-500 mt-1">{{ $periodLabel }} — إيرادات مفصّلة، مصروفات، وتحصيلات أونلاين/أوفلاين</p>
-                <p class="text-xs text-slate-400 mt-1">المنتج = مسجّل / جروب أونلاين / جروب أوفلاين — التحصيل = بوابة دفع أو نقدي/تحويل. بدون ازدواجية.</p>
+                <p class="text-sm text-slate-500 mt-1">{{ $periodLabel }} — مذكرة تنفيذية، قوائم، نسب أ–و، تدفقات نقدية، توصيات</p>
+                <p class="text-xs text-slate-400 mt-1">البيانات تبقى في النظام. التقرير طبقة عرض فقط — بلا نقل أو حذف للقيود.</p>
             </div>
+            <div class="flex flex-wrap gap-2">
             <a href="{{ route('admin.accounting.financial-analysis.export', $reportQuery) }}"
-               class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-lg hover:bg-emerald-700 transition">
+               class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-lg hover:bg-emerald-700 transition print:hidden">
                 <i class="fas fa-file-excel text-lg"></i>
-                تصدير Excel تحليلي (7 أوراق)
+                تصدير Excel تحليلي (8 أوراق)
             </a>
+            <button type="button" onclick="window.print()"
+                    class="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-6 py-3 text-sm font-bold text-slate-800 hover:bg-slate-50 print:hidden">
+                <i class="fas fa-print"></i>
+                طباعة التقرير
+            </button>
+            </div>
         </div>
-        <div class="px-5 py-6 sm:px-8">
+        <div class="px-5 py-6 sm:px-8 print:hidden">
             <form method="GET" action="{{ route('admin.accounting.financial-analysis') }}" class="space-y-5">
                 @include('admin.accounting.partials.report-period-filter')
             </form>
@@ -54,7 +71,7 @@
     </section>
 
     {{-- KPIs --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-4">
         <div class="rounded-2xl border-2 border-emerald-200 bg-gradient-to-br from-white to-emerald-50 p-6 shadow-lg">
             <p class="text-xs font-bold uppercase tracking-widest text-emerald-600">إجمالي الإيرادات</p>
             <p class="mt-2 text-3xl font-black text-emerald-700 tabular-nums">{{ number_format($summary['total_revenue'], 2) }} <span class="text-base">ج.م</span></p>
@@ -68,10 +85,23 @@
         <div class="rounded-2xl border-2 {{ $summary['net_profit'] >= 0 ? 'border-sky-200' : 'border-rose-300' }} bg-gradient-to-br from-white {{ $summary['net_profit'] >= 0 ? 'to-sky-50' : 'to-rose-50' }} p-6 shadow-lg">
             <p class="text-xs font-bold uppercase tracking-widest text-slate-600">صافي الربح / الخسارة</p>
             <p class="mt-2 text-3xl font-black tabular-nums {{ $summary['net_profit'] >= 0 ? 'text-sky-700' : 'text-rose-700' }}">{{ number_format($summary['net_profit'], 2) }} <span class="text-base">ج.م</span></p>
-            <p class="text-xs text-slate-500 mt-2">هامش: {{ $totalRev > 0 ? number_format(($summary['net_profit'] / $totalRev) * 100, 1) : 0 }}%</p>
+            <p class="text-xs text-slate-500 mt-2">هامش: {{ $totalRev > 0 ? number_format(($summary['net_profit'] / $totalRev) * 100, 1) : 0 }}% — بعد التكلفة والعمولات</p>
+        </div>
+        <div class="rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-white to-indigo-50 p-6 shadow-lg">
+            <p class="text-xs font-bold uppercase tracking-widest text-indigo-600">مجمل الربح</p>
+            <p class="mt-2 text-3xl font-black text-indigo-700 tabular-nums">{{ number_format($summary['gross_profit'] ?? 0, 2) }} <span class="text-base">ج.م</span></p>
+            <p class="text-xs text-slate-500 mt-2">بعد الرواتب وسحوبات المدربين</p>
+        </div>
+        <div class="rounded-2xl border-2 border-violet-200 bg-gradient-to-br from-white to-violet-50 p-6 shadow-lg">
+            <p class="text-xs font-bold uppercase tracking-widest text-violet-600">الربح التشغيلي</p>
+            <p class="mt-2 text-3xl font-black text-violet-700 tabular-nums">{{ number_format($summary['operating_profit'] ?? 0, 2) }} <span class="text-base">ج.م</span></p>
+            <p class="text-xs text-slate-500 mt-2">بعد البيع والتشغيل وعمولات البوابات</p>
         </div>
     </div>
 
+    @include('admin.accounting.partials.financial-statements')
+
+    <div class="print:hidden space-y-6">
     {{-- نوع المنتج: مسجّل vs جروبات --}}
     <section class="rounded-2xl border border-slate-200 bg-white shadow-lg p-6">
         <h3 class="text-lg font-black text-slate-900 mb-1"><i class="fas fa-layer-group text-emerald-600 ml-1"></i> الإيراد حسب نوع المنتج</h3>
@@ -293,6 +323,7 @@
         <h3 class="text-lg font-black text-slate-900 mb-4"><i class="fas fa-chart-area text-sky-600 ml-1"></i> الاتجاه الشهري</h3>
         <div class="relative h-72"><canvas id="monthlyTrendChart"></canvas></div>
     </section>
+    </div>
 </div>
 @endsection
 
