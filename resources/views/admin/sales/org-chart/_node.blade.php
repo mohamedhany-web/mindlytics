@@ -8,7 +8,7 @@
         : '—';
 @endphp
 <div class="mb-3" style="margin-right: {{ $depth * 1.75 }}rem">
-    <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 {{ $readonly ?? false ? '' : '' }}">
+    <div class="rounded-2xl border border-emerald-200 bg-white shadow-sm p-4 {{ $depth === 0 ? 'ring-2 ring-emerald-100' : '' }}">
         <div class="flex flex-col sm:flex-row sm:items-center gap-3">
             <div class="flex-1 min-w-0">
                 <p class="font-black text-slate-900">

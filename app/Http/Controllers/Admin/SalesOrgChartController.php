@@ -13,13 +13,47 @@ class SalesOrgChartController extends Controller
     public function index(SalesHierarchyService $hierarchy, SalesSpecialtyService $specialtyService)
     {
         $tree = $hierarchy->buildTree();
-        $staff = $hierarchy->salesStaff()->load('salesInterestTypes');
+        $staff = $hierarchy->salesStaff()->load(['salesInterestTypes', 'employeeJob']);
         $openCounts = [];
         foreach ($staff as $user) {
             $openCounts[$user->id] = $hierarchy->openLeadsCount((int) $user->id);
         }
 
-        return view('admin.sales.org-chart.index', compact('tree', 'staff', 'openCounts'));
+        $managers = User::salesManagers()
+            ->where('is_active', true)
+            ->with(['employeeJob', 'salesInterestTypes'])
+            ->orderBy('name')
+            ->get();
+
+        $employees = User::salesEmployees()
+            ->where('is_active', true)
+            ->with(['employeeJob', 'salesInterestTypes'])
+            ->orderBy('name')
+            ->get();
+
+        $directReportsCount = [];
+        foreach ($staff as $user) {
+            $directReportsCount[$user->id] = $staff
+                ->filter(fn (User $u) => (int) $u->sales_reports_to_id === (int) $user->id)
+                ->count();
+        }
+
+        $stats = [
+            'managers' => $managers->count(),
+            'employees' => $employees->count(),
+            'open_leads' => (int) array_sum($openCounts),
+            'unlinked_reps' => $employees->filter(fn (User $u) => ! $u->sales_reports_to_id)->count(),
+        ];
+
+        return view('admin.sales.org-chart.index', compact(
+            'tree',
+            'staff',
+            'openCounts',
+            'managers',
+            'employees',
+            'directReportsCount',
+            'stats'
+        ));
     }
 
     public function update(Request $request, User $user, SalesHierarchyService $hierarchy)
