@@ -122,6 +122,9 @@ class EmployeeTaskController extends Controller
         if (($validated['status'] ?? '') === 'completed' && $task->isDesignModeratorDelivery()) {
             DesignTaskCycle::syncAfterModeratorDeliveryCompleted($task);
         }
+        if (($validated['status'] ?? '') === 'completed' && $task->isVideoMontageModeratorDelivery()) {
+            ModeratorMontageRequest::syncAfterModeratorDeliveryCompleted($task);
+        }
         if (($validated['status'] ?? '') === 'completed' && $task->isVideoEditing()) {
             ModeratorMontageRequest::syncTaskCompleted($task);
         }

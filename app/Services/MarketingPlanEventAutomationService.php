@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\EmployeeSalaryDeduction;
 use App\Models\EmployeeTask;
 use App\Models\ModeratorMarketingCalendarEvent;
+use App\Models\ModeratorMontageRequest;
 use App\Models\Notification;
 use App\Models\User;
 use App\Support\MarketingPlanSettings;
@@ -24,7 +25,7 @@ class MarketingPlanEventAutomationService
             'story' => 'ستوري',
             'reel' => 'ريلز / فيديو قصير',
             'graphic_design' => 'تصميم جرافيك',
-            'video_montage' => 'مونتاج فيديو',
+            'video_montage' => 'محرر فيديو / مونتاج',
             'other' => 'أخرى',
         ];
     }
@@ -46,7 +47,11 @@ class MarketingPlanEventAutomationService
         }
 
         if (MarketingPlanSettings::autoCreateTasks() && in_array($event->content_type, ['graphic_design', 'video_montage'], true)) {
-            $this->syncProductionTask($event);
+            if ($event->content_type === 'video_montage') {
+                $this->syncMontageRequest($event);
+            } else {
+                $this->syncProductionTask($event);
+            }
         }
     }
 
@@ -122,6 +127,80 @@ class MarketingPlanEventAutomationService
             'marketing_event_id' => $event->id,
         ]);
 
+        $event->update(['employee_task_id' => $task->id]);
+        $this->taskNotifier->notifyAssigned($task->fresh());
+
+        return $task;
+    }
+
+    public function syncMontageRequest(ModeratorMarketingCalendarEvent $event): ?EmployeeTask
+    {
+        $event->loadMissing(['plan', 'platform']);
+
+        $assigneeId = $event->assigned_employee_id ?? $this->resolveAssignee($event)?->id;
+        if (! $assigneeId) {
+            return null;
+        }
+
+        $moderatorId = $event->plan?->moderator_id;
+        $deadline = $event->starts_at?->copy()->subDay() ?? now()->addDays(2);
+        $requirements = trim(($event->body ?? '')."\n\n".'موعد النشر المخطط: '.($event->starts_at?->format('Y-m-d H:i') ?? '—'));
+        if ($event->platform) {
+            $requirements = 'المنصة: '.$event->platform->displayName()."\n\n".$requirements;
+        }
+
+        if ($event->employee_task_id) {
+            $task = EmployeeTask::query()->find($event->employee_task_id);
+            if ($task && $task->montage_request_id) {
+                $montageRequest = ModeratorMontageRequest::query()->find($task->montage_request_id);
+                if ($montageRequest) {
+                    $montageRequest->update([
+                        'montage_employee_id' => $assigneeId,
+                        'title' => $this->taskTitle($event),
+                        'requirements' => $requirements,
+                        'deadline_at' => $deadline,
+                        'priority' => 'high',
+                    ]);
+                    $task->update([
+                        'employee_id' => $assigneeId,
+                        'title' => $this->taskTitle($event),
+                        'description' => $requirements,
+                        'deadline' => $deadline->toDateString(),
+                        'assigned_by' => $moderatorId,
+                    ]);
+
+                    return $task;
+                }
+            }
+        }
+
+        $montageRequest = ModeratorMontageRequest::create([
+            'moderator_id' => $moderatorId,
+            'montage_employee_id' => $assigneeId,
+            'title' => $this->taskTitle($event),
+            'description' => $event->body,
+            'requirements' => $requirements,
+            'priority' => 'high',
+            'deadline_at' => $deadline,
+            'status' => ModeratorMontageRequest::STATUS_PENDING,
+        ]);
+
+        $task = EmployeeTask::create([
+            'employee_id' => $assigneeId,
+            'assigned_by' => $moderatorId,
+            'title' => $this->taskTitle($event),
+            'description' => $requirements,
+            'task_type' => 'video_editing',
+            'priority' => 'high',
+            'status' => 'pending',
+            'deadline' => $deadline->toDateString(),
+            'notes' => 'مهمة تلقائية من خطة تسويق #'.$event->plan_id.' — حدث #'.$event->id,
+            'marketing_event_id' => $event->id,
+            'montage_request_id' => $montageRequest->id,
+            'flexible_video_delivery' => true,
+        ]);
+
+        $montageRequest->update(['employee_task_id' => $task->id]);
         $event->update(['employee_task_id' => $task->id]);
         $this->taskNotifier->notifyAssigned($task->fresh());
 

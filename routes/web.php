@@ -1165,6 +1165,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/create', [\App\Http\Controllers\Employee\ModeratorMontageRequestController::class, 'create'])->name('create');
             Route::post('/', [\App\Http\Controllers\Employee\ModeratorMontageRequestController::class, 'store'])->name('store');
             Route::get('/{montage_request}', [\App\Http\Controllers\Employee\ModeratorMontageRequestController::class, 'show'])->name('show');
+            Route::post('/{montage_request}/moderator-delivery', [\App\Http\Controllers\Employee\ModeratorMontageRequestController::class, 'storeModeratorDelivery'])->name('moderator-delivery.store');
             Route::post('/{montage_request}/cancel', [\App\Http\Controllers\Employee\ModeratorMontageRequestController::class, 'cancel'])->name('cancel');
         });
 
@@ -1925,6 +1926,14 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('{design_task_cycle}/cancel', [\App\Http\Controllers\Admin\DesignTaskCycleController::class, 'cancel'])->name('cancel');
             Route::get('{design_task_cycle}', [\App\Http\Controllers\Admin\DesignTaskCycleController::class, 'show'])->name('show');
         });
+
+        Route::prefix('montage-requests')->name('montage-requests.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\ModeratorMontageRequestController::class, 'index'])->name('index');
+            Route::get('{montage_request}', [\App\Http\Controllers\Admin\ModeratorMontageRequestController::class, 'show'])->name('show');
+            Route::post('{montage_request}/cancel', [\App\Http\Controllers\Admin\ModeratorMontageRequestController::class, 'cancel'])->name('cancel');
+        });
+
+        Route::get('media/org-chart', [\App\Http\Controllers\Admin\MediaOrgChartController::class, 'index'])->name('media.org-chart.index');
 
         Route::get('moderator-marketing-plans/settings', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'settings'])->name('moderator-marketing-plans.settings');
         Route::put('moderator-marketing-plans/settings', [\App\Http\Controllers\Admin\ModeratorMarketingPlanController::class, 'updateSettings'])->name('moderator-marketing-plans.settings.update');

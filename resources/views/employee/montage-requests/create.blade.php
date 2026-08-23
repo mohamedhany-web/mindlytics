@@ -1,7 +1,7 @@
 @extends('layouts.employee')
 
-@section('title', 'طلب مونتاج جديد')
-@section('header', 'طلب مونتاج جديد')
+@section('title', 'طلب فيديو جديد')
+@section('header', 'طلب فيديو جديد لمحرر الفيديو')
 
 @section('content')
 <div class="w-full max-w-none space-y-6">
@@ -14,11 +14,11 @@
                 <div>
                     <a href="{{ route('employee.montage-requests.index') }}" class="inline-flex items-center gap-2 text-sm font-semibold text-white/90 hover:text-white mb-2 transition-colors">
                         <i class="fas fa-arrow-right text-xs opacity-80"></i>
-                        العودة لطلبات المونتاج
+                        العودة لطلبات محرر الفيديو
                     </a>
-                    <h1 class="text-2xl sm:text-3xl font-black tracking-tight">طلب مونتاج فيديو</h1>
+                    <h1 class="text-2xl sm:text-3xl font-black tracking-tight">طلب فيديو لمحرر الفيديو</h1>
                     <p class="mt-2 text-sm sm:text-base text-white/85 max-w-2xl leading-relaxed">
-                        اختر موظف المونتاج، حدّد الموعد النهائي، واكتب متطلبات الفيديو. ستُنشأ تلقائياً <strong class="text-white">مهمة</strong> في «مهامي» لموظف المونتاج ويمكنه التسليم برابط Drive أو رفع ملف.
+                        اختر محرر الفيديو، حدّد الموعد النهائي، واكتب متطلبات الفيديو. ستُنشأ تلقائياً <strong class="text-white">مهمة</strong> في «مهامي» لمحرر الفيديو ويمكنه التسليم برابط Drive أو رفع ملف.
                     </p>
                 </div>
             </div>
@@ -31,7 +31,7 @@
                 <i class="fas fa-user-slash text-lg"></i>
             </div>
             <div class="text-sm text-amber-900">
-                <p class="font-bold text-amber-950 mb-1">لا يوجد موظفو مونتاج متاحون</p>
+                <p class="font-bold text-amber-950 mb-1">لا يوجد محررو فيديو متاحون</p>
                 <p class="text-amber-800/90">اطلب من الإدارة إنشاء وظيفة برمز <code class="rounded-md bg-white/80 px-1.5 py-0.5 text-xs font-mono border border-amber-200">video_editing</code> وتعيينها لموظف نشط.</p>
             </div>
         </div>
@@ -96,10 +96,10 @@
 
                     <div class="space-y-4">
                         <div>
-                            <label for="montage_employee_id" class="block text-sm font-bold text-gray-800 mb-2">موظف المونتاج <span class="text-red-500">*</span></label>
+                            <label for="montage_employee_id" class="block text-sm font-bold text-gray-800 mb-2">محرر الفيديو <span class="text-red-500">*</span></label>
                             <select id="montage_employee_id" name="montage_employee_id" required
                                     class="w-full rounded-xl border border-gray-200 py-3 px-4 text-sm focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30">
-                                <option value="">اختر موظف المونتاج</option>
+                                <option value="">اختر محرر الفيديو</option>
                                 @foreach($editors as $editor)
                                     <option value="{{ $editor->id }}" @selected((string) old('montage_employee_id') === (string) $editor->id)>
                                         {{ $editor->name }} @if($editor->employeeJob)— {{ $editor->employeeJob->name }}@endif
@@ -127,7 +127,7 @@
                                 class="w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-l from-cyan-600 to-blue-600 px-6 py-4 text-base font-black text-white shadow-lg disabled:opacity-45"
                                 {{ $editors->isEmpty() ? 'disabled' : '' }}>
                             <i class="fas fa-paper-plane"></i>
-                            إرسال لموظف المونتاج كمهمة
+                            إرسال لمحرر الفيديو كمهمة
                         </button>
                     </div>
                 </div>

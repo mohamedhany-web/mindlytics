@@ -133,6 +133,11 @@ class EmployeeTask extends Model
         return $this->task_type === 'design_moderator_delivery';
     }
 
+    public function isVideoMontageModeratorDelivery(): bool
+    {
+        return $this->task_type === 'video_montage_moderator_delivery';
+    }
+
     public static function taskTypeLabel(?string $taskType): string
     {
         return match ($taskType) {
@@ -140,6 +145,7 @@ class EmployeeTask extends Model
             'sales' => 'مبيعات',
             'design' => 'تصميم (دورة مشرف/مصمم)',
             'design_moderator_delivery' => 'تسليم نهائي (مشرف)',
+            'video_montage_moderator_delivery' => 'تسليم نهائي فيديو (مشرف)',
             default => 'مهمة عامة',
         };
     }

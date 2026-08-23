@@ -58,7 +58,8 @@
                         <option value="video_editing" {{ request('task_type') == 'video_editing' ? 'selected' : '' }}>مونتاج فيديو</option>
                         <option value="sales" {{ request('task_type') == 'sales' ? 'selected' : '' }}>مبيعات</option>
                         <option value="design" {{ request('task_type') == 'design' ? 'selected' : '' }}>تصميم</option>
-                        <option value="design_moderator_delivery" {{ request('task_type') == 'design_moderator_delivery' ? 'selected' : '' }}>تسليم مشرف</option>
+                        <option value="design_moderator_delivery" {{ request('task_type') == 'design_moderator_delivery' ? 'selected' : '' }}>تسليم مشرف تصميم</option>
+                        <option value="video_montage_moderator_delivery" {{ request('task_type') == 'video_montage_moderator_delivery' ? 'selected' : '' }}>تسليم مشرف فيديو</option>
                     </select>
                 </div>
 

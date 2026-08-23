@@ -1,7 +1,7 @@
 @extends('layouts.employee')
 
-@section('title', 'طلبات المونتاج')
-@section('header', 'طلبات المونتاج (مشرف → مونتاج)')
+@section('title', 'طلبات محرر الفيديو')
+@section('header', 'طلبات محرر الفيديو (مشرف → محرر)')
 
 @section('content')
 <div class="space-y-6">
@@ -15,7 +15,7 @@
     <div class="flex flex-wrap items-center justify-between gap-3">
         <a href="{{ route('employee.montage-requests.create') }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-semibold text-sm shadow-lg">
             <i class="fas fa-plus"></i>
-            طلب مونتاج جديد
+            طلب فيديو جديد
         </a>
         <form method="get" class="flex flex-wrap items-center gap-2">
             <select name="status" class="rounded-xl border border-gray-200 px-3 py-2 text-sm">
@@ -35,7 +35,7 @@
                     <tr>
                         <th class="text-right px-4 py-3 font-semibold">#</th>
                         <th class="text-right px-4 py-3 font-semibold">العنوان</th>
-                        <th class="text-right px-4 py-3 font-semibold">موظف المونتاج</th>
+                        <th class="text-right px-4 py-3 font-semibold">محرر الفيديو</th>
                         <th class="text-right px-4 py-3 font-semibold">حد التسليم</th>
                         <th class="text-right px-4 py-3 font-semibold">الحالة</th>
                         <th class="text-right px-4 py-3 font-semibold">إجراء</th>
@@ -60,7 +60,7 @@
                     @empty
                         <tr>
                             <td colspan="6" class="px-4 py-12 text-center text-slate-500">
-                                لا توجد طلبات مونتاج بعد.
+                                لا توجد طلبات فيديو بعد.
                                 <a href="{{ route('employee.montage-requests.create') }}" class="block mt-2 text-cyan-700 font-semibold hover:underline">إنشاء أول طلب</a>
                             </td>
                         </tr>

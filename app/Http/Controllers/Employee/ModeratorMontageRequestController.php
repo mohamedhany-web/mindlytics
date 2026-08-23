@@ -23,7 +23,7 @@ class ModeratorMontageRequestController extends Controller
         $user = Auth::user();
         $query = ModeratorMontageRequest::query()
             ->where('moderator_id', $user->id)
-            ->with(['montageEmployee.employeeJob', 'employeeTask']);
+            ->with(['montageEmployee.employeeJob', 'employeeTask', 'moderatorDeliveryTask']);
 
         if ($request->filled('status') && array_key_exists($request->status, ModeratorMontageRequest::statuses())) {
             $query->where('status', $request->status);
@@ -57,7 +57,7 @@ class ModeratorMontageRequestController extends Controller
             'priority' => ['required', 'in:low,medium,high,urgent'],
             'deadline_at' => ['required', 'date', 'after:now'],
         ], [
-            'montage_employee_id.required' => 'اختر موظف المونتاج',
+            'montage_employee_id.required' => 'اختر محرر الفيديو',
             'requirements.required' => 'أدخل متطلبات الفيديو المطلوب',
             'deadline_at.after' => 'حد التسليم يجب أن يكون في المستقبل',
         ]);
@@ -69,7 +69,7 @@ class ModeratorMontageRequestController extends Controller
             ->first();
 
         if (! $editor || ! $editor->isVideoEditingEmployee()) {
-            return back()->withErrors(['montage_employee_id' => 'المستخدم المختار ليس موظف مونتاج نشطاً.'])->withInput();
+            return back()->withErrors(['montage_employee_id' => 'المستخدم المختار ليس محرر فيديو نشطاً.'])->withInput();
         }
 
         if ((int) $editor->id === (int) $user->id) {
@@ -131,7 +131,7 @@ class ModeratorMontageRequestController extends Controller
 
         return redirect()
             ->route('employee.montage-requests.show', $montageRequest)
-            ->with('success', 'تم إنشاء طلب المونتاج وإسناده لموظف المونتاج كمهمة.');
+            ->with('success', 'تم إنشاء طلب الفيديو وإسناده لمحرر الفيديو كمهمة.');
     }
 
     public function show(ModeratorMontageRequest $montage_request)
@@ -143,11 +143,76 @@ class ModeratorMontageRequestController extends Controller
             'montageEmployee.employeeJob',
             'moderator',
             'employeeTask.deliverables',
+            'moderatorDeliveryTask.deliverables',
         ]);
 
         return view('employee.montage-requests.show', [
             'montageRequest' => $montage_request,
+            'deliverablesTimeline' => $montage_request->deliverablesTimelineForModerator(),
         ]);
+    }
+
+    public function storeModeratorDelivery(Request $request, ModeratorMontageRequest $montage_request)
+    {
+        $user = Auth::user();
+        abort_unless((int) $montage_request->moderator_id === (int) $user->id, 403);
+
+        if ($montage_request->status !== ModeratorMontageRequest::STATUS_SUBMITTED) {
+            return back()->withErrors(['error' => 'يمكن إنشاء مهمة التسليم النهائي بعد تسليم محرر الفيديو فقط.']);
+        }
+
+        if ($montage_request->moderator_delivery_task_id) {
+            return back()->withErrors(['error' => 'تم إنشاء مهمة التسليم النهائي مسبقاً.']);
+        }
+
+        $validated = $request->validate([
+            'delivery_notes' => ['nullable', 'string', 'max:5000'],
+            'deadline' => ['nullable', 'date', 'after_or_equal:today'],
+        ]);
+
+        $deadline = $validated['deadline'] ?? now()->addDays(3)->toDateString();
+
+        $title = 'تسليم نهائي (مشرف): '.$montage_request->title;
+        $description = trim(
+            ($validated['delivery_notes'] ?? '')
+            ."\n\n"
+            .'مرتبط بطلب فيديو #'.$montage_request->id
+            ."\n"
+            .'بعد مراجعة تسليم محرر الفيديو، ارفع الملف النهائي للجهة المعنية من خلال تسليمات هذه المهمة.'
+        );
+
+        DB::beginTransaction();
+        try {
+            $modTask = EmployeeTask::create([
+                'employee_id' => $user->id,
+                'assigned_by' => $user->id,
+                'title' => $title,
+                'description' => $description,
+                'task_type' => 'video_montage_moderator_delivery',
+                'priority' => $montage_request->priority,
+                'status' => 'pending',
+                'deadline' => $deadline,
+                'notes' => 'تسليم نهائي لطلب فيديو #'.$montage_request->id,
+                'montage_request_id' => $montage_request->id,
+            ]);
+
+            $montage_request->update([
+                'moderator_delivery_task_id' => $modTask->id,
+                'status' => ModeratorMontageRequest::STATUS_MODERATOR_DELIVERY_PENDING,
+            ]);
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            report($e);
+
+            return back()->withErrors(['error' => 'تعذر إنشاء مهمة التسليم.']);
+        }
+
+        $this->taskAssignmentNotifier->notifyAssigned($modTask->fresh());
+
+        return redirect()->route('employee.tasks.show', $modTask)
+            ->with('success', 'تم إنشاء مهمة التسليم النهائي في «مهامي». أضف التسليمات ثم أكمل المهمة.');
     }
 
     public function cancel(ModeratorMontageRequest $montage_request)

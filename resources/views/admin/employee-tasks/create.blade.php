@@ -74,7 +74,8 @@
                             <option value="video_editing" {{ old('task_type') == 'video_editing' ? 'selected' : '' }}>مونتاج فيديو</option>
                             <option value="sales" {{ old('task_type') == 'sales' ? 'selected' : '' }}>مبيعات</option>
                             <option value="design" {{ old('task_type') == 'design' ? 'selected' : '' }}>تصميم (مشرف/مصمم)</option>
-                            <option value="design_moderator_delivery" {{ old('task_type') == 'design_moderator_delivery' ? 'selected' : '' }}>تسليم نهائي (مشرف)</option>
+                            <option value="design_moderator_delivery" {{ old('task_type') == 'design_moderator_delivery' ? 'selected' : '' }}>تسليم نهائي تصميم (مشرف)</option>
+                            <option value="video_montage_moderator_delivery" {{ old('task_type') == 'video_montage_moderator_delivery' ? 'selected' : '' }}>تسليم نهائي فيديو (مشرف)</option>
                         </select>
                         <p class="text-xs text-gray-500 mt-1">مونتاج فيديو: تسليم روابط Bunny والمدة. مبيعات: تسليم كملف/رابط/صورة مع شارة «مبيعات» وربط بمركز المبيعات للموظف.</p>
                         @error('task_type')

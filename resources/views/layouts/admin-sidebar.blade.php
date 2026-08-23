@@ -1698,7 +1698,7 @@
 
             <!-- إدارة الموظفين -->
             @php
-                $employeesOpen = request()->routeIs('admin.employees.*') || request()->routeIs('admin.work-schedules.*') || request()->routeIs('admin.employee-attendance.*') || request()->routeIs('admin.employee-jobs.*') || request()->routeIs('admin.employee-tasks.*') || request()->routeIs('admin.design-task-cycles.*') || request()->routeIs('admin.moderator-marketing-plans.*') || request()->routeIs('admin.employee-deductions.*') || request()->routeIs('admin.employee-additions.*') || request()->routeIs('admin.employee-daily-reports.*') || request()->routeIs('admin.leaves.*') || request()->routeIs('admin.tasks.*') || request()->routeIs('admin.instructor-requests.*');
+                $employeesOpen = request()->routeIs('admin.employees.*') || request()->routeIs('admin.work-schedules.*') || request()->routeIs('admin.employee-attendance.*') || request()->routeIs('admin.employee-jobs.*') || request()->routeIs('admin.employee-tasks.*') || request()->routeIs('admin.design-task-cycles.*') || request()->routeIs('admin.montage-requests.*') || request()->routeIs('admin.media.org-chart.*') || request()->routeIs('admin.moderator-marketing-plans.*') || request()->routeIs('admin.employee-deductions.*') || request()->routeIs('admin.employee-additions.*') || request()->routeIs('admin.employee-daily-reports.*') || request()->routeIs('admin.leaves.*') || request()->routeIs('admin.tasks.*') || request()->routeIs('admin.instructor-requests.*');
             @endphp
             <li x-data="{ open: {{ $employeesOpen ? 'true' : 'false' }} }">
                 <button type="button" @click="open = !open" :aria-expanded="open" 
@@ -1774,6 +1774,22 @@
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.design-task-cycles.performance-report') ? 'bg-fuchsia-600/30 text-white font-semibold border-r-2 border-fuchsia-400' : '' }}">
                             <i class="fas fa-chart-pie w-4"></i>
                             <span>تقرير أداء التصميم (شهري)</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.montage-requests.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.montage-requests.*') ? 'bg-cyan-600/30 text-white font-semibold border-r-2 border-cyan-400' : '' }}">
+                            <i class="fas fa-film w-4"></i>
+                            <span>طلبات محرر الفيديو</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('admin.media.org-chart.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.media.org-chart.*') ? 'bg-cyan-600/30 text-white font-semibold border-r-2 border-cyan-400' : '' }}">
+                            <i class="fas fa-sitemap w-4"></i>
+                            <span>هيكل قسم الميديا</span>
                         </a>
                     </li>
                     <li>

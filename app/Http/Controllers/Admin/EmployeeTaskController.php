@@ -91,7 +91,7 @@ class EmployeeTaskController extends Controller
     {
         $validated = $request->validate([
             'employee_id' => 'required|exists:users,id',
-            'task_type' => 'required|in:general,video_editing,sales,design,design_moderator_delivery',
+            'task_type' => 'required|in:general,video_editing,sales,design,design_moderator_delivery,video_montage_moderator_delivery',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'priority' => 'required|in:low,medium,high,urgent',
@@ -158,7 +158,7 @@ class EmployeeTaskController extends Controller
 
         $validated = $request->validate([
             'employee_id' => 'required|exists:users,id',
-            'task_type' => 'required|in:general,video_editing,sales,design,design_moderator_delivery',
+            'task_type' => 'required|in:general,video_editing,sales,design,design_moderator_delivery,video_montage_moderator_delivery',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'priority' => 'required|in:low,medium,high,urgent',
