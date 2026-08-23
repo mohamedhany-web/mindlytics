@@ -62,15 +62,50 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">الوظيفة *</label>
-                        <select name="employee_job_id" required 
+                        <select name="employee_job_id" required
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
                             <option value="">اختر الوظيفة</option>
-                            @foreach($jobs as $job)
-                                <option value="{{ $job->id }}" {{ old('employee_job_id') == $job->id ? 'selected' : '' }}>{{ $job->name }}</option>
-                            @endforeach
+                            @php
+                                $mediaCodes = ['moderator', 'designer', 'video_editing', 'video_editor', 'montage', 'video_montage'];
+                                $salesCodes = ['sales', 'sales_manager'];
+                                $mediaJobs = $jobs->filter(fn ($j) => in_array(strtolower((string) $j->code), $mediaCodes, true));
+                                $salesJobs = $jobs->filter(fn ($j) => in_array(strtolower((string) $j->code), $salesCodes, true));
+                                $otherJobs = $jobs->reject(fn ($j) => $mediaJobs->contains('id', $j->id) || $salesJobs->contains('id', $j->id));
+                            @endphp
+                            @if($mediaJobs->isNotEmpty())
+                                <optgroup label="قسم الميديا">
+                                    @foreach($mediaJobs as $job)
+                                        <option value="{{ $job->id }}" {{ old('employee_job_id') == $job->id ? 'selected' : '' }}>
+                                            {{ $job->name }} — رمز: {{ $job->code }}
+                                        </option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                            @if($salesJobs->isNotEmpty())
+                                <optgroup label="المبيعات">
+                                    @foreach($salesJobs as $job)
+                                        <option value="{{ $job->id }}" {{ old('employee_job_id') == $job->id ? 'selected' : '' }}>
+                                            {{ $job->name }} — رمز: {{ $job->code }}
+                                        </option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                            @if($otherJobs->isNotEmpty())
+                                <optgroup label="وظائف أخرى">
+                                    @foreach($otherJobs as $job)
+                                        <option value="{{ $job->id }}" {{ old('employee_job_id') == $job->id ? 'selected' : '' }}>
+                                            {{ $job->name }} — رمز: {{ $job->code }}
+                                        </option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
                         </select>
                         @error('employee_job_id')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-                        <p class="text-xs text-gray-500 mt-2">لتفعيل <strong>لوحة المبيعات</strong> للموظف، اختر وظيفة «مبيعات» (رمز الوظيفة: <code class="bg-gray-100 px-1 rounded">sales</code>). يمكن إضافتها من «الوظائف» إن لم تكن في القائمة.</p>
+                        <div class="mt-2 rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs text-cyan-950 space-y-1">
+                            <p><strong>محرر فيديو:</strong> اختر «محرر فيديو» برمز <code class="bg-white px-1 rounded border">video_editing</code> ليظهر في هيكل الميديا وعند مشرف المحتوى.</p>
+                            <p><strong>مصمم:</strong> رمز <code class="bg-white px-1 rounded border">designer</code> · <strong>مشرف محتوى:</strong> رمز <code class="bg-white px-1 rounded border">moderator</code></p>
+                            <p class="text-cyan-800/90">لا تختار وظيفة مبيعات إلا لفريق السيلز — غير ذلك ستظهر له قوائم المبيعات بالخطأ.</p>
+                        </div>
                     </div>
 
                     <div>

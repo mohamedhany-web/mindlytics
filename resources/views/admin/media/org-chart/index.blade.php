@@ -5,6 +5,15 @@
 
 @section('content')
 <div class="space-y-8">
+    <section class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+        <p class="font-bold mb-1"><i class="fas fa-info-circle ml-1"></i> مهم لظهور محرر الفيديو</p>
+        <p class="text-xs leading-relaxed">
+            الموظف يظهر هنا وعند مشرف المحتوى فقط إذا كانت وظيفته برمز
+            <code class="bg-white px-1.5 py-0.5 rounded border border-amber-200">video_editing</code>
+            (محرر فيديو). من صفحة تعديل الموظف غيّر الوظيفة إلى «محرر فيديو» ضمن قسم الميديا.
+        </p>
+    </section>
+
     <section class="rounded-2xl border border-slate-200 bg-white shadow-lg overflow-hidden">
         <div class="px-5 py-5 bg-gradient-to-l from-slate-900 via-slate-800 to-cyan-900 text-white">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

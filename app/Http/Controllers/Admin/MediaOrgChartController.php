@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\DesignTaskCycle;
+use App\Models\EmployeeJob;
 use App\Models\ModeratorMontageRequest;
 use App\Models\User;
 
@@ -11,6 +12,8 @@ class MediaOrgChartController extends Controller
 {
     public function index()
     {
+        EmployeeJob::ensureMediaJobs();
+
         $moderators = User::moderatorEmployees()
             ->where('is_active', true)
             ->with('employeeJob')

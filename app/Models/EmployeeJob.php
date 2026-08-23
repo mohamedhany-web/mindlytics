@@ -109,4 +109,102 @@ class EmployeeJob extends Model
             ],
         ];
     }
+
+    /**
+     * رموز الوظائف المعتمدة لمحرر الفيديو (للتوافق مع أسماء قديمة/خاطئة).
+     *
+     * @return list<string>
+     */
+    public static function videoEditingCodes(): array
+    {
+        return ['video_editing', 'video_editor', 'montage', 'video_montage'];
+    }
+
+    /**
+     * التأكد من وجود وظائف الميديا الأساسية برموز النظام الصحيحة.
+     *
+     * @return array{created: list<string>, repaired: list<string>}
+     */
+    public static function ensureMediaJobs(): array
+    {
+        $created = [];
+        $repaired = [];
+
+        foreach (['moderator', 'designer', 'video_editing'] as $code) {
+            $preset = self::presetJobTemplates()[$code] ?? null;
+            if (! $preset) {
+                continue;
+            }
+
+            $existing = self::query()
+                ->whereRaw('LOWER(code) = ?', [strtolower($code)])
+                ->first();
+
+            if ($existing) {
+                $dirty = false;
+                if (! $existing->is_active) {
+                    $existing->is_active = true;
+                    $dirty = true;
+                }
+                if (trim((string) $existing->name) === '') {
+                    $existing->name = $preset['name'];
+                    $dirty = true;
+                }
+                if ($dirty) {
+                    $existing->save();
+                    $repaired[] = $code;
+                }
+
+                continue;
+            }
+
+            // إصلاح وظيفة بنفس الاسم العربي لكن برمز خاطئ (مثل إنشاء يدوي).
+            $byName = self::query()
+                ->where(function ($q) use ($preset, $code) {
+                    $q->where('name', $preset['name']);
+                    if ($code === 'video_editing') {
+                        $q->orWhere('name', 'like', '%محرر فيديو%')
+                            ->orWhere('name', 'like', '%مونتاج%')
+                            ->orWhere('name', 'like', '%محرر بيانات%');
+                    }
+                })
+                ->where(function ($q) use ($code) {
+                    $q->whereNull('code')
+                        ->orWhereRaw('LOWER(code) != ?', [strtolower($code)]);
+                })
+                ->whereNotIn('code', ['sales', 'sales_manager', 'moderator', 'designer'])
+                ->first();
+
+            if ($byName && $code === 'video_editing') {
+                $byName->update([
+                    'name' => $preset['name'],
+                    'code' => $preset['code'],
+                    'description' => $byName->description ?: $preset['description'],
+                    'responsibilities' => $byName->responsibilities ?: $preset['responsibilities'],
+                    'is_active' => true,
+                ]);
+                $repaired[] = $code;
+
+                continue;
+            }
+
+            self::create([
+                'name' => $preset['name'],
+                'code' => $preset['code'],
+                'description' => $preset['description'],
+                'responsibilities' => $preset['responsibilities'],
+                'is_active' => true,
+            ]);
+            $created[] = $code;
+        }
+
+        return compact('created', 'repaired');
+    }
+
+    public function isVideoEditingJob(): bool
+    {
+        $code = strtolower((string) $this->code);
+
+        return in_array($code, self::videoEditingCodes(), true);
+    }
 }

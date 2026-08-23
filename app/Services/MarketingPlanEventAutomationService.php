@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\EmployeeSalaryDeduction;
+use App\Models\EmployeeJob;
 use App\Models\EmployeeTask;
 use App\Models\ModeratorMarketingCalendarEvent;
 use App\Models\ModeratorMontageRequest;
@@ -383,10 +384,20 @@ class MarketingPlanEventAutomationService
 
     private function pickEmployeeByJobCode(string $code): ?User
     {
+        $codes = $code === 'video_editing'
+            ? EmployeeJob::videoEditingCodes()
+            : [$code];
+
         return User::query()
             ->employees()
             ->where('is_active', true)
-            ->whereHas('employeeJob', fn ($q) => $q->whereRaw('LOWER(code) = ?', [strtolower($code)]))
+            ->whereHas('employeeJob', function ($q) use ($codes) {
+                $q->where(function ($inner) use ($codes) {
+                    foreach ($codes as $c) {
+                        $inner->orWhereRaw('LOWER(code) = ?', [strtolower($c)]);
+                    }
+                });
+            })
             ->orderBy('id')
             ->first();
     }

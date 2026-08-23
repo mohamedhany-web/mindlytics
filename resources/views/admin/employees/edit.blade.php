@@ -63,14 +63,46 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">الوظيفة *</label>
-                        <select name="employee_job_id" required 
+                        <select name="employee_job_id" required
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
                             <option value="">اختر الوظيفة</option>
-                            @foreach($jobs as $job)
-                                <option value="{{ $job->id }}" {{ old('employee_job_id', $employee->employee_job_id) == $job->id ? 'selected' : '' }}>{{ $job->name }}</option>
-                            @endforeach
+                            @php
+                                $mediaCodes = ['moderator', 'designer', 'video_editing', 'video_editor', 'montage', 'video_montage'];
+                                $salesCodes = ['sales', 'sales_manager'];
+                                $mediaJobs = $jobs->filter(fn ($j) => in_array(strtolower((string) $j->code), $mediaCodes, true));
+                                $salesJobs = $jobs->filter(fn ($j) => in_array(strtolower((string) $j->code), $salesCodes, true));
+                                $otherJobs = $jobs->reject(fn ($j) => $mediaJobs->contains('id', $j->id) || $salesJobs->contains('id', $j->id));
+                            @endphp
+                            @if($mediaJobs->isNotEmpty())
+                                <optgroup label="قسم الميديا">
+                                    @foreach($mediaJobs as $job)
+                                        <option value="{{ $job->id }}" {{ old('employee_job_id', $employee->employee_job_id) == $job->id ? 'selected' : '' }}>
+                                            {{ $job->name }} — رمز: {{ $job->code }}
+                                        </option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                            @if($salesJobs->isNotEmpty())
+                                <optgroup label="المبيعات">
+                                    @foreach($salesJobs as $job)
+                                        <option value="{{ $job->id }}" {{ old('employee_job_id', $employee->employee_job_id) == $job->id ? 'selected' : '' }}>
+                                            {{ $job->name }} — رمز: {{ $job->code }}
+                                        </option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                            @if($otherJobs->isNotEmpty())
+                                <optgroup label="وظائف أخرى">
+                                    @foreach($otherJobs as $job)
+                                        <option value="{{ $job->id }}" {{ old('employee_job_id', $employee->employee_job_id) == $job->id ? 'selected' : '' }}>
+                                            {{ $job->name }} — رمز: {{ $job->code }}
+                                        </option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
                         </select>
                         @error('employee_job_id')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                        <p class="text-xs text-cyan-800 mt-2">محرر الفيديو يجب أن يكون برمز <code class="bg-cyan-50 px-1 rounded">video_editing</code> ليظهر لمشرف المحتوى وفي هيكل الميديا.</p>
                     </div>
 
                     <div>

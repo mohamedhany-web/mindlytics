@@ -1153,7 +1153,7 @@ class User extends Authenticatable
         }
         $this->loadMissing('employeeJob');
 
-        return $this->employeeJob && strtolower((string) $this->employeeJob->code) === 'video_editing';
+        return $this->employeeJob && $this->employeeJob->isVideoEditingJob();
     }
 
     /**
@@ -1425,8 +1425,14 @@ class User extends Authenticatable
 
     public function scopeVideoEditingEmployees($query)
     {
-        return $query->employees()->whereHas('employeeJob', function ($q) {
-            $q->whereRaw('LOWER(code) = ?', ['video_editing']);
+        $codes = \App\Models\EmployeeJob::videoEditingCodes();
+
+        return $query->employees()->whereHas('employeeJob', function ($q) use ($codes) {
+            $q->where(function ($inner) use ($codes) {
+                foreach ($codes as $code) {
+                    $inner->orWhereRaw('LOWER(code) = ?', [strtolower($code)]);
+                }
+            });
         });
     }
 

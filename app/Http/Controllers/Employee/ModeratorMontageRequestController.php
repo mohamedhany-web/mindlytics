@@ -36,6 +36,8 @@ class ModeratorMontageRequestController extends Controller
 
     public function create()
     {
+        \App\Models\EmployeeJob::ensureMediaJobs();
+
         $editors = User::videoEditingEmployees()
             ->where('is_active', true)
             ->with('employeeJob')
