@@ -1231,6 +1231,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         // التقارير والإحصائيات
         Route::get('/reports', [\App\Http\Controllers\Employee\EmployeeReportController::class, 'index'])->name('reports');
         Route::get('/documentation', [\App\Http\Controllers\Employee\EmployeeController::class, 'documentation'])->name('documentation');
+        Route::get('/business-developer/guide', [\App\Http\Controllers\Employee\EmployeeController::class, 'businessDeveloperGuide'])->name('business-developer.guide');
         
         // الإعدادات
         Route::get('/settings', [\App\Http\Controllers\Employee\EmployeeSettingsController::class, 'index'])->name('settings');

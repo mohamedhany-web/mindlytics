@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Http\Controllers\Employee\EmployeeController;
 use App\Http\Middleware\EnsureModeratorEmployee;
 use App\Http\Middleware\EnsureSalesManager;
 use App\Models\EmployeeJob;
@@ -11,6 +12,7 @@ use App\Models\SalesTeamMember;
 use App\Models\User;
 use App\Services\SalesTeamService;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -157,6 +159,24 @@ class BusinessDeveloperAccessTest extends TestCase
         $this->assertTrue($service->canAccessLead($bd, $leadB));
         $this->assertFalse($service->canAccessLead($managerA, $leadB));
         $this->assertTrue($service->canAccessLead($managerB, $leadB));
+    }
+
+    public function test_business_developer_guide_is_bd_only(): void
+    {
+        $bd = $this->makeUser('business_developer');
+        $rep = $this->makeUser('sales');
+
+        Auth::login($bd);
+        $view = app(EmployeeController::class)->businessDeveloperGuide();
+        $this->assertSame('employee.business-developer.guide', $view->name());
+
+        Auth::login($rep);
+        try {
+            app(EmployeeController::class)->businessDeveloperGuide();
+            $this->fail('Expected 403 for non-BD user');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            $this->assertSame(403, $e->getStatusCode());
+        }
     }
 
     private function makeUser(string $jobCode, ?string $name = null): User

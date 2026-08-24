@@ -40,6 +40,18 @@
             <span>مهامي</span>
         </a>
 
+        @if($isBusinessDeveloper)
+        <div class="border-t border-slate-700/50 my-2 pt-2">
+            <p class="px-4 text-xs font-semibold text-violet-400/90 uppercase tracking-wider mb-1">Business Developer</p>
+            <a href="{{ route('employee.business-developer.guide') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.business-developer.guide') ? 'bg-violet-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-compass text-base"></i>
+                <span>دليل النظام</span>
+            </a>
+        </div>
+        @endif
+
         @if($hasModeratorPortal)
         <div class="border-t border-slate-700/50 my-2 pt-2">
             <p class="px-4 text-xs font-semibold text-fuchsia-400/90 uppercase tracking-wider mb-1">{{ $isBusinessDeveloper ? 'Business Developer — الماركتينغ' : 'المشرف — التصميم والفيديو' }}</p>

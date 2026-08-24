@@ -72,4 +72,18 @@ class EmployeeController extends Controller
 
         return view('employee.documentation.index');
     }
+
+    /**
+     * دليل Business Developer — شرح النظام والصلاحيات والأدوات.
+     */
+    public function businessDeveloperGuide()
+    {
+        $user = Auth::user();
+
+        if (! $user || ! $user->isBusinessDeveloper()) {
+            abort(403, 'هذه الصفحة مخصصة لـ Business Developer فقط.');
+        }
+
+        return view('employee.business-developer.guide');
+    }
 }
