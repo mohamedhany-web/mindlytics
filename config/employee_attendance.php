@@ -19,4 +19,10 @@ return [
 
     /** قفل النظام + حضور/انصراف + خصومات الحضور — لموظفي المبيعات فقط */
     'sales_employees_only' => true,
+
+    /**
+     * شاشة قفل النظام (لا يمكن الدخول إلا بعد الحضور / داخل الشيفت).
+     * false = الدخول متاح في أي وقت بدون قفل.
+     */
+    'system_lock_enabled' => (bool) env('EMPLOYEE_SYSTEM_LOCK_ENABLED', false),
 ];

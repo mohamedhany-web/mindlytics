@@ -142,6 +142,22 @@ class EmployeeAttendanceService
             ]);
         }
 
+        // قفل النظام معطّل — الدخول متاح دائماً (الحضور اختياري للمتابعة فقط)
+        if (! config('employee_attendance.system_lock_enabled', false)) {
+            $schedule = $this->resolveSchedule($user);
+            $record = $schedule ? $this->ensureTodayRecord($user, $schedule, $now) : null;
+
+            return $this->state([
+                'mode' => 'lock_disabled',
+                'can_access' => true,
+                'can_clock_in' => $record && ! $record->clock_in_at,
+                'can_clock_out' => $record && $record->clock_in_at && ! $record->clock_out_at,
+                'record' => $record,
+                'schedule' => $schedule,
+                'message' => 'قفل النظام معطّل — يمكنك الدخول في أي وقت.',
+            ]);
+        }
+
         $schedule = $this->resolveSchedule($user);
         if (! $schedule) {
             return $this->state([

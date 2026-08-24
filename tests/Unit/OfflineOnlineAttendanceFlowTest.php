@@ -24,6 +24,7 @@ class OfflineOnlineAttendanceFlowTest extends TestCase
 
         config([
             'employee_attendance.sales_employees_only' => true,
+            'employee_attendance.system_lock_enabled' => true,
             'employee_attendance.penalties_enabled' => false,
             'employee_attendance.late_penalty_enabled' => false,
             'employee_attendance.absence_penalty_enabled' => false,

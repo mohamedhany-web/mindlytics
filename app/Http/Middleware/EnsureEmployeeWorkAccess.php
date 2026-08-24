@@ -22,6 +22,10 @@ class EnsureEmployeeWorkAccess
                 return $next($request);
             }
 
+            if (! config('employee_attendance.system_lock_enabled', false)) {
+                return $next($request);
+            }
+
             if (! $user->isSubjectToWorkSchedule()) {
                 return $next($request);
             }

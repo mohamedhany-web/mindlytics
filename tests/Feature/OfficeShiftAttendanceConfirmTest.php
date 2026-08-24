@@ -29,6 +29,7 @@ class OfficeShiftAttendanceConfirmTest extends TestCase
 
         config([
             'employee_attendance.sales_employees_only' => true,
+            'employee_attendance.system_lock_enabled' => true,
             'employee_attendance.penalties_enabled' => true,
             'employee_attendance.late_penalty_enabled' => true,
             'employee_attendance.late_penalty_amount' => 25.0,
