@@ -587,6 +587,7 @@ class SalesLeadController extends Controller
             'category',
             'creator:id,name',
             'interestType',
+            'group:id,name',
             'transfers' => fn ($q) => $q->latest()->limit(1)->with('fromUser:id,name'),
         ]);
 
@@ -602,6 +603,12 @@ class SalesLeadController extends Controller
         }
         if ($request->filled('group_id')) {
             $query->where('sales_lead_group_id', $request->group_id);
+        }
+        if ($request->filled('source')) {
+            $query->where('source', $request->source);
+        }
+        if ($request->filled('origin')) {
+            $query->originKind((string) $request->origin);
         }
         if ($request->filled('stage')) {
             $query->where('stage', $request->stage);
@@ -640,7 +647,8 @@ class SalesLeadController extends Controller
                 $q->where('name', 'like', "%{$s}%")
                     ->orWhere('phone', 'like', "%{$s}%")
                     ->orWhere('email', 'like', "%{$s}%")
-                    ->orWhere('company', 'like', "%{$s}%");
+                    ->orWhere('company', 'like', "%{$s}%")
+                    ->orWhere('import_batch', 'like', "%{$s}%");
             });
         }
 

@@ -215,7 +215,7 @@ class WorkshopController extends Controller
 
         $groupId = $this->resolveConvertLeadGroupId($validated['sales_lead_group_id'] ?? null, $assigneeIds);
         if ($groupId === false) {
-            return back()->with('error', 'مجموعة العملاء المختارة لا تشمل كل موظفي المبيعات المحددين.');
+            return back()->with('error', 'مجموعة العملاء المختارة غير موجودة.');
         }
 
         $created = 0;
@@ -223,6 +223,8 @@ class WorkshopController extends Controller
         $skippedAlready = 0;
         $createdByRep = array_fill_keys($assigneeIds, ['new' => [], 'existing' => []]);
         $assigneeCount = count($assigneeIds);
+        // توزيع عادل: ترتيب عشوائي ثابت لهذه الدفعة ثم round-robin
+        $distributionOrder = collect($assigneeIds)->shuffle()->values()->all();
         $hasConversionColumn = Schema::hasColumn('workshop_registrations', 'converted_to_lead_at');
         $batchId = 'WS-'.$workshop->id.'-'.now()->format('YmdHis');
         $transferSummary = [
@@ -232,7 +234,7 @@ class WorkshopController extends Controller
             'already' => [],
         ];
 
-        DB::transaction(function () use ($workshop, $assigneeIds, $assigneeCount, $groupId, $hasConversionColumn, $batchId, &$created, &$linkedExisting, &$skippedAlready, &$createdByRep, &$transferSummary) {
+        DB::transaction(function () use ($workshop, $distributionOrder, $assigneeCount, $groupId, $hasConversionColumn, $batchId, &$created, &$linkedExisting, &$skippedAlready, &$createdByRep, &$transferSummary) {
             $registrations = $workshop->registrations()->orderBy('id')->get();
             $eligible = [];
 
@@ -248,17 +250,31 @@ class WorkshopController extends Controller
             }
 
             foreach ($eligible as $index => $reg) {
-                $assigneeId = $assigneeIds[$index % $assigneeCount];
+                $assigneeId = $distributionOrder[$index % $assigneeCount];
                 $notes = $this->buildLeadNotesFromRegistration($workshop, $reg);
                 $displayName = $reg->name ?: 'عميل محتمل من ورشة';
 
                 $existingLead = $this->findExistingLeadByContact($reg);
 
                 if ($existingLead) {
-                    $existingLead->update([
+                    $updates = [
                         'notes' => trim(($existingLead->notes ?? '')."\n\n".$notes),
                         'interest' => $existingLead->interest ?: 'الاهتمام بورشة: '.$workshop->title,
-                    ]);
+                        'import_batch' => $existingLead->import_batch ?: $batchId,
+                        'source' => $existingLead->source ?: 'event',
+                    ];
+
+                    if ($groupId !== null && Schema::hasColumn('sales_leads', 'sales_lead_group_id')) {
+                        $updates['sales_lead_group_id'] = $groupId;
+                    }
+
+                    // إن كان بدون إسناد — وزّعه على موظفي الترحيل
+                    if (empty($existingLead->assigned_to)) {
+                        $updates['assigned_to'] = $assigneeId;
+                    }
+
+                    $existingLead->update($updates);
+                    $existingLead->refresh()->loadMissing('assignee:id,name');
 
                     $this->markRegistrationConverted($reg, $existingLead->id, $hasConversionColumn);
 
@@ -269,7 +285,7 @@ class WorkshopController extends Controller
                         'assignee' => $existingLead->assignee?->name,
                     ];
 
-                    $repId = (int) $existingLead->assigned_to;
+                    $repId = (int) ($existingLead->assigned_to ?: $assigneeId);
                     if (! isset($createdByRep[$repId])) {
                         $createdByRep[$repId] = ['new' => [], 'existing' => []];
                     }
@@ -471,9 +487,12 @@ class WorkshopController extends Controller
             ->with('members:id')
             ->find((int) $groupId);
 
-        if (! $group || ! $group->includesAllMembers($assigneeIds)) {
+        if (! $group) {
             return false;
         }
+
+        // عند اختيار مجموعة + موظفين: نضمن عضويتهم في المجموعة حتى تظهر الداتا عندهم
+        $group->ensureMembers($assigneeIds);
 
         return $group->id;
     }

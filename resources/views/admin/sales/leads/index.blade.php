@@ -19,7 +19,10 @@
         'normal' => ['label' => null, 'classes' => 'bg-slate-100 text-slate-700 border border-slate-200'],
     ];
 
-    $hasFilters = request()->hasAny(['assigned_to', 'stage', 'priority', 'follow_up', 'sort', 'stale', 'search', 'category_id', 'interest_type_id', 'import_batch']);
+    $hasFilters = request()->hasAny([
+        'assigned_to', 'stage', 'priority', 'follow_up', 'sort', 'stale', 'search',
+        'category_id', 'interest_type_id', 'import_batch', 'group_id', 'source', 'origin', 'workshop_id',
+    ]);
 @endphp
 
 <div class="space-y-6">
@@ -144,10 +147,57 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">دفعة الاستيراد</label>
-                        <input type="text" name="import_batch" value="{{ request('import_batch') }}"
-                               class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                               placeholder="IMP-...">
+                        @if(($importBatches ?? collect())->isNotEmpty())
+                            <select name="import_batch" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                                <option value="">الكل</option>
+                                @foreach($importBatches as $batch)
+                                    <option value="{{ $batch }}" @selected(request('import_batch') === $batch)>{{ $batch }}</option>
+                                @endforeach
+                            </select>
+                        @else
+                            <input type="text" name="import_batch" value="{{ request('import_batch') }}"
+                                   class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                   placeholder="IMP-... / WS-...">
+                        @endif
                     </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">المصدر</label>
+                        <select name="source" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                            <option value="">الكل</option>
+                            @foreach(\App\Models\SalesLead::SOURCES as $k => $label)
+                                <option value="{{ $k }}" @selected(request('source') === $k)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">جاي منين</label>
+                        <select name="origin" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                            <option value="">الكل</option>
+                            <option value="workshop" @selected(request('origin') === 'workshop')>ورشة</option>
+                            <option value="import" @selected(request('origin') === 'import')>استيراد</option>
+                            <option value="manual" @selected(request('origin') === 'manual')>يدوي / أخرى</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">ورشة</label>
+                        <select name="workshop_id" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                            <option value="">الكل</option>
+                            @foreach($workshopsForFilter ?? [] as $ws)
+                                <option value="{{ $ws->id }}" @selected((int) request('workshop_id') === (int) $ws->id)>{{ $ws->title }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @if(($leadGroups ?? collect())->isNotEmpty())
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">المجموعة</label>
+                        <select name="group_id" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                            <option value="">الكل</option>
+                            @foreach($leadGroups as $grp)
+                                <option value="{{ $grp->id }}" @selected((int) request('group_id') === (int) $grp->id)>{{ $grp->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endif
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">المرحلة</label>
                         <select name="stage" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
@@ -229,6 +279,7 @@
                 <thead>
                     <tr class="bg-slate-50 text-slate-700 border-b border-slate-200">
                         <th class="px-4 py-3 text-right font-semibold">الاسم</th>
+                        <th class="px-4 py-3 text-right font-semibold">جاي منين</th>
                         <th class="px-4 py-3 text-right font-semibold">مسند إلى</th>
                         <th class="px-4 py-3 text-right font-semibold">التصنيف</th>
                         <th class="px-4 py-3 text-right font-semibold">المرحلة</th>
@@ -256,6 +307,21 @@
                                 <p class="font-semibold text-slate-900">{{ $lead->name }}</p>
                                 @if($lead->phone || $lead->email)
                                     <p class="text-xs text-slate-500 mt-0.5">{{ $lead->phone ?: $lead->email }}</p>
+                                @endif
+                            </td>
+                            @php $origin = $lead->originSummary(); @endphp
+                            <td class="px-4 py-3">
+                                <span class="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold
+                                    @if($origin['kind'] === 'workshop') bg-indigo-50 text-indigo-700 border border-indigo-200
+                                    @elseif($origin['kind'] === 'import') bg-violet-50 text-violet-700 border border-violet-200
+                                    @else bg-slate-100 text-slate-700 border border-slate-200 @endif">
+                                    {{ $origin['label'] }}
+                                </span>
+                                @if($origin['detail'])
+                                    <p class="text-[10px] text-slate-500 mt-0.5 max-w-[11rem] truncate" title="{{ $origin['detail'] }}">{{ $origin['detail'] }}</p>
+                                @endif
+                                @if($lead->group)
+                                    <p class="text-[10px] text-emerald-700 mt-0.5">{{ $lead->group->name }}</p>
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-slate-700">{{ $lead->assignee->name ?? '—' }}</td>
@@ -294,7 +360,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="px-4 py-12 text-center">
+                            <td colspan="10" class="px-4 py-12 text-center">
                                 <div class="w-14 h-14 mx-auto mb-3 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
                                     <i class="fas fa-user-tag text-xl"></i>
                                 </div>

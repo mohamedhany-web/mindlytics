@@ -100,7 +100,7 @@
     </div>
 
     {{-- تصفية — تطبيق تلقائي عند التغيير --}}
-    <div class="leads-panel p-4" x-data="{ showMore: {{ $req->hasAny(['category_id','import_batch','stage','priority','stale']) && ! in_array($activePreset, ['today','overdue','stale','new']) ? 'true' : 'false' }} }">
+    <div class="leads-panel p-4" x-data="{ showMore: {{ $req->hasAny(['category_id','import_batch','stage','priority','stale','group_id','source','origin','interest_type_id']) && ! in_array($activePreset, ['today','overdue','stale','new']) ? 'true' : 'false' }} }">
         <form method="get" id="leads-filter-form" class="space-y-3">
             <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                 <div class="md:col-span-5 lg:col-span-4">
@@ -132,7 +132,7 @@
                 </div>
                 <div class="md:col-span-2 flex flex-wrap gap-2">
                     <button type="submit" class="px-4 py-2 rounded-lg bg-slate-800 text-white text-sm font-semibold">بحث</button>
-                    @if($req->hasAny(['stage','priority','follow_up','sort','stale','search','category_id','import_batch']))
+                    @if($req->hasAny(['stage','priority','follow_up','sort','stale','search','category_id','import_batch','group_id','source','origin','interest_type_id']))
                         <a href="{{ route('employee.sales.leads.index') }}" class="px-3 py-2 text-sm text-slate-600">مسح</a>
                     @endif
                     <button type="button" @click="showMore = !showMore" class="px-3 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg">
@@ -175,6 +175,24 @@
                         <option value="">الكل</option>
                         @foreach($interestTypes ?? [] as $itype)
                             <option value="{{ $itype->id }}" @selected($req->interest_type_id == $itype->id)>{{ $itype->name_ar }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">جاي منين</label>
+                    <select name="origin" class="w-full px-3 py-2 text-sm bg-white" onchange="this.form.submit()">
+                        <option value="">الكل</option>
+                        <option value="workshop" @selected($req->origin === 'workshop')>ورشة</option>
+                        <option value="import" @selected($req->origin === 'import')>استيراد</option>
+                        <option value="manual" @selected($req->origin === 'manual')>يدوي</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">المصدر</label>
+                    <select name="source" class="w-full px-3 py-2 text-sm bg-white" onchange="this.form.submit()">
+                        <option value="">الكل</option>
+                        @foreach(\App\Models\SalesLead::SOURCES as $k => $label)
+                            <option value="{{ $k }}" @selected($req->source === $k)>{{ $label }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -239,6 +257,16 @@
                         <a href="{{ route('employee.sales.leads.show', $lead) }}" class="font-semibold text-slate-900 hover:underline">
                             {{ $lead->name }}
                         </a>
+                        @php $origin = $lead->originSummary(); @endphp
+                        <span class="inline-flex mt-0.5 items-center rounded px-1.5 py-0.5 text-[10px] font-semibold
+                            @if($origin['kind'] === 'workshop') bg-indigo-50 text-indigo-700
+                            @elseif($origin['kind'] === 'import') bg-violet-50 text-violet-700
+                            @else bg-slate-100 text-slate-600 @endif">
+                            {{ $origin['label'] }}@if($origin['detail']) · {{ $origin['detail'] }}@endif
+                        </span>
+                        @if($lead->group)
+                            <span class="block text-[10px] text-emerald-700">{{ $lead->group->name }}</span>
+                        @endif
                         @if($lead->interestType)
                             <span class="inline-flex mt-0.5 items-center rounded px-1.5 py-0.5 text-[10px] font-bold text-white" style="background:{{ $lead->interestType->color }}">{{ $lead->interestType->name_ar }}</span>
                         @endif

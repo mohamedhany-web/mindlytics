@@ -111,9 +111,20 @@
                             @endforeach
                         </div>
                     </div>
+                    <p class="text-xs font-bold text-slate-700 mb-1">مجموعة العملاء</p>
                     <select name="sales_lead_group_id" id="convert-lead-group" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs bg-white">
                         <option value="">بدون مجموعة</option>
+                        @foreach(($salesLeadGroups ?? []) as $g)
+                            <option value="{{ $g['id'] }}"
+                                    data-member-ids="{{ implode(',', $g['member_ids'] ?? []) }}">
+                                {{ $g['name'] }}{{ !empty($g['is_admin_managed']) ? ' (إدارة)' : '' }}
+                                @if(!empty($g['member_ids']))
+                                    — {{ count($g['member_ids']) }} عضو
+                                @endif
+                            </option>
+                        @endforeach
                     </select>
+                    <p id="convert-group-hint" class="text-[11px] text-slate-500">اختر مجموعة لإظهار العملاء فيها — عند الاختيار يُحدَّد أعضاؤها تلقائياً ويمكنك تعديل الموظفين.</p>
                     <button type="submit" @disabled($stats['pending_leads'] === 0)
                             class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-bold">
                         ترحيل الجدد ({{ $stats['pending_leads'] }})
@@ -231,36 +242,58 @@
     const groupSelect = document.getElementById('convert-lead-group');
     const repCheckboxes = document.querySelectorAll('.convert-rep-checkbox');
     const form = document.getElementById('convert-to-leads-form');
+    const groupHint = document.getElementById('convert-group-hint');
+    let syncingFromGroup = false;
 
     function selectedRepIds() {
         return Array.from(repCheckboxes).filter(cb => cb.checked).map(cb => Number(cb.value));
     }
 
-    function refreshLeadGroups() {
-        if (!groupSelect) return;
-        const repIds = selectedRepIds();
-        groupSelect.innerHTML = '<option value="">بدون مجموعة</option>';
-        if (repIds.length === 0) return;
-        allGroups.forEach(function (g) {
-            const members = (g.member_ids || []).map(Number);
-            if (!repIds.every(id => members.includes(id))) return;
-            const opt = document.createElement('option');
-            opt.value = g.id;
-            opt.textContent = g.name + (g.is_admin_managed ? ' (إدارة)' : '');
-            groupSelect.appendChild(opt);
-        });
+    function applyGroupMembers(groupId) {
+        const group = allGroups.find(g => Number(g.id) === Number(groupId));
+        if (!group) return;
+        const members = (group.member_ids || []).map(Number);
+        syncingFromGroup = true;
+        if (members.length > 0) {
+            repCheckboxes.forEach(cb => {
+                cb.checked = members.includes(Number(cb.value));
+            });
+            if (groupHint) {
+                groupHint.textContent = 'تم تحديد أعضاء المجموعة. يمكنك إضافة موظفين آخرين — سيُضافون للمجموعة عند الترحيل.';
+            }
+        } else if (groupHint) {
+            groupHint.textContent = 'المجموعة بلا أعضاء — اختر موظفين وسيُضافون إليها عند الترحيل.';
+        }
+        syncingFromGroup = false;
     }
 
-    repCheckboxes.forEach(cb => cb.addEventListener('change', refreshLeadGroups));
+    groupSelect?.addEventListener('change', function () {
+        const val = this.value;
+        if (val) {
+            applyGroupMembers(val);
+        } else if (groupHint) {
+            groupHint.textContent = 'اختر مجموعة لإظهار العملاء فيها — عند الاختيار يُحدَّد أعضاؤها تلقائياً ويمكنك تعديل الموظفين.';
+        }
+    });
+
+    repCheckboxes.forEach(cb => cb.addEventListener('change', function () {
+        if (syncingFromGroup || !groupHint) return;
+        const gid = groupSelect?.value;
+        if (!gid) return;
+        const group = allGroups.find(g => Number(g.id) === Number(gid));
+        const members = (group?.member_ids || []).map(Number);
+        const extra = selectedRepIds().filter(id => !members.includes(id));
+        groupHint.textContent = extra.length
+            ? 'سيُضاف ' + extra.length + ' موظف جديد للمجموعة عند الترحيل مع توزيع عادل للعملاء.'
+            : 'التوزيع يكون بالتساوي بين الموظفين المحددين.';
+    }));
+
     document.getElementById('select-all-reps')?.addEventListener('click', () => {
         repCheckboxes.forEach(cb => { cb.checked = true; });
-        refreshLeadGroups();
     });
     document.getElementById('clear-all-reps')?.addEventListener('click', () => {
         repCheckboxes.forEach(cb => { cb.checked = false; });
-        refreshLeadGroups();
     });
-    refreshLeadGroups();
 
     form?.addEventListener('submit', function (e) {
         if (selectedRepIds().length === 0) {
@@ -269,12 +302,14 @@
             return;
         }
         const pending = Number(form.dataset.pending || 0);
-        if (pending === 0) {
+        if (pending <= 0) {
             e.preventDefault();
             alert('لا يوجد مسجّلون جدد للترحيل.');
             return;
         }
-        if (!confirm('ترحيل ' + pending + ' مسجّل جديد؟')) e.preventDefault();
+        if (!confirm('ترحيل ' + pending + ' مسجّل وتوزيعهم على ' + selectedRepIds().length + ' موظف؟')) {
+            e.preventDefault();
+        }
     });
 })();
 </script>

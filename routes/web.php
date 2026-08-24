@@ -1354,6 +1354,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('win-approvals/{lead}/reject', [\App\Http\Controllers\Admin\SalesWinApprovalController::class, 'reject'])->name('win-approvals.reject');
             Route::get('groups/{group}/print-pdf', [\App\Http\Controllers\Admin\SalesLeadGroupController::class, 'printPdf'])->name('groups.print-pdf');
             Route::post('groups/{group}/reclaim', [\App\Http\Controllers\Admin\SalesLeadGroupController::class, 'reclaim'])->name('groups.reclaim');
+            Route::post('groups/{group}/assign', [\App\Http\Controllers\Admin\SalesLeadGroupController::class, 'assign'])->name('groups.assign');
             Route::resource('groups', \App\Http\Controllers\Admin\SalesLeadGroupController::class)->except(['edit']);
             Route::post('groups/{group}/whatsapp-bulk', [\App\Http\Controllers\Admin\SalesGroupWhatsAppController::class, 'store'])->name('groups.whatsapp.store');
             Route::get('groups/{group}/whatsapp-batches/{batch}', [\App\Http\Controllers\Admin\SalesGroupWhatsAppController::class, 'showBatch'])->name('groups.whatsapp-batches.show');

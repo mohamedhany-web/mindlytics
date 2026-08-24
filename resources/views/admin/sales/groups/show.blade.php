@@ -158,9 +158,80 @@
     </section>
 
     @if($group->members->isNotEmpty() || $group->assigned_to || $group->leads->contains(fn ($l) => blank($l->assigned_to)))
-                    الموظفون وسحب البيانات
+        @php
+            $groupMembers = $group->members->isNotEmpty() ? $group->members : collect([$group->assignee])->filter();
+            $unassignedCount = $group->leads->filter(fn ($l) => blank($l->assigned_to) || (int) $l->assigned_to === 0)->count();
+        @endphp
+        <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+                <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                    <i class="fas fa-exchange-alt text-amber-600"></i>
+                    الموظفون وترحيل / سحب البيانات
                 </h3>
-                <p class="text-xs text-slate-600 mt-0.5">سحب العملاء من محفظة الموظف يخليهم عند المجموعة بكل ملاحظاته وأنشطته، ويختفوا من عنده. شيل الموظف من المجموعة بيعمل نفس السحب تلقائياً.</p>
+                <p class="text-xs text-slate-600 mt-0.5">رحّل من بيانات المجموعة (بدون موظف) إلى محفظة الموظف بعدد معيّن أو من رقم لرقم. السحب يعكس العملية: العملاء يرجعوا للمجموعة بكل الملاحظات.</p>
+            </div>
+
+            @if($groupMembers->isNotEmpty())
+                <div class="mx-4 mt-4 mb-1 rounded-2xl border border-sky-200 bg-gradient-to-l from-sky-50 via-white to-teal-50 p-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-9 h-9 rounded-xl bg-sky-600 text-white flex items-center justify-center shadow-sm">
+                            <i class="fas fa-share"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-black text-slate-900">ترحيل بيانات للمجموعة إلى موظف</h4>
+                            <p class="text-xs text-slate-600">المتاح حالياً بدون موظف: <strong class="tabular-nums">{{ number_format($unassignedCount) }}</strong> — الترقيم حسب ترتيب الأسماء.</p>
+                        </div>
+                    </div>
+                    <form method="post" action="{{ route('admin.sales.groups.assign', $group) }}"
+                          class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-3 items-end"
+                          onsubmit="return confirm('تأكيد ترحيل العملاء المحددين إلى محفظة الموظف؟ هيبقوا داخل المجموعة.');">
+                        @csrf
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">الموظف</label>
+                            <select name="employee_id" required class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
+                                <option value="">اختر الموظف…</option>
+                                @foreach($groupMembers as $member)
+                                    @if($member)
+                                        <option value="{{ $member->id }}" @selected((int) old('employee_id') === (int) $member->id)>{{ $member->name }}</option>
+                                    @endif
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">عدد معيّن</label>
+                            <input type="number" name="count" min="1" max="{{ max(1, (int) $unassignedCount) }}" value="{{ old('count') }}" placeholder="مثال: 50"
+                                   class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                                   @disabled($unassignedCount === 0)>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">من رقم</label>
+                            <input type="number" name="from" min="1" max="{{ max(1, (int) $unassignedCount) }}" value="{{ old('from') }}" placeholder="1"
+                                   class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                                   @disabled($unassignedCount === 0)>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">إلى رقم</label>
+                            <input type="number" name="to" min="1" max="{{ max(1, (int) $unassignedCount) }}" value="{{ old('to') }}" placeholder="{{ max(1, (int) $unassignedCount) }}"
+                                   class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                                   @disabled($unassignedCount === 0)>
+                        </div>
+                        <div>
+                            <button type="submit" @disabled($unassignedCount === 0)
+                                    class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white rounded-xl {{ $unassignedCount === 0 ? 'bg-slate-300 cursor-not-allowed' : 'bg-gradient-to-r from-sky-600 to-teal-600 hover:from-sky-700 hover:to-teal-700 shadow-md shadow-sky-500/20' }} whitespace-nowrap">
+                                <i class="fas fa-share"></i>
+                                ترحيل
+                            </button>
+                        </div>
+                    </form>
+                    <p class="text-[11px] text-slate-500 mt-2">
+                        أمثلة: عدد <strong>50</strong> يأخذ أول 50 · أو من <strong>1</strong> إلى <strong>50</strong> · من <strong>51</strong> إلى <strong>100</strong>.
+                        لو عبّيت من/إلى يُستخدم النطاق ويتجاهل العدد.
+                    </p>
+                </div>
+            @endif
+
+            <div class="px-4 pt-3 pb-1">
+                <p class="text-xs text-slate-600">سحب العملاء من محفظة الموظف يخليهم عند المجموعة بكل ملاحظاته وأنشطته، ويختفوا من عنده. شيل الموظف من المجموعة بيعمل نفس السحب تلقائياً.</p>
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full text-sm">
@@ -172,7 +243,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
-                        @foreach(($group->members->isNotEmpty() ? $group->members : collect([$group->assignee])) as $member)
+                        @foreach($groupMembers as $member)
                             @if($member)
                                 @php $memberLeadCount = $group->leads->where('assigned_to', $member->id)->count(); @endphp
                                 <tr class="hover:bg-slate-50/80">
@@ -193,12 +264,11 @@
                                 </tr>
                             @endif
                         @endforeach
-                        @php $unassignedCount = $group->leads->whereNull('assigned_to')->count(); @endphp
                         @if($unassignedCount > 0)
                             <tr class="bg-emerald-50/70">
                                 <td class="px-4 py-3 font-semibold text-emerald-900">عند المجموعة (بدون موظف)</td>
                                 <td class="px-4 py-3 tabular-nums text-emerald-800">{{ number_format($unassignedCount) }}</td>
-                                <td class="px-4 py-3 text-xs text-emerald-700">محفوظة بكل الملاحظات</td>
+                                <td class="px-4 py-3 text-xs text-emerald-700">جاهزة للترحيل للموظف</td>
                             </tr>
                         @endif
                     </tbody>

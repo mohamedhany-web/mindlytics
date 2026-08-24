@@ -19,8 +19,9 @@ use App\Services\SalesNotificationService;
 use App\Services\SalesWinCommissionService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -47,8 +48,29 @@ class SalesLeadController extends Controller
         $salesReps = User::salesEmployees()->orderBy('name')->get(['id', 'name']);
         $categories = SalesLeadCategory::active()->ordered()->get();
         $interestTypes = SalesInterestType::active()->ordered()->get();
+        $leadGroups = Schema::hasTable('sales_lead_groups')
+            ? SalesLeadGroup::query()->orderBy('name')->get(['id', 'name'])
+            : collect();
+        $workshopsForFilter = Schema::hasTable('workshops')
+            ? \App\Models\Workshop::query()->orderByDesc('id')->limit(80)->get(['id', 'title'])
+            : collect();
+        $importBatches = SalesLead::query()
+            ->whereNotNull('import_batch')
+            ->distinct()
+            ->orderByDesc('import_batch')
+            ->limit(40)
+            ->pluck('import_batch');
 
-        return view('admin.sales.leads.index', compact('leads', 'salesReps', 'stats', 'categories', 'interestTypes'));
+        return view('admin.sales.leads.index', compact(
+            'leads',
+            'salesReps',
+            'stats',
+            'categories',
+            'interestTypes',
+            'leadGroups',
+            'workshopsForFilter',
+            'importBatches'
+        ));
     }
 
     public function export(Request $request, SalesLeadsExcelExportService $excel): StreamedResponse
@@ -398,7 +420,7 @@ class SalesLeadController extends Controller
 
     private function indexQuery(Request $request): Builder
     {
-        $query = SalesLead::query()->with(['assignee', 'creator', 'category', 'interestType']);
+        $query = SalesLead::query()->with(['assignee', 'creator', 'category', 'interestType', 'group']);
 
         if ($request->filled('category_id')) {
             $query->where('category_id', $request->category_id);
@@ -408,6 +430,18 @@ class SalesLeadController extends Controller
         }
         if ($request->filled('import_batch')) {
             $query->where('import_batch', $request->import_batch);
+        }
+        if ($request->filled('group_id') && Schema::hasColumn('sales_leads', 'sales_lead_group_id')) {
+            $query->where('sales_lead_group_id', $request->group_id);
+        }
+        if ($request->filled('source')) {
+            $query->where('source', $request->source);
+        }
+        if ($request->filled('origin')) {
+            $query->originKind((string) $request->origin);
+        }
+        if ($request->filled('workshop_id')) {
+            $query->fromWorkshop((int) $request->workshop_id);
         }
         if ($request->filled('assigned_to')) {
             $query->where('assigned_to', $request->assigned_to);
@@ -449,7 +483,9 @@ class SalesLeadController extends Controller
                 $q->where('name', 'like', "%{$s}%")
                     ->orWhere('phone', 'like', "%{$s}%")
                     ->orWhere('email', 'like', "%{$s}%")
-                    ->orWhere('company', 'like', "%{$s}%");
+                    ->orWhere('company', 'like', "%{$s}%")
+                    ->orWhere('import_batch', 'like', "%{$s}%")
+                    ->orWhere('notes', 'like', "%{$s}%");
             });
         }
 

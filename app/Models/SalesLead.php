@@ -369,6 +369,34 @@ class SalesLead extends Model
         return $query->where('assigned_to', $userId);
     }
 
+    public function scopeOriginKind($query, string $origin)
+    {
+        return match ($origin) {
+            'workshop' => $query->where(function ($q) {
+                $q->where('import_batch', 'like', 'WS-%')
+                    ->orWhere('notes', 'like', '%[workshop:%');
+            }),
+            'import' => $query->whereNotNull('import_batch')
+                ->where('import_batch', 'not like', 'WS-%'),
+            'manual' => $query->where(function ($q) {
+                $q->whereNull('import_batch')
+                    ->where(function ($q2) {
+                        $q2->whereNull('notes')
+                            ->orWhere('notes', 'not like', '%[workshop:%');
+                    });
+            }),
+            default => $query,
+        };
+    }
+
+    public function scopeFromWorkshop($query, int $workshopId)
+    {
+        return $query->where(function ($q) use ($workshopId) {
+            $q->where('import_batch', 'like', 'WS-'.$workshopId.'-%')
+                ->orWhere('notes', 'like', '%[workshop:'.$workshopId.']%');
+        });
+    }
+
     public function scopeForVisibleSalesUser($query, User $user)
     {
         if ($user->hasSalesManagerPortalAccess()) {
@@ -447,6 +475,90 @@ class SalesLead extends Model
     public static function sourceLabel(string $source): string
     {
         return self::SOURCES[$source] ?? $source;
+    }
+
+    /**
+     * نوع مصدر الظهور في قائمة العملاء: ورشة / استيراد / يدوي.
+     */
+    public function originKind(): string
+    {
+        if ($this->workshopIdFromNotes() !== null || $this->isWorkshopImportBatch()) {
+            return 'workshop';
+        }
+
+        if (filled($this->import_batch)) {
+            return 'import';
+        }
+
+        return 'manual';
+    }
+
+    public function isWorkshopImportBatch(): bool
+    {
+        $batch = (string) ($this->import_batch ?? '');
+
+        return $batch !== '' && preg_match('/^WS-\d+/', $batch) === 1;
+    }
+
+    public function workshopIdFromNotes(): ?int
+    {
+        $notes = (string) ($this->notes ?? '');
+        if ($notes === '') {
+            return null;
+        }
+
+        if (preg_match('/\[workshop:(\d+)\]/', $notes, $m)) {
+            return (int) $m[1];
+        }
+
+        return null;
+    }
+
+    public function workshopTitleFromNotes(): ?string
+    {
+        $notes = (string) ($this->notes ?? '');
+        if ($notes === '') {
+            return null;
+        }
+
+        if (preg_match('/اسم الورشة:\s*(.+)/u', $notes, $m)) {
+            $title = trim((string) $m[1]);
+
+            return $title !== '' ? $title : null;
+        }
+
+        return null;
+    }
+
+    /**
+     * ملخص «جاي منين» للعرض في الجدول.
+     *
+     * @return array{kind: string, label: string, detail: string|null}
+     */
+    public function originSummary(): array
+    {
+        $source = self::sourceLabel((string) ($this->source ?: 'other'));
+
+        return match ($this->originKind()) {
+            'workshop' => [
+                'kind' => 'workshop',
+                'label' => 'ورشة',
+                'detail' => $this->workshopTitleFromNotes()
+                    ?: ($this->import_batch ?: ('ورشة #'.($this->workshopIdFromNotes() ?? '—'))),
+            ],
+            'import' => [
+                'kind' => 'import',
+                'label' => 'استيراد',
+                'detail' => $this->import_batch ?: $source,
+            ],
+            default => [
+                'kind' => 'manual',
+                'label' => $source,
+                'detail' => $this->relationLoaded('group') && $this->group
+                    ? $this->group->name
+                    : null,
+            ],
+        };
     }
 
     public static function priorityLabel(?string $priority): string

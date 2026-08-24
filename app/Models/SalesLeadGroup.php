@@ -102,6 +102,23 @@ class SalesLeadGroup extends Model
     }
 
     /**
+     * أضف أعضاء للمجموعة دون حذف الموجودين.
+     *
+     * @param  list<int>  $userIds
+     */
+    public function ensureMembers(array $userIds): void
+    {
+        $incoming = collect($userIds)->map(fn ($id) => (int) $id)->filter()->unique();
+        if ($incoming->isEmpty()) {
+            return;
+        }
+
+        $merged = $this->memberIds()->merge($incoming)->unique()->values()->all();
+        $this->syncMembers($merged);
+        $this->unsetRelation('members');
+    }
+
+    /**
      * @param  list<int>  $userIds
      */
     public function includesAllMembers(array $userIds): bool

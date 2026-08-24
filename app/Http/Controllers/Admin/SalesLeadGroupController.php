@@ -195,6 +195,47 @@ class SalesLeadGroupController extends Controller
         );
     }
 
+    public function assign(Request $request, SalesLeadGroup $group, SalesLeadGroupReclaimService $reclaim): RedirectResponse
+    {
+        $validated = $request->validate([
+            'employee_id' => 'required|integer|exists:users,id',
+            'count' => 'nullable|integer|min:1|max:100000',
+            'from' => 'nullable|integer|min:1|max:100000',
+            'to' => 'nullable|integer|min:1|max:100000',
+        ]);
+
+        $employeeId = (int) $validated['employee_id'];
+        $count = isset($validated['count']) ? (int) $validated['count'] : null;
+        $from = isset($validated['from']) ? (int) $validated['from'] : null;
+        $to = isset($validated['to']) ? (int) $validated['to'] : null;
+
+        if ($from === null && $to === null && $count === null) {
+            return back()->withErrors([
+                'count' => 'حدد عدداً من العملاء، أو نطاقاً من رقم إلى رقم.',
+            ])->withInput();
+        }
+
+        $employee = User::query()->find($employeeId);
+        $moved = $reclaim->assignToEmployee(
+            $group,
+            $employeeId,
+            Auth::user(),
+            $count,
+            $from,
+            $to,
+            'ترحيل يدوي من صفحة المجموعة'
+        );
+
+        $rangeHint = ($from !== null || $to !== null)
+            ? ' (من '.($from ?? 1).' إلى '.($to ?? 'الأخير').')'
+            : ' (عدد '.$moved.')';
+
+        return back()->with(
+            'success',
+            'اترحّل '.$moved.' عميل من بيانات المجموعة إلى محفظة '.($employee?->name ?? 'الموظف').$rangeHint.' — بقوا داخل المجموعة.'
+        );
+    }
+
     public function destroy(SalesLeadGroup $group): RedirectResponse
     {
         SalesLead::where('sales_lead_group_id', $group->id)->update(['sales_lead_group_id' => null]);
