@@ -126,15 +126,24 @@ class SendSalesFollowupReminders extends Command
         $teamService = app(SalesTeamService::class);
         $staleDays = SalesLead::STALE_CONTACT_DAYS;
 
-        $managers = User::salesManagers()->where('is_active', true)->get(['id', 'name']);
+        $managers = User::query()
+            ->employees()
+            ->where('is_active', true)
+            ->where(function ($q) {
+                $q->whereHas('employeeJob', fn ($job) => $job->whereRaw('LOWER(code) = ?', ['sales_manager']))
+                    ->orWhereHas('employeeJob', fn ($job) => $job->whereRaw('LOWER(code) = ?', ['business_developer']));
+            })
+            ->get(['id', 'name']);
 
         foreach ($managers as $manager) {
             $team = $teamService->teamFor($manager);
-            if (! $team instanceof SalesTeam) {
+            if (! $team instanceof SalesTeam && ! $manager->isBusinessDeveloper()) {
                 continue;
             }
 
-            $memberIds = $teamService->memberUserIds($team);
+            $memberIds = $manager->isBusinessDeveloper()
+                ? $teamService->allSalesEmployeeIds()
+                : ($team ? $teamService->memberUserIds($team, $manager) : []);
             if ($memberIds === []) {
                 continue;
             }
@@ -185,7 +194,7 @@ class SendSalesFollowupReminders extends Command
                 'action_text' => 'فتح رقابة المتابعات',
                 'data' => [
                     'reminder_kind' => 'sales_manager_followup_daily',
-                    'team_id' => $team->id,
+                    'team_id' => $team?->id,
                     'overdue_followups' => $overdueCount,
                     'today_followups' => $todayCount,
                     'stale_open_leads' => $staleCount,

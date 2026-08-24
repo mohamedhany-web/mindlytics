@@ -67,7 +67,7 @@
                             <option value="">اختر الوظيفة</option>
                             @php
                                 $mediaCodes = ['moderator', 'designer', 'video_editing', 'video_editor', 'montage', 'video_montage'];
-                                $salesCodes = ['sales', 'sales_manager'];
+                                $salesCodes = ['sales', 'sales_manager', 'business_developer'];
                                 $mediaJobs = $jobs->filter(fn ($j) => in_array(strtolower((string) $j->code), $mediaCodes, true));
                                 $salesJobs = $jobs->filter(fn ($j) => in_array(strtolower((string) $j->code), $salesCodes, true));
                                 $otherJobs = $jobs->reject(fn ($j) => $mediaJobs->contains('id', $j->id) || $salesJobs->contains('id', $j->id));
@@ -104,7 +104,8 @@
                         <div class="mt-2 rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs text-cyan-950 space-y-1">
                             <p><strong>محرر فيديو:</strong> اختر «محرر فيديو» برمز <code class="bg-white px-1 rounded border">video_editing</code> ليظهر في هيكل الميديا وعند مشرف المحتوى.</p>
                             <p><strong>مصمم:</strong> رمز <code class="bg-white px-1 rounded border">designer</code> · <strong>مشرف محتوى:</strong> رمز <code class="bg-white px-1 rounded border">moderator</code></p>
-                            <p class="text-cyan-800/90">لا تختار وظيفة مبيعات إلا لفريق السيلز — غير ذلك ستظهر له قوائم المبيعات بالخطأ.</p>
+                            <p><strong>Business Developer:</strong> رمز <code class="bg-white px-1 rounded border">business_developer</code> — صلاحيات مدير المبيعات + الماركتينغ والمهام.</p>
+                            <p class="text-cyan-800/90">لا تختار وظيفة مبيعات عادية إلا لفريق السيلز — غير ذلك ستظهر له قوائم المبيعات بالخطأ.</p>
                         </div>
                     </div>
 

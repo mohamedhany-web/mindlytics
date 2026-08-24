@@ -138,7 +138,7 @@ class WhatsAppConversation extends Model
             return $query->ownedBySalesAgent($user);
         }
 
-        if ($user->isSalesManager()) {
+        if ($user->hasSalesManagerPortalAccess()) {
             $memberIds = app(\App\Services\SalesTeamService::class)->visibleAssigneeIds($user);
             $memberIds[] = (int) $user->id;
 
@@ -213,7 +213,7 @@ class WhatsAppConversation extends Model
 
         if (! empty($filters['sales_owned']) && auth()->check()) {
             $user = auth()->user();
-            if ($user && $user->isSalesManager()) {
+            if ($user && $user->hasSalesManagerPortalAccess()) {
                 $memberIds = app(\App\Services\SalesTeamService::class)->visibleAssigneeIds($user);
                 $memberIds[] = (int) $user->id;
 

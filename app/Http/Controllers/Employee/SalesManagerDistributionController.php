@@ -14,8 +14,9 @@ class SalesManagerDistributionController extends Controller
 {
     public function index(Request $request, SalesTeamService $teamService, SalesSpecialtyService $specialtyService)
     {
-        $team = $teamService->managedTeamOrFail(Auth::user());
-        $memberIds = $teamService->memberUserIds($team);
+        $user = Auth::user();
+        $team = $teamService->managedTeamOrFail($user);
+        $memberIds = $teamService->memberUserIds($team, $user);
         $types = $specialtyService->activeTypes();
         $filter = $request->query('filter', 'all');
         $interestTypeId = $request->filled('interest_type_id') ? (int) $request->interest_type_id : null;
@@ -47,7 +48,7 @@ class SalesManagerDistributionController extends Controller
             $specialistsByType[$type->id] = $specialtyService->specialistsFor((int) $type->id, $memberIds);
         }
 
-        $salesReps = $team->members()->with('user:id,name')->get()->pluck('user')->filter()->sortBy('name')->values();
+        $salesReps = $teamService->memberRecords($user, $team)->pluck('user')->filter()->sortBy('name')->values();
 
         return view('employee.sales-manager.distribution.index', compact(
             'types',
@@ -64,7 +65,7 @@ class SalesManagerDistributionController extends Controller
     {
         $manager = Auth::user();
         $team = $teamService->managedTeamOrFail($manager);
-        $memberIds = $teamService->memberUserIds($team);
+        $memberIds = $teamService->memberUserIds($team, $manager);
 
         if (! in_array((int) $lead->assigned_to, $memberIds, true)) {
             abort(403);
@@ -86,7 +87,7 @@ class SalesManagerDistributionController extends Controller
             $manager,
             $validated['reason'] ?? 'توزيع المدير حسب التخصص',
             SalesLeadTransferService::SOURCE_DISTRIBUTION,
-            (int) $team->id
+            $team->exists ? (int) $team->id : null
         );
 
         return back()->with('success', 'تم تحويل العميل بنجاح.');

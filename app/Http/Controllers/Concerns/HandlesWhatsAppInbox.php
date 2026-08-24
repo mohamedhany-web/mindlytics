@@ -931,17 +931,22 @@ trait HandlesWhatsAppInbox
         }
 
         $user = auth()->user();
-        if (! $user || ! $user->isSalesManager()) {
+        if (! $user || ! $user->hasSalesManagerPortalAccess()) {
             return [];
         }
 
-        $team = app(SalesTeamService::class)->teamFor($user);
-        if (! $team) {
+        $teamService = app(SalesTeamService::class);
+        $team = $teamService->teamFor($user);
+        if (! $team && ! $user->isBusinessDeveloper()) {
             return [];
         }
+
+        $staffIds = $user->isBusinessDeveloper()
+            ? $teamService->allSalesEmployeeIds()
+            : $team->allStaffUserIds();
 
         return User::query()
-            ->whereIn('id', $team->allStaffUserIds())
+            ->whereIn('id', $staffIds)
             ->orderBy('name')
             ->get(['id', 'name'])
             ->map(fn ($u) => ['id' => $u->id, 'name' => $u->name])

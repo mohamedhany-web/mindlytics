@@ -371,7 +371,7 @@ class SalesLead extends Model
 
     public function scopeForVisibleSalesUser($query, User $user)
     {
-        if ($user->isSalesManager()) {
+        if ($user->hasSalesManagerPortalAccess()) {
             $ids = app(\App\Services\SalesTeamService::class)->visibleAssigneeIds($user);
             if ($ids === []) {
                 return $query->whereRaw('1 = 0');

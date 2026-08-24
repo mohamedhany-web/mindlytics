@@ -159,12 +159,12 @@ class WhatsAppQueueService
      */
     public function assignToSalesRep(WhatsAppConversation $conversation, User $manager, User $assignee): SalesLead
     {
-        if (! $manager->isSalesManager()) {
-            abort(403, 'توزيع طلبات واتساب لمديري المبيعات فقط.');
+        if (! $manager->hasSalesManagerPortalAccess()) {
+            abort(403, 'توزيع طلبات واتساب لمديري المبيعات و Business Developer فقط.');
         }
 
         $team = $this->teams->managedTeamOrFail($manager);
-        $memberIds = $this->teams->memberUserIds($team);
+        $memberIds = $this->teams->memberUserIds($team, $manager);
 
         if (! in_array((int) $assignee->id, $memberIds, true) || ! $assignee->isSalesEmployee()) {
             throw ValidationException::withMessages([
@@ -295,7 +295,7 @@ class WhatsAppQueueService
 
     public function inboxIndexUrlFor(User $user, array $params = []): string
     {
-        if ($user->isSalesManager()) {
+        if ($user->hasSalesManagerPortalAccess()) {
             return route('employee.sales-manager.whatsapp.inbox.index', $params);
         }
 

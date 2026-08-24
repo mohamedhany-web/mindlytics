@@ -21,16 +21,13 @@ class ModeratorMarketingPlanController extends Controller
     private function assertOwnPlan(ModeratorMarketingPlan $plan): void
     {
         $user = Auth::user();
-        if ($user && method_exists($user, 'isAdmin') && $user->isAdmin()) {
-            return;
-        }
-        abort_unless((int) $plan->moderator_id === (int) $user?->id, 403);
+        abort_unless($user && $user->canManageModeratorResource((int) $plan->moderator_id), 403);
     }
 
     private function planModeratorId(ModeratorMarketingPlan $plan): int
     {
         $user = Auth::user();
-        if ($user?->isAdmin()) {
+        if ($user?->isAdmin() || $user?->isBusinessDeveloper()) {
             return (int) $plan->moderator_id;
         }
 
@@ -39,19 +36,28 @@ class ModeratorMarketingPlanController extends Controller
 
     public function index()
     {
+        $user = Auth::user();
         $moderatorId = Auth::id();
 
-        $plans = ModeratorMarketingPlan::query()
-            ->where('moderator_id', $moderatorId)
+        $plansQuery = ModeratorMarketingPlan::query()
+            ->when(! $user->isBusinessDeveloper(), fn ($q) => $q->where('moderator_id', $moderatorId))
             ->withCount(['platforms', 'calendarEvents'])
-            ->latest()
-            ->paginate(15);
+            ->latest();
+
+        $plans = $plansQuery->paginate(15);
+
+        $statsQuery = ModeratorMarketingPlan::query()
+            ->when(! $user->isBusinessDeveloper(), fn ($q) => $q->where('moderator_id', $moderatorId));
 
         $stats = [
-            'total' => ModeratorMarketingPlan::where('moderator_id', $moderatorId)->count(),
-            'active' => ModeratorMarketingPlan::where('moderator_id', $moderatorId)->where('status', 'active')->count(),
-            'platforms' => \App\Models\ModeratorMarketingPlatform::whereHas('plan', fn ($q) => $q->where('moderator_id', $moderatorId))->count(),
-            'events' => \App\Models\ModeratorMarketingCalendarEvent::whereHas('plan', fn ($q) => $q->where('moderator_id', $moderatorId))->count(),
+            'total' => (clone $statsQuery)->count(),
+            'active' => (clone $statsQuery)->where('status', 'active')->count(),
+            'platforms' => ModeratorMarketingPlatform::query()->when(! $user->isBusinessDeveloper(), function ($q) use ($moderatorId) {
+                $q->whereHas('plan', fn ($plan) => $plan->where('moderator_id', $moderatorId));
+            })->count(),
+            'events' => \App\Models\ModeratorMarketingCalendarEvent::query()->when(! $user->isBusinessDeveloper(), function ($q) use ($moderatorId) {
+                $q->whereHas('plan', fn ($plan) => $plan->where('moderator_id', $moderatorId));
+            })->count(),
         ];
 
         return view('employee.marketing-plans.index', compact('plans', 'stats'));
@@ -60,7 +66,7 @@ class ModeratorMarketingPlanController extends Controller
     public function create()
     {
         $cycles = DesignTaskCycle::query()
-            ->where('moderator_id', Auth::id())
+            ->when(! Auth::user()->isBusinessDeveloper(), fn ($q) => $q->where('moderator_id', Auth::id()))
             ->orderByDesc('id')
             ->limit(100)
             ->get(['id', 'title', 'status']);
@@ -81,11 +87,11 @@ class ModeratorMarketingPlanController extends Controller
         ]);
 
         if (! empty($validated['design_task_cycle_id'])) {
-            $ok = DesignTaskCycle::query()
-                ->where('id', $validated['design_task_cycle_id'])
-                ->where('moderator_id', Auth::id())
-                ->exists();
-            if (! $ok) {
+            $cycleQuery = DesignTaskCycle::query()->where('id', $validated['design_task_cycle_id']);
+            if (! Auth::user()->isBusinessDeveloper()) {
+                $cycleQuery->where('moderator_id', Auth::id());
+            }
+            if (! $cycleQuery->exists()) {
                 return back()->withErrors(['design_task_cycle_id' => 'دورة التصميم غير صالحة.'])->withInput();
             }
         }

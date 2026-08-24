@@ -68,7 +68,7 @@
                             <option value="">اختر الوظيفة</option>
                             @php
                                 $mediaCodes = ['moderator', 'designer', 'video_editing', 'video_editor', 'montage', 'video_montage'];
-                                $salesCodes = ['sales', 'sales_manager'];
+                                $salesCodes = ['sales', 'sales_manager', 'business_developer'];
                                 $mediaJobs = $jobs->filter(fn ($j) => in_array(strtolower((string) $j->code), $mediaCodes, true));
                                 $salesJobs = $jobs->filter(fn ($j) => in_array(strtolower((string) $j->code), $salesCodes, true));
                                 $otherJobs = $jobs->reject(fn ($j) => $mediaJobs->contains('id', $j->id) || $salesJobs->contains('id', $j->id));

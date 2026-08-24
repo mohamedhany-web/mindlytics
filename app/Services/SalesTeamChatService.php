@@ -34,11 +34,22 @@ class SalesTeamChatService
     /** @return list<int> */
     public function staffUserIds(SalesTeam $team): array
     {
-        return $team->allStaffUserIds();
+        $ids = $team->allStaffUserIds();
+        $viewer = auth()->user();
+        if ($viewer?->isBusinessDeveloper()) {
+            $ids[] = (int) $viewer->id;
+            $ids = array_merge($ids, $this->teamService->allSalesEmployeeIds());
+        }
+
+        return array_values(array_unique(array_map('intval', $ids)));
     }
 
     public function assertSameTeam(User $user, SalesTeam $team): void
     {
+        if ($user->isBusinessDeveloper()) {
+            return;
+        }
+
         $ids = $this->staffUserIds($team);
         if (! in_array((int) $user->id, $ids, true)) {
             throw new HttpResponseException(response()->json([
@@ -369,7 +380,7 @@ class SalesTeamChatService
         }
 
         $isOwner = (int) $message->user_id === (int) $user->id;
-        $isManager = (int) $team->manager_id === (int) $user->id;
+        $isManager = (int) $team->manager_id === (int) $user->id || $user->isBusinessDeveloper();
 
         if ($isManager) {
             $this->assertSameTeam($user, $team);

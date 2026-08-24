@@ -23,7 +23,7 @@ class DesignTaskCycleController extends Controller
     {
         $user = Auth::user();
         $query = DesignTaskCycle::query()
-            ->where('moderator_id', $user->id)
+            ->when(! $user->isBusinessDeveloper(), fn ($q) => $q->where('moderator_id', $user->id))
             ->with(['designer.employeeJob', 'designerTask', 'moderatorDeliveryTask']);
 
         if ($request->filled('status')) {
@@ -127,7 +127,7 @@ class DesignTaskCycleController extends Controller
     public function show(DesignTaskCycle $designTaskCycle)
     {
         $user = Auth::user();
-        abort_unless((int) $designTaskCycle->moderator_id === (int) $user->id, 403);
+        abort_unless($user->canManageModeratorResource((int) $designTaskCycle->moderator_id), 403);
 
         $designTaskCycle->load([
             'designer.employeeJob',
@@ -148,7 +148,7 @@ class DesignTaskCycleController extends Controller
     public function storePlannerItem(Request $request, DesignTaskCycle $designTaskCycle)
     {
         $user = Auth::user();
-        abort_unless((int) $designTaskCycle->moderator_id === (int) $user->id, 403);
+        abort_unless($user->canManageModeratorResource((int) $designTaskCycle->moderator_id), 403);
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:500'],
@@ -191,7 +191,7 @@ class DesignTaskCycleController extends Controller
         DesignCycleModeratorPlannerItem $planner_item
     ) {
         $user = Auth::user();
-        abort_unless((int) $designTaskCycle->moderator_id === (int) $user->id, 403);
+        abort_unless($user->canManageModeratorResource((int) $designTaskCycle->moderator_id), 403);
         abort_unless((int) $planner_item->design_task_cycle_id === (int) $designTaskCycle->id, 404);
 
         $validated = $request->validate([
@@ -221,7 +221,7 @@ class DesignTaskCycleController extends Controller
         DesignCycleModeratorPlannerItem $planner_item
     ) {
         $user = Auth::user();
-        abort_unless((int) $designTaskCycle->moderator_id === (int) $user->id, 403);
+        abort_unless($user->canManageModeratorResource((int) $designTaskCycle->moderator_id), 403);
         abort_unless((int) $planner_item->design_task_cycle_id === (int) $designTaskCycle->id, 404);
 
         $planner_item->delete();
@@ -232,7 +232,7 @@ class DesignTaskCycleController extends Controller
     public function storeModeratorDelivery(Request $request, DesignTaskCycle $designTaskCycle)
     {
         $user = Auth::user();
-        abort_unless((int) $designTaskCycle->moderator_id === (int) $user->id, 403);
+        abort_unless($user->canManageModeratorResource((int) $designTaskCycle->moderator_id), 403);
 
         if ($designTaskCycle->status !== DesignTaskCycle::STATUS_DESIGN_SUBMITTED) {
             return back()->withErrors(['error' => 'يمكن إنشاء مهمة التسليم النهائي بعد تسليم المصمم فقط.']);
@@ -298,7 +298,7 @@ class DesignTaskCycleController extends Controller
     public function cancel(Request $request, DesignTaskCycle $designTaskCycle)
     {
         $user = Auth::user();
-        abort_unless((int) $designTaskCycle->moderator_id === (int) $user->id, 403);
+        abort_unless($user->canManageModeratorResource((int) $designTaskCycle->moderator_id), 403);
 
         if (in_array($designTaskCycle->status, [DesignTaskCycle::STATUS_COMPLETED, DesignTaskCycle::STATUS_CANCELLED], true)) {
             return back()->withErrors(['error' => 'لا يمكن إلغاء هذه الدورة.']);

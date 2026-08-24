@@ -11,8 +11,8 @@ class EnsureSalesManager
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
-        if (! $user || ! $user->isSalesManager()) {
-            abort(403, 'هذه المنطقة مخصصة لمديري المبيعات فقط.');
+        if (! $user || ! $user->hasSalesManagerPortalAccess()) {
+            abort(403, 'هذه المنطقة مخصصة لمديري المبيعات و Business Developer فقط.');
         }
 
         return $next($request);

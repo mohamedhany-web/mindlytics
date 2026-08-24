@@ -6,16 +6,25 @@ use App\Models\SalesDailyReport;
 use App\Models\SalesLead;
 use App\Models\SalesLeadTransfer;
 use App\Models\SalesTeam;
+use App\Models\SalesTeamMember;
 use App\Models\User;
 use App\Models\WhatsAppConversation;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
 class SalesTeamService
 {
     public function teamFor(User $user): ?SalesTeam
     {
-        if ($user->isSalesManager()) {
+        if ($user->hasSalesManagerPortalAccess()) {
+            if ($user->isBusinessDeveloper()) {
+                return SalesTeam::query()
+                    ->active()
+                    ->with(['members.user', 'manager'])
+                    ->first();
+            }
+
             return SalesTeam::query()
                 ->active()
                 ->where('manager_id', $user->id)
@@ -41,6 +50,22 @@ class SalesTeamService
 
     public function managedTeamOrFail(User $manager): SalesTeam
     {
+        if ($manager->isBusinessDeveloper()) {
+            $team = SalesTeam::query()->active()->with(['members.user', 'manager'])->first();
+            if ($team) {
+                return $team;
+            }
+
+            $shell = new SalesTeam([
+                'name' => 'Business Development — كل المبيعات',
+                'manager_id' => $manager->id,
+                'is_active' => true,
+            ]);
+            $shell->exists = false;
+
+            return $shell;
+        }
+
         $team = $this->teamFor($manager);
         if (! $team || ! $manager->isSalesManager()) {
             throw new HttpResponseException(
@@ -52,18 +77,77 @@ class SalesTeamService
     }
 
     /** @return list<int> */
-    public function memberUserIds(SalesTeam $team): array
+    public function allSalesEmployeeIds(): array
     {
+        return User::salesEmployees()
+            ->where('is_active', true)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /**
+     * أعضاء الفريق الظاهرون للمشاهد.
+     * Business Developer يرى كل موظفي المبيعات عبر كل الفرق.
+     *
+     * @return list<int>
+     */
+    public function memberUserIds(SalesTeam $team, ?User $viewer = null): array
+    {
+        $viewer ??= auth()->user();
+        if ($viewer?->isBusinessDeveloper()) {
+            return $this->allSalesEmployeeIds();
+        }
+
+        if (! $team->exists) {
+            return [];
+        }
+
         return $team->memberUserIds();
+    }
+
+    /**
+     * سجلات عضوية للاستخدام في قوائم التحويل/التوزيع (نفس شكل SalesTeamMember).
+     *
+     * @return Collection<int, SalesTeamMember>
+     */
+    public function memberRecords(User $viewer, ?SalesTeam $team = null): Collection
+    {
+        if ($viewer->isBusinessDeveloper()) {
+            return User::salesEmployees()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(function (User $u) use ($team) {
+                    $row = new SalesTeamMember([
+                        'sales_team_id' => $team?->id,
+                        'user_id' => $u->id,
+                        'role' => SalesTeamMember::ROLE_MEMBER,
+                    ]);
+                    $row->setRelation('user', $u);
+
+                    return $row;
+                });
+        }
+
+        if (! $team?->exists) {
+            return collect();
+        }
+
+        return $team->members()->where('role', 'member')->with('user:id,name')->get();
     }
 
     /** @return list<int> */
     public function visibleAssigneeIds(User $user): array
     {
-        if ($user->isSalesManager()) {
+        if ($user->isBusinessDeveloper()) {
+            return $this->allSalesEmployeeIds();
+        }
+
+        if ($user->hasSalesManagerPortalAccess()) {
             $team = $this->teamFor($user);
 
-            return $team ? $this->memberUserIds($team) : [];
+            return $team ? $this->memberUserIds($team, $user) : [];
         }
 
         if ($user->isSalesEmployee()) {
@@ -79,17 +163,23 @@ class SalesTeamService
             return true;
         }
 
+        if ($user->isBusinessDeveloper()) {
+            return $lead->assigned_to === null
+                || in_array((int) $lead->assigned_to, $this->allSalesEmployeeIds(), true)
+                || User::salesManagers()->where('id', $lead->assigned_to)->exists();
+        }
+
         if ($user->isSalesEmployee()) {
             return (int) $lead->assigned_to === (int) $user->id;
         }
 
-        if ($user->isSalesManager()) {
+        if ($user->hasSalesManagerPortalAccess()) {
             $team = $this->teamFor($user);
             if (! $team) {
                 return false;
             }
 
-            return in_array((int) $lead->assigned_to, $this->memberUserIds($team), true);
+            return in_array((int) $lead->assigned_to, $this->memberUserIds($team, $user), true);
         }
 
         return false;
@@ -105,16 +195,18 @@ class SalesTeamService
             return true;
         }
 
-        if (! $user->isSalesManager()) {
+        if (! $user->hasSalesManagerPortalAccess()) {
             return false;
         }
 
         $team = $this->teamFor($user);
-        if (! $team) {
+        if (! $team && ! $user->isBusinessDeveloper()) {
             return false;
         }
 
-        $memberIds = $this->memberUserIds($team);
+        $memberIds = $user->isBusinessDeveloper()
+            ? $this->allSalesEmployeeIds()
+            : $this->memberUserIds($team, $user);
 
         if ((int) $conversation->assigned_to && in_array((int) $conversation->assigned_to, $memberIds, true)) {
             return true;
@@ -129,9 +221,17 @@ class SalesTeamService
     public function transferLead(User $manager, SalesLead $lead, int $toUserId, ?string $reason = null): SalesLeadTransfer
     {
         $team = $this->managedTeamOrFail($manager);
-        $memberIds = $this->memberUserIds($team);
+        $memberIds = $this->memberUserIds($team, $manager);
 
-        if (! in_array((int) $lead->assigned_to, $memberIds, true)) {
+        if ($manager->isBusinessDeveloper()) {
+            $memberIds = array_values(array_unique(array_merge(
+                $memberIds,
+                $this->allSalesEmployeeIds(),
+                User::salesManagers()->where('is_active', true)->pluck('id')->map(fn ($id) => (int) $id)->all()
+            )));
+        }
+
+        if (! in_array((int) $lead->assigned_to, $memberIds, true) && ! $manager->isBusinessDeveloper()) {
             throw ValidationException::withMessages([
                 'lead' => 'هذا العميل المحتمل غير تابع لفريقك.',
             ]);
@@ -149,7 +249,7 @@ class SalesTeamService
             $manager,
             $reason,
             SalesLeadTransferService::SOURCE_MANAGER,
-            (int) $team->id
+            $team->exists ? (int) $team->id : null
         );
     }
 

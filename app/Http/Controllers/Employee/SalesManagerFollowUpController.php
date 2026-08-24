@@ -19,9 +19,10 @@ class SalesManagerFollowUpController extends Controller
 
     public function index(Request $request): View
     {
-        $team = $this->teamService->managedTeamOrFail(Auth::user());
-        $memberIds = $this->teamService->memberUserIds($team);
-        $members = $team->members()->with('user:id,name')->get();
+        $user = Auth::user();
+        $team = $this->teamService->managedTeamOrFail($user);
+        $memberIds = $this->teamService->memberUserIds($team, $user);
+        $members = $this->teamService->memberRecords($user, $team);
 
         $filter = $request->get('filter', 'overdue');
         if (! in_array($filter, ['overdue', 'today', 'week', 'none', 'stale', 'all'], true)) {

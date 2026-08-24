@@ -23,9 +23,10 @@ class SalesManagerLeadController extends Controller
 
     public function index(Request $request)
     {
-        $team = $this->teamService->managedTeamOrFail(Auth::user());
-        $memberIds = $this->teamService->memberUserIds($team);
-        $members = $team->members()->with('user:id,name')->get();
+        $user = Auth::user();
+        $team = $this->teamService->managedTeamOrFail($user);
+        $memberIds = $this->teamService->memberUserIds($team, $user);
+        $members = $this->teamService->memberRecords($user, $team);
 
         $query = SalesLead::query()
             ->whereIn('assigned_to', $memberIds)
@@ -96,8 +97,9 @@ class SalesManagerLeadController extends Controller
     public function show(SalesLead $lead)
     {
         $this->authorizeTeamLead($lead);
-        $team = $this->teamService->managedTeamOrFail(Auth::user());
-        $members = $team->members()->with('user:id,name')->get();
+        $user = Auth::user();
+        $team = $this->teamService->managedTeamOrFail($user);
+        $members = $this->teamService->memberRecords($user, $team);
 
         $lead->load([
             'assignee:id,name,email,phone',
@@ -153,8 +155,9 @@ class SalesManagerLeadController extends Controller
     public function transfer(Request $request, SalesLead $lead): RedirectResponse
     {
         $this->authorizeTeamLead($lead);
-        $team = $this->teamService->managedTeamOrFail(Auth::user());
-        $memberIds = $this->teamService->memberUserIds($team);
+        $user = Auth::user();
+        $team = $this->teamService->managedTeamOrFail($user);
+        $memberIds = $this->teamService->memberUserIds($team, $user);
 
         $validated = $request->validate([
             'to_user_id' => ['required', 'integer', Rule::in($memberIds)],

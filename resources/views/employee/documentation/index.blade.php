@@ -5,7 +5,7 @@
 
 @section('content')
 @php
-    $isSales = auth()->user()?->isSalesEmployee() || auth()->user()?->isSalesManager();
+    $isSales = auth()->user()?->isSalesStaff();
     $stages = \App\Models\SalesLead::STAGES;
 @endphp
 <div class="p-4 sm:p-6 lg:p-8 space-y-6">

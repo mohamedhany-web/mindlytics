@@ -26,9 +26,7 @@ class SalesWhatsAppQueueController extends Controller
     {
         $manager = $request->user();
         $team = $this->teams->teamFor($manager);
-        $members = $team
-            ? $team->members()->where('role', 'member')->with('user:id,name')->get()
-            : collect();
+        $members = $this->teams->memberRecords($manager, $team);
 
         $conversations = $this->queue->pendingQuery()
             ->paginate(48)
@@ -39,7 +37,7 @@ class SalesWhatsAppQueueController extends Controller
             'queueEnabled' => $this->queue->queueEnabled(),
             'inboxUrl' => $this->queue->inboxIndexUrlFor($manager),
             'teamMembers' => $members,
-            'hasTeam' => (bool) $team,
+            'hasTeam' => $members->isNotEmpty() || (bool) $team,
         ]);
     }
 

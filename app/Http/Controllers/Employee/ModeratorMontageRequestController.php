@@ -22,7 +22,7 @@ class ModeratorMontageRequestController extends Controller
     {
         $user = Auth::user();
         $query = ModeratorMontageRequest::query()
-            ->where('moderator_id', $user->id)
+            ->when(! $user->isBusinessDeveloper(), fn ($q) => $q->where('moderator_id', $user->id))
             ->with(['montageEmployee.employeeJob', 'employeeTask', 'moderatorDeliveryTask']);
 
         if ($request->filled('status') && array_key_exists($request->status, ModeratorMontageRequest::statuses())) {
@@ -139,7 +139,7 @@ class ModeratorMontageRequestController extends Controller
     public function show(ModeratorMontageRequest $montage_request)
     {
         $user = Auth::user();
-        abort_unless((int) $montage_request->moderator_id === (int) $user->id, 403);
+        abort_unless($user->canManageModeratorResource((int) $montage_request->moderator_id), 403);
 
         $montage_request->load([
             'montageEmployee.employeeJob',
@@ -157,7 +157,7 @@ class ModeratorMontageRequestController extends Controller
     public function storeModeratorDelivery(Request $request, ModeratorMontageRequest $montage_request)
     {
         $user = Auth::user();
-        abort_unless((int) $montage_request->moderator_id === (int) $user->id, 403);
+        abort_unless($user->canManageModeratorResource((int) $montage_request->moderator_id), 403);
 
         if ($montage_request->status !== ModeratorMontageRequest::STATUS_SUBMITTED) {
             return back()->withErrors(['error' => 'يمكن إنشاء مهمة التسليم النهائي بعد تسليم محرر الفيديو فقط.']);
@@ -220,7 +220,7 @@ class ModeratorMontageRequestController extends Controller
     public function cancel(ModeratorMontageRequest $montage_request)
     {
         $user = Auth::user();
-        abort_unless((int) $montage_request->moderator_id === (int) $user->id, 403);
+        abort_unless($user->canManageModeratorResource((int) $montage_request->moderator_id), 403);
 
         if (! $montage_request->isOpen()) {
             return back()->with('error', 'لا يمكن إلغاء هذا الطلب.');

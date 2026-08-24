@@ -1085,11 +1085,47 @@ class User extends Authenticatable
     }
 
     /**
-     * موظف مبيعات أو مدير مبيعات.
+     * Business Developer — صلاحيات مدير مبيعات + الماركتينغ والمهام.
+     */
+    public function isBusinessDeveloper(): bool
+    {
+        if (! $this->isEmployee()) {
+            return false;
+        }
+        $this->loadMissing('employeeJob');
+
+        return $this->employeeJob && strtolower((string) $this->employeeJob->code) === 'business_developer';
+    }
+
+    public function hasSalesManagerPortalAccess(): bool
+    {
+        return $this->isSalesManager() || $this->isBusinessDeveloper();
+    }
+
+    public function hasModeratorPortalAccess(): bool
+    {
+        return $this->isModeratorEmployee() || $this->isBusinessDeveloper();
+    }
+
+    public function canManageModeratorResource(int $moderatorId): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        if ($this->isBusinessDeveloper()) {
+            return true;
+        }
+
+        return $this->isModeratorEmployee() && (int) $this->id === $moderatorId;
+    }
+
+    /**
+     * موظف مبيعات أو مدير مبيعات أو Business Developer.
      */
     public function isSalesStaff(): bool
     {
-        return $this->isSalesEmployee() || $this->isSalesManager();
+        return $this->isSalesEmployee() || $this->isSalesManager() || $this->isBusinessDeveloper();
     }
 
     /**
@@ -1404,8 +1440,16 @@ class User extends Authenticatable
         return $query->employees()->whereHas('employeeJob', function ($q) {
             $q->where(function ($inner) {
                 $inner->whereRaw('LOWER(code) = ?', ['sales'])
-                    ->orWhereRaw('LOWER(code) = ?', ['sales_manager']);
+                    ->orWhereRaw('LOWER(code) = ?', ['sales_manager'])
+                    ->orWhereRaw('LOWER(code) = ?', ['business_developer']);
             });
+        });
+    }
+
+    public function scopeBusinessDevelopers($query)
+    {
+        return $query->employees()->whereHas('employeeJob', function ($q) {
+            $q->whereRaw('LOWER(code) = ?', ['business_developer']);
         });
     }
 

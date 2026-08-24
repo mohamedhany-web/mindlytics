@@ -40,7 +40,7 @@ class EmployeeCalendarController extends Controller
             'meetings' => $events->where('type', 'meeting')->count(),
             'followups' => $events->where('type', 'follow_up')->count(),
             'upcoming' => $events->where('start_date', '>=', now())->count(),
-            'is_sales_manager' => $user->isSalesManager(),
+            'is_sales_manager' => $user->hasSalesManagerPortalAccess(),
         ];
 
         return view('employee.calendar.index', compact('events', 'stats'));
@@ -175,9 +175,11 @@ class EmployeeCalendarController extends Controller
         }
 
         $mktQuery = ModeratorMarketingCalendarEvent::query()
-            ->where(function ($q) use ($user) {
-                $q->where('assigned_employee_id', $user->id)
-                    ->orWhereHas('plan', fn ($p) => $p->where('moderator_id', $user->id));
+            ->when(! $user->isBusinessDeveloper(), function ($q) use ($user) {
+                $q->where(function ($inner) use ($user) {
+                    $inner->where('assigned_employee_id', $user->id)
+                        ->orWhereHas('plan', fn ($p) => $p->where('moderator_id', $user->id));
+                });
             })
             ->with(['plan', 'platform']);
 
@@ -191,7 +193,7 @@ class EmployeeCalendarController extends Controller
         foreach ($mktQuery->get() as $mkt) {
             $color = $mkt->platform?->color_hex ?: '#db2777';
             $planTitle = $mkt->plan?->title ?? '';
-            $url = $user->isModeratorEmployee() && (int) $mkt->plan?->moderator_id === (int) $user->id
+            $url = $user->hasModeratorPortalAccess() && $mkt->plan_id
                 ? route('employee.marketing-plans.show', $mkt->plan_id)
                 : route('employee.marketing-today.index');
             $events->push((object)[
@@ -243,7 +245,7 @@ class EmployeeCalendarController extends Controller
             $query->where('next_follow_up_at', '<=', Carbon::parse($endDate)->endOfDay());
         }
 
-        $isManager = $user->isSalesManager();
+        $isManager = $user->hasSalesManagerPortalAccess();
 
         foreach ($query->get() as $lead) {
             $at = $lead->next_follow_up_at;

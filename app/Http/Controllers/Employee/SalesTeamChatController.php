@@ -35,7 +35,7 @@ class SalesTeamChatController extends Controller
             'team' => [
                 'id' => $team->id,
                 'name' => $team->name,
-                'is_manager' => (int) $team->manager_id === (int) $user->id,
+                'is_manager' => (int) $team->manager_id === (int) $user->id || $user->isBusinessDeveloper(),
             ],
             'members' => $this->chat->listMembers($user, $team),
             'conversations' => $this->chat->listConversations($user, $team)->values(),

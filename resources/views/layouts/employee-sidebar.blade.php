@@ -19,6 +19,12 @@
 
     <!-- Navigation (التمرير يعمل لكن شريط التمرير مخفي) -->
     <nav class="flex-1 overflow-y-auto overflow-x-hidden px-4 py-6 space-y-2 employee-sidebar-nav">
+        @php
+            $sidebarUser = auth()->user();
+            $hasSalesManagerPortal = $sidebarUser?->hasSalesManagerPortalAccess() ?? false;
+            $hasModeratorPortal = $sidebarUser?->hasModeratorPortalAccess() ?? false;
+            $isBusinessDeveloper = $sidebarUser?->isBusinessDeveloper() ?? false;
+        @endphp
         <a href="{{ route('employee.dashboard') }}" 
            title="لوحة التحكم"
            class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.dashboard') ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
@@ -34,9 +40,9 @@
             <span>مهامي</span>
         </a>
 
-        @if(auth()->user()->isModeratorEmployee())
+        @if($hasModeratorPortal)
         <div class="border-t border-slate-700/50 my-2 pt-2">
-            <p class="px-4 text-xs font-semibold text-fuchsia-400/90 uppercase tracking-wider mb-1">المشرف — التصميم والفيديو</p>
+            <p class="px-4 text-xs font-semibold text-fuchsia-400/90 uppercase tracking-wider mb-1">{{ $isBusinessDeveloper ? 'Business Developer — الماركتينغ' : 'المشرف — التصميم والفيديو' }}</p>
             <a href="{{ route('employee.design-cycles.index') }}"
                class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.design-cycles.*') ? 'bg-fuchsia-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
                @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
@@ -58,7 +64,7 @@
         </div>
         @endif
 
-        @if(auth()->user()->isSalesManager())
+        @if($hasSalesManagerPortal)
         @php $waQueueCount = app(\App\Services\WhatsAppQueueService::class)->pendingCount(); @endphp
         <div class="border-t border-slate-700/50 my-2 pt-2">
             <p class="px-4 text-xs font-semibold text-amber-400/90 uppercase tracking-wider mb-1">واتساب — طلبات</p>
@@ -172,9 +178,9 @@
         </div>
         @endif
 
-        @if(auth()->user()->isSalesManager())
+        @if($hasSalesManagerPortal)
         <div class="border-t border-slate-700/50 my-2 pt-2">
-            <p class="px-4 text-xs font-semibold text-teal-400/90 uppercase tracking-wider mb-1">مدير المبيعات</p>
+            <p class="px-4 text-xs font-semibold text-teal-400/90 uppercase tracking-wider mb-1">{{ $isBusinessDeveloper ? 'Business Developer — المبيعات' : 'مدير المبيعات' }}</p>
             <a href="{{ route('employee.sales-manager.dashboard') }}"
                class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.dashboard') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
                @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
@@ -307,9 +313,14 @@
                 try {
                     $pendingShiftSwapsCount = \App\Models\SalesShiftSwapRequest::query()
                         ->where('status', 'pending')
-                        ->when(auth()->user()?->isSalesManager(), function ($q) {
+                        ->when($hasSalesManagerPortal, function ($q) {
                             $team = app(\App\Services\SalesTeamService::class)->teamFor(auth()->user());
-                            if ($team) {
+                            if (auth()->user()?->isBusinessDeveloper()) {
+                                $ids = app(\App\Services\SalesTeamService::class)->allSalesEmployeeIds();
+                                $q->where(function ($q2) use ($ids) {
+                                    $q2->whereIn('requester_id', $ids)->orWhereIn('partner_id', $ids);
+                                });
+                            } elseif ($team) {
                                 $ids = $team->memberUserIds();
                                 $q->where(function ($q2) use ($ids) {
                                     $q2->whereIn('requester_id', $ids)->orWhereIn('partner_id', $ids);
@@ -345,7 +356,7 @@
         </div>
         @endif
 
-        @if(!auth()->user()->isSalesEmployee() && !auth()->user()->isSalesManager())
+        @if(!auth()->user()->isSalesEmployee() && !$hasSalesManagerPortal)
         <a href="{{ route('employee.daily-reports.index') }}"
            class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.daily-reports.*') ? 'bg-sky-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">

@@ -423,8 +423,8 @@ class WhatsAppCrmService
         $actorId = $userId ?? auth()->id();
         if ($employeeScope && (int) $lead->assigned_to !== (int) $actorId) {
             // مدير المبيعات يقدر يحدّد متابعة لعملاء فريقه من المحادثة المصرّح بها
-            $isManager = auth()->user() && method_exists(auth()->user(), 'isSalesManager')
-                ? auth()->user()->isSalesManager()
+            $isManager = auth()->user() && method_exists(auth()->user(), 'hasSalesManagerPortalAccess')
+                ? auth()->user()->hasSalesManagerPortalAccess()
                 : false;
             if (! $isManager) {
                 abort(403, 'لا يمكنك تحديد متابعة لعميل غير مخصص لك.');

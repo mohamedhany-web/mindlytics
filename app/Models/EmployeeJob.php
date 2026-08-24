@@ -59,6 +59,12 @@ class EmployeeJob extends Model
                 'description' => 'إدارة فريق المبيعات، متابعة الأداء، تحويل العملاء بين أعضاء الفريق، ورفع التقارير للإدارة.',
                 'responsibilities' => 'متابعة فريق السيلز؛ مراقبة المحادثات والحضور؛ تحويل Leads؛ مراجعة التقارير اليومية؛ رفع تقرير الفريق للإدارة.',
             ],
+            'business_developer' => [
+                'name' => 'Business Developer',
+                'code' => 'business_developer',
+                'description' => 'قيادة المبيعات والتسويق: صلاحيات مدير المبيعات على كل بيانات الفريق، ومتابعة خطط الماركتينغ وطلبات التصميم والفيديو والمهام.',
+                'responsibilities' => 'متابعة كل المبيعات والفريق؛ خطط التسويق؛ طلبات التصميم والمونتاج؛ المهام والتقويم؛ التنسيق بين المبيعات والميديا.',
+            ],
             'video_editing' => [
                 'name' => 'محرر فيديو',
                 'code' => 'video_editing',
@@ -172,7 +178,7 @@ class EmployeeJob extends Model
                     $q->whereNull('code')
                         ->orWhereRaw('LOWER(code) != ?', [strtolower($code)]);
                 })
-                ->whereNotIn('code', ['sales', 'sales_manager', 'moderator', 'designer'])
+                ->whereNotIn('code', ['sales', 'sales_manager', 'business_developer', 'moderator', 'designer'])
                 ->first();
 
             if ($byName && $code === 'video_editing') {
@@ -197,6 +203,52 @@ class EmployeeJob extends Model
             ]);
             $created[] = $code;
         }
+
+        return compact('created', 'repaired');
+    }
+
+    /**
+     * @return array{created: list<string>, repaired: list<string>}
+     */
+    public static function ensurePresetJob(string $code): array
+    {
+        $created = [];
+        $repaired = [];
+        $preset = self::presetJobTemplates()[$code] ?? null;
+        if (! $preset) {
+            return compact('created', 'repaired');
+        }
+
+        $existing = self::query()
+            ->whereRaw('LOWER(code) = ?', [strtolower($code)])
+            ->first();
+
+        if ($existing) {
+            $dirty = false;
+            if (! $existing->is_active) {
+                $existing->is_active = true;
+                $dirty = true;
+            }
+            if (trim((string) $existing->name) === '') {
+                $existing->name = $preset['name'];
+                $dirty = true;
+            }
+            if ($dirty) {
+                $existing->save();
+                $repaired[] = $code;
+            }
+
+            return compact('created', 'repaired');
+        }
+
+        self::create([
+            'name' => $preset['name'],
+            'code' => $preset['code'],
+            'description' => $preset['description'],
+            'responsibilities' => $preset['responsibilities'],
+            'is_active' => true,
+        ]);
+        $created[] = $code;
 
         return compact('created', 'repaired');
     }

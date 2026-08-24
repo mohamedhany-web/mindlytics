@@ -67,6 +67,7 @@ class EmployeeController extends Controller
     public function create()
     {
         EmployeeJob::ensureMediaJobs();
+        EmployeeJob::ensurePresetJob('business_developer');
 
         $jobs = EmployeeJob::active()->orderBy('name')->get();
         $workSchedules = \App\Models\WorkSchedule::query()->where('is_active', true)->orderBy('name')->get();
@@ -177,6 +178,7 @@ class EmployeeController extends Controller
     public function edit(User $employee)
     {
         EmployeeJob::ensureMediaJobs();
+        EmployeeJob::ensurePresetJob('business_developer');
 
         $jobs = EmployeeJob::active()->orderBy('name')->get();
         $workSchedules = \App\Models\WorkSchedule::query()->where('is_active', true)->orderBy('name')->get();

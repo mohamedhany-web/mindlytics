@@ -22,8 +22,9 @@ class SalesManagerDailyReportController extends Controller
 
     public function index(Request $request)
     {
-        $team = $this->teamService->managedTeamOrFail(Auth::user());
-        $memberIds = $this->teamService->memberUserIds($team);
+        $user = Auth::user();
+        $team = $this->teamService->managedTeamOrFail($user);
+        $memberIds = $this->teamService->memberUserIds($team, $user);
 
         $from = $request->filled('from')
             ? Carbon::parse($request->from)->startOfDay()
@@ -74,7 +75,13 @@ class SalesManagerDailyReportController extends Controller
 
     public function teamReports(Request $request)
     {
-        $team = $this->teamService->managedTeamOrFail(Auth::user());
+        $user = Auth::user();
+        $team = $this->teamService->managedTeamOrFail($user);
+        if (! $team->exists) {
+            return redirect()
+                ->route('employee.sales-manager.dashboard')
+                ->with('error', 'لا يوجد فريق مبيعات بعد لرفع تقرير الفريق.');
+        }
 
         $reports = SalesTeamDailyReport::query()
             ->where('sales_team_id', $team->id)
@@ -87,7 +94,13 @@ class SalesManagerDailyReportController extends Controller
 
     public function editTeamReport(Request $request)
     {
-        $team = $this->teamService->managedTeamOrFail(Auth::user());
+        $user = Auth::user();
+        $team = $this->teamService->managedTeamOrFail($user);
+        if (! $team->exists) {
+            return redirect()
+                ->route('employee.sales-manager.dashboard')
+                ->with('error', 'لا يوجد فريق مبيعات بعد لرفع تقرير الفريق.');
+        }
         $date = $request->filled('date')
             ? Carbon::parse($request->date)->startOfDay()
             : today();
@@ -103,7 +116,7 @@ class SalesManagerDailyReportController extends Controller
                 ->with('error', 'تم تسليم تقرير هذا اليوم مسبقاً.');
         }
 
-        $memberIds = $this->teamService->memberUserIds($team);
+        $memberIds = $this->teamService->memberUserIds($team, $user);
         $memberReports = SalesDailyReport::query()
             ->with('user:id,name')
             ->whereIn('user_id', $memberIds)
@@ -125,7 +138,13 @@ class SalesManagerDailyReportController extends Controller
 
     public function storeTeamReport(Request $request): RedirectResponse
     {
-        $team = $this->teamService->managedTeamOrFail(Auth::user());
+        $user = Auth::user();
+        $team = $this->teamService->managedTeamOrFail($user);
+        if (! $team->exists) {
+            return redirect()
+                ->route('employee.sales-manager.dashboard')
+                ->with('error', 'لا يوجد فريق مبيعات بعد لرفع تقرير الفريق.');
+        }
         $date = Carbon::parse($request->input('report_date', today()->toDateString()))->startOfDay();
 
         $validated = $request->validate([
@@ -148,7 +167,7 @@ class SalesManagerDailyReportController extends Controller
             ]);
         }
 
-        $memberIds = $this->teamService->memberUserIds($team);
+        $memberIds = $this->teamService->memberUserIds($team, $user);
         $memberReports = SalesDailyReport::query()
             ->whereIn('user_id', $memberIds)
             ->whereDate('report_date', $date->toDateString())
@@ -184,8 +203,9 @@ class SalesManagerDailyReportController extends Controller
 
     private function authorizeTeamReport(SalesDailyReport $report): void
     {
-        $team = $this->teamService->managedTeamOrFail(Auth::user());
-        $memberIds = $this->teamService->memberUserIds($team);
+        $user = Auth::user();
+        $team = $this->teamService->managedTeamOrFail($user);
+        $memberIds = $this->teamService->memberUserIds($team, $user);
 
         if (! in_array((int) $report->user_id, $memberIds, true)) {
             abort(403);

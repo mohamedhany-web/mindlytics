@@ -47,7 +47,7 @@ class SalesMetaSocialInboxController extends Controller
     protected function metaInboxAudience(): string
     {
         $user = auth()->user();
-        if ($user?->isSalesManager()) {
+        if ($user?->hasSalesManagerPortalAccess()) {
             return 'sales_manager';
         }
 

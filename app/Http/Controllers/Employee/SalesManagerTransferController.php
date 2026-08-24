@@ -20,9 +20,10 @@ class SalesManagerTransferController extends Controller
 
     public function index(Request $request)
     {
-        $team = $this->teamService->managedTeamOrFail(Auth::user());
-        $members = $team->members()->with('user:id,name')->get();
-        $memberIds = $this->teamService->memberUserIds($team);
+        $user = Auth::user();
+        $team = $this->teamService->managedTeamOrFail($user);
+        $members = $this->teamService->memberRecords($user, $team);
+        $memberIds = $this->teamService->memberUserIds($team, $user);
 
         $fromId = $request->filled('from_user_id') ? (int) $request->from_user_id : null;
         $toId = $request->filled('to_user_id') ? (int) $request->to_user_id : null;
@@ -69,8 +70,9 @@ class SalesManagerTransferController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $team = $this->teamService->managedTeamOrFail(Auth::user());
-        $memberIds = $this->teamService->memberUserIds($team);
+        $user = Auth::user();
+        $team = $this->teamService->managedTeamOrFail($user);
+        $memberIds = $this->teamService->memberUserIds($team, $user);
 
         $validated = $request->validate([
             'from_user_id' => ['required', 'integer', Rule::in($memberIds)],
