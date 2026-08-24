@@ -295,21 +295,99 @@ class WorkshopConvertToLeadsTest extends TestCase
         $blade = file_get_contents(resource_path('views/admin/workshops/show.blade.php'));
 
         $this->assertStringContainsString('@foreach(($salesLeadGroups ?? []) as $g)', $blade);
+        $this->assertStringContainsString('retransfer_converted', $blade);
         $this->assertStringNotContainsString('refreshLeadGroups', $blade);
         $this->assertStringNotContainsString('repIds.every', $blade);
     }
 
-    private function convert(Workshop $workshop, array $assigneeIds, ?int $groupId)
+    public function test_retransfer_moves_converted_leads_to_another_group(): void
+    {
+        $workshop = $this->makeWorkshop();
+        $firstGroup = SalesLeadGroup::query()->create([
+            'name' => 'المجموعة الأولى',
+            'created_by' => $this->admin->id,
+        ]);
+        $secondGroup = SalesLeadGroup::query()->create([
+            'name' => 'المجموعة الثانية',
+            'created_by' => $this->admin->id,
+        ]);
+
+        foreach (range(1, 4) as $i) {
+            WorkshopRegistration::query()->create([
+                'workshop_id' => $workshop->id,
+                'name' => "مسجل {$i}",
+                'phone' => '0101000000'.$i,
+                'email' => "retry{$i}@t.test",
+                'attendance_mode' => 'online',
+                'status' => 'confirmed',
+                'checkin_token' => 'retry-'.$i,
+            ]);
+        }
+
+        $this->convert($workshop, [$this->repA->id], $firstGroup->id);
+        $this->assertSame(4, SalesLead::query()->where('sales_lead_group_id', $firstGroup->id)->count());
+
+        session()->forget(['success', 'error']);
+        $this->convert($workshop, [$this->repA->id, $this->repB->id], $secondGroup->id, true);
+
+        $this->assertTrue(session()->has('success'), (string) session('error'));
+        $this->assertSame(0, SalesLead::query()->where('sales_lead_group_id', $firstGroup->id)->count());
+        $leads = SalesLead::query()->where('sales_lead_group_id', $secondGroup->id)->get();
+        $this->assertCount(4, $leads);
+        $this->assertSame(4, SalesLead::query()->count());
+        $this->assertSame(2, $leads->where('assigned_to', $this->repA->id)->count());
+        $this->assertSame(2, $leads->where('assigned_to', $this->repB->id)->count());
+        $this->assertEqualsCanonicalizing(
+            [$this->repA->id, $this->repB->id],
+            $secondGroup->fresh()->memberIds()->map(fn ($id) => (int) $id)->all()
+        );
+    }
+
+    public function test_second_convert_without_retransfer_does_not_duplicate(): void
+    {
+        $workshop = $this->makeWorkshop();
+        $group = SalesLeadGroup::query()->create([
+            'name' => 'مجموعة ثابتة',
+            'created_by' => $this->admin->id,
+        ]);
+
+        WorkshopRegistration::query()->create([
+            'workshop_id' => $workshop->id,
+            'name' => 'مسجل واحد',
+            'phone' => '01055556666',
+            'email' => 'once@t.test',
+            'attendance_mode' => 'online',
+            'status' => 'confirmed',
+            'checkin_token' => 'once-1',
+        ]);
+
+        $this->convert($workshop, [$this->repA->id], $group->id);
+        $this->assertSame(1, SalesLead::query()->count());
+
+        session()->forget(['success', 'error']);
+        $this->convert($workshop, [$this->repB->id], $group->id);
+
+        $this->assertTrue(session()->has('error'));
+        $this->assertSame(1, SalesLead::query()->count());
+        $this->assertSame($this->repA->id, (int) SalesLead::query()->first()->assigned_to);
+    }
+
+    private function convert(Workshop $workshop, array $assigneeIds, ?int $groupId, bool $retransfer = false)
     {
         Auth::login($this->admin);
+
+        $payload = [
+            'assigned_to' => $assigneeIds,
+            'sales_lead_group_id' => $groupId,
+        ];
+        if ($retransfer) {
+            $payload['retransfer_converted'] = 1;
+        }
 
         $request = Request::create(
             '/admin/workshops/'.$workshop->id.'/convert-to-leads',
             'POST',
-            [
-                'assigned_to' => $assigneeIds,
-                'sales_lead_group_id' => $groupId,
-            ]
+            $payload
         );
         $request->setLaravelSession(app('session.store'));
         $request->setUserResolver(fn () => $this->admin);

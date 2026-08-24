@@ -196,6 +196,7 @@ class WorkshopController extends Controller
             'assigned_to' => 'required|array|min:1',
             'assigned_to.*' => 'integer|exists:users,id',
             'sales_lead_group_id' => 'nullable|integer',
+            'retransfer_converted' => 'sometimes|boolean',
         ]);
 
         $assigneeIds = collect($validated['assigned_to'])
@@ -218,8 +219,10 @@ class WorkshopController extends Controller
             return back()->with('error', 'مجموعة العملاء المختارة غير موجودة.');
         }
 
+        $retransferConverted = $request->boolean('retransfer_converted');
         $created = 0;
         $linkedExisting = 0;
+        $retried = 0;
         $skippedAlready = 0;
         $createdByRep = array_fill_keys($assigneeIds, ['new' => [], 'existing' => []]);
         $assigneeCount = count($assigneeIds);
@@ -231,17 +234,18 @@ class WorkshopController extends Controller
             'batch_id' => $batchId,
             'new' => [],
             'existing' => [],
+            'retried' => [],
             'already' => [],
         ];
 
-        DB::transaction(function () use ($workshop, $distributionOrder, $assigneeCount, $groupId, $hasConversionColumn, $batchId, &$created, &$linkedExisting, &$skippedAlready, &$createdByRep, &$transferSummary) {
+        DB::transaction(function () use ($workshop, $distributionOrder, $assigneeCount, $groupId, $hasConversionColumn, $batchId, $retransferConverted, &$created, &$linkedExisting, &$retried, &$skippedAlready, &$createdByRep, &$transferSummary) {
             $registrations = $workshop->registrations()->orderBy('id')->get();
             $eligible = [];
+            $alreadyConverted = [];
 
             foreach ($registrations as $reg) {
                 if ($this->registrationAlreadyConverted($reg, $hasConversionColumn)) {
-                    $skippedAlready++;
-                    $transferSummary['already'][] = $reg->name ?: ('#'.$reg->id);
+                    $alreadyConverted[] = $reg;
 
                     continue;
                 }
@@ -249,8 +253,12 @@ class WorkshopController extends Controller
                 $eligible[] = $reg;
             }
 
-            foreach ($eligible as $index => $reg) {
-                $assigneeId = $distributionOrder[$index % $assigneeCount];
+            $assignIndex = 0;
+            $processedLeadIds = [];
+
+            foreach ($eligible as $reg) {
+                $assigneeId = $distributionOrder[$assignIndex % $assigneeCount];
+                $assignIndex++;
                 $notes = $this->buildLeadNotesFromRegistration($workshop, $reg);
                 $displayName = $reg->name ?: 'عميل محتمل من ورشة';
 
@@ -268,7 +276,6 @@ class WorkshopController extends Controller
                         $updates['sales_lead_group_id'] = $groupId;
                     }
 
-                    // إن كان بدون إسناد — وزّعه على موظفي الترحيل
                     if (empty($existingLead->assigned_to)) {
                         $updates['assigned_to'] = $assigneeId;
                     }
@@ -279,6 +286,7 @@ class WorkshopController extends Controller
                     $this->markRegistrationConverted($reg, $existingLead->id, $hasConversionColumn);
 
                     $linkedExisting++;
+                    $processedLeadIds[$existingLead->id] = true;
                     $transferSummary['existing'][] = [
                         'name' => $displayName,
                         'lead_id' => $existingLead->id,
@@ -312,12 +320,71 @@ class WorkshopController extends Controller
                 $this->markRegistrationConverted($reg, $lead->id, $hasConversionColumn);
 
                 $created++;
+                $processedLeadIds[$lead->id] = true;
                 $transferSummary['new'][] = [
                     'name' => $displayName,
                     'lead_id' => $lead->id,
                     'assignee' => User::query()->whereKey($assigneeId)->value('name'),
                 ];
                 $createdByRep[$assigneeId]['new'][] = $displayName;
+            }
+
+            if (! $retransferConverted) {
+                $skippedAlready = count($alreadyConverted);
+                $transferSummary['already'] = collect($alreadyConverted)
+                    ->map(fn ($reg) => $reg->name ?: ('#'.$reg->id))
+                    ->all();
+
+                return;
+            }
+
+            foreach ($alreadyConverted as $reg) {
+                $displayName = $reg->name ?: 'عميل محتمل من ورشة';
+                $lead = $this->resolveLeadForRegistration($reg);
+
+                if (! $lead) {
+                    $skippedAlready++;
+                    $transferSummary['already'][] = $displayName;
+
+                    continue;
+                }
+
+                if (isset($processedLeadIds[$lead->id])) {
+                    $this->markRegistrationConverted($reg, $lead->id, $hasConversionColumn);
+
+                    continue;
+                }
+
+                $assigneeId = $distributionOrder[$assignIndex % $assigneeCount];
+                $assignIndex++;
+                $processedLeadIds[$lead->id] = true;
+
+                $updates = [
+                    'assigned_to' => $assigneeId,
+                    'import_batch' => $batchId,
+                    'source' => $lead->source ?: 'event',
+                    'interest' => $lead->interest ?: 'الاهتمام بورشة: '.$workshop->title,
+                    'notes' => trim(($lead->notes ?? '')."\nإعادة ترحيل الورشة إلى المجموعة في ".now()->format('Y-m-d H:i')),
+                ];
+
+                if ($groupId !== null && Schema::hasColumn('sales_leads', 'sales_lead_group_id')) {
+                    $updates['sales_lead_group_id'] = $groupId;
+                }
+
+                $lead->update($updates);
+                $this->markRegistrationConverted($reg, $lead->id, $hasConversionColumn);
+
+                $retried++;
+                $transferSummary['retried'][] = [
+                    'name' => $displayName,
+                    'lead_id' => $lead->id,
+                    'assignee' => User::query()->whereKey($assigneeId)->value('name'),
+                ];
+
+                if (! isset($createdByRep[$assigneeId])) {
+                    $createdByRep[$assigneeId] = ['new' => [], 'existing' => []];
+                }
+                $createdByRep[$assigneeId]['existing'][] = $displayName;
             }
         });
 
@@ -349,10 +416,10 @@ class WorkshopController extends Controller
             })
             ->implode(' · ');
 
-        if ($created === 0 && $linkedExisting === 0) {
-            $message = 'لا يوجد مسجّلون جدد للترحيل.';
+        if ($created === 0 && $linkedExisting === 0 && $retried === 0) {
+            $message = 'لا يوجد مسجّلون للترحيل.';
             if ($skippedAlready > 0) {
-                $message .= " ({$skippedAlready} مُرحَّل مسبقاً)";
+                $message .= " ({$skippedAlready} مُرحَّل مسبقاً — فعّل إعادة الترحيل للمجموعة)";
             }
 
             return back()
@@ -364,9 +431,12 @@ class WorkshopController extends Controller
         if ($linkedExisting > 0) {
             $message .= " وربط {$linkedExisting} موجود مسبقاً";
         }
+        if ($retried > 0) {
+            $message .= " وإعادة ترحيل {$retried} للمجموعة";
+        }
         $message .= ' إلى Leads.';
         if ($skippedAlready > 0) {
-            $message .= " تخطّي {$skippedAlready} مُرحَّل سابقاً.";
+            $message .= " تخطّي {$skippedAlready}.";
         }
         if ($distribution !== '') {
             $message .= ' التوزيع: '.$distribution.'.';
@@ -390,6 +460,27 @@ class WorkshopController extends Controller
         return SalesLead::query()
             ->where('notes', 'like', '%[workshop_registration:'.$registration->id.']%')
             ->exists();
+    }
+
+    private function resolveLeadForRegistration(WorkshopRegistration $registration): ?SalesLead
+    {
+        if ($registration->sales_lead_id) {
+            $lead = SalesLead::query()->find((int) $registration->sales_lead_id);
+            if ($lead) {
+                return $lead;
+            }
+        }
+
+        $fromNotes = SalesLead::query()
+            ->where('notes', 'like', '%[workshop_registration:'.$registration->id.']%')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($fromNotes) {
+            return $fromNotes;
+        }
+
+        return $this->findExistingLeadByContact($registration);
     }
 
     private function markRegistrationConverted(WorkshopRegistration $registration, int $leadId, bool $hasConversionColumn): void

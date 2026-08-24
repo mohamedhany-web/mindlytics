@@ -93,9 +93,10 @@
             <div class="px-5 pb-5 pt-0">
                 <form id="convert-to-leads-form" action="{{ route('admin.workshops.convert-to-leads', $workshop) }}" method="POST"
                       class="max-w-2xl space-y-3 rounded-xl border border-blue-100 bg-blue-50/30 p-4"
-                      data-pending="{{ $stats['pending_leads'] }}">
+                      data-pending="{{ $stats['pending_leads'] }}"
+                      data-converted="{{ $stats['converted'] }}">
                     @csrf
-                    <p class="text-xs text-slate-600">يُرحَّل المسجّلون الجدد فقط — المُرحَّلون سابقاً لا يُعاد توزيعهم.</p>
+                    <p class="text-xs text-slate-600">ترحيل المسجّلين إلى موظفي السيلز والمجموعة — يمكن إعادة ترحيل المُرحَّلين للمجموعة من غير تكرار العملاء.</p>
                     <div>
                         <p class="text-xs font-bold text-slate-700 mb-2">موظفو المبيعات</p>
                         <div class="flex gap-2 mb-2 text-[11px]">
@@ -125,9 +126,26 @@
                         @endforeach
                     </select>
                     <p id="convert-group-hint" class="text-[11px] text-slate-500">اختر مجموعة لإظهار العملاء فيها — عند الاختيار يُحدَّد أعضاؤها تلقائياً ويمكنك تعديل الموظفين.</p>
-                    <button type="submit" @disabled($stats['pending_leads'] === 0)
+                    @if($stats['converted'] > 0)
+                        <label class="flex items-start gap-2 text-xs text-slate-700 bg-white rounded-lg border border-slate-200 px-3 py-2 cursor-pointer">
+                            <input type="checkbox" name="retransfer_converted" value="1" id="retransfer-converted"
+                                   class="mt-0.5 rounded text-blue-600"
+                                   @checked($stats['pending_leads'] === 0)>
+                            <span>
+                                <span class="font-bold">إعادة ترحيل المُرحَّلين للمجموعة</span>
+                                <span class="block text-[11px] text-slate-500 mt-0.5">{{ $stats['converted'] }} عميل مُرحَّل — يُوزَّعوا تاني على الموظفين والمجموعة من غير إنشاء تكرار.</span>
+                            </span>
+                        </label>
+                    @endif
+                    <button type="submit" @disabled($stats['total'] === 0)
                             class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-bold">
-                        ترحيل الجدد ({{ $stats['pending_leads'] }})
+                        @if($stats['pending_leads'] > 0 && $stats['converted'] > 0)
+                            ترحيل الجدد ({{ $stats['pending_leads'] }}) وإعادة ترحيل المُرحَّلين
+                        @elseif($stats['pending_leads'] > 0)
+                            ترحيل الجدد ({{ $stats['pending_leads'] }})
+                        @else
+                            ترحيل مرة أخرى للمجموعة ({{ $stats['converted'] }})
+                        @endif
                     </button>
                 </form>
             </div>
@@ -302,12 +320,19 @@
             return;
         }
         const pending = Number(form.dataset.pending || 0);
-        if (pending <= 0) {
+        const converted = Number(form.dataset.converted || 0);
+        const retransfer = document.getElementById('retransfer-converted')?.checked;
+        if (pending <= 0 && !retransfer) {
             e.preventDefault();
-            alert('لا يوجد مسجّلون جدد للترحيل.');
+            alert(converted > 0
+                ? 'فعّل «إعادة ترحيل المُرحَّلين للمجموعة» ثم اختر المجموعة والموظفين.'
+                : 'لا يوجد مسجّلون جدد للترحيل.');
             return;
         }
-        if (!confirm('ترحيل ' + pending + ' مسجّل وتوزيعهم على ' + selectedRepIds().length + ' موظف؟')) {
+        const parts = [];
+        if (pending > 0) parts.push(pending + ' جديد');
+        if (retransfer && converted > 0) parts.push(converted + ' مُرحَّل');
+        if (!confirm('ترحيل ' + parts.join(' + ') + ' وتوزيعهم على ' + selectedRepIds().length + ' موظف؟')) {
             e.preventDefault();
         }
     });
