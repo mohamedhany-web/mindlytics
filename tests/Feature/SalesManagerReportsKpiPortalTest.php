@@ -123,6 +123,7 @@ class SalesManagerReportsKpiPortalTest extends TestCase
             $table->unsignedBigInteger('sales_lead_id')->nullable();
             $table->unsignedBigInteger('user_id')->nullable();
             $table->string('type')->nullable();
+            $table->string('title')->nullable();
             $table->text('body')->nullable();
             $table->timestamps();
         });
@@ -140,13 +141,17 @@ class SalesManagerReportsKpiPortalTest extends TestCase
             $table->unsignedBigInteger('user_id');
             $table->date('report_date');
             $table->string('status')->default('draft');
-            $table->unsignedInteger('calls_made')->nullable();
+            $table->unsignedInteger('messages_replied')->nullable();
             $table->unsignedInteger('leads_qualified')->nullable();
             $table->unsignedInteger('bookings_from_leads')->nullable();
+            $table->unsignedInteger('numbers_worked')->nullable();
             $table->unsignedInteger('followups_done')->nullable();
-            $table->unsignedInteger('messages_replied')->nullable();
+            $table->unsignedInteger('calls_made')->nullable();
+            $table->unsignedInteger('meetings_held')->nullable();
+            $table->unsignedInteger('calls_answered')->nullable();
             $table->text('activity_notes')->nullable();
             $table->text('productivity_notes')->nullable();
+            $table->unsignedBigInteger('auto_deduction_id')->nullable();
             $table->timestamp('manager_reviewed_at')->nullable();
             $table->unsignedBigInteger('manager_reviewed_by')->nullable();
             $table->timestamps();
@@ -156,7 +161,13 @@ class SalesManagerReportsKpiPortalTest extends TestCase
             $table->id();
             $table->unsignedBigInteger('sales_daily_report_id');
             $table->unsignedBigInteger('lead_id')->nullable();
+            $table->unsignedBigInteger('sales_lead_id')->nullable();
             $table->string('name')->nullable();
+            $table->string('contact_name')->nullable();
+            $table->string('contact_phone')->nullable();
+            $table->string('interaction_type')->nullable();
+            $table->text('client_status')->nullable();
+            $table->text('client_problems')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
         });
@@ -452,6 +463,9 @@ class SalesManagerReportsKpiPortalTest extends TestCase
         $this->actingAs($manager)
             ->get(route('employee.sales-manager.daily-reports.show', $report))
             ->assertOk()
+            ->assertSee('نشاط اليوم', false)
+            ->assertSee('الإنتاجية', false)
+            ->assertSee('مقارنة KPI ليوم التقرير', false)
             ->assertSee('تقارير الكامبين لهذا اليوم', false)
             ->assertSee('كامبين اليوم', false)
             ->assertSee('7', false);

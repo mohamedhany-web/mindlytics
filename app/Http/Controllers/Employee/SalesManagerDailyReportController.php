@@ -63,15 +63,25 @@ class SalesManagerDailyReportController extends Controller
         return view('employee.sales-manager.daily-reports.index', compact('reports', 'team', 'from', 'to', 'stats'));
     }
 
-    public function show(SalesDailyReport $report, CampaignReportService $campaigns)
-    {
+    public function show(
+        SalesDailyReport $report,
+        CampaignReportService $campaigns,
+        \App\Services\SalesDailyReportService $service,
+    ) {
         $this->authorizeTeamReport($report);
-        $report->load(['user', 'contacts.lead']);
+        $report->load(['user', 'contacts.lead', 'autoDeduction']);
 
         $report->forceFill([
             'manager_reviewed_at' => now(),
             'manager_reviewed_by' => Auth::id(),
         ])->save();
+
+        $kpiComparison = $report->user
+            ? $service->kpiComparisonForReport($report->user, $report, $report->report_date)
+            : null;
+        $dayActivities = $report->user
+            ? $service->activitiesForUserOnDate($report->user, $report->report_date)
+            : collect();
 
         $campaignEntries = collect();
         if ($campaigns->tablesReady() && Schema::hasTable('campaign_daily_reports')) {
@@ -83,7 +93,12 @@ class SalesManagerDailyReportController extends Controller
                 ->get();
         }
 
-        return view('employee.sales-manager.daily-reports.show', compact('report', 'campaignEntries'));
+        return view('employee.sales-manager.daily-reports.show', compact(
+            'report',
+            'campaignEntries',
+            'kpiComparison',
+            'dayActivities',
+        ));
     }
 
     public function teamReports(Request $request)
