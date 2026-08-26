@@ -99,6 +99,31 @@
     </section>
     @endif
 
+    @if(($user->isBusinessDeveloper() ?? false))
+    <section class="dashboard-card !p-0 overflow-hidden border-teal-200">
+        <div class="px-4 py-3 sm:px-5 border-b border-slate-100 bg-gradient-to-l from-teal-50 to-white flex flex-wrap items-center justify-between gap-2">
+            <h3 class="text-sm font-black text-slate-900 flex items-center gap-2">
+                <i class="fas fa-bullhorn text-teal-600"></i>
+                مركز التسويق — Business Developer
+            </h3>
+            <a href="{{ route('employee.business-developer.marketing') }}" class="text-xs font-bold text-teal-700 hover:underline">فتح المركز التنفيذي ←</a>
+        </div>
+        <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <p class="text-sm text-slate-600 max-w-xl">
+                راقب كل خطط المشرفين، المنصات، جدول المحتوى، والتأكيدات المتأخرة من لوحة واحدة قوية.
+            </p>
+            <div class="flex flex-wrap gap-2 shrink-0">
+                <a href="{{ route('employee.business-developer.marketing') }}" class="inline-flex items-center gap-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 text-sm font-semibold">
+                    <i class="fas fa-gauge-high"></i> مركز التسويق
+                </a>
+                <a href="{{ route('employee.marketing-plans.index') }}" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white text-slate-700 px-4 py-2 text-sm font-semibold hover:bg-slate-50">
+                    إدارة الخطط
+                </a>
+            </div>
+        </div>
+    </section>
+    @endif
+
     {{-- Reports & KPIs hub --}}
     <section id="hub-reports" class="dashboard-card !p-0 overflow-hidden border-teal-200">
         <div class="px-4 py-3 sm:px-5 border-b border-slate-100 bg-gradient-to-l from-teal-50 to-white flex flex-wrap items-center justify-between gap-2">

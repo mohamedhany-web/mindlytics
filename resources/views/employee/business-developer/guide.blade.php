@@ -133,7 +133,7 @@
                 <p class="font-bold text-slate-900"><i class="fas fa-film text-cyan-600 ml-1"></i> طلبات محرر الفيديو</p>
                 <p class="text-xs text-slate-500 mt-2 leading-6">طلب مونتاج، متابعة التسليم، وإغلاق الطلب عند الاستلام.</p>
             </a>
-            <a href="{{ route('employee.marketing-plans.index') }}" class="rounded-xl border border-slate-200 p-4 hover:border-pink-300 hover:bg-pink-50/30 transition">
+            <a href="{{ route('employee.business-developer.marketing') }}" class="rounded-xl border border-slate-200 p-4 hover:border-teal-300 hover:bg-teal-50/30 transition">
                 <p class="font-bold text-slate-900"><i class="fas fa-bullhorn text-pink-600 ml-1"></i> التسويق والمنصات</p>
                 <p class="text-xs text-slate-500 mt-2 leading-6">خطط شهرية، منصات، أحداث، وربطها بالتقويم.</p>
             </a>
@@ -258,7 +258,7 @@
             <a href="{{ route('employee.sales-manager.leads.index') }}" class="rounded-xl border border-slate-200 p-3 hover:border-teal-300"><i class="fas fa-user-plus text-teal-600 ml-1"></i> عملاء الفريق</a>
             <a href="{{ route('employee.sales-manager.distribution.index') }}" class="rounded-xl border border-slate-200 p-3 hover:border-teal-300"><i class="fas fa-share-alt text-teal-600 ml-1"></i> توزيع الاهتمام</a>
             <a href="{{ route('employee.sales-manager.live-board') }}" class="rounded-xl border border-slate-200 p-3 hover:border-teal-300"><i class="fas fa-tv text-teal-600 ml-1"></i> اللوحة الحية</a>
-            <a href="{{ route('employee.marketing-plans.index') }}" class="rounded-xl border border-slate-200 p-3 hover:border-fuchsia-300"><i class="fas fa-bullhorn text-fuchsia-600 ml-1"></i> خطط التسويق</a>
+            <a href="{{ route('employee.business-developer.marketing') }}" class="rounded-xl border border-slate-200 p-3 hover:border-teal-300"><i class="fas fa-bullhorn text-teal-600 ml-1"></i> مركز التسويق</a>
             <a href="{{ route('employee.design-cycles.index') }}" class="rounded-xl border border-slate-200 p-3 hover:border-fuchsia-300"><i class="fas fa-palette text-fuchsia-600 ml-1"></i> طلبات التصميم</a>
             <a href="{{ route('employee.tasks.index') }}" class="rounded-xl border border-slate-200 p-3 hover:border-blue-300"><i class="fas fa-tasks text-blue-600 ml-1"></i> مهامي</a>
             <a href="{{ route('employee.calendar') }}" class="rounded-xl border border-slate-200 p-3 hover:border-blue-300"><i class="fas fa-calendar text-blue-600 ml-1"></i> التقويم</a>

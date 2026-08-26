@@ -4,9 +4,26 @@
 @section('header', 'خطط التسويق والسوشيال ميديا')
 
 @section('content')
+@php $isBusinessDeveloper = $isBusinessDeveloper ?? auth()->user()?->isBusinessDeveloper(); @endphp
 <div class="space-y-6">
     @if(session('success'))
         <div class="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-900 px-4 py-3 text-sm font-medium">{{ session('success') }}</div>
+    @endif
+
+    @if($isBusinessDeveloper)
+        <a href="{{ route('employee.business-developer.marketing') }}"
+           class="block rounded-2xl overflow-hidden border border-teal-700/30 shadow-lg group">
+            <div class="bg-gradient-to-l from-teal-800 via-slate-900 to-slate-900 px-5 py-5 sm:px-7 text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <p class="text-[11px] font-bold tracking-widest uppercase text-teal-200/90 mb-1">Business Developer</p>
+                    <h2 class="text-xl font-black">مركز التسويق التنفيذي</h2>
+                    <p class="text-sm text-teal-100/80 mt-1">لوحة قوية لكل الخطط · المنصات · الجدول · التأكيدات المتأخرة</p>
+                </div>
+                <span class="inline-flex items-center gap-2 rounded-xl bg-white text-slate-900 px-4 py-2.5 text-sm font-bold group-hover:bg-teal-50">
+                    فتح المركز <i class="fas fa-arrow-left"></i>
+                </span>
+            </div>
+        </a>
     @endif
 
     <section class="rounded-2xl bg-white border border-gray-200 shadow-lg overflow-hidden">
@@ -16,14 +33,21 @@
                     <i class="fas fa-bullhorn text-lg"></i>
                 </div>
                 <div>
-                    <h2 class="text-xl font-black text-gray-900">خطط التسويق والمنصات</h2>
+                    <h2 class="text-xl font-black text-gray-900">{{ $isBusinessDeveloper ? 'إدارة خطط التسويق (كل المشرفين)' : 'خطط التسويق والمنصات' }}</h2>
                     <p class="text-xs text-gray-600">اربط المنصات بالتوصيف، الأحداث بالتقويم، ودورات التصميم</p>
                 </div>
             </div>
-            <a href="{{ route('employee.marketing-plans.create') }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-semibold text-sm shadow-lg">
-                <i class="fas fa-plus"></i>
-                خطة جديدة
-            </a>
+            <div class="flex flex-wrap gap-2">
+                @if($isBusinessDeveloper)
+                    <a href="{{ route('employee.business-developer.marketing') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-teal-300 text-teal-800 bg-teal-50 hover:bg-teal-100 font-semibold text-sm">
+                        <i class="fas fa-gauge-high"></i> المركز التنفيذي
+                    </a>
+                @endif
+                <a href="{{ route('employee.marketing-plans.create') }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-semibold text-sm shadow-lg">
+                    <i class="fas fa-plus"></i>
+                    خطة جديدة
+                </a>
+            </div>
         </div>
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 p-4">
             <div class="rounded-xl border border-pink-100 bg-pink-50/50 p-4">
@@ -52,6 +76,9 @@
                     <tr>
                         <th class="text-right px-4 py-3 font-semibold">#</th>
                         <th class="text-right px-4 py-3 font-semibold">العنوان</th>
+                        @if($isBusinessDeveloper)
+                            <th class="text-right px-4 py-3 font-semibold">المشرف</th>
+                        @endif
                         <th class="text-right px-4 py-3 font-semibold">الحالة</th>
                         <th class="text-right px-4 py-3 font-semibold">منصات</th>
                         <th class="text-right px-4 py-3 font-semibold">أحداث</th>
@@ -73,6 +100,9 @@
                         <tr class="hover:bg-slate-50/80">
                             <td class="px-4 py-3 font-mono text-xs">{{ $p->id }}</td>
                             <td class="px-4 py-3 font-semibold text-gray-900">{{ $p->title }}</td>
+                            @if($isBusinessDeveloper)
+                                <td class="px-4 py-3 text-slate-600">{{ $p->moderator?->name ?? '—' }}</td>
+                            @endif
                             <td class="px-4 py-3">
                                 <span class="inline-flex px-2 py-1 rounded-lg text-xs font-semibold {{ $st[1] }}">{{ $st[0] }}</span>
                             </td>
@@ -85,7 +115,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-4 py-12 text-center text-gray-500">لا توجد خطط بعد. أنشئ خطة لربط المنصات والتقويم.</td>
+                            <td colspan="{{ $isBusinessDeveloper ? 8 : 7 }}" class="px-4 py-12 text-center text-gray-500">لا توجد خطط بعد. أنشئ خطة لربط المنصات والتقويم.</td>
                         </tr>
                     @endforelse
                 </tbody>

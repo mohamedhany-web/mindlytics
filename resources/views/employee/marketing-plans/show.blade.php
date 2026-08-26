@@ -26,6 +26,48 @@
         <div class="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-900 px-4 py-3 text-sm font-medium">{{ session('success') }}</div>
     @endif
 
+    @if(($isBusinessDeveloper ?? false))
+        @php $executionStats = $executionStats ?? ['total' => 0, 'published' => 0, 'scheduled' => 0, 'overdue_confirm' => 0]; @endphp
+        <section class="rounded-2xl overflow-hidden border border-teal-200 shadow-lg">
+            <div class="bg-gradient-to-l from-teal-800 to-slate-900 text-white px-5 py-5 sm:px-7">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div>
+                        <p class="text-[11px] font-bold tracking-widest uppercase text-teal-200/90">مراقبة Business Developer</p>
+                        <h2 class="text-xl font-black mt-1">{{ $plan->title }}</h2>
+                        <p class="text-sm text-teal-100/85 mt-1">
+                            المشرف: <strong>{{ $plan->moderator?->name ?? '—' }}</strong>
+                            @if($plan->start_date || $plan->end_date)
+                                · {{ $plan->start_date?->format('Y-m-d') ?? '—' }} → {{ $plan->end_date?->format('Y-m-d') ?? '—' }}
+                            @endif
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <a href="{{ route('employee.business-developer.marketing') }}" class="inline-flex items-center gap-2 rounded-xl bg-white text-slate-900 px-4 py-2 text-sm font-bold">المركز التنفيذي</a>
+                        <a href="{{ route('employee.marketing-plans.index') }}" class="inline-flex items-center gap-2 rounded-xl border border-white/30 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10">كل الخطط</a>
+                    </div>
+                </div>
+                <div class="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="rounded-xl bg-white/10 border border-white/15 p-3">
+                        <p class="text-[11px] text-teal-100/80">أحداث</p>
+                        <p class="text-2xl font-black tabular-nums">{{ $executionStats['total'] }}</p>
+                    </div>
+                    <div class="rounded-xl bg-white/10 border border-white/15 p-3">
+                        <p class="text-[11px] text-teal-100/80">مجدول</p>
+                        <p class="text-2xl font-black tabular-nums">{{ $executionStats['scheduled'] }}</p>
+                    </div>
+                    <div class="rounded-xl bg-white/10 border border-white/15 p-3">
+                        <p class="text-[11px] text-teal-100/80">منشور</p>
+                        <p class="text-2xl font-black tabular-nums">{{ $executionStats['published'] }}</p>
+                    </div>
+                    <div class="rounded-xl bg-white/10 border border-white/15 p-3">
+                        <p class="text-[11px] text-rose-200/90">تأكيدات متأخرة</p>
+                        <p class="text-2xl font-black tabular-nums">{{ $executionStats['overdue_confirm'] }}</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    @endif
+
     <div class="flex flex-wrap items-start justify-between gap-4">
         <div class="space-y-2">
             <div class="flex flex-wrap items-center gap-2">

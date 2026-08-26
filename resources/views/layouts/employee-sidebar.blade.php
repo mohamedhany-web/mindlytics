@@ -49,6 +49,18 @@
                 <i class="fas fa-compass text-base"></i>
                 <span>دليل النظام</span>
             </a>
+            <a href="{{ route('employee.business-developer.marketing') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.business-developer.marketing') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-bullhorn text-base"></i>
+                <span>مركز التسويق</span>
+            </a>
+            <a href="{{ route('employee.marketing-plans.index') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.marketing-plans.*') ? 'bg-pink-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-diagram-project text-base"></i>
+                <span>إدارة خطط التسويق</span>
+            </a>
         </div>
         @endif
 
@@ -68,10 +80,10 @@
                 <span>طلبات محرر الفيديو</span>
             </a>
             <a href="{{ route('employee.marketing-plans.index') }}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.marketing-plans.*') ? 'bg-pink-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.marketing-plans.*') && ! request()->routeIs('employee.business-developer.marketing') ? 'bg-pink-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
                @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
                 <i class="fas fa-bullhorn text-base"></i>
-                <span>التسويق والمنصات</span>
+                <span>{{ $isBusinessDeveloper ? 'خطط التسويق (تفصيلي)' : 'التسويق والمنصات' }}</span>
             </a>
         </div>
         @endif

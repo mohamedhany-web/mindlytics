@@ -42,6 +42,7 @@ class ModeratorMarketingPlanController extends Controller
         $plansQuery = ModeratorMarketingPlan::query()
             ->when(! $user->isBusinessDeveloper(), fn ($q) => $q->where('moderator_id', $moderatorId))
             ->withCount(['platforms', 'calendarEvents'])
+            ->when($user->isBusinessDeveloper(), fn ($q) => $q->with('moderator:id,name'))
             ->latest();
 
         $plans = $plansQuery->paginate(15);
@@ -60,7 +61,9 @@ class ModeratorMarketingPlanController extends Controller
             })->count(),
         ];
 
-        return view('employee.marketing-plans.index', compact('plans', 'stats'));
+        $isBusinessDeveloper = $user->isBusinessDeveloper();
+
+        return view('employee.marketing-plans.index', compact('plans', 'stats', 'isBusinessDeveloper'));
     }
 
     public function create()
@@ -108,6 +111,7 @@ class ModeratorMarketingPlanController extends Controller
     {
         $this->assertOwnPlan($marketing_plan);
         $plan = $marketing_plan->load([
+            'moderator:id,name',
             'platforms.employeeJobs',
             'calendarEvents' => fn ($q) => $q->with(['platform', 'assignee', 'employeeTask'])->orderBy('starts_at'),
             'designTaskCycle',
@@ -122,8 +126,30 @@ class ModeratorMarketingPlanController extends Controller
         $platformLabels = ModeratorMarketingPlatform::platformLabels();
         $employeeJobs = EmployeeJob::active()->orderBy('name')->get();
         $contentTypes = MarketingPlanEventAutomationService::contentTypeLabels();
+        $isBusinessDeveloper = Auth::user()?->isBusinessDeveloper() ?? false;
 
-        return view('employee.marketing-plans.show', compact('plan', 'cycles', 'platformLabels', 'employeeJobs', 'contentTypes'));
+        $executionStats = [
+            'total' => $plan->calendarEvents->count(),
+            'published' => $plan->calendarEvents->where('status', 'published')->count(),
+            'scheduled' => $plan->calendarEvents->where('status', 'scheduled')->count(),
+            'overdue_confirm' => $plan->calendarEvents
+                ->filter(fn ($e) => $e->requires_confirmation
+                    && ! $e->execution_confirmed_at
+                    && $e->starts_at
+                    && $e->starts_at->isPast()
+                    && ! in_array($e->status, ['skipped', 'published'], true))
+                ->count(),
+        ];
+
+        return view('employee.marketing-plans.show', compact(
+            'plan',
+            'cycles',
+            'platformLabels',
+            'employeeJobs',
+            'contentTypes',
+            'isBusinessDeveloper',
+            'executionStats',
+        ));
     }
 
     public function edit(ModeratorMarketingPlan $marketing_plan)
