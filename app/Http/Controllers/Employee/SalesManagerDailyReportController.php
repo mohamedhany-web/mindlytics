@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
+use App\Models\CampaignDailyReport;
 use App\Models\SalesDailyReport;
 use App\Models\SalesTeamDailyReport;
+use App\Services\CampaignReportService;
 use App\Services\SalesTeamService;
+use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -60,7 +63,7 @@ class SalesManagerDailyReportController extends Controller
         return view('employee.sales-manager.daily-reports.index', compact('reports', 'team', 'from', 'to', 'stats'));
     }
 
-    public function show(SalesDailyReport $report)
+    public function show(SalesDailyReport $report, CampaignReportService $campaigns)
     {
         $this->authorizeTeamReport($report);
         $report->load(['user', 'contacts.lead']);
@@ -70,7 +73,17 @@ class SalesManagerDailyReportController extends Controller
             'manager_reviewed_by' => Auth::id(),
         ])->save();
 
-        return view('employee.sales-manager.daily-reports.show', compact('report'));
+        $campaignEntries = collect();
+        if ($campaigns->tablesReady() && Schema::hasTable('campaign_daily_reports')) {
+            $campaignEntries = CampaignDailyReport::query()
+                ->with(['campaign:id,name,platform'])
+                ->where('user_id', $report->user_id)
+                ->whereDate('report_date', $report->report_date?->toDateString())
+                ->orderBy('id')
+                ->get();
+        }
+
+        return view('employee.sales-manager.daily-reports.show', compact('report', 'campaignEntries'));
     }
 
     public function teamReports(Request $request)

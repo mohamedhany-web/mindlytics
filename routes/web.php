@@ -1075,6 +1075,10 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('live-board', [\App\Http\Controllers\Employee\SalesManagerLiveBoardController::class, 'index'])->name('live-board');
             Route::get('pipeline', [\App\Http\Controllers\Employee\SalesManagerPipelineController::class, 'index'])->name('pipeline');
             Route::get('kpi', [\App\Http\Controllers\Employee\SalesManagerKpiController::class, 'index'])->name('kpi.index');
+            Route::get('kpi/targets', [\App\Http\Controllers\Employee\SalesManagerKpiController::class, 'targets'])->name('kpi.targets');
+            Route::put('kpi/targets', [\App\Http\Controllers\Employee\SalesManagerKpiController::class, 'updateTargets'])->name('kpi.targets.update');
+            Route::get('campaign-reports', [\App\Http\Controllers\Employee\SalesManagerCampaignReportController::class, 'index'])->name('campaign-reports.index');
+            Route::get('campaign-reports/export', [\App\Http\Controllers\Employee\SalesManagerCampaignReportController::class, 'export'])->name('campaign-reports.export');
             Route::get('scorecard', [\App\Http\Controllers\Employee\SalesManagerScorecardController::class, 'index'])->name('scorecard.index');
             Route::get('scorecard/pdf', [\App\Http\Controllers\Employee\SalesManagerScorecardController::class, 'exportPdf'])->name('scorecard.pdf');
             Route::get('scorecard/excel', [\App\Http\Controllers\Employee\SalesManagerScorecardController::class, 'exportExcel'])->name('scorecard.excel');

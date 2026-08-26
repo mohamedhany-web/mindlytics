@@ -55,9 +55,13 @@
                 </p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
-                <a href="{{ route('employee.sales-manager.ops-board') }}"
+                <a href="{{ route('employee.sales-manager.kpi.targets') }}"
+                   class="inline-flex items-center gap-2 rounded-xl bg-teal-600 hover:bg-teal-700 px-4 py-2 text-sm font-semibold text-white">
+                    <i class="fas fa-bullseye"></i> ضبط الأهداف
+                </a>
+                <a href="{{ route('employee.sales-manager.campaign-reports.index') }}"
                    class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                    <i class="fas fa-broadcast-tower"></i> متابعة اليوم
+                    <i class="fas fa-bullhorn"></i> الكامبين
                 </a>
                 <a href="{{ route('employee.sales-manager.daily-reports.index') }}"
                    class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">

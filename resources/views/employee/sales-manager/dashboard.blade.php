@@ -40,6 +40,7 @@
     $shiftBoard = $hub['shift_board'] ?? null;
     $pendingShiftSwaps = $hub['pending_shift_swaps'] ?? 0;
     $members = $hub['members'] ?? collect();
+    $reportsHub = $reportsHub ?? [];
     $fmtMoney = fn ($v) => number_format((float) $v, 0);
     $statusDot = [
         'on_call' => 'bg-emerald-500',
@@ -98,8 +99,82 @@
     </section>
     @endif
 
+    {{-- Reports & KPIs hub --}}
+    <section id="hub-reports" class="dashboard-card !p-0 overflow-hidden border-teal-200">
+        <div class="px-4 py-3 sm:px-5 border-b border-slate-100 bg-gradient-to-l from-teal-50 to-white flex flex-wrap items-center justify-between gap-2">
+            <h3 class="text-sm font-black text-slate-900 flex items-center gap-2">
+                <i class="fas fa-folder-open text-teal-600"></i>
+                مركز التقارير والمؤشرات
+            </h3>
+            <span class="text-[11px] font-semibold text-slate-500">تقارير يومية · كامبين · أهداف KPI</span>
+        </div>
+        <div class="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <a href="{{ route('employee.sales-manager.daily-reports.index') }}"
+               class="group rounded-xl border border-slate-200 hover:border-teal-300 hover:bg-teal-50/40 p-4 transition-colors">
+                <div class="flex items-start justify-between gap-2">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500">التقارير اليومية</p>
+                        <p class="text-2xl font-black text-slate-900 tabular-nums mt-1">{{ $reportsHub['pending_daily'] ?? 0 }}</p>
+                        <p class="text-[11px] text-amber-700 font-semibold mt-0.5">بانتظار مراجعتك</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <i class="fas fa-file-lines"></i>
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-3">
+                    مُسلَّم اليوم: <strong class="text-slate-800">{{ $reportsHub['submitted_today'] ?? 0 }}</strong>
+                    / {{ $reportsHub['members'] ?? 0 }}
+                </p>
+            </a>
+
+            <a href="{{ route('employee.sales-manager.campaign-reports.index') }}"
+               class="group rounded-xl border border-slate-200 hover:border-violet-300 hover:bg-violet-50/40 p-4 transition-colors">
+                <div class="flex items-start justify-between gap-2">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500">تقارير الكامبين (7 أيام)</p>
+                        <p class="text-2xl font-black text-slate-900 tabular-nums mt-1">{{ number_format($reportsHub['campaign']['messages'] ?? 0) }}</p>
+                        <p class="text-[11px] text-violet-700 font-semibold mt-0.5">رسالة جديدة</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-lg bg-violet-100 text-violet-700 flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <i class="fas fa-bullhorn"></i>
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-3">
+                    Qual: <strong>{{ number_format($reportsHub['campaign']['qualified'] ?? 0) }}</strong>
+                    · Conv: <strong>{{ number_format($reportsHub['campaign']['converted'] ?? 0) }}</strong>
+                </p>
+            </a>
+
+            <a href="{{ route('employee.sales-manager.kpi.targets') }}"
+               class="group rounded-xl border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/40 p-4 transition-colors">
+                <div class="flex items-start justify-between gap-2">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500">أهداف KPIs</p>
+                        <p class="text-2xl font-black text-slate-900 tabular-nums mt-1">{{ $reportsHub['targets_configured'] ?? 0 }}<span class="text-base font-bold text-slate-400">/{{ $reportsHub['members'] ?? 0 }}</span></p>
+                        <p class="text-[11px] text-emerald-700 font-semibold mt-0.5">أهداف محفوظة · {{ $reportsHub['year_month'] ?? now()->format('Y-m') }}</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <i class="fas fa-bullseye"></i>
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-3">
+                    <span class="text-teal-700 font-bold">ضبط الأهداف ←</span>
+                    · أو <span class="text-slate-600">عرض الأداء من القائمة الجانبية</span>
+                </p>
+            </a>
+        </div>
+        <div class="px-4 sm:px-5 pb-4 flex flex-wrap gap-2">
+            <a href="{{ route('employee.sales-manager.daily-reports.index') }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700"><i class="fas fa-clipboard-list"></i> تقارير الأعضاء</a>
+            <a href="{{ route('employee.sales-manager.campaign-reports.index') }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700"><i class="fas fa-chart-column"></i> كامبين</a>
+            <a href="{{ route('employee.sales-manager.kpi.index') }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700"><i class="fas fa-gauge-high"></i> مؤشرات الفريق</a>
+            <a href="{{ route('employee.sales-manager.kpi.targets') }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-xs font-semibold text-white"><i class="fas fa-sliders"></i> ضبط الأهداف</a>
+            <a href="{{ route('employee.sales-manager.team-reports.index') }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700"><i class="fas fa-clipboard-check"></i> تقرير الفريق للإدارة</a>
+        </div>
+    </section>
+
     {{-- Quick jump --}}
     <nav class="flex flex-wrap gap-2 text-xs font-semibold">
+        <a href="#hub-reports" class="px-3 py-1.5 rounded-lg bg-teal-100 text-teal-800 hover:bg-teal-200">التقارير و KPI</a>
         <a href="#hub-kpis" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">المؤشرات</a>
         <a href="#hub-live" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">المراقبة</a>
         <a href="#hub-ranking" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">الترتيب</a>
