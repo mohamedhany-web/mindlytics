@@ -8,6 +8,9 @@
     $src = \App\Support\StudentFigmaAssets::url($name);
 @endphp
 
-<span {{ $attributes->class(['sp-figma-ico', $box, $class]) }}
-      style="--sp-ico: url({{ json_encode($src) }})"
-      aria-hidden="true"></span>
+<img src="{{ $src }}"
+     {{ $attributes->class(['sp-figma-img', $box, $class]) }}
+     alt=""
+     aria-hidden="true"
+     loading="lazy"
+     decoding="async">

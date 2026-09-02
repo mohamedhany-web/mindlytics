@@ -159,7 +159,40 @@
         color: var(--sp-accent-text);
     }
 
-    /* Mask icons — color follows currentColor (works; <img> + currentColor does NOT) */
+    /* Sidebar icons (img) — white on dark; dark on active pill */
+    .sp-figma-img {
+        display: inline-block;
+        flex-shrink: 0;
+        width: 24px;
+        height: 24px;
+        object-fit: contain;
+    }
+    .sp-sidebar .sp-figma-img {
+        filter: brightness(0) invert(1);
+        opacity: 0.92;
+    }
+    .sp-sidebar .sp-nav-link.is-active .sp-figma-img {
+        filter: brightness(0);
+        opacity: 1;
+    }
+    .sp-header .sp-figma-img {
+        filter: none;
+        opacity: 0.85;
+    }
+    .sp-search .sp-figma-img {
+        filter: none;
+        opacity: 0.55;
+        width: 20px;
+        height: 20px;
+    }
+    .sp-icon-bubble .sp-figma-img {
+        filter: none;
+        opacity: 1;
+        width: 24px;
+        height: 24px;
+    }
+
+    /* Legacy mask icons (fallback if used elsewhere) */
     .sp-figma-ico {
         display: inline-block;
         flex-shrink: 0;

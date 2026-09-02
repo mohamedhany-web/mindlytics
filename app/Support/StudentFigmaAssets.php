@@ -6,8 +6,10 @@ class StudentFigmaAssets
 {
     public const BASE_PATH = '/images/student-portal';
 
+    public const ROUTE_NAME = 'student-portal.asset';
+
     /**
-     * Root-relative public path (works even when APP_URL is misconfigured on deploy).
+     * Root-relative public path segment.
      */
     public static function path(string $name): string
     {
@@ -18,23 +20,47 @@ class StudentFigmaAssets
 
     /**
      * Public URL for a student-portal asset.
-     * Uses root-relative paths by default; honors ASSET_URL when set (CDN/subfolder).
+     * Prefers Laravel route (serves from public/ even when static files 404 on host).
      */
     public static function url(string $name): string
     {
-        $path = self::path($name);
-        $assetUrl = config('app.asset_url');
+        $file = ltrim(str_replace('\\', '/', $name), '/');
+        $fullPath = public_path('images/student-portal/'.$file);
 
-        if (filled($assetUrl)) {
-            $path = rtrim($assetUrl, '/').$path;
-        }
+        $path = self::resolvePublicUrl($file);
 
-        $fullPath = public_path('images/student-portal/'.ltrim(str_replace('\\', '/', $name), '/'));
         if (is_file($fullPath)) {
             $path .= (str_contains($path, '?') ? '&' : '?').'v='.filemtime($fullPath);
         }
 
         return $path;
+    }
+
+    protected static function resolvePublicUrl(string $file): string
+    {
+        if (filled(config('app.asset_url'))) {
+            return rtrim((string) config('app.asset_url'), '/').self::BASE_PATH.'/'.$file;
+        }
+
+        if (! app()->runningInConsole() && app()->bound('request') && app('router')->has(self::ROUTE_NAME)) {
+            try {
+                return route(self::ROUTE_NAME, ['asset' => $file], false);
+            } catch (\Throwable) {
+                // fall through
+            }
+        }
+
+        return self::path($file);
+    }
+
+    /**
+     * Absolute filesystem path for an asset file.
+     */
+    public static function fullPath(string $name): string
+    {
+        $file = ltrim(str_replace('\\', '/', $name), '/');
+
+        return public_path('images/student-portal/'.$file);
     }
 
     /**
@@ -81,8 +107,6 @@ class StudentFigmaAssets
     }
 
     /**
-     * All non-manifest files shipped under public/images/student-portal/.
-     *
      * @return list<string>
      */
     public static function diskFiles(): array
