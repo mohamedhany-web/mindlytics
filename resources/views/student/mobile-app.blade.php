@@ -20,8 +20,8 @@
                 <h2 class="m-0 mt-3 text-2xl sm:text-3xl font-extrabold">{{ __('student.mobile_app_heading') }}</h2>
                 <p class="m-0 mt-3 text-sm sm:text-base text-white/80 leading-relaxed max-w-md">{{ __('student.mobile_app_desc') }}</p>
             </div>
-            <div class="sp-promo-art hidden sm:block">
-                <img src="{{ $sp['promo'] }}?v=3" alt="" width="160" height="190">
+            <div class="sp-promo-art">
+                <img src="{{ $sp['promo'] }}" alt="" width="160" height="190">
             </div>
         </div>
 

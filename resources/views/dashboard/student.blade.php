@@ -304,7 +304,7 @@
                     <p class="m-0 mt-2 text-sm text-white/80 max-w-[12rem] leading-relaxed">{{ __('student.go_premium_desc') }}</p>
                     <a href="{{ route('academic-years') }}" class="sp-promo-btn self-start">{{ __('student.get_access') }}</a>
                 </div>
-                <div class="sp-promo-art hidden sm:block">
+                <div class="sp-promo-art">
                     <img src="{{ $sp['promo'] }}" alt="" width="160" height="190">
                 </div>
             </section>

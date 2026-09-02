@@ -806,7 +806,31 @@
         .sp-content { padding: 6px 14px 24px; }
         .sp-welcome-title { font-size: 1.25rem; }
         .sp-search { width: 100%; }
-        .sp-promo-art { display: none; }
+        .sp-promo {
+            min-height: 200px;
+            padding: 22px 18px 18px;
+            align-items: flex-end;
+            gap: 4px;
+        }
+        .sp-promo-copy h3 {
+            font-size: 1.125rem;
+            margin-top: 0.75rem !important;
+        }
+        .sp-promo-copy p.max-w-\[12rem\] {
+            max-width: 9.5rem;
+            font-size: 0.8125rem;
+        }
+        .sp-promo-btn {
+            margin-top: 12px;
+            padding: 12px 18px;
+            font-size: 14px;
+        }
+        .sp-promo-art {
+            display: block;
+            width: min(118px, 40%);
+            margin-inline-end: -4px;
+            margin-bottom: -10px;
+        }
     }
 
     /* Immersive student pages (exam take, etc.) — still on student shell/tokens */
