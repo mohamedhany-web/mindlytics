@@ -9,5 +9,5 @@
 @endphp
 
 <span {{ $attributes->class(['sp-figma-ico', $box, $class]) }}
-      style="--sp-ico: url('{{ $src }}')"
+      style="--sp-ico: url({{ json_encode($src) }})"
       aria-hidden="true"></span>

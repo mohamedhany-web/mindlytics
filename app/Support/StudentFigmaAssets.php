@@ -4,11 +4,42 @@ namespace App\Support;
 
 class StudentFigmaAssets
 {
-    public static function url(string $name): string
+    public const BASE_PATH = '/images/student-portal';
+
+    /**
+     * Root-relative public path (works even when APP_URL is misconfigured on deploy).
+     */
+    public static function path(string $name): string
     {
-        return asset('images/student-portal/' . ltrim($name, '/'));
+        $file = ltrim(str_replace('\\', '/', $name), '/');
+
+        return self::BASE_PATH.'/'.$file;
     }
 
+    /**
+     * Public URL for a student-portal asset.
+     * Uses root-relative paths by default; honors ASSET_URL when set (CDN/subfolder).
+     */
+    public static function url(string $name): string
+    {
+        $path = self::path($name);
+        $assetUrl = config('app.asset_url');
+
+        if (filled($assetUrl)) {
+            $path = rtrim($assetUrl, '/').$path;
+        }
+
+        $fullPath = public_path('images/student-portal/'.ltrim(str_replace('\\', '/', $name), '/'));
+        if (is_file($fullPath)) {
+            $path .= (str_contains($path, '?') ? '&' : '?').'v='.filemtime($fullPath);
+        }
+
+        return $path;
+    }
+
+    /**
+     * @return array<string, string>
+     */
     public static function urls(): array
     {
         return [
@@ -46,7 +77,34 @@ class StudentFigmaAssets
             'avatar_2' => self::url('avatar-2.png'),
             'avatar_3' => self::url('avatar-3.png'),
             'avatar_4' => self::url('avatar-4.png'),
-            'avatar_fallback' => self::url('avatar-1.png'),
         ];
+    }
+
+    /**
+     * All non-manifest files shipped under public/images/student-portal/.
+     *
+     * @return list<string>
+     */
+    public static function diskFiles(): array
+    {
+        $dir = public_path('images/student-portal');
+        if (! is_dir($dir)) {
+            return [];
+        }
+
+        $files = [];
+        foreach (scandir($dir) ?: [] as $entry) {
+            if ($entry === '.' || $entry === '..' || $entry === 'ASSET_MANIFEST.json') {
+                continue;
+            }
+            $full = $dir.DIRECTORY_SEPARATOR.$entry;
+            if (is_file($full)) {
+                $files[] = $entry;
+            }
+        }
+
+        sort($files);
+
+        return $files;
     }
 }

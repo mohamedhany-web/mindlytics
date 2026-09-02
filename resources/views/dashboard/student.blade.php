@@ -305,7 +305,7 @@
                     <a href="{{ route('academic-years') }}" class="sp-promo-btn self-start">{{ __('student.get_access') }}</a>
                 </div>
                 <div class="sp-promo-art hidden sm:block">
-                    <img src="{{ $sp['promo'] }}?v=3" alt="" width="160" height="190">
+                    <img src="{{ $sp['promo'] }}" alt="" width="160" height="190">
                 </div>
             </section>
             @else
