@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.student-dashboard')
 
 @section('title', $pattern->title . ' - ' . $course->title)
 @section('header', $pattern->title)

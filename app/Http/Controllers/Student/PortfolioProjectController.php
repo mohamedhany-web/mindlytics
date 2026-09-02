@@ -245,7 +245,7 @@ class PortfolioProjectController extends Controller
         $learningPaths = AcademicYear::where('is_active', true)->whereIn('id', $pathIds)->ordered()->get(['id', 'name']);
         $courses = $user->activeCourses()->select('advanced_courses.id', 'advanced_courses.title')->get();
 
-        $offlineIds = $user->offlineCourseEnrollments()->whereIn('status', ['active', 'completed'])->pluck('offline_course_id')->unique()->filter();
+        $offlineIds = $user->offlineEnrollments()->whereIn('status', ['active', 'completed'])->pluck('offline_course_id')->unique()->filter();
         $offlineCourses = OfflineCourse::whereIn('id', $offlineIds)->get(['id', 'title', 'online_only']);
 
         return compact('learningPaths', 'courses', 'offlineCourses');
@@ -256,7 +256,7 @@ class PortfolioProjectController extends Controller
         $user = auth()->user();
         $pathIds = $user->learningPathEnrollments()->whereIn('status', ['active', 'completed'])->pluck('academic_year_id')->all();
         $courseIds = $user->activeCourses()->pluck('advanced_courses.id')->all();
-        $offlineIds = $user->offlineCourseEnrollments()->whereIn('status', ['active', 'completed'])->pluck('offline_course_id')->all();
+        $offlineIds = $user->offlineEnrollments()->whereIn('status', ['active', 'completed'])->pluck('offline_course_id')->all();
 
         $data = $request->validate([
             'title' => 'required|string|max:255',

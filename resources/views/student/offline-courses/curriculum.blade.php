@@ -1,270 +1,231 @@
 @extends('layouts.student-dashboard')
 
-@section('title', 'منهج الكورس — ' . $offlineCourse->title)
+@php
+    use App\Support\StudentFigmaAssets;
+    use Illuminate\Support\Str;
+
+    $isOnlineChannel = ($channel ?? 'offline') === 'online';
+    $sg = $studentRouteGroup ?? 'student.offline-courses';
+    $stats = $curriculumStats ?? ['sections' => 0, 'items' => 0];
+    $examsModule = $isOnlineChannel ? 'online' : 'offline';
+    $sp = StudentFigmaAssets::urls();
+@endphp
+
+@section('title', __('student.oc_curriculum_title') . ' — ' . $offlineCourse->title)
+@section('header', __('student.oc_curriculum_title'))
 
 @push('styles')
 <style>
-    .curriculum-hero {
-        background: #fff;
-        border-radius: 16px;
-        padding: 24px 28px;
+    .sp-oc-curriculum-hero {
+        background: #2f2e43;
+        border-radius: 30px;
+        color: #fff;
+        padding: 28px 24px;
         position: relative;
         overflow: hidden;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-        border: 1px solid rgb(226 232 240);
-        transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        box-shadow: var(--sp-shadow);
     }
-    .curriculum-hero:hover {
-        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.1);
-        border-color: rgb(186 230 253);
-    }
-    .curriculum-hero .curriculum-hero-accent {
-        position: absolute;
-        top: 0;
-        right: 0;
-        width: 4px;
-        height: 100%;
-        background: linear-gradient(180deg, rgb(14 165 233), rgb(2 132 199));
-        border-radius: 0 16px 16px 0;
-    }
-    .curriculum-stat {
-        background: #fff;
-        border: 1px solid rgb(226 232 240);
-        border-radius: 14px;
-        padding: 16px 18px;
-        transition: all 0.2s ease;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    .curriculum-stat:hover {
-        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.1);
-        border-color: rgb(186 230 253);
-    }
-    .curriculum-panel {
-        background: #fff;
-        border: 1px solid rgb(226 232 240);
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    }
-    .curriculum-panel-header {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 16px 20px;
-        border-bottom: 1px solid rgb(241 245 249);
-        background: rgb(248 250 252);
-    }
-    .curriculum-panel-body {
-        padding: 20px 22px;
-    }
-    .curriculum-panel-body.prose-tight {
-        font-size: 0.9375rem;
-        line-height: 1.75;
-        color: rgb(51 65 85);
-    }
-    .curriculum-aside-card {
-        background: #fff;
-        border: 1px solid rgb(226 232 240);
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    }
-    @media (min-width: 1280px) {
-        .curriculum-aside-sticky {
-            position: sticky;
-            top: 1rem;
-        }
-    }
-    .curriculum-section-summary::-webkit-details-marker {
-        display: none;
-    }
-    .curriculum-section-summary::marker {
-        display: none;
+    .sp-oc-curriculum-hero::before {
         content: '';
+        position: absolute;
+        inset-inline-end: -40px;
+        top: -60px;
+        width: 220px;
+        height: 220px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(174,217,234,0.28), transparent 70%);
+        pointer-events: none;
+    }
+    .sp-oc-curriculum-sticky { position: sticky; top: 12px; }
+    .sp-oc-section-details > summary { list-style: none; cursor: pointer; }
+    .sp-oc-section-details > summary::-webkit-details-marker { display: none; }
+    .sp-oc-section-details .sp-oc-section-chevron { transition: transform 0.18s ease; }
+    .sp-oc-section-details[open] > summary .sp-oc-section-chevron { transform: rotate(180deg); }
+    @media (max-width: 1023px) {
+        .sp-oc-curriculum-sticky { position: static; }
     }
 </style>
 @endpush
 
 @section('content')
-@php
-    $sg = $studentRouteGroup ?? 'student.offline-courses';
-    $stats = $curriculumStats ?? ['sections' => 0, 'items' => 0];
-@endphp
-<div class="w-full max-w-full space-y-6">
-    {{-- مسار تنقل --}}
-    <nav class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-500" aria-label="مسار التنقل">
-        <a href="{{ route('dashboard') }}" class="hover:text-sky-600 font-medium">لوحة التحكم</a>
-        <span class="text-slate-300" aria-hidden="true">/</span>
-        <a href="{{ route($sg . '.index') }}" class="hover:text-sky-600 font-medium">{{ ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : 'كورساتي الأوفلاين' }}</a>
-        <span class="text-slate-300" aria-hidden="true">/</span>
-        <a href="{{ route($sg . '.show', $offlineCourse) }}" class="hover:text-sky-600 font-medium truncate max-w-[10rem] sm:max-w-xs">{{ \Illuminate\Support\Str::limit($offlineCourse->title, 40) }}</a>
-        <span class="text-slate-300" aria-hidden="true">/</span>
-        <span class="text-slate-800 font-semibold">المنهج</span>
+<div class="space-y-5">
+    <nav class="flex flex-wrap items-center gap-2 text-sm font-bold text-[var(--sp-muted)]">
+        <a href="{{ route($sg . '.index') }}" class="sp-link">{{ $isOnlineChannel ? __('student.online_courses_title') : __('student.offline_courses_title') }}</a>
+        <x-student.figma-icon name="icon-chevron.svg" box="size-3" class="opacity-40 rtl:rotate-180" />
+        <a href="{{ route($sg . '.show', $offlineCourse) }}" class="sp-link truncate max-w-[40vw]">{{ $offlineCourse->title }}</a>
+        <x-student.figma-icon name="icon-chevron.svg" box="size-3" class="opacity-40 rtl:rotate-180" />
+        <span class="text-[var(--sp-text)]">{{ __('student.oc_curriculum_title') }}</span>
     </nav>
 
-    {{-- رأس الصفحة (نفس فكرة ترحيب لوحة الطالب) --}}
-    <div class="curriculum-hero">
-        <div class="curriculum-hero-accent" aria-hidden="true"></div>
-        <div class="relative pr-2 sm:pr-3">
-            <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
-                <div class="min-w-0 flex-1 space-y-3">
-                    <p class="text-xs font-bold uppercase tracking-wide text-sky-600">منهج الكورس والتوصيف</p>
-                    <h1 class="text-2xl sm:text-3xl font-black text-gray-900 leading-tight">{{ $offlineCourse->title }}</h1>
-                    <p class="text-sm sm:text-base text-gray-600 max-w-3xl leading-relaxed">
-                        اقرأ وصف الكورس والمدرب، ثم استعرض هيكل المحتوى والروابط لكل عنصر — الصفحة تستخدم عرض المنطقة الكامل مثل بقية لوحة الطالب.
-                    </p>
-                    <div class="flex flex-wrap items-center gap-2 pt-1">
-                        <a href="{{ route($sg . '.show', $offlineCourse) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-bold border border-slate-200 transition-colors">
-                            <i class="fas fa-arrow-right text-slate-500"></i>
-                            صفحة الكورس
-                        </a>
-                        <a href="{{ route($sg . '.schedule', $offlineCourse) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-sm font-bold shadow-sm transition-colors">
-                            <i class="fas fa-calendar-alt"></i>
-                            التقويم والمواعيد
-                        </a>
-                        <a href="{{ route($sg . '.lectures', $offlineCourse) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-sky-200 bg-sky-50 text-sky-800 text-sm font-bold hover:bg-sky-100 transition-colors">
-                            <i class="fas fa-chalkboard-teacher"></i>
-                            المحاضرات
-                        </a>
-                    </div>
+    {{-- Hero --}}
+    <section class="sp-oc-curriculum-hero">
+        <div class="relative z-[1] flex flex-col lg:flex-row lg:items-center gap-6 lg:gap-8">
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold text-white/60 m-0 mb-2">{{ __('student.oc_curriculum_eyebrow') }}</p>
+                <h2 class="text-2xl sm:text-[28px] font-extrabold m-0 leading-tight">{{ $offlineCourse->title }}</h2>
+                <p class="text-sm text-white/70 m-0 mt-3 max-w-2xl leading-relaxed">{{ __('student.oc_curriculum_subtitle') }}</p>
+                <div class="flex flex-wrap gap-2 mt-4">
+                    <span class="sp-pill sp-pill--progress">{{ $isOnlineChannel ? __('student.exam_source_online') : __('student.exam_source_offline') }}</span>
+                    @if($enrollment->group)
+                        <span class="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/80">{{ __('student.oc_group') }}: {{ $enrollment->group->name }}</span>
+                    @endif
+                </div>
+                <div class="flex flex-wrap gap-3 mt-6">
+                    <a href="{{ route($sg . '.show', $offlineCourse) }}" class="inline-flex items-center justify-center rounded-[20px] bg-white/10 hover:bg-white/15 px-5 py-3.5 text-sm font-extrabold text-white transition">
+                        {{ __('student.oc_back_course') }}
+                    </a>
+                    <a href="{{ route($sg . '.schedule', $offlineCourse) }}" class="sp-promo-btn !mt-0 !text-[var(--sp-accent-text)]">{{ __('student.oc_tile_schedule') }}</a>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 sm:gap-3 shrink-0 min-w-[200px] lg:min-w-[240px]">
+                <div class="rounded-2xl bg-white/8 px-4 py-3 border border-white/10 text-center">
+                    <p class="text-2xl font-black text-[var(--sp-accent)] m-0">{{ $stats['sections'] }}</p>
+                    <p class="text-[10px] font-bold text-white/50 m-0 mt-1 uppercase tracking-wide">{{ __('student.oc_stat_sections') }}</p>
+                </div>
+                <div class="rounded-2xl bg-white/8 px-4 py-3 border border-white/10 text-center">
+                    <p class="text-2xl font-black text-[var(--sp-accent)] m-0">{{ $stats['items'] }}</p>
+                    <p class="text-[10px] font-bold text-white/50 m-0 mt-1 uppercase tracking-wide">{{ __('student.oc_stat_items') }}</p>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 
-    {{-- إحصائيات سريعة --}}
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div class="curriculum-stat">
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">أقسام المنهج</p>
-            <p class="text-2xl font-black text-sky-600 mt-1">{{ $stats['sections'] }}</p>
-        </div>
-        <div class="curriculum-stat">
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">عناصر مرتبطة</p>
-            <p class="text-2xl font-black text-violet-600 mt-1">{{ $stats['items'] }}</p>
-        </div>
-        <div class="curriculum-stat">
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">القناة</p>
-            <p class="text-lg font-bold text-gray-900 mt-1">{{ ($channel ?? 'offline') === 'online' ? 'أونلاين' : 'أوفلاين' }}</p>
-        </div>
-        <div class="curriculum-stat">
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">المجموعة</p>
-            <p class="text-lg font-bold text-gray-900 mt-1 truncate" title="{{ $enrollment->group->name ?? '—' }}">{{ $enrollment->group->name ?? '—' }}</p>
-        </div>
-    </div>
-
-    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-        {{-- العمود الرئيسي: التوصيف + المنهج --}}
-        <div class="xl:col-span-8 space-y-6 min-w-0">
+    <div class="grid gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(280px,1fr)]">
+        {{-- Main --}}
+        <div class="space-y-5 min-w-0">
             @if(filled($offlineCourse->description))
-                <section class="curriculum-panel" aria-labelledby="course-desc-heading">
-                    <div class="curriculum-panel-header">
-                        <span class="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-500 to-sky-600 text-white flex items-center justify-center shadow-md flex-shrink-0">
-                            <i class="fas fa-book-open"></i>
+                <section class="sp-card overflow-hidden">
+                    <div class="flex items-center gap-3 px-5 py-4 border-b border-black/5 bg-[#f7f7f5]">
+                        <span class="sp-icon-bubble shrink-0" style="background:var(--sp-sky)">
+                            <x-student.figma-icon name="icon-courses.svg" />
                         </span>
-                        <h2 id="course-desc-heading" class="text-base sm:text-lg font-black text-gray-900">وصف الكورس (التوصيف)</h2>
+                        <h3 class="font-extrabold text-base m-0">{{ __('student.oc_course_description') }}</h3>
                     </div>
-                    <div class="curriculum-panel-body prose-tight whitespace-pre-wrap break-words">
-                        {{ $offlineCourse->description }}
-                    </div>
+                    <div class="p-5 sm:p-6 text-sm leading-relaxed whitespace-pre-wrap break-words text-[var(--sp-text)]">{{ $offlineCourse->description }}</div>
                 </section>
             @endif
 
             @if(filled($offlineCourse->notes))
-                <section class="rounded-2xl border border-amber-200 bg-amber-50/50 overflow-hidden shadow-sm" aria-labelledby="course-notes-heading">
-                    <div class="px-5 py-4 border-b border-amber-100 bg-amber-50/80 flex items-center gap-3">
-                        <span class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0">
-                            <i class="fas fa-info-circle"></i>
+                <section class="sp-card overflow-hidden">
+                    <div class="flex items-center gap-3 px-5 py-4 border-b border-black/5" style="background:var(--sp-amber-soft)">
+                        <span class="sp-icon-bubble shrink-0" style="background:var(--sp-peach)">
+                            <x-student.figma-icon name="icon-messages.svg" />
                         </span>
-                        <h2 id="course-notes-heading" class="text-base font-black text-amber-950">ملاحظات إضافية</h2>
+                        <h3 class="font-extrabold text-base m-0">{{ __('student.oc_extra_notes') }}</h3>
                     </div>
-                    <div class="p-5 sm:p-6 text-sm sm:text-base text-amber-950/95 leading-relaxed whitespace-pre-wrap break-words">
-                        {{ $offlineCourse->notes }}
-                    </div>
+                    <div class="p-5 sm:p-6 text-sm leading-relaxed whitespace-pre-wrap break-words text-[var(--sp-text)]">{{ $offlineCourse->notes }}</div>
                 </section>
             @endif
 
-            <section class="space-y-4" aria-labelledby="curriculum-structure-heading">
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                    <h2 id="curriculum-structure-heading" class="text-lg sm:text-xl font-black text-gray-900 flex items-center gap-2">
-                        <span class="w-10 h-10 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center">
-                            <i class="fas fa-sitemap"></i>
+            <section class="space-y-3">
+                <div class="flex items-center justify-between gap-3 flex-wrap">
+                    <div class="flex items-center gap-3">
+                        <span class="sp-icon-bubble shrink-0" style="background:var(--sp-mint)">
+                            <x-student.figma-icon name="icon-path.svg" />
                         </span>
-                        هيكل المنهج
-                    </h2>
+                        <div>
+                            <h3 class="sp-section-title m-0">{{ __('student.oc_curriculum_structure') }}</h3>
+                            <p class="text-xs text-[var(--sp-muted)] m-0 mt-1">{{ __('student.oc_curriculum_structure_hint') }}</p>
+                        </div>
+                    </div>
+                    @if($stats['items'] > 0)
+                        <span class="sp-pill sp-pill--progress">{{ __('student.oc_stat_items') }}: {{ $stats['items'] }}</span>
+                    @endif
                 </div>
 
                 @if($curriculumRoots->isNotEmpty())
-                    <div class="curriculum-panel overflow-visible">
-                        <div class="curriculum-panel-body p-4 sm:p-5 bg-slate-50/60">
-                            @include('student.offline-courses.partials.curriculum-sections', [
-                                'sections' => $curriculumRoots,
-                                'offlineCourse' => $offlineCourse,
-                                'channel' => $channel,
-                                'studentRouteGroup' => $studentRouteGroup,
-                                'depth' => 0,
-                            ])
-                        </div>
-                    </div>
+                    @include('student.offline-courses.partials.curriculum-sections', [
+                        'sections' => $curriculumRoots,
+                        'offlineCourse' => $offlineCourse,
+                        'channel' => $channel,
+                        'studentRouteGroup' => $studentRouteGroup,
+                        'depth' => 0,
+                    ])
                 @else
-                    <div class="curriculum-panel">
-                        <div class="curriculum-panel-body py-14 text-center text-gray-500 text-sm">
-                            <i class="fas fa-folder-open text-4xl text-gray-300 mb-3 block" aria-hidden="true"></i>
-                            لا يوجد منهج منشور لهذا الكورس بعد.
-                        </div>
+                    <div class="sp-card p-10 text-center">
+                        <span class="sp-icon-bubble mx-auto mb-3" style="background:var(--sp-sky)">
+                            <x-student.figma-icon name="icon-path.svg" />
+                        </span>
+                        <p class="font-extrabold m-0">{{ __('student.oc_no_curriculum') }}</p>
+                        <p class="text-sm text-[var(--sp-muted)] m-0 mt-2">{{ __('student.oc_no_curriculum_hint') }}</p>
                     </div>
                 @endif
             </section>
         </div>
 
-        {{-- الشريط الجانبي: المدرب + روابط سريعة --}}
-        <aside class="xl:col-span-4 space-y-6 min-w-0">
-            <div class="curriculum-aside-card curriculum-aside-sticky space-y-5">
-                <div class="flex items-center gap-2 pb-3 border-b border-slate-100">
-                    <span class="w-9 h-9 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center">
-                        <i class="fas fa-chalkboard-teacher text-sm"></i>
-                    </span>
-                    <h2 class="text-base font-black text-gray-900">المدرب</h2>
-                </div>
-                <div class="flex flex-col items-start text-start gap-4">
-                    @if($offlineCourse->instructor->profile_image_url)
-                        <img src="{{ $offlineCourse->instructor->profile_image_url }}" alt="" class="w-28 h-28 rounded-2xl object-cover border border-slate-200 shadow-md" width="112" height="112">
+        {{-- Sidebar --}}
+        <aside class="space-y-4 min-w-0 sp-oc-curriculum-sticky">
+            <section class="sp-card p-5">
+                <div class="flex items-center gap-3 mb-4">
+                    @if($offlineCourse->instructor?->profile_image_url)
+                        <img src="{{ $offlineCourse->instructor->profile_image_url }}" alt="" class="w-12 h-12 rounded-[16px] object-cover">
                     @else
-                        <div class="w-28 h-28 rounded-2xl bg-gradient-to-br from-sky-500 to-sky-600 text-white flex items-center justify-center text-3xl font-black border border-slate-200 shadow-md" aria-hidden="true">
-                            {{ mb_substr($offlineCourse->instructor->name, 0, 1) }}
-                        </div>
+                        <span class="sp-icon-bubble shrink-0" style="background:var(--sp-peach)">
+                            <x-student.figma-icon name="icon-profile.svg" />
+                        </span>
                     @endif
-                    <div class="w-full space-y-2">
-                        <p class="text-lg font-black text-gray-900">{{ $offlineCourse->instructor->name }}</p>
-                        @if(filled($offlineCourse->instructor->bio))
-                            <div class="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap break-words">{{ $offlineCourse->instructor->bio }}</div>
-                        @else
-                            <p class="text-sm text-slate-500">لم يضف المدرب نبذة تعريفية بعد.</p>
-                        @endif
+                    <div class="min-w-0">
+                        <p class="text-xs font-bold text-[var(--sp-muted)] m-0">{{ __('student.oc_instructor') }}</p>
+                        <p class="font-extrabold text-[15px] m-0 truncate">{{ $offlineCourse->instructor?->name ?? '—' }}</p>
                     </div>
                 </div>
-            </div>
+                @if(filled($offlineCourse->instructor?->bio))
+                    <p class="text-sm text-[var(--sp-muted)] m-0 whitespace-pre-wrap leading-relaxed">{{ Str::limit($offlineCourse->instructor->bio, 280) }}</p>
+                    @if(strlen($offlineCourse->instructor->bio) > 280)
+                        <p class="text-xs text-[var(--sp-muted)] m-0 mt-2">{{ __('student.oc_instructor_bio_more') }}</p>
+                    @endif
+                @else
+                    <p class="text-sm text-[var(--sp-muted)] m-0">{{ __('student.oc_no_instructor_bio') }}</p>
+                @endif
+            </section>
 
-            <div class="curriculum-aside-card space-y-3">
-                <p class="text-xs font-bold text-gray-500 uppercase tracking-wide">انتقال سريع</p>
-                <div class="flex flex-col gap-2">
-                    <a href="{{ route($sg . '.resources', $offlineCourse) }}" class="flex items-center justify-between gap-2 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-sky-200 text-sm font-bold text-gray-800 transition-colors">
-                        <span class="flex items-center gap-2"><i class="fas fa-file-alt text-sky-500"></i> الموارد</span>
-                        <i class="fas fa-chevron-left text-xs text-gray-400"></i>
+            <section class="sp-card p-5 space-y-2">
+                <p class="text-xs font-bold text-[var(--sp-muted)] m-0 uppercase tracking-wide mb-1">{{ __('student.oc_quick_links') }}</p>
+                @foreach([
+                    ['route' => 'resources', 'icon' => 'icon-messages.svg', 'label' => __('student.oc_tile_resources')],
+                    ['route' => 'lectures', 'icon' => 'icon-classes.svg', 'label' => __('student.oc_tile_lectures')],
+                    ['route' => 'schedule', 'icon' => 'icon-calendar.svg', 'label' => __('student.oc_tile_schedule')],
+                ] as $link)
+                    <a href="{{ route($sg . '.' . $link['route'], $offlineCourse) }}" class="sp-process-row !shadow-none border border-[#f0f0ec] hover:border-[var(--sp-accent)] transition-colors">
+                        <span class="sp-icon-bubble !w-9 !h-9 shrink-0" style="background:var(--sp-sky)">
+                            <x-student.figma-icon :name="$link['icon']" box="size-4" />
+                        </span>
+                        <span class="flex-1 font-extrabold text-sm">{{ $link['label'] }}</span>
+                        <x-student.figma-icon name="icon-chevron.svg" box="size-3" class="opacity-40 rtl:rotate-180 shrink-0" />
                     </a>
-                    <a href="{{ route($sg . '.lectures', $offlineCourse) }}" class="flex items-center justify-between gap-2 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-violet-200 text-sm font-bold text-gray-800 transition-colors">
-                        <span class="flex items-center gap-2"><i class="fas fa-chalkboard-teacher text-violet-500"></i> المحاضرات</span>
-                        <i class="fas fa-chevron-left text-xs text-gray-400"></i>
-                    </a>
-                    <a href="{{ route($sg . '.schedule', $offlineCourse) }}" class="flex items-center justify-between gap-2 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-indigo-200 text-sm font-bold text-gray-800 transition-colors">
-                        <span class="flex items-center gap-2"><i class="fas fa-calendar-alt text-indigo-500"></i> التقويم</span>
-                        <i class="fas fa-chevron-left text-xs text-gray-400"></i>
-                    </a>
-                    <a href="{{ route('student.exams.index') }}" class="flex items-center justify-between gap-2 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-emerald-200 text-sm font-bold text-gray-800 transition-colors">
-                        <span class="flex items-center gap-2"><i class="fas fa-clipboard-check text-emerald-600"></i> الاختبارات</span>
-                        <i class="fas fa-chevron-left text-xs text-gray-400"></i>
-                    </a>
-                </div>
-            </div>
+                @endforeach
+                <a href="{{ route('student.exams.index', ['module' => $examsModule]) }}" class="sp-process-row !shadow-none border border-[#f0f0ec] hover:border-[var(--sp-accent)] transition-colors">
+                    <span class="sp-icon-bubble !w-9 !h-9 shrink-0" style="background:var(--sp-mint)">
+                        <x-student.figma-icon name="icon-exams.svg" box="size-4" />
+                    </span>
+                    <span class="flex-1 font-extrabold text-sm">{{ __('student.oc_tile_exams') }}</span>
+                    <x-student.figma-icon name="icon-chevron.svg" box="size-3" class="opacity-40 rtl:rotate-180 shrink-0" />
+                </a>
+            </section>
+
+            @if($offlineCourse->start_date || $enrollment->group)
+                <section class="sp-card p-5 space-y-2">
+                    <h3 class="sp-section-title mb-3">{{ __('student.oc_curriculum_meta') }}</h3>
+                    @if($offlineCourse->start_date)
+                        <div class="flex items-center justify-between gap-3 rounded-[14px] bg-[#f7f7f5] px-3 py-2.5">
+                            <span class="text-sm font-bold text-[var(--sp-muted)]">{{ __('student.oc_start_date') }}</span>
+                            <span class="text-sm font-extrabold">{{ $offlineCourse->start_date->format('Y/m/d') }}</span>
+                        </div>
+                    @endif
+                    @if($enrollment->group)
+                        <div class="flex items-center justify-between gap-3 rounded-[14px] bg-[#f7f7f5] px-3 py-2.5">
+                            <span class="text-sm font-bold text-[var(--sp-muted)]">{{ __('student.oc_group') }}</span>
+                            <span class="text-sm font-extrabold truncate">{{ $enrollment->group->name }}</span>
+                        </div>
+                    @endif
+                    @if($offlineCourse->locationModel || $offlineCourse->location)
+                        <div class="flex items-center justify-between gap-3 rounded-[14px] bg-[#f7f7f5] px-3 py-2.5">
+                            <span class="text-sm font-bold text-[var(--sp-muted)]">{{ __('student.oc_location') }}</span>
+                            <span class="text-sm font-extrabold truncate">{{ $offlineCourse->locationModel->name ?? $offlineCourse->location }}</span>
+                        </div>
+                    @endif
+                </section>
+            @endif
         </aside>
     </div>
 </div>

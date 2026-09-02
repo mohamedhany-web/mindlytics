@@ -1,126 +1,105 @@
-@extends('layouts.app')
+@extends('layouts.student-dashboard')
 
-@section('title', 'موارد الكورس - ' . $offlineCourse->title)
-@section('header', 'موارد الكورس الأوفلاين')
+@php
+    $isOnlineChannel = ($channel ?? 'offline') === 'online';
+    $sg = $studentRouteGroup ?? 'student.offline-courses';
+    $hasGeneral = isset($generalResources) && $generalResources && $generalResources->isNotEmpty();
+    $hasLectures = isset($lectures) && $lectures && $lectures->count() > 0;
+    $pp = (int) ($perPage ?? 10);
+@endphp
+
+@section('title', __('student.oc_resources_title') . ' — ' . $offlineCourse->title)
+@section('header', __('student.oc_resources_title'))
 
 @section('content')
-<div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-    <div class="mb-4">
-        <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.show', $offlineCourse) }}" class="inline-flex items-center text-sky-600 hover:text-sky-700 text-sm font-medium">
-            <i class="fas fa-arrow-right ml-2"></i>
-            العودة لصفحة الكورس
-        </a>
-    </div>
+<div class="space-y-5">
+    <nav class="flex flex-wrap items-center gap-2 text-sm font-bold text-[var(--sp-muted)]">
+        <a href="{{ route($sg . '.index') }}" class="sp-link">{{ $isOnlineChannel ? __('student.online_courses_title') : __('student.offline_courses_title') }}</a>
+        <x-student.figma-icon name="icon-chevron.svg" box="size-3" class="opacity-40 rtl:rotate-180" />
+        <a href="{{ route($sg . '.show', $offlineCourse) }}" class="sp-link truncate max-w-[40vw]">{{ $offlineCourse->title }}</a>
+        <x-student.figma-icon name="icon-chevron.svg" box="size-3" class="opacity-40 rtl:rotate-180" />
+        <span class="text-[var(--sp-text)]">{{ __('student.oc_resources_title') }}</span>
+    </nav>
 
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div class="p-5 sm:p-6 border-b border-gray-100">
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <section class="sp-card p-5 sm:p-6 space-y-4">
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+            <div class="flex items-start gap-4 min-w-0">
+                <span class="sp-icon-bubble shrink-0 !w-14 !h-14" style="background:var(--sp-peach)">
+                    <x-student.figma-icon name="icon-messages.svg" box="size-7" />
+                </span>
                 <div class="min-w-0">
-                    <h1 class="text-xl font-bold text-gray-900 flex items-center gap-2">
-                        <i class="fas fa-file-alt text-sky-500"></i>
-                        موارد الكورس (أوفلاين) — {{ $offlineCourse->title }}
-                    </h1>
-                    <p class="text-sm text-gray-500 mt-1">
-                        اعرض الموارد حسب <span class="font-semibold text-gray-700">المحاضرات</span>، مع قسم للموارد العامة.
-                    </p>
+                    <h2 class="sp-section-title m-0">{{ __('student.oc_resources_title') }}</h2>
+                    <p class="text-sm text-[var(--sp-muted)] m-0 mt-2">{{ __('student.oc_resources_subtitle') }}</p>
                 </div>
-                <form method="GET" class="flex flex-col sm:flex-row gap-2 sm:items-center">
-                    <div class="relative">
-                        <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                        <input
-                            type="text"
-                            name="q"
-                            value="{{ $search ?? '' }}"
-                            placeholder="ابحث بالعنوان أو الوصف أو اسم الملف..."
-                            class="w-full sm:w-80 pr-9 pl-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm"
-                        />
-                    </div>
-                    <select name="per_page" class="w-full sm:w-auto px-3 py-2 rounded-lg border border-gray-200 text-sm">
-                        @php $pp = (int) ($perPage ?? 10); @endphp
-                        <option value="5" {{ $pp === 5 ? 'selected' : '' }}>5</option>
-                        <option value="10" {{ $pp === 10 ? 'selected' : '' }}>10</option>
-                        <option value="15" {{ $pp === 15 ? 'selected' : '' }}>15</option>
-                        <option value="25" {{ $pp === 25 ? 'selected' : '' }}>25</option>
-                    </select>
-                    <button class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-sky-600 text-white text-sm font-semibold hover:bg-sky-700">
-                        <i class="fas fa-filter"></i>
-                        تطبيق
-                    </button>
-                    @if(!empty($search))
-                        <a href="{{ url()->current() }}?per_page={{ $pp }}" class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200">
-                            مسح
-                        </a>
-                    @endif
-                </form>
             </div>
+            <form method="GET" class="flex flex-col sm:flex-row gap-2 sm:items-center shrink-0">
+                <input type="text" name="q" value="{{ $search ?? '' }}" placeholder="{{ __('student.oc_resources_search') }}"
+                       class="w-full sm:w-72 rounded-[30px] border-0 bg-[#f7f7f5] px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-[var(--sp-accent)]" />
+                <select name="per_page" class="rounded-[30px] border-0 bg-[#f7f7f5] px-4 py-2.5 text-sm font-bold">
+                    @foreach([5,10,15,25] as $n)
+                        <option value="{{ $n }}" @selected($pp === $n)>{{ $n }}</option>
+                    @endforeach
+                </select>
+                <button type="submit" class="sp-promo-btn !mt-0 !py-2.5">{{ __('student.oc_apply_filter') }}</button>
+                @if(!empty($search))
+                    <a href="{{ url()->current() }}?per_page={{ $pp }}" class="inline-flex items-center justify-center rounded-[30px] px-4 py-2.5 text-sm font-extrabold bg-[#f7f7f5]">{{ __('student.oc_clear_filter') }}</a>
+                @endif
+            </form>
         </div>
-        @php
-            $hasGeneral = isset($generalResources) && $generalResources && $generalResources->isNotEmpty();
-            $hasLectures = isset($lectures) && $lectures && $lectures->count() > 0;
-        @endphp
+    </section>
 
-        @if(! $hasGeneral && ! $hasLectures)
-            <div class="p-12 text-center text-gray-500">
-                <i class="fas fa-folder-open text-4xl mb-3 opacity-50"></i>
-                <p>لا توجد موارد متاحة حالياً.</p>
-            </div>
-        @else
-            @if($hasGeneral)
-                <div class="p-4 sm:p-5 border-b border-gray-100 bg-gray-50/40">
-                    <h2 class="font-bold text-gray-900 flex items-center gap-2">
-                        <i class="fas fa-layer-group text-slate-500"></i>
-                        موارد عامة
-                    </h2>
-                    <p class="text-sm text-gray-600 mt-1">موارد غير مرتبطة بمحاضرة محددة.</p>
-                </div>
-                <div class="p-4 sm:p-5">
-                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                        @foreach($generalResources as $resource)
-                            <div class="rounded-2xl border border-gray-200 bg-white p-4 hover:bg-gray-50/40 transition-colors">
-                                <div class="min-w-0">
-                                    <h3 class="font-semibold text-gray-900 leading-snug break-words">{{ $resource->title }}</h3>
-                                    @if($resource->description)
-                                        <p class="text-sm text-gray-600 mt-1 leading-relaxed">{{ Str::limit($resource->description, 180) }}</p>
-                                    @endif
-                                </div>
-
-                                <div class="mt-3">
-                                    @if($resource->type === 'link' && $resource->url)
-                                        <a href="{{ $resource->url }}" target="_blank" rel="noopener"
-                                           class="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-sky-600 text-white rounded-xl font-semibold hover:bg-sky-700">
-                                            <i class="fas fa-external-link-alt"></i>
-                                            فتح الرابط
-                                        </a>
-                                    @else
-                                        @php $files = $resource->getAllFiles(); @endphp
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                            @foreach($files as $file)
-                                                <a href="{{ offline_course_resource_file_url($file) }}"
-                                                   download="{{ $file['name'] ?? 'download' }}"
-                                                   class="group inline-flex items-center gap-2 w-full max-w-full px-3 py-2 rounded-xl bg-sky-50 text-sky-700 text-sm font-semibold hover:bg-sky-100 border border-sky-100">
-                                                    <i class="fas fa-download flex-shrink-0"></i>
-                                                    <span class="truncate min-w-0">{{ $file['name'] ?? 'تحميل' }}</span>
-                                                </a>
-                                            @endforeach
-                                        </div>
-                                    @endif
-                                </div>
-                            </div>
-                        @endforeach
+    @if(! $hasGeneral && ! $hasLectures)
+        <div class="sp-card p-10 text-center">
+            <span class="sp-icon-bubble mx-auto mb-3" style="background:var(--sp-peach)"><x-student.figma-icon name="icon-messages.svg" /></span>
+            <p class="font-extrabold m-0">{{ __('student.oc_no_resources') }}</p>
+        </div>
+    @else
+        @if($hasGeneral)
+            <section class="space-y-3">
+                <div class="flex items-center gap-3">
+                    <span class="sp-icon-bubble" style="background:var(--sp-sky)"><x-student.figma-icon name="icon-courses.svg" /></span>
+                    <div>
+                        <h3 class="font-extrabold text-base m-0">{{ __('student.oc_general_resources') }}</h3>
+                        <p class="text-xs text-[var(--sp-muted)] m-0">{{ __('student.oc_general_resources_hint') }}</p>
                     </div>
                 </div>
-            @endif
-
-            @if($hasLectures)
-                <div class="p-4 sm:p-5 border-t border-gray-100 bg-white">
-                    <h2 class="font-bold text-gray-900 flex items-center gap-2">
-                        <i class="fas fa-chalkboard-teacher text-sky-500"></i>
-                        المحاضرات
-                    </h2>
-                    <p class="text-sm text-gray-600 mt-1">اختر محاضرة لتحميل مواردها.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    @foreach($generalResources as $resource)
+                        <div class="sp-card p-4 sm:p-5 space-y-3">
+                            <h4 class="font-extrabold text-sm m-0 leading-snug">{{ $resource->title }}</h4>
+                            @if($resource->description)
+                                <p class="text-xs text-[var(--sp-muted)] m-0">{{ Str::limit($resource->description, 180) }}</p>
+                            @endif
+                            @if($resource->type === 'link' && $resource->url)
+                                <a href="{{ $resource->url }}" target="_blank" rel="noopener" class="sp-promo-btn !mt-0 w-full text-center !py-2.5">{{ __('student.oc_open_link') }}</a>
+                            @else
+                                @php $files = $resource->getAllFiles(); @endphp
+                                <div class="grid grid-cols-1 gap-2">
+                                    @foreach($files as $file)
+                                        <a href="{{ offline_course_resource_file_url($file) }}" download="{{ $file['name'] ?? 'download' }}"
+                                           class="inline-flex items-center gap-2 rounded-[16px] bg-[#f7f7f5] px-3 py-2 text-xs font-extrabold hover:bg-[var(--sp-accent)] transition-colors">
+                                            <x-student.figma-icon name="icon-plus.svg" box="size-3.5" class="opacity-60" />
+                                            <span class="truncate">{{ $file['name'] ?? __('student.oc_download') }}</span>
+                                        </a>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
                 </div>
+            </section>
+        @endif
 
-                <div class="divide-y divide-gray-100">
+        @if($hasLectures)
+            <section class="sp-card overflow-hidden">
+                <div class="flex items-center gap-3 px-5 py-4 border-b border-black/5 bg-[#f7f7f5]">
+                    <span class="sp-icon-bubble shrink-0" style="background:var(--sp-mint)"><x-student.figma-icon name="icon-classes.svg" /></span>
+                    <div>
+                        <h3 class="font-extrabold text-base m-0">{{ __('student.oc_tile_lectures') }}</h3>
+                        <p class="text-xs text-[var(--sp-muted)] m-0">{{ __('student.oc_lecture_resources_hint') }}</p>
+                    </div>
+                </div>
+                <div class="divide-y divide-black/5">
                     @foreach($lectures as $lec)
                         @php
                             $dateLabel = optional($lec->groupSession)->session_date
@@ -130,62 +109,44 @@
                             $resourcesForLecture = $lec->resources ?? collect();
                         @endphp
                         <details class="group">
-                            <summary class="cursor-pointer list-none p-4 sm:p-5 hover:bg-gray-50/50 flex items-center justify-between gap-3 select-none">
-                                <div class="min-w-0">
-                                    <div class="flex items-center gap-2 flex-wrap">
-                                        <span class="font-semibold text-gray-900">{{ $lec->title }}</span>
-                                        @if($dateLabel)
-                                            <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700">{{ $dateLabel }}</span>
-                                        @endif
-                                        @if($groupLabel)
-                                            <span class="text-xs px-2 py-1 rounded-full bg-amber-50 text-amber-700">{{ $groupLabel }}</span>
-                                        @endif
-                                        <span class="text-xs px-2 py-1 rounded-full bg-sky-50 text-sky-700">
-                                            {{ $resourcesForLecture->count() }} مورد
-                                        </span>
+                            <summary class="cursor-pointer list-none p-4 sm:p-5 hover:bg-[#f7f7f5] flex items-center justify-between gap-3 select-none">
+                                <div class="min-w-0 space-y-2">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="font-extrabold text-sm">{{ $lec->title }}</span>
+                                        @if($dateLabel)<span class="sp-pill">{{ $dateLabel }}</span>@endif
+                                        @if($groupLabel)<span class="sp-pill sp-pill--progress">{{ $groupLabel }}</span>@endif
+                                        <span class="sp-pill sp-pill--done">{{ $resourcesForLecture->count() }} {{ __('student.oc_resource_count') }}</span>
                                     </div>
                                     @if($lec->description)
-                                        <p class="text-sm text-gray-600 mt-1">{{ Str::limit($lec->description, 140) }}</p>
+                                        <p class="text-xs text-[var(--sp-muted)] m-0">{{ Str::limit($lec->description, 140) }}</p>
                                     @endif
                                 </div>
-                                <div class="flex items-center gap-2 text-gray-500">
-                                    <i class="fas fa-chevron-down transition-transform duration-200 group-open:rotate-180"></i>
-                                </div>
+                                <x-student.figma-icon name="icon-dropdown.svg" box="size-4" class="opacity-40 shrink-0 group-open:rotate-180 transition-transform" />
                             </summary>
                             <div class="px-4 sm:px-5 pb-5">
                                 @if($resourcesForLecture->isEmpty())
-                                    <div class="text-sm text-gray-500 py-3">لا توجد موارد مرتبطة بهذه المحاضرة.</div>
+                                    <p class="text-sm text-[var(--sp-muted)] m-0 py-2">{{ __('student.oc_no_lecture_resources') }}</p>
                                 @else
                                     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                         @foreach($resourcesForLecture as $resource)
-                                            <div class="rounded-2xl border border-gray-200 bg-white p-4 hover:bg-gray-50/40 transition-colors">
-                                                <div class="min-w-0">
-                                                    <div class="font-semibold text-gray-900 leading-snug break-words">{{ $resource->title }}</div>
-                                                    @if($resource->description)
-                                                        <div class="text-sm text-gray-600 mt-1 leading-relaxed">{{ Str::limit($resource->description, 180) }}</div>
-                                                    @endif
-                                                </div>
-                                                <div class="mt-3">
-                                                    @if($resource->type === 'link' && $resource->url)
-                                                        <a href="{{ $resource->url }}" target="_blank" rel="noopener"
-                                                           class="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-sky-600 text-white rounded-xl font-semibold hover:bg-sky-700">
-                                                            <i class="fas fa-external-link-alt"></i>
-                                                            فتح الرابط
-                                                        </a>
-                                                    @else
-                                                        @php $files = $resource->getAllFiles(); @endphp
-                                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                            @foreach($files as $file)
-                                                                <a href="{{ offline_course_resource_file_url($file) }}"
-                                                                   download="{{ $file['name'] ?? 'download' }}"
-                                                                   class="group inline-flex items-center gap-2 w-full max-w-full px-3 py-2 rounded-xl bg-sky-50 text-sky-700 text-sm font-semibold hover:bg-sky-100 border border-sky-100">
-                                                                    <i class="fas fa-download flex-shrink-0"></i>
-                                                                    <span class="truncate min-w-0">{{ $file['name'] ?? 'تحميل' }}</span>
-                                                                </a>
-                                                            @endforeach
-                                                        </div>
-                                                    @endif
-                                                </div>
+                                            <div class="rounded-[16px] bg-[#f7f7f5] p-4 space-y-3">
+                                                <p class="font-extrabold text-sm m-0">{{ $resource->title }}</p>
+                                                @if($resource->description)
+                                                    <p class="text-xs text-[var(--sp-muted)] m-0">{{ Str::limit($resource->description, 180) }}</p>
+                                                @endif
+                                                @if($resource->type === 'link' && $resource->url)
+                                                    <a href="{{ $resource->url }}" target="_blank" rel="noopener" class="sp-promo-btn !mt-0 w-full text-center !py-2">{{ __('student.oc_open_link') }}</a>
+                                                @else
+                                                    @php $files = $resource->getAllFiles(); @endphp
+                                                    <div class="grid gap-2">
+                                                        @foreach($files as $file)
+                                                            <a href="{{ offline_course_resource_file_url($file) }}" download="{{ $file['name'] ?? 'download' }}"
+                                                               class="inline-flex items-center gap-2 rounded-[14px] bg-white px-3 py-2 text-xs font-extrabold hover:bg-[var(--sp-accent)] transition-colors">
+                                                                <span class="truncate">{{ $file['name'] ?? __('student.oc_download') }}</span>
+                                                            </a>
+                                                        @endforeach
+                                                    </div>
+                                                @endif
                                             </div>
                                         @endforeach
                                     </div>
@@ -194,12 +155,9 @@
                         </details>
                     @endforeach
                 </div>
-
-                <div class="p-4 sm:p-5 border-t border-gray-100">
-                    {{ $lectures->links() }}
-                </div>
-            @endif
+                <div class="p-4 sm:p-5 border-t border-black/5 flex justify-center">{{ $lectures->links() }}</div>
+            </section>
         @endif
-    </div>
+    @endif
 </div>
 @endsection

@@ -1,318 +1,398 @@
-@extends('layouts.app')
+@extends('layouts.student-dashboard')
+
+@php
+    use App\Support\StudentFigmaAssets;
+    use Illuminate\Support\Str;
+
+    $isOnlineChannel = ($channel ?? 'offline') === 'online';
+    $examsModule = $isOnlineChannel ? 'online' : 'offline';
+    $routeGroup = $studentRouteGroup ?? 'student.offline-courses';
+    $sp = StudentFigmaAssets::urls();
+    $stats = $hubStats ?? ['resources' => 0, 'lectures' => 0, 'activities' => 0, 'exams' => 0, 'pending_activities' => 0];
+
+    $progressPct = max(0, min(100, (int) round((float) $enrollment->progress)));
+    $ringDeg = (int) round($progressPct * 3.6);
+    $isDone = $progressPct >= 100;
+    $bubbleColors = ['#f9e4d7', '#d7e8f9', '#d7eef5', '#f9f0d7', '#dcdef2'];
+
+    $primaryHref = $stats['pending_activities'] > 0
+        ? '#activities-required'
+        : route($routeGroup . '.schedule', $offlineCourse);
+    $primaryLabel = $stats['pending_activities'] > 0
+        ? __('student.oc_hub_view_activities')
+        : __('student.oc_open_schedule');
+
+    $quickLinks = [
+        ['route' => 'curriculum', 'icon' => 'icon-path.svg', 'bubble' => 'var(--sp-sky)', 'title' => __('student.oc_tile_curriculum'), 'meta' => __('student.oc_badge_curriculum')],
+        ['route' => 'schedule', 'icon' => 'icon-calendar.svg', 'bubble' => 'var(--sp-lilac)', 'title' => __('student.oc_tile_schedule'), 'meta' => __('student.oc_badge_schedule')],
+        ['route' => 'lectures', 'icon' => 'icon-classes.svg', 'bubble' => 'var(--sp-mint)', 'title' => __('student.oc_tile_lectures'), 'meta' => (string) $stats['lectures']],
+        ['route' => 'resources', 'icon' => 'icon-messages.svg', 'bubble' => 'var(--sp-peach)', 'title' => __('student.oc_tile_resources'), 'meta' => (string) $stats['resources']],
+        ['route' => '#activities-required', 'icon' => 'icon-star.svg', 'bubble' => 'var(--sp-amber-soft)', 'title' => __('student.oc_tile_activities'), 'meta' => (string) $stats['pending_activities']],
+        ['route' => 'exams', 'icon' => 'icon-exams.svg', 'bubble' => 'var(--sp-badge-done)', 'title' => __('student.oc_tile_exams'), 'meta' => (string) $stats['exams']],
+    ];
+@endphp
 
 @section('title', $offlineCourse->title)
 @section('header', $offlineCourse->title)
 
+@push('styles')
+<style>
+    .sp-oc-hub-hero {
+        background: #2f2e43;
+        border-radius: 30px;
+        color: #fff;
+        padding: 28px 24px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: var(--sp-shadow);
+    }
+    .sp-oc-hub-hero::before {
+        content: '';
+        position: absolute;
+        inset-inline-end: -40px;
+        top: -60px;
+        width: 220px;
+        height: 220px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(174,217,234,0.28), transparent 70%);
+        pointer-events: none;
+    }
+    .sp-oc-hub-hero::after {
+        content: '';
+        position: absolute;
+        inset-inline-start: -30px;
+        bottom: -80px;
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(249,228,215,0.18), transparent 70%);
+        pointer-events: none;
+    }
+    .sp-oc-progress-ring {
+        width: 132px;
+        height: 132px;
+        border-radius: 50%;
+        background: conic-gradient(var(--sp-accent) {{ $ringDeg }}deg, rgba(255,255,255,0.12) 0deg);
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+        position: relative;
+        z-index: 1;
+    }
+    .sp-oc-progress-ring-inner {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: #2f2e43;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+    .sp-oc-hub-sticky { position: sticky; top: 12px; }
+    @media (max-width: 1023px) {
+        .sp-oc-hub-sticky { position: static; }
+        .sp-oc-progress-ring { width: 112px; height: 112px; }
+        .sp-oc-progress-ring-inner { width: 84px; height: 84px; }
+    }
+</style>
+@endpush
+
 @section('content')
-<div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-    <div class="mb-4">
-        <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.index') }}" class="inline-flex items-center text-sky-600 hover:text-sky-700 text-sm font-medium">
-            <i class="fas fa-arrow-right ml-2"></i>
-            العودة للقائمة
+<div class="space-y-5">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+        <a href="{{ route($routeGroup . '.index') }}" class="sp-link inline-flex items-center gap-2">
+            <img src="{{ $sp['chevron'] ?? StudentFigmaAssets::url('icon-chevron.svg') }}" alt="" class="size-4 rotate-180 rtl:rotate-0">
+            {{ $isOnlineChannel ? __('student.online_courses_title') : __('student.offline_courses_title') }}
         </a>
+        <span class="sp-pill {{ $isOnlineChannel ? 'sp-pill--progress' : 'sp-pill--upcoming' }}">
+            {{ $isOnlineChannel ? __('student.exam_source_online') : __('student.exam_source_offline') }}
+        </span>
     </div>
 
-    @php
-        $resourcesCount = $offlineCourse->resources()
-            ->active()
-            ->when($enrollment->group_id, fn ($q) => $q->where(function ($x) use ($enrollment) {
-                $x->whereNull('group_id')->orWhere('group_id', $enrollment->group_id);
-            }))
-            ->count();
-
-        $lecturesCount = $offlineCourse->offlineLectures()
-            ->active()
-            ->when($enrollment->group_id, fn ($q) => $q->where(function ($x) use ($enrollment) {
-                $x->whereNull('group_id')->orWhere('group_id', $enrollment->group_id);
-            }))
-            ->count();
-
-        $activitiesCount = $offlineCourse->activities()
-            ->where('status', 'published')
-            ->when($enrollment->group_id, fn ($q) => $q->where(function ($x) use ($enrollment) {
-                $x->whereNull('group_id')->orWhere('group_id', $enrollment->group_id);
-            }))
-            ->count();
-
-        $examsCount = \App\Models\AdvancedExam::query()
-            ->where('offline_course_id', $offlineCourse->id)
-            ->where('is_active', true)
-            ->where('is_published', true)
-            ->count();
-    @endphp
-
-    <!-- معلومات الكورس -->
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div class="p-5 sm:p-6">
-            <h1 class="text-xl sm:text-2xl font-bold text-gray-900 mb-4">{{ $offlineCourse->title }}</h1>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                <div class="py-2.5 px-3 bg-gray-50 rounded-lg border border-gray-100">
-                    <p class="text-xs font-medium text-gray-500 mb-0.5">المدرب</p>
-                    <p class="text-sm font-semibold text-gray-900">{{ $offlineCourse->instructor->name }}</p>
-                </div>
-                @if($offlineCourse->locationModel)
-                <div class="py-2.5 px-3 bg-gray-50 rounded-lg border border-gray-100">
-                    <p class="text-xs font-medium text-gray-500 mb-0.5">المكان</p>
-                    <p class="text-sm font-semibold text-gray-900"><i class="fas fa-map-marker-alt text-sky-500 ml-1"></i>{{ $offlineCourse->locationModel->name }}</p>
-                    @if($offlineCourse->locationModel->address)
-                        <p class="text-xs text-gray-500 mt-1">{{ $offlineCourse->locationModel->address }}</p>
+    {{-- Hero --}}
+    <section class="sp-oc-hub-hero">
+        <div class="relative z-[1] flex flex-col lg:flex-row lg:items-center gap-6 lg:gap-8">
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold text-white/60 m-0 mb-2">{{ __('student.oc_hub_eyebrow') }}</p>
+                <h2 class="text-2xl sm:text-[28px] font-extrabold m-0 leading-tight">{{ $offlineCourse->title }}</h2>
+                <p class="text-sm text-white/70 m-0 mt-3 flex flex-wrap gap-x-2 gap-y-1">
+                    <span>{{ $offlineCourse->instructor->name ?? '—' }}</span>
+                    @if($offlineCourse->locationModel || $offlineCourse->location)
+                        <span class="opacity-40">·</span>
+                        <span>{{ $offlineCourse->locationModel->name ?? $offlineCourse->location }}</span>
+                    @endif
+                    @if($enrollment->group)
+                        <span class="opacity-40">·</span>
+                        <span>{{ __('student.oc_group') }}: {{ $enrollment->group->name }}</span>
+                    @endif
+                </p>
+                @if(filled($offlineCourse->description))
+                    <p class="text-sm text-white/55 m-0 mt-3 max-w-2xl leading-relaxed line-clamp-2">{{ Str::limit(strip_tags($offlineCourse->description), 160) }}</p>
+                @endif
+                <div class="flex flex-wrap gap-3 mt-6">
+                    <a href="{{ $primaryHref }}" class="sp-promo-btn !mt-0 !text-[var(--sp-accent-text)]">{{ $primaryLabel }}</a>
+                    <a href="{{ route($routeGroup . '.curriculum', $offlineCourse) }}" class="inline-flex items-center justify-center rounded-[20px] bg-white/10 hover:bg-white/15 px-5 py-3.5 text-sm font-extrabold text-white transition">
+                        {{ __('student.oc_tile_curriculum') }}
+                    </a>
+                    @if($stats['lectures'] > 0)
+                        <a href="{{ route($routeGroup . '.lectures', $offlineCourse) }}" class="inline-flex items-center justify-center rounded-[20px] bg-white/10 hover:bg-white/15 px-5 py-3.5 text-sm font-extrabold text-white transition">
+                            {{ __('student.oc_tile_lectures') }}
+                        </a>
                     @endif
                 </div>
-                @elseif($offlineCourse->location)
-                <div class="py-2.5 px-3 bg-gray-50 rounded-lg border border-gray-100">
-                    <p class="text-xs font-medium text-gray-500 mb-0.5">الموقع</p>
-                    <p class="text-sm font-semibold text-gray-900"><i class="fas fa-map-marker-alt text-sky-500 ml-1"></i>{{ $offlineCourse->location }}</p>
+            </div>
+
+            <div class="flex items-center gap-5 shrink-0">
+                <div class="sp-oc-progress-ring" role="img" aria-label="{{ __('student.percent_complete', ['pct' => $progressPct]) }}">
+                    <div class="sp-oc-progress-ring-inner">
+                        <span class="text-2xl font-black text-[var(--sp-accent)] leading-none">{{ $progressPct }}%</span>
+                        <span class="text-[10px] font-bold text-white/50 mt-1 uppercase tracking-wide">{{ __('student.oc_progress') }}</span>
+                    </div>
                 </div>
-                @endif
-                @if($offlineCourse->start_date)
-                <div class="py-2.5 px-3 bg-gray-50 rounded-lg border border-gray-100">
-                    <p class="text-xs font-medium text-gray-500 mb-0.5">تاريخ البدء</p>
-                    <p class="text-sm font-semibold text-gray-900">{{ $offlineCourse->start_date->format('Y-m-d') }}</p>
-                </div>
-                @endif
-                @if($enrollment->group)
-                <div class="py-2.5 px-3 bg-gray-50 rounded-lg border border-gray-100">
-                    <p class="text-xs font-medium text-gray-500 mb-0.5">المجموعة</p>
-                    <p class="text-sm font-semibold text-gray-900">{{ $enrollment->group->name }}</p>
-                </div>
-                @endif
-                <div class="py-2.5 px-3 bg-sky-50 rounded-lg border border-sky-100">
-                    <p class="text-xs font-medium text-gray-500 mb-1">التقدم</p>
-                    <div class="flex items-center gap-2">
-                        <div class="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
-                            <div class="bg-sky-500 h-2 rounded-full" style="width: {{ min($enrollment->progress, 100) }}%;"></div>
-                        </div>
-                        <span class="text-sm font-bold text-sky-600">{{ number_format($enrollment->progress, 0) }}%</span>
+                <div class="hidden sm:grid gap-2 min-w-[120px]">
+                    <div class="rounded-2xl bg-white/8 px-3 py-2.5 border border-white/10">
+                        <p class="text-[11px] font-bold text-white/50 m-0">{{ __('student.oc_tile_lectures') }}</p>
+                        <p class="text-lg font-black m-0 text-white">{{ $stats['lectures'] }}</p>
+                    </div>
+                    <div class="rounded-2xl bg-white/8 px-3 py-2.5 border border-white/10">
+                        <p class="text-[11px] font-bold text-white/50 m-0">{{ __('student.oc_pending_activities') }}</p>
+                        <p class="text-lg font-black m-0 text-white">{{ $stats['pending_activities'] }}</p>
                     </div>
                 </div>
             </div>
-            @if(filled($offlineCourse->description))
-            <div class="pt-4 border-t border-gray-100">
-                <p class="text-xs font-medium text-gray-500 mb-2">نبذة عن الكورس</p>
-                <p class="text-sm text-gray-700 leading-relaxed">{{ \Illuminate\Support\Str::limit($offlineCourse->description, 280) }}</p>
-                <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.curriculum', $offlineCourse) }}" class="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-sky-700 hover:text-sky-900">
-                    عرض التوصيف الكامل والمنهج
-                    <i class="fas fa-chevron-left text-xs"></i>
-                </a>
-            </div>
-            @endif
-            <!-- روابط المحتوى الأوفلاين -->
-            <div class="pt-4 border-t border-gray-100 flex flex-wrap gap-3">
-                <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.curriculum', $offlineCourse) }}" class="inline-flex items-center gap-2 px-3 py-2 bg-slate-50 text-slate-800 rounded-lg border border-slate-200 font-medium text-sm hover:bg-slate-100">
-                    <i class="fas fa-sitemap"></i> المنهج والتوصيف
-                </a>
-                <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.schedule', $offlineCourse) }}" class="inline-flex items-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-800 rounded-lg border border-indigo-100 font-medium text-sm hover:bg-indigo-100">
-                    <i class="fas fa-calendar-alt"></i> التقويم
-                </a>
-                <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.resources', $offlineCourse) }}" class="inline-flex items-center gap-2 px-3 py-2 bg-sky-50 text-sky-700 rounded-lg border border-sky-100 font-medium text-sm hover:bg-sky-100">
-                    <i class="fas fa-file-alt"></i> الموارد
-                </a>
-                <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.lectures', $offlineCourse) }}" class="inline-flex items-center gap-2 px-3 py-2 bg-violet-50 text-violet-700 rounded-lg border border-violet-100 font-medium text-sm hover:bg-violet-100">
-                    <i class="fas fa-chalkboard-teacher"></i> المحاضرات
-                </a>
-                <a href="{{ route('student.exams.index') }}" class="inline-flex items-center gap-2 px-3 py-2 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 font-medium text-sm hover:bg-emerald-100">
-                    <i class="fas fa-clipboard-check"></i> الاختبارات
-                </a>
-            </div>
         </div>
-    </div>
+    </section>
 
-    <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.curriculum', $offlineCourse) }}" class="group bg-white rounded-xl border border-slate-200 shadow-sm p-4 hover:shadow-md hover:border-slate-300 transition-all">
-            <div class="flex items-center justify-between">
-                <span class="w-10 h-10 rounded-lg bg-slate-100 text-slate-700 inline-flex items-center justify-center">
-                    <i class="fas fa-sitemap"></i>
-                </span>
-                <span class="text-xs px-2 py-1 rounded-full bg-slate-50 text-slate-600 font-semibold">منهج</span>
-            </div>
-            <p class="mt-3 text-sm font-bold text-gray-900">المنهج والتوصيف</p>
-            <p class="text-xs text-gray-500 mt-1">وصف الكورس، نبذة المدرب، وهيكل المحتوى</p>
-        </a>
-
-        <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.schedule', $offlineCourse) }}" class="group bg-white rounded-xl border border-indigo-100 shadow-sm p-4 hover:shadow-md hover:border-indigo-200 transition-all">
-            <div class="flex items-center justify-between">
-                <span class="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-700 inline-flex items-center justify-center">
-                    <i class="fas fa-calendar-alt"></i>
-                </span>
-                <span class="text-xs px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 font-semibold">جدول</span>
-            </div>
-            <p class="mt-3 text-sm font-bold text-gray-900">تقويم الجلسات</p>
-            <p class="text-xs text-gray-500 mt-1">كل الجلسات والمواعيد والاختبارات المجدولة</p>
-        </a>
-
-        <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.resources', $offlineCourse) }}" class="group bg-white rounded-xl border border-sky-100 shadow-sm p-4 hover:shadow-md hover:border-sky-200 transition-all">
-            <div class="flex items-center justify-between">
-                <span class="w-10 h-10 rounded-lg bg-sky-100 text-sky-600 inline-flex items-center justify-center">
-                    <i class="fas fa-file-alt"></i>
-                </span>
-                <span class="text-xs px-2 py-1 rounded-full bg-sky-50 text-sky-700 font-semibold">{{ $resourcesCount }}</span>
-            </div>
-            <p class="mt-3 text-sm font-bold text-gray-900">الموارد</p>
-            <p class="text-xs text-gray-500 mt-1">فتح وتحميل الملفات التعليمية</p>
-        </a>
-
-        <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.lectures', $offlineCourse) }}" class="group bg-white rounded-xl border border-violet-100 shadow-sm p-4 hover:shadow-md hover:border-violet-200 transition-all">
-            <div class="flex items-center justify-between">
-                <span class="w-10 h-10 rounded-lg bg-violet-100 text-violet-600 inline-flex items-center justify-center">
-                    <i class="fas fa-chalkboard-teacher"></i>
-                </span>
-                <span class="text-xs px-2 py-1 rounded-full bg-violet-50 text-violet-700 font-semibold">{{ $lecturesCount }}</span>
-            </div>
-            <p class="mt-3 text-sm font-bold text-gray-900">المحاضرات</p>
-            <p class="text-xs text-gray-500 mt-1">الدروس المتاحة لمجموعتك</p>
-        </a>
-
-        <a href="#activities-required" class="group bg-white rounded-xl border border-amber-100 shadow-sm p-4 hover:shadow-md hover:border-amber-200 transition-all">
-            <div class="flex items-center justify-between">
-                <span class="w-10 h-10 rounded-lg bg-amber-100 text-amber-700 inline-flex items-center justify-center">
-                    <i class="fas fa-tasks"></i>
-                </span>
-                <span class="text-xs px-2 py-1 rounded-full bg-amber-50 text-amber-700 font-semibold">{{ $activitiesCount }}</span>
-            </div>
-            <p class="mt-3 text-sm font-bold text-gray-900">الأنشطة</p>
-            <p class="text-xs text-gray-500 mt-1">المطلوب تسليمه ومتابعته</p>
-        </a>
-
-        <a href="{{ route('student.exams.index') }}" class="group bg-white rounded-xl border border-emerald-100 shadow-sm p-4 hover:shadow-md hover:border-emerald-200 transition-all">
-            <div class="flex items-center justify-between">
-                <span class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 inline-flex items-center justify-center">
-                    <i class="fas fa-clipboard-check"></i>
-                </span>
-                <span class="text-xs px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 font-semibold">{{ $examsCount }}</span>
-            </div>
-            <p class="mt-3 text-sm font-bold text-gray-900">الاختبارات</p>
-            <p class="text-xs text-gray-500 mt-1">الدخول والبدء من واجهة الطالب</p>
-        </a>
-    </div>
-
-    @if($enrollment->group)
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 sm:p-6">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div class="flex items-start gap-3">
-                <span class="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 inline-flex items-center justify-center shrink-0">
-                    <i class="fas fa-calendar-check text-lg"></i>
-                </span>
-                <div>
-                    <h2 class="text-base font-bold text-gray-900">الجلسات والمواعيد</h2>
-                    <p class="text-sm text-gray-500 mt-1">
-                        مجموعة <span class="font-semibold text-gray-700">{{ $enrollment->group->name }}</span>
-                        @if(($enrollment->group->sessions_count ?? 0) > 0)
-                            — {{ $enrollment->group->sessions_count }} جلسة مسجّلة
-                        @endif
-                    </p>
+    <div class="grid gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(280px,1fr)]">
+        {{-- Main --}}
+        <div class="space-y-5 min-w-0">
+            <section class="sp-card p-5 sm:p-6">
+                <div class="flex items-center justify-between gap-3 mb-4">
+                    <div>
+                        <h3 class="sp-section-title m-0">{{ __('student.oc_hub_quick_access') }}</h3>
+                        <p class="text-sm text-[var(--sp-muted)] m-0 mt-1">{{ __('student.oc_hub_quick_access_hint') }}</p>
+                    </div>
                 </div>
-            </div>
-            <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.schedule', $offlineCourse) }}" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 shadow-sm shrink-0">
-                <i class="fas fa-calendar-alt"></i>
-                فتح التقويم الكامل
-            </a>
-        </div>
-    </div>
-    @endif
-
-    <!-- حالة الدفع -->
-    @if((float)$enrollment->total_amount > 0)
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div class="p-5 sm:p-6">
-            <h2 class="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <i class="fas fa-money-bill-wave text-green-500"></i>
-                حالة الدفع
-            </h2>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div class="py-3 px-4 rounded-xl border {{ $enrollment->payment_status === 'paid' ? 'bg-green-50 border-green-200' : ($enrollment->payment_status === 'partial' ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200') }}">
-                    <p class="text-xs font-medium text-gray-500 mb-1">حالة الدفع</p>
-                    @php
-                        $pTexts = ['paid' => 'مكتمل', 'partial' => 'جزئي', 'unpaid' => 'لم يتم الدفع'];
-                        $pIcons = ['paid' => 'fa-check-circle text-green-600', 'partial' => 'fa-exclamation-circle text-amber-600', 'unpaid' => 'fa-times-circle text-red-600'];
-                    @endphp
-                    <p class="text-sm font-bold">
-                        <i class="fas {{ $pIcons[$enrollment->payment_status] ?? '' }} ml-1"></i>
-                        {{ $pTexts[$enrollment->payment_status] ?? '—' }}
-                    </p>
-                </div>
-                <div class="py-3 px-4 bg-gray-50 rounded-xl border border-gray-200">
-                    <p class="text-xs font-medium text-gray-500 mb-1">المبلغ المدفوع</p>
-                    <p class="text-sm font-bold text-gray-900">{{ number_format($enrollment->paid_amount, 2) }} ج.م</p>
-                </div>
-                <div class="py-3 px-4 bg-gray-50 rounded-xl border border-gray-200">
-                    <p class="text-xs font-medium text-gray-500 mb-1">المبلغ المتبقي</p>
-                    <p class="text-sm font-bold {{ (float)$enrollment->remaining_amount > 0 ? 'text-red-600' : 'text-green-600' }}">
-                        {{ number_format($enrollment->remaining_amount, 2) }} ج.م
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
-
-    <!-- الأنشطة المطلوبة -->
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" id="activities-required">
-        <div class="p-5 sm:p-6">
-            <h2 class="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <i class="fas fa-tasks text-amber-500"></i>
-                الأنشطة المطلوبة
-            </h2>
-            @if($pendingActivities->count() > 0)
-                <div class="space-y-3">
-                    @foreach($pendingActivities as $activity)
-                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-lg border border-gray-100 hover:bg-gray-50/50 transition-colors">
-                        <div class="flex-1 min-w-0">
-                            <h3 class="font-semibold text-gray-900 mb-1">{{ $activity->title }}</h3>
-                            @if($activity->description)
-                                <p class="text-sm text-gray-600 mb-2 line-clamp-2">{{ Str::limit($activity->description, 120) }}</p>
-                            @endif
-                            <div class="flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                                <span><i class="fas fa-tag text-sky-500 ml-1"></i>{{ $activity->type }}</span>
-                                @if($activity->due_date)
-                                    <span><i class="fas fa-calendar text-sky-500 ml-1"></i>{{ $activity->due_date->format('Y-m-d') }}</span>
-                                @endif
-                                <span><i class="fas fa-star text-amber-500 ml-1"></i>{{ $activity->max_score }} نقطة</span>
-                            </div>
-                        </div>
-                        <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.activities.show', [$offlineCourse, $activity]) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200 hover:bg-amber-200 flex-shrink-0">
-                            عرض / تسليم
+                <div class="grid gap-2 sm:grid-cols-2">
+                    @foreach($quickLinks as $index => $link)
+                        @php
+                            $href = $link['route'] === 'exams'
+                                ? route('student.exams.index', ['module' => $examsModule])
+                                : ($link['route'] === '#activities-required'
+                                    ? '#activities-required'
+                                    : route($routeGroup . '.' . $link['route'], $offlineCourse));
+                        @endphp
+                        <a href="{{ $href }}" class="sp-process-row !shadow-none border border-[#f0f0ec] hover:border-[var(--sp-accent)] transition-colors">
+                            <span class="sp-icon-bubble !w-10 !h-10" style="background:{{ $bubbleColors[$index % count($bubbleColors)] }}">
+                                <x-student.figma-icon :name="$link['icon']" box="size-5" />
+                            </span>
+                            <span class="flex-1 min-w-0">
+                                <span class="block font-extrabold text-sm truncate">{{ $link['title'] }}</span>
+                                <span class="block text-xs font-bold text-[var(--sp-muted)] mt-0.5">{{ __('student.oc_hub_open_section') }}</span>
+                            </span>
+                            <span class="sp-pill sp-pill--progress !py-1.5 !px-2.5 !text-xs shrink-0">{{ $link['meta'] }}</span>
                         </a>
-                    </div>
                     @endforeach
                 </div>
-            @else
-                <div class="rounded-lg border border-gray-100 bg-gray-50 p-4 text-sm text-gray-600">
-                    لا توجد أنشطة مطلوبة حالياً.
+            </section>
+
+            <section class="sp-card p-5 sm:p-6 space-y-4" id="activities-required">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <span class="sp-icon-bubble shrink-0" style="background:var(--sp-peach)">
+                            <x-student.figma-icon name="icon-star.svg" />
+                        </span>
+                        <div>
+                            <h3 class="sp-section-title m-0">{{ __('student.oc_pending_activities') }}</h3>
+                            <p class="text-xs text-[var(--sp-muted)] m-0 mt-1">{{ __('student.oc_hub_activities_hint') }}</p>
+                        </div>
+                    </div>
+                    @if($stats['pending_activities'] > 0)
+                        <span class="sp-pill sp-pill--upcoming">{{ $stats['pending_activities'] }}</span>
+                    @endif
                 </div>
+
+                @if($pendingActivities->count() > 0)
+                    <div class="space-y-2">
+                        @foreach($pendingActivities as $activity)
+                            <a href="{{ route($routeGroup . '.activities.show', [$offlineCourse, $activity]) }}"
+                               class="sp-process-row !shadow-none border border-[#f0f0ec] hover:border-[var(--sp-accent)] transition-colors">
+                                <span class="sp-icon-bubble !w-10 !h-10" style="background:var(--sp-amber-soft)">
+                                    <x-student.figma-icon name="icon-star.svg" box="size-5" />
+                                </span>
+                                <span class="flex-1 min-w-0">
+                                    <span class="block font-extrabold text-sm truncate">{{ $activity->title }}</span>
+                                    <span class="block text-xs font-bold text-[var(--sp-muted)] mt-0.5">
+                                        {{ $activity->type }}
+                                        @if($activity->due_date) · {{ $activity->due_date->format('Y/m/d') }}@endif
+                                        · {{ $activity->max_score }} {{ __('student.oc_points') }}
+                                    </span>
+                                </span>
+                                <span class="sp-pill sp-pill--upcoming shrink-0">{{ __('student.oc_submit_activity') }}</span>
+                            </a>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="rounded-[20px] bg-[#f7f7f5] px-4 py-8 text-center">
+                        <p class="font-extrabold text-sm m-0">{{ __('student.oc_no_pending_activities') }}</p>
+                    </div>
+                @endif
+            </section>
+
+            @if($completedActivities->count() > 0)
+                <section class="sp-card p-5 sm:p-6 space-y-4">
+                    <div class="flex items-center gap-3">
+                        <span class="sp-icon-bubble shrink-0" style="background:var(--sp-mint)">
+                            <x-student.figma-icon name="icon-certificates.svg" />
+                        </span>
+                        <h3 class="sp-section-title m-0">{{ __('student.oc_completed_activities') }}</h3>
+                    </div>
+                    <div class="space-y-2">
+                        @foreach($completedActivities as $activity)
+                            @php $submission = $activity->submissions->firstWhere('student_id', auth()->id()); @endphp
+                            <a href="{{ route($routeGroup . '.activities.show', [$offlineCourse, $activity]) }}"
+                               class="sp-process-row !shadow-none border border-[#f0f0ec]">
+                                <span class="sp-icon-bubble !w-10 !h-10" style="background:var(--sp-mint)">
+                                    <x-student.figma-icon name="icon-certificates.svg" box="size-5" />
+                                </span>
+                                <span class="flex-1 min-w-0">
+                                    <span class="block font-extrabold text-sm truncate">{{ $activity->title }}</span>
+                                    @if($submission && $submission->score !== null)
+                                        <span class="block text-xs font-bold text-[var(--sp-muted)] mt-0.5">
+                                            {{ __('student.oc_graded_score', ['score' => $submission->score, 'max' => $activity->max_score]) }}
+                                        </span>
+                                    @endif
+                                </span>
+                                <span class="sp-pill sp-pill--done shrink-0">{{ __('student.completed_badge') }}</span>
+                            </a>
+                        @endforeach
+                    </div>
+                </section>
+            @endif
+
+            @if(filled($offlineCourse->description))
+                <section class="sp-card p-5 sm:p-6">
+                    <h3 class="sp-section-title mb-3">{{ __('student.oc_about') }}</h3>
+                    <p class="text-sm text-[var(--sp-muted)] leading-relaxed m-0 whitespace-pre-line">{{ $offlineCourse->description }}</p>
+                    <a href="{{ route($routeGroup . '.curriculum', $offlineCourse) }}" class="sp-link text-sm font-extrabold inline-block mt-3">{{ __('student.oc_view_full_curriculum') }}</a>
+                </section>
             @endif
         </div>
-    </div>
 
-    <!-- الأنشطة المكتملة -->
-    @if($completedActivities->count() > 0)
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div class="p-5 sm:p-6">
-            <h2 class="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <i class="fas fa-check-circle text-emerald-500"></i>
-                الأنشطة المكتملة
-            </h2>
-            <div class="space-y-3">
-                @foreach($completedActivities as $activity)
-                @php
-                    $submission = $activity->submissions->firstWhere('student_id', auth()->id());
-                @endphp
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-lg border border-gray-100 hover:bg-gray-50/50 transition-colors">
-                    <div class="flex-1 min-w-0">
-                        <h3 class="font-semibold text-gray-900 mb-1">{{ $activity->title }}</h3>
-                        @if($submission && $submission->score !== null)
-                            <p class="text-sm text-emerald-600 font-semibold">
-                                <i class="fas fa-check-circle ml-1"></i>تم التصحيح: {{ $submission->score }}/{{ $activity->max_score }}
-                            </p>
-                        @endif
+        {{-- Sidebar rail --}}
+        <aside class="space-y-4 min-w-0 sp-oc-hub-sticky">
+            <section class="sp-card p-5">
+                <p class="text-xs font-bold text-[var(--sp-muted)] uppercase tracking-wide m-0 mb-2">{{ __('student.next_step') }}</p>
+                <h3 class="font-extrabold text-base m-0 mb-3 leading-snug">
+                    {{ $stats['pending_activities'] > 0 ? __('student.oc_hub_next_activity') : __('student.oc_hub_explore_course') }}
+                </h3>
+                <a href="{{ $primaryHref }}" class="sp-promo-btn !mt-0 w-full !text-[var(--sp-accent-text)]">{{ $primaryLabel }}</a>
+            </section>
+
+            @if($nextSession ?? null)
+                <section class="sp-card p-5 space-y-3">
+                    <div class="flex items-center gap-3">
+                        <span class="sp-icon-bubble shrink-0" style="background:var(--sp-lilac)">
+                            <x-student.figma-icon name="icon-calendar.svg" />
+                        </span>
+                        <div>
+                            <p class="text-xs font-bold text-[var(--sp-muted)] m-0">{{ __('student.oc_hub_next_session') }}</p>
+                            <p class="font-extrabold text-sm m-0 mt-0.5">{{ $nextSession->session_date->translatedFormat('l j F') }}</p>
+                        </div>
                     </div>
-                    <a href="{{ route(($studentRouteGroup ?? 'student.offline-courses') . '.activities.show', [$offlineCourse, $activity]) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 hover:bg-emerald-200 flex-shrink-0">
-                        عرض
-                    </a>
+                    @if(filled($nextSession->title))
+                        <p class="text-sm font-bold m-0">{{ $nextSession->title }}</p>
+                    @endif
+                    <a href="{{ route($routeGroup . '.schedule', $offlineCourse) }}" class="sp-link text-sm font-extrabold">{{ __('student.oc_open_schedule') }}</a>
+                </section>
+            @endif
+
+            <section class="sp-card p-5">
+                <div class="flex items-center gap-3 mb-4">
+                    @if($offlineCourse->instructor?->profile_image_url)
+                        <img src="{{ $offlineCourse->instructor->profile_image_url }}" alt="" class="w-12 h-12 rounded-[16px] object-cover">
+                    @else
+                        <span class="sp-icon-bubble shrink-0" style="background:var(--sp-peach)">
+                            <x-student.figma-icon name="icon-profile.svg" />
+                        </span>
+                    @endif
+                    <div class="min-w-0">
+                        <p class="text-xs font-bold text-[var(--sp-muted)] m-0">{{ __('student.oc_instructor') }}</p>
+                        <p class="font-extrabold text-[15px] m-0 truncate">{{ $offlineCourse->instructor?->name ?? '—' }}</p>
+                    </div>
                 </div>
-                @endforeach
-            </div>
-        </div>
+                <div class="space-y-2">
+                    @if($offlineCourse->start_date)
+                        <div class="flex items-center justify-between gap-3 rounded-[14px] bg-[#f7f7f5] px-3 py-2.5">
+                            <span class="text-sm font-bold text-[var(--sp-muted)]">{{ __('student.oc_start_date') }}</span>
+                            <span class="text-sm font-extrabold">{{ $offlineCourse->start_date->format('Y/m/d') }}</span>
+                        </div>
+                    @endif
+                    @if($enrollment->group)
+                        <div class="flex items-center justify-between gap-3 rounded-[14px] bg-[#f7f7f5] px-3 py-2.5">
+                            <span class="text-sm font-bold text-[var(--sp-muted)]">{{ __('student.oc_group') }}</span>
+                            <span class="text-sm font-extrabold truncate">{{ $enrollment->group->name }}</span>
+                        </div>
+                    @endif
+                </div>
+            </section>
+
+            @if((float) $enrollment->total_amount > 0)
+                <section class="sp-card p-5 space-y-3">
+                    <div class="flex items-center gap-3">
+                        <span class="sp-icon-bubble shrink-0" style="background:var(--sp-mint)">
+                            <x-student.figma-icon name="icon-wallet.svg" />
+                        </span>
+                        <h3 class="font-extrabold text-base m-0">{{ __('student.oc_payment_title') }}</h3>
+                    </div>
+                    @php
+                        $paymentLabels = [
+                            'paid' => __('student.oc_payment_paid'),
+                            'partial' => __('student.oc_payment_partial'),
+                            'unpaid' => __('student.oc_payment_unpaid'),
+                        ];
+                    @endphp
+                    <div class="rounded-[16px] px-3 py-2.5" style="background:var(--sp-mint)">
+                        <p class="text-xs font-bold text-[var(--sp-muted)] m-0 mb-1">{{ __('student.oc_payment_status') }}</p>
+                        <p class="text-sm font-extrabold m-0">{{ $paymentLabels[$enrollment->payment_status] ?? '—' }}</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="rounded-[14px] bg-[#f7f7f5] px-3 py-2.5 text-center">
+                            <p class="text-[10px] font-bold text-[var(--sp-muted)] m-0">{{ __('student.oc_paid_amount') }}</p>
+                            <p class="text-sm font-extrabold m-0 mt-1">{{ number_format($enrollment->paid_amount, 0) }}</p>
+                        </div>
+                        <div class="rounded-[14px] bg-[#f7f7f5] px-3 py-2.5 text-center">
+                            <p class="text-[10px] font-bold text-[var(--sp-muted)] m-0">{{ __('student.oc_remaining_amount') }}</p>
+                            <p class="text-sm font-extrabold m-0 mt-1">{{ number_format($enrollment->remaining_amount, 0) }}</p>
+                        </div>
+                    </div>
+                </section>
+            @endif
+
+            <section class="sp-card p-5">
+                <h3 class="sp-section-title mb-3">{{ __('student.oc_hub_stats') }}</h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="rounded-[16px] bg-[var(--sp-mint)] p-3 text-center">
+                        <p class="text-xl font-black text-[var(--sp-accent-text)] m-0">{{ $stats['lectures'] }}</p>
+                        <p class="text-[10px] font-bold text-[var(--sp-muted)] m-0 mt-1">{{ __('student.oc_tile_lectures') }}</p>
+                    </div>
+                    <div class="rounded-[16px] bg-[var(--sp-lilac)] p-3 text-center">
+                        <p class="text-xl font-black text-[var(--sp-accent-text)] m-0">{{ $stats['resources'] }}</p>
+                        <p class="text-[10px] font-bold text-[var(--sp-muted)] m-0 mt-1">{{ __('student.oc_tile_resources') }}</p>
+                    </div>
+                    <div class="rounded-[16px] bg-[var(--sp-amber-soft)] p-3 text-center">
+                        <p class="text-xl font-black text-[var(--sp-accent-text)] m-0">{{ $stats['exams'] }}</p>
+                        <p class="text-[10px] font-bold text-[var(--sp-muted)] m-0 mt-1">{{ __('student.oc_tile_exams') }}</p>
+                    </div>
+                    <div class="rounded-[16px] bg-[var(--sp-peach)] p-3 text-center">
+                        <p class="text-xl font-black text-[var(--sp-accent-text)] m-0">{{ $progressPct }}%</p>
+                        <p class="text-[10px] font-bold text-[var(--sp-muted)] m-0 mt-1">{{ __('student.oc_progress') }}</p>
+                    </div>
+                </div>
+            </section>
+        </aside>
     </div>
-    @endif
 </div>
 @endsection

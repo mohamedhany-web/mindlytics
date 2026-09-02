@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.student-dashboard')
 
 @section('title', __('student.referrals_title') . ' - Mindlytics')
 @section('header', __('student.referrals_title'))

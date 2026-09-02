@@ -466,10 +466,9 @@ class MyCourseController extends Controller
                         if ($prev instanceof Lecture) { $prevLecture = $prev; break; }
                     }
                     if ($prevLecture) {
-                        $prevWp = $prevLecture->watchProgress->firstWhere('user_id', $user->id);
-                        $prevMin = $prevLecture->min_watch_percent_to_unlock_next;
-                        $prevThreshold = $prevMin !== null ? (int) $prevMin : 90;
-                        if (! $prevWp || (! $prevWp->is_completed && (int) $prevWp->progress_percent < $prevThreshold)) {
+                        $prevWp = $prevLecture->watchProgress->firstWhere('user_id', $user->id)
+                            ?? $prevLecture->watchProgress->first();
+                        if (! $this->courseProgress->lectureWatchUnlocksNext($prevLecture, $prevWp)) {
                             $isLocked = true;
                         }
                     }

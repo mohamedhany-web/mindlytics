@@ -11,9 +11,6 @@ use Illuminate\Support\Facades\Storage;
 
 class AssignmentController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
         $user = Auth::user();
@@ -31,33 +28,41 @@ class AssignmentController extends Controller
             ->get()
             ->keyBy('assignment_id');
 
-        return view('student.assignments.index', compact('assignments', 'submissions'));
+        $stats = [
+            'total' => $assignments->count(),
+            'pending' => 0,
+            'submitted' => 0,
+            'graded' => 0,
+            'overdue' => 0,
+        ];
+
+        $assignments = $assignments->map(function (Assignment $assignment) use ($submissions, &$stats) {
+            $submission = $submissions->get($assignment->id);
+            $status = $this->resolveStudentStatus($assignment, $submission);
+            $assignment->student_submission = $submission;
+            $assignment->student_status = $status;
+
+            if ($status === 'pending') {
+                $stats['pending']++;
+            } elseif ($status === 'submitted') {
+                $stats['submitted']++;
+            } elseif ($status === 'graded') {
+                $stats['graded']++;
+            } elseif ($status === 'overdue') {
+                $stats['overdue']++;
+            }
+
+            return $assignment;
+        });
+
+        return view('student.assignments.index', compact('assignments', 'submissions', 'stats'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
     public function show(Assignment $assignment, Request $request)
     {
         $user = Auth::user();
         if (!$user->isEnrolledIn($assignment->advanced_course_id)) {
-            abort(403, 'غير مسموح لك بعرض هذا الواجب');
+            abort(403, __('student.assign_forbidden'));
         }
 
         $assignment->load(['course', 'lesson', 'teacher']);
@@ -65,6 +70,9 @@ class AssignmentController extends Controller
             ->where('student_id', $user->id)
             ->latest('submitted_at')
             ->first();
+
+        $studentStatus = $this->resolveStudentStatus($assignment, $submission);
+        $canSubmit = $this->canSubmit($assignment, $submission);
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
@@ -87,18 +95,22 @@ class AssignmentController extends Controller
             ]);
         }
 
-        return view('student.assignments.show', compact('assignment', 'submission'));
+        return view('student.assignments.show', compact('assignment', 'submission', 'studentStatus', 'canSubmit'));
     }
 
     public function submit(Request $request, Assignment $assignment)
     {
         $user = Auth::user();
         if (!$user->isEnrolledIn($assignment->advanced_course_id)) {
-            abort(403, 'غير مسموح لك بتسليم هذا الواجب');
+            abort(403, __('student.assign_forbidden'));
         }
 
-        if (!$assignment->allow_late_submission && $assignment->due_date && now()->greaterThan($assignment->due_date)) {
-            return back()->with('error', 'انتهى موعد التسليم لهذا الواجب');
+        $existing = AssignmentSubmission::where('assignment_id', $assignment->id)
+            ->where('student_id', $user->id)
+            ->first();
+
+        if (!$this->canSubmit($assignment, $existing)) {
+            return back()->with('error', __('student.assign_due_passed'));
         }
 
         $validated = $request->validate([
@@ -144,6 +156,8 @@ class AssignmentController extends Controller
             'attachments' => $attachments,
             'submitted_at' => now(),
             'status' => 'submitted',
+            'score' => null,
+            'feedback' => null,
         ]);
         $submission->save();
 
@@ -154,30 +168,32 @@ class AssignmentController extends Controller
             \Log::warning('Failed to update course progress after assignment submit: '.$e->getMessage());
         }
 
-        return back()->with('success', 'تم تسليم الواجب بنجاح');
+        return back()->with('success', __('student.assign_submitted_success'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
+    private function resolveStudentStatus(Assignment $assignment, ?AssignmentSubmission $submission): string
     {
-        //
+        if ($submission) {
+            if (in_array($submission->status, ['graded', 'returned'], true) || $submission->score !== null) {
+                return 'graded';
+            }
+
+            return 'submitted';
+        }
+
+        if ($assignment->due_date && now()->greaterThan($assignment->due_date) && !$assignment->allow_late_submission) {
+            return 'overdue';
+        }
+
+        return 'pending';
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
+    private function canSubmit(Assignment $assignment, ?AssignmentSubmission $submission): bool
     {
-        //
-    }
+        if (!$assignment->allow_late_submission && $assignment->due_date && now()->greaterThan($assignment->due_date)) {
+            return false;
+        }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+        return true;
     }
 }

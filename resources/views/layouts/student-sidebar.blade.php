@@ -1,513 +1,275 @@
-<div class="flex flex-col h-full">
-    <!-- Logo & Brand -->
-    <div class="logo-section p-3 md:p-4 relative">
-        <button @click="if (window.innerWidth < 1024) sidebarOpen = false"
-                class="lg:hidden absolute top-2.5 left-2.5 w-8 h-8 rounded-lg bg-sky-500 hover:bg-sky-600 text-white flex items-center justify-center transition-all z-10">
-            <i class="fas fa-times text-xs"></i>
+@php
+    use App\Support\StudentFigmaAssets;
+    $user = auth()->user();
+    $isStudent = $user->role === 'student' || strtolower((string) $user->role) === 'student';
+    $scholarshipOnlyPortal = $isStudent && $user->usesScholarshipOnlyPortal();
+    $activeCoursesCount = $scholarshipOnlyPortal
+        ? $user->courseEnrollments()->scholarshipOnly()->where('status', 'active')->count()
+        : $user->activeCourses()->count();
+    $spIcons = StudentFigmaAssets::urls();
+    $logoUrl = $platformLogoUrl ?? \App\Support\SiteBranding::logoUrl();
+
+    $unreadNotifications = 0;
+    try {
+        $unreadNotifications = (int) ($user->unreadNotificationsCount ?? 0);
+    } catch (\Throwable $e) {}
+@endphp
+
+<div class="sp-sidebar flex flex-col h-full">
+    <div class="sp-sidebar-brand relative">
+        <button type="button" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+                class="lg:hidden absolute top-3 start-3 size-8 rounded-full bg-white/10 text-white flex items-center justify-center text-xl leading-none"
+                aria-label="{{ __('common.close') }}">
+            &times;
         </button>
-        <div class="flex items-center gap-2 md:gap-2.5 pr-8 lg:pr-0">
-            <div class="w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center overflow-hidden bg-sky-100 border border-sky-200 flex-shrink-0">
-                <img src="{{ $platformLogoUrl ?? asset('logo-fallback.svg') }}" alt="Mindlytics Logo" class="w-full h-full object-contain" style="transform: none !important; object-position: center;" onerror="this.onerror=null; this.src='{{ asset('logo-fallback.svg') }}';">
-            </div>
-            <div class="flex-1 min-w-0">
-                <h2 class="text-sm md:text-base font-bold text-gray-900 tracking-tight leading-tight">Mindlytics</h2>
-                <p class="text-xs text-gray-500 font-medium mt-0.5">{{ __('student.learning_center') }}</p>
-            </div>
+        <div class="flex items-center justify-center gap-2">
+            @if($logoUrl)
+                <img src="{{ $logoUrl }}" alt="" onerror="this.style.display='none'">
+            @endif
+            <span>Mindlytics</span>
         </div>
     </div>
 
-    @php
-        $user = auth()->user();
-        $isStudent = $user->role === 'student' || strtolower($user->role) === 'student';
-        $scholarshipOnlyPortal = $isStudent && $user->usesScholarshipOnlyPortal();
-        $activeCoursesCount = $scholarshipOnlyPortal
-            ? $user->courseEnrollments()->scholarshipOnly()->where('status', 'active')->count()
-            : $user->activeCourses()->count();
-        $progressEnrollments = $scholarshipOnlyPortal
-            ? $user->courseEnrollments()->scholarshipOnly()->whereIn('status', ['active', 'completed'])->get()
-            : $user->courseEnrollments()->whereIn('status', ['active', 'completed'])->get();
-        $totalProgress = $progressEnrollments->isEmpty() ? 0 : round($progressEnrollments->avg('progress') ?? 0, 0);
-    @endphp
-
-    <!-- Quick Stats -->
-    <div class="p-2.5 md:p-3 border-b border-gray-100 bg-white">
-        <div class="grid grid-cols-2 gap-2">
-            <div class="stats-card bg-sky-50 rounded-lg p-2 md:p-2.5 border border-sky-100 cursor-pointer transition-all duration-200">
-                <div class="flex items-center gap-1 mb-0.5">
-                    <i class="fas fa-book text-sky-500 text-xs"></i>
-                    <span class="text-xs text-gray-600 font-medium">{{ __('student.courses') }}</span>
-                </div>
-                <div class="text-base md:text-lg font-bold text-sky-600 leading-none">{{ $activeCoursesCount }}</div>
-            </div>
-            <div class="stats-card bg-amber-50 rounded-lg p-2 md:p-2.5 border border-amber-100 cursor-pointer transition-all duration-200">
-                <div class="flex items-center gap-1 mb-0.5">
-                    <i class="fas fa-chart-line text-amber-500 text-xs"></i>
-                    <span class="text-xs text-gray-600 font-medium">{{ __('student.progress') }}</span>
-                </div>
-                <div class="text-base md:text-lg font-bold text-amber-600 leading-none">
-                    {{ $totalProgress }}%
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Navigation -->
-    <nav class="flex-1 overflow-y-auto sidebar-scroll p-2 md:p-2.5 space-y-0.5">
+    <nav class="sp-nav" aria-label="{{ __('student.dashboard') }}">
         @if($isStudent || $user->hasAnyPermission('student.view.courses', 'student.view.my-courses', 'student.view.orders', 'student.view.invoices', 'student.view.wallet', 'student.view.certificates', 'student.view.achievements', 'student.view.exams', 'student.view.calendar', 'student.view.notifications', 'student.view.profile', 'student.view.settings'))
-            <!-- Dashboard -->
-            <a href="{{ route('dashboard') }}" 
-               @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="nav-card block {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                <div class="flex items-center gap-3">
-                    <div class="nav-icon bg-sky-500 text-white flex-shrink-0">
-                        <i class="fas fa-chart-line text-sm"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.dashboard') }}</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ __('student.overview') }}</div>
-                    </div>
-                    <i class="fas fa-chevron-left text-gray-400 text-xs flex-shrink-0"></i>
-                </div>
+
+            <a href="{{ route('dashboard') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="sp-nav-link {{ request()->routeIs('dashboard') ? 'is-active' : '' }}">
+                <span class="sp-nav-ico"><x-student.figma-icon name="icon-dashboard.svg" /></span>
+                <span class="flex-1 min-w-0">{{ __('student.dashboard') }}</span>
             </a>
 
-            <!-- Browse Courses -->
-            @unless($scholarshipOnlyPortal)
-            @hasPermission('student.view.courses')
-            @php
-                $catalogActive = request()->routeIs('academic-years*') || request()->routeIs('subjects.*') || request()->routeIs('courses.*');
-            @endphp
-            <a href="{{ route('academic-years') }}" 
-               @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="nav-card block {{ $catalogActive ? 'active' : '' }}">
-                <div class="flex items-center gap-3">
-                    <div class="nav-icon bg-sky-400 text-white flex-shrink-0">
-                        <i class="fas fa-search text-sm"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.browse_courses') }}</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ __('student.discover_new') }}</div>
-                    </div>
-                    <i class="fas fa-chevron-left text-gray-400 text-xs flex-shrink-0"></i>
-                </div>
-            </a>
-            @endif
-            @endunless
-
-            <!-- My Courses -->
             @if($isStudent || $user->hasPermission('student.view.my-courses'))
-            <a href="{{ route('my-courses.index') }}" 
-               @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="nav-card block {{ request()->routeIs('my-courses.*') ? 'active' : '' }}">
-                <div class="flex items-center gap-3">
-                    <div class="nav-icon bg-sky-600 text-white flex-shrink-0">
-                        <i class="fas fa-book-open text-sm"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.my_courses') }}</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ $activeCoursesCount }} {{ __('student.active_course') }}</div>
-                    </div>
-                    <i class="fas fa-chevron-left text-gray-400 text-xs flex-shrink-0"></i>
-                </div>
+            <a href="{{ route('my-courses.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="sp-nav-link {{ request()->routeIs('my-courses.*') ? 'is-active' : '' }}">
+                <span class="sp-nav-ico"><x-student.figma-icon name="icon-courses.svg" /></span>
+                <span class="flex-1 min-w-0">{{ __('student.my_courses') }}</span>
             </a>
             @endif
 
-            <!-- مجموعاتي -->
-            @unless($scholarshipOnlyPortal)
-            @if($isStudent || $user->hasPermission('student.view.my-courses'))
-            @php
-                $myGroupsCount = auth()->user()->groups()->where('groups.status', 'active')->count();
-            @endphp
-            <a href="{{ route('student.groups.index') }}" 
-               @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="nav-card block {{ request()->routeIs('student.groups.*') ? 'active' : '' }}">
-                <div class="flex items-center gap-3">
-                    <div class="nav-icon bg-emerald-500 text-white flex-shrink-0">
-                        <i class="fas fa-users text-sm"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.my_groups') }}</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ $myGroupsCount }} {{ __('student.group_count') }}</div>
-                    </div>
-                    <i class="fas fa-chevron-left text-gray-400 text-xs flex-shrink-0"></i>
-                </div>
-            </a>
-            @endif
-            @endunless
-
-            <!-- Learning Path -->
-            @unless($scholarshipOnlyPortal)
-            @php
-                $activeEnrollment = auth()->user()->learningPathEnrollments()->where('status', 'active')->with('learningPath')->first();
-            @endphp
-            @if($activeEnrollment && $activeEnrollment->learningPath)
-            <a href="{{ route('student.learning-path.show', \Illuminate\Support\Str::slug($activeEnrollment->learningPath->name)) }}" 
-               @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="nav-card block {{ request()->routeIs('student.learning-path.*') ? 'active' : '' }}">
-                <div class="flex items-center gap-3">
-                    <div class="nav-icon bg-gradient-to-br from-green-500 to-emerald-600 text-white flex-shrink-0">
-                        <i class="fas fa-route text-sm"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.learning_path') }}</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ \Illuminate\Support\Str::limit($activeEnrollment->learningPath->name, 20) }}</div>
-                    </div>
-                    <i class="fas fa-chevron-left text-gray-400 text-xs flex-shrink-0"></i>
-                </div>
-            </a>
-            @endif
-            @endunless
-
-            <!-- كورساتي الأوفلاين (منفصلة عن الأونلاين) -->
-            @unless($scholarshipOnlyPortal)
             @if($isStudent || $user->hasPermission('student.view.my-courses'))
             @php
                 $offlineStudentNavOpen = request()->routeIs('student.offline-courses.*');
                 $onlineStudentNavOpen = request()->routeIs('student.online-courses.*');
+                $offlineEnrollmentsNav = collect();
+                $onlineEnrollmentsNav = collect();
+                $offlineCountSidebar = 0;
+                $onlineCountSidebar = 0;
+
                 try {
-                    $offlineCountSidebar = auth()->user()->offlineEnrollments()->where('enrollment_channel', 'offline')->where('status', 'active')->count();
-                    $onlineCountSidebar = auth()->user()->offlineEnrollments()
+                    $offlineEnrollmentsNav = $user->offlineEnrollments()
+                        ->where('enrollment_channel', 'offline')
+                        ->where('status', 'active')
+                        ->with(['course', 'group'])
+                        ->latest('enrolled_at')
+                        ->get()
+                        ->filter(fn ($enrollment) => $enrollment->course !== null)
+                        ->values();
+
+                    $onlineEnrollmentsNav = $user->offlineEnrollments()
                         ->where('enrollment_channel', 'online')
                         ->where('status', 'active')
                         ->whereHas('course', fn ($q) => $q->where('student_online_portal_enabled', true))
-                        ->count();
-                } catch (\Exception $e) {
-                    $offlineCountSidebar = 0;
-                    $onlineCountSidebar = 0;
+                        ->with(['course', 'group'])
+                        ->latest('enrolled_at')
+                        ->get()
+                        ->filter(fn ($enrollment) => $enrollment->course !== null)
+                        ->values();
+
+                    $offlineCountSidebar = $offlineEnrollmentsNav->count();
+                    $onlineCountSidebar = $onlineEnrollmentsNav->count();
+                } catch (\Throwable $e) {
+                    $offlineEnrollmentsNav = collect();
+                    $onlineEnrollmentsNav = collect();
+                    \Log::warning('student.sidebar.offline_enrollments_failed', [
+                        'user_id' => $user->id,
+                        'message' => $e->getMessage(),
+                    ]);
+                }
+
+                $showOfflineNav = ! $scholarshipOnlyPortal || $offlineCountSidebar > 0;
+                $showOnlineNav = ! $scholarshipOnlyPortal || $onlineCountSidebar > 0;
+                $offlineNavOpen = $offlineStudentNavOpen;
+                $onlineNavOpen = $onlineStudentNavOpen;
+
+                $activeOfflineCourseId = null;
+                $activeOnlineCourseId = null;
+                if ($offlineStudentNavOpen) {
+                    $routeCourse = request()->route('offlineCourse');
+                    $activeOfflineCourseId = is_object($routeCourse) ? ($routeCourse->id ?? null) : $routeCourse;
+                }
+                if ($onlineStudentNavOpen) {
+                    $routeCourse = request()->route('offlineCourse');
+                    $activeOnlineCourseId = is_object($routeCourse) ? ($routeCourse->id ?? null) : $routeCourse;
                 }
             @endphp
-            <div class="rounded-xl border border-purple-100/80 bg-gradient-to-br from-purple-50/40 to-white overflow-hidden" x-data="{ open: {{ $offlineStudentNavOpen ? 'true' : 'false' }} }">
-                <button type="button" @click="open = !open"
-                        class="w-full flex items-center gap-3 px-3 py-2.5 text-right transition-colors hover:bg-purple-50/90 {{ $offlineStudentNavOpen ? 'bg-purple-50/70' : '' }}">
-                    <div class="nav-icon bg-gradient-to-br from-purple-500 to-purple-700 text-white flex-shrink-0">
-                        <i class="fas fa-chalkboard-teacher text-sm"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.offline_courses') }}</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ $offlineCountSidebar }} {{ __('student.offline_course') }} {{ __('student.active_offline_courses') }}</div>
-                    </div>
-                    <i class="fas fa-chevron-down text-gray-500 text-xs flex-shrink-0 transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
-                </button>
-                <div x-show="open" x-transition class="mr-3 mt-0.5 mb-2 space-y-0.5 border-r-2 border-purple-200/80 pr-2">
-                    <a href="{{ route('student.offline-courses.index') }}"
-                       @click="if (window.innerWidth < 1024) sidebarOpen = false"
-                       class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors {{ request()->routeIs('student.offline-courses.*') && !request()->routeIs('student.offline-courses.booking.*') ? 'bg-purple-600 text-white font-semibold' : 'text-gray-700 hover:bg-purple-100/80' }}">
-                        <i class="fas fa-book-reader w-4 text-center opacity-90"></i>
-                        <span>{{ __('student.my_offline_courses') }}</span>
-                    </a>
-                </div>
-            </div>
 
-            <!-- كورساتي الأونلاين (مسار /online-courses؛ تظهر بعد تفعيل البوابة من الإدارة) -->
-            <div class="rounded-xl border border-indigo-100/80 bg-gradient-to-br from-indigo-50/40 to-white overflow-hidden" x-data="{ openOnline: {{ $onlineStudentNavOpen ? 'true' : 'false' }} }">
-                <button type="button" @click="openOnline = !openOnline"
-                        class="w-full flex items-center gap-3 px-3 py-2.5 text-right transition-colors hover:bg-indigo-50/90 {{ $onlineStudentNavOpen ? 'bg-indigo-50/70' : '' }}">
-                    <div class="nav-icon bg-gradient-to-br from-indigo-500 to-indigo-700 text-white flex-shrink-0">
-                        <i class="fas fa-laptop-house text-sm"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.my_online_courses') }}</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ __('student.online_courses_portal_subtitle') }}</div>
-                    </div>
-                    @if($onlineCountSidebar > 0)
-                        <span class="text-[11px] bg-indigo-500 text-white px-1.5 py-0.5 rounded-full font-semibold">{{ $onlineCountSidebar }}</span>
-                    @endif
-                    <i class="fas fa-chevron-down text-gray-500 text-xs flex-shrink-0 transition-transform duration-200" :class="openOnline ? 'rotate-180' : ''"></i>
-                </button>
-                <div x-show="openOnline" x-transition class="mr-3 mt-0.5 mb-2 space-y-0.5 border-r-2 border-indigo-200/80 pr-2">
-                    <a href="{{ route('student.online-courses.index') }}"
-                       @click="if (window.innerWidth < 1024) sidebarOpen = false"
-                       class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors {{ request()->routeIs('student.online-courses.*') ? 'bg-indigo-600 text-white font-semibold' : 'text-gray-700 hover:bg-indigo-100/80' }}">
-                        <i class="fas fa-book-open w-4 text-center opacity-90"></i>
-                        <span>{{ __('student.online_courses_list') }}</span>
-                    </a>
-                </div>
-            </div>
+            @if($showOfflineNav)
+                <x-student.sidebar-channel-courses
+                    :enrollments="$offlineEnrollmentsNav"
+                    :count="$offlineCountSidebar"
+                    icon="icon-classes.svg"
+                    :label="__('student.my_offline_courses')"
+                    :index-route="route('student.offline-courses.index')"
+                    show-route="student.offline-courses.show"
+                    :is-section-active="$offlineStudentNavOpen"
+                    :active-course-id="$activeOfflineCourseId"
+                    :default-open="$offlineNavOpen"
+                />
+            @endif
+
+            @if($showOnlineNav)
+                <x-student.sidebar-channel-courses
+                    :enrollments="$onlineEnrollmentsNav"
+                    :count="$onlineCountSidebar"
+                    icon="icon-community.svg"
+                    :label="__('student.my_online_courses')"
+                    :index-route="route('student.online-courses.index')"
+                    show-route="student.online-courses.show"
+                    :is-section-active="$onlineStudentNavOpen"
+                    :active-course-id="$activeOnlineCourseId"
+                    :default-open="$onlineNavOpen"
+                />
+            @endif
+            @endif
+
+            @unless($scholarshipOnlyPortal)
+            @if($isStudent || $user->hasPermission('student.view.courses'))
+            @php $catalogActive = request()->routeIs('academic-years*') || request()->routeIs('subjects.*') || request()->routeIs('courses.*'); @endphp
+            <a href="{{ route('academic-years') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="sp-nav-link {{ $catalogActive ? 'is-active' : '' }}">
+                <span class="sp-nav-ico"><x-student.figma-icon name="icon-search.svg" /></span>
+                <span class="flex-1 min-w-0">{{ __('student.browse_courses') }}</span>
+            </a>
             @endif
             @endunless
 
-            <!-- Orders -->
+            @unless($scholarshipOnlyPortal)
+            @if($isStudent || $user->hasPermission('student.view.my-courses'))
+            <a href="{{ route('student.groups.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="sp-nav-link {{ request()->routeIs('student.groups.*') ? 'is-active' : '' }}">
+                <span class="sp-nav-ico"><x-student.figma-icon name="icon-community.svg" /></span>
+                <span class="flex-1 min-w-0">{{ __('student.my_groups') }}</span>
+            </a>
+            @endif
+            @endunless
+
+            @unless($scholarshipOnlyPortal)
+            @php $hasLearningPathEnrollment = auth()->user()->learningPathEnrollments()->where('status', 'active')->exists(); @endphp
+            @if($hasLearningPathEnrollment)
+            <a href="{{ route('student.learning-path.index') }}"
+               @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="sp-nav-link {{ request()->routeIs('student.learning-path.*') ? 'is-active' : '' }}">
+                <span class="sp-nav-ico"><x-student.figma-icon name="icon-path.svg" /></span>
+                <span class="flex-1 min-w-0">{{ __('student.learning_path') }}</span>
+            </a>
+            @endif
+            @endunless
+
+            @if($isStudent || $user->hasPermission('student.view.my-courses'))
+            <a href="{{ route('student.assignments.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="sp-nav-link {{ request()->routeIs('student.assignments.*') ? 'is-active' : '' }}">
+                <span class="sp-nav-ico"><x-student.figma-icon name="icon-messages.svg" /></span>
+                <span class="flex-1 min-w-0">{{ __('student.assignments') }}</span>
+            </a>
+            @endif
+
+            @if($isStudent || $user->hasPermission('student.view.notifications'))
+            <a href="{{ route('notifications') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="sp-nav-link {{ request()->routeIs('notifications') ? 'is-active' : '' }}">
+                <span class="sp-nav-ico"><x-student.figma-icon name="icon-notifications.svg" /></span>
+                <span class="flex-1 min-w-0">{{ __('student.notifications') }}</span>
+                @if($unreadNotifications > 0)
+                    <span class="sp-nav-badge">{{ $unreadNotifications > 9 ? '9+' : $unreadNotifications }}</span>
+                @endif
+            </a>
+            @endif
+
+            @if($isStudent || $user->hasPermission('student.view.calendar'))
+            <a href="{{ route('calendar') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="sp-nav-link {{ request()->routeIs('calendar') ? 'is-active' : '' }}">
+                <span class="sp-nav-ico"><x-student.figma-icon name="icon-calendar.svg" /></span>
+                <span class="flex-1 min-w-0">{{ __('student.calendar') }}</span>
+            </a>
+            @endif
+
+            @if($isStudent || $user->hasPermission('student.view.exams'))
+            <a href="{{ route('student.exams.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="sp-nav-link {{ request()->routeIs('student.exams.*') ? 'is-active' : '' }}">
+                <span class="sp-nav-ico"><x-student.figma-icon name="icon-exams.svg" /></span>
+                <span class="flex-1 min-w-0">{{ __('student.exams') }}</span>
+            </a>
+            @endif
+
+            @if($isStudent || $user->hasPermission('student.view.certificates'))
+            <a href="{{ route('student.certificates.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="sp-nav-link {{ request()->routeIs('student.certificates.*') ? 'is-active' : '' }}">
+                <span class="sp-nav-ico"><x-student.figma-icon name="icon-certificates.svg" /></span>
+                <span class="flex-1 min-w-0">{{ __('student.certificates') }}</span>
+            </a>
+            @endif
+
             @unless($scholarshipOnlyPortal)
             @if($isStudent || $user->hasPermission('student.view.orders'))
-            <a href="{{ route('orders.index') }}" 
-               @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="nav-card block {{ request()->routeIs('orders.*') ? 'active' : '' }}">
-                <div class="flex items-center gap-3">
-                    <div class="nav-icon bg-amber-500 text-white flex-shrink-0">
-                        <i class="fas fa-shopping-cart text-sm"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.orders') }}</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ __('student.orders_tracking') }}</div>
-                    </div>
-                    <i class="fas fa-chevron-left text-gray-400 text-xs flex-shrink-0"></i>
-                </div>
+            <a href="{{ route('orders.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="sp-nav-link {{ request()->routeIs('orders.*') ? 'is-active' : '' }}">
+                <span class="sp-nav-ico"><x-student.figma-icon name="icon-orders.svg" /></span>
+                <span class="flex-1 min-w-0">{{ __('student.orders') }}</span>
             </a>
             @endif
             @endunless
 
-            <!-- Assignments -->
-            @if($isStudent || $user->hasPermission('student.view.my-courses'))
-            <a href="{{ route('student.assignments.index') }}"
-               @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="nav-card block {{ request()->routeIs('student.assignments.*') ? 'active' : '' }}">
-                <div class="flex items-center gap-3">
-                    <div class="nav-icon bg-violet-500 text-white flex-shrink-0">
-                        <i class="fas fa-tasks text-sm"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.assignments') }}</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ __('student.assignments_view_submit') }}</div>
-                    </div>
-                    <i class="fas fa-chevron-left text-gray-400 text-xs flex-shrink-0"></i>
-                </div>
-            </a>
-            @endif
-
-            <!-- Exams -->
-            @if($isStudent || $user->hasPermission('student.view.exams'))
-            <a href="{{ route('student.exams.index') }}" 
-               @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="nav-card block {{ request()->routeIs('student.exams.*') ? 'active' : '' }}">
-                <div class="flex items-center gap-3">
-                    <div class="nav-icon bg-sky-500 text-white flex-shrink-0">
-                        <i class="fas fa-clipboard-check text-sm"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.exams') }}</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ __('student.my_exams') }}</div>
-                    </div>
-                    <i class="fas fa-chevron-left text-gray-400 text-xs flex-shrink-0"></i>
-                </div>
-            </a>
-            @endif
-
-            <!-- Certificates -->
-            @if($isStudent || $user->hasPermission('student.view.certificates'))
-            <a href="{{ route('student.certificates.index') }}" 
-               @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="nav-card block {{ request()->routeIs('student.certificates.*') ? 'active' : '' }}">
-                <div class="flex items-center gap-3">
-                    <div class="nav-icon bg-amber-500 text-white flex-shrink-0">
-                        <i class="fas fa-certificate text-sm"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.certificates') }}</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ __('student.my_achievements') }}</div>
-                    </div>
-                    <i class="fas fa-chevron-left text-gray-400 text-xs flex-shrink-0"></i>
-                </div>
-            </a>
-            @endif
-
-            <!-- Wallet -->
             @unless($scholarshipOnlyPortal)
             @if($isStudent || $user->hasPermission('student.view.wallet'))
-            <a href="{{ route('student.wallet.index') }}" 
-               @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="nav-card block {{ request()->routeIs('student.wallet.*') ? 'active' : '' }}">
-                <div class="flex items-center gap-3">
-                    <div class="nav-icon bg-sky-500 text-white flex-shrink-0">
-                        <i class="fas fa-wallet text-sm"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.wallet') }}</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ __('student.wallet_financial') }}</div>
-                    </div>
-                    <i class="fas fa-chevron-left text-gray-400 text-xs flex-shrink-0"></i>
-                </div>
+            <a href="{{ route('student.wallet.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="sp-nav-link {{ request()->routeIs('student.wallet.*') ? 'is-active' : '' }}">
+                <span class="sp-nav-ico"><x-student.figma-icon name="icon-wallet.svg" /></span>
+                <span class="flex-1 min-w-0">{{ __('student.wallet') }}</span>
             </a>
             @endif
             @endunless
 
-            <!-- Calendar -->
-            @if($isStudent || $user->hasPermission('student.view.calendar'))
-            @php
-                // حساب عدد الأحداث القادمة للطالب
-                $upcomingEventsCount = 0;
-                try {
-                    $user = auth()->user();
-                    // محاضرات قادمة
-                    $upcomingEventsCount += \App\Models\Lecture::whereHas('course', function($q) use ($user) {
-                        $q->whereHas('enrollments', function($q2) use ($user) {
-                            $q2->where('user_id', $user->id)->where('status', 'active');
-                        });
-                    })->where('status', 'scheduled')->where('scheduled_at', '>=', now())->count();
-                    
-                    // امتحانات قادمة
-                    $upcomingEventsCount += \App\Models\Exam::whereHas('course', function($q) use ($user) {
-                        $q->whereHas('enrollments', function($q2) use ($user) {
-                            $q2->where('user_id', $user->id)->where('status', 'active');
-                        });
-                    })->where('is_active', true)->where('is_published', true)
-                    ->where(function($q) {
-                        $q->where('start_time', '>=', now())
-                          ->orWhere('start_date', '>=', now());
-                    })->count();
-                    
-                    // واجبات قادمة
-                    $upcomingEventsCount += \App\Models\Assignment::whereHas('course', function($q) use ($user) {
-                        $q->whereHas('enrollments', function($q2) use ($user) {
-                            $q2->where('user_id', $user->id)->where('status', 'active');
-                        });
-                    })->where('status', 'published')->where('due_date', '>=', now())->count();
-                    
-                    // واجبات محاضرات قادمة
-                    $upcomingEventsCount += \App\Models\LectureAssignment::whereHas('lecture.course', function($q) use ($user) {
-                        $q->whereHas('enrollments', function($q2) use ($user) {
-                            $q2->where('user_id', $user->id)->where('status', 'active');
-                        });
-                    })->where('status', 'published')->where('due_date', '>=', now())->count();
-                } catch (\Exception $e) {
-                    // في حالة حدوث خطأ، نترك العدد 0
-                }
-            @endphp
-            <a href="{{ route('calendar') }}" 
-               @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="nav-card block {{ request()->routeIs('calendar') ? 'active' : '' }}">
-                <div class="flex items-center gap-3">
-                    <div class="nav-icon bg-sky-500 text-white relative flex-shrink-0">
-                        <i class="fas fa-calendar-alt text-sm"></i>
-                        @if($upcomingEventsCount > 0)
-                            <span class="absolute -top-0.5 -right-0.5 w-4 h-4 bg-sky-500 rounded-full border-2 border-white flex items-center justify-center text-[8px] font-bold text-white">{{ $upcomingEventsCount > 9 ? '9+' : $upcomingEventsCount }}</span>
-                        @endif
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.calendar') }}</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">
-                            @if($upcomingEventsCount > 0)
-                                {{ $upcomingEventsCount }} {{ __('student.upcoming_event') }}
-                            @else
-                                {{ __('student.events_dates') }}
-                            @endif
-                        </div>
-                    </div>
-                    <i class="fas fa-chevron-left text-gray-400 text-xs flex-shrink-0"></i>
-                </div>
-            </a>
-            @endif
-
-            <!-- Notifications -->
-            @if($isStudent || $user->hasPermission('student.view.notifications'))
-            <a href="{{ route('notifications') }}" 
-               @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="nav-card block {{ request()->routeIs('notifications') ? 'active' : '' }}">
-                <div class="flex items-center gap-3">
-                    <div class="nav-icon bg-amber-400 text-white relative flex-shrink-0">
-                        <i class="fas fa-bell text-sm"></i>
-                        <span class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-white"></span>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.notifications') }}</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">3 {{ __('student.new_notifications') }}</div>
-                    </div>
-                    <i class="fas fa-chevron-left text-gray-400 text-xs flex-shrink-0"></i>
-                </div>
-            </a>
-            @endif
-
-            <!-- البورتفوليو - مشاريعي -->
             @unless($scholarshipOnlyPortal)
             @if($isStudent || $user->hasPermission('student.view.profile'))
-            <a href="{{ route('student.portfolio.index') }}" 
-               @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="nav-card block {{ request()->routeIs('student.portfolio.*') ? 'active' : '' }}">
-                <div class="flex items-center gap-3">
-                    <div class="nav-icon bg-emerald-500 text-white flex-shrink-0">
-                        <i class="fas fa-route text-sm"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">رحلتي</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">Journey · مشاريع موثّقة</div>
-                    </div>
-                    <i class="fas fa-chevron-left text-gray-400 text-xs flex-shrink-0"></i>
-                </div>
+            <a href="{{ route('student.portfolio.index') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="sp-nav-link {{ request()->routeIs('student.portfolio.*') ? 'is-active' : '' }}">
+                <span class="sp-nav-ico"><x-student.figma-icon name="icon-community.svg" /></span>
+                <span class="flex-1 min-w-0">{{ __('student.my_journey') }}</span>
             </a>
             @endif
             @endunless
 
-            <!-- Profile -->
             @if($isStudent || $user->hasPermission('student.view.profile'))
-            <a href="{{ route('profile') }}" 
-               @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="nav-card block {{ request()->routeIs('profile') ? 'active' : '' }}">
-                <div class="flex items-center gap-3">
-                    <div class="nav-icon bg-sky-600 text-white flex-shrink-0">
-                        <i class="fas fa-user text-sm"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.profile') }}</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ __('student.my_info') }}</div>
-                    </div>
-                    <i class="fas fa-chevron-left text-gray-400 text-xs flex-shrink-0"></i>
-                </div>
+            <a href="{{ route('profile') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="sp-nav-link {{ request()->routeIs('profile') ? 'is-active' : '' }}">
+                <span class="sp-nav-ico"><x-student.figma-icon name="icon-profile.svg" /></span>
+                <span class="flex-1 min-w-0">{{ __('student.profile') }}</span>
             </a>
             @endif
 
-            <!-- Settings -->
             @if($isStudent || $user->hasPermission('student.view.settings'))
-            <a href="{{ route('settings') }}" 
-               @click="if (window.innerWidth < 1024) sidebarOpen = false"
-               class="nav-card block {{ request()->routeIs('settings') ? 'active' : '' }}">
-                <div class="flex items-center gap-3">
-                    <div class="nav-icon bg-gray-500 text-white flex-shrink-0">
-                        <i class="fas fa-cog text-sm"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.settings') }}</div>
-                        <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ __('student.options') }}</div>
-                    </div>
-                    <i class="fas fa-chevron-left text-gray-400 text-xs flex-shrink-0"></i>
-                </div>
+            <a href="{{ route('settings') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="sp-nav-link {{ request()->routeIs('settings') ? 'is-active' : '' }}">
+                <span class="sp-nav-ico"><x-student.figma-icon name="icon-settings.svg" /></span>
+                <span class="flex-1 min-w-0">{{ __('student.settings') }}</span>
             </a>
             @endif
         @endif
 
-        @if(auth()->user()->isAdmin() || auth()->user()->isInstructor())
-            <div class="my-3 border-t-2 border-gray-200"></div>
-            
-            @if(auth()->user()->isAdmin())
-                <a href="{{ route('admin.dashboard') }}" 
-                   @click="if (window.innerWidth < 1024) sidebarOpen = false"
-                   class="nav-card block {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
-                    <div class="flex items-center gap-3">
-                        <div class="nav-icon bg-gradient-to-br from-red-500 to-red-600 text-white flex-shrink-0">
-                            <i class="fas fa-shield-alt text-sm"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="font-black text-gray-900 text-sm leading-tight">{{ __('student.admin_panel') }}</div>
-                            <div class="text-xs text-gray-500 mt-0.5 leading-tight">{{ __('student.admin_role') }}</div>
-                        </div>
-                        <i class="fas fa-chevron-left text-gray-400 text-xs flex-shrink-0"></i>
-                    </div>
-                </a>
-            @endif
+        @if(auth()->user()->isAdmin())
+            <a href="{{ route('admin.dashboard') }}" @click="if (window.innerWidth < 1024) sidebarOpen = false"
+               class="sp-nav-link {{ request()->routeIs('admin.dashboard') ? 'is-active' : '' }}">
+                <span class="sp-nav-ico"><x-student.figma-icon name="icon-admin.svg" /></span>
+                <span class="flex-1 min-w-0">{{ __('student.admin_panel') }}</span>
+            </a>
         @endif
     </nav>
 
-    <!-- User at Bottom -->
-    <div class="user-profile-card p-2 md:p-2.5">
-        <div class="user-profile-inner bg-white rounded-xl p-2.5 border border-gray-200 transition-all duration-200">
-            <div class="flex items-center gap-2">
-                <div class="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-sky-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                    @if(auth()->user()->profile_image)
-                        <img src="{{ auth()->user()->profile_image_url }}" alt="" class="w-full h-full rounded-lg object-cover">
-                    @else
-                        {{ substr(auth()->user()->name, 0, 1) }}
-                    @endif
-                </div>
-                <div class="flex-1 min-w-0">
-                    <p class="text-xs font-bold text-gray-900 truncate leading-tight">{{ auth()->user()->name }}</p>
-                    <p class="text-[10px] text-gray-500 truncate leading-tight mt-0.5 flex items-center gap-1">
-                        @if(auth()->user()->isAdmin())
-                            <i class="fas fa-shield-alt text-sky-500 text-[10px]"></i> {{ __('student.admin_role') }}
-                        @elseif(auth()->user()->isInstructor())
-                            <i class="fas fa-chalkboard-teacher text-sky-500 text-[10px]"></i> {{ __('student.instructor_role') }}
-                        @else
-                            <i class="fas fa-user-graduate text-sky-500 text-[10px]"></i> {{ __('student.student_role') }}
-                        @endif
-                    </p>
-                </div>
-            </div>
+    <a href="{{ route('mobile-app') }}" class="sp-app-card" @click="if (window.innerWidth < 1024) sidebarOpen = false">
+        <img src="{{ $spIcons['app_blob'] }}" alt="" class="sp-app-blob" aria-hidden="true">
+        <div class="sp-app-arrow">
+            <img src="{{ $spIcons['app_arrow'] }}" alt="">
         </div>
-    </div>
+        <p>{!! nl2br(e(__('student.download_app_lines'))) !!}</p>
+    </a>
 </div>

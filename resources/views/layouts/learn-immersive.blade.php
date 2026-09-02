@@ -1,32 +1,24 @@
-@php $learnLocale = app()->getLocale(); @endphp
+@php $learnLocale = app()->getLocale(); $learnRtl = $learnLocale === 'ar'; @endphp
 <!DOCTYPE html>
-<html lang="{{ $learnLocale }}" dir="rtl" class="learn-rtl-root">
+<html lang="{{ $learnLocale }}" dir="{{ $learnRtl ? 'rtl' : 'ltr' }}" class="learn-rtl-root student-portal">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ config('app.name', 'Mindlytics') }} - @yield('title', __('student.learn'))</title>
     @include('components.favicon-meta')
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    @include('components.student.portal-theme')
     @stack('meta')
     @stack('styles')
-    <style>html.learn-precapture-flash::before{content:'';position:fixed;inset:0;z-index:2147483000;background:#000;pointer-events:none;display:block;}</style>
+    <style>html.learn-precapture-flash::before{content:'';position:fixed;inset:0;z-index:2147483000;background:#000;pointer-events:none;display:block;}.learn-immersive-body{font-family:var(--sp-font)!important;background:var(--sp-bg);}</style>
     <script>
     (function () {
         'use strict';
-        var suspectUntil = 0;
-        function now() { return Date.now(); }
-        function markSuspect(ms) { suspectUntil = Math.max(suspectUntil, now() + (ms || 12000)); }
-        function isSuspect() { return now() < suspectUntil; }
-        function flash(ms) {
-            document.documentElement.classList.add('learn-precapture-flash', 'learn-screen-covered');
-            clearTimeout(window.__lspFlashTimer);
-            window.__lspFlashTimer = setTimeout(function () {
-                document.documentElement.classList.remove('learn-precapture-flash', 'learn-screen-covered');
-            }, ms || 8000);
-        }
+        /* Lightweight capture block only — full UI cover lives in learn-screen-protection.js.
+           Do NOT flash black on window blur (iframe focus) — that caused learn-page tremble. */
         function block(e) {
             try { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); } catch (err) {}
             return false;
@@ -45,43 +37,36 @@
         function isCapture(e) {
             return isPrt(e) || isMacDigit(e) || isWinSnip(e);
         }
-        function onCapture(e) {
-            markSuspect(12000);
-            flash(10000);
-            block(e);
-        }
         document.addEventListener('keydown', function (e) {
-            if (isCapture(e)) { onCapture(e); return; }
-            if (e.metaKey && e.shiftKey) { markSuspect(12000); }
-            if (isPrt(e)) { onCapture(e); }
+            if (isCapture(e)) {
+                if (window.__mindlyticsLearnProtection && typeof window.__mindlyticsLearnProtection.showCover === 'function') {
+                    window.__mindlyticsLearnProtection.showCover(10000);
+                } else {
+                    document.documentElement.classList.add('learn-precapture-flash', 'learn-screen-covered');
+                    clearTimeout(window.__lspFlashTimer);
+                    window.__lspFlashTimer = setTimeout(function () {
+                        document.documentElement.classList.remove('learn-precapture-flash', 'learn-screen-covered');
+                    }, 8000);
+                }
+                block(e);
+            }
         }, true);
-        document.addEventListener('keyup', function (e) {
-            if (isPrt(e) || isMacDigit(e)) { onCapture(e); }
-        }, true);
-        window.addEventListener('blur', function () { if (isSuspect()) { flash(8000); } });
-        document.addEventListener('visibilitychange', function () {
-            if (document.hidden && isSuspect()) { flash(8000); }
-        });
         try {
             if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
                 var patchedGdm = function () {
-                    markSuspect(15000);
-                    flash(12000);
+                    if (window.__mindlyticsLearnProtection && typeof window.__mindlyticsLearnProtection.showCover === 'function') {
+                        window.__mindlyticsLearnProtection.showCover(12000);
+                    }
                     return Promise.reject(new DOMException('Not allowed', 'NotAllowedError'));
                 };
                 patchedGdm.__mindlytics_lsp_v3__ = true;
                 navigator.mediaDevices.getDisplayMedia = patchedGdm;
-                setInterval(function () {
-                    if (!navigator.mediaDevices.getDisplayMedia || !navigator.mediaDevices.getDisplayMedia.__mindlytics_lsp_v3__) {
-                        navigator.mediaDevices.getDisplayMedia = patchedGdm;
-                    }
-                }, 1500);
             }
         } catch (err) {}
     })();
     </script>
 </head>
-<body class="learn-immersive-body learn-rtl antialiased" dir="rtl">
+<body class="learn-immersive-body student-portal-body learn-rtl antialiased" dir="{{ $learnRtl ? 'rtl' : 'ltr' }}">
     @yield('content')
     @include('student.my-courses.partials.learn-screen-protection')
     @stack('scripts')

@@ -9,6 +9,10 @@ window.__learnPremiumMixin = {
     lessonNotes: {},
     streakDays: 0,
     xpPoints: 0,
+    _learnPageInited: false,
+    _initialItemOpened: false,
+    _progressBarTimer: null,
+    _loadLectureLock: null,
 
     panelTabs: {},
 
@@ -26,29 +30,35 @@ window.__learnPremiumMixin = {
         options = options || {};
         const panelType = String(type);
         const panelId = (/^\d+$/.test(String(id))) ? parseInt(id, 10) : id;
+        const alreadyActive = String(this.activePanelType) === panelType && String(this.activePanelId) === String(panelId);
         this.activePanelType = panelType;
         this.activePanelId = panelId;
-        document.querySelectorAll('#learn-curriculum-sidebar .curriculum-item').forEach(el => el.classList.remove('active'));
-        const sideEl = document.querySelector('#learn-curriculum-sidebar .curriculum-item[data-item-type="' + panelType + '"][data-item-id="' + panelId + '"]');
-        if (sideEl) sideEl.classList.add('active');
-        document.querySelectorAll('.learn-curriculum-panel').forEach(el => el.classList.remove('panel-active'));
+        if (!alreadyActive) {
+            document.querySelectorAll('#learn-curriculum-sidebar .curriculum-item').forEach(el => el.classList.remove('active'));
+            const sideEl = document.querySelector('#learn-curriculum-sidebar .curriculum-item[data-item-type="' + panelType + '"][data-item-id="' + panelId + '"]');
+            if (sideEl) sideEl.classList.add('active');
+            // لا نزل panel-active ثم نعيده لنفس اللوحة — display:none→block يسبب رعشة
+            document.querySelectorAll('.learn-curriculum-panel').forEach(el => el.classList.remove('panel-active'));
+            const panel = document.getElementById('learn-panel-' + panelType + '-' + panelId);
+            if (panel) panel.classList.add('panel-active');
+        }
         const panel = document.getElementById('learn-panel-' + panelType + '-' + panelId);
-        if (panel) {
-            panel.classList.add('panel-active');
-            if (!title) {
-                const titleEl = panel.querySelector('.learn-panel-title');
-                title = titleEl ? titleEl.textContent.trim() : '';
-            }
+        if (panel && !title) {
+            const titleEl = panel.querySelector('.learn-panel-title');
+            title = titleEl ? titleEl.textContent.trim() : '';
         }
         if (title) this.activeLessonTitle = title;
         if (options.scroll === true && panel) {
             this.$nextTick(() => {
-                panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                try { panel.scrollIntoView({ behavior: 'auto', block: 'nearest' }); } catch (e) {}
             });
         }
     },
 
     initLearnPage() {
+        if (this._learnPageInited) return;
+        this._learnPageInited = true;
+
         const descEl = document.getElementById('learn-section-descriptions');
         if (descEl) try { window.learnSectionDescriptions = JSON.parse(descEl.textContent); } catch(e) { window.learnSectionDescriptions = {}; }
         else window.learnSectionDescriptions = {};
@@ -56,35 +66,75 @@ window.__learnPremiumMixin = {
             const stored = localStorage.getItem('learn-notes-{{ $course->id ?? 0 }}');
             if (stored) this.lessonNotes = JSON.parse(stored) || {};
         } catch (e) { this.lessonNotes = {}; }
+
         this.focusMode = true;
         document.body.classList.add('learn-immersive-active');
         this.$watch('searchQuery', () => this.filterCurriculum());
         this.$watch('curriculumFilter', () => this.filterCurriculum());
         this.updateProgressBar();
-        setInterval(() => this.updateProgressBar(), 100);
+        if (this._progressBarTimer) clearInterval(this._progressBarTimer);
+        this._progressBarTimer = setInterval(() => this.updateProgressBar(), 2500);
         document.addEventListener('fullscreenchange', () => { this.isFullscreen = !!document.fullscreenElement; });
+
         const _learnComp = this;
+
         window.addEventListener('video-progress-report', (e) => {
             const d = e.detail || {};
             if (d.lectureId != null && String(_learnComp.selectedLecture) !== String(d.lectureId)) return;
-            _learnComp.reportVideoProgressFromPlayer(d.currentSec, d.durationSec, d.isPlaying);
-            if (_learnComp.selectedLecture) {
-                _learnComp.lectureProgressPercent = _learnComp.videoProgressPercent;
-                if (Number(d.durationSec) > 0) _learnComp.lastVideoDurationSec = Number(d.durationSec);
+            const nowTs = Date.now();
+            const isLecture = !!_learnComp.selectedLecture;
+            // للمحاضرات: حدّث منطق المشاهدة كل ثانية لكن لا تدفع Alpine إلا كل ~2ث
+            if (isLecture) {
+                const t = Number(d.currentSec) || 0;
+                const dur = Number(d.durationSec) || 0;
+                if (dur > 0) {
+                    if (_learnComp.lastReportedTime === null) _learnComp.lastReportedTime = t;
+                    else if (d.isPlaying) {
+                        const delta = t - _learnComp.lastReportedTime;
+                        if (delta >= 0 && delta <= _learnComp.SEEK_THRESHOLD) {
+                            _learnComp.watchedSeconds = Math.min(dur, (_learnComp.watchedSeconds || 0) + delta);
+                        }
+                        _learnComp.lastReportedTime = t;
+                    } else {
+                        _learnComp.lastReportedTime = t;
+                    }
+                    const pct = Math.min(100, ((_learnComp.watchedSeconds || 0) / dur) * 100);
+                    _learnComp.lastVideoProgressPercent = pct;
+                    _learnComp.lastVideoWatchTimeSec = _learnComp.watchedSeconds;
+                    _learnComp.lastVideoDurationSec = dur;
+                    if (!_learnComp._lastAlpinePctAt || (nowTs - _learnComp._lastAlpinePctAt) > 2000 || pct >= 99) {
+                        _learnComp.videoProgressPercent = pct;
+                        _learnComp.lectureProgressPercent = pct;
+                        _learnComp._lastAlpinePctAt = nowTs;
+                    }
+                }
+                return;
             }
+            _learnComp.reportVideoProgressFromPlayer(d.currentSec, d.durationSec, d.isPlaying);
         });
         window.addEventListener('learn-lecture-progress', (e) => {
             const d = e.detail || {};
             if (d.lectureId != null && String(_learnComp.selectedLecture) !== String(d.lectureId)) return;
-            if (typeof d.progress_percent === 'number') _learnComp.lectureProgressPercent = d.progress_percent;
+            if (typeof d.progress_percent !== 'number') return;
+            const pct = d.progress_percent;
+            const prev = Number(_learnComp.lectureProgressPercent) || 0;
+            if (pct >= prev + 1 || pct >= 99 || !_learnComp._lastAlpinePctAt || (Date.now() - _learnComp._lastAlpinePctAt) > 2000) {
+                _learnComp.lectureProgressPercent = pct;
+                _learnComp._lastAlpinePctAt = Date.now();
+            }
         });
         window.addEventListener('learn-open-next-item', (e) => {
             const d = e.detail || {};
             const hasId = d.id !== undefined && d.id !== null && d.id !== '';
             if (!hasId || !d.type) return;
             const openId = (/^\d+$/.test(String(d.id))) ? parseInt(d.id, 10) : d.id;
+            // تجنّب إعادة فتح نفس العنصر (رعشة المشغّل)
+            if (!d.force) {
+                if (d.type === 'lecture' && String(_learnComp.selectedLecture) === String(openId)) return;
+                if (d.type === 'lesson' && String(_learnComp.selectedLesson) === String(openId)) return;
+            }
             if (d.type === 'lecture') {
-                _learnComp.loadLecture(openId, { autoAdvance: !!d.autoAdvance });
+                _learnComp.loadLecture(openId, { autoAdvance: !!d.autoAdvance, force: !!d.force });
             } else if (d.type === 'lesson') {
                 _learnComp.loadLesson(openId);
                 if (typeof _learnComp.syncActivePanel === 'function') _learnComp.syncActivePanel('lesson', openId);
@@ -139,17 +189,46 @@ window.__learnPremiumMixin = {
             this.curriculumFilter = 'all';
             this.searchQuery = '';
             this.filterCurriculum();
+            await this.openInitialCurriculumItem();
+        });
+    },
+
+    async openInitialCurriculumItem() {
+        if (this._initialItemOpened) return;
+        this._initialItemOpened = true;
+        try {
             const params = new URLSearchParams(window.location.search);
+            const deepType = params.get('type');
+            const deepId = params.get('id');
             const lectureParam = params.get('lecture');
+
+            // مسار واحد فقط — يمنع فتح محاضرة ثم استبدالها (رعشة)
+            if (deepType && deepId) {
+                const el = document.querySelector(
+                    '#learn-curriculum-sidebar .curriculum-item[data-item-type="' + deepType + '"][data-item-id="' + deepId + '"]'
+                );
+                if (el) {
+                    const sectionId = el.getAttribute('data-section-id');
+                    if (sectionId && typeof this.isSectionCollapsed === 'function' && this.isSectionCollapsed(sectionId)) {
+                        this.toggleSection(sectionId);
+                    }
+                }
+                window.dispatchEvent(new CustomEvent('learn-open-next-item', {
+                    detail: { type: deepType, id: deepId, force: true }
+                }));
+                return;
+            }
             if (lectureParam && typeof this.loadLecture === 'function') {
-                await this.loadLecture(parseInt(lectureParam, 10) || lectureParam);
+                await this.loadLecture(parseInt(lectureParam, 10) || lectureParam, { force: true });
                 return;
             }
             const first = document.querySelector('#learn-curriculum-sidebar .curriculum-item[data-item-type="lecture"]:not(.locked):not(.curriculum-item--filtered)');
             if (first && first.dataset.itemId && typeof this.loadLecture === 'function') {
-                await this.loadLecture(first.dataset.itemId);
+                await this.loadLecture(first.dataset.itemId, { force: true });
             }
-        });
+        } catch (e) {
+            console.warn('openInitialCurriculumItem failed', e);
+        }
     },
 
     saveLessonNote(key, value) {

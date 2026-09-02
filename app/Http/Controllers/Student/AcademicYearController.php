@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
-use App\Models\AcademicYear;
 use App\Models\AcademicSubject;
+use App\Models\AcademicYear;
 use App\Models\AdvancedCourse;
+use App\Models\OfflineCourseGroup;
+use App\Support\AcademyWhatsApp;
+use App\Services\PaymentGatewaySettings;
+use App\Support\PlatformSettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -13,10 +17,15 @@ use Illuminate\Support\Str;
 class AcademicYearController extends Controller
 {
     /**
-     * عرض السنوات الدراسية للطلاب
+     * بوابة الاكتشاف: مسار كامل | كورسات مسجّلة | لايف
      */
-    public function index()
+    public function index(Request $request)
     {
+        $intent = $request->query('intent', 'choose');
+        if (! in_array($intent, ['choose', 'path', 'recorded', 'live'], true)) {
+            $intent = 'choose';
+        }
+
         $academicYears = AcademicYear::where('is_active', true)
             ->visibleOnCurrentHost()
             ->withCount('academicSubjects')
@@ -24,6 +33,8 @@ class AcademicYearController extends Controller
             ->get();
 
         $allCourses = AdvancedCourse::where('is_active', true)
+            ->visibleOnCurrentHost()
+            ->publicCatalog()
             ->select([
                 'id',
                 'title',
@@ -37,16 +48,111 @@ class AcademicYearController extends Controller
                 'skills',
                 'price',
                 'is_free',
+                'thumbnail',
                 'created_at',
             ])
+            ->orderByDesc('created_at')
             ->get();
 
         $tracks = $academicYears->map(function (AcademicYear $year) use ($allCourses) {
             return $this->hydrateTrack($year, $allCourses);
         });
 
+        $recordedCourses = $allCourses->take(48)->map(function (AdvancedCourse $course) {
+            $checkoutUrl = route('public.course.checkout', ['courseId' => $course->id, 'from' => 'portal']);
+            $course->setAttribute('portal_checkout_url', $checkoutUrl);
+            $course->setAttribute('whatsapp_url', AcademyWhatsApp::bookingUrl([
+                'type' => 'recorded',
+                'title' => $course->localized('title') ?: $course->title,
+                'code' => 'COURSE-' . $course->id,
+                'url' => $checkoutUrl,
+                'price' => $course->is_free ? 'مجاني' : number_format((float) $course->price, 0),
+            ]));
+
+            return $course;
+        });
+
+        $offlineGroups = OfflineCourseGroup::query()
+            ->where('is_active', true)
+            ->where('status', 'active')
+            ->where('public_booking_enabled', true)
+            ->whereNotNull('public_slug')
+            ->with(['course:id,title,price,is_active,status', 'instructor:id,name'])
+            ->orderByDesc('start_date')
+            ->limit(40)
+            ->get()
+            ->filter(fn (OfflineCourseGroup $g) => $g->course && $g->course->is_active && $g->course->status === 'active')
+            ->values()
+            ->map(function (OfflineCourseGroup $group) {
+                $bookUrl = route('public.offline-groups.show', $group->public_slug);
+                $group->setAttribute('channel', 'offline');
+                $group->setAttribute('book_url', $bookUrl);
+                $group->setAttribute('seats_left', $group->effectiveAvailableSeats('offline'));
+                $group->setAttribute('whatsapp_url', AcademyWhatsApp::bookingUrl([
+                    'type' => 'live_offline',
+                    'title' => $group->name,
+                    'code' => 'OFF-' . $group->id,
+                    'url' => $bookUrl,
+                    'price' => number_format((float) ($group->course->price ?? 0), 0),
+                    'channel' => 'أوفلاين',
+                ]));
+
+                return $group;
+            });
+
+        $onlineGroups = OfflineCourseGroup::query()
+            ->where('is_active', true)
+            ->where('status', 'active')
+            ->where('online_booking_enabled', true)
+            ->whereNotNull('online_slug')
+            ->with(['course:id,title,price,is_active,status', 'instructor:id,name'])
+            ->orderByDesc('start_date')
+            ->limit(40)
+            ->get()
+            ->filter(fn (OfflineCourseGroup $g) => $g->course && $g->course->is_active && $g->course->status === 'active')
+            ->values()
+            ->map(function (OfflineCourseGroup $group) {
+                $bookUrl = route('public.online-groups.show', $group->online_slug);
+                $group->setAttribute('channel', 'online');
+                $group->setAttribute('book_url', $bookUrl);
+                $group->setAttribute('seats_left', $group->effectiveAvailableSeats('online'));
+                $group->setAttribute('whatsapp_url', AcademyWhatsApp::bookingUrl([
+                    'type' => 'live_online',
+                    'title' => $group->name,
+                    'code' => 'ON-' . $group->id,
+                    'url' => $bookUrl,
+                    'price' => number_format((float) ($group->course->price ?? 0), 0),
+                    'channel' => 'أونلاين',
+                ]));
+
+                return $group;
+            });
+
+        $tracks = $tracks->map(function (AcademicYear $year) {
+            $slug = Str::slug($year->name) ?: ('year-' . $year->id);
+            $pathUrl = route('public.learning-path.show', $slug);
+            $checkoutUrl = route('public.learning-path.checkout', $slug);
+            $year->setAttribute('path_url', $pathUrl);
+            $year->setAttribute('path_checkout_url', $checkoutUrl);
+            $year->setAttribute('whatsapp_url', AcademyWhatsApp::bookingUrl([
+                'type' => 'path',
+                'title' => $year->name,
+                'code' => $year->code ?: ('PATH-' . $year->id),
+                'url' => $pathUrl,
+            ]));
+
+            return $year;
+        });
+
         return view('student.academic-years.index', [
+            'intent' => $intent,
             'tracks' => $tracks,
+            'recordedCourses' => $recordedCourses,
+            'offlineGroups' => $offlineGroups,
+            'onlineGroups' => $onlineGroups,
+            'fawaterakEnabled' => PaymentGatewaySettings::isFawaterakEnabled(),
+            'academyWhatsapp' => AcademyWhatsApp::academyDigits(),
+            'contactWhatsapp' => PlatformSettings::contactPage()['whatsapp'] ?? '',
         ]);
     }
 
@@ -61,6 +167,7 @@ class AcademicYearController extends Controller
             ->get();
 
         $allCourses = AdvancedCourse::where('is_active', true)
+            ->visibleOnCurrentHost()
             ->select([
                 'id',
                 'title',

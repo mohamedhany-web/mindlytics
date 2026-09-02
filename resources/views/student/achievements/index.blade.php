@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.student-dashboard')
 
 @section('title', __('student.achievements_title'))
 @section('header', __('student.achievements_title'))

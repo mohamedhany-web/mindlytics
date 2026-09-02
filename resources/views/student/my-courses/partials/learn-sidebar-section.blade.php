@@ -1,26 +1,26 @@
 @php
     $depth = $depth ?? 0;
     $course = $course ?? null;
+    $progressService = $progressService ?? app(\App\Services\CourseProgressService::class);
     $sectionItemCount = $section->activeItems->filter(fn($ci) => (bool) $ci->item)->count();
     $isSectionLocked = (!empty($course->admin_unlock_all_videos)) ? false : ($section->is_locked ?? false);
 @endphp
-<div class="mb-4 {{ $depth > 0 ? 'pr-2 border-r-2 border-slate-100' : '' }} {{ $isSectionLocked ? 'opacity-80' : '' }}" style="{{ $depth > 0 ? 'margin-right: ' . ($depth * 0.5) . 'rem;' : '' }}">
-    <div class="curriculum-section-header mb-2 {{ $isSectionLocked ? 'section-locked' : '' }}"
+<div class="learn-section-block {{ $depth > 0 ? 'learn-section-block--nested' : '' }} {{ $isSectionLocked ? 'opacity-80' : '' }}"
+     style="{{ $depth > 0 ? 'margin-inline-start: ' . ($depth * 0.65) . 'rem;' : '' }}">
+    <div class="curriculum-section-header {{ $isSectionLocked ? 'section-locked' : '' }}"
          :class="{ 'collapsed': isSectionCollapsed({{ $section->id }}) }"
          @click="toggleSection({{ $section->id }})"
          role="button"
          tabindex="0"
          @keydown.enter.prevent="toggleSection({{ $section->id }})"
          @keydown.space.prevent="toggleSection({{ $section->id }})">
-        <span class="flex items-center gap-1.5">
+        <span class="flex items-center gap-2 min-w-0">
             @if($isSectionLocked)
-                <i class="fas fa-lock text-amber-500 text-[10px]" title="أكمل القسم السابق لفتح هذا القسم"></i>
-            @else
-                <i class="fas fa-folder text-sky-400/90 text-[10px]"></i>
+                <i class="fas fa-lock text-amber-500 text-xs shrink-0" title="{{ __('student.learn_section_locked') }}"></i>
             @endif
-            <span>{{ $section->title }}</span>
+            <span class="truncate font-extrabold">{{ $section->title }}</span>
             @if($sectionItemCount > 0)
-                <span class="text-gray-500 text-[10px]">({{ $sectionItemCount }})</span>
+                <span class="text-[var(--learn-text-muted)] text-[11px] font-bold shrink-0">({{ $sectionItemCount }})</span>
             @endif
         </span>
         <i class="fas fa-chevron-down curriculum-section-chevron"></i>
@@ -35,8 +35,10 @@
                 $isCompleted = false;
                 $isCurrent = false;
                 $isLocked = $isSectionLocked;
+                $typeLabel = __('student.curriculum_type_other');
 
                 if ($item instanceof \App\Models\CourseLesson) {
+                    $typeLabel = __('student.curriculum_type_lesson');
                     $lessonProgress = $item->progress->first();
                     $isCompleted = $lessonProgress && $lessonProgress->is_completed;
                     $previousItems = $section->activeItems->where('order', '<', $curriculumItem->order);
@@ -59,36 +61,36 @@
                     $isCurrent = !$isCompleted && ($curriculumItem->order == 1 || $allPreviousCompleted);
                     $isLocked = $isSectionLocked || (!$isCurrent && !$isCompleted);
                 } elseif ($item instanceof \App\Models\Lecture) {
+                    $typeLabel = __('student.curriculum_type_lecture');
                     $watchProgress = $item->watchProgress->first();
                     $minPercent = $item->min_watch_percent_to_unlock_next;
                     $threshold = $minPercent !== null ? (int) $minPercent : 90;
-                    $isCompleted = $watchProgress && (int) $watchProgress->progress_percent >= $threshold;
+                    $progressService = $progressService ?? app(\App\Services\CourseProgressService::class);
+                    $isCompleted = $progressService->lectureWatchUnlocksNext($item, $watchProgress);
                     if (empty($course->admin_unlock_all_videos)) {
                         $prevLecturesInSection = $section->activeItems->where('order', '<', $curriculumItem->order)->filter(fn($i) => $i->item instanceof \App\Models\Lecture);
                         $lastPrevLecture = $prevLecturesInSection->sortByDesc('order')->first();
                         if ($lastPrevLecture) {
                             $prevLec = $lastPrevLecture->item;
                             $prevWp = $prevLec->watchProgress->first();
-                            $prevMin = $prevLec->min_watch_percent_to_unlock_next;
-                            $prevThreshold = $prevMin !== null ? (int) $prevMin : 90;
-                            $isLocked = $isLocked || !$prevWp || (int) $prevWp->progress_percent < $prevThreshold;
+                            $isLocked = $isLocked || ! $progressService->lectureWatchUnlocksNext($prevLec, $prevWp);
                         }
                     } else {
                         $isLocked = false;
                     }
                     $isCurrent = !$isCompleted && !$isLocked;
                 } elseif ($item instanceof \App\Models\LearningPattern) {
+                    $typeLabel = __('student.curriculum_type_pattern');
                     $bestAttempt = $item->getUserBestAttempt(auth()->id());
                     $isCompleted = $bestAttempt && $bestAttempt->status === 'completed';
                     $isCurrent = !$isCompleted && !$isSectionLocked;
                     $isLocked = $isSectionLocked;
                 } elseif ($item instanceof \App\Models\AdvancedExam || $item instanceof \App\Models\Exam) {
-                    // الامتحان يُعتبر مكتمل إذا كانت أفضل محاولة مساوية أو أعلى من درجة النجاح
+                    $typeLabel = __('student.curriculum_type_exam');
                     $passing = (float) ($item->passing_marks ?? 0);
                     $bestAttempt = $item->attempts->sortByDesc('submitted_at')->first();
                     $isCompleted = $bestAttempt && $bestAttempt->score !== null && (float) $bestAttempt->score >= $passing;
 
-                    // فتح الامتحان يعتمد على إكمال العناصر السابقة في نفس القسم (فيديوهات / أنماط / واجبات)
                     $prevItems = $section->activeItems->where('order', '<', $curriculumItem->order);
                     foreach ($prevItems as $prevItem) {
                         $prev = $prevItem->item;
@@ -96,9 +98,7 @@
 
                         if ($prev instanceof \App\Models\Lecture) {
                             $wp = $prev->watchProgress->first();
-                            $minPercent = $prev->min_watch_percent_to_unlock_next;
-                            $threshold = $minPercent !== null ? (int) $minPercent : 90;
-                            if (!$wp || (int) $wp->progress_percent < $threshold) {
+                            if (! $progressService->lectureWatchUnlocksNext($prev, $wp)) {
                                 $isLocked = true;
                                 break;
                             }
@@ -123,14 +123,30 @@
                     }
 
                     $isCurrent = !$isCompleted && !$isLocked && !$isSectionLocked;
+                } elseif ($item instanceof \App\Models\Assignment) {
+                    $typeLabel = __('student.curriculum_type_assignment');
                 }
 
                 $filterState = $isLocked ? 'locked' : ($isCompleted ? 'completed' : 'unlocked');
                 if ($item instanceof \App\Models\Lecture && !$isLocked && !$isCompleted) {
                     $wpF = $item->watchProgress->first();
-                    if ($wpF && (int)$wpF->progress_percent > 0 && (int)$wpF->progress_percent < 90) {
+                    if ($wpF && (int) $wpF->progress_percent > 0 && (int) $wpF->progress_percent < $threshold) {
                         $filterState = 'progress';
                     }
+                }
+
+                $statusClass = $isCompleted ? 'curriculum-status--done' : ($isLocked ? 'curriculum-status--locked' : ($isCurrent ? 'curriculum-status--current' : 'curriculum-status--ready'));
+                $typeIcon = 'icon-courses.svg';
+                if ($item instanceof \App\Models\CourseLesson) {
+                    $typeIcon = 'icon-courses.svg';
+                } elseif ($item instanceof \App\Models\Lecture) {
+                    $typeIcon = 'icon-classes.svg';
+                } elseif ($item instanceof \App\Models\LearningPattern) {
+                    $typeIcon = 'icon-path.svg';
+                } elseif ($item instanceof \App\Models\AdvancedExam || $item instanceof \App\Models\Exam) {
+                    $typeIcon = 'icon-exams.svg';
+                } elseif ($item instanceof \App\Models\Assignment) {
+                    $typeIcon = 'icon-messages.svg';
                 }
             @endphp
 
@@ -141,122 +157,58 @@
                      data-item-type="lesson"
                      data-item-id="{{ $item->id }}"
                      data-item-locked="{{ $isLocked ? '1' : '0' }}"
+                     data-item-completed="{{ $isCompleted ? '1' : '0' }}"
                      @click="currentSectionDescription = (window.learnSectionDescriptions || {})[$event.currentTarget.dataset.sectionId] || ''; if (($event.currentTarget.dataset.itemLocked || '0') === '1') return; selectedLesson = {{ $item->id }}; loadLesson({{ $item->id }}); syncActivePanel('lesson', {{ $item->id }}); mobileCurriculumOpen = false"
                  @elseif($item instanceof \App\Models\Lecture)
                      data-item-type="lecture"
                      data-item-id="{{ $item->id }}"
                      data-item-locked="{{ $isLocked ? '1' : '0' }}"
+                     data-item-completed="{{ $isCompleted ? '1' : '0' }}"
                      @click="currentSectionDescription = (window.learnSectionDescriptions || {})[$event.currentTarget.dataset.sectionId] || ''; if (($event.currentTarget.dataset.itemLocked || '0') === '1') return; loadLecture({{ $item->id }}); mobileCurriculumOpen = false"
                  @elseif($item instanceof \App\Models\Assignment)
                      data-item-type="assignment"
                      data-item-id="{{ $item->id }}"
                      data-item-locked="0"
+                     data-item-completed="0"
                      @click="currentSectionDescription = (window.learnSectionDescriptions || {})[$event.currentTarget.dataset.sectionId] || ''; loadAssignment({{ $item->id }}); syncActivePanel('assignment', {{ $item->id }}); mobileCurriculumOpen = false"
                  @elseif($item instanceof \App\Models\AdvancedExam || $item instanceof \App\Models\Exam)
                      data-item-type="exam"
                      data-item-id="{{ $item->id }}"
-                     data-item-locked="0"
-                     @click="currentSectionDescription = (window.learnSectionDescriptions || {})[$event.currentTarget.dataset.sectionId] || ''; loadExam({{ $item->id }}); syncActivePanel('exam', {{ $item->id }}); mobileCurriculumOpen = false"
+                     data-item-locked="{{ $isLocked ? '1' : '0' }}"
+                     data-item-completed="{{ $isCompleted ? '1' : '0' }}"
+                     @click="currentSectionDescription = (window.learnSectionDescriptions || {})[$event.currentTarget.dataset.sectionId] || ''; if (($event.currentTarget.dataset.itemLocked || '0') === '1') return; loadExam({{ $item->id }}); syncActivePanel('exam', {{ $item->id }}); mobileCurriculumOpen = false"
                  @elseif($item instanceof \App\Models\LearningPattern)
                      data-item-type="pattern"
                      data-item-id="{{ $item->id }}"
                      data-item-locked="{{ $isLocked ? '1' : '0' }}"
+                     data-item-completed="{{ $isCompleted ? '1' : '0' }}"
                      @click="currentSectionDescription = (window.learnSectionDescriptions || {})[$event.currentTarget.dataset.sectionId] || ''; if (($event.currentTarget.dataset.itemLocked || '0') === '1') return; loadPattern({{ $item->id }}); syncActivePanel('pattern', {{ $item->id }}); mobileCurriculumOpen = false"
                  @endif>
-                <div class="flex items-start gap-2">
-                    <div class="flex-shrink-0 mt-0.5">
-                        @if($item instanceof \App\Models\CourseLesson)
-                            @if($isCompleted)
-                                <div class="w-6 h-6 bg-green-500 rounded-md flex items-center justify-center">
-                                    <i class="fas fa-check text-white text-[10px]"></i>
-                                </div>
-                            @elseif($isCurrent)
-                                <div class="w-6 h-6 bg-sky-500 rounded-md flex items-center justify-center animate-pulse">
-                                    <i class="fas fa-play text-white text-[10px]"></i>
-                                </div>
-                            @else
-                                <div class="w-6 h-6 bg-gray-600 rounded-md flex items-center justify-center">
-                                    <i class="fas fa-lock text-white text-[10px]"></i>
-                                </div>
-                            @endif
-                        @elseif($item instanceof \App\Models\Lecture)
-                            @if($isCompleted)
-                                <div class="w-6 h-6 bg-green-500 rounded-md flex items-center justify-center">
-                                    <i class="fas fa-check text-white text-[10px]"></i>
-                                </div>
-                            @elseif($isLocked)
-                                <div class="w-6 h-6 bg-gray-600 rounded-md flex items-center justify-center">
-                                    <i class="fas fa-lock text-white text-[10px]"></i>
-                                </div>
-                            @else
-                                <div class="w-6 h-6 bg-sky-500 rounded-md flex items-center justify-center">
-                                    <i class="fas fa-chalkboard-teacher text-white text-[10px]"></i>
-                                </div>
-                            @endif
-                        @elseif($item instanceof \App\Models\Assignment)
-                            <div class="w-6 h-6 bg-purple-500 rounded-md flex items-center justify-center">
-                                <i class="fas fa-tasks text-white text-[10px]"></i>
-                            </div>
-                        @elseif($item instanceof \App\Models\AdvancedExam || $item instanceof \App\Models\Exam)
-                            @if($isCompleted)
-                                <div class="w-6 h-6 bg-green-500 rounded-md flex items-center justify-center">
-                                    <i class="fas fa-check text-white text-[10px]"></i>
-                                </div>
-                            @elseif($isCurrent)
-                                <div class="w-6 h-6 bg-indigo-500 rounded-md flex items-center justify-center animate-pulse">
-                                    <i class="fas fa-clipboard-check text-white text-[10px]"></i>
-                                </div>
-                            @else
-                                <div class="w-6 h-6 bg-gray-600 rounded-md flex items-center justify-center">
-                                    <i class="fas fa-lock text-white text-[10px]"></i>
-                                </div>
-                            @endif
-                        @elseif($item instanceof \App\Models\LearningPattern)
-                            @php $typeInfo = $item->getTypeInfo(); @endphp
-                            @if($isCompleted)
-                                <div class="w-6 h-6 bg-green-500 rounded-md flex items-center justify-center">
-                                    <i class="fas fa-check text-white text-[10px]"></i>
-                                </div>
-                            @elseif($isCurrent)
-                                <div class="w-6 h-6 bg-orange-500 rounded-md flex items-center justify-center animate-pulse">
-                                    <i class="{{ $typeInfo['icon'] ?? 'fas fa-puzzle-piece' }} text-white text-[10px]"></i>
-                                </div>
-                            @else
-                                <div class="w-6 h-6 bg-gray-600 rounded-md flex items-center justify-center">
-                                    <i class="fas fa-lock text-white text-[10px]"></i>
-                                </div>
-                            @endif
+                <div class="curriculum-item-inner">
+                    <span class="curriculum-status {{ $statusClass }}" aria-hidden="true">
+                        @if($isCompleted)
+                            <i class="fas fa-check"></i>
+                        @elseif($isLocked)
+                            <i class="fas fa-lock"></i>
+                        @elseif($isCurrent)
+                            <i class="fas fa-play"></i>
+                        @else
+                            <x-student.figma-icon :name="$typeIcon" box="size-3.5" />
                         @endif
-                    </div>
-                    <div class="flex-1 min-w-0">
+                    </span>
+                    <div class="min-w-0 flex-1">
                         <div class="curriculum-item-title">{{ $item->title }}</div>
                         <div class="curriculum-item-meta">
-                            @if($item instanceof \App\Models\CourseLesson)
-                                <span><i class="fas fa-video ml-1"></i> درس</span>
-                                @if($item->duration_minutes)
-                                    <span><i class="fas fa-clock ml-1"></i> {{ $item->duration_minutes }} دقيقة</span>
-                                @endif
-                            @elseif($item instanceof \App\Models\Lecture)
-                                <span><i class="fas fa-chalkboard-teacher ml-1"></i> محاضرة</span>
-                                @if($item->scheduled_at)
-                                    <span><i class="fas fa-calendar ml-1"></i> {{ $item->scheduled_at->format('Y/m/d') }}</span>
-                                @endif
-                            @elseif($item instanceof \App\Models\Assignment)
-                                <span><i class="fas fa-tasks ml-1"></i> واجب</span>
-                                @if($item->due_date)
-                                    <span><i class="fas fa-calendar ml-1"></i> {{ $item->due_date->format('Y/m/d') }}</span>
-                                @endif
-                            @elseif($item instanceof \App\Models\AdvancedExam || $item instanceof \App\Models\Exam)
-                                <span><i class="fas fa-clipboard-check ml-1"></i> امتحان</span>
-                                @if(isset($item->start_date) && $item->start_date)
-                                    <span><i class="fas fa-calendar ml-1"></i> {{ $item->start_date->format('Y/m/d') }}</span>
-                                @endif
-                            @elseif($item instanceof \App\Models\LearningPattern)
-                                @php $typeInfo = $item->getTypeInfo(); @endphp
-                                <span><i class="{{ $typeInfo['icon'] ?? 'fas fa-puzzle-piece' }} ml-1"></i> {{ $typeInfo['name'] ?? 'نمط تعليمي' }}</span>
-                                @if($item->points > 0)
-                                    <span><i class="fas fa-star ml-1"></i> {{ $item->points }} نقطة</span>
-                                @endif
+                            <span class="curriculum-type-row">
+                                <x-student.figma-icon :name="$typeIcon" box="size-3" class="curriculum-type-ico" />
+                                <span>{{ $typeLabel }}</span>
+                            </span>
+                            @if($isCompleted)
+                                <span class="curriculum-meta-pill curriculum-meta-pill--done">{{ __('student.completed_badge') }}</span>
+                            @elseif($isLocked)
+                                <span class="curriculum-meta-pill">{{ __('student.learn_locked') }}</span>
+                            @elseif($isCurrent)
+                                <span class="curriculum-meta-pill curriculum-meta-pill--now">{{ __('student.learn_playing_now') }}</span>
                             @endif
                         </div>
                     </div>

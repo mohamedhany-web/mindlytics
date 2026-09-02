@@ -133,13 +133,39 @@ class OfflineCourseController extends Controller
             })
             ->get();
 
+        $groupFilter = function ($q) use ($enrollment) {
+            if ($enrollment->group_id) {
+                $q->where(function ($x) use ($enrollment) {
+                    $x->whereNull('group_id')->orWhere('group_id', $enrollment->group_id);
+                });
+            }
+        };
+
+        $hubStats = [
+            'resources' => $offlineCourse->resources()->active()->where($groupFilter)->count(),
+            'lectures' => $offlineCourse->offlineLectures()->active()->where($groupFilter)->count(),
+            'activities' => $offlineCourse->activities()->where('status', 'published')->where($groupFilter)->count(),
+            'exams' => \App\Models\AdvancedExam::query()
+                ->where('offline_course_id', $offlineCourse->id)
+                ->where('is_active', true)
+                ->where('is_published', true)
+                ->count(),
+            'pending_activities' => $pendingActivities->count(),
+        ];
+
+        $nextSession = $enrollment->group
+            ? $enrollment->group->sessions()->where('session_date', '>=', now()->startOfDay())->ordered()->first()
+            : null;
+
         return view('student.offline-courses.show', compact(
             'offlineCourse',
             'enrollment',
             'pendingActivities',
             'completedActivities',
             'channel',
-            'studentRouteGroup'
+            'studentRouteGroup',
+            'hubStats',
+            'nextSession'
         ));
     }
 

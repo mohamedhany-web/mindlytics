@@ -135,6 +135,7 @@ class CheckoutController extends Controller
 
         $platformPaymentMode = PlatformSettings::paymentMode();
         $fawaterakCheckoutReady = PaymentGatewaySettings::isFawaterakEnabled();
+        $portalCheckout = request()->query('from') === 'portal';
         $phoneCountries = config('phone_countries.countries', []);
         $defaultCountry = collect($phoneCountries)->firstWhere('code', config('phone_countries.default_country', 'SA'));
 
@@ -147,6 +148,7 @@ class CheckoutController extends Controller
             'wallets',
             'platformPaymentMode',
             'fawaterakCheckoutReady',
+            'portalCheckout',
             'phoneCountries',
             'defaultCountry',
             'personalCoupon',

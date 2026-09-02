@@ -1,1335 +1,434 @@
-@extends('layouts.app')
+@extends('layouts.student-dashboard')
 
 @section('title', $course->localized('title') . ' - ' . __('student.my_courses'))
 @section('header', $course->localized('title'))
 
+@php
+    use App\Models\AdvancedExam;
+    use App\Models\Assignment;
+    use App\Models\CourseLesson;
+    use App\Models\Exam;
+    use App\Models\Lecture;
+    use App\Models\LearningPattern;
+    use App\Support\StudentFigmaAssets;
+    use Illuminate\Support\Str;
+
+    $sp = StudentFigmaAssets::urls();
+    $progressService = app(\App\Services\CourseProgressService::class);
+    $user = auth()->user();
+    $progressPct = max(0, min(100, (int) round((float) $progress)));
+    $isDone = $progressPct >= 100;
+    $remaining = max(0, (int) $totalLessons - (int) $completedLessons);
+    $bubbleColors = ['#f9e4d7', '#d7e8f9', '#d7eef5', '#f9f0d7', '#dcdef2'];
+    $sectionMeta = [];
+    $firstOpenId = null;
+    $firstIncompleteHref = route('my-courses.learn', $course);
+
+    if (isset($sections) && $sections->isNotEmpty()) {
+        foreach ($sections as $section) {
+            $items = $section->relationLoaded('activeItems') ? $section->activeItems : collect();
+            $rows = [];
+            $doneCount = 0;
+            foreach ($items as $ci) {
+                $entity = $ci->item ?? null;
+                if (! $entity) {
+                    continue;
+                }
+                $completed = $progressService->isItemCompletedForUser($entity, $user);
+                if ($completed) {
+                    $doneCount++;
+                }
+
+                $typeKey = 'other';
+                $icon = 'icon-courses.svg';
+                $bubble = $bubbleColors[count($rows) % count($bubbleColors)];
+                $title = method_exists($entity, 'localized')
+                    ? ($entity->localized('title') ?: ($entity->title ?? __('student.section_fallback')))
+                    : ($entity->title ?? $entity->name ?? __('student.section_fallback'));
+                $href = route('my-courses.learn', $course);
+                $learnType = null;
+                $learnId = $entity->id;
+
+                if ($entity instanceof CourseLesson) {
+                    $typeKey = 'lesson';
+                    $icon = 'icon-courses.svg';
+                    $learnType = 'lesson';
+                    $href = route('my-courses.learn', $course) . '?type=lesson&id=' . $entity->id;
+                } elseif ($entity instanceof Lecture) {
+                    $typeKey = 'lecture';
+                    $icon = 'icon-classes.svg';
+                    $learnType = 'lecture';
+                    $href = route('my-courses.learn', $course) . '?type=lecture&id=' . $entity->id;
+                } elseif ($entity instanceof LearningPattern) {
+                    $typeKey = 'pattern';
+                    $icon = 'icon-path.svg';
+                    $learnType = 'pattern';
+                    $href = route('my-courses.learn', $course) . '?type=pattern&id=' . $entity->id;
+                } elseif ($entity instanceof AdvancedExam || $entity instanceof Exam) {
+                    $typeKey = 'exam';
+                    $icon = 'icon-exams.svg';
+                    $learnType = 'exam';
+                    $href = route('my-courses.learn', $course) . '?type=exam&id=' . $entity->id;
+                } elseif ($entity instanceof Assignment) {
+                    $typeKey = 'assignment';
+                    $icon = 'icon-orders.svg';
+                    $learnType = 'assignment';
+                    $href = route('my-courses.learn', $course) . '?type=assignment&id=' . $entity->id;
+                }
+
+                if (! $completed && $firstOpenId === null) {
+                    $firstOpenId = 's' . $section->id;
+                    $firstIncompleteHref = $href;
+                }
+
+                $rows[] = [
+                    'title' => $title,
+                    'type' => $typeKey,
+                    'icon' => $icon,
+                    'bubble' => $bubble,
+                    'completed' => $completed,
+                    'href' => $href,
+                ];
+            }
+            $total = count($rows);
+            $sectionMeta[] = [
+                'id' => $section->id,
+                'title' => $section->title ?? $section->name ?? __('student.section_fallback'),
+                'description' => $section->description ?? null,
+                'rows' => $rows,
+                'done' => $doneCount,
+                'total' => $total,
+                'pct' => $total > 0 ? (int) round(($doneCount / $total) * 100) : 0,
+            ];
+        }
+        if ($firstOpenId === null && count($sectionMeta)) {
+            $firstOpenId = 's' . $sectionMeta[0]['id'];
+        }
+    }
+
+    $ringDeg = (int) round($progressPct * 3.6);
+@endphp
+
 @push('styles')
 <style>
-    @keyframes shimmer {
-        0% { transform: translateX(-100%); }
-        100% { transform: translateX(100%); }
-    }
-    
-    .animate-shimmer {
-        animation: shimmer 2s infinite;
-    }
-    
-    .border-b-3 {
-        border-bottom-width: 3px;
-    }
-    
-    .scrollbar-hide {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-    }
-    
-    .scrollbar-hide::-webkit-scrollbar {
-        display: none;
-    }
-    
-    /* تحسينات إضافية */
-    .lesson-item, .lecture-item {
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    
-    .lesson-item:hover, .lecture-item:hover {
-        transform: translateX(-5px);
-    }
-    /* Focus Mode - وضع التركيز المتقدم */
-    .focus-mode {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: #f8fafc;
-        z-index: 99999;
-        overflow: hidden;
-        padding: 0;
-        animation: focusFadeIn 0.3s ease-in-out;
-        display: flex;
-        flex-direction: column;
-    }
-    
-    /* سايدبار المنهج - على اليمين */
-    .focus-sidebar {
-        width: 380px;
-        background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-        border-left: 1px solid rgba(59, 130, 246, 0.2);
-        overflow-y: auto;
-        overflow-x: hidden;
+    .sp-course-hub-hero {
+        background: #2f2e43;
+        border-radius: 30px;
+        color: #fff;
+        padding: 28px 24px;
         position: relative;
-        transition: transform 0.3s ease, width 0.3s ease;
-        order: 2;
-        flex-shrink: 0;
-    }
-    
-    /* السايدبار مغلق */
-    .focus-sidebar.closed {
-        width: 0;
-        transform: translateX(100%);
-        border: none;
         overflow: hidden;
+        box-shadow: var(--sp-shadow);
     }
-    
-    .focus-sidebar::-webkit-scrollbar {
-        width: 6px;
-    }
-    
-    .focus-sidebar::-webkit-scrollbar-track {
-        background: rgba(15, 23, 42, 0.5);
-    }
-    
-    .focus-sidebar::-webkit-scrollbar-thumb {
-        background: rgba(59, 130, 246, 0.5);
-        border-radius: 3px;
-    }
-    
-    .focus-sidebar::-webkit-scrollbar-thumb:hover {
-        background: rgba(59, 130, 246, 0.7);
-    }
-    
-    .focus-sidebar-header {
-        padding: 1.5rem;
-        background: rgba(15, 23, 42, 0.8);
-        border-bottom: 2px solid rgba(59, 130, 246, 0.3);
-        position: sticky;
-        top: 0;
-        z-index: 10;
-        backdrop-filter: blur(10px);
-    }
-    
-    .focus-sidebar-content {
-        padding: 1rem;
-    }
-    
-    /* المحتوى الرئيسي - على اليسار */
-    .focus-main-content {
-        flex: 1;
-        overflow-y: auto;
-        background: #ffffff;
-        position: relative;
-        order: 1;
-        min-height: 0;
-        width: 100%;
-        transition: margin-left 0.3s ease;
-    }
-    
-    /* عندما يكون السايدبار مغلق */
-    .focus-sidebar.closed {
-        width: 0 !important;
-        min-width: 0 !important;
-        padding: 0 !important;
-        border: none !important;
-        overflow: hidden !important;
-        opacity: 0;
+    .sp-course-hub-hero::before {
+        content: '';
+        position: absolute;
+        inset-inline-end: -40px;
+        top: -60px;
+        width: 220px;
+        height: 220px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(174,217,234,0.28), transparent 70%);
         pointer-events: none;
     }
-    
-    /* المحتوى يملأ الصفحة عندما يكون السايدبار مغلق */
-    .curriculum-wrapper:has(.focus-sidebar.closed) .focus-main-content,
-    .focus-sidebar.closed ~ .focus-main-content {
-        width: 100% !important;
-        flex: 1 1 100% !important;
-        margin: 0 !important;
-    }
-    
-    /* زر التبديل */
-    .sidebar-toggle-btn {
-        position: fixed;
-        right: 20px;
-        top: 50%;
-        transform: translateY(-50%);
-        z-index: 1000;
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        border: 2px solid rgba(59, 130, 246, 0.3);
-        color: white;
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    }
-    
-    .sidebar-toggle-btn:hover {
-        background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
-        border-color: rgba(59, 130, 246, 0.5);
-        transform: translateY(-50%) scale(1.1);
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
-    }
-    
-    /* عندما يكون السايدبار مفتوح، الزر يتحرك */
-    .focus-sidebar:not(.closed) ~ .focus-main-content .sidebar-toggle-btn,
-    .focus-sidebar:not(.closed) + .focus-main-content .sidebar-toggle-btn {
-        right: 400px;
-    }
-    
-    /* ضمان أن المحتوى يملأ الصفحة */
-    .curriculum-wrapper {
-        width: 100%;
-        display: flex;
-    }
-    
-    .curriculum-wrapper .focus-main-content {
-        flex: 1;
-        min-width: 0;
-    }
-    
-    .focus-main-content::-webkit-scrollbar {
-        width: 8px;
-    }
-    
-    .focus-main-content::-webkit-scrollbar-track {
-        background: #f1f5f9;
-    }
-    
-    .focus-main-content::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 4px;
-    }
-    
-    .focus-main-content::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
-    }
-    
-    /* عناصر المنهج في السايدبار */
-    .curriculum-item {
-        background: rgba(30, 41, 59, 0.6);
-        border: 1px solid rgba(59, 130, 246, 0.2);
-        border-radius: 0.75rem;
-        padding: 1rem;
-        margin-bottom: 0.75rem;
-        transition: all 0.3s;
-        cursor: pointer;
-        position: relative;
-    }
-    
-    .curriculum-item:hover {
-        background: rgba(30, 41, 59, 0.8);
-        border-color: rgba(59, 130, 246, 0.5);
-        transform: translateX(-5px);
-    }
-    
-    .curriculum-item.active {
-        background: rgba(59, 130, 246, 0.2);
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-    }
-    
-    .curriculum-item.completed {
-        border-color: rgba(16, 185, 129, 0.5);
-    }
-    
-    .curriculum-item.locked {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-    
-    /* زر إغلاق/فتح السايدبار */
-    .sidebar-toggle-btn {
-        position: fixed;
-        right: 20px;
-        top: 50%;
-        transform: translateY(-50%);
-        z-index: 1000;
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        border: 2px solid rgba(59, 130, 246, 0.3);
-        color: white;
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    }
-    
-    .sidebar-toggle-btn:hover {
-        background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
-        border-color: rgba(59, 130, 246, 0.5);
-        transform: translateY(-50%) scale(1.1);
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
-    }
-    
-    /* عندما يكون السايدبار مغلق، الزر يظهر على اليمين */
-    .focus-sidebar.closed ~ .focus-main-content .sidebar-toggle-btn {
-        right: 20px;
-    }
-    
-    /* زر في السايدبار لإغلاقه */
-    .sidebar-close-btn {
+    .sp-course-hub-hero::after {
+        content: '';
         position: absolute;
-        top: 1rem;
-        left: 1rem;
-        background: rgba(239, 68, 68, 0.2);
-        border: 1px solid rgba(239, 68, 68, 0.5);
-        color: white;
-        width: 36px;
-        height: 36px;
+        inset-inline-start: -30px;
+        bottom: -80px;
+        width: 180px;
+        height: 180px;
         border-radius: 50%;
+        background: radial-gradient(circle, rgba(249,228,215,0.18), transparent 70%);
+        pointer-events: none;
+    }
+    .sp-progress-ring {
+        width: 132px;
+        height: 132px;
+        border-radius: 50%;
+        background: conic-gradient(var(--sp-accent) {{ $ringDeg }}deg, rgba(255,255,255,0.12) 0deg);
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+        position: relative;
+        z-index: 1;
+    }
+    .sp-progress-ring-inner {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: #2f2e43;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        z-index: 20;
-    }
-    
-    .sidebar-close-btn:hover {
-        background: rgba(239, 68, 68, 0.4);
-        border-color: #ef4444;
-        transform: scale(1.1);
-    }
-    
-    .focus-sidebar.closed .sidebar-close-btn {
-        display: none;
-    }
-    
-    @media (max-width: 1024px) {
-        .focus-sidebar {
-            position: fixed;
-            right: 0;
-            top: 0;
-            bottom: 0;
-            z-index: 100001;
-            transform: translateX(100%);
-        }
-        
-        .focus-sidebar.open {
-            transform: translateX(0);
-        }
-        
-        .focus-main-content {
-            width: 100%;
-        }
-        
-        .sidebar-toggle-btn {
-            display: block;
-        }
-    }
-    
-    @keyframes focusFadeIn {
-        from {
-            opacity: 0;
-            backdrop-filter: blur(0px);
-        }
-        to {
-            opacity: 1;
-            backdrop-filter: blur(10px);
-        }
-    }
-    
-    .focus-mode .curriculum-wrapper {
-        display: flex;
-        flex-direction: row;
-        height: 100vh;
-        overflow: hidden;
-        width: 100%;
-    }
-    
-    /* شريط التحكم العلوي */
-    .focus-mode .focus-control-bar {
-        background: rgba(255, 255, 255, 0.98);
-        backdrop-filter: blur(20px);
-        border-bottom: 2px solid #e2e8f0;
-        padding: 0.75rem 1.5rem;
-        position: sticky;
-        top: 0;
-        z-index: 100;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    }
-    
-    .focus-mode .focus-control-bar .controls {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        flex-wrap: wrap;
-    }
-    
-    .focus-mode .focus-control-bar .search-box {
-        flex: 1;
-        min-width: 250px;
-        max-width: 400px;
-    }
-    
-    .focus-mode .focus-control-bar .search-box input {
-        width: 100%;
-        background: #f1f5f9;
-        border: 1px solid #e2e8f0;
-        color: #1e293b;
-        padding: 0.75rem 1rem;
-        border-radius: 0.5rem;
-        font-size: 0.9rem;
-    }
-    
-    .focus-mode .focus-control-bar .search-box input:focus {
-        outline: none;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        background: white;
-    }
-    
-    .focus-mode .focus-control-bar .action-buttons {
-        display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-    }
-    
-    .focus-mode .focus-control-bar .btn-control {
-        background: #f1f5f9;
-        border: 1px solid #e2e8f0;
-        color: #475569;
-        padding: 0.5rem 1rem;
-        border-radius: 0.5rem;
-        cursor: pointer;
-        transition: all 0.3s;
-        font-size: 0.85rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-weight: 600;
-    }
-    
-    .focus-mode .focus-control-bar .btn-control:hover {
-        background: #e2e8f0;
-        border-color: #cbd5e1;
-        color: #1e293b;
-        transform: translateY(-2px);
-    }
-    
-    .focus-mode .focus-control-bar .btn-control.active {
-        background: #3b82f6;
-        border-color: #3b82f6;
-        color: white;
-    }
-    
-    .focus-mode .focus-control-bar .btn-close {
-        background: rgba(239, 68, 68, 0.2);
-        border-color: rgba(239, 68, 68, 0.5);
-    }
-    
-    .focus-mode .focus-control-bar .btn-close:hover {
-        background: rgba(239, 68, 68, 0.3);
-        border-color: #ef4444;
-    }
-    
-    
-    /* المحتوى الرئيسي */
-    .focus-main-content-wrapper {
-        padding: 1rem 1.5rem;
-        width: 100%;
-        max-width: 100%;
-        margin: 0;
-        min-height: auto;
-        box-sizing: border-box;
-    }
-    
-    /* عند عدم وجود محتوى محدد، لا تأخذ مساحة كبيرة */
-    .focus-main-content-wrapper:has(.empty-content-state) {
-        padding: 1rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 200px;
-    }
-    
-    /* ضمان أن جميع العناصر الداخلية تملأ العرض */
-    .focus-main-content-wrapper > * {
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
-    }
-    
-    .focus-content-header {
-        margin-bottom: 2rem;
-        padding-bottom: 1.5rem;
-        border-bottom: 2px solid #e2e8f0;
-    }
-    
-    .focus-content-header h2 {
-        color: #1e293b;
-        font-size: 2rem;
-        font-weight: 800;
-        margin-bottom: 0.5rem;
-    }
-    
-    .focus-content-header .course-meta {
-        color: #64748b;
-        font-size: 0.9rem;
-        display: flex;
-        gap: 1.5rem;
-        flex-wrap: wrap;
-        margin-top: 0.5rem;
-    }
-    
-    /* محتوى الدرس */
-    .lesson-content-viewer {
-        background: white;
-        border-radius: 1rem;
-        padding: 2rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        width: 100%;
-        max-width: 100%;
-        margin: 0;
-        box-sizing: border-box;
-    }
-    
-    .lesson-content-viewer > div {
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
-    }
-    
-    .lecture-viewer {
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
-    }
-    
-    /* ضمان أن جميع العناصر داخل المحتوى تملأ العرض */
-    .lecture-viewer > * {
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
-    }
-    
-    .empty-content-state {
         text-align: center;
-        padding: 1.5rem 1rem;
-        color: #64748b;
-        min-height: auto;
+    }
+    .sp-curriculum-section {
+        background: #fff;
+        border-radius: var(--sp-radius-card);
+        box-shadow: var(--sp-shadow);
+        overflow: hidden;
+    }
+    .sp-curriculum-section-btn {
         width: 100%;
-    }
-    
-    .empty-content-state i {
-        font-size: 2.5rem;
-        color: #cbd5e1;
-        margin-bottom: 0.5rem;
-    }
-    
-    .empty-content-state h3 {
-        font-size: 1.25rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .empty-content-state p {
-        font-size: 0.875rem;
-    }
-    
-    /* الأقسام */
-    .curriculum-section {
-        margin-bottom: 3rem;
-        animation: slideInUp 0.5s ease-out;
-    }
-    
-    @keyframes slideInUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    .curriculum-section.collapsed .section-content {
-        display: none;
-    }
-    
-    .curriculum-section-title {
-        color: #60a5fa;
-        font-size: 1.5rem;
-        font-weight: 700;
-        margin-bottom: 1.5rem;
-        padding: 1rem;
-        background: rgba(59, 130, 246, 0.1);
-        border-right: 4px solid #3b82f6;
-        border-radius: 0.5rem;
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        cursor: pointer;
-        transition: all 0.3s;
-    }
-    
-    .curriculum-section-title:hover {
-        background: rgba(59, 130, 246, 0.2);
-        transform: translateX(-5px);
-    }
-    
-    .curriculum-section-title .section-toggle {
-        color: #94a3b8;
-        transition: transform 0.3s;
-    }
-    
-    .curriculum-section.collapsed .curriculum-section-title .section-toggle {
-        transform: rotate(-90deg);
-    }
-    
-    /* عناصر المنهج في السايدبار - محسّنة */
-    .curriculum-item {
-        background: rgba(30, 41, 59, 0.6);
-        border: 1px solid rgba(59, 130, 246, 0.2);
-        border-radius: 0.75rem;
-        padding: 1rem;
-        margin-bottom: 0.75rem;
-        transition: all 0.3s;
-        cursor: pointer;
-        position: relative;
-    }
-    
-    .curriculum-item:hover {
-        background: rgba(30, 41, 59, 0.8);
-        border-color: rgba(59, 130, 246, 0.5);
-        transform: translateX(-5px);
-    }
-    
-    .curriculum-item.active {
-        background: rgba(59, 130, 246, 0.2);
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-    }
-    
-    .curriculum-item.completed {
-        border-color: rgba(16, 185, 129, 0.5);
-    }
-    
-    .curriculum-item.locked {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-    
-    .curriculum-item-title {
-        color: white;
-        font-weight: 600;
-        font-size: 0.95rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .curriculum-item-meta {
-        color: #94a3b8;
-        font-size: 0.75rem;
-        display: flex;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-    }
-    
-    .curriculum-section-header {
-        color: #60a5fa;
-        font-size: 1rem;
-        font-weight: 700;
-        margin: 1.5rem 0 1rem 0;
-        padding: 0.75rem 1rem;
-        background: rgba(59, 130, 246, 0.1);
-        border-right: 3px solid #3b82f6;
-        border-radius: 0.5rem;
-    }
-    
-    .lesson-item::before, .lecture-item::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        right: 0;
-        width: 4px;
-        height: 100%;
+        gap: 12px;
+        padding: 16px 18px;
         background: transparent;
-        transition: all 0.3s;
+        border: 0;
+        cursor: pointer;
+        text-align: start;
+        font-family: inherit;
+        color: inherit;
     }
-    
-    .lesson-item:hover, .lecture-item:hover {
-        border-color: #3b82f6;
-        transform: translateX(-10px) scale(1.02);
-        box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+    .sp-curriculum-section-btn:hover { background: #fafaf8; }
+    .sp-curriculum-chevron {
+        width: 28px;
+        height: 28px;
+        border-radius: 10px;
+        background: #f5f5f5;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s ease;
+        flex-shrink: 0;
     }
-    
-    .lesson-item:hover::before, .lecture-item:hover::before {
-        background: linear-gradient(180deg, #3b82f6 0%, #8b5cf6 100%);
-        width: 6px;
+    .sp-curriculum-chevron.is-open { transform: rotate(180deg); }
+    .sp-curriculum-body {
+        padding: 0 14px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
     }
-    
-    .lesson-item.completed {
-        border-color: rgba(16, 185, 129, 0.5);
-        background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(30, 41, 59, 0.8) 100%);
+    .sp-hub-sticky {
+        position: sticky;
+        top: 12px;
     }
-    
-    .lesson-item.completed::before {
-        background: linear-gradient(180deg, #10b981 0%, #059669 100%);
-        width: 4px;
-    }
-    
-    .lesson-item.current {
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3), 0 10px 40px rgba(59, 130, 246, 0.2);
-        animation: pulse 2s infinite;
-    }
-    
-    @keyframes pulse {
-        0%, 100% {
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3), 0 10px 40px rgba(59, 130, 246, 0.2);
-        }
-        50% {
-            box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.4), 0 15px 50px rgba(59, 130, 246, 0.3);
-        }
-    }
-    
-    .lecture-item.scheduled {
-        border-color: rgba(59, 130, 246, 0.5);
-    }
-    
-    .lecture-item.completed {
-        border-color: rgba(16, 185, 129, 0.5);
-    }
-    
-    .lecture-item.in-progress {
-        border-color: rgba(245, 158, 11, 0.5);
-        animation: pulse 2s infinite;
-    }
-    
-    /* فلترة */
-    .lesson-item.hidden, .lecture-item.hidden {
-        display: none;
-    }
-    
-    /* شريط التقدم */
-    .focus-progress-bar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: rgba(30, 41, 59, 0.5);
-        z-index: 100001;
-    }
-    
-    .focus-progress-bar .progress-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%);
-        transition: width 0.3s ease;
-    }
-    
-    /* إعدادات العرض */
-    .focus-settings-panel {
-        position: fixed;
-        top: 50%;
-        left: 2rem;
-        transform: translateY(-50%);
-        background: rgba(15, 23, 42, 0.98);
-        backdrop-filter: blur(20px);
-        border: 2px solid rgba(59, 130, 246, 0.5);
-        border-radius: 1rem;
-        padding: 1.5rem;
-        z-index: 100002;
-        min-width: 280px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
-        display: none;
-    }
-    
-    .focus-settings-panel::before {
-        content: '';
-        position: absolute;
-        top: -2px;
-        left: -2px;
-        right: -2px;
-        bottom: -2px;
-        background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(139, 92, 246, 0.3));
-        border-radius: 1rem;
-        z-index: -1;
-        animation: borderGlow 3s ease-in-out infinite;
-    }
-    
-    @keyframes borderGlow {
-        0%, 100% {
-            opacity: 0.5;
-        }
-        50% {
-            opacity: 1;
-        }
-    }
-    
-    /* تحسينات البحث */
-    .search-box {
-        position: relative;
-    }
-    
-    .search-box input::placeholder {
-        color: rgba(148, 163, 184, 0.6);
-    }
-    
-    /* تحسينات الخط */
-    .focus-mode[data-font-size='small'] .curriculum-content {
-        font-size: 0.875rem;
-    }
-    
-    .focus-mode[data-font-size='medium'] .curriculum-content {
-        font-size: 1rem;
-    }
-    
-    .focus-mode[data-font-size='large'] .curriculum-content {
-        font-size: 1.125rem;
-    }
-    
-    .focus-settings-panel.active {
-        display: block;
-        animation: slideInRight 0.3s ease-out;
-    }
-    
-    @keyframes slideInRight {
-        from {
-            opacity: 0;
-            transform: translateY(-50%) translateX(-20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(-50%) translateX(0);
-        }
-    }
-    
-    /* طباعة */
-    @media print {
-        .focus-mode .focus-control-bar,
-        .focus-mode .focus-stats,
-        .focus-mode .btn-control {
-            display: none !important;
-        }
-        
-        .focus-mode {
-            background: white;
-            color: black;
-        }
-        
-        .lesson-item, .lecture-item {
-            background: white;
-            border: 1px solid #ccc;
-            page-break-inside: avoid;
-        }
+    @media (max-width: 1023px) {
+        .sp-hub-sticky { position: static; }
+        .sp-progress-ring { width: 112px; height: 112px; }
+        .sp-progress-ring-inner { width: 84px; height: 84px; }
     }
 </style>
 @endpush
 
 @section('content')
-<div class="min-h-screen bg-gray-50 py-6" 
-     x-data="courseFocusMode()"
-     @scroll.window="updateProgressBar()">
-    <div class="w-full px-4 sm:px-6 lg:px-8">
-        <!-- العودة -->
-        <div class="mb-4">
-            <a href="{{ route('my-courses.index') }}" class="inline-flex items-center text-sky-600 hover:text-sky-700 text-sm font-medium">
-                <i class="fas fa-arrow-right ml-2"></i>
-                العودة إلى كورساتي
-            </a>
-        </div>
+<div class="space-y-5" x-data="{ openSection: @js($firstOpenId) }">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+        <a href="{{ route('my-courses.index') }}" class="sp-link inline-flex items-center gap-2">
+            <img src="{{ $sp['chevron'] ?? StudentFigmaAssets::url('icon-chevron.svg') }}" alt="" class="size-4 rotate-180 rtl:rotate-0">
+            {{ __('student.back_to_my_courses') }}
+        </a>
+        <span class="sp-pill {{ $isDone ? 'sp-pill--done' : 'sp-pill--progress' }}">
+            {{ $isDone ? __('student.completed_badge') : __('student.active_badge') }}
+        </span>
+    </div>
 
-        <!-- معلومات الكورس - عرض كامل -->
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm mb-6 overflow-hidden">
-            <div class="flex flex-col lg:flex-row">
-                <!-- صورة الكورس -->
-                <div class="lg:w-2/5 h-52 lg:h-72 bg-sky-100 flex items-center justify-center relative overflow-hidden flex-shrink-0">
-                    @if($course->thumbnail)
-                        <img src="{{ asset('storage/' . $course->thumbnail) }}" alt="{{ $course->localized('title') }}" class="w-full h-full object-cover">
-                    @else
-                        <div class="text-sky-600 text-center">
-                            <i class="fas fa-graduation-cap text-4xl"></i>
-                            <p class="text-sm font-medium mt-2 text-sky-700">{{ $course->academicSubject->name ?? 'كورس' }}</p>
-                        </div>
+    {{-- Hero hub --}}
+    <section class="sp-course-hub-hero">
+        <div class="relative z-[1] flex flex-col lg:flex-row lg:items-center gap-6 lg:gap-8">
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold text-white/60 m-0 mb-2">{{ __('student.course_hub_eyebrow') }}</p>
+                <h2 class="text-2xl sm:text-[28px] font-extrabold m-0 leading-tight">{{ $course->localized('title') }}</h2>
+                <p class="text-sm text-white/70 m-0 mt-3 flex flex-wrap gap-x-2 gap-y-1">
+                    <span>{{ $course->academicSubject->name ?? __('student.course_fallback') }}</span>
+                    <span class="opacity-40">·</span>
+                    <span>{{ $course->teacher->name ?? '—' }}</span>
+                    @if($course->academicYear)
+                        <span class="opacity-40">·</span>
+                        <span>{{ $course->academicYear->name }}</span>
                     @endif
-                    <div class="absolute top-3 left-3 bg-white rounded-lg px-3 py-1.5 shadow-sm border border-gray-100">
-                        <span class="text-sm font-bold text-sky-600">{{ $progress }}%</span>
+                </p>
+                @if($course->description)
+                    <p class="text-sm text-white/55 m-0 mt-3 max-w-2xl leading-relaxed line-clamp-2">{{ Str::limit(strip_tags($course->description), 160) }}</p>
+                @endif
+                <div class="flex flex-wrap gap-3 mt-6">
+                    <a href="{{ $firstIncompleteHref }}" class="sp-promo-btn !mt-0 !text-[var(--sp-accent-text)]">
+                        {{ $isDone ? __('student.review_course') : ($progressPct > 0 ? __('student.continue_where_left') : __('student.start_learning')) }}
+                    </a>
+                    @if($isDone)
+                        <a href="{{ route('student.certificates.claim', $course) }}" class="inline-flex items-center justify-center rounded-[20px] bg-white/10 hover:bg-white/15 px-5 py-3.5 text-sm font-extrabold text-white transition">
+                            {{ __('student.claim_certificate') }}
+                        </a>
+                    @endif
+                </div>
+            </div>
+
+            <div class="flex items-center gap-5 shrink-0">
+                <div class="sp-progress-ring" role="img" aria-label="{{ __('student.percent_complete', ['pct' => $progressPct]) }}">
+                    <div class="sp-progress-ring-inner">
+                        <span class="text-2xl font-black text-[var(--sp-accent)] leading-none">{{ $progressPct }}%</span>
+                        <span class="text-[10px] font-bold text-white/50 mt-1 uppercase tracking-wide">{{ __('student.progress') }}</span>
                     </div>
                 </div>
+                <div class="hidden sm:grid gap-2 min-w-[120px]">
+                    <div class="rounded-2xl bg-white/8 px-3 py-2.5 border border-white/10">
+                        <p class="text-[11px] font-bold text-white/50 m-0">{{ __('student.completed') }}</p>
+                        <p class="text-lg font-black m-0 text-white">{{ (int) $completedLessons }}/{{ (int) $totalLessons }}</p>
+                    </div>
+                    <div class="rounded-2xl bg-white/8 px-3 py-2.5 border border-white/10">
+                        <p class="text-[11px] font-bold text-white/50 m-0">{{ __('student.remaining_items') }}</p>
+                        <p class="text-lg font-black m-0 text-white">{{ $remaining }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
-                <!-- تفاصيل الكورس -->
-                <div class="lg:flex-1 p-5 sm:p-6 lg:p-8">
-                    <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
-                        <div class="min-w-0 flex-1">
-                            <h1 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2 leading-tight">{{ $course->localized('title') }}</h1>
-                            <p class="text-sm text-gray-500">
-                                {{ $course->academicYear->name ?? '—' }} · {{ $course->academicSubject->name ?? '—' }} · {{ $course->teacher->name ?? '—' }}
-                            </p>
+    <div class="grid gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(280px,1fr)]">
+        {{-- MAIN: interactive curriculum --}}
+        <div class="space-y-4 min-w-0">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <h3 class="sp-section-title m-0">{{ __('student.curriculum') }}</h3>
+                    <p class="text-sm text-[var(--sp-muted)] m-0 mt-1">{{ __('student.curriculum_hub_hint') }}</p>
+                </div>
+                <a href="{{ route('my-courses.learn', $course) }}" class="sp-link shrink-0">{{ __('student.open_in_learn') }}</a>
+            </div>
+
+            @if(count($sectionMeta))
+                <div class="space-y-3">
+                    @foreach($sectionMeta as $index => $sec)
+                        @php $sid = 's' . $sec['id']; @endphp
+                        <div class="sp-curriculum-section">
+                            <button
+                                type="button"
+                                class="sp-curriculum-section-btn"
+                                @click="openSection = openSection === '{{ $sid }}' ? null : '{{ $sid }}'"
+                                :aria-expanded="(openSection === '{{ $sid }}').toString()"
+                            >
+                                <span class="sp-icon-bubble" style="background:{{ $bubbleColors[$index % count($bubbleColors)] }}">
+                                    <x-student.figma-icon name="icon-path.svg" />
+                                </span>
+                                <span class="flex-1 min-w-0 text-start">
+                                    <span class="block font-extrabold text-[15px] truncate">{{ $sec['title'] }}</span>
+                                    <span class="block text-xs font-bold text-[var(--sp-muted)] mt-1">
+                                        {{ __('student.section_progress_count', ['done' => $sec['done'], 'total' => $sec['total']]) }}
+                                    </span>
+                                </span>
+                                <span class="sp-pill {{ $sec['pct'] >= 100 ? 'sp-pill--done' : 'sp-pill--progress' }} !py-1.5 !px-2.5 !text-xs">
+                                    {{ $sec['pct'] }}%
+                                </span>
+                                <span class="sp-curriculum-chevron" :class="openSection === '{{ $sid }}' && 'is-open'">
+                                    <img src="{{ StudentFigmaAssets::url('icon-dropdown.svg') }}" alt="" class="size-2.5">
+                                </span>
+                            </button>
+
+                            <div class="sp-curriculum-body" x-show="openSection === '{{ $sid }}'" x-cloak x-transition>
+                                @if(!empty($sec['description']))
+                                    <p class="text-xs text-[var(--sp-muted)] m-0 mb-1 px-1">{{ Str::limit(strip_tags($sec['description']), 140) }}</p>
+                                @endif
+                                @forelse($sec['rows'] as $row)
+                                    <a href="{{ $row['href'] }}" class="sp-process-row !shadow-none border border-[#f0f0ec]">
+                                        <span class="sp-icon-bubble !w-10 !h-10" style="background:{{ $row['bubble'] }}">
+                                            <x-student.figma-icon :name="$row['icon']" box="size-5" />
+                                        </span>
+                                        <span class="flex-1 min-w-0">
+                                            <span class="block font-extrabold text-sm truncate">{{ $row['title'] }}</span>
+                                            <span class="block text-xs font-bold text-[var(--sp-muted)] mt-0.5">
+                                                {{ __('student.curriculum_type_' . $row['type']) }}
+                                            </span>
+                                        </span>
+                                        <span class="sp-pill {{ $row['completed'] ? 'sp-pill--done' : 'sp-pill--upcoming' }} !py-1.5 !px-2.5 !text-xs">
+                                            {{ $row['completed'] ? __('student.completed_badge') : __('student.ready_to_start') }}
+                                        </span>
+                                    </a>
+                                @empty
+                                    <p class="text-sm text-[var(--sp-muted)] text-center py-4 m-0">{{ __('student.section_empty') }}</p>
+                                @endforelse
+                            </div>
                         </div>
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500 text-white">
-                            <i class="fas fa-check-circle"></i> مفعل
+                    @endforeach
+                </div>
+            @else
+                <div class="sp-card p-10 text-center">
+                    <span class="sp-icon-bubble mx-auto mb-4" style="background:var(--sp-sky);width:56px;height:56px">
+                        <x-student.figma-icon name="icon-path.svg" box="size-7" />
+                    </span>
+                    <h3 class="font-extrabold text-lg m-0 mb-2">{{ __('student.curriculum_empty_title') }}</h3>
+                    <p class="text-sm text-[var(--sp-muted)] m-0 mb-5">{{ __('student.curriculum_empty_desc') }}</p>
+                    <a href="{{ route('my-courses.learn', $course) }}" class="sp-promo-btn inline-flex">{{ __('student.open_in_learn') }}</a>
+                </div>
+            @endif
+
+            @if($course->description)
+                <section class="sp-card p-5 sm:p-6">
+                    <h3 class="sp-section-title mb-3">{{ __('student.course_overview') }}</h3>
+                    <p class="text-sm text-[var(--sp-muted)] leading-relaxed m-0 whitespace-pre-line">{{ $course->description }}</p>
+                </section>
+            @endif
+        </div>
+
+        {{-- RAIL --}}
+        <aside class="space-y-4 min-w-0 sp-hub-sticky">
+            <section class="sp-card p-5">
+                <p class="text-xs font-bold text-[var(--sp-muted)] uppercase tracking-wide m-0 mb-2">{{ __('student.next_step') }}</p>
+                <h3 class="font-extrabold text-base m-0 mb-3 leading-snug">
+                    {{ $isDone ? __('student.course_finished_cta') : __('student.keep_momentum') }}
+                </h3>
+                <a href="{{ $firstIncompleteHref }}" class="sp-promo-btn !mt-0 w-full !text-[var(--sp-accent-text)]">
+                    {{ $isDone ? __('student.review_course') : __('student.continue_learning') }}
+                </a>
+                @if($isDone)
+                    <a href="{{ route('student.certificates.claim', $course) }}" class="mt-3 block text-center text-sm font-extrabold text-[var(--sp-accent-text)] sp-link">
+                        {{ __('student.claim_certificate_design') }}
+                    </a>
+                @endif
+            </section>
+
+            <section class="sp-card p-5">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="sp-icon-bubble" style="background:var(--sp-peach)">
+                        <x-student.figma-icon name="icon-profile.svg" />
+                    </span>
+                    <div class="min-w-0">
+                        <p class="text-xs font-bold text-[var(--sp-muted)] m-0">{{ __('student.teacher_label') }}</p>
+                        <p class="font-extrabold text-[15px] m-0 truncate">{{ $course->teacher->name ?? '—' }}</p>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between gap-3 rounded-[14px] bg-[#f7f7f5] px-3 py-2.5">
+                        <span class="text-sm font-bold text-[var(--sp-muted)]">{{ __('student.level_label') }}</span>
+                        <span class="text-sm font-extrabold">{{ $course->level ?? '—' }}</span>
+                    </div>
+                    <div class="flex items-center justify-between gap-3 rounded-[14px] bg-[#f7f7f5] px-3 py-2.5">
+                        <span class="text-sm font-bold text-[var(--sp-muted)]">{{ __('student.duration_hours_label') }}</span>
+                        <span class="text-sm font-extrabold">{{ $course->duration_hours ?? '—' }} {{ __('student.hours_unit') }}</span>
+                    </div>
+                    <div class="flex items-center justify-between gap-3 rounded-[14px] bg-[#f7f7f5] px-3 py-2.5">
+                        <span class="text-sm font-bold text-[var(--sp-muted)]">{{ __('student.points_label') }}</span>
+                        <span class="inline-flex items-center gap-1 text-sm font-extrabold">
+                            <img src="{{ $sp['star'] ?? StudentFigmaAssets::url('icon-star.svg') }}" alt="" class="size-4">
+                            {{ number_format((float) ($coursePoints ?? 0), 0) }}
                         </span>
                     </div>
+                </div>
+            </section>
 
-                    @if($course->description)
-                        <p class="text-sm text-gray-600 mb-4 leading-relaxed line-clamp-2">{{ Str::limit($course->description, 180) }}</p>
-                    @endif
-
-                    <!-- التقدم والإحصائيات -->
-                    <div class="flex flex-wrap items-center gap-4 sm:gap-6 mb-5">
-                        <div class="flex-1 min-w-[200px]">
-                            <div class="flex items-center justify-between text-sm mb-1.5">
-                                <span class="font-medium text-gray-600">التقدم</span>
-                                <span class="font-bold text-sky-600">{{ $progress }}%</span>
-                            </div>
-                            <div class="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                                <div class="h-full bg-sky-500 rounded-full transition-all duration-500" style="width: {{ min($progress, 100) }}%;"></div>
-                            </div>
-                            <p class="text-xs text-gray-500 mt-1">{{ $progress }}% مكتمل</p>
-                            @if($progress >= 100)
-                                <a href="{{ route('student.certificates.claim', $course) }}"
-                                   class="mt-3 inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2.5 shadow-sm">
-                                    <i class="fas fa-certificate"></i>
-                                    اختر تصميم الشهادة ونزّلها
-                                </a>
-                            @endif
-                        </div>
-                        <div class="flex gap-4">
-                            <div class="text-center px-4 py-2 bg-amber-50 rounded-lg border border-amber-100">
-                                <span class="text-lg font-bold text-amber-600 block"><i class="fas fa-star text-amber-500 ml-1"></i>{{ number_format((float)($coursePoints ?? 0), 0) }}</span>
-                                <span class="text-xs text-gray-600">نقاط</span>
-                            </div>
-                            <div class="text-center px-4 py-2 bg-emerald-50 rounded-lg border border-emerald-100">
-                                <span class="text-lg font-bold text-emerald-600 block">{{ $completedLessons }}</span>
-                                <span class="text-xs text-gray-600">مكتمل</span>
-                            </div>
-                        </div>
+            <section class="sp-card p-5">
+                <h3 class="sp-section-title mb-4">{{ __('student.your_stats') }}</h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="rounded-[16px] bg-[var(--sp-mint)] p-3 text-center">
+                        <p class="text-xl font-black text-[var(--sp-accent-text)] m-0">{{ (int) $completedLessons }}</p>
+                        <p class="text-[11px] font-bold text-[var(--sp-muted)] m-0 mt-1">{{ __('student.completed') }}</p>
                     </div>
-
-                    <a href="{{ route('my-courses.learn', $course) }}" 
-                       class="inline-flex items-center justify-center gap-2 bg-sky-500 hover:bg-sky-600 text-white px-6 py-3 rounded-lg font-semibold text-sm transition-colors">
-                        <i class="fas fa-play"></i>
-                        ابدأ التعلم
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- نظرة عامة -->
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm mb-6 overflow-hidden">
-            <div class="px-3 py-5 sm:px-6 sm:py-6 lg:p-8 border-b border-gray-100">
-                <h2 class="text-base font-bold text-gray-900 flex items-center gap-2">
-                    <i class="fas fa-info-circle text-sky-500"></i>
-                    نظرة عامة
-                </h2>
-            </div>
-            <div class="px-3 py-5 sm:px-6 sm:py-6 lg:p-8">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="bg-gray-50 rounded-xl p-5 border border-gray-100">
-                        <h3 class="text-base font-bold text-gray-900 mb-3 flex items-center gap-2">
-                            <i class="fas fa-info-circle text-sky-500"></i>
-                            وصف الكورس
-                        </h3>
-                        <p class="text-sm text-gray-700 leading-relaxed">{{ $course->description ?? 'لا يوجد وصف متاح' }}</p>
+                    <div class="rounded-[16px] bg-[var(--sp-lilac)] p-3 text-center">
+                        <p class="text-xl font-black text-[var(--sp-accent-text)] m-0">{{ (int) $totalLessons }}</p>
+                        <p class="text-[11px] font-bold text-[var(--sp-muted)] m-0 mt-1">{{ __('student.lessons_count') }}</p>
                     </div>
-                    <div class="bg-gray-50 rounded-xl p-5 border border-gray-100">
-                        <h3 class="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <i class="fas fa-list-ul text-sky-500"></i>
-                            معلومات الكورس
-                        </h3>
-                        <div class="space-y-3">
-                            <div class="flex items-center justify-between py-2.5 px-3 bg-white rounded-lg border border-gray-100">
-                                <span class="text-sm text-gray-600 flex items-center gap-2"><i class="fas fa-layer-group text-sky-500 w-4"></i> المستوى</span>
-                                <span class="text-sm font-semibold text-gray-900">{{ $course->level ?? '—' }}</span>
-                            </div>
-                            <div class="flex items-center justify-between py-2.5 px-3 bg-white rounded-lg border border-gray-100">
-                                <span class="text-sm text-gray-600 flex items-center gap-2"><i class="fas fa-clock text-sky-500 w-4"></i> المدة</span>
-                                <span class="text-sm font-semibold text-gray-900">{{ $course->duration_hours }} ساعة</span>
-                            </div>
-                        </div>
+                    <div class="rounded-[16px] bg-[var(--sp-amber-soft)] p-3 text-center">
+                        <p class="text-xl font-black text-[var(--sp-accent-text)] m-0">{{ $progressPct }}%</p>
+                        <p class="text-[11px] font-bold text-[var(--sp-muted)] m-0 mt-1">{{ __('student.progress') }}</p>
+                    </div>
+                    <div class="rounded-[16px] bg-[var(--sp-peach)] p-3 text-center">
+                        <p class="text-xl font-black text-[var(--sp-accent-text)] m-0">{{ $remaining }}</p>
+                        <p class="text-[11px] font-bold text-[var(--sp-muted)] m-0 mt-1">{{ __('student.remaining_items') }}</p>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Focus Mode Modal - وضع التركيز المتقدم -->
-    <div x-show="focusMode" 
-         x-cloak
-         class="focus-mode"
-         :data-font-size="fontSize"
-         @keydown.escape.window="focusMode = false"
-         @keydown.ctrl.f.window.prevent="document.querySelector('.search-box input')?.focus()"
-         @keydown.ctrl.p.window.prevent="printCurriculum()"
-         @keydown.ctrl.comma.window.prevent="showSettings = !showSettings"
-         x-init="
-             $watch('searchQuery', () => filterItems());
-             updateProgressBar();
-             setInterval(() => updateProgressBar(), 100);
-             document.body.style.overflow = 'hidden';
-             $watch('focusMode', (value) => {
-                 if (!value) {
-                     document.body.style.overflow = '';
-                 }
-             });
-         ">
-        <!-- شريط التقدم -->
-        <div class="focus-progress-bar">
-            <div class="progress-fill" style="width: 0%"></div>
-        </div>
-        
-        <div class="curriculum-wrapper">
-            <!-- شريط التحكم العلوي -->
-            <div class="focus-control-bar">
-                <div class="controls">
-                    <div class="flex items-center gap-4 flex-1">
-                        <!-- زر السايدبار (للشاشات الصغيرة) -->
-                        <button @click="sidebarOpen = !sidebarOpen" class="sidebar-toggle btn-control">
-                            <i class="fas fa-bars"></i>
-                        </button>
-                        
-                        <!-- عنوان الكورس -->
-                        <div class="flex items-center gap-3">
-                            <h1 class="text-xl font-black text-gray-900">{{ $course->localized('title') }}</h1>
-                            <span class="text-sm text-gray-500">|</span>
-                            <span class="text-sm text-gray-600">{{ $course->academicYear->name ?? 'غير محدد' }} - {{ $course->academicSubject->name ?? 'غير محدد' }}</span>
-                        </div>
-                    </div>
-                    
-                    <!-- أزرار التحكم -->
-                    <div class="action-buttons">
-                        <button @click="showSettings = !showSettings" 
-                                :class="showSettings ? 'active' : ''"
-                                class="btn-control"
-                                title="إعدادات (Ctrl+,)">
-                            <i class="fas fa-cog"></i>
-                            <span class="hidden md:inline">إعدادات</span>
-                        </button>
-                        <button @click="toggleFullscreen()" class="btn-control">
-                            <i class="fas fa-expand"></i>
-                            <span class="hidden md:inline">ملء الشاشة</span>
-                        </button>
-                        <button @click="focusMode = false" class="btn-control btn-close">
-                            <i class="fas fa-times"></i>
-                            <span class="hidden md:inline">إغلاق</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- المحتوى الرئيسي -->
-            <div class="flex flex-1 overflow-hidden relative" style="width: 100%;">
-                <!-- المحتوى الرئيسي - على اليسار -->
-                <div class="focus-main-content" style="width: 100%; flex: 1;">
-                    <!-- زر إغلاق/فتح السايدبار -->
-                    <button @click="sidebarClosed = !sidebarClosed" 
-                            class="sidebar-toggle-btn"
-                            :style="sidebarClosed ? 'right: 20px;' : 'right: 400px;'">
-                        <i class="fas" :class="sidebarClosed ? 'fa-chevron-left' : 'fa-chevron-right'"></i>
-                    </button>
-                    <div class="focus-main-content-wrapper">
-                        <!-- حالة فارغة -->
-                        <div x-show="!selectedLesson" class="empty-content-state">
-                            <i class="fas fa-graduation-cap"></i>
-                            <h3 class="text-xl font-black text-gray-900 mb-2 mt-4">مرحباً في {{ $course->localized('title') }}</h3>
-                            <p class="text-sm text-gray-600">اختر درساً من القائمة الجانبية أو استخدم «ابدأ التعلم» من الصفحة الرئيسية للكورس</p>
-                        </div>
-                        
-                        <div x-show="selectedLesson" x-transition class="lesson-content-viewer">
-                            <div x-html="lessonContent"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- السايدبار - المنهج الكامل على اليمين -->
-                <div class="focus-sidebar" :class="{ 'closed': sidebarClosed, 'open': sidebarOpen }">
-                    <button @click="sidebarClosed = true" class="sidebar-close-btn" title="إغلاق السايدبار">
-                        <i class="fas fa-times"></i>
-                    </button>
-                    <div class="focus-sidebar-header">
-                        <div class="flex items-center justify-between mb-3">
-                            <h3 class="text-white font-black text-lg">المنهج الكامل</h3>
-                            <button @click="sidebarOpen = false" class="lg:hidden text-gray-400 hover:text-white">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                        <!-- البحث -->
-                        <div class="search-box relative">
-                            <input type="text" 
-                                   x-model="searchQuery"
-                                   placeholder="ابحث في الدروس..."
-                                   class="w-full bg-white/10 border border-white/20 text-white placeholder-gray-400 px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-[#2CA9BD] focus:bg-white/20"
-                                   @keydown.escape="searchQuery = ''">
-                            <div class="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400">
-                                <i class="fas fa-search"></i>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="focus-sidebar-content">
-                        @if(isset($sections) && $sections->count() > 0)
-                            <!-- عرض المنهج من الأقسام -->
-                            @foreach($sections as $section)
-                                <div class="mb-6">
-                                    <div class="curriculum-section-header mb-3">
-                                        <i class="fas fa-folder ml-2"></i>
-                                        {{ $section->title }}
-                                    </div>
-                                    @if($section->description)
-                                        <p class="text-xs text-gray-400 mb-3 px-2">{{ $section->description }}</p>
-                                    @endif
-                                    
-                                    @foreach($section->activeItems as $curriculumItem)
-                                        @php
-                                            $item = $curriculumItem->item;
-                                            // تخطي العناصر المحذوفة
-                                            if (!$item) continue;
-                                            // المحاضرات لا تُعرض للطلاب من هذه الصفحة (التعلم عبر «ابدأ التعلم» فقط)
-                                            if ($item instanceof \App\Models\Lecture) continue;
-                                            
-                                            $isCompleted = false;
-                                            $isCurrent = false;
-                                            $isLocked = false;
-                                            
-                                            if ($item instanceof \App\Models\CourseLesson) {
-                                                $lessonProgress = $item->progress->first();
-                                                $isCompleted = $lessonProgress && $lessonProgress->is_completed;
-                                                // التحقق من الدروس السابقة
-                                                $previousItems = $section->activeItems->where('order', '<', $curriculumItem->order);
-                                                $allPreviousCompleted = true;
-                                                foreach ($previousItems as $prevItem) {
-                                                    if ($prevItem->item instanceof \App\Models\CourseLesson) {
-                                                        $prevProgress = $prevItem->item->progress->first();
-                                                        if (!$prevProgress || !$prevProgress->is_completed) {
-                                                            $allPreviousCompleted = false;
-                                                            break;
-                                                        }
-                                                    }
-                                                }
-                                                $isCurrent = !$isCompleted && ($curriculumItem->order == 1 || $allPreviousCompleted);
-                                                $isLocked = !$isCurrent && !$isCompleted;
-                                            }
-                                        @endphp
-                                        
-                                        <div class="curriculum-item {{ $isCompleted ? 'completed' : '' }} {{ $isCurrent ? 'active' : '' }} {{ $isLocked ? 'locked' : '' }}"
-                                             @if($item instanceof \App\Models\CourseLesson)
-                                                 @click="if ({{ $isLocked ? 'true' : 'false' }}) return; selectedLesson = {{ $item->id }}; loadLesson({{ $item->id }})"
-                                             @elseif($item instanceof \App\Models\Assignment)
-                                                 @click="loadAssignment({{ $item->id }})"
-                                             @elseif($item instanceof \App\Models\AdvancedExam || $item instanceof \App\Models\Exam)
-                                                 @click="loadExam({{ $item->id }})"
-                                             @endif
-                                             x-show="!searchQuery || '{{ strtolower($item->title) }}'.includes(searchQuery.toLowerCase())">
-                                            <div class="flex items-start gap-3">
-                                                <div class="flex-shrink-0 mt-1">
-                                                    @if($item instanceof \App\Models\CourseLesson)
-                                                        @if($isCompleted)
-                                                            <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-                                                                <i class="fas fa-check text-white text-xs"></i>
-                                                            </div>
-                                                        @elseif($isCurrent)
-                                                            <div class="w-8 h-8 bg-[#2CA9BD] rounded-lg flex items-center justify-center animate-pulse">
-                                                                <i class="fas fa-play text-white text-xs"></i>
-                                                            </div>
-                                                        @else
-                                                            <div class="w-8 h-8 bg-gray-600 rounded-lg flex items-center justify-center">
-                                                                <i class="fas fa-lock text-white text-xs"></i>
-                                                            </div>
-                                                        @endif
-                                                    @elseif($item instanceof \App\Models\Assignment)
-                                                        <div class="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
-                                                            <i class="fas fa-tasks text-white text-xs"></i>
-                                                        </div>
-                                                    @elseif($item instanceof \App\Models\AdvancedExam || $item instanceof \App\Models\Exam)
-                                                        <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
-                                                            <i class="fas fa-clipboard-check text-white text-xs"></i>
-                                                        </div>
-                                                    @endif
-                                                </div>
-                                                <div class="flex-1 min-w-0">
-                                                    <div class="curriculum-item-title">{{ $item->title }}</div>
-                                                    <div class="curriculum-item-meta">
-                                                        @if($item instanceof \App\Models\CourseLesson)
-                                                            <span><i class="fas fa-video ml-1"></i> درس</span>
-                                                            @if($item->duration_minutes)
-                                                                <span><i class="fas fa-clock ml-1"></i> {{ $item->duration_minutes }} دقيقة</span>
-                                                            @endif
-                                                        @elseif($item instanceof \App\Models\Assignment)
-                                                            <span><i class="fas fa-tasks ml-1"></i> واجب</span>
-                                                            @if($item->due_date)
-                                                                <span><i class="fas fa-calendar ml-1"></i> {{ $item->due_date->format('Y/m/d') }}</span>
-                                                            @endif
-                                                        @elseif($item instanceof \App\Models\AdvancedExam || $item instanceof \App\Models\Exam)
-                                                            <span><i class="fas fa-clipboard-check ml-1"></i> امتحان</span>
-                                                            @if($item->start_date)
-                                                                <span><i class="fas fa-calendar ml-1"></i> {{ $item->start_date->format('Y/m/d') }}</span>
-                                                            @endif
-                                                        @endif
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @endforeach
-                        @else
-                            <!-- عرض الدروس القديمة (للتوافق) -->
-                            <div class="curriculum-section-header">
-                                <i class="fas fa-book ml-2"></i>
-                                الدروس ({{ $totalLessons }})
-                            </div>
-                            @foreach($course->lessons->sortBy('order') as $index => $lesson)
-                                @php
-                                    $lessonProgress = $lesson->progress->first();
-                                    $isCompleted = $lessonProgress && $lessonProgress->is_completed;
-                                    $isCurrentLesson = !$isCompleted && ($index == 0 || $course->lessons->take($index)->every(function($prevLesson) {
-                                        return $prevLesson->progress->isNotEmpty() && $prevLesson->progress->first()->is_completed;
-                                    }));
-                                @endphp
-                                <div class="curriculum-item {{ $isCompleted ? 'completed' : '' }} {{ $isCurrentLesson ? 'active' : '' }} {{ !$isCurrentLesson && !$isCompleted ? 'locked' : '' }}"
-                                     @click="if (!$isCurrentLesson && !$isCompleted) return; selectedLesson = {{ $lesson->id }}; loadLesson({{ $lesson->id }})"
-                                     x-show="!searchQuery || '{{ strtolower($lesson->title) }}'.includes(searchQuery.toLowerCase())">
-                                    <div class="flex items-start gap-3">
-                                        <div class="flex-shrink-0 mt-1">
-                                            @if($isCompleted)
-                                                <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-                                                    <i class="fas fa-check text-white text-xs"></i>
-                                                </div>
-                                            @elseif($isCurrentLesson)
-                                                <div class="w-8 h-8 bg-[#2CA9BD] rounded-lg flex items-center justify-center animate-pulse">
-                                                    <i class="fas fa-play text-white text-xs"></i>
-                                                </div>
-                                            @else
-                                                <div class="w-8 h-8 bg-gray-600 rounded-lg flex items-center justify-center">
-                                                    <i class="fas fa-lock text-white text-xs"></i>
-                                                </div>
-                                            @endif
-                                        </div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="curriculum-item-title">{{ $lesson->title }}</div>
-                                            <div class="curriculum-item-meta">
-                                                <span><i class="fas fa-clock ml-1"></i> {{ $lesson->duration_minutes ?? 0 }} دقيقة</span>
-                                                @if($lesson->video_url)
-                                                    <span><i class="fas fa-video ml-1"></i> فيديو</span>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endforeach
-                        @endif
-                    </div>
-                </div>
-                
-            </div>
-        
-        <!-- لوحة الإعدادات -->
-        <div class="focus-settings-panel" :class="{ 'active': showSettings }">
-            <div class="mb-4 pb-4 border-b border-gray-700">
-                <h3 class="text-white font-bold text-lg mb-2">
-                    <i class="fas fa-cog ml-2"></i>
-                    إعدادات العرض
-                </h3>
-            </div>
-            <div class="space-y-4">
-                <div>
-                    <label class="text-gray-300 text-sm mb-2 block flex items-center gap-2">
-                        <i class="fas fa-font"></i>
-                        حجم الخط
-                    </label>
-                    <div class="flex gap-2">
-                        <button @click="fontSize = 'small'" 
-                                :class="fontSize === 'small' ? 'bg-blue-600 border-blue-400' : 'bg-gray-700 border-gray-600'"
-                                class="px-3 py-1.5 rounded text-white text-sm border transition-all">صغير</button>
-                        <button @click="fontSize = 'medium'" 
-                                :class="fontSize === 'medium' ? 'bg-blue-600 border-blue-400' : 'bg-gray-700 border-gray-600'"
-                                class="px-3 py-1.5 rounded text-white text-sm border transition-all">متوسط</button>
-                        <button @click="fontSize = 'large'" 
-                                :class="fontSize === 'large' ? 'bg-blue-600 border-blue-400' : 'bg-gray-700 border-gray-600'"
-                                class="px-3 py-1.5 rounded text-white text-sm border transition-all">كبير</button>
-                    </div>
-                </div>
-                <div class="pt-4 border-t border-gray-700">
-                    <p class="text-gray-400 text-xs mb-2">اختصارات لوحة المفاتيح:</p>
-                    <div class="space-y-1 text-xs text-gray-400">
-                        <div class="flex justify-between">
-                            <span>البحث:</span>
-                            <kbd class="px-2 py-0.5 bg-gray-700 rounded text-gray-300">Ctrl+F</kbd>
-                        </div>
-                        <div class="flex justify-between">
-                            <span>الطباعة:</span>
-                            <kbd class="px-2 py-0.5 bg-gray-700 rounded text-gray-300">Ctrl+P</kbd>
-                        </div>
-                        <div class="flex justify-between">
-                            <span>الإعدادات:</span>
-                            <kbd class="px-2 py-0.5 bg-gray-700 rounded text-gray-300">Ctrl+,</kbd>
-                        </div>
-                        <div class="flex justify-between">
-                            <span>إغلاق:</span>
-                            <kbd class="px-2 py-0.5 bg-gray-700 rounded text-gray-300">ESC</kbd>
-                        </div>
-                    </div>
-                </div>
-                <button @click="showSettings = false" 
-                        class="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded mt-4">
-                    <i class="fas fa-times ml-2"></i>
-                    إغلاق
-                </button>
-            </div>
-        </div>
+            </section>
+        </aside>
     </div>
 </div>
-
-@push('scripts')
-<script>
-function courseFocusMode() {
-    return {
-        focusMode: false,
-        searchQuery: '',
-        fontSize: 'medium',
-        showSettings: false,
-        collapsedSections: [],
-        sidebarOpen: false,
-        sidebarClosed: false,
-        selectedLesson: null,
-        lessonContent: '',
-        loadLesson(lessonId) {
-            const lessonUrl = '{{ route('my-courses.lesson.watch', [$course, ':lessonId']) }}'.replace(':lessonId', lessonId);
-            window.open(lessonUrl, '_blank');
-        },
-        toggleSection(section) {
-            const index = this.collapsedSections.indexOf(section);
-            if (index > -1) {
-                this.collapsedSections.splice(index, 1);
-            } else {
-                this.collapsedSections.push(section);
-            }
-        },
-        isSectionCollapsed(section) {
-            return this.collapsedSections.includes(section);
-        },
-        filterItems() {
-            const query = this.searchQuery.toLowerCase();
-            const items = document.querySelectorAll('.lesson-item, .lecture-item');
-            items.forEach(item => {
-                const text = item.textContent.toLowerCase();
-                if (text.includes(query)) {
-                    item.classList.remove('hidden');
-                } else {
-                    item.classList.add('hidden');
-                }
-            });
-        },
-        printCurriculum() {
-            window.print();
-        },
-        toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen();
-            } else {
-                document.exitFullscreen();
-            }
-        },
-        updateProgressBar() {
-            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-            const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-            const progress = (scrollTop / scrollHeight) * 100;
-            const progressBar = document.querySelector('.progress-fill');
-            if (progressBar) {
-                progressBar.style.width = progress + '%';
-            }
-        }
-    };
-}
-</script>
-@endpush
-
 @endsection

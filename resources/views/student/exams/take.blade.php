@@ -1,42 +1,36 @@
-@extends('layouts.app')
+@extends('layouts.student-dashboard')
 
+@section('immersive', 'true')
 @section('title', $exam->title)
 @section('header', '')
 
 @section('content')
-<div class="min-h-screen bg-slate-50/80" dir="rtl">
-    {{-- Top exam bar --}}
-    <div class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm px-4 lg:px-6 py-3">
+@php $isRtl = app()->getLocale() === 'ar'; @endphp
+<div class="min-h-screen" style="background:var(--sp-bg)" dir="{{ $isRtl ? 'rtl' : 'ltr' }}">
+    <div class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-black/5 shadow-sm px-4 lg:px-6 py-3">
         <div class="flex items-center justify-between gap-3 flex-wrap">
             <div class="flex items-center gap-3 min-w-0">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center shrink-0 shadow-lg shadow-sky-500/20">
-                    <i class="fas fa-clipboard-check text-white text-sm"></i>
-                </div>
+                <span class="sp-icon-bubble shrink-0" style="background:{{ $exam->source_bubble ?? 'var(--sp-peach)' }}">
+                    <x-student.figma-icon :name="$exam->source_icon ?? 'icon-exams.svg'" box="size-5" />
+                </span>
                 <div class="min-w-0">
-                    <h1 class="text-base lg:text-lg font-bold text-slate-800 truncate">{{ $exam->title }}</h1>
-                    <p class="text-xs text-slate-500 truncate">{{ $exam->offlineCourse->title ?? $exam->course->title ?? '—' }}@if($exam->offline_course_id) <span class="text-amber-600">(أوفلاين)</span>@endif</p>
+                    <h1 class="text-base lg:text-lg font-black text-[var(--sp-accent-text)] truncate m-0">{{ $exam->title }}</h1>
+                    <p class="text-xs text-[var(--sp-muted)] truncate m-0">{{ $exam->source_label ?? '' }} · {{ $exam->course_label ?? ($exam->offlineCourse->title ?? $exam->course->title ?? '—') }}</p>
                 </div>
             </div>
 
-            <div class="flex items-center gap-3 lg:gap-4 flex-wrap">
-                {{-- Timer --}}
-                <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200">
-                    <i class="fas fa-clock text-amber-500 text-sm"></i>
-                    <div id="timer" class="text-lg font-bold text-slate-800 tabular-nums">{{ sprintf('%02d:%02d', floor($attempt->remaining_time / 60), $attempt->remaining_time % 60) }}</div>
+            <div class="flex items-center gap-2 lg:gap-3 flex-wrap">
+                <div class="flex items-center gap-2 px-3 py-2 rounded-[16px] bg-[#f7f7f5]">
+                    <x-student.figma-icon name="icon-calendar.svg" box="size-4" />
+                    <div id="timer" class="text-lg font-black text-[var(--sp-accent-text)] tabular-nums">{{ sprintf('%02d:%02d', floor($attempt->remaining_time / 60), $attempt->remaining_time % 60) }}</div>
                 </div>
-
-                {{-- Progress --}}
-                <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200">
-                    <i class="fas fa-tasks text-sky-500 text-sm"></i>
-                    <span id="progress-text" class="text-sm font-semibold text-slate-700">0 / {{ $questions->count() }}</span>
+                <div class="flex items-center gap-2 px-3 py-2 rounded-[16px] bg-[#f7f7f5]">
+                    <x-student.figma-icon name="icon-messages.svg" box="size-4" />
+                    <span id="progress-text" class="text-sm font-extrabold text-[var(--sp-accent-text)]">0 / {{ $questions->count() }}</span>
                 </div>
-
-                {{-- Submit button --}}
-                <button type="button" onclick="confirmSubmit()"
-                        class="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-sm transition-colors shadow-lg shadow-emerald-500/20">
-                    <i class="fas fa-check"></i>
-                    <span class="hidden sm:inline">تسليم الامتحان</span>
-                    <span class="sm:hidden">تسليم</span>
+                <button type="button" onclick="confirmSubmit()" class="sp-promo-btn !mt-0 !py-2.5 border-0 cursor-pointer">
+                    <span class="hidden sm:inline">{{ __('student.exam_take_submit') }}</span>
+                    <span class="sm:hidden">{{ __('student.exam_take_submit_short') }}</span>
                 </button>
             </div>
         </div>
@@ -45,23 +39,22 @@
     {{-- Main content --}}
     <div class="flex" style="min-height: calc(100vh - 70px);">
         {{-- Question sidebar --}}
-        <div class="hidden lg:flex w-64 xl:w-72 flex-col shrink-0 border-l border-slate-200 bg-white">
-            <div class="p-4 border-b border-slate-100">
-                <h3 class="font-bold text-slate-800 text-sm">قائمة الأسئلة</h3>
+        <div class="hidden lg:flex w-64 xl:w-72 flex-col shrink-0 border-s border-black/5 bg-white">
+            <div class="p-4 border-b border-black/5">
+                <h3 class="font-extrabold text-[var(--sp-accent-text)] text-sm m-0">{{ __('student.exam_take_questions_nav') }}</h3>
                 <div class="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div id="sidebar-progress-bar" class="h-full bg-sky-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    <div id="sidebar-progress-bar" class="h-full rounded-full transition-all duration-500" style="width:0%;background:var(--sp-accent)"></div>
                 </div>
             </div>
             <div class="flex-1 overflow-y-auto p-3 space-y-1.5" id="questions-sidebar">
                 @foreach($questions as $index => $examQuestion)
                     <button type="button" onclick="goToQuestion({{ $index }})"
                             id="question-nav-{{ $index }}"
-                            class="w-full text-right p-3 rounded-xl transition-all text-sm
-                                   {{ $index == 0 ? 'bg-sky-50 text-sky-700 border-2 border-sky-300 font-semibold' : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200' }}">
+                            class="exam-q-nav w-full text-start p-3 rounded-[16px] transition-all text-sm border bg-[#f7f7f5] hover:bg-[rgba(174,217,234,.15)] text-[var(--sp-muted)] border-transparent {{ $index == 0 ? 'is-active' : '' }}">
                         <div class="flex items-center justify-between gap-2">
                             <div class="flex items-center gap-2 min-w-0">
-                                <span class="w-7 h-7 rounded-lg {{ $index == 0 ? 'bg-sky-500 text-white' : 'bg-slate-200 text-slate-600' }} flex items-center justify-center text-xs font-bold shrink-0">{{ $index + 1 }}</span>
-                                <span class="truncate">السؤال {{ $index + 1 }}</span>
+                                <span class="exam-q-nav-num w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black shrink-0 bg-white text-[var(--sp-muted)] {{ $index == 0 ? 'is-active' : '' }}">{{ $index + 1 }}</span>
+                                <span class="truncate">{{ __('student.exam_take_question_n', ['n' => $index + 1]) }}</span>
                             </div>
                             <div class="flex items-center gap-1.5 shrink-0">
                                 <span class="text-[10px] text-slate-400">{{ $examQuestion->marks }} ن</span>
@@ -81,8 +74,7 @@
                     @foreach($questions as $index => $examQuestion)
                         <button type="button" onclick="goToQuestion({{ $index }})"
                                 id="question-nav-mobile-{{ $index }}"
-                                class="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 transition-all
-                                       {{ $index == 0 ? 'bg-sky-500 text-white' : 'bg-slate-100 text-slate-600 border border-slate-200' }}">
+                                class="exam-q-mobile w-9 h-9 rounded-lg flex items-center justify-center text-xs font-black shrink-0 transition-all bg-[#f7f7f5] text-[var(--sp-muted)] {{ $index == 0 ? 'is-active' : '' }}">
                             {{ $index + 1 }}
                         </button>
                     @endforeach
@@ -92,16 +84,15 @@
             <div class="max-w-4xl mx-auto p-4 lg:p-8">
                 @foreach($questions as $index => $examQuestion)
                     <div class="question-container {{ $index == 0 ? '' : 'hidden' }}" id="question-{{ $index }}">
-                        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                            {{-- Question header --}}
-                            <div class="px-5 lg:px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                        <div class="bg-white rounded-[20px] border border-black/5 shadow-sm overflow-hidden">
+                            <div class="px-5 lg:px-6 py-4 border-b border-black/5 bg-[#f7f7f5]/60">
                                 <div class="flex items-center justify-between flex-wrap gap-3">
                                     <div class="flex items-center gap-3">
-                                        <span class="w-10 h-10 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center font-bold">{{ $index + 1 }}</span>
+                                        <span class="w-10 h-10 rounded-[14px] flex items-center justify-center font-black" style="background:var(--sp-peach);color:var(--sp-accent-text)">{{ $index + 1 }}</span>
                                         <div>
-                                            <h2 class="text-base lg:text-lg font-bold text-slate-800">السؤال {{ $index + 1 }}</h2>
-                                            <div class="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
-                                                <span><i class="fas fa-star ml-1 text-amber-400"></i>{{ $examQuestion->marks }} نقطة</span>
+                                            <h2 class="text-base lg:text-lg font-black text-[var(--sp-accent-text)] m-0">{{ __('student.exam_take_question_n', ['n' => $index + 1]) }}</h2>
+                                            <div class="flex items-center gap-3 text-xs text-[var(--sp-muted)] mt-0.5">
+                                                <span>{{ $examQuestion->marks }} {{ __('student.exam_take_points') }}</span>
                                                 <span>{{ $examQuestion->question->type_text }}</span>
                                                 @if($examQuestion->question->difficulty_level)
                                                     @php
@@ -117,9 +108,9 @@
                                         </div>
                                     </div>
                                     @if($examQuestion->time_limit)
-                                        <div class="text-center px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200">
-                                            <div class="text-sm font-bold text-amber-600" id="question-timer-{{ $index }}">{{ gmdate('i:s', $examQuestion->time_limit) }}</div>
-                                            <div class="text-[10px] text-amber-500">وقت السؤال</div>
+                                        <div class="text-center px-3 py-1.5 rounded-[14px]" style="background:var(--sp-amber-soft)">
+                                            <div class="text-sm font-black text-[var(--sp-accent-text)]" id="question-timer-{{ $index }}">{{ gmdate('i:s', $examQuestion->time_limit) }}</div>
+                                            <div class="text-[10px] text-[var(--sp-muted)]">{{ __('student.exam_take_question_time') }}</div>
                                         </div>
                                     @endif
                                 </div>
@@ -127,7 +118,7 @@
 
                             {{-- Question body --}}
                             <div class="p-5 lg:p-6">
-                                <div class="text-slate-800 text-base lg:text-lg leading-relaxed mb-6">{{ $examQuestion->question->question }}</div>
+                                <div class="text-[var(--sp-text)] text-base lg:text-lg leading-relaxed mb-6">{{ $examQuestion->question->question }}</div>
 
                                 @if($examQuestion->question->image_url)
                                     <div class="mb-5">
@@ -158,7 +149,7 @@
                                 <div class="space-y-2.5" id="answer-options-{{ $index }}">
                                     @if($examQuestion->question->type == 'multiple_choice')
                                         @foreach($exam->randomize_options ? $examQuestion->question->shuffled_options : $examQuestion->question->options as $optionIndex => $option)
-                                            <label class="flex items-center gap-3 p-4 rounded-xl border-2 border-slate-200 hover:border-sky-300 hover:bg-sky-50/30 cursor-pointer transition-all group exam-option"
+                                            <label class="flex items-center gap-3 p-4 rounded-[16px] border-2 border-black/5 hover:border-[var(--sp-accent)] hover:bg-[rgba(174,217,234,.15)] cursor-pointer transition-all group exam-option"
                                                    data-question="{{ $examQuestion->question->id }}" data-value="{{ $option }}">
                                                 <input type="radio"
                                                        name="answer_{{ $examQuestion->question->id }}"
@@ -171,7 +162,7 @@
 
                                     @elseif($examQuestion->question->type == 'true_false')
                                         @foreach([['صح', 'fa-check-circle', 'emerald'], ['خطأ', 'fa-times-circle', 'red']] as $tf)
-                                            <label class="flex items-center gap-3 p-4 rounded-xl border-2 border-slate-200 hover:border-sky-300 hover:bg-sky-50/30 cursor-pointer transition-all group exam-option"
+                                            <label class="flex items-center gap-3 p-4 rounded-[16px] border-2 border-black/5 hover:border-[var(--sp-accent)] hover:bg-[rgba(174,217,234,.15)] cursor-pointer transition-all group exam-option"
                                                    data-question="{{ $examQuestion->question->id }}" data-value="{{ $tf[0] }}">
                                                 <input type="radio"
                                                        name="answer_{{ $examQuestion->question->id }}"
@@ -186,8 +177,8 @@
                                     @elseif($examQuestion->question->type == 'fill_blank')
                                         <input type="text"
                                                id="answer_{{ $examQuestion->question->id }}"
-                                               placeholder="اكتب إجابتك هنا..."
-                                               class="w-full px-4 py-3 border-2 border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors"
+                                               placeholder="{{ __('student.exam_take_answer_placeholder') }}"
+                                               class="w-full px-4 py-3 border-2 border-black/5 rounded-[16px] text-[var(--sp-text)] placeholder-[var(--sp-muted)] focus:ring-2 focus:ring-[var(--sp-accent)] focus:border-[var(--sp-accent)] transition-colors"
                                                onchange="saveAnswer({{ $examQuestion->question->id }}, this.value)">
 
                                     @elseif($examQuestion->question->type == 'short_answer' || $examQuestion->question->type == 'essay')
@@ -200,28 +191,17 @@
                                 </div>
                             </div>
 
-                            {{-- Navigation footer --}}
-                            <div class="px-5 lg:px-6 py-4 border-t border-slate-100 bg-slate-50/30">
+                            <div class="px-5 lg:px-6 py-4 border-t border-black/5 bg-[#f7f7f5]/40">
                                 <div class="flex items-center justify-between gap-3">
                                     <button type="button" onclick="previousQuestion()" id="prev-btn"
-                                            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-colors {{ $index == 0 ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-slate-100 hover:bg-slate-200 text-slate-700' }}"
+                                            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-[30px] font-extrabold text-sm transition-colors {{ $index == 0 ? 'bg-[#f7f7f5] text-[var(--sp-muted)] cursor-not-allowed' : 'bg-[#f7f7f5] hover:bg-[var(--sp-accent)] text-[var(--sp-accent-text)]' }}"
                                             {{ $index == 0 ? 'disabled' : '' }}>
-                                        <i class="fas fa-arrow-right"></i>
-                                        السابق
+                                        <x-student.figma-icon name="icon-chevron.svg" box="size-3.5" class="rtl:rotate-180" />
+                                        {{ __('student.exam_take_prev') }}
                                     </button>
-
-                                    <div class="hidden sm:flex items-center gap-2 text-sm text-slate-500">
-                                        <div class="w-24 h-2 bg-slate-200 rounded-full overflow-hidden">
-                                            <div class="h-full bg-sky-500 rounded-full transition-all duration-300"
-                                                 style="width: {{ (($index + 1) / $questions->count()) * 100 }}%"></div>
-                                        </div>
-                                        <span class="tabular-nums">{{ $index + 1 }}/{{ $questions->count() }}</span>
-                                    </div>
-
-                                    <button type="button" onclick="nextQuestion()" id="next-btn"
-                                            class="inline-flex items-center gap-2 px-5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-semibold text-sm transition-colors shadow-sm">
-                                        {{ $index == $questions->count() - 1 ? 'إنهاء' : 'التالي' }}
-                                        <i class="fas fa-arrow-left"></i>
+                                    <button type="button" onclick="nextQuestion()" id="next-btn" class="sp-promo-btn !mt-0 !py-2.5 border-0 cursor-pointer">
+                                        {{ $index == $questions->count() - 1 ? __('student.exam_take_finish') : __('student.exam_take_next') }}
+                                        <x-student.figma-icon name="icon-chevron.svg" box="size-3.5" class="opacity-80" />
                                     </button>
                                 </div>
                             </div>
@@ -232,55 +212,46 @@
         </div>
     </div>
 
-    {{-- Submit confirmation modal --}}
-    <div id="submitModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);">
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md p-6" onclick="event.stopPropagation()">
+    <div id="submitModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(15,15,20,.45);backdrop-filter:blur(4px);">
+        <div class="sp-card w-full max-w-md p-6" onclick="event.stopPropagation()">
             <div class="text-center">
-                <div class="w-14 h-14 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-exclamation-triangle text-xl"></i>
-                </div>
-                <h3 class="text-lg font-bold text-slate-800 mb-2">تأكيد تسليم الامتحان</h3>
-                <p class="text-sm text-slate-500 mb-4">هل أنت متأكد من تسليم الامتحان؟ لن تتمكن من تعديل إجاباتك بعد التسليم.</p>
-                <div class="p-3 bg-sky-50 rounded-xl border border-sky-100 mb-5">
-                    <div class="flex justify-between text-sm">
-                        <span class="text-slate-600">الأسئلة المجابة</span>
-                        <span class="font-bold text-sky-700"><span id="answered-count">0</span> من {{ $questions->count() }}</span>
-                    </div>
-                    <div class="flex justify-between text-sm mt-1.5">
-                        <span class="text-slate-600">الوقت المتبقي</span>
-                        <span class="font-bold text-amber-600" id="submit-timer">--:--</span>
-                    </div>
+                <span class="sp-icon-bubble mx-auto mb-4" style="background:var(--sp-peach)"><x-student.figma-icon name="icon-exams.svg" /></span>
+                <h3 class="text-lg font-black text-[var(--sp-accent-text)] mb-2 m-0">{{ __('student.exam_take_confirm_submit_title') }}</h3>
+                <p class="text-sm text-[var(--sp-muted)] mb-4 m-0">{{ __('student.exam_take_confirm_submit_body') }}</p>
+                <div class="p-3 rounded-[16px] mb-5 text-sm" style="background:var(--sp-mint)">
+                    <div class="flex justify-between"><span class="text-[var(--sp-muted)]">{{ __('student.exam_take_answered') }}</span><span class="font-extrabold"><span id="answered-count">0</span> / {{ $questions->count() }}</span></div>
+                    <div class="flex justify-between mt-1.5"><span class="text-[var(--sp-muted)]">{{ __('student.exam_take_time_left') }}</span><span class="font-extrabold" id="submit-timer">--:--</span></div>
                 </div>
                 <div class="flex gap-3">
-                    <button type="button" onclick="submitExam()" class="flex-1 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition-colors">
-                        <i class="fas fa-check ml-1"></i> تسليم
-                    </button>
-                    <button type="button" onclick="closeSubmitModal()" class="flex-1 px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-colors">
-                        إلغاء
-                    </button>
+                    <button type="button" onclick="submitExam()" class="sp-promo-btn !mt-0 flex-1 border-0 cursor-pointer">{{ __('student.exam_take_submit_btn') }}</button>
+                    <button type="button" onclick="closeSubmitModal()" class="flex-1 px-5 py-3 rounded-[30px] font-extrabold bg-[#f7f7f5] text-[var(--sp-accent-text)] border-0 cursor-pointer">{{ __('student.exam_take_cancel') }}</button>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Tab switch warning --}}
-    <div id="tabSwitchWarning" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(185,28,28,0.92);backdrop-filter:blur(6px);">
-        <div class="bg-white rounded-2xl border border-red-200 shadow-2xl w-full max-w-md p-8 text-center">
-            <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-                <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
-            </div>
-            <h3 class="text-xl font-bold text-red-800 mb-3">تحذير!</h3>
-            <p class="text-slate-600 mb-4">تم رصد تبديل التبويب. هذا مخالف لقواعد الامتحان.</p>
-            <div id="warning-message" class="text-red-600 font-semibold mb-5"></div>
-            <button onclick="acknowledgeWarning()" class="w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-colors">
-                فهمت، أعود للامتحان
-            </button>
+    <div id="tabSwitchWarning" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(122,59,46,.92);backdrop-filter:blur(6px);">
+        <div class="sp-card w-full max-w-md p-8 text-center">
+            <span class="sp-icon-bubble mx-auto mb-4" style="background:#f9e4d7"><x-student.figma-icon name="icon-exams.svg" /></span>
+            <h3 class="text-xl font-black text-[#7a3b2e] mb-3 m-0">{{ __('student.exam_take_warning_title') }}</h3>
+            <p class="text-[var(--sp-muted)] mb-4 m-0">{{ __('student.exam_take_tab_switch_body') }}</p>
+            <div id="warning-message" class="text-[#7a3b2e] font-extrabold mb-5"></div>
+            <button onclick="acknowledgeWarning()" class="sp-promo-btn !mt-0 w-full border-0 cursor-pointer">{{ __('student.exam_take_warning_ack') }}</button>
         </div>
     </div>
 </div>
 
 @push('scripts')
 <script>
+const examI18n = {
+    backBlocked: @json(__('student.exam_take_back_blocked')),
+    actionBlocked: @json(__('student.exam_take_action_blocked')),
+    leaveConfirm: @json(__('student.exam_take_leave_confirm')),
+    autoSubmit: @json(__('student.exam_take_auto_submit')),
+    prev: @json(__('student.exam_take_prev')),
+    next: @json(__('student.exam_take_next')),
+    finish: @json(__('student.exam_take_finish')),
+};
 let currentQuestion = 0;
 let totalQuestions = {{ $questions->count() }};
 let examId = {{ $exam->id }};
@@ -300,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.onpopstate = function () {
         if (!examEnded) {
             history.go(1);
-            showTabSwitchWarning('محاولة العودة للخلف ممنوعة أثناء الامتحان');
+            showTabSwitchWarning(examI18n.backBlocked);
         }
     };
 
@@ -309,12 +280,10 @@ document.addEventListener('DOMContentLoaded', function() {
         var radio = label.querySelector('input[type="radio"]');
         if (radio) {
             radio.addEventListener('change', function() {
-                label.closest('.space-y-2\\.5').querySelectorAll('.exam-option').forEach(function(l) {
-                    l.classList.remove('border-sky-500', 'bg-sky-50/50');
-                    l.classList.add('border-slate-200');
+                label.closest('.space-y-2\\.5, .space-y-2')?.querySelectorAll('.exam-option').forEach(function(l) {
+                    l.classList.remove('is-selected');
                 });
-                label.classList.remove('border-slate-200');
-                label.classList.add('border-sky-500', 'bg-sky-50/50');
+                label.classList.add('is-selected');
             });
         }
     });
@@ -327,7 +296,7 @@ function setupExamProtection() {
             (e.ctrlKey && e.key === 'u') ||
             (e.ctrlKey && e.key === 's')) {
             e.preventDefault();
-            showTabSwitchWarning('هذا الإجراء ممنوع أثناء الامتحان');
+            showTabSwitchWarning(examI18n.actionBlocked);
             return false;
         }
     });
@@ -343,7 +312,7 @@ function setupExamProtection() {
     window.addEventListener('beforeunload', function(e) {
         if (!examEnded) {
             e.preventDefault();
-            e.returnValue = 'هل تريد مغادرة الامتحان؟ سيتم تسليم إجاباتك الحالية.';
+            e.returnValue = examI18n.leaveConfirm;
             return e.returnValue;
         }
     });
@@ -376,44 +345,28 @@ function updateTimerDisplay() {
 
 function goToQuestion(index) {
     document.getElementById('question-' + currentQuestion).classList.add('hidden');
-
-    // Desktop sidebar
-    var oldNav = document.getElementById('question-nav-' + currentQuestion);
-    var newNav = document.getElementById('question-nav-' + index);
-    if (oldNav) {
-        oldNav.classList.remove('bg-sky-50', 'text-sky-700', 'border-sky-300', 'font-semibold');
-        oldNav.classList.add('bg-slate-50', 'text-slate-600', 'border-slate-200');
-        var oldNum = oldNav.querySelector('span:first-child');
-        if (oldNum) { oldNum.classList.remove('bg-sky-500', 'text-white'); oldNum.classList.add('bg-slate-200', 'text-slate-600'); }
-    }
-    if (newNav) {
-        newNav.classList.remove('bg-slate-50', 'text-slate-600', 'border-slate-200');
-        newNav.classList.add('bg-sky-50', 'text-sky-700', 'border-sky-300', 'font-semibold');
-        var newNum = newNav.querySelector('span:first-child');
-        if (newNum) { newNum.classList.remove('bg-slate-200', 'text-slate-600'); newNum.classList.add('bg-sky-500', 'text-white'); }
-    }
-
-    // Mobile nav
-    var oldMobile = document.getElementById('question-nav-mobile-' + currentQuestion);
-    var newMobile = document.getElementById('question-nav-mobile-' + index);
-    if (oldMobile) { oldMobile.classList.remove('bg-sky-500', 'text-white'); oldMobile.classList.add('bg-slate-100', 'text-slate-600', 'border', 'border-slate-200'); }
-    if (newMobile) { newMobile.classList.remove('bg-slate-100', 'text-slate-600', 'border', 'border-slate-200'); newMobile.classList.add('bg-sky-500', 'text-white'); }
+    document.querySelectorAll('.exam-q-nav').forEach(el => el.classList.remove('is-active'));
+    document.querySelectorAll('.exam-q-nav-num').forEach(el => el.classList.remove('is-active'));
+    document.querySelectorAll('.exam-q-mobile').forEach(el => el.classList.remove('is-active'));
+    document.getElementById('question-nav-' + index)?.classList.add('is-active');
+    document.getElementById('question-nav-' + index)?.querySelector('.exam-q-nav-num')?.classList.add('is-active');
+    document.getElementById('question-nav-mobile-' + index)?.classList.add('is-active');
 
     currentQuestion = index;
     document.getElementById('question-' + currentQuestion).classList.remove('hidden');
 
     var prevBtn = document.getElementById('prev-btn');
-    prevBtn.disabled = (currentQuestion === 0);
-    prevBtn.className = currentQuestion === 0
-        ? 'inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm bg-slate-100 text-slate-400 cursor-not-allowed'
-        : 'inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors';
+    if (prevBtn) {
+        prevBtn.disabled = (currentQuestion === 0);
+        prevBtn.className = currentQuestion === 0
+            ? 'inline-flex items-center gap-2 px-4 py-2.5 rounded-[30px] font-extrabold text-sm bg-[#f7f7f5] text-[var(--sp-muted)] cursor-not-allowed'
+            : 'inline-flex items-center gap-2 px-4 py-2.5 rounded-[30px] font-extrabold text-sm bg-[#f7f7f5] hover:bg-[var(--sp-accent)] text-[var(--sp-accent-text)]';
+    }
 
     var nextBtn = document.getElementById('next-btn');
-    nextBtn.innerHTML = currentQuestion === totalQuestions - 1
-        ? 'إنهاء <i class="fas fa-arrow-left"></i>'
-        : 'التالي <i class="fas fa-arrow-left"></i>';
+    if (nextBtn) nextBtn.textContent = currentQuestion === totalQuestions - 1 ? examI18n.finish : examI18n.next;
 
-    // Scroll mobile nav into view
+    var newMobile = document.getElementById('question-nav-mobile-' + index);
     if (newMobile) newMobile.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
 }
 
@@ -461,7 +414,7 @@ function loadSavedAnswers() {
                 if (answerInput.type === 'radio') {
                     answerInput.checked = true;
                     var label = answerInput.closest('.exam-option');
-                    if (label) { label.classList.remove('border-slate-200'); label.classList.add('border-sky-500', 'bg-sky-50/50'); }
+                    if (label) label.classList.add('is-selected');
                 } else {
                     answerInput.value = savedAnswers[questionId];
                 }
@@ -532,7 +485,7 @@ function submitExam() {
 function autoSubmitExam() {
     examEnded = true;
     clearInterval(timerInterval);
-    alert('انتهى الوقت المحدد للامتحان. سيتم تسليم إجاباتك تلقائياً.');
+    alert(examI18n.autoSubmit);
     fetch('{{ route("student.exams.submit", [$exam, $attempt]) }}', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
@@ -548,9 +501,10 @@ function autoSubmitExam() {
 * { -webkit-user-select: none !important; user-select: none !important; }
 input, textarea { -webkit-user-select: text !important; user-select: text !important; }
 @media print { body { display: none !important; } }
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: #f1f5f9; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+.exam-q-nav.is-active { background: rgba(174,217,234,.25); border-color: var(--sp-accent); color: var(--sp-accent-text); font-weight: 800; }
+.exam-q-nav-num.is-active { background: var(--sp-accent); color: var(--sp-accent-text); }
+.exam-q-mobile.is-active { background: var(--sp-accent); color: var(--sp-accent-text); }
+.exam-option.is-selected { border-color: var(--sp-accent) !important; background: rgba(174,217,234,.15) !important; }
 </style>
 @endpush
 @endsection

@@ -20,6 +20,12 @@ class GroupController extends Controller
         $groups = auth()->user()
             ->groups()
             ->with(['course', 'leader', 'members'])
+            ->withCount([
+                'messages',
+                'assignments as published_assignments_count' => function ($q) {
+                    $q->where('status', 'published');
+                },
+            ])
             ->where('groups.status', 'active')
             ->orderBy('groups.name')
             ->get();
@@ -33,14 +39,23 @@ class GroupController extends Controller
     public function show(Group $group)
     {
         if (!auth()->user()->groups()->where('groups.id', $group->id)->exists()) {
-            abort(403, 'غير مسموح لك بعرض هذه المجموعة');
+            abort(403, __('student.group_forbidden'));
         }
         if ($group->status !== 'active') {
             abort(404);
         }
 
         $group->load(['course', 'leader', 'members', 'messages.user']);
-        return view('student.groups.show', compact('group'));
+        $publishedAssignmentsCount = $group->assignments()->where('status', 'published')->count();
+        $submittedAssignmentIds = AssignmentSubmission::query()
+            ->where('group_id', $group->id)
+            ->pluck('assignment_id');
+        $pendingAssignmentsCount = $group->assignments()
+            ->where('status', 'published')
+            ->whereNotIn('id', $submittedAssignmentIds)
+            ->count();
+
+        return view('student.groups.show', compact('group', 'publishedAssignmentsCount', 'pendingAssignmentsCount'));
     }
 
     /**
@@ -49,7 +64,7 @@ class GroupController extends Controller
     public function assignments(Group $group)
     {
         if (!auth()->user()->groups()->where('groups.id', $group->id)->exists()) {
-            abort(403, 'غير مسموح لك بعرض هذه المجموعة');
+            abort(403, __('student.group_forbidden'));
         }
         if ($group->status !== 'active') {
             abort(404);
@@ -67,7 +82,10 @@ class GroupController extends Controller
                 ->first();
         }
 
-        return view('student.groups.assignments', compact('group', 'assignments'));
+        $submittedCount = $assignments->filter(fn ($a) => $a->group_submission)->count();
+        $pendingCount = $assignments->count() - $submittedCount;
+
+        return view('student.groups.assignments', compact('group', 'assignments', 'submittedCount', 'pendingCount'));
     }
 
     /**
@@ -87,7 +105,7 @@ class GroupController extends Controller
             return [
                 'id' => $msg->id,
                 'user_id' => $msg->user_id,
-                'user_name' => $msg->user->name ?? 'غير معروف',
+                'user_name' => $msg->user->name ?? __('student.group_unknown_user'),
                 'body' => $msg->body,
                 'created_at' => $msg->created_at->toIso8601String(),
                 'created_at_human' => $msg->created_at->diffForHumans(),
@@ -121,7 +139,7 @@ class GroupController extends Controller
                 'message' => [
                     'id' => $msg->id,
                     'user_id' => $msg->user_id,
-                    'user_name' => $msg->user->name ?? 'غير معروف',
+                    'user_name' => $msg->user->name ?? __('student.group_unknown_user'),
                     'body' => $msg->body,
                     'created_at' => $msg->created_at->toIso8601String(),
                     'created_at_human' => $msg->created_at->diffForHumans(),
@@ -129,7 +147,7 @@ class GroupController extends Controller
             ]);
         }
 
-        return back()->with('success', 'تم إرسال الرسالة.');
+        return back()->with('success', __('student.group_message_sent'));
     }
 
     /**
@@ -148,7 +166,7 @@ class GroupController extends Controller
             ->where('group_id', $group->id)
             ->first();
         if ($existing) {
-            return back()->with('error', 'تم تسليم هذا الواجب مسبقاً من المجموعة.');
+            return back()->with('error', __('student.group_assignment_already_submitted'));
         }
 
         $request->validate([
@@ -204,6 +222,6 @@ class GroupController extends Controller
             \Log::warning('Failed to update course progress after group assignment submit: '.$e->getMessage());
         }
 
-        return back()->with('success', 'تم تسليم الواجب بنجاح.');
+        return back()->with('success', __('student.group_assignment_submitted'));
     }
 }

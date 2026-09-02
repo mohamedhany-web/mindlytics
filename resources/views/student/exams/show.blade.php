@@ -1,259 +1,200 @@
-@extends('layouts.app')
+@extends('layouts.student-dashboard')
 
 @section('title', $exam->title)
 @section('header', $exam->title)
 
 @section('content')
-<div class="w-full px-4 sm:px-6 lg:px-8 py-6">
-    <!-- هيدر الصفحة -->
-    <div class="rounded-2xl bg-white border border-slate-200 shadow-sm p-5 sm:p-6 mb-6">
-        <nav class="text-sm text-slate-500 mb-2">
-            <a href="{{ route('dashboard') }}" class="hover:text-sky-600 transition-colors">لوحة التحكم</a>
-            <span class="mx-2">/</span>
-            <a href="{{ route('student.exams.index') }}" class="hover:text-sky-600 transition-colors">امتحاناتي</a>
-            <span class="mx-2">/</span>
-            <span class="text-slate-700 font-semibold">{{ Str::limit($exam->title, 40) }}</span>
-        </nav>
-        <div class="flex flex-wrap items-center justify-between gap-4">
-            <div class="flex flex-wrap items-center gap-4">
-                <div class="w-12 h-12 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center shrink-0">
-                    <i class="fas fa-clipboard-list text-lg"></i>
-                </div>
-                <div class="min-w-0">
-                    <h1 class="text-xl sm:text-2xl font-bold text-slate-800">{{ $exam->title }}</h1>
-                    <p class="text-sm text-slate-600 mt-0.5">
-                        {{ $exam->offlineCourse->title ?? $exam->course->title ?? '—' }}
-                        @if($exam->offline_course_id)<span class="text-amber-600">(أوفلاين)</span>@endif
-                    </p>
-                </div>
-            </div>
-            <a href="{{ route('student.exams.index') }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors">
-                <i class="fas fa-arrow-right"></i>
-                العودة
-            </a>
-        </div>
-    </div>
+@php
+    $courseLabel = $exam->offlineCourse->title ?? $exam->course->title ?? __('student.course_undefined');
+    $questionCount = $exam->examQuestions()->whereHas('question')->count();
+    $bestPercentage = $previousAttempts->where('status', 'completed')->max('percentage');
+    $lastCompleted = $previousAttempts->where('status', 'completed')->first();
+    $activeAttempt = $previousAttempts->firstWhere('status', 'in_progress');
+@endphp
 
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <!-- المحتوى الرئيسي -->
-        <div class="xl:col-span-2 space-y-6">
-            <!-- تفاصيل الامتحان -->
-            <div class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
-                <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between flex-wrap gap-2">
-                    <h2 class="text-lg font-bold text-slate-800">تفاصيل الامتحان</h2>
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ $exam->isAvailable() ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800' }}">
-                        {{ $exam->isAvailable() ? 'متاح الآن' : 'غير متاح' }}
-                    </span>
-                </div>
-                <div class="p-6 space-y-6">
-                    @if($exam->description)
-                        <div>
-                            <h3 class="text-sm font-semibold text-slate-700 mb-1">الوصف</h3>
-                            <p class="text-slate-600">{{ $exam->description }}</p>
-                        </div>
-                    @endif
-                    @if($exam->instructions)
-                        <div>
-                            <h3 class="text-sm font-semibold text-slate-700 mb-2">تعليمات الامتحان</h3>
-                            <div class="bg-sky-50 border border-sky-200 rounded-xl p-4 text-sky-900 whitespace-pre-wrap">{{ $exam->instructions }}</div>
-                        </div>
-                    @endif
-                    <div class="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200">
-                        <div>
-                            <span class="text-sm text-slate-500">المدة</span>
-                            <p class="font-semibold text-slate-800">{{ $exam->duration_minutes }} دقيقة</p>
-                        </div>
-                        <div>
-                            <span class="text-sm text-slate-500">عدد الأسئلة</span>
-                            <p class="font-semibold text-slate-800">{{ $exam->examQuestions->count() }} سؤال</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<div class="space-y-5 max-w-6xl">
+    @if(session('error'))
+        <div class="sp-card !rounded-[16px] px-4 py-3 text-sm font-bold bg-[#f9e4d7] text-[#7a3b2e]">{{ session('error') }}</div>
+    @endif
 
-            <!-- المحاولات السابقة -->
-            @if($previousAttempts->count() > 0)
-                <div class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
-                    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/50">
-                        <h2 class="text-lg font-bold text-slate-800">محاولاتك السابقة</h2>
+    <nav class="flex flex-wrap items-center gap-2 text-sm font-bold text-[var(--sp-muted)]">
+        <a href="{{ $exam->module_route }}" class="sp-link">{{ $exam->source_label }}</a>
+        <x-student.figma-icon name="icon-chevron.svg" box="size-3" class="opacity-40 rtl:rotate-180" />
+        <span class="text-[var(--sp-text)] truncate max-w-[60vw]">{{ $exam->title }}</span>
+    </nav>
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+        <div class="xl:col-span-2 space-y-5">
+            <section class="sp-card p-5 sm:p-6 space-y-4">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="flex items-start gap-4 min-w-0">
+                        <span class="sp-icon-bubble shrink-0 !w-14 !h-14" style="background:{{ $exam->source_bubble }}">
+                            <x-student.figma-icon :name="$exam->source_icon" box="size-7" />
+                        </span>
+                        <div class="min-w-0">
+                            <h2 class="sp-section-title m-0">{{ $exam->title }}</h2>
+                            <p class="text-sm text-[var(--sp-muted)] m-0 mt-1">{{ $exam->source_label }}</p>
+                            <div class="flex flex-wrap items-center gap-2 mt-2">
+                                <span class="sp-pill {{ $exam->isAvailable() ? 'sp-pill--done' : 'sp-pill--upcoming' }}">
+                                    {{ $exam->isAvailable() ? __('student.exam_status_available') : __('student.exam_status_locked') }}
+                                </span>
+                            </div>
+                            <a href="{{ $exam->course_route }}" class="sp-link text-sm font-bold inline-block mt-2">{{ $exam->course_label }}</a>
+                        </div>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-slate-200">
-                            <thead class="bg-slate-50">
-                                <tr>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">المحاولة</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">النتيجة</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">الوقت</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">التاريخ</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">الحالة</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase"></th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-200">
-                                @foreach($previousAttempts as $index => $attempt)
-                                    <tr class="hover:bg-slate-50/50">
-                                        <td class="px-4 py-3 text-sm text-slate-800">{{ $index + 1 }}</td>
-                                        <td class="px-4 py-3 text-sm">
-                                            @if($attempt->status === 'completed')
-                                                <span class="font-semibold {{ $attempt->result_color == 'green' ? 'text-emerald-600' : 'text-red-600' }}">{{ number_format($attempt->percentage, 1) }}%</span>
-                                            @else
-                                                <span class="text-slate-500">غير مكتمل</span>
-                                            @endif
-                                        </td>
-                                        <td class="px-4 py-3 text-sm text-slate-600">{{ $attempt->formatted_time }}</td>
-                                        <td class="px-4 py-3 text-sm text-slate-600">{{ $attempt->created_at->format('Y-m-d H:i') }}</td>
-                                        <td class="px-4 py-3">
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $attempt->result_color == 'green' ? 'bg-emerald-100 text-emerald-800' : ($attempt->result_color == 'red' ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-800') }}">{{ $attempt->result_status }}</span>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            @if($exam->show_results_immediately && $attempt->status === 'completed')
-                                                <a href="{{ route('student.exams.result', [$exam, $attempt]) }}" class="text-sky-600 hover:text-sky-700 text-sm font-medium">عرض النتيجة</a>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
+                    <a href="{{ $exam->module_route }}" class="inline-flex items-center justify-center gap-2 rounded-[30px] px-4 py-2.5 text-sm font-extrabold bg-[#f7f7f5] text-[var(--sp-accent-text)] hover:bg-[var(--sp-accent)] transition-colors shrink-0">
+                        <x-student.figma-icon name="icon-chevron.svg" box="size-3.5" class="rtl:rotate-180" />
+                        {{ __('student.exam_show_back') }}
+                    </a>
                 </div>
+
+                @if($exam->description)
+                    <div>
+                        <p class="text-xs font-bold text-[var(--sp-muted)] m-0 mb-1.5">{{ __('student.exam_show_description') }}</p>
+                        <p class="text-sm text-[var(--sp-text)] m-0 leading-relaxed">{{ $exam->description }}</p>
+                    </div>
+                @endif
+
+                @if($exam->instructions)
+                    <div class="rounded-[20px] p-4 sm:p-5" style="background:var(--sp-mint)">
+                        <p class="font-extrabold text-sm m-0 mb-2 text-[var(--sp-accent-text)]">{{ __('student.exam_show_instructions') }}</p>
+                        <div class="text-sm text-[var(--sp-accent-text)] leading-relaxed whitespace-pre-wrap opacity-90">{{ $exam->instructions }}</div>
+                    </div>
+                @endif
+            </section>
+
+            @if($previousAttempts->isNotEmpty())
+                <section class="sp-card overflow-hidden">
+                    <div class="px-5 py-4 border-b border-black/5">
+                        <h3 class="font-extrabold text-base m-0">{{ __('student.exam_show_previous_attempts') }}</h3>
+                    </div>
+                    <div class="divide-y divide-black/5">
+                        @foreach($previousAttempts as $index => $attempt)
+                            <div class="px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="font-extrabold text-sm m-0">{{ __('student.exam_attempt_n', ['n' => $index + 1]) }}</p>
+                                    <p class="text-xs text-[var(--sp-muted)] m-0 mt-1">{{ $attempt->created_at->format('Y/m/d H:i') }} · {{ $attempt->formatted_time }}</p>
+                                </div>
+                                <div class="flex items-center gap-3 shrink-0">
+                                    @if($attempt->status === 'completed')
+                                        <span class="sp-pill {{ $attempt->result_color === 'green' ? 'sp-pill--done' : 'sp-pill--upcoming' }}">
+                                            {{ number_format($attempt->percentage, 1) }}% · {{ $attempt->result_status }}
+                                        </span>
+                                        @if($exam->show_results_immediately)
+                                            <a href="{{ route('student.exams.result', [$exam, $attempt]) }}" class="sp-link text-sm font-extrabold">{{ __('student.view_result') }}</a>
+                                        @endif
+                                    @elseif($attempt->status === 'in_progress')
+                                        <span class="sp-pill sp-pill--progress">{{ __('student.exam_status_in_progress') }}</span>
+                                        <a href="{{ route('student.exams.take', [$exam, $attempt]) }}" class="sp-promo-btn !mt-0 !py-2 !px-3 text-xs">{{ __('student.exam_resume') }}</a>
+                                    @else
+                                        <span class="sp-pill sp-pill--upcoming">{{ __('student.exam_result_incomplete') }}</span>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </section>
             @endif
         </div>
 
-        <!-- الشريط الجانبي -->
-        <div class="space-y-6">
-            <!-- معلومات سريعة + زر البدء -->
-            <div class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
-                <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/50">
-                    <h3 class="text-lg font-bold text-slate-800">معلومات الامتحان</h3>
-                </div>
-                <div class="p-6 space-y-4">
-                    <div class="flex justify-between text-sm">
-                        <span class="text-slate-500">مدة الامتحان</span>
-                        <span class="font-semibold text-slate-800">{{ $exam->duration_minutes }} دقيقة</span>
-                    </div>
-                    <div class="flex justify-between text-sm">
-                        <span class="text-slate-500">عدد الأسئلة</span>
-                        <span class="font-semibold text-slate-800">{{ $exam->examQuestions->count() }}</span>
-                    </div>
-                    <div class="flex justify-between text-sm">
-                        <span class="text-slate-500">إجمالي الدرجات</span>
-                        <span class="font-semibold text-slate-800">{{ $exam->total_marks }}</span>
-                    </div>
-                    <div class="flex justify-between text-sm">
-                        <span class="text-slate-500">درجة النجاح</span>
-                        <span class="font-semibold text-slate-800">{{ $exam->passing_marks }}</span>
-                    </div>
-                    <div class="flex justify-between text-sm">
-                        <span class="text-slate-500">المحاولات المسموحة</span>
-                        <span class="font-semibold text-slate-800">{{ $exam->attempts_allowed == 0 ? 'غير محدود' : $exam->attempts_allowed }}</span>
-                    </div>
-                    <div class="flex justify-between text-sm">
-                        <span class="text-slate-500">محاولاتك</span>
-                        <span class="font-semibold text-slate-800">{{ $previousAttempts->count() }}</span>
-                    </div>
+        <aside class="space-y-4">
+            <section class="sp-card p-5 space-y-3">
+                <h3 class="font-extrabold text-sm m-0">{{ __('student.exam_show_meta') }}</h3>
+                <dl class="space-y-3 m-0 text-sm">
+                    @foreach([
+                        __('student.duration_label') => $exam->duration_minutes.' '.__('student.minutes'),
+                        __('student.questions_label') => $questionCount,
+                        __('student.passing_marks_label') => $exam->passing_marks.'%',
+                        __('student.attempts_label') => $exam->attempts_allowed == 0 ? __('student.unlimited_attempts') : $exam->attempts_allowed,
+                        __('student.your_attempts') => $previousAttempts->count(),
+                    ] as $label => $value)
+                        <div class="flex items-center justify-between gap-3">
+                            <dt class="font-bold text-[var(--sp-muted)]">{{ $label }}</dt>
+                            <dd class="m-0 font-extrabold">{{ $value }}</dd>
+                        </div>
+                    @endforeach
                     @if($exam->start_time)
-                        <div class="flex justify-between text-sm">
-                            <span class="text-slate-500">يبدأ في</span>
-                            <span class="font-semibold text-slate-800">{{ $exam->start_time->format('Y-m-d H:i') }}</span>
+                        <div class="flex items-center justify-between gap-3">
+                            <dt class="font-bold text-[var(--sp-muted)]">{{ __('student.starts_at') }}</dt>
+                            <dd class="m-0 font-extrabold">{{ $exam->start_time->format('Y/m/d H:i') }}</dd>
                         </div>
                     @endif
                     @if($exam->end_time)
-                        <div class="flex justify-between text-sm">
-                            <span class="text-slate-500">ينتهي في</span>
-                            <span class="font-semibold text-slate-800">{{ $exam->end_time->format('Y-m-d H:i') }}</span>
+                        <div class="flex items-center justify-between gap-3">
+                            <dt class="font-bold text-[var(--sp-muted)]">{{ __('student.ends_at') }}</dt>
+                            <dd class="m-0 font-extrabold">{{ $exam->end_time->format('Y/m/d H:i') }}</dd>
                         </div>
                     @endif
-                </div>
-            </div>
+                </dl>
+            </section>
 
             @if($exam->prevent_tab_switch || $exam->require_camera || $exam->require_microphone || $exam->auto_submit)
-                <div class="rounded-xl bg-amber-50 border border-amber-200 p-4">
-                    <h4 class="font-semibold text-amber-900 mb-2"><i class="fas fa-shield-alt ml-1"></i> متطلبات الأمان</h4>
-                    <ul class="space-y-1.5 text-sm text-amber-800">
-                        @if($exam->prevent_tab_switch)<li><i class="fas fa-exclamation-triangle ml-1"></i> ممنوع تبديل التبويبات</li>@endif
-                        @if($exam->require_camera)<li><i class="fas fa-video ml-1"></i> يتطلب تفعيل الكاميرا</li>@endif
-                        @if($exam->require_microphone)<li><i class="fas fa-microphone ml-1"></i> يتطلب تفعيل المايكروفون</li>@endif
-                        @if($exam->auto_submit)<li><i class="fas fa-clock ml-1"></i> تسليم تلقائي عند انتهاء الوقت</li>@endif
+                <section class="sp-card p-5 space-y-2" style="background:#f9f0d7">
+                    <h3 class="font-extrabold text-sm m-0 text-[var(--sp-accent-text)]">{{ __('student.exam_show_security') }}</h3>
+                    <ul class="space-y-1.5 m-0 ps-4 text-sm text-[var(--sp-accent-text)]">
+                        @if($exam->prevent_tab_switch)<li>{{ __('student.no_tab_switch') }}</li>@endif
+                        @if($exam->require_camera)<li>{{ __('student.camera_label') }}</li>@endif
+                        @if($exam->require_microphone)<li>{{ __('student.microphone_label') }}</li>@endif
+                        @if($exam->auto_submit)<li>{{ __('student.exam_auto_submit') }}</li>@endif
                     </ul>
-                </div>
+                </section>
             @endif
 
-            <!-- زر بدء الامتحان -->
-            <div class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
-                <div class="p-6 text-center">
-                    @if($exam->canAttempt(auth()->id()))
-                        <p class="text-sm text-slate-600 mb-4">تأكد من قراءة التعليمات قبل البدء. لن تتمكن من العودة بعد البدء.</p>
-                        <form action="{{ route('student.exams.start', $exam) }}" method="POST" id="start-exam-form">
-                            @csrf
-                            <button type="button" onclick="confirmStart()" class="w-full px-6 py-3.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold text-lg transition-colors">
-                                <i class="fas fa-play ml-2"></i>
-                                ابدأ الامتحان الآن
-                            </button>
-                        </form>
-                    @else
-                        <div class="text-center py-2">
-                            <i class="fas fa-times-circle text-4xl text-red-500 mb-3"></i>
-                            <h4 class="text-lg font-bold text-red-800 mb-1">غير متاح للبدء</h4>
-                            <p class="text-sm text-red-700">
-                                @if($previousAttempts->count() >= $exam->attempts_allowed && $exam->attempts_allowed > 0)
-                                    لقد استنفدت عدد المحاولات ({{ $exam->attempts_allowed }})
-                                @elseif(!$exam->isAvailable())
-                                    الامتحان غير متاح حالياً
-                                @else
-                                    غير مصرح لك بأداء هذا الامتحان
-                                @endif
-                            </p>
-                        </div>
+            @if($bestPercentage !== null)
+                <section class="sp-card p-5 text-center space-y-2">
+                    <p class="text-xs font-bold text-[var(--sp-muted)] m-0">{{ __('student.exam_show_best_score') }}</p>
+                    <p class="text-3xl font-black text-[var(--sp-accent-text)] m-0">{{ number_format($bestPercentage, 1) }}%</p>
+                    @if($exam->show_results_immediately && $lastCompleted)
+                        <a href="{{ route('student.exams.result', [$exam, $lastCompleted]) }}" class="sp-link text-sm font-extrabold">{{ __('student.view_result') }}</a>
                     @endif
-                </div>
-            </div>
-
-            @if($previousAttempts->where('status', 'completed')->count() > 0)
-                @php $bestScore = $previousAttempts->where('status', 'completed')->max('percentage'); $lastAttempt = $previousAttempts->where('status', 'completed')->first(); @endphp
-                <div class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
-                    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/50">
-                        <h3 class="text-lg font-bold text-slate-800">أفضل نتيجة</h3>
-                    </div>
-                    <div class="p-6 text-center">
-                        <div class="text-3xl font-bold text-sky-600">{{ number_format($bestScore, 1) }}%</div>
-                        @if($exam->show_results_immediately && $lastAttempt)
-                            <a href="{{ route('student.exams.result', [$exam, $lastAttempt]) }}" class="inline-block mt-3 text-sky-600 hover:text-sky-700 font-medium text-sm">عرض آخر نتيجة</a>
-                        @endif
-                    </div>
-                </div>
+                </section>
             @endif
-        </div>
+
+            <section class="sp-card p-5 space-y-3">
+                @if($activeAttempt)
+                    <a href="{{ route('student.exams.take', [$exam, $activeAttempt]) }}" class="sp-promo-btn !mt-0 w-full text-center">{{ __('student.exam_resume') }}</a>
+                @elseif($exam->canAttempt(auth()->id()))
+                    <form action="{{ route('student.exams.start', $exam) }}" method="POST" id="start-exam-form">
+                        @csrf
+                        <button type="button" onclick="document.getElementById('exam-confirm-modal').classList.remove('hidden')" class="sp-promo-btn !mt-0 w-full border-0 cursor-pointer">
+                            {{ __('student.start_exam') }}
+                        </button>
+                    </form>
+                @else
+                    <div class="rounded-[16px] bg-[#f7f7f5] px-4 py-5 text-center">
+                        <p class="font-extrabold m-0 mb-1">{{ __('student.exam_show_cannot_start') }}</p>
+                        <p class="text-sm text-[var(--sp-muted)] m-0">
+                            @if($previousAttempts->count() >= $exam->attempts_allowed && $exam->attempts_allowed > 0)
+                                {{ __('student.exam_attempts_exhausted') }}
+                            @elseif(!$exam->isAvailable())
+                                {{ __('student.exam_not_available') }}
+                            @else
+                                {{ __('student.exam_start_forbidden') }}
+                            @endif
+                        </p>
+                    </div>
+                @endif
+            </section>
+        </aside>
     </div>
 </div>
 
-<!-- نافذة تأكيد البدء -->
-<div id="confirmModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(0,0,0,0.5);">
-    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full p-6" onclick="event.stopPropagation()">
+<div id="exam-confirm-modal" class="hidden fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-0 sm:p-6" style="background:rgba(15,15,20,.45);backdrop-filter:blur(4px)">
+    <div class="sp-card !rounded-t-[24px] sm:!rounded-[24px] w-full sm:max-w-md p-6 space-y-4" onclick="event.stopPropagation()">
+        <span class="sp-icon-bubble mx-auto" style="background:var(--sp-peach)">
+            <x-student.figma-icon name="icon-exams.svg" />
+        </span>
         <div class="text-center">
-            <div class="w-14 h-14 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-4">
-                <i class="fas fa-exclamation-triangle text-xl"></i>
-            </div>
-            <h3 class="text-lg font-bold text-slate-800 mb-2">تأكيد بدء الامتحان</h3>
-            <p class="text-sm text-slate-600 mb-4">هل أنت متأكد من بدء الامتحان؟ لن تتمكن من العودة أو إيقاف الامتحان بعد البدء.</p>
-            @if($exam->prevent_tab_switch)
-                <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 font-medium">
-                    <i class="fas fa-warning ml-1"></i> ممنوع تبديل التبويبات أثناء الامتحان
-                </div>
-            @endif
-            <div class="flex gap-3 justify-center">
-                <button type="button" onclick="startExam()" class="px-5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-semibold transition-colors">ابدأ</button>
-                <button type="button" onclick="closeModal()" class="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-semibold transition-colors">إلغاء</button>
-            </div>
+            <h3 class="font-black text-lg m-0 mb-2">{{ __('student.exam_show_confirm_title') }}</h3>
+            <p class="text-sm text-[var(--sp-muted)] m-0">{{ __('student.exam_show_confirm_body') }}</p>
+        </div>
+        @if($exam->prevent_tab_switch)
+            <div class="rounded-[14px] px-3 py-2 text-sm font-bold bg-[#f9e4d7] text-[#7a3b2e]">{{ __('student.no_tab_switch') }}</div>
+        @endif
+        <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="document.getElementById('start-exam-form').submit()" class="sp-promo-btn !mt-0 flex-1 border-0 cursor-pointer">{{ __('student.exam_show_confirm_start') }}</button>
+            <button type="button" onclick="document.getElementById('exam-confirm-modal').classList.add('hidden')" class="flex-1 inline-flex items-center justify-center rounded-[30px] px-4 py-2.5 text-sm font-extrabold bg-[#f7f7f5] text-[var(--sp-accent-text)] border-0 cursor-pointer">{{ __('common.cancel') }}</button>
         </div>
     </div>
 </div>
-
-@push('scripts')
-<script>
-function confirmStart() { document.getElementById('confirmModal').classList.remove('hidden'); }
-function closeModal() { document.getElementById('confirmModal').classList.add('hidden'); }
-function startExam() { document.getElementById('start-exam-form').submit(); }
-document.getElementById('confirmModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
-</script>
-@endpush
 @endsection

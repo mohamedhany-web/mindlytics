@@ -782,7 +782,8 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
                 Route::get('/{offlineCourse}', [\App\Http\Controllers\Student\OfflineCourseController::class, 'show'])->name('show');
             });
 
-            // المسار التعليمي للطالب
+            // المسار التعليمي للطالب — القائمة ثم التفاصيل
+            Route::get('/student/learning-path', [\App\Http\Controllers\Student\LearningPathController::class, 'index'])->name('student.learning-path.index');
             Route::get('/student/learning-path/{slug}', [\App\Http\Controllers\Student\LearningPathController::class, 'show'])->name('student.learning-path.show');
         Route::get('/my-courses/{course}/learn', [\App\Http\Controllers\Student\MyCourseController::class, 'learn'])
             ->middleware(['ownership:course,course'])
@@ -952,20 +953,23 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('/notifications/{notification}/go', [\App\Http\Controllers\Student\NotificationController::class, 'go'])
             ->name('notifications.go');
         Route::get('/notifications/{notification}', [\App\Http\Controllers\Student\NotificationController::class, 'show'])
-            ->middleware(['ownership:user,user'])
+            ->middleware(['ownership:notification,notification'])
             ->name('notifications.show');
         Route::post('/notifications/{notification}/mark-read', [\App\Http\Controllers\Student\NotificationController::class, 'markAsRead'])
-            ->middleware(['ownership:user,user'])
+            ->middleware(['ownership:notification,notification'])
             ->name('notifications.mark-read');
         Route::post('/notifications/mark-all-read', [\App\Http\Controllers\Student\NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
         Route::delete('/notifications/{notification}', [\App\Http\Controllers\Student\NotificationController::class, 'destroy'])
-            ->middleware(['ownership:user,user'])
+            ->middleware(['ownership:notification,notification'])
             ->name('notifications.destroy');
         Route::post('/notifications/cleanup', [\App\Http\Controllers\Student\NotificationController::class, 'cleanup'])->name('notifications.cleanup');
         Route::get('/api/notifications/unread-count', [\App\Http\Controllers\Student\NotificationController::class, 'getUnreadCount'])->name('notifications.unread-count');
         Route::get('/api/notifications/recent', [\App\Http\Controllers\Student\NotificationController::class, 'getRecent'])->name('notifications.recent');
         Route::get('/calendar', [\App\Http\Controllers\Student\CalendarController::class, 'index'])->name('calendar');
         Route::get('/api/calendar/events', [\App\Http\Controllers\Student\CalendarController::class, 'getEvents'])->name('calendar.events');
+        Route::get('/mobile-app', function () {
+            return view('student.mobile-app');
+        })->name('mobile-app');
         // رحلة التعلم / البورتفوليو - مشاريع الطالب
         Route::prefix('my-portfolio')->name('student.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Student\PortfolioProjectController::class, 'index'])->name('portfolio.index');

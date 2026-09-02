@@ -1,6 +1,6 @@
 /**
  * Learn page screen protection — isolated from the video player.
- * Blocks capture shortcuts, detects capture signals, resists extension tampering.
+ * Blocks capture shortcuts only. Does NOT flash on iframe focus (that caused page "tremble").
  */
 (function () {
     'use strict';
@@ -18,6 +18,7 @@
     var overlay = null;
     var coverUntil = 0;
     var suspectUntil = 0;
+    var guardTimer = null;
 
     var natives = {
         getDisplayMedia: null,
@@ -67,20 +68,7 @@
     }
 
     function isCaptureShortcut(e) {
-        if (isPrintScreen(e) || isMacScreenshotDigit(e) || isWinSnip(e) || isWinGameBar(e)) {
-            return true;
-        }
-        if (e.altKey && isPrintScreen(e)) {
-            return true;
-        }
-        if (e.ctrlKey && isPrintScreen(e)) {
-            return true;
-        }
-        return false;
-    }
-
-    function isCaptureModifier(e) {
-        return (e.metaKey && e.shiftKey) || isPrintScreen(e);
+        return isPrintScreen(e) || isMacScreenshotDigit(e) || isWinSnip(e) || isWinGameBar(e);
     }
 
     function blockEvent(e) {
@@ -221,15 +209,6 @@
             onCaptureDetected(e, 10000);
             return blockEvent(e);
         }
-        if (isCaptureModifier(e)) {
-            markSuspect(12000);
-        }
-    }
-
-    function onDetectionSignal(minMs) {
-        if (isSuspectWindow()) {
-            showCover(minMs || 8000);
-        }
     }
 
     function ensureVideoGuards() {
@@ -316,11 +295,8 @@
         ensureVideoGuards();
         buildOverlay();
 
-        if (!document.getElementById('learn-screen-protection-root')) {
-            showCover(15000);
-        }
-
-        setInterval(function () {
+        if (guardTimer) clearInterval(guardTimer);
+        guardTimer = setInterval(function () {
             patchMediaApis();
             ensureVideoGuards();
             if (!document.getElementById('learn-screen-protection-overlay')) {
@@ -330,19 +306,7 @@
                 overlay = null;
                 buildOverlay();
             }
-        }, 1500);
-
-        try {
-            var observer = new MutationObserver(function () {
-                ensureVideoGuards();
-                if (!document.getElementById('learn-screen-protection-overlay')) {
-                    buildOverlay();
-                }
-            });
-            observer.observe(document.documentElement, { childList: true, subtree: true });
-        } catch (err) {
-            /* ignore */
-        }
+        }, 4000);
     }
 
     document.addEventListener('keydown', onKeyboard, true);
@@ -353,18 +317,11 @@
         }
     }, true);
 
-    window.addEventListener('blur', function () {
-        onDetectionSignal(8000);
-    });
-
+    // لا نغطي الشاشة عند blur (التركيز على iframe الفيديو) — كان يسبب رعشة/وميض أسود
     document.addEventListener('visibilitychange', function () {
-        if (document.hidden) {
-            onDetectionSignal(8000);
+        if (document.hidden && isSuspectWindow()) {
+            showCover(8000);
         }
-    });
-
-    window.addEventListener('pagehide', function () {
-        onDetectionSignal(8000);
     });
 
     document.addEventListener('paste', function (e) {
@@ -384,15 +341,10 @@
         }
     }, true);
 
-    document.addEventListener('copy', function () {
-        if (isSuspectWindow()) {
-            showCover(6000);
-        }
-    }, true);
-
     window.__mindlyticsLearnProtection = {
         showCover: showCover,
         markSuspect: markSuspect,
+        isSuspectWindow: isSuspectWindow,
     };
 
     startTamperGuard();

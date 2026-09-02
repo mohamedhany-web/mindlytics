@@ -19,7 +19,13 @@ class ProfileController extends Controller
         $user = auth()->user();
         $profileImageUrl = $user->profile_image_url;
 
-        return view('student.profile.index', compact('user', 'profileImageUrl'));
+        $stats = [
+            'courses' => $user->activeCourses()->count(),
+            'offline' => $user->offlineEnrollments()->where('status', 'active')->count(),
+            'notifications' => method_exists($user, 'notifications') ? $user->notifications()->count() : 0,
+        ];
+
+        return view('student.profile.index', compact('user', 'profileImageUrl', 'stats'));
     }
 
     /**

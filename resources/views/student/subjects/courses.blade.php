@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.student-dashboard')
 
 @section('title', $academicSubject->name . ' - كورسات المسار')
 @section('header', 'كورسات ' . $academicSubject->name)

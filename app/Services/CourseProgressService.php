@@ -151,6 +151,21 @@ class CourseProgressService
     }
 
     /**
+     * هل مشاهدة المحاضرة كافية لفتح العنصر التالي؟
+     * (is_completed أو progress_percent ≥ عتبة المدرب) — بدون اشتراط أسئلة الفيديو.
+     */
+    public function lectureWatchUnlocksNext(Lecture $lecture, ?LectureWatchProgress $wp): bool
+    {
+        if (! $wp) {
+            return false;
+        }
+
+        $threshold = $this->lectureCompletionThreshold($lecture);
+
+        return (bool) $wp->is_completed || (int) $wp->progress_percent >= $threshold;
+    }
+
+    /**
      * نسبة دقيقة: 100% فقط عندما completed === total.
      */
     public function percentFromCounts(int $completed, int $total): float

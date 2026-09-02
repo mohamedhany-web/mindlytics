@@ -1,396 +1,345 @@
-@extends('layouts.app')
+@extends('layouts.student-dashboard')
+
+@php
+    use Illuminate\Support\Str;
+
+    $statusPill = match ($order->status) {
+        'pending' => 'sp-pill--upcoming',
+        'approved' => 'sp-pill--done',
+        'rejected' => 'sp-pill',
+        default => '',
+    };
+    $statusLabel = match ($order->status) {
+        'pending' => __('student.order_status_pending'),
+        'approved' => __('student.order_status_approved'),
+        'rejected' => __('student.order_status_rejected'),
+        default => __('student.order_status_unknown'),
+    };
+    $statusHint = match ($order->status) {
+        'pending' => __('student.order_status_pending_hint'),
+        'approved' => __('student.order_status_approved_hint'),
+        'rejected' => __('student.order_status_rejected_hint'),
+        default => '',
+    };
+    $paymentLabel = match ($order->payment_method) {
+        'bank_transfer' => __('student.bank_transfer'),
+        'cash' => __('student.cash_label'),
+        default => __('student.other_label'),
+    };
+
+    $itemTitle = $order->academic_year_id && $order->learningPath
+        ? ($order->learningPath->name ?? __('student.learning_path_label'))
+        : ($order->course?->title ?? Str::before($order->notes ?? __('student.order_untitled'), "\n") ?: __('student.order_untitled'));
+
+    $imageUrl = null;
+    $imageExists = false;
+    if ($order->payment_proof) {
+        $fullPath = storage_path('app/public/' . $order->payment_proof);
+        $imageExists = file_exists($fullPath);
+        if ($imageExists) {
+            $imageUrl = asset('storage/' . $order->payment_proof);
+            if (! file_exists(public_path('storage/' . $order->payment_proof))) {
+                try {
+                    $imageUrl = route('storage.file', ['path' => $order->payment_proof]);
+                } catch (\Throwable $e) {
+                    $imageUrl = url('/storage/' . $order->payment_proof);
+                }
+            }
+        }
+    }
+@endphp
+
+@section('title', __('student.order_details_title') . ' #' . $order->id)
+@section('header', __('student.order_details_title'))
+
+@push('styles')
+<style>
+    .sp-order-show-hero {
+        background: #2f2e43;
+        border-radius: 30px;
+        color: #fff;
+        padding: 24px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: var(--sp-shadow);
+    }
+    .sp-order-show-hero::before {
+        content: '';
+        position: absolute;
+        inset-inline-end: -30px;
+        top: -50px;
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(174,217,234,0.25), transparent 70%);
+        pointer-events: none;
+    }
+    .sp-order-show-sticky { position: sticky; top: 12px; }
+    @media (max-width: 1023px) { .sp-order-show-sticky { position: static; } }
+    .sp-receipt-img { cursor: zoom-in; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+    .sp-receipt-img:hover { transform: scale(1.01); box-shadow: 0 10px 24px rgba(0,0,0,0.12); }
+</style>
+@endpush
 
 @section('content')
-<div class="space-y-6">
-    <!-- الهيدر -->
-    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900">{{ __('student.order_details_title') }} #{{ $order->id }}</h1>
-                <p class="text-gray-600 mt-1 flex items-center gap-2">
-                    <i class="fas fa-calendar-alt text-xs"></i>
-                    {{ $order->created_at->format('d/m/Y - H:i') }}
+<div class="space-y-5">
+    <nav class="flex flex-wrap items-center gap-2 text-sm font-bold text-[var(--sp-muted)]">
+        <a href="{{ route('orders.index') }}" class="sp-link">{{ __('student.orders_page_title') }}</a>
+        <x-student.figma-icon name="icon-chevron.svg" box="size-3" class="opacity-40 rtl:rotate-180" />
+        <span class="text-[var(--sp-text)]">{{ __('student.order_number_label', ['id' => $order->id]) }}</span>
+    </nav>
+
+    {{-- Hero --}}
+    <section class="sp-order-show-hero">
+        <div class="relative z-[1] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="min-w-0">
+                <p class="text-sm font-bold text-white/60 m-0 mb-2">{{ __('student.order_details_title') }}</p>
+                <h2 class="text-xl sm:text-2xl font-extrabold m-0 leading-tight">{{ $itemTitle }}</h2>
+                <p class="text-sm text-white/65 m-0 mt-2 flex flex-wrap items-center gap-2">
+                    <span>{{ __('student.order_number_label', ['id' => $order->id]) }}</span>
+                    <span class="opacity-40">·</span>
+                    <span>{{ $order->created_at->format('Y/m/d H:i') }}</span>
                 </p>
             </div>
-            <a href="{{ route('orders.index') }}" 
-               class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                <i class="fas fa-arrow-right mr-2"></i>
-                {{ __('student.back_to_orders') }}
-            </a>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                <span class="sp-pill {{ $statusPill }} !text-sm">{{ $statusLabel }}</span>
+                <a href="{{ route('orders.index') }}" class="inline-flex items-center justify-center rounded-[20px] bg-white/10 hover:bg-white/15 px-4 py-2.5 text-sm font-extrabold text-white transition">
+                    {{ __('student.back_to_orders') }}
+                </a>
+            </div>
         </div>
-    </div>
+    </section>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- تفاصيل الطلب -->
-        <div class="lg:col-span-2 space-y-6">
-            <!-- معلومات الكورس أو المسار التعليمي -->
-            <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-                <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-sky-50 to-slate-50">
-                    <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-                        <i class="fas {{ $order->academic_year_id ? 'fa-route' : 'fa-book-open' }} text-sky-600"></i>
+    <div class="grid gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(280px,1fr)]">
+        {{-- Main --}}
+        <div class="space-y-5 min-w-0">
+            {{-- Course / path --}}
+            <section class="sp-card overflow-hidden">
+                <div class="flex items-center gap-3 px-5 py-4 border-b border-black/5 bg-[#f7f7f5]">
+                    <span class="sp-icon-bubble shrink-0" style="background:var(--sp-sky)">
+                        <x-student.figma-icon name="{{ $order->academic_year_id ? 'icon-path.svg' : 'icon-courses.svg' }}" />
+                    </span>
+                    <h3 class="font-extrabold text-base m-0">
                         {{ $order->academic_year_id ? __('student.learning_path_info') : __('student.course_info') }}
-                    </h2>
+                    </h3>
                 </div>
-                <div class="p-6">
+                <div class="p-5 sm:p-6">
                     <div class="flex flex-col sm:flex-row gap-4">
-                        <div class="w-full sm:w-24 h-24 bg-gradient-to-br {{ $order->academic_year_id ? 'from-green-500 to-green-600' : 'from-sky-500 to-sky-600' }} rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                            @if($order->academic_year_id && $order->learningPath && $order->learningPath->thumbnail)
-                                <img src="{{ asset('storage/' . $order->learningPath->thumbnail) }}" alt="{{ $order->learningPath->name ?? 'مسار تعليمي' }}" 
-                                     class="w-full h-full object-cover rounded-xl">
-                            @elseif($order->course && $order->course->thumbnail)
-                                <img src="{{ asset('storage/' . $order->course->thumbnail) }}" alt="{{ $order->course->title ?? 'كورس' }}" 
-                                     class="w-full h-full object-cover rounded-xl">
+                        <div class="w-full sm:w-24 h-24 rounded-[20px] overflow-hidden shrink-0 flex items-center justify-center" style="background:var(--sp-lilac)">
+                            @if($order->academic_year_id && $order->learningPath?->thumbnail)
+                                <img src="{{ asset('storage/' . $order->learningPath->thumbnail) }}" alt="" class="w-full h-full object-cover">
+                            @elseif($order->course?->thumbnail)
+                                <img src="{{ asset('storage/' . $order->course->thumbnail) }}" alt="" class="w-full h-full object-cover">
                             @else
-                                <i class="fas {{ $order->academic_year_id ? 'fa-route' : 'fa-play-circle' }} text-white text-3xl"></i>
+                                <x-student.figma-icon name="{{ $order->academic_year_id ? 'icon-path.svg' : 'icon-courses.svg' }}" box="size-10" />
                             @endif
                         </div>
-                        
-                        <div class="flex-1">
-                            @if($order->academic_year_id && $order->learningPath)
-                                <h3 class="text-lg font-bold text-gray-900 mb-2">{{ $order->learningPath->name ?? 'مسار تعليمي' }}</h3>
-                                <div class="flex flex-wrap items-center gap-2 mb-3">
-                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                        <i class="fas fa-route ml-1 text-xs"></i>
-                                        مسار تعليمي
-                                    </span>
-                                    @if($order->learningPath->price)
-                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
-                                        <i class="fas fa-money-bill-wave ml-1 text-xs"></i>
-                                        {{ number_format($order->learningPath->price, 2) }} ج.م
-                                    </span>
+                        <div class="min-w-0 flex-1 space-y-3">
+                            <div>
+                                <h4 class="font-extrabold text-lg m-0">{{ $itemTitle }}</h4>
+                                @if($order->academic_year_id && $order->learningPath)
+                                    <div class="flex flex-wrap gap-2 mt-2">
+                                        <span class="sp-pill sp-pill--progress">{{ __('student.learning_path_label') }}</span>
+                                        @if($order->learningPath->price)
+                                            <span class="sp-pill">{{ number_format($order->learningPath->price, 2) }} {{ __('public.currency_egp') }}</span>
+                                        @endif
+                                    </div>
+                                    @if($order->learningPath->description)
+                                        <p class="text-sm text-[var(--sp-muted)] m-0 mt-2">{{ Str::limit($order->learningPath->description, 160) }}</p>
                                     @endif
-                                </div>
-                                @if($order->learningPath->description)
-                                    <p class="text-sm text-gray-600 mb-3">
-                                        {{ Str::limit($order->learningPath->description, 120) }}
-                                    </p>
-                                @endif
-                                <a href="{{ route('public.learning-path.show', Str::slug($order->learningPath->name)) }}" 
-                                   class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg font-medium transition-colors shadow-lg shadow-green-500/30">
-                                    <i class="fas fa-eye"></i>
-                                    عرض المسار
-                                </a>
-                            @elseif($order->course)
-                                <h3 class="text-lg font-bold text-gray-900 mb-2">{{ $order->course->title ?? 'كورس غير محدد' }}</h3>
-                                @if($order->course->academicYear || $order->course->academicSubject)
-                                <div class="flex flex-wrap items-center gap-2 mb-3">
-                                    @if($order->course->academicYear)
-                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-sky-100 text-sky-700">
-                                        <i class="fas fa-graduation-cap ml-1 text-xs"></i>
-                                        {{ $order->course->academicYear->name }}
-                                    </span>
+                                    @if($order->learningPath?->name)
+                                        <a href="{{ route('public.learning-path.show', Str::slug($order->learningPath->name)) }}" class="sp-link text-sm font-extrabold inline-block mt-2">
+                                            {{ __('student.order_view_path') }}
+                                        </a>
                                     @endif
-                                    @if($order->course->academicSubject)
-                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                                        <i class="fas fa-layer-group ml-1 text-xs"></i>
-                                        {{ $order->course->academicSubject->name }}
-                                    </span>
+                                @elseif($order->course)
+                                    <div class="flex flex-wrap gap-2 mt-2">
+                                        @if($order->course->academicYear)
+                                            <span class="sp-pill sp-pill--progress">{{ $order->course->academicYear->name }}</span>
+                                        @endif
+                                        @if($order->course->academicSubject)
+                                            <span class="sp-pill">{{ $order->course->academicSubject->name }}</span>
+                                        @endif
+                                    </div>
+                                    @if($order->course->description)
+                                        <p class="text-sm text-[var(--sp-muted)] m-0 mt-2">{{ Str::limit($order->course->description, 160) }}</p>
                                     @endif
-                                </div>
+                                    <a href="{{ route('courses.show', $order->course) }}" class="sp-link text-sm font-extrabold inline-block mt-2">
+                                        {{ __('student.order_view_course') }}
+                                    </a>
+                                @else
+                                    <p class="text-sm text-[var(--sp-muted)] m-0 mt-2">{{ __('student.order_offline_booking_hint') }}</p>
                                 @endif
-                                @if($order->course->description)
-                                    <p class="text-sm text-gray-600 mb-3">
-                                        {{ Str::limit($order->course->description, 120) }}
-                                    </p>
-                                @endif
-                                <a href="{{ route('courses.show', $order->course) }}" 
-                                   class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sky-600 to-sky-700 hover:from-sky-700 hover:to-sky-800 text-white rounded-lg font-medium transition-colors shadow-lg shadow-sky-500/30">
-                                    <i class="fas fa-eye"></i>
-                                    عرض الكورس
-                                </a>
-                            @else
-                                <h3 class="text-lg font-bold text-gray-900 mb-2">
-                                    {{ \Illuminate\Support\Str::before($order->notes ?? 'طلب بدون عنوان', "\n") ?: 'طلب بدون عنوان' }}
-                                </h3>
-                                <p class="text-sm text-gray-600">هذا طلب حجز كورس أوفلاين/أونلاين.</p>
-                            @endif
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <!-- تفاصيل الدفع -->
-            <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-                <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-sky-50 to-slate-50">
-                    <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-                        <i class="fas fa-credit-card text-sky-600"></i>
-                        تفاصيل الدفع
-                    </h2>
+            {{-- Payment --}}
+            <section class="sp-card overflow-hidden">
+                <div class="flex items-center gap-3 px-5 py-4 border-b border-black/5 bg-[#f7f7f5]">
+                    <span class="sp-icon-bubble shrink-0" style="background:var(--sp-mint)">
+                        <x-student.figma-icon name="icon-wallet.svg" />
+                    </span>
+                    <h3 class="font-extrabold text-base m-0">{{ __('student.order_payment_details') }}</h3>
                 </div>
-                <div class="p-6">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div class="p-4 bg-gradient-to-br from-sky-50 to-slate-50 rounded-xl border border-sky-100">
-                            <label class="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
-                                <i class="fas fa-money-bill-wave ml-1"></i>
-                                المبلغ
-                            </label>
-                            <div class="text-2xl font-bold bg-gradient-to-r from-sky-600 to-sky-700 bg-clip-text text-transparent">
-                                {{ number_format($order->amount, 2) }} <span class="text-base text-gray-600">ج.م</span>
-                            </div>
+                <div class="p-5 sm:p-6 space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="rounded-[16px] p-4" style="background:var(--sp-mint)">
+                            <p class="text-xs font-bold text-[var(--sp-muted)] m-0 uppercase tracking-wide">{{ __('student.amount_label') }}</p>
+                            <p class="text-2xl font-black text-[var(--sp-accent-text)] m-0 mt-1">{{ number_format($order->amount, 2) }} <span class="text-base font-extrabold">{{ __('public.currency_egp') }}</span></p>
+                            @if($order->discount_amount > 0)
+                                <p class="text-xs font-bold text-[var(--sp-muted)] m-0 mt-2">
+                                    {{ __('student.order_discount_saved', ['amount' => number_format($order->discount_amount, 2)]) }}
+                                </p>
+                            @endif
                         </div>
-                        
-                        <div class="p-4 bg-gradient-to-br from-sky-50 to-slate-50 rounded-xl border border-sky-100">
-                            <label class="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
-                                <i class="fas fa-wallet ml-1"></i>
-                                طريقة الدفع
-                            </label>
-                            <div class="text-base font-bold text-gray-900">
-                                @if($order->payment_method == 'bank_transfer')
-                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                                        <i class="fas fa-university ml-1 text-xs"></i>
-                                        تحويل بنكي
-                                    </span>
-                                @elseif($order->payment_method == 'cash')
-                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                        <i class="fas fa-money-bill ml-1 text-xs"></i>
-                                        نقدي
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                                        <i class="fas fa-question-circle ml-1 text-xs"></i>
-                                        أخرى
-                                    </span>
-                                @endif
-                            </div>
+                        <div class="rounded-[16px] bg-[#f7f7f5] p-4">
+                            <p class="text-xs font-bold text-[var(--sp-muted)] m-0 uppercase tracking-wide">{{ __('student.payment_method_label') }}</p>
+                            <p class="text-base font-extrabold m-0 mt-2">
+                                <span class="sp-pill sp-pill--progress">{{ $paymentLabel }}</span>
+                            </p>
                         </div>
-                        
-                        <div class="p-4 bg-gradient-to-br from-sky-50 to-slate-50 rounded-xl border border-sky-100">
-                            <label class="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
-                                <i class="fas fa-calendar-alt ml-1"></i>
-                                تاريخ الطلب
-                            </label>
-                            <div class="text-base font-bold text-gray-900">
-                                {{ $order->created_at->format('d/m/Y') }}
-                                <span class="text-sm text-gray-500 font-normal">- {{ $order->created_at->format('H:i') }}</span>
-                            </div>
+                        <div class="rounded-[16px] bg-[#f7f7f5] p-4">
+                            <p class="text-xs font-bold text-[var(--sp-muted)] m-0 uppercase tracking-wide">{{ __('student.order_date_label') }}</p>
+                            <p class="text-base font-extrabold m-0 mt-2">{{ $order->created_at->format('Y/m/d') }} <span class="text-sm font-bold text-[var(--sp-muted)]">{{ $order->created_at->format('H:i') }}</span></p>
                         </div>
-                        
                         @if($order->approved_at)
-                        <div class="p-4 bg-gradient-to-br from-sky-50 to-slate-50 rounded-xl border border-sky-100">
-                            <label class="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
-                                <i class="fas fa-check-circle ml-1"></i>
-                                تاريخ الموافقة
-                            </label>
-                            <div class="text-base font-bold text-gray-900">
-                                {{ $order->approved_at->format('d/m/Y') }}
-                                <span class="text-sm text-gray-500 font-normal">- {{ $order->approved_at->format('H:i') }}</span>
+                            <div class="rounded-[16px] bg-[#f7f7f5] p-4">
+                                <p class="text-xs font-bold text-[var(--sp-muted)] m-0 uppercase tracking-wide">{{ __('student.approved_date_label') }}</p>
+                                <p class="text-base font-extrabold m-0 mt-2">{{ $order->approved_at->format('Y/m/d') }} <span class="text-sm font-bold text-[var(--sp-muted)]">{{ $order->approved_at->format('H:i') }}</span></p>
                             </div>
-                        </div>
                         @endif
                     </div>
 
                     @if($order->notes)
-                        <div class="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                            <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                <i class="fas fa-sticky-note text-sky-500"></i>
-                                ملاحظاتك
-                            </label>
-                            <div class="text-sm text-gray-700">
-                                {{ $order->notes }}
-                            </div>
+                        <div class="rounded-[16px] bg-[#fafaf8] border border-black/5 px-4 py-3">
+                            <p class="text-xs font-bold text-[var(--sp-muted)] m-0 mb-1">{{ __('student.your_notes') }}</p>
+                            <p class="text-sm m-0 whitespace-pre-line">{{ $order->notes }}</p>
                         </div>
                     @endif
                 </div>
-            </div>
+            </section>
 
-            <!-- صورة الإيصال -->
+            {{-- Receipt --}}
             @if($order->payment_proof)
-                <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-sky-50 to-slate-50">
-                        <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-                            <i class="fas fa-receipt text-sky-600"></i>
-                            إيصال الدفع
-                        </h2>
+                <section class="sp-card overflow-hidden">
+                    <div class="flex items-center gap-3 px-5 py-4 border-b border-black/5 bg-[#f7f7f5]">
+                        <span class="sp-icon-bubble shrink-0" style="background:var(--sp-peach)">
+                            <x-student.figma-icon name="icon-wallet.svg" />
+                        </span>
+                        <h3 class="font-extrabold text-base m-0">{{ __('student.order_payment_receipt') }}</h3>
                     </div>
-                    <div class="p-6">
-                        <div class="text-center">
-                            <div class="inline-block p-2 bg-gray-50 rounded-xl border border-gray-200">
-                                @php
-                                    $fullPath = storage_path('app/public/' . $order->payment_proof);
-                                    $imageExists = file_exists($fullPath);
-                                    
-                                    $imageUrl = null;
-                                    if ($imageExists) {
-                                        // استخدام asset أولاً (الرابط الرمزي)
-                                        $imageUrl = asset('storage/' . $order->payment_proof);
-                                        // إذا كان الرابط الرمزي لا يعمل، استخدم route أو url
-                                        if (!file_exists(public_path('storage/' . $order->payment_proof))) {
-                                            try {
-                                                $imageUrl = route('storage.file', ['path' => $order->payment_proof]);
-                                            } catch (\Exception $e) {
-                                                $imageUrl = url('/storage/' . $order->payment_proof);
-                                            }
-                                        }
-                                    }
-                                @endphp
-                                @if($imageExists)
-                                <img src="{{ $imageUrl }}" 
-                                     alt="إيصال الدفع" 
-                                     class="max-w-full h-auto rounded-lg shadow-md cursor-pointer hover:shadow-xl transition-all duration-300"
+                    <div class="p-5 sm:p-6 text-center">
+                        @if($imageExists && $imageUrl)
+                            <div class="inline-block p-2 rounded-[20px] bg-[#f7f7f5] border border-black/5 max-w-full">
+                                <img src="{{ $imageUrl }}"
+                                     alt="{{ __('student.order_receipt_alt') }}"
+                                     class="sp-receipt-img max-w-full h-auto rounded-[16px]"
                                      onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';"
                                      onclick="openImageModal(this.src)">
-                                <div class="hidden p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                    <p class="text-sm text-yellow-800 flex items-center gap-2">
-                                        <i class="fas fa-exclamation-triangle"></i>
-                                        <span>الصورة غير متوفرة حالياً</span>
-                                    </p>
+                                <div class="hidden p-4 rounded-[16px] bg-[#f9f0d7] text-sm font-bold text-[#7a3b2e]">
+                                    {{ __('student.order_receipt_unavailable') }}
                                 </div>
-                                @else
-                                <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                    <p class="text-sm text-yellow-800 flex items-center gap-2">
-                                        <i class="fas fa-exclamation-triangle"></i>
-                                        <span>الصورة غير موجودة في الخادم</span>
-                                    </p>
-                                </div>
-                                @endif
                             </div>
-                            <p class="text-sm text-gray-500 mt-4 flex items-center justify-center gap-2">
-                                <i class="fas fa-info-circle"></i>
-                                اضغط على الصورة لعرضها بحجم أكبر
-                            </p>
-                        </div>
+                            <p class="text-xs font-bold text-[var(--sp-muted)] m-0 mt-3">{{ __('student.order_receipt_click_hint') }}</p>
+                        @else
+                            <div class="p-4 rounded-[16px] bg-[#f9f0d7] text-sm font-bold text-[#7a3b2e]">
+                                {{ __('student.order_receipt_missing') }}
+                            </div>
+                        @endif
                     </div>
-                </div>
+                </section>
             @endif
         </div>
 
-        <!-- حالة الطلب -->
-        <div class="lg:col-span-1">
-            <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden sticky top-8">
-                <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r 
-                    @if($order->status == 'pending') from-amber-50 to-yellow-50
-                    @elseif($order->status == 'approved') from-emerald-50 to-green-50
-                    @else from-rose-50 to-red-50
-                    @endif">
-                    <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-                        <i class="fas 
-                            @if($order->status == 'pending') fa-clock text-amber-600
-                            @elseif($order->status == 'approved') fa-check-circle text-emerald-600
-                            @else fa-times-circle text-rose-600
-                            @endif"></i>
-                        حالة الطلب
-                    </h2>
+        {{-- Sidebar --}}
+        <aside class="space-y-4 min-w-0 sp-order-show-sticky">
+            <section class="sp-card p-5 text-center">
+                <span class="sp-icon-bubble mx-auto mb-3 !w-16 !h-16" style="background:{{ $order->status === 'approved' ? 'var(--sp-mint)' : ($order->status === 'pending' ? 'var(--sp-amber-soft)' : 'var(--sp-peach)') }}">
+                    <x-student.figma-icon name="{{ $order->status === 'approved' ? 'icon-star.svg' : ($order->status === 'pending' ? 'icon-calendar.svg' : 'icon-settings.svg') }}" box="size-7" />
+                </span>
+                <p class="text-xs font-bold text-[var(--sp-muted)] m-0 uppercase tracking-wide">{{ __('student.order_status_title') }}</p>
+                <p class="text-xl font-extrabold m-0 mt-1">{{ $statusLabel }}</p>
+                @if($statusHint)
+                    <p class="text-sm text-[var(--sp-muted)] m-0 mt-2 leading-relaxed">{{ $statusHint }}</p>
+                @endif
+
+                @if($order->status === 'approved' && $order->course)
+                    <a href="{{ route('courses.show', $order->course) }}" class="sp-promo-btn !mt-4 w-full !text-[var(--sp-accent-text)]">
+                        {{ __('student.enter_course') }}
+                    </a>
+                @elseif($order->status === 'rejected' && $order->course)
+                    <a href="{{ route('courses.show', $order->course) }}" class="sp-promo-btn !mt-4 w-full !text-[var(--sp-accent-text)]">
+                        {{ __('student.order_submit_new') }}
+                    </a>
+                @endif
+            </section>
+
+            <section class="sp-card p-5 space-y-2">
+                <h3 class="sp-section-title mb-3">{{ __('student.order_summary') }}</h3>
+                <div class="flex items-center justify-between gap-3 rounded-[14px] bg-[#f7f7f5] px-3 py-2.5">
+                    <span class="text-sm font-bold text-[var(--sp-muted)]">{{ __('student.order_id_label') }}</span>
+                    <span class="text-sm font-extrabold">#{{ $order->id }}</span>
                 </div>
-                
-                <div class="p-6">
-                    <div class="text-center mb-6">
-                        <div class="w-20 h-20 mx-auto mb-4 rounded-xl flex items-center justify-center shadow-lg
-                            @if($order->status == 'pending') bg-amber-100
-                            @elseif($order->status == 'approved') bg-emerald-100
-                            @else bg-rose-100
-                            @endif">
-                            <i class="fas 
-                                @if($order->status == 'pending') fa-clock text-amber-600 text-3xl
-                                @elseif($order->status == 'approved') fa-check text-emerald-600 text-3xl
-                                @else fa-times text-rose-600 text-3xl
-                                @endif"></i>
-                        </div>
-                        
-                        <div class="text-xl font-bold mb-2
-                            @if($order->status == 'pending') text-amber-600
-                            @elseif($order->status == 'approved') text-emerald-600
-                            @else text-rose-600
-                            @endif">
-                            {{ $order->status_text }}
-                        </div>
-                        <p class="text-sm text-gray-500">
-                            @if($order->status == 'pending')
-                                جاري المراجعة
-                            @elseif($order->status == 'approved')
-                                تمت الموافقة
-                            @else
-                                تم الرفض
+                <div class="flex items-center justify-between gap-3 rounded-[14px] bg-[#f7f7f5] px-3 py-2.5">
+                    <span class="text-sm font-bold text-[var(--sp-muted)]">{{ __('student.amount_label') }}</span>
+                    <span class="text-sm font-extrabold">{{ number_format($order->amount, 2) }} {{ __('public.currency_egp') }}</span>
+                </div>
+                <div class="flex items-center justify-between gap-3 rounded-[14px] bg-[#f7f7f5] px-3 py-2.5">
+                    <span class="text-sm font-bold text-[var(--sp-muted)]">{{ __('student.payment_method_label') }}</span>
+                    <span class="text-sm font-extrabold">{{ $paymentLabel }}</span>
+                </div>
+            </section>
+
+            @if($order->approver)
+                <section class="sp-card p-5">
+                    <p class="text-xs font-bold text-[var(--sp-muted)] m-0 uppercase tracking-wide mb-3">{{ __('student.order_reviewed_by') }}</p>
+                    <div class="flex items-center gap-3">
+                        <span class="w-11 h-11 rounded-[14px] flex items-center justify-center font-extrabold text-[var(--sp-accent-text)] shrink-0" style="background:var(--sp-accent)">
+                            {{ mb_substr($order->approver->name ?? '?', 0, 1) }}
+                        </span>
+                        <div class="min-w-0">
+                            <p class="font-extrabold text-sm m-0 truncate">{{ $order->approver->name ?? __('student.order_unknown_reviewer') }}</p>
+                            @if($order->approved_at)
+                                <p class="text-xs font-bold text-[var(--sp-muted)] m-0 mt-0.5">{{ $order->approved_at->format('Y/m/d H:i') }}</p>
                             @endif
-                        </p>
+                        </div>
                     </div>
-
-                    @if($order->status == 'pending')
-                        <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-                            <p class="text-sm text-amber-800 flex items-start gap-2">
-                                <i class="fas fa-info-circle mt-0.5"></i>
-                                <span>طلبك قيد المراجعة من قبل الإدارة. سيتم الرد عليك قريباً.</span>
-                            </p>
-                        </div>
-                    @elseif($order->status == 'approved')
-                        <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-4">
-                            <p class="text-sm text-emerald-800 flex items-start gap-2">
-                                <i class="fas fa-check-circle mt-0.5"></i>
-                                <span>تمت الموافقة على طلبك! يمكنك الآن الدخول للكورس.</span>
-                            </p>
-                        </div>
-                        @if($order->course)
-                        <a href="{{ route('courses.show', $order->course) }}" 
-                           class="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white py-3 px-4 rounded-lg font-medium transition-colors text-center block shadow-lg shadow-emerald-500/30">
-                            <i class="fas fa-arrow-left ml-2"></i>
-                            ادخل للكورس
-                        </a>
-                        @endif
-                    @else
-                        <div class="bg-rose-50 border border-rose-200 rounded-lg p-4 mb-4">
-                            <p class="text-sm text-rose-800 flex items-start gap-2">
-                                <i class="fas fa-exclamation-circle mt-0.5"></i>
-                                <span>تم رفض طلبك. يمكنك تقديم طلب جديد أو التواصل مع الإدارة.</span>
-                            </p>
-                        </div>
-                        @if($order->course)
-                        <a href="{{ route('courses.show', $order->course) }}" 
-                           class="w-full bg-gradient-to-r from-sky-600 to-sky-700 hover:from-sky-700 hover:to-sky-800 text-white py-3 px-4 rounded-lg font-medium transition-colors text-center block shadow-lg shadow-sky-500/30">
-                            <i class="fas fa-redo ml-2"></i>
-                            تقديم طلب جديد
-                        </a>
-                        @endif
-                    @endif
-
-                    @if($order->approver)
-                        <div class="mt-6 pt-6 border-t border-gray-200">
-                            <p class="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">تمت المراجعة بواسطة:</p>
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-gradient-to-br from-sky-500 to-sky-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
-                                    {{ substr($order->approver->name ?? 'غير محدد', 0, 1) }}
-                                </div>
-                                <div>
-                                    <p class="font-bold text-gray-900">{{ $order->approver->name ?? 'غير محدد' }}</p>
-                                    @if($order->approved_at)
-                                        <p class="text-xs text-gray-500">{{ $order->approved_at->format('d/m/Y - H:i') }}</p>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                    @endif
-                </div>
-            </div>
-        </div>
+                </section>
+            @endif
+        </aside>
     </div>
 </div>
 
-<!-- Modal لعرض الصورة -->
-<div id="imageModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden items-center justify-center z-50" onclick="closeImageModal()">
-    <div class="max-w-5xl max-h-[90vh] p-4 relative">
-        <button onclick="closeImageModal()" class="absolute -top-12 left-0 text-white hover:text-gray-300 text-3xl font-bold transition-colors">
-            <i class="fas fa-times-circle"></i>
+<div id="imageModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden items-center justify-center z-50 p-4" onclick="closeImageModal()">
+    <div class="max-w-5xl max-h-[90vh] relative" onclick="event.stopPropagation()">
+        <button type="button" onclick="closeImageModal()" class="absolute -top-10 end-0 text-white hover:text-white/70 text-sm font-extrabold">
+            {{ __('common.close') }}
         </button>
-        <img id="modalImage" src="" alt="إيصال الدفع" class="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl">
+        <img id="modalImage" src="" alt="{{ __('student.order_receipt_alt') }}" class="max-w-full max-h-[90vh] object-contain rounded-[20px] shadow-2xl mx-auto">
     </div>
 </div>
+@endsection
 
+@push('scripts')
 <script>
 function openImageModal(src) {
     document.getElementById('modalImage').src = src;
-    document.getElementById('imageModal').classList.remove('hidden');
-    document.getElementById('imageModal').classList.add('flex');
+    const modal = document.getElementById('imageModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
     document.body.style.overflow = 'hidden';
 }
-
 function closeImageModal() {
-    document.getElementById('imageModal').classList.add('hidden');
-    document.getElementById('imageModal').classList.remove('flex');
+    const modal = document.getElementById('imageModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
     document.body.style.overflow = 'auto';
 }
-
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeImageModal();
-    }
+    if (e.key === 'Escape') closeImageModal();
 });
 </script>
-@endsection
+@endpush

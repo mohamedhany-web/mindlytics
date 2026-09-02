@@ -496,6 +496,10 @@ function courseFocusMode() {
                         ? root.querySelector('.curriculum-item[data-item-type="' + type + '"][data-item-id="' + id + '"]')
                         : document.querySelector('.curriculum-item[data-item-type="' + type + '"][data-item-id="' + id + '"]');
                     if (el) {
+                        // لا نُعيد قفل عنصر فُتح بالفعل في هذه الجلسة
+                        if (locked && el.dataset.itemLocked === '0') {
+                            return;
+                        }
                         el.dataset.itemLocked = locked ? '1' : '0';
                         el.classList.toggle('locked', locked);
                         if (!locked && typeof window.learnSidebarUnlockItem === 'function') {
@@ -504,6 +508,9 @@ function courseFocusMode() {
                     }
                     const panel = document.querySelector('.learn-curriculum-panel[data-panel-type="' + type + '"][data-panel-id="' + id + '"]');
                     if (panel) {
+                        if (locked && panel.dataset.panelLocked === '0') {
+                            return;
+                        }
                         panel.dataset.panelLocked = locked ? '1' : '0';
                         if (!locked) {
                             const overlay = document.querySelector('[data-panel-lock-overlay="' + type + '-' + id + '"]');
@@ -613,9 +620,21 @@ function courseFocusMode() {
         },
         async loadLecture(lectureId, options) {
             options = options || {};
-            if (typeof window.__learnActiveLecturePlayerCleanup === 'function') {
-                try { window.__learnActiveLecturePlayerCleanup(); } catch (e) {}
+            const lectureKey = String(lectureId);
+
+            // منع الفتح المتكرر لنفس المحاضرة / منع السباق أثناء التحميل
+            if (!options.force && !options.autoAdvance && String(this.selectedLecture) === lectureKey && this.showVideoPlayer) {
+                if (typeof this.syncActivePanel === 'function') {
+                    this.syncActivePanel('lecture', lectureId, this.activeLessonTitle || '');
+                }
+                return;
             }
+            if (this._loadLectureLock === lectureKey && !options.force && !options.autoAdvance) {
+                return;
+            }
+            this._loadLectureLock = lectureKey;
+
+            try {
             if (window._autoplayCancel) window._autoplayCancel();
             this.lectureVideoEndedThisClip = false;
             this.lessonVideoEndedThisClip = false;
@@ -625,8 +644,21 @@ function courseFocusMode() {
             this.selectedLesson = null;
             this.selectedPattern = null;
             this.currentLessonId = null;
-            this.showVideoPlayer = false;
-            this.currentLessonVideoUrl = null;
+            // أظهر بطاقة الفيديو فوراً لتقليل القفز/الرعشة أثناء الجلب
+            this.showVideoPlayer = true;
+            // لا تُخفِ بطاقة الفيديو (false→true = رعشة). صفّر/نظّف فقط عند تبديل محاضرة
+            const switching = String(this._activeLecturePlaybackKey || '').split('|')[0] !== lectureKey;
+            if (switching) {
+                if (typeof window.__learnActiveLecturePlayerCleanup === 'function') {
+                    try { window.__learnActiveLecturePlayerCleanup(); } catch (e) {}
+                }
+                this._activeLecturePlaybackKey = null;
+                this.currentLessonVideoUrl = null;
+                const mount = document.getElementById('learn-video-embed');
+                if (mount) {
+                    mount.innerHTML = '<div class="flex items-center justify-center h-full text-white/70 text-sm font-bold"><i class="fas fa-spinner fa-spin me-2"></i></div>';
+                }
+            }
             this.lectureMaterials = [];
             
             const lectures = this.lecturesData || {};
@@ -660,6 +692,7 @@ function courseFocusMode() {
             }
             
             if (!lecture) {
+                this.showVideoPlayer = false;
                 this.lectureContent = '<div class="text-center text-red-600 p-8"><i class="fas fa-exclamation-circle text-4xl mb-4"></i><p class="text-xl font-bold">المحاضرة غير موجودة</p><p class="text-sm mt-2">ID: ' + lectureId + '</p></div>';
                 return;
             }
@@ -709,58 +742,66 @@ function courseFocusMode() {
                 if (canControl && courseId) {
                     let lecturePlayerInitDone = false;
                     const playbackKey = String(lectureId) + '|' + url;
+                    const self = this;
                     const initLecturePlayer = () => {
                         if (lecturePlayerInitDone) return true;
+                        if (String(self.selectedLecture) !== lectureKey) return true;
                         const container = document.getElementById('learn-video-embed');
                         if (!container || typeof window.initLectureVideoWithQuestions !== 'function') return false;
-                        const replayRequested = this.startLectureFromBeginning === true;
-                        const existingIframe = document.getElementById('lecture-yt-player-box')?.querySelector('iframe');
-                        if (!replayRequested && this._activeLecturePlaybackKey === playbackKey && existingIframe) {
+                        const replayRequested = self.startLectureFromBeginning === true;
+                        const existingIframe = container.querySelector('#lecture-yt-player-box iframe, iframe');
+                        if (!replayRequested && self._activeLecturePlaybackKey === playbackKey && existingIframe) {
                             lecturePlayerInitDone = true;
                             return true;
                         }
-                        this._activeLecturePlaybackKey = playbackKey;
+                        self._activeLecturePlaybackKey = playbackKey;
                         lecturePlayerInitDone = true;
                         container.innerHTML = '';
                         window.initLectureVideoWithQuestions(container, lecture, platform, url, courseId, lectureId);
                         return true;
                     };
                     await this.$nextTick();
-                    requestAnimationFrame(function() { initLecturePlayer(); });
-                    setTimeout(function() {
-                        var c = document.getElementById('learn-video-embed');
-                        if (!lecturePlayerInitDone && c && !c.querySelector('#lecture-yt-player-box')) {
-                            initLecturePlayer();
-                        }
-                    }, 350);
-                    [700, 1200, 2000, 3500].forEach(function(ms) {
-                        setTimeout(function() {
-                            if (!lecturePlayerInitDone) initLecturePlayer();
-                        }, ms);
-                    });
+                    if (!initLecturePlayer()) {
+                        // محاولة واحدة فقط إن لم يكن الـ mount جاهزاً بعد (بدل رشّة timeouts)
+                        setTimeout(function() { initLecturePlayer(); }, 120);
+                        setTimeout(function() { initLecturePlayer(); }, 400);
+                    }
                 } else {
                     const embedHtml = this.buildLectureVideoEmbedHtml(url, platform);
+                    const playbackKey = String(lectureId) + '|' + url;
+                    if (this._activeLecturePlaybackKey === playbackKey && document.querySelector('#learn-video-embed iframe, #learn-video-embed video')) {
+                        this.trackLectureProgress(lectureId);
+                        return;
+                    }
+                    this._activeLecturePlaybackKey = playbackKey;
                     const inject = () => {
+                        if (String(this.selectedLecture) !== lectureKey) return;
                         const container = document.getElementById('learn-video-embed');
-                        if (container && embedHtml) container.innerHTML = embedHtml;
-                        else if (container) container.innerHTML = '<div class="flex items-center justify-center text-white h-full min-h-[200px]"><p>لا يمكن عرض الفيديو</p></div>';
-                        if (container && platform === 'direct') {
+                        if (!container) return;
+                        if (embedHtml) container.innerHTML = embedHtml;
+                        else container.innerHTML = '<div class="flex items-center justify-center text-white h-full min-h-[200px]"><p>لا يمكن عرض الفيديو</p></div>';
+                        if (platform === 'direct') {
                             const vid = container.querySelector('video');
-                            if (vid) {
+                            if (vid && !vid.dataset.endedBound) {
+                                vid.dataset.endedBound = '1';
                                 vid.addEventListener('ended', function onLectureDirectEnded() {
                                     window.dispatchEvent(new CustomEvent('learn-video-ended', { detail: { lectureId: lectureId } }));
                                 });
                             }
                         }
                     };
-                    this.$nextTick(inject);
-                    setTimeout(inject, 50);
-                    setTimeout(inject, 200);
-                    setTimeout(inject, 500);
+                    await this.$nextTick();
+                    inject();
+                    if (!document.querySelector('#learn-video-embed iframe, #learn-video-embed video')) {
+                        setTimeout(inject, 150);
+                    }
                 }
                 this.trackLectureProgress(lectureId);
                 return;
             }
+
+            this.showVideoPlayer = false;
+            this.currentLessonVideoUrl = null;
             
             // بناء محتوى HTML (بدون فيديو)
             let html = '<div class="lecture-viewer space-y-6 w-full">';
@@ -791,6 +832,9 @@ function courseFocusMode() {
             
             html += '</div>';
             this.lectureContent = html;
+            } finally {
+                if (this._loadLectureLock === lectureKey) this._loadLectureLock = null;
+            }
         },
         loadAssignment(assignmentId) {
             this.lectureVideoEndedThisClip = false;
@@ -1636,13 +1680,14 @@ function videoPlayer() {
             if (data.is_completed || (typeof data.progress_percent === 'number' && data.progress_percent >= minPercentToUnlock)) {
                 markCurrentLectureCompletedInSidebar();
             }
-            var comp = window.__learnPageComponent;
-            if (comp && typeof comp.refreshSidebarLocks === 'function') {
-                comp.refreshSidebarLocks();
-            }
             var reachedUnlockThreshold = data.is_completed || (typeof data.progress_percent === 'number' && data.progress_percent >= minPercentToUnlock);
             if (reachedUnlockThreshold) {
                 unlockNextLectureInSidebar(lectureId);
+            } else {
+                var comp = window.__learnPageComponent;
+                if (comp && typeof comp.refreshSidebarLocks === 'function') {
+                    comp.refreshSidebarLocks();
+                }
             }
         }
         function unlockNextLectureInSidebar(lid) {
@@ -2162,6 +2207,8 @@ function videoPlayer() {
             if (!videoId) { container.innerHTML = '<div class="flex items-center justify-center text-white h-full"><p>رابط يوتيوب غير صالح</p></div>'; return; }
             function createYT() {
                 if (player) return;
+                var box = document.getElementById('lecture-yt-player-box');
+                if (!box) return;
                 player = new YT.Player('lecture-yt-player-box', {
                     videoId: videoId,
                     width: '100%',
@@ -2178,17 +2225,31 @@ function videoPlayer() {
                     }
                 });
             }
-            if (window.YT && window.YT.Player) {
-                createYT();
-            } else {
+            function queueYtReady(fn) {
+                window.__learnYtReadyQueue = window.__learnYtReadyQueue || [];
+                if (window.YT && window.YT.Player) {
+                    fn();
+                    return;
+                }
+                window.__learnYtReadyQueue.push(fn);
+                var prev = window.onYouTubeIframeAPIReady;
                 window.onYouTubeIframeAPIReady = function() {
-                    createYT();
+                    if (typeof prev === 'function') {
+                        try { prev(); } catch (e) {}
+                    }
+                    var q = window.__learnYtReadyQueue || [];
+                    window.__learnYtReadyQueue = [];
+                    q.forEach(function(cb) { try { cb(); } catch (e) {} });
                 };
-                var tag = document.createElement('script');
-                tag.src = 'https://www.youtube.com/iframe_api';
-                var first = document.getElementsByTagName('script')[0];
-                first.parentNode.insertBefore(tag, first);
+                if (!window.__learnYtApiRequested) {
+                    window.__learnYtApiRequested = true;
+                    var tag = document.createElement('script');
+                    tag.src = 'https://www.youtube.com/iframe_api';
+                    var first = document.getElementsByTagName('script')[0];
+                    first.parentNode.insertBefore(tag, first);
+                }
             }
+            queueYtReady(createYT);
         } else if (platform === 'vimeo') {
             var vimeoId = getVimeoVideoId(url);
             if (!vimeoId) { container.innerHTML = '<div class="flex items-center justify-center text-white h-full"><p>رابط فيميوه غير صالح</p></div>'; return; }

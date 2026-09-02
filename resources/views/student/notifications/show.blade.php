@@ -1,313 +1,176 @@
-@extends('layouts.app')
+@extends('layouts.student-dashboard')
 
 @section('title', $notification->title)
 @section('header', __('student.notification_details'))
 
 @section('content')
-<div class="space-y-6">
-    <!-- الهيدر -->
-    <div class="flex items-center justify-between">
-        <div>
-            <nav class="text-sm text-gray-500 mb-2">
-                <a href="{{ route('dashboard') }}" class="hover:text-primary-600">{{ __('student.dashboard') }}</a>
-                <span class="mx-2">/</span>
-                <a href="{{ route('notifications') }}" class="hover:text-primary-600">{{ __('student.notifications') }}</a>
-                <span class="mx-2">/</span>
-                <span>{{ $notification->title }}</span>
-            </nav>
-        </div>
-        <a href="{{ route('notifications') }}" 
-           class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-            <i class="fas fa-arrow-right ml-2"></i>
-            {{ __('student.back_to_notifications') }}
-        </a>
-    </div>
+<div class="space-y-5 max-w-5xl">
+    <nav class="flex flex-wrap items-center gap-2 text-sm font-bold text-[var(--sp-muted)]">
+        <a href="{{ route('notifications') }}" class="sp-link">{{ __('student.notifications') }}</a>
+        <x-student.figma-icon name="icon-chevron.svg" box="size-3" class="opacity-40 rtl:rotate-180" />
+        <span class="text-[var(--sp-text)] truncate max-w-[60vw]">{{ $notification->title }}</span>
+    </nav>
 
-    <!-- محتوى الإشعار -->
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <!-- المحتوى الرئيسي -->
-        <div class="xl:col-span-2">
-            <div class="bg-white shadow-sm rounded-lg border border-gray-200">
-                <!-- هيدر الإشعار -->
-                <div class="px-6 py-4 border-b border-gray-200">
-                    <div class="flex items-center space-x-4 space-x-reverse">
-                        <!-- أيقونة النوع -->
-                        <div class="w-12 h-12 rounded-full flex items-center justify-center
-                            @if($notification->type_color == 'blue') bg-blue-100
-                            @elseif($notification->type_color == 'green') bg-green-100
-                            @elseif($notification->type_color == 'yellow') bg-yellow-100
-                            @elseif($notification->type_color == 'red') bg-red-100
-                            @elseif($notification->type_color == 'purple') bg-purple-100
-                            @elseif($notification->type_color == 'orange') bg-orange-100
-                            @else bg-gray-100
-                            @endif">
-                            <i class="{{ $notification->type_icon }} 
-                                @if($notification->type_color == 'blue') text-blue-600
-                                @elseif($notification->type_color == 'green') text-green-600
-                                @elseif($notification->type_color == 'yellow') text-yellow-600
-                                @elseif($notification->type_color == 'red') text-red-600
-                                @elseif($notification->type_color == 'purple') text-purple-600
-                                @elseif($notification->type_color == 'orange') text-orange-600
-                                @else text-gray-600
-                                @endif text-xl"></i>
-                        </div>
-
-                        <!-- العنوان والحالة -->
-                        <div class="flex-1">
-                            <h1 class="text-2xl font-bold text-gray-900">{{ $notification->title }}</h1>
-                            <div class="flex items-center gap-3 mt-2">
-                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
-                                    @if($notification->type_color == 'blue') bg-blue-100 text-blue-800
-                                    @elseif($notification->type_color == 'green') bg-green-100 text-green-800
-                                    @elseif($notification->type_color == 'yellow') bg-yellow-100 text-yellow-800
-                                    @elseif($notification->type_color == 'red') bg-red-100 text-red-800
-                                    @elseif($notification->type_color == 'purple') bg-purple-100 text-purple-800
-                                    @elseif($notification->type_color == 'orange') bg-orange-100 text-orange-800
-                                    @else bg-gray-100 text-gray-800
-                                    @endif">
-                                    {{ \App\Models\Notification::getTypes()[$notification->type] ?? $notification->type }}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div class="lg:col-span-2 space-y-5">
+            <section class="sp-card p-5 sm:p-6 space-y-4">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="flex items-start gap-4 min-w-0">
+                        <x-student.notif-icon :type="$notification->type" box="size-7" class="!w-14 !h-14" />
+                        <div class="min-w-0">
+                            <h2 class="sp-section-title m-0">{{ $notification->title }}</h2>
+                            <div class="flex flex-wrap items-center gap-2 mt-2">
+                                <span class="sp-pill sp-pill--progress">
+                                    {{ $notificationTypes[$notification->type] ?? $notification->type }}
                                 </span>
-
                                 @if($notification->priority !== 'normal')
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
-                                        @if($notification->priority_color == 'red') bg-red-100 text-red-800
-                                        @elseif($notification->priority_color == 'yellow') bg-yellow-100 text-yellow-800
-                                        @else bg-gray-100 text-gray-800
-                                        @endif">
-                                        {{ \App\Models\Notification::getPriorities()[$notification->priority] ?? $notification->priority }}
+                                    <span class="sp-pill {{ $notification->priority === 'urgent' ? 'sp-pill--upcoming' : 'sp-pill--done' }}">
+                                        {{ $priorities[$notification->priority] ?? $notification->priority }}
                                     </span>
                                 @endif
-
                                 @if($notification->is_read)
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
-                                        <i class="fas fa-check ml-1"></i>
-                                        مقروء
-                                    </span>
+                                    <span class="sp-pill sp-pill--done">{{ __('student.read_filter') }}</span>
                                 @else
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                                        <i class="fas fa-circle text-xs ml-1"></i>
-                                        جديد
-                                    </span>
+                                    <span class="sp-pill sp-pill--upcoming">{{ __('student.new_notifications') }}</span>
                                 @endif
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <!-- محتوى الإشعار -->
-                <div class="p-6">
-                    <div class="prose max-w-none">
-                        <div class="text-gray-900 text-lg leading-relaxed whitespace-pre-wrap">{{ $notification->message }}</div>
-                    </div>
-
-                    <!-- زر الإجراء -->
-                    @if($notification->action_url && $notification->action_text)
-                        <div class="mt-8 p-6 bg-primary-50 border border-primary-200 rounded-lg">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <h4 class="font-medium text-primary-900 mb-1">إجراء مطلوب</h4>
-                                    <p class="text-sm text-primary-700">انقر على الزر للمتابعة</p>
-                                </div>
-                                <a href="{{ route('notifications.go', $notification) }}" 
-                                   class="inline-flex items-center px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors">
-                                    {{ $notification->action_text }}
-                                    <i class="fas fa-external-link-alt mr-2"></i>
-                                </a>
-                            </div>
-                        </div>
-                    @endif
-
-                    <!-- بيانات إضافية -->
-                    @if($notification->data)
-                        <div class="mt-6 p-4 bg-gray-50 rounded-lg">
-                            <h4 class="font-medium text-gray-900 mb-2">معلومات إضافية</h4>
-                            <div class="text-sm text-gray-600">
-                                @foreach($notification->data as $key => $value)
-                                    <div class="flex items-center justify-between py-1">
-                                        <span class="font-medium">{{ ucfirst($key) }}:</span>
-                                        <span>{{ is_array($value) ? json_encode($value) : $value }}</span>
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endif
-                </div>
-            </div>
-        </div>
-
-        <!-- الشريط الجانبي -->
-        <div class="space-y-6">
-            <!-- معلومات الإشعار -->
-            <div class="bg-white shadow-sm rounded-lg border border-gray-200">
-                <div class="px-6 py-4 border-b border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-900">معلومات الإشعار</h3>
-                </div>
-                <div class="p-6 space-y-4">
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm font-medium text-gray-500">المرسل</span>
-                        <span class="text-sm text-gray-900">{{ $notification->sender->name ?? 'النظام' }}</span>
-                    </div>
-                    
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm font-medium text-gray-500">تاريخ الإرسال</span>
-                        <span class="text-sm text-gray-900">{{ $notification->created_at->format('Y-m-d H:i') }}</span>
-                    </div>
-                    
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm font-medium text-gray-500">تاريخ القراءة</span>
-                        <span class="text-sm text-gray-900">
-                            {{ $notification->read_at ? $notification->read_at->format('Y-m-d H:i') : 'لم يُقرأ بعد' }}
-                        </span>
-                    </div>
-
-                    @if($notification->expires_at)
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm font-medium text-gray-500">ينتهي في</span>
-                            <span class="text-sm {{ $notification->isExpired() ? 'text-red-600' : 'text-gray-900' }}">
-                                {{ $notification->expires_at->format('Y-m-d H:i') }}
-                            </span>
-                        </div>
-                    @endif
-
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm font-medium text-gray-500">الحالة</span>
-                        <span class="text-sm font-medium {{ $notification->is_read ? 'text-green-600' : 'text-blue-600' }}">
-                            {{ $notification->is_read ? 'مقروء' : 'جديد' }}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- إجراءات -->
-            <div class="bg-white shadow-sm rounded-lg border border-gray-200">
-                <div class="px-6 py-4 border-b border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-900">إجراءات</h3>
-                </div>
-                <div class="p-6 space-y-3">
-                    @if(!$notification->is_read)
-                        <button onclick="markAsRead()" 
-                                class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                            <i class="fas fa-check ml-2"></i>
-                            تحديد كمقروء
-                        </button>
-                    @endif
-                    
-                    <button onclick="deleteNotification()" 
-                            class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                        <i class="fas fa-trash ml-2"></i>
-                        حذف الإشعار
-                    </button>
-                    
-                    <a href="{{ route('notifications') }}" 
-                       class="w-full bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors block text-center">
-                        <i class="fas fa-list ml-2"></i>
-                        جميع الإشعارات
+                    <a href="{{ route('notifications') }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-[30px] px-4 py-2.5 text-sm font-extrabold bg-[#f7f7f5] text-[var(--sp-accent-text)] hover:bg-[var(--sp-accent)] transition-colors shrink-0">
+                        <x-student.figma-icon name="icon-chevron.svg" box="size-3.5" class="rtl:rotate-180" />
+                        {{ __('student.back_to_notifications') }}
                     </a>
                 </div>
-            </div>
 
-            <!-- إشعارات أخرى -->
-            @php
-                $otherNotifications = auth()->user()->customNotifications()
-                                                 ->where(function ($q) { $q->whereNull('audience')->orWhere('audience', 'student'); })
-                                                 ->where('id', '!=', $notification->id)
-                                                 ->valid()
-                                                 ->orderBy('created_at', 'desc')
-                                                 ->take(5)
-                                                 ->get();
-            @endphp
+                <div class="text-sm sm:text-base text-[var(--sp-text)] leading-relaxed whitespace-pre-wrap">{{ $notification->message }}</div>
 
-            @if($otherNotifications->count() > 0)
-                <div class="bg-white shadow-sm rounded-lg border border-gray-200">
-                    <div class="px-6 py-4 border-b border-gray-200">
-                        <h3 class="text-lg font-semibold text-gray-900">إشعارات أخرى</h3>
-                    </div>
-                    <div class="p-6">
-                        <div class="space-y-3">
-                            @foreach($otherNotifications as $other)
-                                <a href="{{ route('notifications.show', $other) }}" 
-                                   class="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                    <div class="flex items-center space-x-3 space-x-reverse">
-                                        <div class="w-8 h-8 rounded-full flex items-center justify-center
-                                            @if($other->type_color == 'blue') bg-blue-100
-                                            @elseif($other->type_color == 'green') bg-green-100
-                                            @elseif($other->type_color == 'yellow') bg-yellow-100
-                                            @elseif($other->type_color == 'red') bg-red-100
-                                            @elseif($other->type_color == 'purple') bg-purple-100
-                                            @elseif($other->type_color == 'orange') bg-orange-100
-                                            @else bg-gray-100
-                                            @endif">
-                                            <i class="{{ $other->type_icon }} text-sm
-                                                @if($other->type_color == 'blue') text-blue-600
-                                                @elseif($other->type_color == 'green') text-green-600
-                                                @elseif($other->type_color == 'yellow') text-yellow-600
-                                                @elseif($other->type_color == 'red') text-red-600
-                                                @elseif($other->type_color == 'purple') text-purple-600
-                                                @elseif($other->type_color == 'orange') text-orange-600
-                                                @else text-gray-600
-                                                @endif"></i>
-                                        </div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-2">
-                                                <p class="text-sm font-medium text-gray-900 truncate">{{ $other->title }}</p>
-                                                @if(!$other->is_read)
-                                                    <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                                @endif
-                                            </div>
-                                            <p class="text-xs text-gray-500 mt-1">{{ $other->created_at->diffForHumans() }}</p>
-                                        </div>
-                                    </div>
-                                </a>
-                            @endforeach
+                @if($notification->action_url && $notification->action_text)
+                    <div class="rounded-[20px] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" style="background:var(--sp-mint)">
+                        <div>
+                            <p class="font-extrabold text-sm m-0 text-[var(--sp-accent-text)]">{{ __('student.notif_action_required') }}</p>
+                            <p class="text-xs text-[var(--sp-accent-text)] m-0 mt-1 opacity-80">{{ __('student.notif_action_hint') }}</p>
                         </div>
+                        <a href="{{ route('notifications.go', $notification) }}" class="sp-promo-btn !mt-0 shrink-0">
+                            {{ $notification->action_text }}
+                        </a>
                     </div>
-                </div>
-            @endif
+                @endif
+
+                @if($notification->data)
+                    <div class="rounded-[16px] bg-[#f7f7f5] p-4">
+                        <p class="text-xs font-bold text-[var(--sp-muted)] m-0 mb-2">{{ __('student.notif_extra_data') }}</p>
+                        <dl class="space-y-2 m-0">
+                            @foreach($notification->data as $key => $value)
+                                <div class="flex flex-wrap items-start justify-between gap-2 text-sm">
+                                    <dt class="font-bold text-[var(--sp-muted)]">{{ ucfirst($key) }}</dt>
+                                    <dd class="m-0 text-[var(--sp-text)] text-start">{{ is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE) : $value }}</dd>
+                                </div>
+                            @endforeach
+                        </dl>
+                    </div>
+                @endif
+            </section>
         </div>
+
+        <aside class="space-y-4">
+            <section class="sp-card p-5 space-y-3">
+                <h3 class="font-extrabold text-sm m-0">{{ __('student.notif_meta_section') }}</h3>
+                <dl class="space-y-3 m-0 text-sm">
+                    <div class="flex items-center justify-between gap-3">
+                        <dt class="font-bold text-[var(--sp-muted)]">{{ __('student.notif_sender') }}</dt>
+                        <dd class="m-0 font-extrabold text-end">{{ $notification->sender->name ?? __('student.notif_from_system') }}</dd>
+                    </div>
+                    <div class="flex items-center justify-between gap-3">
+                        <dt class="font-bold text-[var(--sp-muted)]">{{ __('student.notif_sent_at') }}</dt>
+                        <dd class="m-0 font-extrabold text-end">{{ $notification->created_at->format('Y/m/d H:i') }}</dd>
+                    </div>
+                    <div class="flex items-center justify-between gap-3">
+                        <dt class="font-bold text-[var(--sp-muted)]">{{ __('student.notif_read_at') }}</dt>
+                        <dd class="m-0 font-extrabold text-end">
+                            {{ $notification->read_at ? $notification->read_at->format('Y/m/d H:i') : __('student.notif_not_read_yet') }}
+                        </dd>
+                    </div>
+                    @if($notification->expires_at)
+                        <div class="flex items-center justify-between gap-3">
+                            <dt class="font-bold text-[var(--sp-muted)]">{{ __('student.notif_expires_at') }}</dt>
+                            <dd class="m-0 font-extrabold text-end {{ $notification->isExpired() ? 'text-[#b45309]' : '' }}">
+                                {{ $notification->expires_at->format('Y/m/d H:i') }}
+                            </dd>
+                        </div>
+                    @endif
+                    <div class="flex items-center justify-between gap-3">
+                        <dt class="font-bold text-[var(--sp-muted)]">{{ __('student.notif_status') }}</dt>
+                        <dd class="m-0">
+                            @if($notification->is_read)
+                                <span class="sp-pill sp-pill--done">{{ __('student.read_filter') }}</span>
+                            @else
+                                <span class="sp-pill sp-pill--upcoming">{{ __('student.unread_label') }}</span>
+                            @endif
+                        </dd>
+                    </div>
+                </dl>
+            </section>
+
+            <section class="sp-card p-5 space-y-2">
+                <h3 class="font-extrabold text-sm m-0 mb-1">{{ __('student.notif_actions') }}</h3>
+                @if(!$notification->is_read)
+                    <button type="button" onclick="markAsRead()" class="sp-promo-btn !mt-0 w-full border-0 cursor-pointer">
+                        {{ __('student.notif_mark_read') }}
+                    </button>
+                @endif
+                <button type="button"
+                        onclick="deleteNotification()"
+                        class="w-full inline-flex items-center justify-center rounded-[30px] px-4 py-2.5 text-sm font-extrabold bg-[#f7f7f5] text-[#b45309] hover:bg-[#f9e4d7] border-0 cursor-pointer">
+                    {{ __('student.notif_delete') }}
+                </button>
+                <a href="{{ route('notifications') }}"
+                   class="w-full inline-flex items-center justify-center rounded-[30px] px-4 py-2.5 text-sm font-extrabold bg-[#f7f7f5] text-[var(--sp-accent-text)] hover:bg-[var(--sp-accent)] transition-colors">
+                    {{ __('student.notifications') }}
+                </a>
+            </section>
+
+            @if($otherNotifications->isNotEmpty())
+                <section class="sp-card p-5 space-y-3">
+                    <h3 class="font-extrabold text-sm m-0">{{ __('student.notif_other') }}</h3>
+                    <div class="space-y-2">
+                        @foreach($otherNotifications as $other)
+                            <a href="{{ route('notifications.show', $other) }}" class="sp-process-row !p-3">
+                                <x-student.notif-icon :type="$other->type" box="size-4" class="!w-9 !h-9" />
+                                <span class="flex-1 min-w-0">
+                                    <span class="block font-extrabold text-sm truncate">{{ $other->title }}</span>
+                                    <span class="block text-xs mt-0.5 text-[var(--sp-muted)]">{{ $other->created_at->diffForHumans() }}</span>
+                                </span>
+                                @if(!$other->is_read)
+                                    <span class="size-2 rounded-full bg-[var(--sp-accent)] shrink-0"></span>
+                                @endif
+                            </a>
+                        @endforeach
+                    </div>
+                </section>
+            @endif
+        </aside>
     </div>
 </div>
+@endsection
 
 @push('scripts')
 <script>
 function markAsRead() {
-    fetch(`{{ route('notifications.mark-read', $notification) }}`, {
+    fetch(@json(route('notifications.mark-read', $notification)), {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-    });
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+    }).then(r => r.json()).then(data => { if (data.success) location.reload(); }).catch(() => {});
 }
 
 function deleteNotification() {
-    if (confirm('هل تريد حذف هذا الإشعار؟')) {
-        fetch(`{{ route('notifications.destroy', $notification) }}`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                window.location.href = '{{ route("notifications") }}';
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-    }
+    if (!confirm(@json(__('student.notif_confirm_delete')))) return;
+    fetch(@json(route('notifications.destroy', $notification)), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+    }).then(r => r.json()).then(data => {
+        if (data.success) window.location.href = @json(route('notifications'));
+    }).catch(() => {});
 }
 </script>
 @endpush
-@endsection

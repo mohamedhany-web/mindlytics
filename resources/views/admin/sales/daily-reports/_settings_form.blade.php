@@ -114,12 +114,6 @@
                             @endforeach
                         </select>
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">سريان الخصم اعتباراً من</label>
-                        <input type="date" name="penalty_effective_from"
-                               value="{{ old('penalty_effective_from', $s['penalty_effective_from'] ?? '') }}" class="{{ $penaltyInputClass }}">
-                        <p class="text-[11px] text-slate-500 mt-1">اتركه فارغاً للاعتماد على تاريخ تعيين كل موظف. لن يُحتسب أي خصم قبل هذا التاريخ.</p>
-                    </div>
                 </div>
             </div>
         </section>
@@ -218,12 +212,6 @@
                             <option value="{{ $val }}" @selected(old('penalty_type', $s['penalty_type'] ?? 'penalty') === $val)>{{ $label }}</option>
                         @endforeach
                     </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1">سريان الخصم اعتباراً من</label>
-                    <input type="date" name="penalty_effective_from"
-                           value="{{ old('penalty_effective_from', $s['penalty_effective_from'] ?? '') }}" class="{{ $penaltyInputClass }}">
-                    <p class="text-[11px] text-slate-500 mt-1">اتركه فارغاً للاعتماد على تاريخ تعيين كل موظف. لن يُحتسب أي خصم قبل هذا التاريخ.</p>
                 </div>
             </div>
         </div>

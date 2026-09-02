@@ -1,35 +1,31 @@
-@extends('layouts.app')
+@extends('layouts.student-dashboard')
 
+@section('immersive', 'true')
 @section('title', $lesson->title)
 @section('header', $lesson->title)
 @section('enable-content-protection', 'true')
 
 @section('content')
-<div class="min-h-screen bg-black">
-    <!-- شريط التحكم العلوي -->
-    <div class="bg-gray-900 text-white px-6 py-3 flex items-center justify-between">
-        <div class="flex items-center space-x-4 space-x-reverse">
-            <button onclick="exitLesson()" 
-                    class="text-gray-400 hover:text-white transition-colors">
-                <i class="fas fa-times text-xl"></i>
+<div class="min-h-screen bg-[#0c0b14]">
+    <div class="sticky top-0 z-40 px-4 sm:px-6 py-3 flex items-center justify-between gap-3 border-b border-white/10" style="background:rgba(31,30,49,0.96);backdrop-filter:blur(12px);font-family:var(--sp-font)">
+        <div class="flex items-center gap-3 min-w-0">
+            <button type="button" onclick="exitLesson()" class="size-10 rounded-xl bg-white/10 hover:bg-[var(--sp-accent)] hover:text-[var(--sp-accent-text)] text-white/80 transition flex items-center justify-center shrink-0" title="{{ __('student.exit_lesson') }}">
+                <i class="fas fa-times text-lg"></i>
             </button>
-            <div>
-                <h1 class="text-lg font-semibold">{{ $lesson->title }}</h1>
-                <p class="text-sm text-gray-400">{{ $course->localized('title') }}</p>
+            <div class="min-w-0">
+                <h1 class="text-base sm:text-lg font-extrabold text-white m-0 truncate">{{ $lesson->title }}</h1>
+                <p class="text-xs sm:text-sm text-white/50 m-0 truncate">{{ $course->localized('title') }}</p>
             </div>
         </div>
-        
-        <div class="flex items-center space-x-4 space-x-reverse">
-            <!-- التقدم في الدرس -->
-            <div class="flex items-center space-x-2 space-x-reverse">
-                <span class="text-sm text-gray-400">التقدم:</span>
-                <span id="lesson-progress" class="text-sm font-medium text-white">0%</span>
+
+        <div class="flex items-center gap-3 sm:gap-5 shrink-0">
+            <div class="hidden sm:flex items-center gap-2">
+                <span class="text-xs font-bold text-white/50">{{ __('student.progress') }}:</span>
+                <span id="lesson-progress" class="text-sm font-extrabold text-[var(--sp-accent)]">0%</span>
             </div>
-            
-            <!-- الوقت المتبقي -->
-            <div class="flex items-center space-x-2 space-x-reverse">
-                <span class="text-sm text-gray-400">الوقت:</span>
-                <span id="time-display" class="text-sm font-medium text-white">00:00 / {{ gmdate('i:s', ($lesson->duration_minutes ?? 0) * 60) }}</span>
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-white/50 hidden sm:inline">{{ __('student.lesson_time_label') }}:</span>
+                <span id="time-display" class="text-sm font-extrabold text-white">00:00 / {{ gmdate('i:s', ($lesson->duration_minutes ?? 0) * 60) }}</span>
             </div>
         </div>
     </div>
@@ -53,7 +49,7 @@
                 Mindlytics
             </div>
             <div class="watermark-3 absolute text-white opacity-5 text-3xl font-bold select-none animate-bounce">
-                منصة التعلم
+                {{ __('student.learning_platform_watermark') }}
             </div>
         </div>
         
@@ -73,16 +69,16 @@
                     </div>
                 </div>
             @else
-                <div class="text-center text-white">
-                    <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
-                    <p>لا يوجد فيديو متاح لهذا الدرس</p>
+                <div class="text-center text-white px-6" style="font-family:var(--sp-font)">
+                    <i class="fas fa-exclamation-triangle text-4xl mb-4 text-[var(--sp-accent)]"></i>
+                    <p class="font-extrabold">{{ __('student.no_lesson_video') }}</p>
                 </div>
             @endif
         </div>
         
         <!-- شريط التقدم -->
         <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-6 z-30">
-            <div class="flex items-center space-x-4 space-x-reverse mb-4">
+            <div class="flex items-center gap-4 mb-4">
                 <!-- زر التشغيل/الإيقاف -->
                 <button id="play-pause-btn" onclick="togglePlayPause()" 
                         class="w-12 h-12 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full flex items-center justify-center text-white transition-colors">
@@ -92,7 +88,7 @@
                 <!-- شريط التقدم -->
                 <div class="flex-1">
                     <div class="w-full bg-gray-600 rounded-full h-2 cursor-pointer" onclick="seekTo(event)">
-                        <div id="progress-bar" class="bg-blue-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        <div id="progress-bar" class="bg-[var(--sp-accent)] h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
                     </div>
                 </div>
                 
@@ -116,7 +112,7 @@
                 {{ auth()->user()->name }}
             </div>
             <div class="absolute top-3/4 right-1/4 text-white opacity-10 text-4xl font-bold -rotate-45 select-none">
-                منصة التعلم
+                {{ __('student.learning_platform_watermark') }}
             </div>
             <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white opacity-5 text-8xl font-bold select-none">
                 Mindlytics

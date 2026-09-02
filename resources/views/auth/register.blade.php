@@ -30,9 +30,9 @@
 
     <style>
         :root {
-            --color-primary: #2563eb;
-            --color-primary-hover: #1d4ed8;
-            --color-primary-light: rgba(37, 99, 235, 0.12);
+            --color-primary: #702dff;
+            --color-primary-hover: #5a24cc;
+            --color-primary-light: rgba(112, 45, 255, 0.12);
             --input-bg: #f3f4f6;
             --input-border: #e5e7eb;
             --text-dark: #1f2937;
@@ -53,7 +53,7 @@
 
         /* النافبار على الهاتف - نفس ألوان النافبار الرئيسية */
         .navbar-gradient {
-            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 45%, #1d4ed8 100%) !important;
+            background: linear-gradient(135deg, #5a24cc 0%, #4a1db8 45%, #702dff 100%) !important;
             box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
             position: fixed;
             top: 0;
@@ -137,7 +137,7 @@
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(160deg, rgba(30, 64, 175, 0.75) 0%, rgba(37, 99, 235, 0.7) 30%, rgba(59, 130, 246, 0.65) 100%);
+            background: linear-gradient(160deg, rgba(90, 36, 204, 0.75) 0%, rgba(112, 45, 255, 0.7) 30%, rgba(130, 70, 255, 0.65) 100%);
             z-index: 0;
         }
 
@@ -236,7 +236,7 @@
         .btn-register:hover {
             background: var(--color-primary-hover);
             transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
+            box-shadow: 0 6px 20px rgba(112, 45, 255, 0.35);
         }
 
         .link-primary {
@@ -552,7 +552,7 @@
             position: absolute;
             inset: 0;
             border-radius: 20px;
-            background: linear-gradient(135deg, rgba(30, 64, 175, 0.8) 0%, rgba(37, 99, 235, 0.75) 100%);
+            background: linear-gradient(135deg, rgba(90, 36, 204, 0.8) 0%, rgba(112, 45, 255, 0.75) 100%);
             z-index: 0;
         }
         .register-mobile-welcome::after {

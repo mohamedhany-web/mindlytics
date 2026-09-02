@@ -279,6 +279,52 @@ class CourseProgressServiceTest extends TestCase
         $this->assertSame(600, (int) $progress->video_duration_seconds);
     }
 
+    public function test_trusts_player_duration_when_not_suspicious_vs_expected(): void
+    {
+        $user = $this->makeUser('trust@test.local');
+        $course = $this->makeCourse('Trust');
+        $lecture = $this->makeLecture((int) $course->id, 'L');
+
+        $progress = LectureWatchProgress::query()->create([
+            'lecture_id' => $lecture->id,
+            'user_id' => $user->id,
+            'watch_time_seconds' => 0,
+            'video_duration_seconds' => 0,
+            'progress_percent' => 0,
+            'is_completed' => false,
+        ]);
+
+        // Player reports real ~10min video; curriculum wrongly says 60min — trust player
+        $progress->updateFromSample(540, 600, 90, 3600);
+        $progress->refresh();
+
+        $this->assertSame(90, (int) $progress->progress_percent);
+        $this->assertTrue((bool) $progress->is_completed);
+        $this->assertSame(600, (int) $progress->video_duration_seconds);
+    }
+
+    public function test_lecture_watch_unlocks_next_honors_is_completed_flag(): void
+    {
+        $service = app(CourseProgressService::class);
+        $user = $this->makeUser('unlock@test.local');
+        $course = $this->makeCourse('Unlock');
+        $lecture = $this->makeLecture((int) $course->id, 'L');
+        $lecture->min_watch_percent_to_unlock_next = 95;
+        $lecture->save();
+
+        $wp = LectureWatchProgress::query()->create([
+            'lecture_id' => $lecture->id,
+            'user_id' => $user->id,
+            'watch_time_seconds' => 100,
+            'video_duration_seconds' => 200,
+            'progress_percent' => 50,
+            'is_completed' => true,
+        ]);
+
+        $this->assertTrue($service->lectureWatchUnlocksNext($lecture->fresh(), $wp));
+        $this->assertFalse($service->lectureWatchUnlocksNext($lecture->fresh(), null));
+    }
+
     public function test_sync_enrollment_progress_only_increases_by_default(): void
     {
         Schema::dropIfExists('student_course_enrollments');

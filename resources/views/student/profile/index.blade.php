@@ -1,356 +1,324 @@
-@extends('layouts.app')
+@extends('layouts.student-dashboard')
 
 @section('title', __('student.profile_title'))
 @section('header', __('student.profile_title'))
 
 @push('styles')
 <style>
-    .info-card {
-        background: white;
-        border: 1px solid rgb(229 231 235);
-        border-radius: 12px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    .sp-profile-cover {
+        height: 140px;
+        border-radius: 30px 30px 0 0;
+        background: linear-gradient(135deg, rgba(174,217,234,0.55) 0%, rgba(247,247,245,1) 55%, rgba(220,222,242,0.45) 100%);
+        position: relative;
+        overflow: hidden;
     }
+    .sp-profile-cover::after {
+        content: '';
+        position: absolute;
+        inset-inline-end: -20px;
+        top: -30px;
+        width: 160px;
+        height: 160px;
+        border-radius: 50%;
+        background: rgba(174,217,234,0.35);
+    }
+    .sp-profile-shell {
+        border-radius: 30px;
+        overflow: hidden;
+        box-shadow: var(--sp-shadow);
+        background: #fff;
+    }
+    .sp-profile-avatar {
+        width: 112px;
+        height: 112px;
+        border-radius: 28px;
+        border: 4px solid #fff;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        overflow: hidden;
+        background: var(--sp-accent);
+        display: grid;
+        place-items: center;
+        font-size: 2.5rem;
+        font-weight: 900;
+        color: var(--sp-accent-text);
+        flex-shrink: 0;
+    }
+    .sp-profile-field {
+        width: 100%;
+        border-radius: 18px;
+        border: 1px solid rgba(0,0,0,0.06);
+        background: #fafaf8;
+        padding: 0.8rem 1rem;
+        font-size: 0.875rem;
+        font-weight: 700;
+        color: var(--sp-text);
+        transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .sp-profile-field:focus {
+        outline: none;
+        border-color: var(--sp-accent);
+        box-shadow: 0 0 0 3px rgba(174,217,234,0.35);
+        background: #fff;
+    }
+    .sp-profile-nav a {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 999px;
+        font-size: 0.8125rem;
+        font-weight: 800;
+        color: var(--sp-muted);
+        text-decoration: none;
+        transition: background 0.15s, color 0.15s;
+    }
+    .sp-profile-nav a:hover { background: #f7f7f5; color: var(--sp-accent-text); }
+    .sp-profile-rail { position: sticky; top: 12px; }
+    @media (max-width: 1023px) { .sp-profile-rail { position: static; } }
 </style>
 @endpush
 
 @section('content')
 @php
     use Illuminate\Support\Str;
+
     $roleLabels = [
-        'student' => ['label' => __('student.student_role'), 'color' => 'from-sky-500 to-sky-400', 'chip' => 'bg-gradient-to-r from-sky-500/15 to-sky-400/15 text-sky-500 border-2 border-sky-500/30'],
-        'teacher' => ['label' => __('student.teacher_role'), 'color' => 'from-emerald-500 to-green-600', 'chip' => 'bg-gradient-to-r from-emerald-500/15 to-green-600/15 text-emerald-600 border-2 border-emerald-500/30'],
-        'admin' => ['label' => __('student.admin_role_label'), 'color' => 'from-indigo-500 to-violet-600', 'chip' => 'bg-gradient-to-r from-indigo-500/15 to-violet-600/15 text-indigo-600 border-2 border-indigo-500/30'],
-        'super_admin' => ['label' => __('student.super_admin_role'), 'color' => 'from-blue-600 to-indigo-700', 'chip' => 'bg-gradient-to-r from-blue-600/15 to-indigo-700/15 text-blue-600 border-2 border-blue-600/30'],
+        'student' => __('student.student_role'),
+        'teacher' => __('student.teacher_role'),
+        'admin' => __('student.admin_role_label'),
+        'super_admin' => __('student.super_admin_role'),
     ];
+    $roleLabel = $roleLabels[$user->role] ?? __('student.user_role');
 
-    $roleMeta = $roleLabels[$user->role] ?? ['label' => __('student.user_role'), 'color' => 'from-slate-500 to-slate-600', 'chip' => 'bg-slate-500/15 text-gray-200 border border-slate-500/40'];
+    $memberSince = $user->created_at instanceof \Carbon\CarbonInterface
+        ? $user->created_at->translatedFormat('d F Y')
+        : '—';
 
-    $memberSince = null;
-    if ($user && $user->created_at instanceof \Carbon\CarbonInterface) {
-        $memberSince = $user->created_at->copy()->locale('ar')->translatedFormat('d F Y');
-    }
-
-    $coursesCount = method_exists($user, 'courseEnrollments') ? $user->courseEnrollments()->count() : 0;
-    $notificationsCount = method_exists($user, 'notifications') ? $user->notifications()->count() : 0;
-
-    $lastLogin = null;
-    if ($user && $user->last_login_at instanceof \Carbon\CarbonInterface) {
-        $lastLogin = $user->last_login_at->copy()->locale('ar')->diffForHumans();
-    }
-
-    $stats = [
-        ['icon' => 'fa-calendar-week', 'label' => __('student.join_date_label'), 'value' => $memberSince ?: '—', 'color' => 'from-sky-500 to-sky-400'],
-        ['icon' => 'fa-layer-group', 'label' => __('student.active_courses_count'), 'value' => $coursesCount, 'color' => 'from-purple-500 to-indigo-600'],
-        ['icon' => 'fa-bell', 'label' => __('student.notifications'), 'value' => $notificationsCount, 'color' => 'from-emerald-500 to-emerald-600'],
-        ['icon' => 'fa-clock-rotate-left', 'label' => __('student.last_login_label'), 'value' => $lastLogin ?: '—', 'color' => 'from-amber-400 to-amber-500'],
-    ];
+    $lastLogin = $user->last_login_at instanceof \Carbon\CarbonInterface
+        ? $user->last_login_at->diffForHumans()
+        : null;
 @endphp
 
-<div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-    <!-- الهيدر -->
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 sm:p-6">
-        <div class="flex flex-col lg:flex-row items-start lg:items-center gap-6 lg:justify-between">
-            <div class="flex flex-col sm:flex-row sm:items-center gap-5 w-full lg:w-auto">
-                <div class="profile-avatar flex items-center justify-center h-24 w-24 sm:h-28 sm:w-28 rounded-2xl bg-gradient-to-br {{ $roleMeta['color'] }} text-white overflow-hidden mx-auto sm:mx-0">
+<div class="space-y-5 max-w-6xl mx-auto">
+    @if(session('success'))
+        <div class="sp-card !rounded-[16px] px-4 py-3 text-sm font-bold" style="background:var(--sp-mint);color:var(--sp-accent-text)">{{ session('success') }}</div>
+    @endif
+
+    {{-- Identity shell — light studio layout (not dark hero) --}}
+    <div class="sp-profile-shell">
+        <div class="sp-profile-cover" aria-hidden="true"></div>
+
+        <div class="px-5 sm:px-8 pb-6 -mt-14 relative z-[1]">
+            <div class="flex flex-col lg:flex-row lg:items-end gap-5 lg:gap-8">
+                <div class="sp-profile-avatar">
                     @if($user->profile_image)
                         <img src="{{ $user->profile_image_url }}" alt="{{ __('student.profile_image_alt') }}" class="w-full h-full object-cover">
                     @else
-                        <span class="text-4xl sm:text-5xl font-black leading-none">{{ mb_substr($user->name, 0, 1) }}</span>
+                        {{ mb_substr($user->name, 0, 1) }}
                     @endif
                 </div>
-                <div class="flex-1 text-center sm:text-right">
-                    <div class="mb-3">
-                        <span class="inline-flex items-center gap-2 rounded-xl {{ $roleMeta['chip'] }} px-4 py-2 text-xs font-bold mb-3">
-                            <i class="fas fa-user-shield"></i>
-                            {{ $roleMeta['label'] }}
-                        </span>
-                        <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 mb-2">{{ $user->name }}</h1>
-                        <p class="text-sm sm:text-base text-gray-600 font-medium">{{ __('student.profile_subtitle') }}</p>
-                    </div>
-
-                    <div class="flex flex-col sm:flex-row sm:justify-end gap-3 text-sm">
-                        <span class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-500/10 to-sky-400/10 text-gray-700 px-4 py-2 font-bold border-2 border-sky-500/20">
-                            <i class="fas fa-phone text-sky-500"></i>
-                            {{ $user->phone ?? '—' }}
-                        </span>
+                <div class="flex-1 min-w-0 pb-1">
+                    <p class="text-xs font-bold text-[var(--sp-muted)] uppercase tracking-wide m-0">{{ __('student.profile_studio_eyebrow') }}</p>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold m-0 mt-1 leading-tight">{{ $user->name }}</h2>
+                    <p class="text-sm text-[var(--sp-muted)] m-0 mt-1">{{ __('student.profile_studio_tagline') }}</p>
+                    <div class="flex flex-wrap items-center gap-2 mt-3">
+                        <span class="sp-pill sp-pill--progress">{{ $roleLabel }}</span>
+                        <span class="sp-pill {{ $user->is_active ? 'sp-pill--done' : '' }}">{{ $user->is_active ? __('student.profile_status_active') : __('student.profile_status_inactive') }}</span>
+                        @if($user->phone)
+                            <span class="text-xs font-bold text-[var(--sp-muted)]">{{ $user->phone }}</span>
+                        @endif
                         @if($user->email)
-                            <span class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-500/10 to-sky-400/10 text-gray-700 px-4 py-2 font-bold border-2 border-sky-500/20">
-                                <i class="fas fa-envelope text-sky-500"></i>
-                                {{ $user->email }}
-                            </span>
+                            <span class="text-xs font-bold text-[var(--sp-muted)] hidden sm:inline">· {{ $user->email }}</span>
                         @endif
                     </div>
                 </div>
+                <div class="flex flex-wrap gap-2 shrink-0">
+                    <a href="{{ route('settings') }}" class="inline-flex items-center justify-center rounded-[20px] bg-[#f7f7f5] hover:bg-[var(--sp-accent)] px-4 py-2.5 text-sm font-extrabold text-[var(--sp-accent-text)] transition">
+                        {{ __('student.profile_settings_link') }}
+                    </a>
+                    <a href="{{ route('student.portfolio.journey') }}" class="sp-promo-btn !mt-0 !text-[var(--sp-accent-text)] !py-2.5 !px-4">
+                        {{ __('student.profile_journey_link') }}
+                    </a>
+                </div>
             </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 w-full lg:w-auto">
-                @foreach ($stats as $stat)
-                    <div class="stats-mini-card rounded-xl p-4 text-center">
-                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br {{ $stat['color'] }} flex items-center justify-center text-white mx-auto mb-2 shadow-md">
-                            <i class="fas {{ $stat['icon'] }} text-sm"></i>
-                        </div>
-                        <div class="text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">{{ $stat['label'] }}</div>
-                        <div class="text-base sm:text-lg font-black text-gray-900">
-                            {{ $stat['value'] }}
-                        </div>
-                    </div>
-                @endforeach
-            </div>
+            <nav class="sp-profile-nav flex flex-wrap gap-2 mt-6 pt-5 border-t border-black/5">
+                <a href="#profile-personal"><x-student.figma-icon name="icon-profile.svg" box="size-4" />{{ __('student.profile_nav_personal') }}</a>
+                <a href="#profile-security"><x-student.figma-icon name="icon-settings.svg" box="size-4" />{{ __('student.profile_nav_security') }}</a>
+                <a href="#profile-activity"><x-student.figma-icon name="icon-notifications.svg" box="size-4" />{{ __('student.profile_nav_activity') }}</a>
+            </nav>
         </div>
     </div>
 
-    <!-- المحتوى الرئيسي -->
-    <div class="grid grid-cols-1 gap-6 lg:gap-8 lg:grid-cols-3">
-        <!-- البطاقات الجانبية -->
-        <div class="space-y-6">
-            <div class="info-card rounded-2xl p-6 shadow-lg">
-                <h2 class="text-lg sm:text-xl font-black text-gray-900 mb-5 flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-sky-500 to-sky-400 flex items-center justify-center text-white">
-                        <i class="fas fa-info-circle text-sm"></i>
+    <div class="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
+        {{-- Left rail --}}
+        <aside class="space-y-4 sp-profile-rail">
+            <section class="sp-card p-5 space-y-3">
+                <h3 class="text-xs font-bold text-[var(--sp-muted)] uppercase tracking-wide m-0">{{ __('student.profile_contact_section') }}</h3>
+                @foreach([
+                    ['label' => __('student.profile_member_id'), 'value' => '#' . str_pad($user->id, 5, '0', STR_PAD_LEFT)],
+                    ['label' => __('student.join_date_label'), 'value' => $memberSince],
+                    ['label' => __('student.profile_account_type'), 'value' => $roleLabel],
+                ] as $row)
+                    <div class="flex items-center justify-between gap-2 rounded-[14px] bg-[#f7f7f5] px-3 py-2.5">
+                        <span class="text-xs font-bold text-[var(--sp-muted)]">{{ $row['label'] }}</span>
+                        <span class="text-xs font-extrabold truncate">{{ $row['value'] }}</span>
                     </div>
-                    <span>معلومات الاتصال</span>
-                </h2>
-                <div class="space-y-4 text-sm">
-                    <div class="flex items-center justify-between gap-4 p-3 bg-gradient-to-r from-sky-500/5 to-sky-400/5 rounded-xl">
-                        <div class="flex items-center gap-3 text-gray-600">
-                            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-sky-400 text-white shadow-md"><i class="fas fa-id-badge"></i></span>
-                            <span class="font-bold">رقم العضوية</span>
-                        </div>
-                        <span class="text-gray-900 font-black text-base">#{{ str_pad($user->id, 5, '0', STR_PAD_LEFT) }}</span>
-                    </div>
-                    <div class="flex items-center justify-between gap-4 p-3 bg-gradient-to-r from-purple-500/5 to-indigo-500/5 rounded-xl">
-                        <div class="flex items-center gap-3 text-gray-600">
-                            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-md"><i class="fas fa-user-shield"></i></span>
-                            <span class="font-bold">نوع الحساب</span>
-                        </div>
-                        <span class="px-3 py-1.5 rounded-xl text-xs font-bold {{ $roleMeta['chip'] }}">{{ $roleMeta['label'] }}</span>
-                    </div>
-                    <div class="flex items-center justify-between gap-4 p-3 bg-gradient-to-r from-green-500/5 to-emerald-500/5 rounded-xl">
-                        <div class="flex items-center gap-3 text-gray-600">
-                            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-md"><i class="fas fa-signal"></i></span>
-                            <span class="font-bold">الحالة</span>
-                        </div>
-                        <span class="inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-bold {{ $user->is_active ? 'bg-gradient-to-r from-green-500/15 to-emerald-600/15 text-green-700 border-2 border-green-500/30' : 'bg-gradient-to-r from-red-500/15 to-rose-600/15 text-red-700 border-2 border-red-500/30' }}">
-                            <span class="relative flex h-2 w-2">
-                                <span class="absolute inline-flex h-full w-full rounded-full opacity-75 {{ $user->is_active ? 'bg-green-500 animate-ping' : 'bg-red-500' }}"></span>
-                                <span class="relative inline-flex h-2 w-2 rounded-full {{ $user->is_active ? 'bg-green-500' : 'bg-red-500' }}"></span>
-                            </span>
-                            {{ $user->is_active ? 'نشط' : 'غير نشط' }}
+                @endforeach
+            </section>
+
+            <section class="sp-card p-5 space-y-3">
+                @foreach([
+                    ['icon' => 'icon-courses.svg', 'label' => __('student.profile_stat_courses'), 'value' => $stats['courses'] ?? 0, 'bg' => 'var(--sp-sky)'],
+                    ['icon' => 'icon-classes.svg', 'label' => __('student.profile_stat_offline'), 'value' => $stats['offline'] ?? 0, 'bg' => 'var(--sp-lilac)'],
+                    ['icon' => 'icon-notifications.svg', 'label' => __('student.profile_stat_notifications'), 'value' => $stats['notifications'] ?? 0, 'bg' => 'var(--sp-peach)'],
+                ] as $stat)
+                    <div class="flex items-center gap-3">
+                        <span class="sp-icon-bubble shrink-0 !w-9 !h-9" style="background:{{ $stat['bg'] }}">
+                            <x-student.figma-icon :name="$stat['icon']" box="size-4" />
                         </span>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[11px] font-bold text-[var(--sp-muted)] m-0">{{ $stat['label'] }}</p>
+                            <p class="text-lg font-black m-0 text-[var(--sp-accent-text)]">{{ $stat['value'] }}</p>
+                        </div>
                     </div>
-                    <div class="flex items-start gap-3 rounded-xl bg-gradient-to-r from-sky-500/10 to-sky-400/10 border-2 border-sky-500/20 px-4 py-3 text-gray-600">
-                        <span class="mt-1 text-sky-500"><i class="fas fa-shield-halved"></i></span>
-                        <p class="text-sm font-medium">يمكنك تحسين أمان حسابك بتفعيل التحقق بخطوتين من الإعدادات المتقدمة (قريباً).</p>
-                    </div>
-                </div>
-            </div>
+                @endforeach
+            </section>
 
-            <div class="info-card rounded-2xl p-6 shadow-lg">
-                <h2 class="text-lg sm:text-xl font-black text-gray-900 mb-5 flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center text-white">
-                        <i class="fas fa-lightbulb text-sm"></i>
-                    </div>
-                    <span>نصائح سريعة</span>
-                </h2>
-                <ul class="space-y-4 text-sm text-gray-600">
-                    <li class="flex items-start gap-3 p-3 bg-gradient-to-r from-sky-500/5 to-sky-400/5 rounded-xl">
-                        <span class="mt-1 text-sky-500"><i class="fas fa-check-circle"></i></span>
-                        <div>
-                            <p class="font-bold text-gray-900">حدّث معلومات التواصل</p>
-                            <p class="mt-1 text-xs text-gray-600">احرص على أن يكون بريدك الإلكتروني ورقم هاتفك محدثين لاستقبال كل الإشعارات المهمة.</p>
-                        </div>
-                    </li>
-                    <li class="flex items-start gap-3 p-3 bg-gradient-to-r from-green-500/5 to-emerald-500/5 rounded-xl">
-                        <span class="mt-1 text-green-600"><i class="fas fa-lock"></i></span>
-                        <div>
-                            <p class="font-bold text-gray-900">أنشئ كلمة مرور قوية</p>
-                            <p class="mt-1 text-xs text-gray-600">استخدم مزيجاً من الأحرف والأرقام والرموز، وقم بتغيير كلمة المرور بشكل دوري.</p>
-                        </div>
-                    </li>
-                    <li class="flex items-start gap-3 p-3 bg-gradient-to-r from-purple-500/5 to-indigo-500/5 rounded-xl">
-                        <span class="mt-1 text-purple-600"><i class="fas fa-bell"></i></span>
-                        <div>
-                            <p class="font-bold text-gray-900">فعّل الإشعارات</p>
-                            <p class="mt-1 text-xs text-gray-600">ابقَ على اطلاع بالمستجدات من خلال متابعة جديد الكورسات والتنبيهات.</p>
-                        </div>
-                    </li>
+            <section class="sp-card p-5">
+                <h3 class="font-extrabold text-sm m-0 mb-3">{{ __('student.profile_tips_title') }}</h3>
+                <ul class="space-y-3 m-0 p-0 list-none">
+                    @foreach([
+                        ['title' => __('student.profile_tip_contact_title'), 'desc' => __('student.profile_tip_contact_desc')],
+                        ['title' => __('student.profile_tip_password_title'), 'desc' => __('student.profile_tip_password_desc')],
+                    ] as $tip)
+                        <li class="text-xs">
+                            <p class="font-extrabold m-0 text-[var(--sp-text)]">{{ $tip['title'] }}</p>
+                            <p class="text-[var(--sp-muted)] m-0 mt-0.5 leading-relaxed font-bold">{{ $tip['desc'] }}</p>
+                        </li>
+                    @endforeach
                 </ul>
-            </div>
-        </div>
+            </section>
+        </aside>
 
-        <!-- النماذج -->
-        <div class="lg:col-span-2 space-y-6">
-            <div class="info-card rounded-2xl p-6 sm:p-8 shadow-lg">
-                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+        {{-- Main form --}}
+        <div class="space-y-5 min-w-0">
+            <section id="profile-personal" class="sp-card overflow-hidden scroll-mt-24">
+                <div class="flex flex-wrap items-start justify-between gap-3 px-5 py-4 border-b border-black/5 bg-[#fafaf8]">
                     <div>
-                        <h3 class="text-xl sm:text-2xl font-black text-gray-900 mb-2">تحديث البيانات الأساسية</h3>
-                        <p class="text-sm sm:text-base text-gray-600 font-medium">قم بمراجعة معلوماتك وتحديثها في أي وقت</p>
+                        <h3 class="font-extrabold text-base m-0">{{ __('student.profile_edit_section') }}</h3>
+                        <p class="text-xs text-[var(--sp-muted)] m-0 mt-1 font-bold">{{ __('student.profile_edit_hint') }}</p>
                     </div>
-                    <span class="inline-flex items-center gap-2 text-xs font-bold rounded-xl bg-gradient-to-r from-sky-500/10 to-sky-400/10 text-sky-500 border-2 border-sky-500/20 px-4 py-2">
-                        <i class="fas fa-shield-check"></i>
-                        بياناتك مشفرة وآمنة
-                    </span>
+                    <span class="sp-pill sp-pill--progress">{{ __('student.profile_encrypted_badge') }}</span>
                 </div>
 
-                <form method="POST" action="{{ route('profile.update') }}" class="space-y-8" enctype="multipart/form-data">
+                <form method="POST" action="{{ route('profile.update') }}" enctype="multipart/form-data" class="p-5 sm:p-6 space-y-6">
                     @csrf
                     @method('PUT')
 
-                    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-                        <div class="group">
-                            <label class="block text-sm font-bold text-gray-900 mb-2">الاسم الكامل</label>
-                            <div class="relative">
-                                <i class="fas fa-user absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-sky-500 transition-colors"></i>
-                                <input type="text" name="name" value="{{ old('name', $user->name) }}" required
-                                       class="form-input w-full rounded-xl border-2 border-sky-500/20 bg-white px-11 py-3.5 text-gray-900 font-medium shadow-sm focus:border-sky-500 focus:ring-4 focus:ring-sky-500/20">
-                            </div>
-                            @error('name')
-                                <p class="text-red-600 text-xs mt-2 font-semibold">{{ $message }}</p>
-                            @enderror
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-[var(--sp-muted)] mb-1.5 uppercase tracking-wide">{{ __('student.profile_field_name') }}</label>
+                            <input type="text" name="name" value="{{ old('name', $user->name) }}" required class="sp-profile-field">
+                            @error('name')<p class="text-xs font-bold text-[#7a3b2e] mt-1 m-0">{{ $message }}</p>@enderror
                         </div>
-
-                        <div class="group">
-                            <label class="block text-sm font-bold text-gray-900 mb-2">رقم الهاتف</label>
-                            <div class="relative">
-                                <i class="fas fa-phone absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-sky-500 transition-colors"></i>
-                                <input type="text" name="phone" value="{{ old('phone', $user->phone) }}" required
-                                       class="form-input w-full rounded-xl border-2 border-sky-500/20 bg-white px-11 py-3.5 text-gray-900 font-medium shadow-sm focus:border-sky-500 focus:ring-4 focus:ring-sky-500/20">
-                            </div>
-                            @error('phone')
-                                <p class="text-red-600 text-xs mt-2 font-semibold">{{ $message }}</p>
-                            @enderror
+                        <div>
+                            <label class="block text-xs font-bold text-[var(--sp-muted)] mb-1.5 uppercase tracking-wide">{{ __('student.profile_field_phone') }}</label>
+                            <input type="text" name="phone" value="{{ old('phone', $user->phone) }}" required class="sp-profile-field">
+                            @error('phone')<p class="text-xs font-bold text-[#7a3b2e] mt-1 m-0">{{ $message }}</p>@enderror
                         </div>
-
-                        <div class="md:col-span-2 group">
-                            <label class="block text-sm font-bold text-gray-900 mb-2">البريد الإلكتروني (اختياري)</label>
-                            <div class="relative">
-                                <i class="fas fa-at absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-sky-500 transition-colors"></i>
-                                <input type="email" name="email" value="{{ old('email', $user->email) }}"
-                                       class="form-input w-full rounded-xl border-2 border-sky-500/20 bg-white px-11 py-3.5 text-gray-900 font-medium shadow-sm focus:border-sky-500 focus:ring-4 focus:ring-sky-500/20">
-                            </div>
-                            @error('email')
-                                <p class="text-red-600 text-xs mt-2 font-semibold">{{ $message }}</p>
-                            @enderror
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-bold text-[var(--sp-muted)] mb-1.5 uppercase tracking-wide">{{ __('student.profile_field_email') }}</label>
+                            <input type="email" name="email" value="{{ old('email', $user->email) }}" class="sp-profile-field" dir="ltr">
+                            @error('email')<p class="text-xs font-bold text-[#7a3b2e] mt-1 m-0">{{ $message }}</p>@enderror
                         </div>
                     </div>
 
-                    <div class="space-y-4">
-                        <label class="block text-sm font-bold text-gray-900 mb-3">صورة الملف الشخصي</label>
+                    <div class="rounded-[20px] border border-dashed border-[var(--sp-accent)] bg-[rgba(174,217,234,0.08)] p-4 sm:p-5">
+                        <p class="font-extrabold text-sm m-0 mb-3">{{ __('student.profile_photo_section') }}</p>
                         <div class="flex flex-col sm:flex-row sm:items-center gap-4">
-                            <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden border-2 border-dashed border-sky-500/30 bg-gradient-to-br from-sky-500/5 to-sky-400/5 flex items-center justify-center">
+                            <div class="w-24 h-24 rounded-[20px] overflow-hidden border-2 border-white shadow-md shrink-0 bg-[#f7f7f5] flex items-center justify-center">
                                 @if($user->profile_image)
-                                    <img src="{{ $user->profile_image_url }}" alt="صورة الملف الشخصي" class="w-full h-full object-cover">
+                                    <img src="{{ $user->profile_image_url }}" alt="" class="w-full h-full object-cover">
                                 @else
-                                    <i class="fas fa-camera text-sky-500 text-3xl"></i>
+                                    <x-student.figma-icon name="icon-profile.svg" box="size-8" />
                                 @endif
                             </div>
                             <div class="flex-1">
-                                <label class="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-sky-500/30 bg-gradient-to-r from-sky-500/10 to-sky-400/10 px-6 py-3 text-sm font-bold text-gray-900 hover:from-sky-500/20 hover:to-sky-400/20 transition-all">
-                                    <i class="fas fa-upload text-sky-500"></i>
-                                    <span>اختر صورة جديدة (PNG أو JPG)</span>
+                                <label class="flex cursor-pointer items-center justify-center gap-2 rounded-[18px] border border-black/5 bg-white px-4 py-3 text-sm font-extrabold hover:bg-[#f7f7f5] transition">
+                                    <x-student.figma-icon name="icon-plus.svg" box="size-4" />
+                                    {{ __('student.profile_photo_choose') }}
                                     <input type="file" name="profile_image" accept="image/*" class="hidden">
                                 </label>
-                                <p class="mt-2 text-xs text-gray-600 font-medium">الحد الأقصى لحجم الملف 2 ميجابايت.</p>
-                                @error('profile_image')
-                                    <p class="text-red-600 text-xs mt-2 font-semibold">{{ $message }}</p>
-                                @enderror
+                                <p class="text-xs text-[var(--sp-muted)] m-0 mt-2 font-bold">{{ __('student.profile_photo_max') }}</p>
+                                @error('profile_image')<p class="text-xs font-bold text-[#7a3b2e] mt-1 m-0">{{ $message }}</p>@enderror
                             </div>
                         </div>
                     </div>
 
-                    <div class="space-y-6 rounded-2xl border-2 border-dashed border-sky-500/20 bg-gradient-to-r from-sky-500/5 to-sky-400/5 p-6">
-                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div id="profile-security" class="scroll-mt-24 rounded-[20px] bg-[#fafaf8] border border-black/5 p-4 sm:p-5 space-y-4">
+                        <div class="flex flex-wrap items-start justify-between gap-2">
                             <div>
-                                <h4 class="text-base sm:text-lg font-black text-gray-900 mb-1">تغيير كلمة المرور</h4>
-                                <p class="text-xs text-gray-600 font-medium">اترك الحقول فارغة إذا لم ترغب في التغيير الآن</p>
+                                <h4 class="font-extrabold text-sm m-0">{{ __('student.profile_password_section') }}</h4>
+                                <p class="text-xs text-[var(--sp-muted)] m-0 mt-1 font-bold">{{ __('student.profile_password_hint') }}</p>
                             </div>
-                            <span class="inline-flex items-center gap-2 text-xs font-bold text-sky-500 bg-white/50 px-3 py-1.5 rounded-xl border border-sky-500/20">
-                                <i class="fas fa-key"></i> 
-                                نصيحة: استخدم كلمة مرور مكونة من 12 حرفًا على الأقل
-                            </span>
+                            <span class="sp-pill !text-[10px]">{{ __('student.profile_password_tip') }}</span>
                         </div>
-
-                        <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
-                            <div class="group">
-                                <label class="block text-xs font-bold uppercase tracking-wide text-gray-600 mb-2">كلمة المرور الحالية</label>
-                                <input type="password" name="current_password"
-                                       class="form-input w-full rounded-xl border-2 border-sky-500/20 bg-white px-4 py-3 text-sm text-gray-900 font-medium focus:border-sky-500 focus:ring-4 focus:ring-sky-500/20">
-                                @error('current_password')
-                                    <p class="text-red-600 text-xs mt-2 font-semibold">{{ $message }}</p>
-                                @enderror
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-[var(--sp-muted)] mb-1.5">{{ __('student.profile_current_password') }}</label>
+                                <input type="password" name="current_password" class="sp-profile-field">
+                                @error('current_password')<p class="text-xs font-bold text-[#7a3b2e] mt-1 m-0">{{ $message }}</p>@enderror
                             </div>
-
-                            <div class="group">
-                                <label class="block text-xs font-bold uppercase tracking-wide text-gray-600 mb-2">كلمة المرور الجديدة</label>
-                                <input type="password" name="password"
-                                       class="form-input w-full rounded-xl border-2 border-green-500/20 bg-white px-4 py-3 text-sm text-gray-900 font-medium focus:border-green-500 focus:ring-4 focus:ring-green-500/20">
-                                @error('password')
-                                    <p class="text-red-600 text-xs mt-2 font-semibold">{{ $message }}</p>
-                                @enderror
+                            <div>
+                                <label class="block text-xs font-bold text-[var(--sp-muted)] mb-1.5">{{ __('student.profile_new_password') }}</label>
+                                <input type="password" name="password" class="sp-profile-field">
+                                @error('password')<p class="text-xs font-bold text-[#7a3b2e] mt-1 m-0">{{ $message }}</p>@enderror
                             </div>
-
-                            <div class="group">
-                                <label class="block text-xs font-bold uppercase tracking-wide text-gray-600 mb-2">تأكيد كلمة المرور</label>
-                                <input type="password" name="password_confirmation"
-                                       class="form-input w-full rounded-xl border-2 border-green-500/20 bg-white px-4 py-3 text-sm text-gray-900 font-medium focus:border-green-500 focus:ring-4 focus:ring-green-500/20">
+                            <div>
+                                <label class="block text-xs font-bold text-[var(--sp-muted)] mb-1.5">{{ __('student.profile_confirm_password') }}</label>
+                                <input type="password" name="password_confirmation" class="sp-profile-field">
                             </div>
                         </div>
                     </div>
 
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-4 border-t-2 border-sky-500/10">
-                        <div class="text-xs text-gray-600 flex items-center gap-2 font-medium">
-                            <i class="fas fa-info-circle text-sky-500"></i>
-                            <span>سيتم إرسال إشعار إلى بريدك في حال تغيير كلمة المرور.</span>
-                        </div>
-
-                        <div class="flex flex-col sm:flex-row gap-3">
-                            <a href="{{ route('dashboard') }}" class="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-sky-500/20 bg-white px-6 py-3 text-sm font-bold text-gray-900 hover:border-sky-500/40 hover:bg-sky-500/5 transition-all">
-                                <i class="fas fa-arrow-right"></i>
-                                رجوع إلى اللوحة
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2 border-t border-black/5">
+                        <p class="text-xs font-bold text-[var(--sp-muted)] m-0">{{ __('student.profile_save_notice') }}</p>
+                        <div class="flex flex-wrap gap-2">
+                            <a href="{{ route('dashboard') }}" class="inline-flex items-center justify-center rounded-[20px] bg-[#f7f7f5] hover:bg-[var(--sp-accent)] px-5 py-3 text-sm font-extrabold text-[var(--sp-accent-text)] transition">
+                                {{ __('student.profile_back_dashboard') }}
                             </a>
-                            <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-500 via-sky-400 to-sky-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-sky-500/30 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-sky-500/30 transition-all transform hover:scale-105">
-                                <i class="fas fa-save"></i>
-                                حفظ التعديلات
-                            </button>
+                            <button type="submit" class="sp-promo-btn !mt-0 !text-[var(--sp-accent-text)]">{{ __('student.profile_save_changes') }}</button>
                         </div>
                     </div>
                 </form>
-            </div>
+            </section>
 
-            <div class="info-card rounded-2xl p-6 sm:p-8 shadow-lg">
-                <h3 class="text-lg sm:text-xl font-black text-gray-900 mb-5 flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-sky-500 to-sky-400 flex items-center justify-center text-white">
-                        <i class="fas fa-history text-sm"></i>
+            <section id="profile-activity" class="sp-card p-5 sm:p-6 space-y-3 scroll-mt-24">
+                <h3 class="font-extrabold text-base m-0 mb-1">{{ __('student.profile_activity_title') }}</h3>
+                <div class="sp-process-row !shadow-none border border-[#f0f0ec]">
+                    <span class="sp-icon-bubble shrink-0" style="background:var(--sp-sky)">
+                        <x-student.figma-icon name="icon-dashboard.svg" box="size-5" />
+                    </span>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-extrabold text-sm m-0">{{ __('student.profile_activity_login_title') }}</p>
+                        <p class="text-xs text-[var(--sp-muted)] m-0 mt-0.5 font-bold">{{ __('student.profile_activity_login_desc') }}</p>
                     </div>
-                    <span>نشاط الحساب الأخير</span>
-                </h3>
-                <div class="space-y-4 text-sm">
-                    <div class="flex items-center justify-between rounded-xl border-2 border-sky-500/10 bg-gradient-to-r from-sky-500/5 to-sky-400/5 px-4 py-4">
-                        <div class="flex items-center gap-3">
-                            <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-sky-400 text-white shadow-md"><i class="fas fa-desktop"></i></span>
-                            <div>
-                                <p class="font-bold text-gray-900">آخر نشاط للنظام</p>
-                                <p class="text-xs text-gray-600 font-medium">تم تسجيل الدخول بنجاح باستخدام متصفح آمن</p>
-                            </div>
-                        </div>
-                        <span class="text-xs text-gray-600 font-bold">{{ $lastLogin ?: 'قبل قليل' }}</span>
-                    </div>
-
-                    <div class="flex items-center justify-between rounded-xl border-2 border-green-500/10 bg-gradient-to-r from-green-500/5 to-emerald-500/5 px-4 py-4">
-                        <div class="flex items-center gap-3">
-                            <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-md"><i class="fas fa-shield-heart"></i></span>
-                            <div>
-                                <p class="font-bold text-gray-900">أمان الحساب</p>
-                                <p class="text-xs text-gray-600 font-medium">ننصح بتحديث كلمة المرور كل 90 يومًا للحفاظ على أعلى درجات الحماية.</p>
-                            </div>
-                        </div>
-                        <a href="#" class="text-xs font-bold text-sky-500 hover:text-gray-600 transition-colors">تعلم المزيد</a>
-                    </div>
+                    <span class="text-xs font-bold text-[var(--sp-muted)] shrink-0">{{ $lastLogin ?: __('student.profile_just_now') }}</span>
                 </div>
-            </div>
+                <div class="sp-process-row !shadow-none border border-[#f0f0ec]">
+                    <span class="sp-icon-bubble shrink-0" style="background:var(--sp-mint)">
+                        <x-student.figma-icon name="icon-settings.svg" box="size-5" />
+                    </span>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-extrabold text-sm m-0">{{ __('student.profile_activity_security_title') }}</p>
+                        <p class="text-xs text-[var(--sp-muted)] m-0 mt-0.5 font-bold">{{ __('student.profile_activity_security_desc') }}</p>
+                    </div>
+                    <a href="{{ route('settings') }}" class="sp-link text-xs font-extrabold shrink-0">{{ __('student.profile_activity_learn_more') }}</a>
+                </div>
+                <p class="text-xs font-bold text-[var(--sp-muted)] m-0 pt-1">{{ __('student.profile_security_tip') }}</p>
+            </section>
         </div>
     </div>
 </div>
 @endsection
-

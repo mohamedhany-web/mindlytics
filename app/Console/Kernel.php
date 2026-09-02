@@ -51,12 +51,6 @@ class Kernel extends ConsoleKernel
                  ->dailyAt('00:45')
                  ->runInBackground()
                  ->withoutOverlapping();
-
-        // خصومات KPI اليومي (أشخاص تم العمل عليهم + قمع الاتصال) — بعد منتصف الليل على يوم أمس
-        $schedule->command('sales:apply-daily-kpi-penalties')
-                 ->dailyAt('00:50')
-                 ->runInBackground()
-                 ->withoutOverlapping();
     }
 
     /**

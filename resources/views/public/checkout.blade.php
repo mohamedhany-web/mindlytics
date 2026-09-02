@@ -834,20 +834,24 @@
                                     <p class="text-sm text-amber-900 max-w-lg mx-auto leading-relaxed">تأكد من تفعيل البوابة من الإدارة ومن ضبط <code class="bg-amber-100/80 px-1 rounded">FAWATERAK_VENDOR_KEY</code> و <code class="bg-amber-100/80 px-1 rounded">FAWATERAK_PROVIDER_KEY</code> و<code class="bg-amber-100/80 px-1 rounded">FAWATERAK_INTEGRATION=iframe</code> في ملف البيئة. إن ظهرت من المتصفح «Invalid Token» جرّب <code class="bg-amber-100/80 px-1 rounded">FAWATERAK_PLUGIN_BEARER_TOKEN</code> إذا كان Bearer الإضافة عند فواتيرك يختلف عن مفتاح الـ Vendor، وراجع تطابق بيئة <code class="bg-amber-100/80 px-1 rounded">FAWATERAK_ENV</code> مع لوحة فواتيرك.</p>
                                 </div>
                             @elseif($__payMode === 'fawaterak' && isset($course) && ($fawaterakCheckoutReady ?? false))
-                            <div class="mb-6 p-5 bg-indigo-50 rounded-xl border-2 border-indigo-200">
-                                <p class="text-sm font-bold text-indigo-950 mb-2 flex items-center gap-2">
-                                    <i class="fas fa-receipt"></i>
-                                    الدفع الإلكتروني عبر فواتيرك
+                            <div class="mb-6 p-5 rounded-xl border-2 {{ !empty($portalCheckout) ? 'bg-[#f0f9fc] border-[#aed9ea]' : 'bg-indigo-50 border-indigo-200' }}">
+                                <p class="text-sm font-bold {{ !empty($portalCheckout) ? 'text-[#09244b]' : 'text-indigo-950' }} mb-2 flex items-center gap-2">
+                                    <i class="fas fa-shield-alt"></i>
+                                    {{ !empty($portalCheckout) ? 'إتمام الدفع داخل منصة Mindlytics' : 'الدفع الإلكتروني عبر فواتيرك' }}
                                 </p>
-                                <p class="text-sm text-indigo-900/90">بعد الضغط على «متابعة للدفع» تُحمَّل إضافة فواتيرك داخل الصفحة. اختر طريقة الدفع وأكمل العملية؛ عند النجاح يُفعَّل الكورس تلقائياً.</p>
+                                <p class="text-sm {{ !empty($portalCheckout) ? 'text-[#09244b]/90' : 'text-indigo-900/90' }}">
+                                    {{ !empty($portalCheckout)
+                                        ? 'اختر طريقة الدفع وأكمل العملية هنا. عند نجاح الدفع يُفعَّل الكورس على حسابك تلقائياً وتعود لدوراتك.'
+                                        : 'بعد الضغط على «متابعة للدفع» تُحمَّل إضافة فواتيرك داخل الصفحة. اختر طريقة الدفع وأكمل العملية؛ عند النجاح يُفعَّل الكورس تلقائياً.' }}
+                                </p>
                             </div>
-                            <div class="relative min-h-[420px] w-full rounded-2xl border border-slate-200 bg-slate-50/50 shadow-inner overflow-hidden">
+                            <div class="relative min-h-[420px] w-full rounded-2xl border {{ !empty($portalCheckout) ? 'border-[#ecece8] bg-white' : 'border-slate-200 bg-slate-50/50' }} shadow-inner overflow-hidden">
                                 {{-- الحاوية يجب أن تبقى فارغة؛ الإضافة تملأها بمكونات الدفع --}}
                                 <div id="fawaterkDivId" class="min-h-[420px] w-full"></div>
-                                <div id="fawaterk-waiting-hint" class="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center text-slate-500 pointer-events-none z-10 bg-slate-50/90 backdrop-blur-[1px]">
-                                    <i class="fas fa-spinner fa-spin text-2xl text-indigo-400"></i>
-                                    <p class="text-sm font-medium text-slate-600">جاري تحميل طرق الدفع من فواتيرك…</p>
-                                    <p class="text-xs text-slate-500 max-w-md">قد يستغرق الأمر ثوانٍ قليلة. إذا لم تظهر طرق الدفع، اضغط «تحديث / إعادة تحميل الدفع».</p>
+                                <div id="fawaterk-waiting-hint" class="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center text-slate-500 pointer-events-none z-10 bg-white/90 backdrop-blur-[1px]">
+                                    <i class="fas fa-spinner fa-spin text-2xl {{ !empty($portalCheckout) ? 'text-[#7eb8d0]' : 'text-indigo-400' }}"></i>
+                                    <p class="text-sm font-medium text-slate-600">{{ !empty($portalCheckout) ? 'جاري تجهيز الدفع الآمن…' : 'جاري تحميل طرق الدفع من فواتيرك…' }}</p>
+                                    <p class="text-xs text-slate-500 max-w-md">قد يستغرق الأمر ثوانٍ قليلة. إذا لم تظهر طرق الدفع، اضغط «تحديث الدفع».</p>
                                 </div>
                             </div>
                             <div
@@ -860,16 +864,16 @@
                                     <div class="flex flex-col sm:flex-row gap-4">
                                         <button type="submit"
                                                 :disabled="isSubmitting || pluginLoadError"
-                                                class="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 text-white px-6 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                                                class="flex-1 inline-flex items-center justify-center gap-2 {{ !empty($portalCheckout) ? 'bg-[#aed9ea] text-[#09244b] hover:brightness-95' : 'bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 text-white' }} px-6 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
                                             <i class="fas fa-lock" x-show="!isSubmitting"></i>
                                             <i class="fas fa-spinner fa-spin" x-show="isSubmitting" x-cloak></i>
-                                            <span x-text="isSubmitting ? 'جاري التجهيز...' : (pluginLoadError ? 'تعذر التحميل' : 'تحديث / إعادة تحميل الدفع')"></span>
+                                            <span x-text="isSubmitting ? 'جاري التجهيز...' : (pluginLoadError ? 'تعذر التحميل' : '{{ !empty($portalCheckout) ? 'تحديث الدفع' : 'تحديث / إعادة تحميل الدفع' }}')"></span>
                                         </button>
-                                        <a href="{{ route('public.course.show', $course->id) }}"
+                                        <a href="{{ !empty($portalCheckout) ? route('academic-years', ['intent' => 'recorded']) : route('public.course.show', $course->id) }}"
                                            :class="{ 'pointer-events-none opacity-50': isSubmitting }"
                                            class="inline-flex items-center justify-center gap-2 bg-white text-gray-700 px-6 py-4 rounded-full font-bold text-lg border-2 border-gray-300 hover:bg-gray-50 transition-all duration-300">
                                             <i class="fas fa-arrow-right"></i>
-                                            <span>إلغاء</span>
+                                            <span>{{ !empty($portalCheckout) ? 'العودة للمنصة' : 'إلغاء' }}</span>
                                         </a>
                                     </div>
                                     <p x-show="error" x-text="error" class="mt-3 text-xs text-red-600 text-center" x-cloak></p>

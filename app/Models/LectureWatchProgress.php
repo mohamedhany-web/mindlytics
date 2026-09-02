@@ -49,11 +49,16 @@ class LectureWatchProgress extends Model
         ?int $minPercentToComplete = null,
         ?int $expectedDurationSec = null,
     ): void {
-        $reportedDuration = max(1, $durationSec);
+        $reportedDuration = max(0, $durationSec);
         $expected = max(0, (int) ($expectedDurationSec ?? 0));
-        $storedDuration = max((int) ($this->video_duration_seconds ?? 0), $reportedDuration, $expected);
+        $storedDuration = max((int) ($this->video_duration_seconds ?? 0), $reportedDuration);
 
-        // احسب النسبة على أطول مدة معروفة حتى لا تُكمَّل المحاضرة بعيّنة duration خاطئة (مثلاً 5 ثوانٍ).
+        // طبّق مدة المنهج فقط إذا كانت مدة المشغّل مشبوهة جداً (< 45 ثانية).
+        // مدة المنهج غالباً غير دقيقة؛ فرضها دائماً كان يخفّض النسبة ويعيد قفل الفيديوهات.
+        if ($expected > 0 && ($reportedDuration <= 0 || $reportedDuration < 45)) {
+            $storedDuration = max($storedDuration, $expected);
+        }
+
         $effectiveDuration = max($storedDuration, 1);
         $currentSec = max(0, min($currentSec, $effectiveDuration));
         $samplePercent = (int) min(100, round(($currentSec / $effectiveDuration) * 100));

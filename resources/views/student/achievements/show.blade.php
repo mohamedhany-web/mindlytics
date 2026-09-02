@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.student-dashboard')
 
 @section('title', 'تفاصيل الإنجاز')
 @section('header', 'تفاصيل الإنجاز')

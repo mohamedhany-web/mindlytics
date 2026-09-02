@@ -1,58 +1,13 @@
 @extends('layouts.student-dashboard')
 
-@section('title', 'محاضرات الكورس — ' . $offlineCourse->title)
+@section('title', __('student.oc_lectures_title') . ' — ' . $offlineCourse->title)
+@section('header', __('student.oc_lectures_title'))
 
 @push('styles')
 <style>
-    .lectures-hero {
-        background: #fff;
-        border-radius: 16px;
-        padding: 24px 28px;
-        position: relative;
-        overflow: hidden;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-        border: 1px solid rgb(226 232 240);
-    }
-    .lectures-hero-accent {
-        position: absolute;
-        top: 0;
-        right: 0;
-        width: 4px;
-        height: 100%;
-        background: linear-gradient(180deg, rgb(139 92 246), rgb(99 102 241));
-        border-radius: 0 16px 16px 0;
-    }
-    .lectures-stat {
-        background: #fff;
-        border: 1px solid rgb(226 232 240);
-        border-radius: 14px;
-        padding: 16px 18px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    .lectures-panel {
-        background: #fff;
-        border: 1px solid rgb(226 232 240);
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    }
-    .lectures-aside {
-        background: #fff;
-        border: 1px solid rgb(226 232 240);
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    }
-    @media (min-width: 1280px) {
-        .lectures-aside-sticky { position: sticky; top: 1rem; }
-    }
-    .lecture-row {
-        border-bottom: 1px solid rgb(241 245 249);
-    }
+    .lecture-row { border-bottom: 1px solid rgba(0,0,0,.05); }
     .lecture-row:last-child { border-bottom: 0; }
-    .lecture-row.is-active {
-        background: linear-gradient(to left, rgb(245 243 255), #fff);
-    }
+    .lecture-row.is-active { background: rgba(174, 217, 234, .12); }
     [x-cloak] { display: none !important; }
 </style>
 @endpush
@@ -60,7 +15,8 @@
 @section('content')
 @php
     $sg = $studentRouteGroup ?? 'student.offline-courses';
-    $chLabel = ($channel ?? 'offline') === 'online' ? 'أونلاين' : 'أوفلاين';
+    $isOnlineChannel = ($channel ?? 'offline') === 'online';
+    $chLabel = $isOnlineChannel ? __('student.exam_source_online') : __('student.exam_source_offline');
     $lectureCount = $lectures->count();
 
     $withRecording = 0;
@@ -86,93 +42,71 @@
     }
 @endphp
 
-<div class="w-full max-w-full space-y-6" x-data="window.__offlineLecturesPage()">
-    {{-- مسار --}}
-    <nav class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-500" aria-label="مسار التنقل">
-        <a href="{{ route('dashboard') }}" class="font-medium hover:text-sky-600">لوحة التحكم</a>
-        <span class="text-slate-300" aria-hidden="true">/</span>
-        <a href="{{ route($sg . '.index') }}" class="font-medium hover:text-sky-600">{{ ($channel ?? 'offline') === 'online' ? 'كورساتي الأونلاين' : 'كورساتي الأوفلاين' }}</a>
-        <span class="text-slate-300" aria-hidden="true">/</span>
-        <a href="{{ route($sg . '.show', $offlineCourse) }}" class="max-w-[10rem] truncate font-medium hover:text-sky-600 sm:max-w-xs">{{ \Illuminate\Support\Str::limit($offlineCourse->title, 40) }}</a>
-        <span class="text-slate-300" aria-hidden="true">/</span>
-        <span class="font-semibold text-slate-800">المحاضرات</span>
+<div class="space-y-5" x-data="window.__offlineLecturesPage()">
+    <nav class="flex flex-wrap items-center gap-2 text-sm font-bold text-[var(--sp-muted)]">
+        <a href="{{ route($sg . '.index') }}" class="sp-link">{{ $isOnlineChannel ? __('student.online_courses_title') : __('student.offline_courses_title') }}</a>
+        <x-student.figma-icon name="icon-chevron.svg" box="size-3" class="opacity-40 rtl:rotate-180" />
+        <a href="{{ route($sg . '.show', $offlineCourse) }}" class="sp-link truncate max-w-[40vw]">{{ $offlineCourse->title }}</a>
+        <x-student.figma-icon name="icon-chevron.svg" box="size-3" class="opacity-40 rtl:rotate-180" />
+        <span class="text-[var(--sp-text)]">{{ __('student.oc_lectures_title') }}</span>
     </nav>
 
-    {{-- رأس كامل العرض --}}
-    <div class="lectures-hero">
-        <div class="lectures-hero-accent" aria-hidden="true"></div>
-        <div class="relative pr-2 sm:pr-3">
-            <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                <div class="min-w-0 flex-1 space-y-3">
-                    <p class="text-xs font-bold uppercase tracking-wide text-violet-600">محاضرات الكورس · {{ $chLabel }}</p>
-                    <h1 class="text-2xl font-black leading-tight text-gray-900 sm:text-3xl">{{ $offlineCourse->title }}</h1>
-                    <p class="max-w-3xl text-sm leading-relaxed text-gray-600 sm:text-base">
-                        تابع جلساتك، برنامج اليوم، التسجيلات والمرفقات — الصفحة تستخدم عرض لوحة الطالب بالكامل.
-                    </p>
-                    <div class="flex flex-wrap items-center gap-2 pt-1">
-                        <a href="{{ route($sg . '.show', $offlineCourse) }}" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-800 hover:bg-slate-200">
-                            <i class="fas fa-arrow-right text-slate-500"></i>
-                            صفحة الكورس
-                        </a>
-                        <a href="{{ route($sg . '.curriculum', $offlineCourse) }}" class="inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm font-bold text-sky-800 hover:bg-sky-100">
-                            <i class="fas fa-sitemap"></i>
-                            المنهج
-                        </a>
-                        <a href="{{ route($sg . '.schedule', $offlineCourse) }}" class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-800 hover:bg-indigo-100">
-                            <i class="fas fa-calendar-alt"></i>
-                            التقويم
-                        </a>
-                        <a href="{{ route($sg . '.resources', $offlineCourse) }}" class="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-violet-700">
-                            <i class="fas fa-file-alt"></i>
-                            الموارد
-                        </a>
-                    </div>
+    <section class="sp-card p-5 sm:p-6 space-y-4">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <div class="flex items-start gap-4 min-w-0">
+                <span class="sp-icon-bubble shrink-0 !w-14 !h-14" style="background:var(--sp-mint)">
+                    <x-student.figma-icon name="icon-classes.svg" box="size-7" />
+                </span>
+                <div class="min-w-0">
+                    <p class="text-xs font-bold text-[var(--sp-muted)] m-0 mb-1 uppercase tracking-wide">{{ __('student.oc_lectures_eyebrow') }} · {{ $chLabel }}</p>
+                    <h2 class="sp-section-title m-0">{{ $offlineCourse->title }}</h2>
+                    <p class="text-sm text-[var(--sp-muted)] m-0 mt-2 max-w-2xl">{{ __('student.oc_lectures_subtitle') }}</p>
                 </div>
             </div>
+            <div class="flex flex-wrap gap-2 shrink-0">
+                <a href="{{ route($sg . '.show', $offlineCourse) }}" class="inline-flex items-center justify-center rounded-[30px] px-4 py-2.5 text-sm font-extrabold bg-[#f7f7f5] text-[var(--sp-accent-text)] hover:bg-[var(--sp-accent)] transition-colors">{{ __('student.oc_back_course') }}</a>
+                <a href="{{ route($sg . '.resources', $offlineCourse) }}" class="sp-promo-btn !mt-0">{{ __('student.oc_tile_resources') }}</a>
+            </div>
         </div>
-    </div>
+    </section>
 
-    {{-- إحصائيات --}}
     <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <div class="lectures-stat">
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">كل المحاضرات</p>
-            <p class="mt-1 text-2xl font-black text-violet-600">{{ $lectureCount }}</p>
+        <div class="sp-card p-4 sm:p-5">
+            <p class="text-xs font-bold text-[var(--sp-muted)] m-0 uppercase tracking-wide">{{ __('student.oc_stat_lectures') }}</p>
+            <p class="text-2xl font-black text-[var(--sp-accent-text)] m-0 mt-1">{{ $lectureCount }}</p>
         </div>
-        <div class="lectures-stat">
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">بتسجيل</p>
-            <p class="mt-1 text-2xl font-black text-rose-600">{{ $withRecording }}</p>
+        <div class="sp-card p-4 sm:p-5">
+            <p class="text-xs font-bold text-[var(--sp-muted)] m-0 uppercase tracking-wide">{{ __('student.oc_stat_recordings') }}</p>
+            <p class="text-2xl font-black text-[var(--sp-accent-text)] m-0 mt-1">{{ $withRecording }}</p>
         </div>
-        <div class="lectures-stat">
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">قادمة / اليوم</p>
-            <p class="mt-1 text-2xl font-black text-emerald-600">{{ $upcomingCount }}</p>
+        <div class="sp-card p-4 sm:p-5">
+            <p class="text-xs font-bold text-[var(--sp-muted)] m-0 uppercase tracking-wide">{{ __('student.oc_stat_upcoming') }}</p>
+            <p class="text-2xl font-black text-[var(--sp-accent-text)] m-0 mt-1">{{ $upcomingCount }}</p>
         </div>
-        <div class="lectures-stat">
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">المجموعة</p>
-            <p class="mt-1 truncate text-lg font-bold text-gray-900" title="{{ $enrollment->group->name ?? '—' }}">{{ $enrollment->group->name ?? '—' }}</p>
+        <div class="sp-card p-4 sm:p-5">
+            <p class="text-xs font-bold text-[var(--sp-muted)] m-0 uppercase tracking-wide">{{ __('student.oc_group') }}</p>
+            <p class="text-lg font-extrabold text-[var(--sp-accent-text)] m-0 mt-1 truncate">{{ $enrollment->group->name ?? '—' }}</p>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 items-start gap-6 xl:grid-cols-12">
-        {{-- القائمة الرئيسية --}}
+    <div class="grid grid-cols-1 items-start gap-5 xl:grid-cols-12">
         <div class="min-w-0 space-y-4 xl:col-span-8">
             <div class="flex flex-wrap items-center justify-between gap-3">
-                <h2 class="flex items-center gap-2 text-lg font-black text-gray-900 sm:text-xl">
-                    <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
-                        <i class="fas fa-chalkboard-teacher"></i>
-                    </span>
-                    قائمة المحاضرات
-                </h2>
-                <p class="text-sm font-semibold text-slate-500">
-                    يظهر <span class="text-slate-800" x-text="visibleCount"></span> من {{ $lectureCount }}
+                <h3 class="flex items-center gap-2 font-extrabold text-lg m-0">
+                    <span class="sp-icon-bubble" style="background:var(--sp-mint)"><x-student.figma-icon name="icon-classes.svg" /></span>
+                    {{ __('student.oc_lectures_list') }}
+                </h3>
+                <p class="text-sm font-bold text-[var(--sp-muted)] m-0">
+                    {{ __('student.oc_showing') }} <span class="text-[var(--sp-accent-text)]" x-text="visibleCount"></span> / {{ $lectureCount }}
                 </p>
             </div>
 
-            <div class="lectures-panel">
+            <div class="sp-card overflow-hidden">
                 @if($lectures->isEmpty())
-                    <div class="px-6 py-16 text-center text-slate-500">
-                        <i class="fas fa-chalkboard-teacher mb-3 block text-4xl text-slate-300"></i>
-                        <p class="font-bold text-slate-700">لا توجد محاضرات متاحة حالياً</p>
-                        <p class="mt-1 text-sm">ستظهر هنا عند نشرها من المدرب.</p>
+                    <div class="px-6 py-14 text-center">
+                        <span class="sp-icon-bubble mx-auto mb-3" style="background:var(--sp-mint)"><x-student.figma-icon name="icon-classes.svg" /></span>
+                        <p class="font-extrabold m-0">{{ __('student.oc_no_lectures') }}</p>
+                        <p class="text-sm text-[var(--sp-muted)] m-0 mt-1">{{ __('student.oc_no_lectures_hint') }}</p>
                     </div>
                 @else
                     <div x-ref="list">
@@ -204,7 +138,7 @@
                                 }
 
                                 $statusLabel = null;
-                                $statusClass = 'bg-slate-100 text-slate-600';
+                                $statusPill = 'sp-pill';
                                 $dateForStatus = null;
                                 if ($lecture->relationLoaded('groupSession') && $lecture->groupSession && $lecture->groupSession->session_date) {
                                     $dateForStatus = $lecture->groupSession->session_date;
@@ -213,14 +147,14 @@
                                 }
                                 if ($dateForStatus) {
                                     if ($dateForStatus->isToday()) {
-                                        $statusLabel = 'اليوم';
-                                        $statusClass = 'bg-amber-50 text-amber-800';
+                                        $statusLabel = __('student.oc_today');
+                                        $statusPill = 'sp-pill sp-pill--upcoming';
                                     } elseif ($dateForStatus->isFuture()) {
-                                        $statusLabel = 'قادمة';
-                                        $statusClass = 'bg-emerald-50 text-emerald-800';
+                                        $statusLabel = __('student.oc_upcoming');
+                                        $statusPill = 'sp-pill sp-pill--done';
                                     } else {
-                                        $statusLabel = 'سابقة';
-                                        $statusClass = 'bg-slate-100 text-slate-600';
+                                        $statusLabel = __('student.oc_past');
+                                        $statusPill = 'sp-pill';
                                     }
                                 }
                             @endphp
@@ -241,19 +175,17 @@
                                     {{-- معلومات المحاضرة --}}
                                     <div class="min-w-0 lg:col-span-7">
                                         <div class="flex gap-3">
-                                            <span class="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-sm font-black text-violet-700 tabular-nums">
+                                            <span class="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] text-sm font-black tabular-nums" style="background:var(--sp-mint);color:var(--sp-accent-text)">
                                                 {{ $loop->iteration }}
                                             </span>
                                             <div class="min-w-0 flex-1 space-y-2">
                                                 <div class="flex flex-wrap items-center gap-2">
-                                                    <h3 class="text-base font-black leading-snug text-slate-900 sm:text-lg">{{ $lecture->title }}</h3>
+                                                    <h3 class="text-base font-extrabold leading-snug m-0 sm:text-lg">{{ $lecture->title }}</h3>
                                                     @if($statusLabel)
-                                                        <span class="inline-flex rounded-md px-2 py-0.5 text-[11px] font-bold {{ $statusClass }}">{{ $statusLabel }}</span>
+                                                        <span class="{{ $statusPill }}">{{ $statusLabel }}</span>
                                                     @endif
                                                     @if($hasRecording)
-                                                        <span class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700">
-                                                            <i class="fas fa-circle-play text-[10px]"></i> تسجيل
-                                                        </span>
+                                                        <span class="sp-pill sp-pill--progress">{{ __('student.oc_recording_badge') }}</span>
                                                     @endif
                                                 </div>
 
@@ -295,29 +227,26 @@
                                         <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                                             @if($hasRecording)
                                                 <button type="button"
-                                                        class="js-open-student-recording inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-violet-700"
+                                                        class="js-open-student-recording sp-promo-btn !mt-0 !py-2.5 border-0 cursor-pointer inline-flex items-center justify-center gap-2"
                                                         data-watch-url="{{ route($sg . '.lectures.watch', [$offlineCourse, $lecture]) }}"
                                                         data-title="{{ $lecture->title }}">
-                                                    <i class="fas fa-play text-xs"></i>
-                                                    مشاهدة التسجيل
+                                                    {{ __('student.oc_watch_recording') }}
                                                 </button>
                                             @endif
                                             @if($hasMeeting)
                                                 <a href="{{ $lecture->meeting_url }}" target="_blank" rel="noopener"
-                                                   class="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-indigo-700">
-                                                    <i class="fas fa-video text-xs"></i>
-                                                    دخول البث
+                                                   class="inline-flex items-center justify-center gap-2 rounded-[30px] px-4 py-2.5 text-sm font-extrabold bg-[var(--sp-accent)] text-[var(--sp-accent-text)]">
+                                                    {{ __('student.oc_join_meeting') }}
                                                 </a>
                                             @endif
                                             @if($hasDetails)
                                                 <button type="button"
-                                                        class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 sm:col-span-2 xl:col-span-1"
+                                                        class="inline-flex items-center justify-center gap-2 rounded-[30px] bg-[#f7f7f5] px-4 py-2.5 text-sm font-extrabold text-[var(--sp-accent-text)] border-0 cursor-pointer sm:col-span-2 xl:col-span-1"
                                                         @click="toggleDetails({{ $lecture->id }})">
-                                                    <i class="fas fa-chevron-down text-xs transition-transform" :class="openId === {{ $lecture->id }} ? 'rotate-180' : ''"></i>
-                                                    <span x-text="openId === {{ $lecture->id }} ? 'إخفاء التفاصيل' : 'التفاصيل والمواد'"></span>
+                                                    <span x-text="openId === {{ $lecture->id }} ? @js(__('student.oc_hide_details')) : @js(__('student.oc_show_details'))"></span>
                                                 </button>
                                             @elseif(! $hasRecording && ! $hasMeeting)
-                                                <p class="text-center text-xs font-semibold text-slate-400 sm:col-span-2">لا مواد مرفقة بعد</p>
+                                                <p class="text-center text-xs font-semibold text-[var(--sp-muted)] sm:col-span-2">{{ __('student.oc_no_materials_yet') }}</p>
                                             @endif
                                         </div>
                                     </div>
@@ -394,62 +323,59 @@
             </div>
         </div>
 
-        {{-- الشريط الجانبي --}}
         <aside class="min-w-0 space-y-5 xl:col-span-4">
-            <div class="lectures-aside lectures-aside-sticky space-y-5">
+            <div class="sp-card p-5 space-y-5 xl:sticky xl:top-4">
                 <div>
-                    <p class="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">بحث وفلترة</p>
-                    <div class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                        <i class="fas fa-search text-slate-400 text-sm"></i>
+                    <p class="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--sp-muted)]">{{ __('student.oc_search_filter') }}</p>
+                    <div class="flex items-center gap-2 rounded-[30px] bg-[#f7f7f5] px-4 py-2.5">
+                        <x-student.figma-icon name="icon-search.svg" box="size-4" class="opacity-50" />
                         <input
                             x-model.trim="q"
                             type="search"
-                            placeholder="ابحث بالعنوان أو الوصف…"
-                            class="w-full min-w-0 border-0 bg-transparent p-0 text-sm font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-0"
+                            placeholder="{{ __('student.oc_search_lectures') }}"
+                            class="w-full min-w-0 border-0 bg-transparent p-0 text-sm font-bold focus:outline-none focus:ring-0"
                         >
                     </div>
                     <div class="mt-3 flex flex-col gap-2">
-                        <label class="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50">
-                            <span>محاضرات بمواد فقط</span>
-                            <input type="checkbox" class="rounded border-slate-300 text-violet-600 focus:ring-violet-500" x-model="onlyWithMaterials">
+                        <label class="flex cursor-pointer items-center justify-between rounded-[16px] bg-[#f7f7f5] px-3 py-2.5 text-sm font-extrabold">
+                            <span>{{ __('student.oc_filter_materials') }}</span>
+                            <input type="checkbox" class="rounded border-slate-300 text-[var(--sp-accent-text)] focus:ring-[var(--sp-accent)]" x-model="onlyWithMaterials">
                         </label>
-                        <label class="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50">
-                            <span>القادمة / اليوم</span>
-                            <input type="checkbox" class="rounded border-slate-300 text-violet-600 focus:ring-violet-500" x-model="onlyUpcoming">
+                        <label class="flex cursor-pointer items-center justify-between rounded-[16px] bg-[#f7f7f5] px-3 py-2.5 text-sm font-extrabold">
+                            <span>{{ __('student.oc_filter_upcoming') }}</span>
+                            <input type="checkbox" class="rounded border-slate-300 text-[var(--sp-accent-text)] focus:ring-[var(--sp-accent)]" x-model="onlyUpcoming">
                         </label>
-                        <label class="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50">
-                            <span>السابقة فقط</span>
-                            <input type="checkbox" class="rounded border-slate-300 text-violet-600 focus:ring-violet-500" x-model="onlyPast">
+                        <label class="flex cursor-pointer items-center justify-between rounded-[16px] bg-[#f7f7f5] px-3 py-2.5 text-sm font-extrabold">
+                            <span>{{ __('student.oc_filter_past') }}</span>
+                            <input type="checkbox" class="rounded border-slate-300 text-[var(--sp-accent-text)] focus:ring-[var(--sp-accent)]" x-model="onlyPast">
                         </label>
                     </div>
                     <button type="button"
-                            class="mt-3 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-200"
+                            class="mt-3 w-full rounded-[30px] bg-[#f7f7f5] px-3 py-2.5 text-sm font-extrabold text-[var(--sp-accent-text)] border-0 cursor-pointer hover:bg-[var(--sp-accent)]"
                             @click="q=''; onlyWithMaterials=false; onlyUpcoming=false; onlyPast=false">
-                        إعادة ضبط الفلاتر
+                        {{ __('student.oc_reset_filters') }}
                     </button>
                 </div>
 
-                <div class="border-t border-slate-100 pt-4">
-                    <p class="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">انتقال سريع</p>
-                    <div class="flex flex-col gap-2">
-                        <a href="{{ route($sg . '.curriculum', $offlineCourse) }}" class="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-gray-800 hover:border-sky-200 hover:bg-white">
-                            <span class="flex items-center gap-2"><i class="fas fa-sitemap text-sky-500"></i> المنهج</span>
-                            <i class="fas fa-chevron-left text-xs text-gray-400"></i>
-                        </a>
-                        <a href="{{ route($sg . '.schedule', $offlineCourse) }}" class="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-gray-800 hover:border-indigo-200 hover:bg-white">
-                            <span class="flex items-center gap-2"><i class="fas fa-calendar-alt text-indigo-500"></i> التقويم</span>
-                            <i class="fas fa-chevron-left text-xs text-gray-400"></i>
-                        </a>
-                        <a href="{{ route($sg . '.resources', $offlineCourse) }}" class="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-gray-800 hover:border-violet-200 hover:bg-white">
-                            <span class="flex items-center gap-2"><i class="fas fa-file-alt text-violet-500"></i> الموارد</span>
-                            <i class="fas fa-chevron-left text-xs text-gray-400"></i>
-                        </a>
-                    </div>
+                <div class="border-t border-black/5 pt-4 space-y-2">
+                    <p class="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--sp-muted)]">{{ __('student.oc_quick_links') }}</p>
+                    <a href="{{ route($sg . '.curriculum', $offlineCourse) }}" class="flex items-center justify-between gap-2 rounded-[16px] bg-[#f7f7f5] px-4 py-3 text-sm font-extrabold hover:bg-[var(--sp-accent)] transition-colors">
+                        <span>{{ __('student.oc_tile_curriculum') }}</span>
+                        <x-student.figma-icon name="icon-chevron.svg" box="size-3" class="opacity-40 rtl:rotate-180" />
+                    </a>
+                    <a href="{{ route($sg . '.schedule', $offlineCourse) }}" class="flex items-center justify-between gap-2 rounded-[16px] bg-[#f7f7f5] px-4 py-3 text-sm font-extrabold hover:bg-[var(--sp-accent)] transition-colors">
+                        <span>{{ __('student.oc_tile_schedule') }}</span>
+                        <x-student.figma-icon name="icon-chevron.svg" box="size-3" class="opacity-40 rtl:rotate-180" />
+                    </a>
+                    <a href="{{ route($sg . '.resources', $offlineCourse) }}" class="flex items-center justify-between gap-2 rounded-[16px] bg-[#f7f7f5] px-4 py-3 text-sm font-extrabold hover:bg-[var(--sp-accent)] transition-colors">
+                        <span>{{ __('student.oc_tile_resources') }}</span>
+                        <x-student.figma-icon name="icon-chevron.svg" box="size-3" class="opacity-40 rtl:rotate-180" />
+                    </a>
                 </div>
 
-                <div class="rounded-xl border border-violet-100 bg-violet-50/60 px-4 py-3 text-xs leading-relaxed text-violet-900">
-                    <p class="font-bold mb-1">نصيحة</p>
-                    <p>اضغط «مشاهدة التسجيل» لفتح الفيديو داخل المنصة دون مغادرة الصفحة.</p>
+                <div class="rounded-[16px] px-4 py-3 text-xs leading-relaxed" style="background:var(--sp-mint);color:var(--sp-accent-text)">
+                    <p class="font-extrabold mb-1 m-0">{{ __('student.oc_tip_title') }}</p>
+                    <p class="m-0">{{ __('student.oc_tip_recording') }}</p>
                 </div>
             </div>
         </aside>

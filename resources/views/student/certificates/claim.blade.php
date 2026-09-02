@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.student-dashboard')
 
 @section('title', 'اختر تصميم شهادتك')
 @section('header', 'إصدار الشهادة')

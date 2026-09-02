@@ -1,284 +1,257 @@
-@extends('layouts.app')
+@extends('layouts.student-dashboard')
 
 @section('title', __('student.notifications_title'))
 @section('header', __('student.notifications_title'))
 
 @section('content')
-<div class="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-    <!-- الهيدر والإحصائيات -->
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div class="px-4 sm:px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <h1 class="text-xl sm:text-2xl font-bold text-gray-900">{{ __('student.notifications_title') }}</h1>
-            <div class="flex items-center gap-2">
-                @if($stats['unread'] > 0)
-                <button onclick="markAllAsRead()" class="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
-                    <i class="fas fa-check ml-2"></i> {{ __('student.mark_all_read') }}
+<div class="space-y-5">
+    @if(session('success'))
+        <div class="sp-card !rounded-[16px] px-4 py-3 text-sm font-bold" style="background:var(--sp-mint);color:var(--sp-accent-text)">
+            {{ session('success') }}
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="sp-card !rounded-[16px] px-4 py-3 text-sm font-bold bg-[#f9e4d7] text-[#7a3b2e]">
+            {{ session('error') }}
+        </div>
+    @endif
+
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div class="min-w-0">
+            <p class="text-sm font-bold text-[var(--sp-muted)] m-0 mb-1">{{ __('student.notif_index_eyebrow') }}</p>
+            <p class="text-sm text-[var(--sp-muted)] m-0 max-w-2xl">{{ __('student.notif_index_subtitle') }}</p>
+        </div>
+        <div class="flex flex-wrap gap-2 shrink-0">
+            @if($stats['unread'] > 0)
+                <button type="button" onclick="markAllAsRead()" class="sp-promo-btn !mt-0 border-0 cursor-pointer">
+                    {{ __('student.mark_all_read') }}
                 </button>
-                @endif
-                <button onclick="cleanup()" class="inline-flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
-                    <i class="fas fa-broom ml-2"></i> {{ __('student.cleanup_btn') }}
-                </button>
+            @endif
+            <button type="button"
+                    onclick="cleanup()"
+                    class="inline-flex items-center justify-center rounded-[30px] px-4 py-2.5 text-sm font-extrabold bg-[#f7f7f5] text-[var(--sp-accent-text)] hover:bg-[var(--sp-accent)] transition-colors border-0 cursor-pointer">
+                {{ __('student.cleanup_btn') }}
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div class="sp-card p-4 sm:p-5">
+            <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-xs font-bold text-[var(--sp-muted)] m-0 uppercase tracking-wide">{{ __('student.total_notifications') }}</p>
+                    <p class="text-2xl font-black text-[var(--sp-accent-text)] m-0 mt-1 leading-none">{{ $stats['total'] }}</p>
+                </div>
+                <span class="sp-icon-bubble" style="background:var(--sp-sky)">
+                    <x-student.figma-icon name="icon-notifications.svg" />
+                </span>
             </div>
         </div>
-        <div class="p-4 sm:p-5">
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                <div class="py-3 px-4 bg-gray-50 rounded-xl border border-gray-100 text-center">
-                    <p class="text-xl sm:text-2xl font-bold text-gray-900">{{ $stats['total'] }}</p>
-                    <p class="text-xs font-medium text-gray-500">{{ __('student.total_notifications') }}</p>
+        <div class="sp-card p-4 sm:p-5">
+            <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-xs font-bold text-[var(--sp-muted)] m-0 uppercase tracking-wide">{{ __('student.unread_label') }}</p>
+                    <p class="text-2xl font-black text-[var(--sp-accent-text)] m-0 mt-1 leading-none">{{ $stats['unread'] }}</p>
                 </div>
-                <div class="py-3 px-4 bg-sky-50 rounded-xl border border-sky-100 text-center">
-                    <p class="text-xl sm:text-2xl font-bold text-sky-600">{{ $stats['unread'] }}</p>
-                    <p class="text-xs font-medium text-gray-500">{{ __('student.unread_label') }}</p>
+                <span class="sp-icon-bubble" style="background:var(--sp-mint)">
+                    <x-student.figma-icon name="icon-messages.svg" />
+                </span>
+            </div>
+        </div>
+        <div class="sp-card p-4 sm:p-5">
+            <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-xs font-bold text-[var(--sp-muted)] m-0 uppercase tracking-wide">{{ __('student.today_label') }}</p>
+                    <p class="text-2xl font-black text-[var(--sp-accent-text)] m-0 mt-1 leading-none">{{ $stats['today'] }}</p>
                 </div>
-                <div class="py-3 px-4 bg-amber-50 rounded-xl border border-amber-100 text-center">
-                    <p class="text-xl sm:text-2xl font-bold text-amber-600">{{ $stats['today'] }}</p>
-                    <p class="text-xs font-medium text-gray-500">{{ __('student.today_label') }}</p>
+                <span class="sp-icon-bubble" style="background:var(--sp-peach)">
+                    <x-student.figma-icon name="icon-calendar.svg" />
+                </span>
+            </div>
+        </div>
+        <div class="sp-card p-4 sm:p-5">
+            <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-xs font-bold text-[var(--sp-muted)] m-0 uppercase tracking-wide">{{ __('student.urgent_label') }}</p>
+                    <p class="text-2xl font-black text-[var(--sp-accent-text)] m-0 mt-1 leading-none">{{ $stats['urgent'] }}</p>
                 </div>
-                <div class="py-3 px-4 bg-red-50 rounded-xl border border-red-100 text-center">
-                    <p class="text-xl sm:text-2xl font-bold text-red-600">{{ $stats['urgent'] }}</p>
-                    <p class="text-xs font-medium text-gray-500">{{ __('student.urgent_label') }}</p>
-                </div>
+                <span class="sp-icon-bubble" style="background:#f9e4d7">
+                    <x-student.figma-icon name="icon-exams.svg" />
+                </span>
             </div>
         </div>
     </div>
 
-    <!-- الفلاتر -->
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-5">
-        <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="sp-card p-4 sm:p-5">
+        <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
+            <div class="xl:col-span-2">
+                <label for="notif-q" class="block text-xs font-bold text-[var(--sp-muted)] mb-1.5">{{ __('student.notif_search_placeholder') }}</label>
+                <div class="sp-search !shadow-none !bg-[#f7f7f5] w-full">
+                    <x-student.figma-icon name="icon-search.svg" box="size-5" />
+                    <input type="search" id="notif-q" name="q" value="{{ request('q') }}" placeholder="{{ __('student.notif_search_placeholder') }}" class="!text-sm">
+                </div>
+            </div>
             <div>
-                <label for="type" class="block text-sm font-medium text-gray-700 mb-1">{{ __('student.notification_type_label') }}</label>
-                <select name="type" id="type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm">
+                <label for="type" class="block text-xs font-bold text-[var(--sp-muted)] mb-1.5">{{ __('student.notification_type_label') }}</label>
+                <select name="type" id="type" class="w-full rounded-[16px] border border-black/5 bg-[#f7f7f5] px-3 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[var(--sp-accent)]">
                     <option value="">{{ __('student.all_types') }}</option>
-                    @foreach($notificationTypes as $key => $type)
-                        <option value="{{ $key }}" {{ request('type') == $key ? 'selected' : '' }}>{{ $type }}</option>
+                    @foreach($notificationTypes as $key => $label)
+                        <option value="{{ $key }}" @selected(request('type') == $key)>{{ $label }}</option>
                     @endforeach
                 </select>
             </div>
-
             <div>
-                <label for="status" class="block text-sm font-medium text-gray-700 mb-1">{{ __('common.status') }}</label>
-                <select name="status" id="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm">
+                <label for="status" class="block text-xs font-bold text-[var(--sp-muted)] mb-1.5">{{ __('common.status') }}</label>
+                <select name="status" id="status" class="w-full rounded-[16px] border border-black/5 bg-[#f7f7f5] px-3 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[var(--sp-accent)]">
                     <option value="">{{ __('student.all_statuses') }}</option>
-                    <option value="unread" {{ request('status') == 'unread' ? 'selected' : '' }}>{{ __('student.unread_label') }}</option>
-                    <option value="read" {{ request('status') == 'read' ? 'selected' : '' }}>{{ __('student.read_filter') }}</option>
+                    <option value="unread" @selected(request('status') == 'unread')>{{ __('student.unread_label') }}</option>
+                    <option value="read" @selected(request('status') == 'read')>{{ __('student.read_filter') }}</option>
                 </select>
             </div>
-
             <div>
-                <label for="priority" class="block text-sm font-medium text-gray-700 mb-1">{{ __('student.priority_label') }}</label>
-                <select name="priority" id="priority" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm">
+                <label for="priority" class="block text-xs font-bold text-[var(--sp-muted)] mb-1.5">{{ __('student.priority_label') }}</label>
+                <select name="priority" id="priority" class="w-full rounded-[16px] border border-black/5 bg-[#f7f7f5] px-3 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[var(--sp-accent)]">
                     <option value="">{{ __('student.all_priorities') }}</option>
-                    @foreach($priorities as $key => $priority)
-                        <option value="{{ $key }}" {{ request('priority') == $key ? 'selected' : '' }}>{{ $priority }}</option>
+                    @foreach($priorities as $key => $label)
+                        <option value="{{ $key }}" @selected(request('priority') == $key)>{{ $label }}</option>
                     @endforeach
                 </select>
             </div>
-
-            <div class="flex items-end">
-                <button type="submit" class="w-full bg-sky-500 hover:bg-sky-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">
-                    <i class="fas fa-filter ml-2"></i>
-                    {{ __('student.filter_btn') }}
-                </button>
+            <div class="sm:col-span-2 xl:col-span-5 flex flex-wrap gap-2 pt-1">
+                <button type="submit" class="sp-promo-btn !mt-0 border-0 cursor-pointer">{{ __('student.filter_btn') }}</button>
+                @if(request()->hasAny(['q', 'type', 'status', 'priority']))
+                    <a href="{{ route('notifications') }}" class="inline-flex items-center justify-center rounded-[30px] px-4 py-2.5 text-sm font-extrabold text-[var(--sp-muted)] hover:text-[var(--sp-accent-text)]">
+                        {{ __('student.clear_search') }}
+                    </a>
+                @endif
             </div>
         </form>
     </div>
 
-    <!-- قائمة الإشعارات -->
     @if($notifications->count() > 0)
         <div class="space-y-3">
             @foreach($notifications as $notification)
-            <div class="bg-white rounded-xl border {{ !$notification->is_read ? 'border-sky-200 border-r-4 border-r-sky-500' : 'border-gray-200' }} shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                <div class="p-6">
-                    <div class="flex items-start justify-between">
-                        <div class="flex items-start gap-4 flex-1 flex-row-reverse">
-                            <!-- أيقونة الإشعار -->
-                            <div class="flex-shrink-0">
-                                <div class="w-12 h-12 rounded-full flex items-center justify-center
-                                    @if($notification->type_color == 'blue') bg-sky-100
-                                    @elseif($notification->type_color == 'green') bg-emerald-100
-                                    @elseif($notification->type_color == 'yellow') bg-amber-100
-                                    @elseif($notification->type_color == 'red') bg-red-100
-                                    @elseif($notification->type_color == 'purple') bg-violet-100
-                                    @elseif($notification->type_color == 'orange') bg-amber-100
-                                    @else bg-gray-100
-                                    @endif">
-                                    <i class="{{ $notification->type_icon }} 
-                                        @if($notification->type_color == 'blue') text-sky-600
-                                        @elseif($notification->type_color == 'green') text-emerald-600
-                                        @elseif($notification->type_color == 'yellow') text-amber-600
-                                        @elseif($notification->type_color == 'red') text-red-600
-                                        @elseif($notification->type_color == 'purple') text-violet-600
-                                        @elseif($notification->type_color == 'orange') text-amber-600
-                                        @else text-gray-600
-                                        @endif"></i>
-                                </div>
-                            </div>
-                            
-                            <!-- محتوى الإشعار -->
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center gap-3 mb-2">
-                                    <h3 class="text-lg font-medium text-gray-900">{{ $notification->title }}</h3>
-                                    
+                <article class="sp-card p-4 sm:p-5 {{ !$notification->is_read ? 'ring-2 ring-[var(--sp-accent)] ring-offset-2' : '' }}">
+                    <div class="flex flex-col sm:flex-row sm:items-start gap-4">
+                        <div class="flex items-start gap-3 min-w-0 flex-1">
+                            <x-student.notif-icon :type="$notification->type" box="size-5" />
+                            <div class="min-w-0 flex-1">
+                                <div class="flex flex-wrap items-center gap-2 mb-1">
+                                    <h3 class="font-extrabold text-[15px] m-0 leading-snug">{{ $notification->title }}</h3>
+                                    @if(!$notification->is_read)
+                                        <span class="sp-pill sp-pill--progress">{{ __('student.new_notifications') }}</span>
+                                    @endif
                                     @if($notification->priority !== 'normal')
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                            @if($notification->priority_color == 'red') bg-red-100 text-red-800
-                                            @elseif($notification->priority_color == 'yellow') bg-amber-100 text-amber-800
-                                            @else bg-gray-100 text-gray-800
-                                            @endif">
+                                        <span class="sp-pill {{ $notification->priority === 'urgent' ? 'sp-pill--upcoming' : 'sp-pill--done' }}">
                                             {{ $priorities[$notification->priority] ?? $notification->priority }}
                                         </span>
                                     @endif
-
-                                    @if(!$notification->is_read)
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-sky-100 text-sky-800">
-                                            <i class="fas fa-circle text-[6px] ml-1"></i> جديد
-                                        </span>
-                                    @endif
-                                </div>
-                                
-                                <p class="text-gray-600 mb-3">{{ $notification->message }}</p>
-                                
-                                <div class="flex items-center gap-6 text-sm text-gray-500">
-                                    <span class="flex items-center">
-                                        <i class="fas fa-user ml-1"></i>
-                                        من: {{ $notification->sender->name ?? 'النظام' }}
+                                    <span class="text-[11px] font-bold text-[var(--sp-muted)] rounded-full bg-[#f7f7f5] px-2 py-0.5">
+                                        {{ $notificationTypes[$notification->type] ?? $notification->type }}
                                     </span>
-                                    
-                                    <span class="flex items-center">
-                                        <i class="fas fa-clock ml-1"></i>
+                                </div>
+
+                                <p class="text-sm text-[var(--sp-text)] m-0 leading-relaxed line-clamp-3">{{ $notification->message }}</p>
+
+                                <div class="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs font-bold text-[var(--sp-muted)]">
+                                    <span class="inline-flex items-center gap-1.5">
+                                        <x-student.figma-icon name="icon-profile.svg" box="size-3.5" />
+                                        {{ __('student.notif_from_sender', ['name' => $notification->sender->name ?? __('student.notif_from_system')]) }}
+                                    </span>
+                                    <span class="inline-flex items-center gap-1.5">
+                                        <x-student.figma-icon name="icon-calendar.svg" box="size-3.5" />
                                         {{ $notification->created_at->diffForHumans() }}
                                     </span>
-
                                     @if($notification->expires_at)
-                                        <span class="flex items-center">
-                                            <i class="fas fa-hourglass-end ml-1"></i>
-                                            ينتهي {{ $notification->expires_at->diffForHumans() }}
+                                        <span class="inline-flex items-center gap-1.5">
+                                            {{ __('student.notif_expires') }} {{ $notification->expires_at->diffForHumans() }}
                                         </span>
                                     @endif
                                 </div>
 
                                 @if($notification->action_url && $notification->action_text)
-                                    <div class="mt-4">
-                                        <a href="{{ route('notifications.go', $notification) }}" class="inline-flex items-center gap-2 text-sky-600 hover:text-sky-700 text-sm font-semibold transition-colors">
-                                            {{ $notification->action_text }} <i class="fas fa-external-link-alt text-xs"></i>
-                                        </a>
-                                    </div>
+                                    <a href="{{ route('notifications.go', $notification) }}"
+                                       class="sp-link inline-flex items-center gap-1.5 text-sm font-extrabold mt-3">
+                                        {{ $notification->action_text }}
+                                        <x-student.figma-icon name="icon-chevron.svg" box="size-3" class="opacity-60 rtl:rotate-180" />
+                                    </a>
                                 @endif
                             </div>
                         </div>
 
-                        <div class="flex items-center gap-2 flex-shrink-0">
+                        <div class="flex items-center gap-2 shrink-0 sm:flex-col sm:items-stretch">
                             @if(!$notification->is_read)
-                            <button onclick="markAsRead({{ $notification->id }})" class="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="تحديد كمقروء"><i class="fas fa-check"></i></button>
+                                <button type="button"
+                                        onclick="markAsRead({{ $notification->id }})"
+                                        class="inline-flex items-center justify-center rounded-[30px] px-3 py-2 text-xs font-extrabold bg-[var(--sp-mint)] text-[var(--sp-accent-text)] hover:opacity-90 border-0 cursor-pointer"
+                                        title="{{ __('student.notif_mark_read') }}">
+                                    {{ __('student.notif_mark_read') }}
+                                </button>
                             @endif
-                            <a href="{{ route('notifications.show', $notification) }}" class="p-2 text-sky-600 hover:bg-sky-50 rounded-lg transition-colors" title="عرض"><i class="fas fa-eye"></i></a>
-                            <button onclick="deleteNotification({{ $notification->id }})" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="حذف"><i class="fas fa-trash"></i></button>
+                            <a href="{{ route('notifications.show', $notification) }}"
+                               class="inline-flex items-center justify-center rounded-[30px] px-3 py-2 text-xs font-extrabold bg-[var(--sp-accent)] text-[var(--sp-accent-text)] hover:opacity-90">
+                                {{ __('student.notif_open') }}
+                            </a>
+                            <button type="button"
+                                    onclick="deleteNotification({{ $notification->id }})"
+                                    class="inline-flex items-center justify-center rounded-[30px] px-3 py-2 text-xs font-extrabold bg-[#f7f7f5] text-[#b45309] hover:bg-[#f9e4d7] border-0 cursor-pointer"
+                                    title="{{ __('student.notif_delete') }}">
+                                {{ __('student.notif_delete') }}
+                            </button>
                         </div>
                     </div>
-                </div>
-            </div>
+                </article>
             @endforeach
         </div>
 
         @if($notifications->hasPages())
-        <div class="flex justify-center mt-6">{{ $notifications->appends(request()->query())->links() }}</div>
+            <div class="flex justify-center pt-2">{{ $notifications->links() }}</div>
         @endif
     @else
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-10 sm:p-12 text-center">
-            <div class="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-gray-400">
-                <i class="fas fa-bell-slash text-2xl"></i>
-            </div>
-            <h3 class="text-lg font-bold text-gray-900 mb-2">لا توجد إشعارات</h3>
-            <p class="text-sm text-gray-500">ستظهر هنا آخر التحديثات والرسائل المهمة</p>
+        <div class="sp-card p-10 text-center">
+            <span class="sp-icon-bubble mx-auto mb-4" style="background:var(--sp-sky);width:56px;height:56px">
+                <x-student.figma-icon name="icon-notifications.svg" box="size-7" />
+            </span>
+            <h3 class="font-extrabold text-lg m-0 mb-2">{{ __('student.no_notifications') }}</h3>
+            <p class="text-sm text-[var(--sp-muted)] m-0 max-w-md mx-auto">{{ __('student.notif_empty_hint') }}</p>
         </div>
     @endif
 </div>
+@endsection
 
 @push('scripts')
 <script>
+const csrf = '{{ csrf_token() }}';
+
 function markAsRead(notificationId) {
     fetch(`/notifications/${notificationId}/mark-read`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-    });
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' }
+    }).then(r => r.json()).then(data => { if (data.success) location.reload(); }).catch(() => {});
 }
 
 function markAllAsRead() {
-    if (confirm('هل تريد تحديد جميع الإشعارات كمقروءة؟')) {
-        fetch('/notifications/mark-all-read', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                location.reload();
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-    }
+    if (!confirm(@json(__('student.notif_confirm_mark_all')))) return;
+    fetch('/notifications/mark-all-read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' }
+    }).then(r => r.json()).then(data => { if (data.success) location.reload(); }).catch(() => {});
 }
 
 function deleteNotification(notificationId) {
-    if (confirm('هل تريد حذف هذا الإشعار؟')) {
-        fetch(`/notifications/${notificationId}`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-    }
+    if (!confirm(@json(__('student.notif_confirm_delete')))) return;
+    fetch(`/notifications/${notificationId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' }
+    }).then(r => r.json()).then(data => { if (data.success) location.reload(); }).catch(() => {});
 }
 
 function cleanup() {
-    if (confirm('هل تريد حذف الإشعارات المقروءة الأقدم من 30 يوم؟')) {
-        fetch('/notifications/cleanup', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                location.reload();
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-    }
+    if (!confirm(@json(__('student.notif_confirm_cleanup')))) return;
+    fetch('/notifications/cleanup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' }
+    }).then(r => r.json()).then(data => { if (data.success) location.reload(); }).catch(() => {});
 }
 </script>
 @endpush
-@endsection

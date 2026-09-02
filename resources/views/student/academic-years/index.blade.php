@@ -1,214 +1,428 @@
-@extends('layouts.app')
+@extends('layouts.student-dashboard')
 
 @section('title', __('student.academic_paths_title'))
 @section('header', __('student.academic_paths_title'))
 
+@php
+    use App\Support\StudentFigmaAssets;
+    $sp = StudentFigmaAssets::urls();
+    $intent = $intent ?? 'choose';
+    $fawaterakEnabled = $fawaterakEnabled ?? false;
+@endphp
+
+@push('styles')
+<style>
+    .ay-hub { max-width: 1120px; }
+    .ay-hero {
+        background: linear-gradient(135deg, #1f1e31 0%, #2a2940 55%, #1f1e31 100%);
+        border-radius: 24px;
+        padding: 28px 24px;
+        color: #fff;
+        position: relative;
+        overflow: hidden;
+    }
+    .ay-hero::after {
+        content: '';
+        position: absolute;
+        inset-inline-end: -40px;
+        top: -40px;
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        background: rgba(174, 217, 234, 0.18);
+        pointer-events: none;
+    }
+    .ay-hero h1 { font-size: clamp(1.4rem, 3vw, 2rem); font-weight: 900; margin: 0 0 8px; }
+    .ay-hero p { margin: 0; color: rgba(255,255,255,0.72); font-size: 0.95rem; line-height: 1.6; max-width: 40rem; }
+    .ay-intent-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+    @media (min-width: 768px) {
+        .ay-intent-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    .ay-intent-card {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        text-align: start;
+        padding: 20px;
+        border-radius: 20px;
+        border: 1px solid #ecece8;
+        background: #fff;
+        box-shadow: var(--sp-shadow);
+        cursor: pointer;
+        transition: border-color .2s ease, transform .2s ease;
+        width: 100%;
+        font: inherit;
+        color: inherit;
+    }
+    .ay-intent-card:hover { border-color: var(--sp-accent); transform: translateY(-2px); }
+    .ay-intent-card.is-active {
+        border-color: var(--sp-accent);
+        box-shadow: 0 0 0 3px rgba(174, 217, 234, 0.45);
+    }
+    .ay-intent-card h2 { margin: 0; font-size: 1.05rem; font-weight: 800; }
+    .ay-intent-card p { margin: 0; font-size: 0.85rem; color: var(--sp-muted); line-height: 1.55; }
+    .ay-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+    .ay-tab {
+        border: 0;
+        background: #fff;
+        border-radius: 999px;
+        padding: 10px 16px;
+        font-weight: 800;
+        font-size: 13px;
+        color: var(--sp-muted);
+        box-shadow: var(--sp-shadow);
+        cursor: pointer;
+        font-family: inherit;
+    }
+    .ay-tab.is-active {
+        background: var(--sp-accent);
+        color: var(--sp-accent-text);
+    }
+    .ay-item {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px;
+        border-radius: 20px;
+        background: #fff;
+        box-shadow: var(--sp-shadow);
+        border: 1px solid #ecece8;
+        height: 100%;
+    }
+    @media (min-width: 640px) {
+        .ay-item {
+            flex-direction: row;
+            align-items: center;
+        }
+    }
+    .ay-item-body { flex: 1; min-width: 0; }
+    .ay-item-title { margin: 0 0 4px; font-size: 1rem; font-weight: 800; }
+    .ay-item-meta { margin: 0; font-size: 12px; color: var(--sp-muted); font-weight: 700; }
+    .ay-item-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        flex-shrink: 0;
+    }
+    .ay-link-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 10px 14px;
+        border-radius: 16px;
+        background: #f5f5f5;
+        color: var(--sp-text);
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 800;
+    }
+    .ay-link-btn:hover { background: #ecece8; }
+    .ay-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: #f0f7fb;
+        color: var(--sp-accent-text);
+        font-size: 11px;
+        font-weight: 800;
+    }
+    .ay-live-seg {
+        display: inline-flex;
+        gap: 6px;
+        background: #f5f5f5;
+        padding: 4px;
+        border-radius: 999px;
+        margin-bottom: 14px;
+    }
+    .ay-live-seg button {
+        border: 0;
+        background: transparent;
+        border-radius: 999px;
+        padding: 8px 14px;
+        font-weight: 800;
+        font-size: 13px;
+        cursor: pointer;
+        font-family: inherit;
+        color: var(--sp-muted);
+    }
+    .ay-live-seg button.is-on {
+        background: #fff;
+        color: var(--sp-accent-text);
+        box-shadow: var(--sp-shadow);
+    }
+    .ay-buy-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 80;
+        background: rgba(15,15,25,0.45);
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        padding: 16px;
+    }
+    @media (min-width: 640px) {
+        .ay-buy-overlay { align-items: center; }
+    }
+    .ay-buy-sheet {
+        width: min(440px, 100%);
+        padding: 20px;
+        max-height: 90dvh;
+        overflow: auto;
+    }
+    .ay-buy-close {
+        width: 36px; height: 36px; border-radius: 999px; border: 0;
+        background: #f5f5f5; cursor: pointer; color: var(--sp-text);
+    }
+    .ay-buy-option {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px;
+        border-radius: 16px;
+        text-decoration: none;
+        border: 1px solid #ecece8;
+        background: #fafaf8;
+        color: inherit;
+    }
+    .ay-buy-option--pay { background: #f0f9fc; border-color: #d7eef5; }
+    .ay-buy-option--wa:hover,
+    .ay-buy-option--pay:hover { border-color: var(--sp-accent); }
+    .ay-empty {
+        padding: 40px 20px;
+        text-align: center;
+        color: var(--sp-muted);
+        font-weight: 700;
+    }
+</style>
+@endpush
+
 @section('content')
-<div class="space-y-8">
-    <!-- Hero Section -->
-    <div class="bg-gradient-to-br from-sky-500 via-indigo-600 to-slate-700 rounded-3xl shadow-2xl overflow-hidden relative">
-        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.12),_transparent_55%)]"></div>
-        <div class="absolute -top-16 -left-16 w-56 h-56 bg-white/10 rounded-full blur-3xl"></div>
-        <div class="absolute -bottom-20 -right-20 w-72 h-72 bg-indigo-400/20 rounded-full blur-3xl"></div>
-        <div class="relative z-10 px-6 py-10 sm:px-10 sm:py-12 lg:px-14 lg:py-14 text-white space-y-6">
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-                <div class="space-y-4 max-w-3xl">
-                    <span class="inline-flex items-center gap-2 bg-white/15 text-white px-4 py-2 rounded-full text-sm font-medium backdrop-blur-md">
-                        <i class="fas fa-route"></i>
-                        {{ __('student.discover_paths') }}
-                    </span>
-                    <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black leading-tight">
-                        {{ __('student.choose_path_subtitle') }}
-                    </h1>
-                    <p class="text-white/80 text-lg sm:text-xl max-w-2xl">
-                        قمنا بتحويل التقسيمات التقليدية إلى مسارات احترافية تجمع المهارات والأدوات المطلوبة في سوق العمل البرمجي. كل مسار يحتوي على مجموعات مهارية متكاملة تساعدك على الانتقال من مستوى المبتدئ إلى المحترف.
-                    </p>
+<div class="ay-hub space-y-5"
+     x-data="{
+        intent: '{{ $intent }}',
+        liveTab: 'offline',
+        setIntent(v) {
+            this.intent = v;
+            const u = new URL(window.location.href);
+            if (v === 'choose') u.searchParams.delete('intent');
+            else u.searchParams.set('intent', v);
+            history.replaceState({}, '', u);
+        }
+     }">
+
+    <section class="ay-hero">
+        <p class="text-xs font-bold tracking-wide m-0 mb-2" style="color:rgba(174,217,234,.95)">{{ __('student.ay_hub_eyebrow') }}</p>
+        <h1>{{ __('student.ay_hub_title') }}</h1>
+        <p>{{ __('student.ay_hub_desc') }}</p>
+    </section>
+
+    {{-- Step 1: choose experience --}}
+    <div x-show="intent === 'choose'" x-cloak class="space-y-4">
+        <h2 class="sp-section-title m-0">{{ __('student.ay_what_do_you_want') }}</h2>
+        <div class="ay-intent-grid">
+            <button type="button" class="ay-intent-card" @click="setIntent('path')">
+                <span class="sp-icon-bubble" style="background:var(--sp-lilac)">
+                    <x-student.figma-icon name="icon-path.svg" box="size-6" />
+                </span>
+                <div>
+                    <h2>{{ __('student.ay_intent_path') }}</h2>
+                    <p>{{ __('student.ay_intent_path_desc') }}</p>
                 </div>
-                <div class="bg-white/10 rounded-2xl backdrop-blur-md p-6 border border-white/20 shadow-lg w-full max-w-xs">
-                    <div class="space-y-4">
-                        <div>
-                            <p class="text-sm text-white/70">{{ __('student.total_paths') }}</p>
-                            <p class="text-3xl font-bold">{{ $tracks->count() }}</p>
-                        </div>
-                        <div class="border-t border-white/10 pt-4">
-                            <p class="text-sm text-white/70">{{ __('student.skill_groups') }}</p>
-                            <p class="text-xl font-semibold">{{ $tracks->sum('academic_subjects_count') }}</p>
-                        </div>
-                        <div class="border-t border-white/10 pt-4">
-                            <p class="text-sm text-white/70">{{ __('student.latest_courses') }}</p>
-                            <p class="text-xl font-semibold">
-                                {{ $tracks->sum(fn($track) => optional($track->track_metrics)['courses_count'] ?? 0) }}
-                            </p>
-                        </div>
-                    </div>
+                <span class="ay-chip">{{ $tracks->count() }} {{ __('student.ay_paths_count') }}</span>
+            </button>
+
+            <button type="button" class="ay-intent-card" @click="setIntent('recorded')">
+                <span class="sp-icon-bubble" style="background:var(--sp-sky)">
+                    <x-student.figma-icon name="icon-courses.svg" box="size-6" />
+                </span>
+                <div>
+                    <h2>{{ __('student.ay_intent_recorded') }}</h2>
+                    <p>{{ __('student.ay_intent_recorded_desc') }}</p>
                 </div>
-            </div>
-            <div class="flex flex-wrap gap-3">
-                <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 text-white text-sm font-medium backdrop-blur-sm">
-                    <i class="fas fa-laptop-code text-emerald-300"></i>
-                    مشاريع تطبيقية واقعية
+                <span class="ay-chip">{{ $recordedCourses->count() }} {{ __('student.ay_courses_count') }}</span>
+            </button>
+
+            <button type="button" class="ay-intent-card" @click="setIntent('live')">
+                <span class="sp-icon-bubble" style="background:var(--sp-mint)">
+                    <x-student.figma-icon name="icon-classes.svg" box="size-6" />
                 </span>
-                <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 text-white text-sm font-medium backdrop-blur-sm">
-                    <i class="fas fa-layer-group text-amber-300"></i>
-                    مستويات متدرجة من المبتدئ للاحترافي
-                </span>
-                <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 text-white text-sm font-medium backdrop-blur-sm">
-                    <i class="fas fa-code-branch text-sky-300"></i>
-                    تكامل مع لغات وأطر عمل حديثة
-                </span>
-            </div>
+                <div>
+                    <h2>{{ __('student.ay_intent_live') }}</h2>
+                    <p>{{ __('student.ay_intent_live_desc') }}</p>
+                </div>
+                <span class="ay-chip">{{ $offlineGroups->count() + $onlineGroups->count() }} {{ __('student.ay_groups_count') }}</span>
+            </button>
         </div>
     </div>
 
-    <!-- Tracks -->
-    @if($tracks->count() > 0)
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            @foreach($tracks as $index => $track)
-                @php
-                    $metrics = $track->track_metrics ?? [];
-                    $languages = collect($metrics['languages'] ?? []);
-                    $frameworks = collect($metrics['frameworks'] ?? []);
-                    $levels = collect($metrics['levels'] ?? []);
-                    $coursesCount = $metrics['courses_count'] ?? 0;
-                    $previewCourses = $track->preview_courses ?? collect();
-                    $colorPalette = [
-                        ['from' => 'from-sky-500', 'to' => 'to-slate-600', 'icon' => 'fa-globe'],
-                        ['from' => 'from-emerald-500', 'to' => 'to-teal-600', 'icon' => 'fa-database'],
-                        ['from' => 'from-purple-500', 'to' => 'to-pink-600', 'icon' => 'fa-layer-group'],
-                        ['from' => 'from-amber-500', 'to' => 'to-orange-600', 'icon' => 'fa-robot'],
-                        ['from' => 'from-indigo-500', 'to' => 'to-sky-600', 'icon' => 'fa-cloud'],
-                        ['from' => 'from-rose-500', 'to' => 'to-fuchsia-600', 'icon' => 'fa-bolt'],
-                    ];
-                    $palette = $colorPalette[$index % count($colorPalette)];
-                @endphp
-                <a href="{{ route('academic-years.subjects', $track) }}"
-                   class="group relative bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
-                    <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br {{ $palette['from'] }} {{ $palette['to'] }}/10 pointer-events-none"></div>
-                    <div class="relative p-6 space-y-6">
-                        <div class="flex items-start justify-between gap-4">
-                            <div>
-                                <div class="flex items-center gap-3 mb-3">
-                                    <span class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br {{ $palette['from'] }} {{ $palette['to'] }} text-white shadow-lg">
-                                        <i class="fas {{ $palette['icon'] }} text-lg"></i>
-                                    </span>
-                                    <div>
-                                        <h2 class="text-xl font-bold text-gray-900">{{ $track->name }}</h2>
-                                        <p class="text-sm text-gray-500">
-                                            {{ $track->description ? Str::limit($track->description, 90) : 'مسار متكامل يجمع بين المهارات المطلوبة لتطوير حلول برمجية حديثة.' }}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold">
-                                        <i class="fas fa-layer-group text-[10px]"></i>
-                                        {{ $track->academic_subjects_count }} مجموعة مهارات
-                                    </span>
-                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-100 text-sky-700 text-xs font-semibold">
-                                        <i class="fas fa-graduation-cap text-[10px]"></i>
-                                        {{ $coursesCount }} كورس متخصص
-                                    </span>
-                                    @if(!empty($metrics['avg_duration']))
-                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
-                                            <i class="fas fa-clock text-[10px]"></i>
-                                            مدة متوسطة {{ $metrics['avg_duration'] }}
-                                        </span>
-                                    @endif
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <span class="inline-flex items-center gap-2 text-sm font-semibold text-sky-600">
-                                    استعرض المسار
-                                    <i class="fas fa-arrow-left text-xs transition-transform group-hover:-translate-x-1"></i>
-                                </span>
-                            </div>
-                        </div>
+    {{-- Tabs when inside a mode --}}
+    <div x-show="intent !== 'choose'" x-cloak>
+        <div class="ay-tabs">
+            <button type="button" class="ay-tab" :class="{ 'is-active': intent === 'path' }" @click="setIntent('path')">{{ __('student.ay_intent_path') }}</button>
+            <button type="button" class="ay-tab" :class="{ 'is-active': intent === 'recorded' }" @click="setIntent('recorded')">{{ __('student.ay_intent_recorded') }}</button>
+            <button type="button" class="ay-tab" :class="{ 'is-active': intent === 'live' }" @click="setIntent('live')">{{ __('student.ay_intent_live') }}</button>
+            <button type="button" class="ay-tab" @click="setIntent('choose')">{{ __('student.ay_back_choose') }}</button>
+        </div>
 
-                        @if($languages->isNotEmpty() || $frameworks->isNotEmpty() || $levels->isNotEmpty())
-                            <div class="space-y-3">
-                                @if($languages->isNotEmpty())
-                                    <div class="flex items-start gap-3">
-                                        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wide mt-1">اللغات</span>
-                                        <div class="flex flex-wrap gap-2">
-                                            @foreach($languages as $language)
-                                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
-                                                    <i class="fas fa-code ml-1 text-[10px] text-sky-500"></i>
-                                                    {{ $language }}
-                                                </span>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                @endif
-                                @if($frameworks->isNotEmpty())
-                                    <div class="flex items-start gap-3">
-                                        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wide mt-1">الأطر</span>
-                                        <div class="flex flex-wrap gap-2">
-                                            @foreach($frameworks as $framework)
-                                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
-                                                    <i class="fas fa-cubes ml-1 text-[10px] text-indigo-500"></i>
-                                                    {{ $framework }}
-                                                </span>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                @endif
-                                @if($levels->isNotEmpty())
-                                    <div class="flex items-start gap-3">
-                                        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wide mt-1">المستويات</span>
-                                        <div class="flex flex-wrap gap-2">
-                                            @foreach($levels as $level)
-                                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-200 text-slate-700 capitalize">
-                                                    {{ __($level) }}
-                                                </span>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                @endif
-                            </div>
-                        @endif
-
-                        @if($previewCourses->isNotEmpty())
-                            <div class="border-t border-gray-100 pt-4">
-                                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">أبرز الكورسات داخل المسار</p>
-                                <div class="space-y-3">
-                                    @foreach($previewCourses as $course)
-                                        <div class="flex items-center justify-between gap-3 text-sm text-gray-600">
-                                            <div class="flex items-center gap-2 truncate">
-                                                <span class="w-2 h-2 rounded-full bg-gradient-to-br {{ $palette['from'] }} {{ $palette['to'] }}"></span>
-                                                <span class="truncate">{{ $course->title }}</span>
-                                            </div>
-                                            <div class="flex items-center gap-2 text-xs text-gray-400">
-                                                @if($course->programming_language)
-                                                    <span><i class="fas fa-code ml-1"></i>{{ $course->programming_language }}</span>
-                                                @endif
-                                                @if($course->level)
-                                                    <span><i class="fas fa-signal ml-1"></i>{{ $course->level }}</span>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </div>
+        {{-- PATHS --}}
+        <div x-show="intent === 'path'" class="space-y-3">
+            <p class="text-sm text-[var(--sp-muted)] font-bold m-0 mb-2">{{ __('student.ay_path_intro') }}</p>
+            @forelse($tracks as $track)
+                @php $metrics = $track->track_metrics ?? []; @endphp
+                <article class="ay-item">
+                    <div class="ay-item-body">
+                        <h3 class="ay-item-title">{{ $track->name }}</h3>
+                        <p class="ay-item-meta">
+                            {{ $track->academic_subjects_count }} {{ __('student.skill_groups') }}
+                            · {{ $metrics['courses_count'] ?? 0 }} {{ __('student.ay_courses_count') }}
+                        </p>
+                        @if($track->description)
+                            <p class="text-sm text-[var(--sp-muted)] m-0 mt-2">{{ \Illuminate\Support\Str::limit($track->description, 120) }}</p>
                         @endif
                     </div>
-                </a>
-            @endforeach
+                    <div class="ay-item-actions">
+                        <a href="{{ route('academic-years.subjects', $track) }}" class="ay-link-btn">{{ __('student.ay_explore_path') }}</a>
+                        <x-student.purchase-chooser
+                            :title="$track->name"
+                            :whatsapp-url="$track->whatsapp_url"
+                            :pay-url="$track->path_checkout_url"
+                            :fawaterak-enabled="$fawaterakEnabled"
+                            :hint="__('student.ay_path_pay_hint')"
+                        />
+                    </div>
+                </article>
+            @empty
+                <div class="ay-empty sp-card">{{ __('student.ay_empty_paths') }}</div>
+            @endforelse
         </div>
-    @else
-        <div class="bg-white border border-gray-100 rounded-3xl shadow-xl p-12 text-center space-y-4">
-            <div class="flex items-center justify-center">
-                <span class="w-16 h-16 rounded-2xl bg-sky-100 text-sky-600 flex items-center justify-center text-2xl">
-                    <i class="fas fa-compass"></i>
-                </span>
+
+        {{-- RECORDED --}}
+        <div x-show="intent === 'recorded'" class="space-y-3">
+            <p class="text-sm text-[var(--sp-muted)] font-bold m-0 mb-2">{{ __('student.ay_recorded_intro') }}</p>
+            @forelse($recordedCourses as $course)
+                @php
+                    $cTitle = $course->localized('title') ?: $course->title;
+                    $priceLabel = $course->is_free ? __('student.free') : (number_format((float) $course->price, 0) . ' ' . __('student.egp'));
+                @endphp
+                <article class="ay-item">
+                    <div class="ay-item-body">
+                        <h3 class="ay-item-title">{{ $cTitle }}</h3>
+                        <p class="ay-item-meta">
+                            {{ $course->level ?: __('student.ay_all_levels') }}
+                            @if($course->programming_language) · {{ $course->programming_language }} @endif
+                        </p>
+                        <p class="text-sm font-extrabold text-[var(--sp-accent-text)] m-0 mt-2">{{ $priceLabel }}</p>
+                    </div>
+                    <div class="ay-item-actions">
+                        <a href="{{ route('courses.show', $course) }}" class="ay-link-btn">{{ __('student.ay_view_details') }}</a>
+                        <x-student.purchase-chooser
+                            :title="$cTitle"
+                            :whatsapp-url="$course->whatsapp_url"
+                            :pay-url="$course->portal_checkout_url"
+                            :fawaterak-enabled="$fawaterakEnabled"
+                            :price-label="$priceLabel"
+                            :hint="__('student.ay_recorded_pay_hint')"
+                        />
+                    </div>
+                </article>
+            @empty
+                <div class="ay-empty sp-card">{{ __('student.ay_empty_recorded') }}</div>
+            @endforelse
+        </div>
+
+        {{-- LIVE --}}
+        <div x-show="intent === 'live'">
+            <p class="text-sm text-[var(--sp-muted)] font-bold m-0 mb-3">{{ __('student.ay_live_intro') }}</p>
+            <div class="ay-live-seg">
+                <button type="button" :class="{ 'is-on': liveTab === 'offline' }" @click="liveTab = 'offline'">
+                    {{ __('student.ay_live_offline') }} ({{ $offlineGroups->count() }})
+                </button>
+                <button type="button" :class="{ 'is-on': liveTab === 'online' }" @click="liveTab = 'online'">
+                    {{ __('student.ay_live_online') }} ({{ $onlineGroups->count() }})
+                </button>
             </div>
-            <h3 class="text-2xl font-bold text-gray-900">لم يتم إعداد المسارات بعد</h3>
-            <p class="text-gray-500 max-w-xl mx-auto">
-                لم يتم ربط المسارات التعليمية بالكورسات البرمجية حتى الآن. تواصل مع فريق المنصة لإضافة المسارات وتوزيع الكورسات عليها.
-            </p>
-            <a href="{{ route('dashboard') }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-600 text-white hover:bg-sky-700 transition-colors">
-                <i class="fas fa-arrow-right"></i>
-                العودة للوحة التحكم
-            </a>
+
+            <div x-show="liveTab === 'offline'" class="space-y-3">
+                @forelse($offlineGroups as $group)
+                    @php
+                        $gTitle = $group->name;
+                        $priceLabel = number_format((float) ($group->course->price ?? 0), 0) . ' ' . __('student.egp');
+                    @endphp
+                    <article class="ay-item">
+                        <div class="ay-item-body">
+                            <span class="ay-chip mb-2">{{ __('student.ay_live_offline') }}</span>
+                            <h3 class="ay-item-title">{{ $gTitle }}</h3>
+                            <p class="ay-item-meta">
+                                {{ $group->course->title ?? '' }}
+                                · {{ __('student.ay_seats_left', ['n' => $group->seats_left]) }}
+                                @if($group->start_date) · {{ $group->start_date->format('Y-m-d') }} @endif
+                            </p>
+                            <p class="text-sm font-extrabold text-[var(--sp-accent-text)] m-0 mt-2">{{ $priceLabel }}</p>
+                        </div>
+                        <div class="ay-item-actions">
+                            <a href="{{ $group->book_url }}" class="ay-link-btn">{{ __('student.ay_open_booking') }}</a>
+                            <x-student.purchase-chooser
+                                :title="$gTitle"
+                                :whatsapp-url="$group->whatsapp_url"
+                                :book-url="$group->book_url"
+                                :fawaterak-enabled="false"
+                                :price-label="$priceLabel"
+                                :hint="__('student.ay_live_pay_hint')"
+                            />
+                        </div>
+                    </article>
+                @empty
+                    <div class="ay-empty sp-card">{{ __('student.ay_empty_offline') }}</div>
+                @endforelse
+            </div>
+
+            <div x-show="liveTab === 'online'" class="space-y-3">
+                @forelse($onlineGroups as $group)
+                    @php
+                        $gTitle = $group->name;
+                        $priceLabel = number_format((float) ($group->course->price ?? 0), 0) . ' ' . __('student.egp');
+                    @endphp
+                    <article class="ay-item">
+                        <div class="ay-item-body">
+                            <span class="ay-chip mb-2">{{ __('student.ay_live_online') }}</span>
+                            <h3 class="ay-item-title">{{ $gTitle }}</h3>
+                            <p class="ay-item-meta">
+                                {{ $group->course->title ?? '' }}
+                                · {{ __('student.ay_seats_left', ['n' => $group->seats_left]) }}
+                                @if($group->start_date) · {{ $group->start_date->format('Y-m-d') }} @endif
+                            </p>
+                            <p class="text-sm font-extrabold text-[var(--sp-accent-text)] m-0 mt-2">{{ $priceLabel }}</p>
+                        </div>
+                        <div class="ay-item-actions">
+                            <a href="{{ $group->book_url }}" class="ay-link-btn">{{ __('student.ay_open_booking') }}</a>
+                            <x-student.purchase-chooser
+                                :title="$gTitle"
+                                :whatsapp-url="$group->whatsapp_url"
+                                :book-url="$group->book_url"
+                                :fawaterak-enabled="false"
+                                :price-label="$priceLabel"
+                                :hint="__('student.ay_live_pay_hint')"
+                            />
+                        </div>
+                    </article>
+                @empty
+                    <div class="ay-empty sp-card">{{ __('student.ay_empty_online') }}</div>
+                @endforelse
+            </div>
         </div>
-    @endif
+    </div>
 </div>
 @endsection
