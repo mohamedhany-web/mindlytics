@@ -543,6 +543,9 @@ Route::get('/course/{course}/mind-map', [\App\Http\Controllers\Public\CourseMind
 Route::get('/course-info/{slug}', [\App\Http\Controllers\Public\SalesCourseBoardLandingController::class, 'show'])
     ->name('public.sales-course-board.show');
 
+Route::get('/diploma-info/{slug}', [\App\Http\Controllers\Public\SalesDiplomaBoardLandingController::class, 'show'])
+    ->name('public.sales-diploma-board.show');
+
 Route::post('/course/{courseId}/reviews', [\App\Http\Controllers\Public\PublicReviewController::class, 'storeCourse'])
     ->middleware('auth')
     ->name('public.course.reviews.store');
@@ -1526,6 +1529,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('/get-subjects-by-year', [\App\Http\Controllers\Admin\AdvancedCourseController::class, 'getSubjectsByYear'])->name('advanced-courses.get-subjects-by-year');
 
         Route::resource('sales-course-board', \App\Http\Controllers\Admin\SalesCourseBoardController::class)->except(['show']);
+        Route::resource('sales-diploma-board', \App\Http\Controllers\Admin\SalesDiplomaBoardController::class)->except(['show']);
 
         // بناء المنهج (أدمن) + سياسة فتح الفيديوهات
         Route::get('/curriculum', [\App\Http\Controllers\Admin\CurriculumController::class, 'hub'])->name('curriculum.hub');
