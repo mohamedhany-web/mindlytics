@@ -1926,7 +1926,9 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\OfflineEnrollmentController::class, 'index'])->name('index');
             Route::post('/', [\App\Http\Controllers\Admin\OfflineEnrollmentController::class, 'store'])->name('store');
             Route::put('/{enrollment}/status', [\App\Http\Controllers\Admin\OfflineEnrollmentController::class, 'updateStatus'])->name('update-status');
+            Route::put('/{enrollment}/financial', [\App\Http\Controllers\Admin\OfflineEnrollmentController::class, 'updateFinancial'])->name('update-financial');
             Route::post('/{enrollment}/payment', [\App\Http\Controllers\Admin\OfflineEnrollmentController::class, 'addPayment'])->name('add-payment');
+            Route::post('/{enrollment}/refund', [\App\Http\Controllers\Admin\OfflineEnrollmentController::class, 'refund'])->name('refund');
             Route::delete('/{enrollment}', [\App\Http\Controllers\Admin\OfflineEnrollmentController::class, 'destroy'])->name('destroy');
         });
 

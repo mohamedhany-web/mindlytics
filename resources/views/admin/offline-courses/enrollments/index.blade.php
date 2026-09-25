@@ -113,6 +113,19 @@
             <!-- الدفع -->
             <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
                 <h3 class="font-bold text-gray-800 mb-3"><i class="fas fa-money-bill-wave text-green-600 ml-2"></i>تفاصيل الدفع</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    <div class="lg:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">سعر الكورس لهذا الطالب (ج.م)</label>
+                        <input type="number" name="custom_price" x-model.number="coursePrice" step="0.01" min="0"
+                               class="w-full px-3 py-2 border border-amber-300 bg-amber-50 rounded-lg focus:ring-2 focus:ring-amber-500 font-semibold"
+                               placeholder="{{ number_format((float) $offlineCourse->price, 2, '.', '') }}">
+                        <p class="text-xs text-amber-800 mt-1">
+                            السعر الافتراضي للكورس: <strong>{{ number_format((float) $offlineCourse->price, 2) }} ج.م</strong>
+                            — يمكنك تغييره لهذا الطالب فقط دون التأثير على باقي المسجلين.
+                        </p>
+                        <button type="button" @click="coursePrice = defaultCoursePrice" class="text-xs text-blue-600 hover:underline mt-1">إعادة السعر الافتراضي</button>
+                    </div>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">نوع الدفع <span class="text-red-500">*</span></label>
@@ -291,7 +304,7 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap">
-                                <div class="flex items-center gap-1">
+                                <div class="flex items-center gap-1 flex-wrap">
                                     <!-- تفعيل/إيقاف -->
                                     <form action="{{ route('admin.offline-courses.enrollments.update-status', [$offlineCourse, $enrollment]) }}" method="POST" class="inline">
                                         @csrf
@@ -302,11 +315,44 @@
                                         </button>
                                     </form>
 
+                                    <!-- تعديل البيانات المالية -->
+                                    <button type="button"
+                                            @click="openEditModal({{ json_encode([
+                                                'id' => $enrollment->id,
+                                                'student' => ['name' => $enrollment->student->name ?? ''],
+                                                'total_amount' => (float) $enrollment->total_amount,
+                                                'discount_amount' => (float) ($enrollment->discount_amount ?? 0),
+                                                'paid_amount' => (float) $enrollment->paid_amount,
+                                                'remaining_amount' => (float) $enrollment->remaining_amount,
+                                                'payment_notes' => $enrollment->payment_notes,
+                                                'status' => $enrollment->status,
+                                            ], JSON_UNESCAPED_UNICODE) }})"
+                                            class="text-sky-600 hover:text-sky-800 font-medium text-xs px-1.5 py-1 rounded hover:bg-sky-50">
+                                        <i class="fas fa-edit"></i> تعديل
+                                    </button>
+
                                     @if((float)$enrollment->remaining_amount > 0)
                                     <!-- دفعة إضافية -->
-                                    <button type="button" @click="openPaymentModal({{ json_encode($enrollment) }})"
+                                    <button type="button" @click="openPaymentModal({{ json_encode([
+                                        'id' => $enrollment->id,
+                                        'student' => ['name' => $enrollment->student->name ?? ''],
+                                        'remaining_amount' => (float) $enrollment->remaining_amount,
+                                    ], JSON_UNESCAPED_UNICODE) }})"
                                             class="text-green-600 hover:text-green-800 font-medium text-xs px-1.5 py-1 rounded hover:bg-green-50">
                                         <i class="fas fa-money-bill-wave"></i> دفعة
+                                    </button>
+                                    @endif
+
+                                    @if((float)$enrollment->paid_amount > 0)
+                                    <!-- استرداد -->
+                                    <button type="button"
+                                            @click="openRefundModal({{ json_encode([
+                                                'id' => $enrollment->id,
+                                                'student' => ['name' => $enrollment->student->name ?? ''],
+                                                'paid_amount' => (float) $enrollment->paid_amount,
+                                            ], JSON_UNESCAPED_UNICODE) }})"
+                                            class="text-amber-700 hover:text-amber-900 font-medium text-xs px-1.5 py-1 rounded hover:bg-amber-50">
+                                        <i class="fas fa-undo"></i> استرداد
                                     </button>
                                     @endif
 
@@ -341,7 +387,7 @@
                 <h3 class="text-lg font-bold text-gray-900 mb-4"><i class="fas fa-money-bill-wave text-green-600 ml-2"></i>تسجيل دفعة إضافية</h3>
                 <div class="bg-gray-50 rounded-lg p-3 mb-4 text-sm">
                     <p>الطالب: <strong x-text="paymentEnrollment?.student?.name"></strong></p>
-                    <p>المبلغ المتبقي: <strong class="text-red-600" x-text="paymentEnrollment?.remaining_amount + ' ج.م'"></strong></p>
+                    <p>المبلغ المتبقي: <strong class="text-red-600" x-text="formatMoney(paymentEnrollment?.remaining_amount) + ' ج.م'"></strong></p>
                 </div>
                 <form :action="paymentAction" method="POST">
                     @csrf
@@ -385,6 +431,97 @@
             </div>
         </div>
     </div>
+
+    <!-- نافذة تعديل البيانات المالية -->
+    <div x-show="showEditModal" x-cloak class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="showEditModal = false">
+        <div class="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4"><i class="fas fa-edit text-sky-600 ml-2"></i>تعديل بيانات الدفع</h3>
+                <div class="bg-sky-50 rounded-lg p-3 mb-4 text-sm">
+                    <p>الطالب: <strong x-text="editEnrollment?.student?.name"></strong></p>
+                </div>
+                <form :action="editAction" method="POST">
+                    @csrf
+                    @method('PUT')
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">الإجمالي المستحق (بعد الخصم) <span class="text-red-500">*</span></label>
+                            <input type="number" name="total_amount" x-model.number="editForm.total_amount" step="0.01" min="0" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">قيمة الخصم</label>
+                            <input type="number" name="discount_amount" x-model.number="editForm.discount_amount" step="0.01" min="0"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">المدفوع <span class="text-red-500">*</span></label>
+                            <input type="number" name="paid_amount" x-model.number="editForm.paid_amount" step="0.01" min="0" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500">
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-3 text-sm">
+                            <p>المتبقي المحسوب:
+                                <strong class="text-red-600" x-text="formatMoney(Math.max(0, (editForm.total_amount || 0) - (editForm.paid_amount || 0))) + ' ج.م'"></strong>
+                            </p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">حالة التسجيل</label>
+                            <select name="status" x-model="editForm.status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500">
+                                <option value="pending">قيد الانتظار</option>
+                                <option value="active">نشط</option>
+                                <option value="completed">منتهي</option>
+                                <option value="suspended">موقوف</option>
+                                <option value="cancelled">ملغي</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">ملاحظات الدفع</label>
+                            <textarea name="payment_notes" x-model="editForm.payment_notes" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"></textarea>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex justify-end gap-2">
+                        <button type="button" @click="showEditModal = false" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium">إلغاء</button>
+                        <button type="submit" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-medium">حفظ التعديلات</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة استرداد -->
+    <div x-show="showRefundModal" x-cloak class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="showRefundModal = false">
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div class="p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4"><i class="fas fa-undo text-amber-600 ml-2"></i>استرداد مبلغ</h3>
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-sm">
+                    <p>الطالب: <strong x-text="refundEnrollment?.student?.name"></strong></p>
+                    <p class="mt-1">أقصى مبلغ قابل للاسترداد:
+                        <strong class="text-amber-800" x-text="formatMoney(refundEnrollment?.paid_amount) + ' ج.م'"></strong>
+                    </p>
+                </div>
+                <form :action="refundAction" method="POST" onsubmit="return confirm('تأكيد استرداد هذا المبلغ؟');">
+                    @csrf
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">مبلغ الاسترداد <span class="text-red-500">*</span></label>
+                            <input type="number" name="amount" x-model.number="refundAmount" step="0.01" min="0.01"
+                                   :max="refundEnrollment?.paid_amount" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">ملاحظات</label>
+                            <textarea name="notes" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                                      placeholder="سبب الاسترداد (اختياري)"></textarea>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex justify-end gap-2">
+                        <button type="button" @click="showRefundModal = false" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium">إلغاء</button>
+                        <button type="submit" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium">تأكيد الاسترداد</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -404,7 +541,8 @@ function enrollmentsPage() {
 
     return {
         paymentType: 'full',
-        coursePrice: {{ (float) $offlineCourse->price }},
+        defaultCoursePrice: {{ (float) $offlineCourse->price }},
+        coursePrice: {{ (float) old('custom_price', $offlineCourse->price) }},
         applyDiscount: {{ old('apply_discount') ? 'true' : 'false' }},
         discountType: @json(old('discount_type', 'fixed')),
         discountValue: @json(old('discount_value', '')),
@@ -412,10 +550,19 @@ function enrollmentsPage() {
         paymentEnrollment: null,
         paymentAction: '',
         paymentMethodModal: 'cash',
+        showEditModal: false,
+        editEnrollment: null,
+        editAction: '',
+        editForm: { total_amount: 0, discount_amount: 0, paid_amount: 0, payment_notes: '', status: 'active' },
+        showRefundModal: false,
+        refundEnrollment: null,
+        refundAction: '',
+        refundAmount: 0,
         emailSearch: '',
         workshopPromo: { has_discount: false, discount_amount: 0, promo_code: '' },
         offlineCourseId: {{ $offlineCourse->id }},
         promoPreviewUrl: @json(route('admin.workshop-promo-codes.preview-discount')),
+        enrollmentsBaseUrl: @json(url('admin/offline-courses/' . $offlineCourse->id . '/enrollments')),
 
         get effectiveDiscountAmount() {
             if (this.paymentType === 'free') return 0;
@@ -487,8 +634,28 @@ function enrollmentsPage() {
         openPaymentModal(enrollment) {
             this.paymentEnrollment = enrollment;
             this.paymentMethodModal = 'cash';
-            this.paymentAction = "{{ url('admin/offline-courses/' . $offlineCourse->id . '/enrollments') }}/" + enrollment.id + "/payment";
+            this.paymentAction = this.enrollmentsBaseUrl + '/' + enrollment.id + '/payment';
             this.showPaymentModal = true;
+        },
+
+        openEditModal(enrollment) {
+            this.editEnrollment = enrollment;
+            this.editForm = {
+                total_amount: parseFloat(enrollment.total_amount) || 0,
+                discount_amount: parseFloat(enrollment.discount_amount) || 0,
+                paid_amount: parseFloat(enrollment.paid_amount) || 0,
+                payment_notes: enrollment.payment_notes || '',
+                status: enrollment.status || 'active',
+            };
+            this.editAction = this.enrollmentsBaseUrl + '/' + enrollment.id + '/financial';
+            this.showEditModal = true;
+        },
+
+        openRefundModal(enrollment) {
+            this.refundEnrollment = enrollment;
+            this.refundAmount = parseFloat(enrollment.paid_amount) || 0;
+            this.refundAction = this.enrollmentsBaseUrl + '/' + enrollment.id + '/refund';
+            this.showRefundModal = true;
         }
     };
 }

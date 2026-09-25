@@ -82,6 +82,7 @@ class OfflineEnrollmentController extends Controller
             'group_id' => 'required|exists:offline_course_groups,id',
             'enrollment_channel' => 'required|in:offline,online',
             'status' => 'required|in:pending,active',
+            'custom_price' => 'nullable|numeric|min:0',
             'payment_type' => 'required|in:full,partial,free',
             'paid_amount' => 'required_if:payment_type,partial|nullable|numeric|min:0',
             'apply_discount' => 'nullable|boolean',
@@ -115,7 +116,9 @@ class OfflineEnrollmentController extends Controller
             return back()->withErrors(['error' => $msg]);
         }
 
-        $listPrice = (float) $offlineCourse->price;
+        $listPrice = array_key_exists('custom_price', $validated) && $validated['custom_price'] !== null
+            ? round((float) $validated['custom_price'], 2)
+            : (float) $offlineCourse->price;
         $discountAmount = 0;
         $finalAmount = $listPrice;
         $paidAmount = 0;
@@ -127,7 +130,7 @@ class OfflineEnrollmentController extends Controller
         } else {
             $discountAmount = $this->resolveEnrollmentDiscount($request, $listPrice);
 
-            if ($discountAmount <= 0) {
+            if ($discountAmount <= 0 && abs($listPrice - (float) $offlineCourse->price) < 0.0001) {
                 $student = User::find($validated['user_id']);
                 if ($student) {
                     $promoResult = app(\App\Services\WorkshopPromoService::class)
@@ -226,6 +229,195 @@ class OfflineEnrollmentController extends Controller
         $enrollment->update($validated);
 
         return back()->with('success', 'تم تحديث حالة التسجيل بنجاح');
+    }
+
+    /**
+     * تعديل البيانات المالية للتسجيل (السعر / الخصم / المدفوع).
+     */
+    public function updateFinancial(Request $request, OfflineCourse $offlineCourse, OfflineCourseEnrollment $enrollment)
+    {
+        abort_unless((int) $enrollment->offline_course_id === (int) $offlineCourse->id, 404);
+
+        $validated = $request->validate([
+            'total_amount' => 'required|numeric|min:0',
+            'discount_amount' => 'nullable|numeric|min:0',
+            'paid_amount' => 'required|numeric|min:0',
+            'payment_notes' => 'nullable|string|max:2000',
+            'status' => 'nullable|in:pending,active,completed,suspended,cancelled',
+        ]);
+
+        $total = round((float) $validated['total_amount'], 2);
+        $discount = max(0, round((float) ($validated['discount_amount'] ?? 0), 2));
+        $paid = max(0, round((float) $validated['paid_amount'], 2));
+
+        if ($paid > $total && $total > 0) {
+            return back()->withErrors(['paid_amount' => 'المبلغ المدفوع لا يمكن أن يتجاوز الإجمالي المستحق.'])->withInput();
+        }
+
+        DB::beginTransaction();
+        try {
+            $enrollment->total_amount = $total;
+            $enrollment->discount_amount = $discount;
+            $enrollment->paid_amount = $paid;
+            $enrollment->remaining_amount = max(0, $total - $paid);
+
+            if ($total <= 0) {
+                $enrollment->payment_status = 'paid';
+                $enrollment->remaining_amount = 0;
+            } elseif ($enrollment->remaining_amount <= 0) {
+                $enrollment->payment_status = 'paid';
+            } elseif ($paid > 0) {
+                $enrollment->payment_status = 'partial';
+            } else {
+                $enrollment->payment_status = 'unpaid';
+            }
+
+            if (array_key_exists('payment_notes', $validated)) {
+                $enrollment->payment_notes = $validated['payment_notes'];
+            }
+            if (! empty($validated['status'])) {
+                $enrollment->status = $validated['status'];
+            }
+
+            $enrollment->save();
+
+            if ($enrollment->invoice) {
+                $invoice = $enrollment->invoice;
+                $listPrice = $total + $discount;
+                $invoice->subtotal = $listPrice;
+                $invoice->discount_amount = $discount;
+                $invoice->total_amount = $total;
+                if ($total <= 0 || $enrollment->remaining_amount <= 0) {
+                    $invoice->status = 'paid';
+                    $invoice->paid_at = $invoice->paid_at ?? now();
+                } elseif ($paid > 0) {
+                    $invoice->status = 'partial';
+                } else {
+                    $invoice->status = 'pending';
+                }
+                $invoice->save();
+            }
+
+            DB::commit();
+
+            return back()->with('success', 'تم تحديث البيانات المالية للطالب بنجاح');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Offline enrollment financial update failed', ['error' => $e->getMessage()]);
+
+            return back()->withErrors(['error' => 'حدث خطأ أثناء تحديث البيانات المالية']);
+        }
+    }
+
+    /**
+     * استرداد مبلغ من تسجيل الطالب (كلي أو جزئي).
+     */
+    public function refund(Request $request, OfflineCourse $offlineCourse, OfflineCourseEnrollment $enrollment)
+    {
+        abort_unless((int) $enrollment->offline_course_id === (int) $offlineCourse->id, 404);
+
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'notes' => 'nullable|string|max:2000',
+        ]);
+
+        $amount = round((float) $validated['amount'], 2);
+        $maxRefundable = round((float) $enrollment->paid_amount, 2);
+
+        if ($amount > $maxRefundable) {
+            return back()->withErrors(['amount' => 'مبلغ الاسترداد لا يمكن أن يتجاوز المدفوع ('.number_format($maxRefundable, 2).' ج.م).']);
+        }
+
+        $notes = trim((string) ($validated['notes'] ?? ''));
+        if ($notes === '') {
+            $notes = 'استرداد تسجيل أوفلاين #'.$enrollment->id.' — '.($enrollment->student->name ?? '');
+        }
+
+        DB::beginTransaction();
+        try {
+            $remainingToRefund = $amount;
+            $refundService = app(\App\Services\TransactionRefundService::class);
+
+            $transactions = Transaction::query()
+                ->where('status', 'completed')
+                ->whereIn('type', ['credit', 'income'])
+                ->where(function ($q) use ($enrollment) {
+                    $q->where('metadata->enrollment_id', $enrollment->id)
+                        ->orWhere('metadata->enrollment_id', (string) $enrollment->id);
+                })
+                ->latest('id')
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($transactions as $transaction) {
+                if ($remainingToRefund <= 0) {
+                    break;
+                }
+                if (! $refundService->canRefund($transaction)) {
+                    continue;
+                }
+
+                $txAmount = round((float) $transaction->amount, 2);
+                $chunk = min($remainingToRefund, $txAmount);
+                if ($chunk <= 0) {
+                    continue;
+                }
+
+                $refundService->process($transaction, $chunk, $notes, Auth::id());
+                $remainingToRefund = round($remainingToRefund - $chunk, 2);
+            }
+
+            // إن لم تُغطَّ كل المبالغ بمعاملات قابلة للاسترداد: عدّل التسجيل يدوياً وأنشئ قيد استرداد.
+            if ($remainingToRefund > 0) {
+                $enrollment->refresh();
+                $enrollment->paid_amount = max(0, round((float) $enrollment->paid_amount - $remainingToRefund, 2));
+                $enrollment->updatePaymentStatus();
+
+                if ($enrollment->invoice) {
+                    $invoice = $enrollment->invoice->fresh();
+                    if ((float) $enrollment->remaining_amount <= 0 && (float) $enrollment->total_amount > 0) {
+                        $invoice->status = 'paid';
+                        $invoice->paid_at = $invoice->paid_at ?? now();
+                    } elseif ((float) $enrollment->paid_amount > 0) {
+                        $invoice->status = 'partial';
+                    } else {
+                        $invoice->status = 'pending';
+                    }
+                    $invoice->save();
+                }
+
+                Transaction::create([
+                    'transaction_number' => 'OFF-REF-'.str_pad((string) (Transaction::count() + 1), 6, '0', STR_PAD_LEFT),
+                    'user_id' => $enrollment->user_id,
+                    'invoice_id' => $enrollment->invoice_id,
+                    'type' => 'debit',
+                    'category' => 'refund',
+                    'amount' => $remainingToRefund,
+                    'currency' => 'EGP',
+                    'description' => $notes,
+                    'status' => 'completed',
+                    'metadata' => [
+                        'offline_course_id' => $enrollment->offline_course_id,
+                        'enrollment_id' => $enrollment->id,
+                        'group_id' => $enrollment->group_id,
+                        'manual_enrollment_refund' => true,
+                    ],
+                    'created_by' => Auth::id(),
+                ]);
+            }
+
+            DB::commit();
+
+            return back()->with('success', 'تم استرداد '.number_format($amount, 2).' ج.م بنجاح');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            throw $e;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Offline enrollment refund failed', ['error' => $e->getMessage(), 'enrollment_id' => $enrollment->id]);
+
+            return back()->withErrors(['error' => 'حدث خطأ أثناء الاسترداد: '.$e->getMessage()]);
+        }
     }
 
     /**
