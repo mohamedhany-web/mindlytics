@@ -51,11 +51,21 @@ class SecurityHeadersMiddleware
                    "connect-src 'self' https: ws: wss: " .
                    "https://app.fawaterk.com " .
                    "https://staging.fawaterk.com; " .
+                   // مشغّلات التعلم: YouTube / Vimeo / Google Drive / Bunny Stream
+                   // بدون هذه الدومينات يظهر Chrome: "This content is blocked. Contact the site owner..."
                    "frame-src 'self' " .
                    "https://app.fawaterk.com " .
                    "https://staging.fawaterk.com " .
                    "https://www.youtube.com " .
+                   "https://www.youtube-nocookie.com " .
                    "https://player.vimeo.com " .
+                   "https://drive.google.com " .
+                   "https://docs.google.com " .
+                   "https://iframe.mediadelivery.net " .
+                   "https://player.mediadelivery.net " .
+                   "https://*.mediadelivery.net " .
+                   "https://*.b-cdn.net " .
+                   "https://*.bunnycdn.com " .
                    "https://www.google.com; " .
                    "object-src 'none'; " .
                    "base-uri 'self'; " .
