@@ -31,7 +31,7 @@ return [
             'dial_code' => '+962',
             'name_ar' => 'الأردن',
             'name_en' => 'Jordan',
-            'validation' => ['regex' => '/^[789]\d{7}$/'], // 8 أرقام تبدأ بـ 7, 8, 9
+            'validation' => ['regex' => '/^7[789]\d{7}$/'], // 9 أرقام تبدأ بـ 77, 78, 79 (محلياً 07xxxxxxxx)
             'placeholder' => '7xxxxxxxx',
             'example' => '791234567',
         ],
