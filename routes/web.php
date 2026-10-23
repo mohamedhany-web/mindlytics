@@ -289,11 +289,7 @@ Route::get('/refund', [\App\Http\Controllers\Public\PageController::class, 'refu
 Route::get('/testimonials', [\App\Http\Controllers\Public\PageController::class, 'testimonials'])->name('public.testimonials');
 Route::get('/events', [\App\Http\Controllers\Public\PageController::class, 'events'])->name('public.events');
 Route::get('/partners', [\App\Http\Controllers\Public\PageController::class, 'partners'])->name('public.partners');
-Route::prefix('investment')->name('investment.')->group(function () {
-    Route::get('/', [\App\Http\Controllers\Public\InvestmentController::class, 'index'])->name('index');
-    Route::get('/{slug}', [\App\Http\Controllers\Public\InvestmentController::class, 'show'])->name('show');
-    Route::post('/{slug}/apply', [\App\Http\Controllers\Public\InvestmentController::class, 'apply'])->name('apply');
-});
+require app_path('Domains/Investment/routes/public.php');
 Route::get('/groups', [\App\Http\Controllers\Public\PageController::class, 'groups'])->name('public.groups');
 Route::get('/bookings', [\App\Http\Controllers\Public\PageController::class, 'bookings'])->middleware('auth')->name('public.bookings');
 
@@ -1456,16 +1452,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         });
 
         // قسم الاستثمار
-        Route::prefix('investment')->name('investment.')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Admin\Investment\DashboardController::class, 'index'])->name('dashboard');
-            Route::resource('plans', \App\Http\Controllers\Admin\Investment\PlanController::class);
-            Route::get('inquiries', [\App\Http\Controllers\Admin\Investment\InquiryController::class, 'index'])->name('inquiries.index');
-            Route::get('inquiries/{inquiry}', [\App\Http\Controllers\Admin\Investment\InquiryController::class, 'show'])->name('inquiries.show');
-            Route::put('inquiries/{inquiry}', [\App\Http\Controllers\Admin\Investment\InquiryController::class, 'update'])->name('inquiries.update');
-            Route::delete('inquiries/{inquiry}', [\App\Http\Controllers\Admin\Investment\InquiryController::class, 'destroy'])->name('inquiries.destroy');
-            Route::get('policies', [\App\Http\Controllers\Admin\Investment\PolicyController::class, 'edit'])->name('policies.edit');
-            Route::put('policies', [\App\Http\Controllers\Admin\Investment\PolicyController::class, 'update'])->name('policies.update');
-        });
+        require app_path('Domains/Investment/routes/admin.php');
 
         // بروفايل الأدمن
         Route::get('/profile', [\App\Http\Controllers\Admin\ProfileController::class, 'index'])->name('profile');
@@ -1709,7 +1696,6 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
 
         // إدارة المحاضرات والجروبات
         Route::resource('lectures', \App\Http\Controllers\Admin\LectureController::class);
-        Route::post('/lectures/{lecture}/sync-teams-attendance', [\App\Http\Controllers\Admin\LectureController::class, 'syncTeamsAttendance'])->name('lectures.sync-teams-attendance');
         Route::resource('groups', \App\Http\Controllers\Admin\GroupController::class);
         Route::post('/groups/{group}/members', [\App\Http\Controllers\Admin\GroupController::class, 'addMember'])->name('groups.add-member');
         Route::delete('/groups/{group}/members/{member}', [\App\Http\Controllers\Admin\GroupController::class, 'removeMember'])->name('groups.remove-member');
@@ -1777,7 +1763,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::get('about', [\App\Http\Controllers\Admin\AboutPageController::class, 'index'])->name('about.index');
         Route::get('about/view', [\App\Http\Controllers\Admin\AboutPageController::class, 'viewPublic'])->name('about.view-public');
 
-        Route::resource('contact-messages', \App\Http\Controllers\Admin\ContactMessageController::class);
+        Route::resource('contact-messages', \App\Http\Controllers\Admin\ContactMessageController::class)->only(['index', 'show', 'destroy']);
         Route::post('/contact-messages/{contactMessage}/mark-as-read', [\App\Http\Controllers\Admin\ContactMessageController::class, 'markAsRead'])->name('contact-messages.mark-as-read');
         Route::post('/contact-messages/{contactMessage}/mark-as-unread', [\App\Http\Controllers\Admin\ContactMessageController::class, 'markAsUnread'])->name('contact-messages.mark-as-unread');
         
@@ -2457,7 +2443,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         Route::put('certificates-branding', [\App\Http\Controllers\Admin\CertificateController::class, 'updateBranding'])->name('certificates.branding.update');
         Route::resource('achievements', \App\Http\Controllers\Admin\AchievementController::class);
         Route::resource('badges', \App\Http\Controllers\Admin\BadgeController::class);
-        Route::resource('reviews', \App\Http\Controllers\Admin\ReviewController::class);
+        Route::resource('reviews', \App\Http\Controllers\Admin\ReviewController::class)->only(['index', 'show', 'update', 'destroy']);
         Route::resource('learning-path-reviews', \App\Http\Controllers\Admin\LearningPathReviewController::class)
             ->only(['index', 'show', 'update', 'destroy'])
             ->parameters(['learning-path-reviews' => 'learningPathReview']);
@@ -2635,7 +2621,6 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
         
         // API لدروس الكورس للمدرب
         Route::resource('lectures', \App\Http\Controllers\Instructor\LectureController::class);
-        Route::post('/lectures/{lecture}/sync-teams-attendance', [\App\Http\Controllers\Instructor\LectureController::class, 'syncTeamsAttendance'])->name('lectures.sync-teams-attendance');
         Route::post('/lectures/{lecture}/update-attendance', [\App\Http\Controllers\Instructor\LectureController::class, 'updateAttendance'])->name('lectures.update-attendance');
         
         // المسار التعليمي للمدرب
