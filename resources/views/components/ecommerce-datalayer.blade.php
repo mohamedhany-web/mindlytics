@@ -3,7 +3,7 @@
 
 @if(is_array($payload) && ($payload['event'] ?? null))
 @php
-    $json = app(\App\Services\MarketingAnalyticsService::class)->toJson($payload);
+    $json = app(\App\Domains\Marketing\Services\MarketingAnalyticsService::class)->toJson($payload);
     $isPurchase = ($payload['event'] ?? '') === 'purchase';
     $txId = $payload['ecommerce']['transaction_id'] ?? null;
 @endphp

@@ -1287,7 +1287,7 @@
     @endif
 
     @php
-        $__mlAnalytics = app(\App\Services\MarketingAnalyticsService::class);
+        $__mlAnalytics = app(\App\Domains\Marketing\Services\MarketingAnalyticsService::class);
         $__mlViewItem = $__mlAnalytics->viewItem($__mlAnalytics->itemFromCourse($course));
     @endphp
     <x-ecommerce-datalayer :payload="$__mlViewItem" />

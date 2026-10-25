@@ -2,7 +2,7 @@
 
 namespace App\Domains\Hr\Models;
 
-use App\Support\MontageVideoHelper;
+use App\Domains\Marketing\Support\MontageVideoHelper;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;

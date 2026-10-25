@@ -33,7 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // File Upload Security - حماية رفع الملفات
         $middleware->appendToGroup('web', \App\Http\Middleware\FileUploadSecurityMiddleware::class);
         
-        $middleware->appendToGroup('web', \App\Http\Middleware\RecordMarketingRegionVisit::class);
+        $middleware->appendToGroup('web', \App\Domains\Marketing\Http\Middleware\RecordMarketingRegionVisit::class);
 
         // إضافة Middleware مراقبة الأنشطة لجميع الطلبات
         $middleware->append(\App\Http\Middleware\LogActivityMiddleware::class);
@@ -52,11 +52,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'guest-only' => \App\Http\Middleware\EnsureGuestOnly::class,
             'prevent-concurrent' => \App\Http\Middleware\PreventConcurrentSessions::class,
             'landing.locale' => \App\Http\Middleware\SetLandingLocale::class,
-            'community.contributor' => \App\Http\Middleware\EnsureCommunityContributor::class,
-            'sales.employee' => \App\Http\Middleware\EnsureSalesEmployee::class,
-            'sales.manager' => \App\Http\Middleware\EnsureSalesManager::class,
-            'sales.staff' => \App\Http\Middleware\EnsureSalesStaff::class,
-            'moderator.employee' => \App\Http\Middleware\EnsureModeratorEmployee::class,
+            'community.contributor' => \App\Domains\Community\Http\Middleware\EnsureCommunityContributor::class,
+            'sales.employee' => \App\Domains\Sales\Http\Middleware\EnsureSalesEmployee::class,
+            'sales.manager' => \App\Domains\Sales\Http\Middleware\EnsureSalesManager::class,
+            'sales.staff' => \App\Domains\Sales\Http\Middleware\EnsureSalesStaff::class,
+            'moderator.employee' => \App\Domains\Marketing\Http\Middleware\EnsureModeratorEmployee::class,
             'employee.work' => \App\Http\Middleware\EnsureEmployeeWorkAccess::class,
             'api.student' => \App\Http\Middleware\EnsureApiStudent::class,
             'api.instructor' => \App\Http\Middleware\EnsureApiInstructor::class,

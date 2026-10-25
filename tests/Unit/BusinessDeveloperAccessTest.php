@@ -3,12 +3,12 @@
 namespace Tests\Unit;
 
 use App\Http\Controllers\Employee\EmployeeController;
-use App\Http\Middleware\EnsureModeratorEmployee;
-use App\Http\Middleware\EnsureSalesManager;
-use App\Models\EmployeeJob;
-use App\Models\SalesLead;
-use App\Models\SalesTeam;
-use App\Models\SalesTeamMember;
+use App\Domains\Marketing\Http\Middleware\EnsureModeratorEmployee;
+use App\Domains\Sales\Http\Middleware\EnsureSalesManager;
+use App\Domains\Hr\Models\EmployeeJob;
+use App\Domains\Sales\Models\SalesLead;
+use App\Domains\Sales\Models\SalesTeam;
+use App\Domains\Sales\Models\SalesTeamMember;
 use App\Models\User;
 use App\Domains\Sales\Services\SalesTeamService;
 use Illuminate\Database\Schema\Blueprint;

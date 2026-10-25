@@ -2,9 +2,9 @@
 
 namespace App\Domains\Hr\Services;
 
-use App\Models\EmployeeTask;
-use App\Models\EmployeeTaskDeliverable;
-use App\Support\MontageVideoHelper;
+use App\Domains\Hr\Models\EmployeeTask;
+use App\Domains\Hr\Models\EmployeeTaskDeliverable;
+use App\Domains\Marketing\Support\MontageVideoHelper;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 

@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
-use App\Models\CalendarEvent;
-use App\Models\EmployeeTask;
-use App\Models\ModeratorMarketingCalendarEvent;
-use App\Models\SalesLead;
-use App\Services\SalesTeamService;
+use App\Domains\Cms\Models\CalendarEvent;
+use App\Domains\Hr\Models\EmployeeTask;
+use App\Domains\Marketing\Models\ModeratorMarketingCalendarEvent;
+use App\Domains\Sales\Models\SalesLead;
+use App\Domains\Sales\Services\SalesTeamService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;

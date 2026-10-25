@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Services\JourneyAchievementService;
+use App\Domains\Community\Services\JourneyAchievementService;
 use Illuminate\Database\Seeder;
 
 class JourneyAchievementsSeeder extends Seeder

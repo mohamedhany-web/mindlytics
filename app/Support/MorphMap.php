@@ -39,8 +39,12 @@ final class MorphMap
             'App\Models\OfflineCurriculumNote' => \App\Models\OfflineCurriculumNote::class,
 
             // course_community_reactions.reactable_type
-            'App\Models\CourseCommunityPost' => \App\Models\CourseCommunityPost::class,
-            'App\Models\CourseCommunityComment' => \App\Models\CourseCommunityComment::class,
+            'App\Models\CourseCommunityPost' => \App\Domains\Community\Models\CourseCommunityPost::class,
+            'App\Models\CourseCommunityComment' => \App\Domains\Community\Models\CourseCommunityComment::class,
+
+            // journey_share_events.shareable_type (يُكتب ويُقارن عبر Relation::getMorphAlias)
+            'App\Models\PortfolioProject' => \App\Domains\Community\Models\PortfolioProject::class,
+            'App\Models\JourneyProfile' => \App\Domains\Community\Models\JourneyProfile::class,
         ];
     }
 

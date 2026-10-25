@@ -36,13 +36,13 @@ class PageController extends Controller
 
     public function faq()
     {
-        $faqs = \App\Models\FAQ::active()
+        $faqs = \App\Domains\Cms\Models\FAQ::active()
             ->orderBy('order')
             ->orderBy('created_at', 'desc')
             ->get()
             ->groupBy('category');
         
-        $categories = \App\Models\FAQ::active()
+        $categories = \App\Domains\Cms\Models\FAQ::active()
             ->distinct()
             ->pluck('category')
             ->filter()

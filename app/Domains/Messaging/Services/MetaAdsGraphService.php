@@ -2,8 +2,8 @@
 
 namespace App\Domains\Messaging\Services;
 
-use App\Support\MarketingWebAnalyticsSettings;
-use App\Support\MetaAdsSettings;
+use App\Domains\Marketing\Support\MarketingWebAnalyticsSettings;
+use App\Domains\Messaging\Support\MetaAdsSettings;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;

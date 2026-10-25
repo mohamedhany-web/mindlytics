@@ -470,7 +470,7 @@
                             <i class="fas fa-envelope w-4"></i>
                             <span>رسائل التواصل</span>
                             @php
-                                $unreadCount = \App\Models\ContactMessage::whereNull('read_at')->count();
+                                $unreadCount = \App\Domains\Cms\Models\ContactMessage::whereNull('read_at')->count();
                             @endphp
                             @if($unreadCount > 0)
                                 <span class="mr-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{{ $unreadCount }}</span>

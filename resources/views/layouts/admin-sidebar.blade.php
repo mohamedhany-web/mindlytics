@@ -2136,7 +2136,7 @@
                             <i class="fas fa-envelope w-4"></i>
                             <span>{{ __('admin.contact_messages') }}</span>
                             @php
-                                $unreadCount = \App\Models\ContactMessage::whereNull('read_at')->count();
+                                $unreadCount = \App\Domains\Cms\Models\ContactMessage::whereNull('read_at')->count();
                             @endphp
                             @if($unreadCount > 0)
                                 <span class="mr-auto bg-[#FFD34E] text-[#1F3A56] text-xs font-bold rounded-full px-2 py-1 shadow-lg">{{ $unreadCount }}</span>

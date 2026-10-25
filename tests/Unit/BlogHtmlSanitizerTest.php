@@ -2,7 +2,7 @@
 
 namespace Tests\Unit;
 
-use App\Support\BlogHtmlSanitizer;
+use App\Domains\Cms\Support\BlogHtmlSanitizer;
 use Tests\TestCase;
 
 class BlogHtmlSanitizerTest extends TestCase

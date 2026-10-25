@@ -2,7 +2,7 @@
 
 namespace Tests\Unit;
 
-use App\Services\MarketingAnalyticsService;
+use App\Domains\Marketing\Services\MarketingAnalyticsService;
 use Tests\TestCase;
 
 class MarketingAnalyticsServiceTest extends TestCase

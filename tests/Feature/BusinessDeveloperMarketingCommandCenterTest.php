@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\EmployeeJob;
-use App\Models\ModeratorMarketingCalendarEvent;
-use App\Models\ModeratorMarketingPlan;
-use App\Models\ModeratorMarketingPlatform;
+use App\Domains\Hr\Models\EmployeeJob;
+use App\Domains\Marketing\Models\ModeratorMarketingCalendarEvent;
+use App\Domains\Marketing\Models\ModeratorMarketingPlan;
+use App\Domains\Marketing\Models\ModeratorMarketingPlatform;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Hash;

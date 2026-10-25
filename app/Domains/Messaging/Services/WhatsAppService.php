@@ -4,8 +4,8 @@ namespace App\Domains\Messaging\Services;
 
 use App\Domains\Messaging\Models\WhatsAppMessage;
 use App\Models\User;
-use App\Models\StudentReport;
-use App\Support\WhatsAppCloudSettings;
+use App\Domains\Cms\Models\StudentReport;
+use App\Domains\Messaging\Support\WhatsAppCloudSettings;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 

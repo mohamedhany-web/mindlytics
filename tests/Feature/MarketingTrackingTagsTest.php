@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Support\MarketingWebAnalyticsSettings;
+use App\Domains\Marketing\Support\MarketingWebAnalyticsSettings;
 use Tests\TestCase;
 
 class MarketingTrackingTagsTest extends TestCase

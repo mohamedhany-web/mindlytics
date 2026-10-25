@@ -380,7 +380,7 @@
     <x-tracking-tags placement="body" />
 
     @php
-        $__mlAnalytics = app(\App\Services\MarketingAnalyticsService::class);
+        $__mlAnalytics = app(\App\Domains\Marketing\Services\MarketingAnalyticsService::class);
         if (isset($course)) {
             $__mlCheckoutPrice = (float) (($checkoutPricing['amount'] ?? null) ?? $course->effectivePrice());
             $__mlCheckoutItem = $__mlAnalytics->itemFromCourse($course, 0, $__mlCheckoutPrice);

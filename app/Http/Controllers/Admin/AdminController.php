@@ -244,10 +244,10 @@ class AdminController extends Controller
             ->first();
 
         $communityStats = [
-            'competitions_count' => \App\Models\CommunityCompetition::count(),
-            'competitions_active' => \App\Models\CommunityCompetition::active()->count(),
-            'datasets_count' => \App\Models\CommunityDataset::count(),
-            'datasets_active' => \App\Models\CommunityDataset::active()->count(),
+            'competitions_count' => \App\Domains\Community\Models\CommunityCompetition::count(),
+            'competitions_active' => \App\Domains\Community\Models\CommunityCompetition::active()->count(),
+            'datasets_count' => \App\Domains\Community\Models\CommunityDataset::count(),
+            'datasets_active' => \App\Domains\Community\Models\CommunityDataset::active()->count(),
         ];
 
         $centralAcademyBranchId = null;

@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Models\AdvertisingCampaign;
-use App\Models\CampaignDailyReport;
-use App\Models\EmployeeJob;
-use App\Models\SalesDailyReport;
-use App\Models\SalesKpiTarget;
-use App\Models\SalesTeam;
-use App\Models\SalesTeamMember;
+use App\Domains\Marketing\Models\AdvertisingCampaign;
+use App\Domains\Marketing\Models\CampaignDailyReport;
+use App\Domains\Hr\Models\EmployeeJob;
+use App\Domains\Sales\Models\SalesDailyReport;
+use App\Domains\Sales\Models\SalesKpiTarget;
+use App\Domains\Sales\Models\SalesTeam;
+use App\Domains\Sales\Models\SalesTeamMember;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Hash;

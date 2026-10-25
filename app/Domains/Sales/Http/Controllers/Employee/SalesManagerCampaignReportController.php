@@ -3,11 +3,11 @@
 namespace App\Domains\Sales\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
-use App\Models\AdvertisingCampaign;
-use App\Models\CampaignDailyReport;
+use App\Domains\Marketing\Models\AdvertisingCampaign;
+use App\Domains\Marketing\Models\CampaignDailyReport;
 use App\Models\User;
-use App\Services\CampaignReportService;
-use App\Services\SalesTeamService;
+use App\Domains\Marketing\Services\CampaignReportService;
+use App\Domains\Sales\Services\SalesTeamService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;

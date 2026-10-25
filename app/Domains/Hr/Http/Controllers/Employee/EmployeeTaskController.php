@@ -3,13 +3,13 @@
 namespace App\Domains\Hr\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
-use App\Models\DesignTaskCycle;
-use App\Models\EmployeeTask;
-use App\Models\EmployeeTaskDeliverable;
-use App\Models\ModeratorMontageRequest;
-use App\Services\EmployeeDeliverableStorageService;
-use App\Services\EmployeeTaskDeliverableService;
-use App\Support\MontageVideoHelper;
+use App\Domains\Marketing\Models\DesignTaskCycle;
+use App\Domains\Hr\Models\EmployeeTask;
+use App\Domains\Hr\Models\EmployeeTaskDeliverable;
+use App\Domains\Marketing\Models\ModeratorMontageRequest;
+use App\Domains\Hr\Services\EmployeeDeliverableStorageService;
+use App\Domains\Hr\Services\EmployeeTaskDeliverableService;
+use App\Domains\Marketing\Support\MontageVideoHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;

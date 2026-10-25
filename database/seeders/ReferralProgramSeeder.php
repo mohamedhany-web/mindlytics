@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\ReferralProgram;
+use App\Domains\Marketing\Models\ReferralProgram;
 
 class ReferralProgramSeeder extends Seeder
 {

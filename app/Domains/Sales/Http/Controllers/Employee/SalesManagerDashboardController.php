@@ -3,12 +3,12 @@
 namespace App\Domains\Sales\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
-use App\Models\CampaignDailyReport;
-use App\Models\SalesDailyReport;
-use App\Models\SalesKpiTarget;
-use App\Services\CampaignReportService;
-use App\Services\SalesManagerHubService;
-use App\Services\SalesTeamService;
+use App\Domains\Marketing\Models\CampaignDailyReport;
+use App\Domains\Sales\Models\SalesDailyReport;
+use App\Domains\Sales\Models\SalesKpiTarget;
+use App\Domains\Marketing\Services\CampaignReportService;
+use App\Domains\Sales\Services\SalesManagerHubService;
+use App\Domains\Sales\Services\SalesTeamService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;

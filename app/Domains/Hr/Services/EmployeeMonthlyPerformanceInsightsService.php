@@ -2,7 +2,7 @@
 
 namespace App\Domains\Hr\Services;
 
-use App\Models\DesignTaskCycle;
+use App\Domains\Marketing\Models\DesignTaskCycle;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 

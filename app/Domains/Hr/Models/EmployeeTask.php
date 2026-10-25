@@ -5,6 +5,10 @@ namespace App\Domains\Hr\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Domains\Marketing\Models\DesignTaskCycle;
+use App\Domains\Marketing\Models\ModeratorMarketingCalendarEvent;
+use App\Domains\Marketing\Models\ModeratorMontageRequest;
+use App\Models\User;
 
 class EmployeeTask extends Model
 {

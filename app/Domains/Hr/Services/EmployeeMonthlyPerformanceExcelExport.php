@@ -2,8 +2,8 @@
 
 namespace App\Domains\Hr\Services;
 
-use App\Models\DesignTaskCycle;
-use App\Models\EmployeeTask;
+use App\Domains\Marketing\Models\DesignTaskCycle;
+use App\Domains\Hr\Models\EmployeeTask;
 use Carbon\Carbon;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;

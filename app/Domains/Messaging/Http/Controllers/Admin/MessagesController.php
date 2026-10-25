@@ -3,9 +3,9 @@
 namespace App\Domains\Messaging\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\WhatsAppMessage;
-use App\Models\StudentReport;
-use App\Models\MessageTemplate;
+use App\Domains\Messaging\Models\WhatsAppMessage;
+use App\Domains\Cms\Models\StudentReport;
+use App\Domains\Messaging\Models\MessageTemplate;
 use App\Models\User;
 use App\Models\AdvancedCourse;
 use App\Services\WhatsAppService;

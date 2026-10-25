@@ -2,9 +2,9 @@
 
 namespace App\Domains\Hr\Services;
 
-use App\Models\DesignTaskCycle;
-use App\Models\EmployeeTask;
-use App\Models\EmployeeTaskDeliverable;
+use App\Domains\Marketing\Models\DesignTaskCycle;
+use App\Domains\Hr\Models\EmployeeTask;
+use App\Domains\Hr\Models\EmployeeTaskDeliverable;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;

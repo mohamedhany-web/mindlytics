@@ -3,7 +3,7 @@
 namespace Tests\Unit;
 
 use App\Services\GeoIpLookupService;
-use App\Services\MarketingRegionsService;
+use App\Domains\Marketing\Services\MarketingRegionsService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;

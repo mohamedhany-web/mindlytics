@@ -8,7 +8,7 @@ use App\Models\Order;
 use App\Models\Coupon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use App\Services\ReferralService;
+use App\Domains\Marketing\Services\ReferralService;
 
 class OrderController extends Controller
 {
@@ -93,7 +93,7 @@ class OrderController extends Controller
             $finalAmount -= $referralDiscount;
 
             // زيادة عدد مرات استخدام الخصم
-            $referral = \App\Models\Referral::where('auto_coupon_id', $referralCoupon->id)->first();
+            $referral = \App\Domains\Marketing\Models\Referral::where('auto_coupon_id', $referralCoupon->id)->first();
             if ($referral) {
                 $referral->incrementDiscountUsage();
                 $referral->update(['discount_amount' => $referralDiscount]);

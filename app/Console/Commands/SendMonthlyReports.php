@@ -3,8 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Models\User;
-use App\Models\StudentReport;
-use App\Services\WhatsAppService;
+use App\Domains\Cms\Models\StudentReport;
+use App\Domains\Messaging\Services\WhatsAppService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 

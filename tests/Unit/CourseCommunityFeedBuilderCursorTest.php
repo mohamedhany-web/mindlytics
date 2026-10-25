@@ -2,8 +2,8 @@
 
 namespace Tests\Unit;
 
-use App\Models\CourseCommunityPost;
-use App\Support\CourseCommunityFeedBuilder;
+use App\Domains\Community\Models\CourseCommunityPost;
+use App\Domains\Community\Support\CourseCommunityFeedBuilder;
 use ReflectionClass;
 use Tests\TestCase;
 
