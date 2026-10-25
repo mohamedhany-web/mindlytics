@@ -210,16 +210,6 @@ class AppServiceProvider extends ServiceProvider
 
         // Observers للنماذج - مع تحسينات الأداء
         \App\Models\User::observe(\App\Observers\UserObserver::class);
-        \App\Models\StudentCourseEnrollment::observe(\App\Observers\EnrollmentObserver::class);
-        \App\Models\Exam::observe(\App\Observers\ExamObserver::class);
-        \App\Models\AdvancedCourse::observe(\App\Observers\AdvancedCourseObserver::class);
-        \App\Models\ExamAttempt::observe(\App\Observers\ExamAttemptObserver::class);
-        
-        // Observers للتقويم والإشعارات
-        \App\Models\Lecture::observe(\App\Observers\LectureObserver::class);
-        \App\Models\Assignment::observe(\App\Observers\AssignmentObserver::class);
-        \App\Models\LectureAssignment::observe(\App\Observers\LectureAssignmentObserver::class);
-        \App\Models\EmployeeSalaryDeduction::observe(\App\Observers\EmployeeSalaryDeductionObserver::class);
 
         // تفعيل Event Listeners لتسجيل النشاطات
         \Illuminate\Support\Facades\Event::listen(

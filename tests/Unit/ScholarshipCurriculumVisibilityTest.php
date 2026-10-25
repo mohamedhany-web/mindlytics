@@ -7,7 +7,7 @@ use App\Models\CourseSection;
 use App\Models\CurriculumItem;
 use App\Models\ScholarshipGroup;
 use App\Models\User;
-use App\Services\ScholarshipCurriculumVisibilityService;
+use App\Domains\Scholarship\Services\ScholarshipCurriculumVisibilityService;
 use Tests\TestCase;
 
 class ScholarshipCurriculumVisibilityTest extends TestCase

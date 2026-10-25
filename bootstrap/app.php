@@ -225,26 +225,4 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
     })
-    ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule): void {
-        $schedule->command('sales:send-followup-reminders')->dailyAt('08:00');
-        $schedule->command('sales:remind-daily-report')->everyFifteenMinutes();
-        $schedule->command('sales:evaluate-enforcement')->dailyAt('09:30');
-        $schedule->command('sales:apply-daily-report-penalties')->dailyAt('01:30');
-        $schedule->command('sales:apply-daily-kpi-penalties')->dailyAt('01:45');
-        $schedule->command('sales:enforce-import-contact')->dailyAt('10:00');
-        $schedule->command('employees:remind-daily-report')->dailyAt('16:30');
-        $schedule->command('employees:apply-daily-report-penalties')->dailyAt('02:00');
-        $schedule->command('employees:apply-attendance-penalties')->dailyAt('02:30');
-        $schedule->command('employees:check-presence')->everyMinute();
-        $schedule->command('marketing:remind-today-events')
-            ->dailyAt(\App\Support\MarketingPlanSettings::reminderTime());
-        $schedule->command('marketing:apply-execution-penalties')
-            ->dailyAt(\App\Support\MarketingPlanSettings::confirmationDeadlineTime());
-
-        // طابور الواتساب فقط — معزول عن sales والتسجيل وغيرها
-        $schedule->command('queue:work --queue=whatsapp --stop-when-empty --max-time=55 --max-jobs=50')
-            ->everyMinute()
-            ->withoutOverlapping()
-            ->runInBackground();
-    })
     ->create();
