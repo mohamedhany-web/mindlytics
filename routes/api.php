@@ -3,22 +3,22 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\MetaController;
 use App\Http\Controllers\Api\V1\StudentHomeController;
-use App\Http\Controllers\Api\V1\StudentLearnController;
+use App\Domains\Learning\Http\Controllers\Api\V1\StudentLearnController;
 use App\Http\Controllers\Api\V1\StudentNotificationsController;
-use App\Http\Controllers\Api\V1\StudentPracticeController;
-use App\Http\Controllers\Api\V1\StudentCommunityController;
+use App\Domains\Learning\Http\Controllers\Api\V1\StudentPracticeController;
+use App\Domains\Community\Http\Controllers\Api\V1\StudentCommunityController;
 use App\Http\Controllers\Api\V1\StudentProfileController;
-use App\Http\Controllers\Api\V1\StudentPeersController;
-use App\Http\Controllers\Api\V1\StudentGroupsController;
-use App\Http\Controllers\Api\V1\StudentGroupChatController;
-use App\Http\Controllers\Api\V1\StudentPeerChatController;
-use App\Http\Controllers\Api\V1\StudentChallengesController;
-use App\Http\Controllers\Api\V1\InstructorCoursesController;
-use App\Http\Controllers\Api\V1\InstructorCommunityController;
-use App\Http\Controllers\Api\V1\InstructorAnnouncementsController;
-use App\Http\Controllers\Api\V1\InstructorMessagesController;
-use App\Http\Controllers\Api\V1\InstructorAssignmentsController;
-use App\Http\Controllers\Api\V1\SupportTicketsController;
+use App\Domains\Community\Http\Controllers\Api\V1\StudentPeersController;
+use App\Domains\Learning\Http\Controllers\Api\V1\StudentGroupsController;
+use App\Domains\Learning\Http\Controllers\Api\V1\StudentGroupChatController;
+use App\Domains\Community\Http\Controllers\Api\V1\StudentPeerChatController;
+use App\Domains\Community\Http\Controllers\Api\V1\StudentChallengesController;
+use App\Domains\Learning\Http\Controllers\Api\V1\InstructorCoursesController;
+use App\Domains\Community\Http\Controllers\Api\V1\InstructorCommunityController;
+use App\Domains\Community\Http\Controllers\Api\V1\InstructorAnnouncementsController;
+use App\Domains\Community\Http\Controllers\Api\V1\InstructorMessagesController;
+use App\Domains\Learning\Http\Controllers\Api\V1\InstructorAssignmentsController;
+use App\Domains\Cms\Http\Controllers\Api\V1\SupportTicketsController;
 use Illuminate\Support\Facades\Route;
 
 /*
