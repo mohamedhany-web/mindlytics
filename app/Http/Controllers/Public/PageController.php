@@ -115,7 +115,7 @@ class PageController extends Controller
     public function pricing()
     {
         // جلب الباقات النشطة من قاعدة البيانات
-        $packages = \App\Models\Package::active()
+        $packages = \App\Domains\Accounting\Models\Package::active()
             ->visibleOnCurrentHost()
             ->whereHas('courses', function ($q) {
                 $q->where('advanced_courses.is_active', true)->visibleOnCurrentHost();

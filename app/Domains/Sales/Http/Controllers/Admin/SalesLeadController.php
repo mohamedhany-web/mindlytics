@@ -3,12 +3,12 @@
 namespace App\Domains\Sales\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\SalesActivity;
-use App\Models\SalesInterestType;
-use App\Models\SalesLead;
-use App\Models\SalesLeadCategory;
-use App\Models\SalesLeadGroup;
-use App\Models\Transaction;
+use App\Domains\Sales\Models\SalesActivity;
+use App\Domains\Sales\Models\SalesInterestType;
+use App\Domains\Sales\Models\SalesLead;
+use App\Domains\Sales\Models\SalesLeadCategory;
+use App\Domains\Sales\Models\SalesLeadGroup;
+use App\Domains\Accounting\Models\Transaction;
 use App\Models\User;
 use App\Domains\Sales\Services\SalesAuditService;
 use App\Domains\Sales\Services\SalesLeadMovementPolicy;

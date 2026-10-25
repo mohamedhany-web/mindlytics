@@ -2,7 +2,7 @@
 
 namespace Tests\Unit;
 
-use App\Support\AccountingAnalytics;
+use App\Domains\Accounting\Support\AccountingAnalytics;
 use Carbon\Carbon;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;

@@ -49,7 +49,7 @@ class QualityControlController extends Controller
         $instructorStats = [
             'total' => User::instructors()->count(),
             'active' => User::instructors()->where('is_active', true)->count(),
-            'with_agreements' => \App\Models\InstructorAgreement::where('status', 'active')->distinct('instructor_id')->count(),
+            'with_agreements' => \App\Domains\Accounting\Models\InstructorAgreement::where('status', 'active')->distinct('instructor_id')->count(),
         ];
 
         // إحصائيات الموظفين
@@ -515,8 +515,8 @@ class QualityControlController extends Controller
 
         // عمليات الدفع
         $paymentOperations = [
-            'pending' => \App\Models\Payment::where('status', 'pending')->count(),
-            'completed_today' => \App\Models\Payment::where('status', 'completed')
+            'pending' => \App\Domains\Accounting\Models\Payment::where('status', 'pending')->count(),
+            'completed_today' => \App\Domains\Accounting\Models\Payment::where('status', 'completed')
                 ->whereDate('paid_at', today())
                 ->sum('amount'),
         ];

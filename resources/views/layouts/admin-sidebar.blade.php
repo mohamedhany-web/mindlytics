@@ -769,7 +769,7 @@
                             <i class="fas fa-shopping-cart w-4"></i>
                             <span>{{ __('admin.orders') }}</span>
                             @php
-                                $pendingOrders = \App\Models\Order::where('status', 'pending')->count();
+                                $pendingOrders = \App\Domains\Accounting\Models\Order::where('status', 'pending')->count();
                             @endphp
                             @if($pendingOrders > 0)
                                 <span class="mr-auto bg-blue-500 text-white text-xs font-bold rounded-full px-2 py-1 shadow-lg">{{ $pendingOrders }}</span>
@@ -928,7 +928,7 @@
                             <span>{{ __('admin.withdrawal_requests') }}</span>
                             @php
                                 try {
-                                    $pendingWithdrawals = \App\Models\WithdrawalRequest::where('status', 'pending')->count();
+                                    $pendingWithdrawals = \App\Domains\Accounting\Models\WithdrawalRequest::where('status', 'pending')->count();
                                 } catch (\Exception $e) {
                                     $pendingWithdrawals = 0;
                                 }

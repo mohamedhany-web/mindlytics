@@ -53,7 +53,7 @@ class EnsureOwnership
                 break;
 
             case 'order':
-                $order = $param instanceof \App\Models\Order ? $param : \App\Models\Order::findOrFail($resourceId);
+                $order = $param instanceof \App\Domains\Accounting\Models\Order ? $param : \App\Domains\Accounting\Models\Order::findOrFail($resourceId);
                 if ($order->user_id != $user->id) {
                     abort(403, 'غير مسموح لك بالوصول إلى هذا الطلب');
                 }
@@ -112,14 +112,14 @@ class EnsureOwnership
                 break;
 
             case 'wallet':
-                $wallet = $param instanceof \App\Models\Wallet ? $param : \App\Models\Wallet::findOrFail($resourceId);
+                $wallet = $param instanceof \App\Domains\Accounting\Models\Wallet ? $param : \App\Domains\Accounting\Models\Wallet::findOrFail($resourceId);
                 if ($wallet->user_id != $user->id) {
                     abort(403, 'غير مسموح لك بالوصول إلى هذه المحفظة');
                 }
                 break;
 
             case 'invoice':
-                $invoice = $param instanceof \App\Models\Invoice ? $param : \App\Models\Invoice::findOrFail($resourceId);
+                $invoice = $param instanceof \App\Domains\Accounting\Models\Invoice ? $param : \App\Domains\Accounting\Models\Invoice::findOrFail($resourceId);
                 if ($invoice->user_id != $user->id) {
                     abort(403, 'غير مسموح لك بالوصول إلى هذه الفاتورة');
                 }

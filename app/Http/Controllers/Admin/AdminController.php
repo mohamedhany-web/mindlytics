@@ -46,7 +46,7 @@ class AdminController extends Controller
         
         $stats = array_merge($cachedStats, [
             // البيانات الديناميكية التي تحتاج تحديث فوري
-            'wallets' => \App\Models\Wallet::academyWallets()->where('is_active', true)->get(),
+            'wallets' => \App\Domains\Accounting\Models\Wallet::academyWallets()->where('is_active', true)->get(),
             'recent_activities' => ActivityLog::with('user')
                                             ->latest()
                                             ->take(10)
@@ -71,14 +71,14 @@ class AdminController extends Controller
         $lastDayPrevMonth = (int) $previousPeriodEnd->format('j');
         $targetDay = min((int) $now->format('j'), $lastDayPrevMonth);
         $previousMonthMtdEnd = $previousPeriodStart->copy()->addDays($targetDay - 1)->endOfDay();
-        $previousMonthMtdRevenue = (float) (\App\Models\Payment::where('status', 'completed')
+        $previousMonthMtdRevenue = (float) (\App\Domains\Accounting\Models\Payment::where('status', 'completed')
             ->whereBetween('paid_at', [$previousPeriodStart->copy()->startOfDay(), $previousMonthMtdEnd])
             ->sum('amount') ?? 0);
 
-        $monthlyExpenses = (float) (\App\Models\Expense::where('status', 'approved')
+        $monthlyExpenses = (float) (\App\Domains\Accounting\Models\Expense::where('status', 'approved')
             ->whereBetween('expense_date', [$currentPeriodStart->toDateString(), $currentPeriodEnd->toDateString()])
             ->sum('amount') ?? 0);
-        $previousMonthMtdExpenses = (float) (\App\Models\Expense::where('status', 'approved')
+        $previousMonthMtdExpenses = (float) (\App\Domains\Accounting\Models\Expense::where('status', 'approved')
             ->whereBetween('expense_date', [$previousPeriodStart->toDateString(), $previousMonthMtdEnd->toDateString()])
             ->sum('amount') ?? 0);
 
@@ -162,14 +162,14 @@ class AdminController extends Controller
             ->get();
             
         // الفواتير المعلقة
-        $pending_invoices = \App\Models\Invoice::where('status', 'pending')
+        $pending_invoices = \App\Domains\Accounting\Models\Invoice::where('status', 'pending')
             ->with('user')
             ->latest()
             ->take(5)
             ->get();
             
         // المدفوعات الأخيرة
-        $recent_payments = \App\Models\Payment::where('status', 'completed')
+        $recent_payments = \App\Domains\Accounting\Models\Payment::where('status', 'completed')
             ->with(['user', 'invoice'])
             ->latest()
             ->take(5)
@@ -224,22 +224,22 @@ class AdminController extends Controller
                 ->get();
         }
 
-        $pendingInvoicesSummary = \App\Models\Invoice::selectRaw('COUNT(*) as count, COALESCE(SUM(total_amount), 0) as amount')
+        $pendingInvoicesSummary = \App\Domains\Accounting\Models\Invoice::selectRaw('COUNT(*) as count, COALESCE(SUM(total_amount), 0) as amount')
             ->where('status', 'pending')
             ->first();
 
-        $overdueInvoicesSummary = \App\Models\Invoice::selectRaw('COUNT(*) as count, COALESCE(SUM(total_amount), 0) as amount')
+        $overdueInvoicesSummary = \App\Domains\Accounting\Models\Invoice::selectRaw('COUNT(*) as count, COALESCE(SUM(total_amount), 0) as amount')
             ->where('status', 'overdue')
             ->first();
 
-        $pendingOrdersSummary = \App\Models\Order::selectRaw('COUNT(*) as count, COALESCE(SUM(amount), 0) as amount')
+        $pendingOrdersSummary = \App\Domains\Accounting\Models\Order::selectRaw('COUNT(*) as count, COALESCE(SUM(amount), 0) as amount')
             ->where('status', 'pending')
             ->first();
 
         $inactiveStudentsCount = User::where('role', 'student')->where('is_active', false)->count();
         $inactiveStudentLatest = User::where('role', 'student')->where('is_active', false)->latest()->first();
 
-        $pendingInstallmentsSummary = \App\Models\InstallmentAgreement::selectRaw('COUNT(*) as count, COALESCE(SUM(total_amount), 0) as amount')
+        $pendingInstallmentsSummary = \App\Domains\Accounting\Models\InstallmentAgreement::selectRaw('COUNT(*) as count, COALESCE(SUM(total_amount), 0) as amount')
             ->whereIn('status', ['pending', 'awaiting_approval'])
             ->first();
 

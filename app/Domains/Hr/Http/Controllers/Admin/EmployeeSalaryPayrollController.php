@@ -3,9 +3,9 @@
 namespace App\Domains\Hr\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\EmployeeSalaryPayment;
-use App\Models\Wallet;
-use App\Services\EmployeePayrollService;
+use App\Domains\Hr\Models\EmployeeSalaryPayment;
+use App\Domains\Accounting\Models\Wallet;
+use App\Domains\Hr\Services\EmployeePayrollService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;

@@ -4,6 +4,9 @@ namespace App\Domains\Hr\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Domains\Accounting\Models\Expense;
+use App\Models\User;
+use App\Domains\Accounting\Models\Wallet;
 
 class EmployeeSalaryPayment extends Model
 {

@@ -3,9 +3,9 @@
 namespace App\Domains\Sales\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
-use App\Models\SalesLead;
-use App\Models\Transaction;
-use App\Services\SalesCourseCommissionResolver;
+use App\Domains\Sales\Models\SalesLead;
+use App\Domains\Accounting\Models\Transaction;
+use App\Domains\Sales\Services\SalesCourseCommissionResolver;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;

@@ -2,9 +2,9 @@
 
 namespace App\Domains\Sales\Services;
 
-use App\Models\SalesActivity;
-use App\Models\SalesLead;
-use App\Models\Transaction;
+use App\Domains\Sales\Models\SalesActivity;
+use App\Domains\Sales\Models\SalesLead;
+use App\Domains\Accounting\Models\Transaction;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;

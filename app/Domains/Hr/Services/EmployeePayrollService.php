@@ -2,16 +2,16 @@
 
 namespace App\Domains\Hr\Services;
 
-use App\Models\EmployeeAgreement;
-use App\Models\EmployeeSalaryAddition;
-use App\Models\EmployeeSalaryDeduction;
-use App\Models\EmployeeSalaryPayment;
-use App\Models\Expense;
-use App\Models\Transaction;
+use App\Domains\Hr\Models\EmployeeAgreement;
+use App\Domains\Hr\Models\EmployeeSalaryAddition;
+use App\Domains\Hr\Models\EmployeeSalaryDeduction;
+use App\Domains\Hr\Models\EmployeeSalaryPayment;
+use App\Domains\Accounting\Models\Expense;
+use App\Domains\Accounting\Models\Transaction;
 use App\Models\User;
-use App\Models\Wallet;
-use App\Models\WalletTransaction;
-use App\Support\AccountingAnalytics;
+use App\Domains\Accounting\Models\Wallet;
+use App\Domains\Accounting\Models\WalletTransaction;
+use App\Domains\Accounting\Support\AccountingAnalytics;
 use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;

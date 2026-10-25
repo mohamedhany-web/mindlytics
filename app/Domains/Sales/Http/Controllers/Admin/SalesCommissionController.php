@@ -3,9 +3,9 @@
 namespace App\Domains\Sales\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\SalesCommissionSettlement;
-use App\Models\SalesLead;
-use App\Models\Transaction;
+use App\Domains\Sales\Models\SalesCommissionSettlement;
+use App\Domains\Sales\Models\SalesLead;
+use App\Domains\Accounting\Models\Transaction;
 use App\Models\User;
 use App\Domains\Sales\Services\SalesCommissionSettlementService;
 use App\Domains\Sales\Services\SalesCommissionTierService;
