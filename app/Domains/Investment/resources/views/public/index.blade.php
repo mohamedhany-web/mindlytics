@@ -3,7 +3,7 @@
 @section('title', 'الاستثمار في Mindlytics')
 
 @push('styles')
-@include('careers._styles')
+@include('hr::public.careers._styles')
 <style>
     .info-tile {
         display: flex;
@@ -36,7 +36,7 @@
     };
 @endphp
 
-@include('careers._hero', [
+@include('hr::public.careers._hero', [
     'badge' => 'استثمر في مستقبل التعليم التقني',
     'title' => 'الاستثمار في Mindlytics',
     'subtitle' => 'فرص استثمارية في أكاديمية البرمجة والتعليم التقني — بشفافية كاملة وإطار قانوني واضح',

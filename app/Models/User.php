@@ -1469,7 +1469,7 @@ class User extends Authenticatable
 
     public function scopeVideoEditingEmployees($query)
     {
-        $codes = \App\Models\EmployeeJob::videoEditingCodes();
+        $codes = \App\Domains\Hr\Models\EmployeeJob::videoEditingCodes();
 
         return $query->employees()->whereHas('employeeJob', function ($q) use ($codes) {
             $q->where(function ($inner) use ($codes) {

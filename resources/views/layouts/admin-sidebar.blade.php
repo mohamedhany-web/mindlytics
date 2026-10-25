@@ -1758,7 +1758,7 @@
                             <span>{{ __('admin.employee_tasks') }}</span>
                             @php
                                 try {
-                                    $pendingTasks = \App\Models\EmployeeTask::where('status', 'pending')->count();
+                                    $pendingTasks = \App\Domains\Hr\Models\EmployeeTask::where('status', 'pending')->count();
                                 } catch (\Exception $e) {
                                     $pendingTasks = 0;
                                 }
@@ -1876,7 +1876,7 @@
                             <span>{{ __('admin.leaves') }}</span>
                             @php
                                 try {
-                                    $pendingLeaves = \App\Models\LeaveRequest::where('status', 'pending')->count();
+                                    $pendingLeaves = \App\Domains\Hr\Models\LeaveRequest::where('status', 'pending')->count();
                                 } catch (\Exception $e) {
                                     $pendingLeaves = 0;
                                 }

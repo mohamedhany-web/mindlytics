@@ -2,10 +2,10 @@
 
 namespace Tests\Unit;
 
-use App\Models\EmployeeAttendanceRecord;
+use App\Domains\Hr\Models\EmployeeAttendanceRecord;
 use App\Models\User;
-use App\Models\WorkSchedule;
-use App\Services\EmployeeAttendanceService;
+use App\Domains\Hr\Models\WorkSchedule;
+use App\Domains\Hr\Services\EmployeeAttendanceService;
 use Carbon\Carbon;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;

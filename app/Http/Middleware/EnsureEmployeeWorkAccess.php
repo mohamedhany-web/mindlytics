@@ -2,7 +2,7 @@
 
 namespace App\Http\Middleware;
 
-use App\Services\EmployeeAttendanceService;
+use App\Domains\Hr\Services\EmployeeAttendanceService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;

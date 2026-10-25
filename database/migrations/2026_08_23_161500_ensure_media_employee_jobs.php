@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\EmployeeJob;
+use App\Domains\Hr\Models\EmployeeJob;
 use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration

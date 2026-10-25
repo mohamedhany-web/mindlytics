@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\Internship;
-use App\Models\InternshipApplication;
+use App\Domains\Hr\Models\Internship;
+use App\Domains\Hr\Models\InternshipApplication;
 use Illuminate\Database\Seeder;
 
 class InternshipDemoSeeder extends Seeder

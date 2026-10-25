@@ -3,7 +3,7 @@
 @section('title', $plan->title . ' — الاستثمار')
 
 @push('styles')
-@include('careers._styles')
+@include('hr::public.careers._styles')
 <style>
     .invest-input {
         width: 100%;
@@ -43,7 +43,7 @@
     };
 @endphp
 
-@include('careers._hero', [
+@include('hr::public.careers._hero', [
     'title' => $plan->title,
     'subtitle' => $plan->short_description ?: ($plan->planTypeLabel() . ' · ' . $plan->returnModelLabel()),
     'backUrl' => route('investment.index'),

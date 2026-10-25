@@ -7,7 +7,7 @@ use App\Models\EmployeeJob;
 use App\Models\SalesTeam;
 use App\Models\SalesTeamMember;
 use App\Models\User;
-use App\Models\WorkSchedule;
+use App\Domains\Hr\Models\WorkSchedule;
 use Carbon\Carbon;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Hash;

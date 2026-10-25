@@ -124,7 +124,7 @@ class EmployeeCalendarController extends Controller
         }
 
         // 2. الإجازات (Leaves)
-        $leaves = \App\Models\LeaveRequest::where('employee_id', $user->id)
+        $leaves = \App\Domains\Hr\Models\LeaveRequest::where('employee_id', $user->id)
             ->where(function($q) use ($startDate, $endDate) {
                 if ($startDate) {
                     $q->where('start_date', '>=', $startDate);

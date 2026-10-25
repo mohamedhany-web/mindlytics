@@ -186,7 +186,7 @@ class AppServiceProvider extends ServiceProvider
             try {
                 $user = auth()->user();
                 if ($user?->isSubjectToWorkSchedule()) {
-                    $view->with('employeeAttendance', app(\App\Services\EmployeeAttendanceService::class)->getState($user));
+                    $view->with('employeeAttendance', app(\App\Domains\Hr\Services\EmployeeAttendanceService::class)->getState($user));
                 }
             } catch (\Throwable $e) {
                 report($e);

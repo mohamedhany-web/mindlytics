@@ -2,8 +2,8 @@
 
 namespace Tests\Unit;
 
-use App\Models\EmployeeAttendanceRecord;
-use App\Models\EmployeeJob;
+use App\Domains\Hr\Models\EmployeeAttendanceRecord;
+use App\Domains\Hr\Models\EmployeeJob;
 use App\Models\User;
 use App\Models\WorkSchedule;
 use App\Services\EmployeeAttendanceService;

@@ -47,7 +47,7 @@
 @php
     $memberSince = $user->created_at ? $user->created_at->copy()->locale('ar')->translatedFormat('d F Y') : null;
     $tasksCount = $user->employeeTasks()->count();
-    $leavesCount = \App\Models\LeaveRequest::where('employee_id', $user->id)->count();
+    $leavesCount = \App\Domains\Hr\Models\LeaveRequest::where('employee_id', $user->id)->count();
     $lastLogin = $user->last_login_at ? $user->last_login_at->copy()->locale('ar')->diffForHumans() : null;
 @endphp
 
