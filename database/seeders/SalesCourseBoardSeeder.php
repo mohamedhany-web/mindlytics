@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\SalesCourseBoardEntry;
+use App\Domains\Sales\Models\SalesCourseBoardEntry;
 use Illuminate\Database\Seeder;
 
 class SalesCourseBoardSeeder extends Seeder

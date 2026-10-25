@@ -16,6 +16,7 @@ use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use App\Domains\Sales\Services\SalesDailyReportService;
 
 class EmployeePayrollService
 {

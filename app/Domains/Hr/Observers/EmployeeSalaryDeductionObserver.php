@@ -2,9 +2,9 @@
 
 namespace App\Domains\Hr\Observers;
 
-use App\Models\EmployeeDailyReport;
-use App\Models\EmployeeSalaryDeduction;
-use App\Models\SalesDailyReport;
+use App\Domains\Hr\Models\EmployeeDailyReport;
+use App\Domains\Hr\Models\EmployeeSalaryDeduction;
+use App\Domains\Sales\Models\SalesDailyReport;
 
 class EmployeeSalaryDeductionObserver
 {
@@ -23,8 +23,8 @@ class EmployeeSalaryDeductionObserver
             ->where('auto_deduction_id', $deduction->id)
             ->update(['penalty_waived_at' => $waivedAt]);
 
-        if (class_exists(\App\Models\SalesDailyKpiPenalty::class)) {
-            \App\Models\SalesDailyKpiPenalty::query()
+        if (class_exists(\App\Domains\Sales\Models\SalesDailyKpiPenalty::class)) {
+            \App\Domains\Sales\Models\SalesDailyKpiPenalty::query()
                 ->where('deduction_id', $deduction->id)
                 ->update(['waived_at' => $waivedAt, 'deduction_id' => null]);
         }

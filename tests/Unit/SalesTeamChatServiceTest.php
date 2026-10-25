@@ -2,12 +2,12 @@
 
 namespace Tests\Unit;
 
-use App\Models\SalesTeam;
-use App\Models\SalesTeamConversation;
-use App\Models\SalesTeamMember;
-use App\Models\SalesTeamMessage;
+use App\Domains\Sales\Models\SalesTeam;
+use App\Domains\Sales\Models\SalesTeamConversation;
+use App\Domains\Sales\Models\SalesTeamMember;
+use App\Domains\Sales\Models\SalesTeamMessage;
 use App\Models\User;
-use App\Services\SalesTeamChatService;
+use App\Domains\Sales\Services\SalesTeamChatService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;

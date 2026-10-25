@@ -2,10 +2,10 @@
 
 namespace App\Domains\Hr\Console\Commands;
 
-use App\Models\EmployeeAttendanceRecord;
-use App\Models\EmployeeDailyReport;
-use App\Models\EmployeeSalaryDeduction;
-use App\Models\SalesDailyReport;
+use App\Domains\Hr\Models\EmployeeAttendanceRecord;
+use App\Domains\Hr\Models\EmployeeDailyReport;
+use App\Domains\Hr\Models\EmployeeSalaryDeduction;
+use App\Domains\Sales\Models\SalesDailyReport;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Console\Command;

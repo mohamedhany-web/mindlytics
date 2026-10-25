@@ -89,7 +89,7 @@
         @endif
 
         @if($hasSalesManagerPortal)
-        @php $waQueueCount = app(\App\Services\WhatsAppQueueService::class)->pendingCount(); @endphp
+        @php $waQueueCount = app(\App\Domains\Messaging\Services\WhatsAppQueueService::class)->pendingCount(); @endphp
         <div class="border-t border-slate-700/50 my-2 pt-2">
             <p class="px-4 text-xs font-semibold text-amber-400/90 uppercase tracking-wider mb-1">واتساب — طلبات</p>
             <a href="{{ route('employee.sales-manager.whatsapp.queue.index') }}"
@@ -348,12 +348,12 @@
             </a>
             @php
                 try {
-                    $pendingShiftSwapsCount = \App\Models\SalesShiftSwapRequest::query()
+                    $pendingShiftSwapsCount = \App\Domains\Sales\Models\SalesShiftSwapRequest::query()
                         ->where('status', 'pending')
                         ->when($hasSalesManagerPortal, function ($q) {
-                            $team = app(\App\Services\SalesTeamService::class)->teamFor(auth()->user());
+                            $team = app(\App\Domains\Sales\Services\SalesTeamService::class)->teamFor(auth()->user());
                             if (auth()->user()?->isBusinessDeveloper()) {
-                                $ids = app(\App\Services\SalesTeamService::class)->allSalesEmployeeIds();
+                                $ids = app(\App\Domains\Sales\Services\SalesTeamService::class)->allSalesEmployeeIds();
                                 $q->where(function ($q2) use ($ids) {
                                     $q2->whereIn('requester_id', $ids)->orWhereIn('partner_id', $ids);
                                 });

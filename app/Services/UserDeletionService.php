@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\SalesLead;
+use App\Domains\Sales\Models\SalesLead;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;

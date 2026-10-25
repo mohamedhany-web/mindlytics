@@ -2,12 +2,12 @@
 
 namespace Tests\Unit;
 
-use App\Models\EmployeeJob;
-use App\Models\SalesActivity;
-use App\Models\SalesDailyReport;
-use App\Models\SalesLead;
+use App\Domains\Hr\Models\EmployeeJob;
+use App\Domains\Sales\Models\SalesActivity;
+use App\Domains\Sales\Models\SalesDailyReport;
+use App\Domains\Sales\Models\SalesLead;
 use App\Models\User;
-use App\Services\SalesCrmComplianceService;
+use App\Domains\Sales\Services\SalesCrmComplianceService;
 use Carbon\Carbon;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Hash;

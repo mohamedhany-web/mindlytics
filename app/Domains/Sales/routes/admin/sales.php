@@ -1,0 +1,118 @@
+<?php
+
+use App\Domains\Sales\Http\Controllers\Admin\SalesAuditController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesCommissionController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesCourseCommissionAgreementController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesCrmComplianceController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesDailyReportController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesDayBlockController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesDistributionController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesGroupWhatsAppController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesInsightsController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesInterestTypeController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesKpiController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesLeadCategoryController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesLeadController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesLeadGroupController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesOrgChartController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesPolicyController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesReportController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesScheduleCalendarController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesShiftController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesSpecialtyController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesTeamController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesTeamDailyReportController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesTransferController;
+use App\Domains\Sales\Http\Controllers\Admin\SalesWinApprovalController;
+use Illuminate\Support\Facades\Route;
+
+/**
+ * لوحة إدارة المبيعات (admin/sales/*).
+ * يُحمَّل من داخل مجموعة admin في routes/web/admin.php (prefix: admin، name: admin.، role middleware)
+ * وفي نفس موضعه القديم.
+ */
+Route::prefix('sales')->name('sales.')->group(function () {
+    Route::get('reports', [SalesReportController::class, 'index'])->name('reports.index');
+    Route::get('reports/employee', [SalesReportController::class, 'employee'])->name('reports.employee');
+    Route::get('reports/export', [SalesReportController::class, 'export'])->name('reports.export');
+    Route::get('reports/pdf', [SalesReportController::class, 'pdfExport'])->name('reports.pdf');
+    Route::get('reports/daily-export', [SalesReportController::class, 'dailyExport'])->name('reports.daily-export');
+    Route::get('daily-reports', [SalesDailyReportController::class, 'index'])->name('daily-reports.index');
+    Route::get('daily-reports/export', [SalesDailyReportController::class, 'export'])->name('daily-reports.export');
+    Route::get('daily-reports/settings', [SalesDailyReportController::class, 'settings'])->name('daily-reports.settings');
+    Route::put('daily-reports/settings', [SalesDailyReportController::class, 'updateSettings'])->name('daily-reports.settings.update');
+    Route::get('daily-reports/{id}', [SalesDailyReportController::class, 'show'])->name('daily-reports.show')->where('id', '[0-9]+');
+    Route::get('audit-log', [SalesAuditController::class, 'index'])->name('audit-log.index');
+    Route::get('transfer', [SalesTransferController::class, 'index'])->name('transfer.index');
+    Route::post('transfer', [SalesTransferController::class, 'store'])->name('transfer.store');
+    Route::resource('sales-teams', SalesTeamController::class)->except(['show']);
+    Route::get('interest-types', [SalesInterestTypeController::class, 'index'])->name('interest-types.index');
+    Route::post('interest-types', [SalesInterestTypeController::class, 'store'])->name('interest-types.store');
+    Route::put('interest-types/{interestType}', [SalesInterestTypeController::class, 'update'])->name('interest-types.update');
+    Route::delete('interest-types/{interestType}', [SalesInterestTypeController::class, 'destroy'])->name('interest-types.destroy');
+    Route::get('policy', [SalesPolicyController::class, 'index'])->name('policy.index');
+    Route::put('policy/settings', [SalesPolicyController::class, 'updateSettings'])->name('policy.settings');
+    Route::post('policy/sections', [SalesPolicyController::class, 'storeSection'])->name('policy.sections.store');
+    Route::put('policy/sections/{section}', [SalesPolicyController::class, 'updateSection'])->name('policy.sections.update');
+    Route::delete('policy/sections/{section}', [SalesPolicyController::class, 'destroySection'])->name('policy.sections.destroy');
+    Route::get('policy/rules/create', [SalesPolicyController::class, 'createRule'])->name('policy.rules.create');
+    Route::post('policy/rules', [SalesPolicyController::class, 'storeRule'])->name('policy.rules.store');
+    Route::get('policy/rules/{rule}/edit', [SalesPolicyController::class, 'editRule'])->name('policy.rules.edit');
+    Route::put('policy/rules/{rule}', [SalesPolicyController::class, 'updateRule'])->name('policy.rules.update');
+    Route::delete('policy/rules/{rule}', [SalesPolicyController::class, 'destroyRule'])->name('policy.rules.destroy');
+    Route::get('specialties', [SalesSpecialtyController::class, 'index'])->name('specialties.index');
+    Route::put('specialties/{user}', [SalesSpecialtyController::class, 'update'])->name('specialties.update')->whereNumber('user');
+    Route::get('distribution', [SalesDistributionController::class, 'index'])->name('distribution.index');
+    Route::post('distribution/{lead}/assign', [SalesDistributionController::class, 'assign'])->name('distribution.assign');
+    Route::get('org-chart', [SalesOrgChartController::class, 'index'])->name('org-chart.index');
+    Route::put('org-chart/{user}', [SalesOrgChartController::class, 'update'])->name('org-chart.update')->whereNumber('user');
+    Route::get('schedule-calendar', [SalesScheduleCalendarController::class, 'index'])->name('schedule-calendar.index');
+    Route::get('team-daily-reports', [SalesTeamDailyReportController::class, 'index'])->name('team-daily-reports.index');
+    Route::get('team-daily-reports/{teamDailyReport}', [SalesTeamDailyReportController::class, 'show'])->name('team-daily-reports.show');
+    Route::get('kpi', [SalesKpiController::class, 'index'])->name('kpi.index');
+    Route::get('kpi/targets', [SalesKpiController::class, 'targets'])->name('kpi.targets');
+    Route::put('kpi/targets', [SalesKpiController::class, 'updateTargets'])->name('kpi.targets.update');
+    Route::get('day-blocks', [SalesDayBlockController::class, 'index'])->name('day-blocks.index');
+    Route::post('day-blocks', [SalesDayBlockController::class, 'store'])->name('day-blocks.store');
+    Route::put('day-blocks/{day_block}', [SalesDayBlockController::class, 'update'])->name('day-blocks.update');
+    Route::delete('day-blocks/{day_block}', [SalesDayBlockController::class, 'destroy'])->name('day-blocks.destroy');
+    Route::get('course-commission-courses', [SalesCourseCommissionAgreementController::class, 'courses'])->name('course-commission.courses');
+    Route::post('course-commission-agreements', [SalesCourseCommissionAgreementController::class, 'store'])->name('course-commission-agreements.store');
+    Route::put('course-commission-agreements/{agreement}', [SalesCourseCommissionAgreementController::class, 'update'])->name('course-commission-agreements.update');
+    Route::delete('course-commission-agreements/{agreement}', [SalesCourseCommissionAgreementController::class, 'destroy'])->name('course-commission-agreements.destroy');
+    Route::get('insights', [SalesInsightsController::class, 'index'])->name('insights.index');
+    Route::get('crm-compliance', [SalesCrmComplianceController::class, 'index'])->name('crm-compliance.index');
+    Route::get('crm-compliance/employees/{employee}', [SalesCrmComplianceController::class, 'show'])->name('crm-compliance.show')->whereNumber('employee');
+    Route::get('crm-compliance/leads/{lead}', [SalesCrmComplianceController::class, 'lead'])->name('crm-compliance.lead')->whereNumber('lead');
+    Route::get('shifts', [SalesShiftController::class, 'index'])->name('shifts.index');
+    Route::post('shifts/import-demo', [SalesShiftController::class, 'importDemo'])->name('shifts.import-demo');
+    Route::put('shifts/plans/{plan}', [SalesShiftController::class, 'updatePlan'])->name('shifts.update-plan')->whereNumber('plan');
+    Route::post('shifts/plans/{plan}/segments', [SalesShiftController::class, 'storeSegment'])->name('shifts.segments.store')->whereNumber('plan');
+    Route::put('shifts/segments/{segment}', [SalesShiftController::class, 'updateSegment'])->name('shifts.segments.update')->whereNumber('segment');
+    Route::delete('shifts/segments/{segment}', [SalesShiftController::class, 'destroySegment'])->name('shifts.segments.destroy')->whereNumber('segment');
+    Route::get('commissions', [SalesCommissionController::class, 'index'])->name('commissions.index');
+    Route::get('commissions/{user}', [SalesCommissionController::class, 'show'])->name('commissions.show')->whereNumber('user');
+    Route::post('commissions/{user}/settle', [SalesCommissionController::class, 'settle'])->name('commissions.settle')->whereNumber('user');
+    Route::get('win-approvals', [SalesWinApprovalController::class, 'index'])->name('win-approvals.index');
+    Route::post('win-approvals/{lead}/approve', [SalesWinApprovalController::class, 'approve'])->name('win-approvals.approve');
+    Route::post('win-approvals/{lead}/reject', [SalesWinApprovalController::class, 'reject'])->name('win-approvals.reject');
+    Route::get('groups/{group}/print-pdf', [SalesLeadGroupController::class, 'printPdf'])->name('groups.print-pdf');
+    Route::post('groups/{group}/reclaim', [SalesLeadGroupController::class, 'reclaim'])->name('groups.reclaim');
+    Route::post('groups/{group}/assign', [SalesLeadGroupController::class, 'assign'])->name('groups.assign');
+    Route::resource('groups', SalesLeadGroupController::class)->except(['edit']);
+    Route::post('groups/{group}/whatsapp-bulk', [SalesGroupWhatsAppController::class, 'store'])->name('groups.whatsapp.store');
+    Route::get('groups/{group}/whatsapp-batches/{batch}', [SalesGroupWhatsAppController::class, 'showBatch'])->name('groups.whatsapp-batches.show');
+    Route::get('groups/{group}/whatsapp-batches/{batch}/status', [SalesGroupWhatsAppController::class, 'statusJson'])->name('groups.whatsapp-batches.status');
+    Route::get('leads/export', [SalesLeadController::class, 'export'])->name('leads.export');
+    Route::get('leads/import', [SalesLeadController::class, 'importForm'])->name('leads.import');
+    Route::get('leads/import/template', [SalesLeadController::class, 'importTemplate'])->name('leads.import.template');
+    Route::post('leads/import', [SalesLeadController::class, 'importStore'])->name('leads.import.store');
+    Route::post('leads/{lead}/activities', [SalesLeadController::class, 'storeActivity'])->name('leads.activities.store');
+    Route::post('leads/{lead}/confirm-win', [SalesLeadController::class, 'confirmWin'])->name('leads.confirm-win');
+    Route::resource('leads', SalesLeadController::class);
+
+    Route::get('categories', [SalesLeadCategoryController::class, 'index'])->name('categories.index');
+    Route::post('categories', [SalesLeadCategoryController::class, 'store'])->name('categories.store');
+    Route::put('categories/{category}', [SalesLeadCategoryController::class, 'update'])->name('categories.update');
+    Route::delete('categories/{category}', [SalesLeadCategoryController::class, 'destroy'])->name('categories.destroy');
+});

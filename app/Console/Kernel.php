@@ -21,7 +21,7 @@ class Kernel extends ConsoleKernel
 
         // تنظيف الرسائل القديمة (أكثر من 6 أشهر)
         $schedule->call(function () {
-            \App\Models\WhatsAppMessage::where('created_at', '<', now()->subMonths(6))->delete();
+            \App\Domains\Messaging\Models\WhatsAppMessage::where('created_at', '<', now()->subMonths(6))->delete();
             \App\Models\ActivityLog::where('created_at', '<', now()->subMonths(3))->delete();
         })->monthly()->withoutOverlapping();
 

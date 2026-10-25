@@ -2,11 +2,11 @@
 
 namespace Tests\Unit;
 
-use App\Jobs\ProcessWhatsAppBatchJob;
+use App\Domains\Messaging\Jobs\ProcessWhatsAppBatchJob;
 use App\Models\User;
-use App\Models\WhatsAppBatch;
-use App\Models\WhatsAppBatchItem;
-use App\Services\WhatsAppBatchService;
+use App\Domains\Messaging\Models\WhatsAppBatch;
+use App\Domains\Messaging\Models\WhatsAppBatchItem;
+use App\Domains\Messaging\Services\WhatsAppBatchService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Tests\TestCase;

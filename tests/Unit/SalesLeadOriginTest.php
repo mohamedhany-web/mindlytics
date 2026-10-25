@@ -2,7 +2,7 @@
 
 namespace Tests\Unit;
 
-use App\Models\SalesLead;
+use App\Domains\Sales\Models\SalesLead;
 use Tests\TestCase;
 
 class SalesLeadOriginTest extends TestCase

@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\WhatsAppSuggestedTemplate;
+use App\Domains\Messaging\Models\WhatsAppSuggestedTemplate;
 use Illuminate\Database\Seeder;
 
 class WhatsAppSuggestedTemplatesSeeder extends Seeder

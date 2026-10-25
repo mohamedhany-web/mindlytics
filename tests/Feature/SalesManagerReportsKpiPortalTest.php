@@ -26,7 +26,7 @@ class SalesManagerReportsKpiPortalTest extends TestCase
             \App\Http\Middleware\PreventConcurrentSessions::class,
         ]);
 
-        $this->mock(\App\Services\WhatsAppQueueService::class, function ($mock) {
+        $this->mock(\App\Domains\Messaging\Services\WhatsAppQueueService::class, function ($mock) {
             $mock->shouldReceive('pendingCount')->andReturn(0);
         });
 

@@ -2,12 +2,12 @@
 
 namespace Tests\Unit;
 
-use App\Models\EmployeeJob;
-use App\Models\SalesShiftPlan;
-use App\Models\SalesShiftSegment;
+use App\Domains\Hr\Models\EmployeeJob;
+use App\Domains\Sales\Models\SalesShiftPlan;
+use App\Domains\Sales\Models\SalesShiftSegment;
 use App\Models\User;
-use App\Services\SalesShiftPlanImporter;
-use App\Services\SalesShiftScheduleService;
+use App\Domains\Sales\Services\SalesShiftPlanImporter;
+use App\Domains\Sales\Services\SalesShiftScheduleService;
 use Carbon\Carbon;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Hash;

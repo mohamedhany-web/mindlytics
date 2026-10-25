@@ -2,11 +2,11 @@
 
 namespace Tests\Unit;
 
-use App\Models\SalesCourseCommissionAgreement;
-use App\Models\SalesLead;
+use App\Domains\Sales\Models\SalesCourseCommissionAgreement;
+use App\Domains\Sales\Models\SalesLead;
 use App\Models\User;
-use App\Services\SalesCommissionTierService;
-use App\Services\SalesCourseCommissionResolver;
+use App\Domains\Sales\Services\SalesCommissionTierService;
+use App\Domains\Sales\Services\SalesCourseCommissionResolver;
 use Tests\TestCase;
 
 class SalesCourseCommissionResolverTest extends TestCase

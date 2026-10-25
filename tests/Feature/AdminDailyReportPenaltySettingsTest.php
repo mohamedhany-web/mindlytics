@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Support\SalesDailyReportSettings;
+use App\Domains\Sales\Support\SalesDailyReportSettings;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 

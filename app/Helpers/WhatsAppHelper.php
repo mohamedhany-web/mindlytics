@@ -6,7 +6,7 @@ if (!function_exists('sendWhatsAppMessage')) {
      */
     function sendWhatsAppMessage(string $phoneNumber, string $message, string $type = 'text'): array
     {
-        $whatsappService = app(\App\Services\WhatsAppService::class);
+        $whatsappService = app(\App\Domains\Messaging\Services\WhatsAppService::class);
         return $whatsappService->sendMessage($phoneNumber, $message, $type);
     }
 }
@@ -25,7 +25,7 @@ if (!function_exists('sendExamResultToParent')) {
                 return false;
             }
 
-            $whatsappService = app(\App\Services\WhatsAppService::class);
+            $whatsappService = app(\App\Domains\Messaging\Services\WhatsAppService::class);
             $result = $whatsappService->sendExamResult($parent, $attempt);
             
             return $result['success'];
@@ -47,7 +47,7 @@ if (!function_exists('generateStudentMonthlyReport')) {
     {
         try {
             $month = $month ?? now()->subMonth()->format('Y-m');
-            $whatsappService = app(\App\Services\WhatsAppService::class);
+            $whatsappService = app(\App\Domains\Messaging\Services\WhatsAppService::class);
             
             $reportData = $whatsappService->generateStudentReportData($student);
             

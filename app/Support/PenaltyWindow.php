@@ -4,6 +4,9 @@ namespace App\Support;
 
 use App\Models\User;
 use Carbon\Carbon;
+use App\Domains\Hr\Support\EmployeeAttendanceSettings;
+use App\Domains\Hr\Support\EmployeeDailyReportSettings;
+use App\Domains\Sales\Support\SalesDailyReportSettings;
 
 /**
  * يحدد التواريخ المسموح باحتساب غرامة تلقائية عنها.

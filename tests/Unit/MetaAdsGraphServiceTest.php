@@ -2,8 +2,8 @@
 
 namespace Tests\Unit;
 
-use App\Services\MetaAds\MetaAdsGraphService;
-use App\Support\MetaAdsSettings;
+use App\Domains\Messaging\Services\MetaAdsGraphService;
+use App\Domains\Messaging\Support\MetaAdsSettings;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;

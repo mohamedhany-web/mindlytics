@@ -28,7 +28,7 @@
       <a href="{{ route('admin.employee-deductions.index') }}" class="text-sm text-slate-600 hover:text-rose-700 font-semibold"><i class="fas fa-arrow-right ml-1"></i> خصومات الموظفين</a>
     </div>
     <div class="p-6">
-      @include('admin.sales.daily-reports._settings_form', [
+      @include('sales::admin.daily-reports._settings_form', [
           'formAction' => route('admin.employee-deductions.daily-report-penalty-settings.update'),
           'method' => 'PUT',
           'settings' => $settings,

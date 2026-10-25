@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\EmployeeAttendanceRecord;
-use App\Models\EmployeeJob;
-use App\Models\SalesTeam;
-use App\Models\SalesTeamMember;
+use App\Domains\Hr\Models\EmployeeAttendanceRecord;
+use App\Domains\Hr\Models\EmployeeJob;
+use App\Domains\Sales\Models\SalesTeam;
+use App\Domains\Sales\Models\SalesTeamMember;
 use App\Models\User;
 use App\Domains\Hr\Models\WorkSchedule;
 use Carbon\Carbon;

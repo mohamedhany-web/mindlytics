@@ -10,7 +10,7 @@ use App\Models\SalesLead;
 use App\Models\SalesTeam;
 use App\Models\SalesTeamMember;
 use App\Models\User;
-use App\Services\SalesTeamService;
+use App\Domains\Sales\Services\SalesTeamService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;

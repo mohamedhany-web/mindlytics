@@ -2,7 +2,7 @@
 
 namespace Tests\Unit;
 
-use App\Services\WhatsAppBridgeService;
+use App\Domains\Messaging\Services\WhatsAppBridgeService;
 use Tests\TestCase;
 
 class WhatsAppBridgeConnectionMetaTest extends TestCase

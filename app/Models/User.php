@@ -345,7 +345,7 @@ class User extends Authenticatable
         $mode = (string) ($this->sales_commission_mode ?? 'none');
 
         if ($mode === 'tier') {
-            return \App\Services\SalesCommissionTierService::quoteNextWin($this)['commission'];
+            return \App\Domains\Sales\Services\SalesCommissionTierService::quoteNextWin($this)['commission'];
         }
 
         $base = max(0, (float) ($baseAmount ?? 0));
