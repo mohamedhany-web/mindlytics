@@ -1297,7 +1297,7 @@
                             <span>{{ __('admin.learning_path_enrollments') }}</span>
                             @php
                                 try {
-                                    $pendingEnrollments = \App\Models\LearningPathEnrollment::where('status', 'pending')->count();
+                                    $pendingEnrollments = \App\Domains\Learning\Models\LearningPathEnrollment::where('status', 'pending')->count();
                                 } catch (\Exception $e) {
                                     $pendingEnrollments = 0;
                                 }
@@ -1598,7 +1598,7 @@
                             <span>حجوزات الأونلاين</span>
                             @php
                                 try {
-                                    $pendingOnlineBookingsMenu2 = \App\Models\OfflineCourseBooking::where('status', 'pending')->where('booking_channel', 'online')->count();
+                                    $pendingOnlineBookingsMenu2 = \App\Domains\Offline\Models\OfflineCourseBooking::where('status', 'pending')->where('booking_channel', 'online')->count();
                                 } catch (\Exception $e) {
                                     $pendingOnlineBookingsMenu2 = 0;
                                 }
@@ -1657,7 +1657,7 @@
                             <span>{{ __('admin.offline_courses_list') }}</span>
                             @php
                                 try {
-                                    $activeOfflineCourses = \App\Models\OfflineCourse::where('status', 'active')->count();
+                                    $activeOfflineCourses = \App\Domains\Offline\Models\OfflineCourse::where('status', 'active')->count();
                                 } catch (\Exception $e) {
                                     $activeOfflineCourses = 0;
                                 }
@@ -1683,7 +1683,7 @@
                             <span>حجوزات أوفلاين</span>
                             @php
                                 try {
-                                    $pendingOfflineBookingsMenu = \App\Models\OfflineCourseBooking::where('status', 'pending')->where('booking_channel', 'offline')->count();
+                                    $pendingOfflineBookingsMenu = \App\Domains\Offline\Models\OfflineCourseBooking::where('status', 'pending')->where('booking_channel', 'offline')->count();
                                 } catch (\Exception $e) {
                                     $pendingOfflineBookingsMenu = 0;
                                 }
@@ -1840,7 +1840,7 @@
                             <span>{{ __('admin.instructor_tasks') }}</span>
                             @php
                                 try {
-                                    $pendingInstructorTasks = \App\Models\Task::whereIn('user_id', \App\Models\User::whereIn('role', ['instructor', 'teacher'])->pluck('id'))->where('status', 'pending')->count();
+                                    $pendingInstructorTasks = \App\Domains\Learning\Models\Task::whereIn('user_id', \App\Models\User::whereIn('role', ['instructor', 'teacher'])->pluck('id'))->where('status', 'pending')->count();
                                 } catch (\Exception $e) {
                                     $pendingInstructorTasks = 0;
                                 }
@@ -1858,7 +1858,7 @@
                             <span>{{ __('admin.instructor_requests_join') }}</span>
                             @php
                                 try {
-                                    $pendingInstructorRequests = \App\Models\InstructorRequest::where('status', 'pending')->count();
+                                    $pendingInstructorRequests = \App\Domains\Learning\Models\InstructorRequest::where('status', 'pending')->count();
                                 } catch (\Exception $e) {
                                     $pendingInstructorRequests = 0;
                                 }
@@ -1967,7 +1967,7 @@
                             <i class="fas fa-list w-4"></i>
                             <span>{{ __('admin.certificates_list') }}</span>
                             @php
-                                $totalCertificates = \App\Models\Certificate::count();
+                                $totalCertificates = \App\Domains\Learning\Models\Certificate::count();
                             @endphp
                             @if($totalCertificates > 0)
                                 <span class="mr-auto bg-blue-400 text-white text-xs font-bold rounded-full px-2 py-0.5 shadow-lg">{{ $totalCertificates }}</span>
@@ -1983,7 +1983,7 @@
                         </a>
                     </li>
                     @php
-                        $pendingCertificates = \App\Models\Certificate::where(function($q) {
+                        $pendingCertificates = \App\Domains\Learning\Models\Certificate::where(function($q) {
                             $q->where('status', 'pending')->orWhere('is_verified', false);
                         })->count();
                     @endphp

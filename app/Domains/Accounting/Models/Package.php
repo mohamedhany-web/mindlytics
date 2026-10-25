@@ -8,6 +8,8 @@ use App\Models\Concerns\VisibleOnCurrentHostScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Models\Branch;
 
 class Package extends Model
 {

@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Workshop;
-use App\Models\WorkshopRegistration;
-use App\Services\WorkshopAttendanceService;
+use App\Domains\Offline\Models\Workshop;
+use App\Domains\Offline\Models\WorkshopRegistration;
+use App\Domains\Offline\Services\WorkshopAttendanceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

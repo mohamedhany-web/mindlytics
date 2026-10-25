@@ -2,10 +2,10 @@
 
 namespace App\Domains\Messaging\Services;
 
-use App\Models\Workshop;
-use App\Models\WorkshopRegistration;
-use App\Models\WhatsAppBatch;
-use App\Support\WhatsAppCloudSettings;
+use App\Domains\Offline\Models\Workshop;
+use App\Domains\Offline\Models\WorkshopRegistration;
+use App\Domains\Messaging\Models\WhatsAppBatch;
+use App\Domains\Messaging\Support\WhatsAppCloudSettings;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 

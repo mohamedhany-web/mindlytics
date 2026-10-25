@@ -3,8 +3,8 @@
 namespace App\Domains\Accounting\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
-use App\Models\Coupon;
-use App\Models\AdvancedCourse;
+use App\Domains\Accounting\Models\Coupon;
+use App\Domains\Learning\Models\AdvancedCourse;
 use Illuminate\Http\Request;
 
 class CouponController extends Controller

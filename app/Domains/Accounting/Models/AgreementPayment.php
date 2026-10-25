@@ -5,6 +5,10 @@ namespace App\Domains\Accounting\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Learning\Models\Lecture;
+use App\Domains\Learning\Models\StudentCourseEnrollment;
+use App\Models\User;
 
 class AgreementPayment extends Model
 {

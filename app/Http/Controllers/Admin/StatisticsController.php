@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\AcademicYear;
-use App\Models\AcademicSubject;
-use App\Models\AdvancedCourse;
-use App\Models\CourseEnrollment;
+use App\Domains\Learning\Models\AcademicYear;
+use App\Domains\Learning\Models\AcademicSubject;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Learning\Models\CourseEnrollment;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;

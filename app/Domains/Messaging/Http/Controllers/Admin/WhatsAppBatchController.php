@@ -3,12 +3,12 @@
 namespace App\Domains\Messaging\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\ProcessWhatsAppBatchJob;
-use App\Models\WhatsAppBatch;
-use App\Models\WhatsAppBatchItem;
-use App\Models\Workshop;
-use App\Services\WhatsAppBatchService;
-use App\Services\WhatsAppCloudService;
+use App\Domains\Messaging\Jobs\ProcessWhatsAppBatchJob;
+use App\Domains\Messaging\Models\WhatsAppBatch;
+use App\Domains\Messaging\Models\WhatsAppBatchItem;
+use App\Domains\Offline\Models\Workshop;
+use App\Domains\Messaging\Services\WhatsAppBatchService;
+use App\Domains\Messaging\Services\WhatsAppCloudService;
 use Illuminate\Http\Request;
 
 class WhatsAppBatchController extends Controller

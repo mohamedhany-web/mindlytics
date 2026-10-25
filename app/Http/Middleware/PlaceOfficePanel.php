@@ -2,7 +2,7 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\OfflineLocation;
+use App\Domains\Offline\Models\OfflineLocation;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;

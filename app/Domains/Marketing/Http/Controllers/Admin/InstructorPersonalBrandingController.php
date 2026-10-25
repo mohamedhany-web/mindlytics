@@ -3,7 +3,7 @@
 namespace App\Domains\Marketing\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\InstructorProfile;
+use App\Domains\Learning\Models\InstructorProfile;
 use Illuminate\Http\Request;
 
 class InstructorPersonalBrandingController extends Controller

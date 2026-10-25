@@ -2,9 +2,9 @@
 
 namespace App\Domains\Accounting\Services;
 
-use App\Models\AgreementPayment;
-use App\Models\InstructorAgreement;
-use App\Models\StudentCourseEnrollment;
+use App\Domains\Accounting\Models\AgreementPayment;
+use App\Domains\Accounting\Models\InstructorAgreement;
+use App\Domains\Learning\Models\StudentCourseEnrollment;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -277,7 +277,7 @@ class InstructorCoursePercentageService
 
     public static function findAgreementForEnrollment(
         StudentCourseEnrollment $enrollment,
-        ?\App\Models\AdvancedCourse $course = null,
+        ?\App\Domains\Learning\Models\AdvancedCourse $course = null,
     ): ?InstructorAgreement {
         $course ??= $enrollment->course;
         if (! $course) {
@@ -341,7 +341,7 @@ class InstructorCoursePercentageService
     /**
      * المبلغ الذي تُحسب عليه نسبة المدرب (بعد الخصم إن وُجد).
      */
-    public static function resolveActivationBaseAmount(StudentCourseEnrollment $enrollment, ?\App\Models\AdvancedCourse $course = null): float
+    public static function resolveActivationBaseAmount(StudentCourseEnrollment $enrollment, ?\App\Domains\Learning\Models\AdvancedCourse $course = null): float
     {
         $course ??= $enrollment->course;
 

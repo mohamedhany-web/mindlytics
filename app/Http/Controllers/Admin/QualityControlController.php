@@ -4,18 +4,18 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\StudentCourseEnrollment;
-use App\Models\OfflineCourseEnrollment;
-use App\Models\EmployeeTask;
-use App\Models\AdvancedCourse;
-use App\Models\Lecture;
-use App\Models\OfflineCourse;
-use App\Models\OfflineLecture;
-use App\Models\InstructorAgreement;
-use App\Models\Assignment;
-use App\Models\WithdrawalRequest;
-use App\Models\InstructorRequest;
-use App\Models\Certificate;
+use App\Domains\Learning\Models\StudentCourseEnrollment;
+use App\Domains\Offline\Models\OfflineCourseEnrollment;
+use App\Domains\Hr\Models\EmployeeTask;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Learning\Models\Lecture;
+use App\Domains\Offline\Models\OfflineCourse;
+use App\Domains\Offline\Models\OfflineLecture;
+use App\Domains\Accounting\Models\InstructorAgreement;
+use App\Domains\Learning\Models\Assignment;
+use App\Domains\Accounting\Models\WithdrawalRequest;
+use App\Domains\Learning\Models\InstructorRequest;
+use App\Domains\Learning\Models\Certificate;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -135,8 +135,8 @@ class QualityControlController extends Controller
 
         // إحصائيات لكل مدرب
         $instructors->getCollection()->transform(function($instructor) {
-            $instructor->courses_count = \App\Models\AdvancedCourse::where('instructor_id', $instructor->id)->count();
-            $instructor->agreements_count = \App\Models\InstructorAgreement::where('instructor_id', $instructor->id)->count();
+            $instructor->courses_count = \App\Domains\Learning\Models\AdvancedCourse::where('instructor_id', $instructor->id)->count();
+            $instructor->agreements_count = \App\Domains\Accounting\Models\InstructorAgreement::where('instructor_id', $instructor->id)->count();
             $instructor->last_activity = $instructor->last_login_at;
             return $instructor;
         });

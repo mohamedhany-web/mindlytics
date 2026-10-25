@@ -2,12 +2,12 @@
 
 namespace App\Domains\Marketing\Services;
 
-use App\Models\AdvancedCourse;
-use App\Models\OfflineCourse;
-use App\Models\Order;
-use App\Models\Package;
-use App\Models\Workshop;
-use App\Support\MarketingWebAnalyticsSettings;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Offline\Models\OfflineCourse;
+use App\Domains\Accounting\Models\Order;
+use App\Domains\Accounting\Models\Package;
+use App\Domains\Offline\Models\Workshop;
+use App\Domains\Marketing\Support\MarketingWebAnalyticsSettings;
 use Illuminate\Support\Arr;
 
 /**

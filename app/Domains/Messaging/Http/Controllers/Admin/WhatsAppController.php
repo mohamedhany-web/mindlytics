@@ -3,8 +3,8 @@
 namespace App\Domains\Messaging\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\AdvancedCourse;
-use App\Models\MessageTemplate;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Messaging\Models\MessageTemplate;
 use App\Models\User;
 use App\Domains\Messaging\Models\WhatsAppBusinessConnection;
 use App\Domains\Messaging\Models\WhatsAppMessage;

@@ -3,11 +3,11 @@
 namespace App\Domains\Community\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
-use App\Models\AcademicYear;
-use App\Models\PortfolioProject;
-use App\Models\PortfolioProjectReview;
-use App\Services\JourneyAchievementService;
-use App\Services\JourneyProfileService;
+use App\Domains\Learning\Models\AcademicYear;
+use App\Domains\Community\Models\PortfolioProject;
+use App\Domains\Community\Models\PortfolioProjectReview;
+use App\Domains\Community\Services\JourneyAchievementService;
+use App\Domains\Community\Services\JourneyProfileService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 

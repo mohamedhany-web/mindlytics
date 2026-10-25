@@ -2,12 +2,12 @@
 
 namespace App\Domains\Places\Services;
 
-use App\Models\Expense;
-use App\Models\OfflineLocation;
-use App\Models\PlaceInvoice;
-use App\Models\PlaceMonthlySettlement;
-use App\Models\PlaceDailyExpense;
-use App\Models\PlaceUsageLog;
+use App\Domains\Accounting\Models\Expense;
+use App\Domains\Offline\Models\OfflineLocation;
+use App\Domains\Places\Models\PlaceInvoice;
+use App\Domains\Places\Models\PlaceMonthlySettlement;
+use App\Domains\Places\Models\PlaceDailyExpense;
+use App\Domains\Places\Models\PlaceUsageLog;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;

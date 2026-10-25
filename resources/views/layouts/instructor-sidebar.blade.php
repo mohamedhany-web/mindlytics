@@ -19,13 +19,13 @@
     <!-- Quick Stats -->
     @php
         $user = auth()->user();
-        $directCourseIds = \App\Models\AdvancedCourse::where('instructor_id', $user->id)->pluck('id');
+        $directCourseIds = \App\Domains\Learning\Models\AdvancedCourse::where('instructor_id', $user->id)->pluck('id');
         $assignedFromPaths = $user->teachingLearningPaths()->get()->flatMap(fn($ay) => json_decode($ay->pivot->assigned_courses ?? '[]', true) ?: []);
         $teachingCourseIds = $directCourseIds->merge($assignedFromPaths)->unique()->filter()->values();
         $myCoursesCount = $teachingCourseIds->count();
-        $totalStudents = $teachingCourseIds->isEmpty() ? 0 : \App\Models\StudentCourseEnrollment::whereIn('advanced_course_id', $teachingCourseIds)->where('status', 'active')->distinct('user_id')->count('user_id');
-        $myOfflineCoursesCount = \App\Models\OfflineCourse::where('instructor_id', $user->id)->count();
-        $myOnlineStudentsCount = \App\Models\OfflineCourseEnrollment::whereHas('course', function ($q) use ($user) {
+        $totalStudents = $teachingCourseIds->isEmpty() ? 0 : \App\Domains\Learning\Models\StudentCourseEnrollment::whereIn('advanced_course_id', $teachingCourseIds)->where('status', 'active')->distinct('user_id')->count('user_id');
+        $myOfflineCoursesCount = \App\Domains\Offline\Models\OfflineCourse::where('instructor_id', $user->id)->count();
+        $myOnlineStudentsCount = \App\Domains\Offline\Models\OfflineCourseEnrollment::whereHas('course', function ($q) use ($user) {
             $q->where('instructor_id', $user->id);
         })->where('enrollment_channel', 'online')->where('status', 'active')->count();
     @endphp

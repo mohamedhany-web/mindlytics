@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Domains\Accounting\Models\Expense;
+use App\Domains\Accounting\Models\Wallet;
+use App\Domains\Offline\Models\OfflineLocation;
+use App\Models\User;
 
 class PlaceMonthlySettlement extends Model
 {

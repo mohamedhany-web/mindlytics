@@ -14,10 +14,10 @@
     ];
     $itemTypeLabel = function ($item) {
         if (! $item?->item) return 'عنصر';
-        if ($item->item instanceof \App\Models\Lecture) return 'محاضرة';
-        if ($item->item instanceof \App\Models\Assignment) return 'واجب';
-        if ($item->item instanceof \App\Models\AdvancedExam || $item->item instanceof \App\Models\Exam) return 'امتحان';
-        if ($item->item instanceof \App\Models\LearningPattern) return 'نمط تعليمي';
+        if ($item->item instanceof \App\Domains\Learning\Models\Lecture) return 'محاضرة';
+        if ($item->item instanceof \App\Domains\Learning\Models\Assignment) return 'واجب';
+        if ($item->item instanceof \App\Domains\Learning\Models\AdvancedExam || $item->item instanceof \App\Domains\Learning\Models\Exam) return 'امتحان';
+        if ($item->item instanceof \App\Domains\Learning\Models\LearningPattern) return 'نمط تعليمي';
         return class_basename($item->item_type);
     };
 @endphp

@@ -3,11 +3,11 @@
 namespace App\Domains\Accounting\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
-use App\Models\AdvancedCourse;
-use App\Models\AcademicYear;
-use App\Models\Coupon;
-use App\Models\StudentCourseEnrollment;
-use App\Models\LearningPathEnrollment;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Learning\Models\AcademicYear;
+use App\Domains\Accounting\Models\Coupon;
+use App\Domains\Learning\Models\StudentCourseEnrollment;
+use App\Domains\Learning\Models\LearningPathEnrollment;
 use App\Models\User;
 use App\Domains\Accounting\Services\CustomerDiscountService;
 use App\Domains\Accounting\Services\InstructorCoursePercentageService;

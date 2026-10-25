@@ -3,15 +3,15 @@
 namespace App\Domains\Community\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
-use App\Models\AcademicYear;
-use App\Models\AdvancedCourse;
-use App\Models\JourneyProfile;
-use App\Models\OfflineCourse;
-use App\Models\PortfolioProject;
-use App\Models\PortfolioProjectImage;
-use App\Services\JourneyAchievementService;
-use App\Services\JourneyProfileService;
-use App\Services\JourneyShareCardService;
+use App\Domains\Learning\Models\AcademicYear;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Community\Models\JourneyProfile;
+use App\Domains\Offline\Models\OfflineCourse;
+use App\Domains\Community\Models\PortfolioProject;
+use App\Domains\Community\Models\PortfolioProjectImage;
+use App\Domains\Community\Services\JourneyAchievementService;
+use App\Domains\Community\Services\JourneyProfileService;
+use App\Domains\Community\Services\JourneyShareCardService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;

@@ -3,10 +3,10 @@
 namespace App\Domains\Marketing\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
-use App\Models\AdvancedCourse;
-use App\Models\MarketingCustomerSurvey;
-use App\Models\Order;
-use App\Models\StudentCourseEnrollment;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Marketing\Models\MarketingCustomerSurvey;
+use App\Domains\Accounting\Models\Order;
+use App\Domains\Learning\Models\StudentCourseEnrollment;
 use App\Models\User;
 use App\Domains\Marketing\Services\CustomerSurveyRewardService;
 use Illuminate\Http\JsonResponse;

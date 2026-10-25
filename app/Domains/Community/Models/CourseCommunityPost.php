@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Models\User;
 
 class CourseCommunityPost extends Model
 {

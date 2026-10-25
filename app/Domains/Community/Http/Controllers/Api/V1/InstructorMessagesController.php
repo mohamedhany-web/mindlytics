@@ -3,10 +3,10 @@
 namespace App\Domains\Community\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\AdvancedCourse;
-use App\Models\DirectMessage;
-use App\Models\DirectMessageThread;
-use App\Models\StudentCourseEnrollment;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Community\Models\DirectMessage;
+use App\Domains\Community\Models\DirectMessageThread;
+use App\Domains\Learning\Models\StudentCourseEnrollment;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

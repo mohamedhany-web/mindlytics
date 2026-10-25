@@ -3,9 +3,9 @@
 namespace App\Domains\Messaging\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\WhatsAppMetaTemplate;
-use App\Models\WhatsAppSuggestedTemplate;
-use App\Models\Workshop;
+use App\Domains\Messaging\Models\WhatsAppMetaTemplate;
+use App\Domains\Messaging\Models\WhatsAppSuggestedTemplate;
+use App\Domains\Offline\Models\Workshop;
 use Database\Seeders\WhatsAppSuggestedTemplatesSeeder;
 use App\Domains\Messaging\Services\WhatsAppCloudService;
 use App\Domains\Messaging\Services\WhatsAppTemplateAccessService;

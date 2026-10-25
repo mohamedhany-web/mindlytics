@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
-use App\Models\AdvancedCourse;
+use App\Domains\Learning\Models\AdvancedCourse;
 use App\Models\User;
 use App\Support\BranchContext;
 use Illuminate\Http\Request;
@@ -174,7 +174,7 @@ class PageController extends Controller
 
     public function groups()
     {
-        $offlineGroups = \App\Models\OfflineCourseGroup::query()
+        $offlineGroups = \App\Domains\Offline\Models\OfflineCourseGroup::query()
             ->where('public_booking_enabled', true)
             ->whereNotNull('public_slug')
             ->where('is_active', true)
@@ -186,7 +186,7 @@ class PageController extends Controller
             ->latest('id')
             ->get();
 
-        $onlineGroups = \App\Models\OfflineCourseGroup::query()
+        $onlineGroups = \App\Domains\Offline\Models\OfflineCourseGroup::query()
             ->where('online_booking_enabled', true)
             ->whereNotNull('online_slug')
             ->where('is_active', true)

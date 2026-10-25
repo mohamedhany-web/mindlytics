@@ -5,6 +5,10 @@ namespace App\Domains\Community\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Domains\Learning\Models\AcademicYear;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Offline\Models\OfflineCourse;
+use App\Models\User;
 
 class PortfolioProject extends Model
 {

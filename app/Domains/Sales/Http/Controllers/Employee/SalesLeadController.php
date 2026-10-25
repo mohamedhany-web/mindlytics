@@ -815,8 +815,8 @@ class SalesLeadController extends Controller
         }
 
         $exists = match ($type) {
-            'advanced' => \App\Models\AdvancedCourse::query()->whereKey($refId)->exists(),
-            'online' => \App\Models\OfflineCourse::query()->whereKey($refId)->where(function ($q) {
+            'advanced' => \App\Domains\Learning\Models\AdvancedCourse::query()->whereKey($refId)->exists(),
+            'online' => \App\Domains\Offline\Models\OfflineCourse::query()->whereKey($refId)->where(function ($q) {
                 $q->where('online_only', true)
                     ->orWhereHas('groups', function ($g) {
                         $g->where('online_booking_enabled', true)
@@ -824,10 +824,10 @@ class SalesLeadController extends Controller
                             ->where('status', 'active');
                     });
             })->exists(),
-            'offline' => \App\Models\OfflineCourse::query()->whereKey($refId)->where(function ($q) {
+            'offline' => \App\Domains\Offline\Models\OfflineCourse::query()->whereKey($refId)->where(function ($q) {
                 $q->where('is_active', true)->orWhere('status', 'active');
             })->exists(),
-            'legacy' => \App\Models\Course::query()->whereKey($refId)->exists(),
+            'legacy' => \App\Domains\Learning\Models\Course::query()->whereKey($refId)->exists(),
             default => false,
         };
         if (! $exists) {

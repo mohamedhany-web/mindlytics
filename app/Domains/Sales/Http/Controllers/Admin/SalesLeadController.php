@@ -52,7 +52,7 @@ class SalesLeadController extends Controller
             ? SalesLeadGroup::query()->orderBy('name')->get(['id', 'name'])
             : collect();
         $workshopsForFilter = Schema::hasTable('workshops')
-            ? \App\Models\Workshop::query()->orderByDesc('id')->limit(80)->get(['id', 'title'])
+            ? \App\Domains\Offline\Models\Workshop::query()->orderByDesc('id')->limit(80)->get(['id', 'title'])
             : collect();
         $importBatches = SalesLead::query()
             ->whereNotNull('import_batch')
@@ -640,8 +640,8 @@ class SalesLeadController extends Controller
         }
 
         $exists = match ($type) {
-            'advanced' => \App\Models\AdvancedCourse::query()->whereKey($refId)->exists(),
-            'online' => \App\Models\OfflineCourse::query()->whereKey($refId)->where(function ($q) {
+            'advanced' => \App\Domains\Learning\Models\AdvancedCourse::query()->whereKey($refId)->exists(),
+            'online' => \App\Domains\Offline\Models\OfflineCourse::query()->whereKey($refId)->where(function ($q) {
                 $q->where('online_only', true)
                     ->orWhereHas('groups', function ($g) {
                         $g->where('online_booking_enabled', true)
@@ -649,10 +649,10 @@ class SalesLeadController extends Controller
                             ->where('status', 'active');
                     });
             })->exists(),
-            'offline' => \App\Models\OfflineCourse::query()->whereKey($refId)->where(function ($q) {
+            'offline' => \App\Domains\Offline\Models\OfflineCourse::query()->whereKey($refId)->where(function ($q) {
                 $q->where('is_active', true)->orWhere('status', 'active');
             })->exists(),
-            'legacy' => \App\Models\Course::query()->whereKey($refId)->exists(),
+            'legacy' => \App\Domains\Learning\Models\Course::query()->whereKey($refId)->exists(),
             default => false,
         };
         if (! $exists) {

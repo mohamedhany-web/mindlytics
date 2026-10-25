@@ -3,11 +3,11 @@
 namespace App\Services;
 
 use App\Models\User;
-use App\Models\AdvancedCourse;
-use App\Models\StudentCourseEnrollment;
-use App\Models\Payment;
-use App\Models\Invoice;
-use App\Models\Wallet;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Learning\Models\StudentCourseEnrollment;
+use App\Domains\Accounting\Models\Payment;
+use App\Domains\Accounting\Models\Invoice;
+use App\Domains\Accounting\Models\Wallet;
 use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 
@@ -31,9 +31,9 @@ class StatisticsCacheService
                 'total_instructors' => User::where('role', 'instructor')->count(),
                 'total_courses' => AdvancedCourse::count(),
                 'published_courses' => AdvancedCourse::where('is_active', true)->count(),
-                'total_subjects' => \App\Models\AcademicSubject::count(),
-                'total_exams' => \App\Models\AdvancedExam::count(),
-                'total_question_banks' => \App\Models\QuestionBank::count(),
+                'total_subjects' => \App\Domains\Learning\Models\AcademicSubject::count(),
+                'total_exams' => \App\Domains\Learning\Models\AdvancedExam::count(),
+                'total_question_banks' => \App\Domains\Learning\Models\QuestionBank::count(),
                 'active_students' => User::where('role', 'student')
                                        ->where('is_active', true)
                                        ->whereHas('courseEnrollments')

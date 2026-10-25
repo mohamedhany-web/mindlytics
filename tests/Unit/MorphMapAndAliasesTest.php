@@ -32,7 +32,7 @@ class MorphMapAndAliasesTest extends TestCase
             $this->assertStringStartsWith('App\\Models\\', $alias);
         }
 
-        $this->assertSame('App\\Models\\Lecture', (new \App\Models\Lecture)->getMorphClass());
+        $this->assertSame('App\\Models\\Lecture', (new \App\Domains\Learning\Models\Lecture)->getMorphClass());
     }
 
     public function test_legacy_aliases_point_to_existing_classes(): void

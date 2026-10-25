@@ -3,9 +3,9 @@
 namespace App\Domains\Marketing\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\AdvancedCourse;
-use App\Models\CourseReview;
-use App\Services\CourseReviewStorageService;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Learning\Models\CourseReview;
+use App\Domains\Learning\Services\CourseReviewStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;

@@ -6,6 +6,9 @@ use App\Models\Concerns\AssignsDefaultBranchOnCreate;
 use App\Models\Concerns\QueriesByBranch;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Branch;
+use App\Domains\Learning\Models\StudentCourseEnrollment;
+use App\Models\User;
 
 class Invoice extends Model
 {

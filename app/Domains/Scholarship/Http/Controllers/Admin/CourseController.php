@@ -3,10 +3,10 @@
 namespace App\Domains\Scholarship\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\AdvancedCourse;
-use App\Models\ScholarshipGroup;
-use App\Models\ScholarshipRegistration;
-use App\Services\Scholarship\ScholarshipStatsService;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Scholarship\Models\ScholarshipGroup;
+use App\Domains\Scholarship\Models\ScholarshipRegistration;
+use App\Domains\Scholarship\Services\ScholarshipStatsService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 

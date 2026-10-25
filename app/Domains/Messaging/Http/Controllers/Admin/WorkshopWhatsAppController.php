@@ -3,12 +3,12 @@
 namespace App\Domains\Messaging\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Workshop;
-use App\Services\WhatsAppCloudService;
-use App\Services\WhatsAppTemplateService;
-use App\Services\WorkshopWhatsAppBatchService;
-use App\Services\WorkshopWhatsAppTemplateService;
-use App\Support\WhatsAppCloudSettings;
+use App\Domains\Offline\Models\Workshop;
+use App\Domains\Messaging\Services\WhatsAppCloudService;
+use App\Domains\Messaging\Services\WhatsAppTemplateService;
+use App\Domains\Messaging\Services\WorkshopWhatsAppBatchService;
+use App\Domains\Messaging\Services\WorkshopWhatsAppTemplateService;
+use App\Domains\Messaging\Support\WhatsAppCloudSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;

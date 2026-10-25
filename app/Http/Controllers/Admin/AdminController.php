@@ -5,13 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Branch;
-use App\Models\Course;
-use App\Models\Subject;
-use App\Models\Exam;
-use App\Models\QuestionBank;
+use App\Domains\Learning\Models\Course;
+use App\Domains\Learning\Models\Subject;
+use App\Domains\Learning\Models\Exam;
+use App\Domains\Learning\Models\QuestionBank;
 use App\Models\ActivityLog;
-use App\Models\VideoWatch;
-use App\Models\ExamAttempt;
+use App\Domains\Learning\Models\VideoWatch;
+use App\Domains\Learning\Models\ExamAttempt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -64,7 +64,7 @@ class AdminController extends Controller
         $monthlyStats = [
             'new_users_this_month' => User::whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count(),
             'exams_this_month' => Exam::whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count(),
-            'course_enrollments_this_month' => \App\Models\StudentCourseEnrollment::whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count(),
+            'course_enrollments_this_month' => \App\Domains\Learning\Models\StudentCourseEnrollment::whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count(),
         ];
 
         // إيرادات الشهر السابق لنفس عدد أيام الشهر الحالي (مثلاً 1–24 آذار مقابل 1–24 شباط)
@@ -96,12 +96,12 @@ class AdminController extends Controller
                 User::where('role', 'student')->whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])->count()
             ),
             'new_courses' => $this->calculateChange(
-                \App\Models\AdvancedCourse::whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count(),
-                \App\Models\AdvancedCourse::whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])->count()
+                \App\Domains\Learning\Models\AdvancedCourse::whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count(),
+                \App\Domains\Learning\Models\AdvancedCourse::whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])->count()
             ),
             'active_enrollments' => $this->calculateChange(
-                \App\Models\StudentCourseEnrollment::where('status', 'active')->whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count(),
-                \App\Models\StudentCourseEnrollment::where('status', 'active')->whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])->count()
+                \App\Domains\Learning\Models\StudentCourseEnrollment::where('status', 'active')->whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count(),
+                \App\Domains\Learning\Models\StudentCourseEnrollment::where('status', 'active')->whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])->count()
             ),
             'monthly_revenue' => $this->calculateChange(
                 $stats['monthly_revenue'],
@@ -156,7 +156,7 @@ class AdminController extends Controller
         $recent_users = User::latest()->take(5)->get();
         
         // جلب الكورسات مع العلاقات بشكل آمن
-        $recent_courses = \App\Models\AdvancedCourse::with(['academicSubject'])
+        $recent_courses = \App\Domains\Learning\Models\AdvancedCourse::with(['academicSubject'])
             ->latest()
             ->take(5)
             ->get();
@@ -1032,7 +1032,7 @@ class AdminController extends Controller
                         ->latest()
                         ->paginate(15);
 
-        return view('admin.courses.index', compact('courses'));
+        return view('learning::admin.courses.index', compact('courses'));
     }
 
     /**

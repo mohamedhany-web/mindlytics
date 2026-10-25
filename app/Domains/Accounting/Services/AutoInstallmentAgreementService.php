@@ -2,11 +2,11 @@
 
 namespace App\Domains\Accounting\Services;
 
-use App\Models\InstallmentAgreement;
-use App\Models\InstallmentPlan;
-use App\Models\Invoice;
-use App\Models\OfflineCourseEnrollment;
-use App\Models\StudentCourseEnrollment;
+use App\Domains\Accounting\Models\InstallmentAgreement;
+use App\Domains\Accounting\Models\InstallmentPlan;
+use App\Domains\Accounting\Models\Invoice;
+use App\Domains\Offline\Models\OfflineCourseEnrollment;
+use App\Domains\Learning\Models\StudentCourseEnrollment;
 use Carbon\Carbon;
 
 class AutoInstallmentAgreementService

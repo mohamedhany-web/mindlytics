@@ -3,8 +3,8 @@
 namespace App\Domains\Community\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\AdvancedCourse;
-use App\Models\CourseCommunityPost;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Community\Models\CourseCommunityPost;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -13,7 +13,7 @@ class InstructorAnnouncementsController extends Controller
     private function teachingCourseIds(Request $request)
     {
         $user = $request->user();
-        $directCourseIds = \App\Models\AdvancedCourse::where('instructor_id', $user->id)->pluck('id');
+        $directCourseIds = \App\Domains\Learning\Models\AdvancedCourse::where('instructor_id', $user->id)->pluck('id');
         $assignedFromPaths = $user->teachingLearningPaths()->get()->flatMap(function ($ay) {
             $ids = json_decode($ay->pivot->assigned_courses ?? '[]', true);
             return is_array($ids) ? $ids : [];

@@ -2,10 +2,10 @@
 
 namespace Tests\Unit;
 
-use App\Models\AdvancedCourse;
-use App\Models\CourseSection;
-use App\Models\CurriculumItem;
-use App\Models\ScholarshipGroup;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Learning\Models\CourseSection;
+use App\Domains\Learning\Models\CurriculumItem;
+use App\Domains\Scholarship\Models\ScholarshipGroup;
 use App\Models\User;
 use App\Domains\Scholarship\Services\ScholarshipCurriculumVisibilityService;
 use Tests\TestCase;

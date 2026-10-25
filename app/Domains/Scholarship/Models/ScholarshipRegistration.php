@@ -4,6 +4,8 @@ namespace App\Domains\Scholarship\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Domains\Learning\Models\StudentCourseEnrollment;
+use App\Models\User;
 
 class ScholarshipRegistration extends Model
 {

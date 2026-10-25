@@ -68,7 +68,7 @@
 </head>
 <body class="learn-immersive-body student-portal-body learn-rtl antialiased" dir="{{ $learnRtl ? 'rtl' : 'ltr' }}">
     @yield('content')
-    @include('student.my-courses.partials.learn-screen-protection')
+    @include('learning::student.my-courses.partials.learn-screen-protection')
     @stack('scripts')
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"></script>
 </body>

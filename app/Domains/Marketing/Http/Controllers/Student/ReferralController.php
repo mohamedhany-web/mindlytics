@@ -49,7 +49,7 @@ class ReferralController extends Controller
         // رابط الإحالة
         $referralLink = url('/register?ref=' . $referralCode);
 
-        $workshopActivation = app(\App\Services\WorkshopPromoService::class)->getActiveActivation($user);
+        $workshopActivation = app(\App\Domains\Offline\Services\WorkshopPromoService::class)->getActiveActivation($user);
 
         return view('marketing::student.referrals.index', compact('referralCode', 'referralLink', 'referrals', 'stats', 'workshopActivation'));
     }

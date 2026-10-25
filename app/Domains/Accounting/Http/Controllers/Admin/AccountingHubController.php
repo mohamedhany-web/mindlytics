@@ -3,14 +3,14 @@
 namespace App\Domains\Accounting\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\InstallmentAgreement;
-use App\Models\InstallmentPayment;
-use App\Models\Invoice;
-use App\Models\OfflineCourseEnrollment;
-use App\Models\Order;
-use App\Models\Payment;
-use App\Models\Subscription;
-use App\Models\WithdrawalRequest;
+use App\Domains\Accounting\Models\InstallmentAgreement;
+use App\Domains\Accounting\Models\InstallmentPayment;
+use App\Domains\Accounting\Models\Invoice;
+use App\Domains\Offline\Models\OfflineCourseEnrollment;
+use App\Domains\Accounting\Models\Order;
+use App\Domains\Accounting\Models\Payment;
+use App\Domains\Accounting\Models\Subscription;
+use App\Domains\Accounting\Models\WithdrawalRequest;
 use Carbon\Carbon;
 use Illuminate\View\View;
 

@@ -7,7 +7,7 @@ use App\Domains\Accounting\Models\InstructorAgreement;
 use App\Domains\Accounting\Services\InstructorCoursePercentageService;
 use App\Domains\Accounting\Models\AgreementPayment;
 use App\Models\User;
-use App\Models\AdvancedCourse;
+use App\Domains\Learning\Models\AdvancedCourse;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;

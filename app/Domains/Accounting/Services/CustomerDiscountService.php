@@ -2,9 +2,9 @@
 
 namespace App\Domains\Accounting\Services;
 
-use App\Models\AdvancedCourse;
-use App\Models\Coupon;
-use App\Models\CouponUsage;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Accounting\Models\Coupon;
+use App\Domains\Accounting\Models\CouponUsage;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;

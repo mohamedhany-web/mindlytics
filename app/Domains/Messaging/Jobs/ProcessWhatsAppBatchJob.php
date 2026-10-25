@@ -2,14 +2,14 @@
 
 namespace App\Domains\Messaging\Jobs;
 
-use App\Models\SalesActivity;
-use App\Models\SalesLead;
-use App\Models\WhatsAppBatch;
-use App\Models\WhatsAppBatchItem;
-use App\Models\WorkshopRegistration;
-use App\Services\WhatsAppBatchService;
-use App\Services\WhatsAppCloudService;
-use App\Services\WhatsAppService;
+use App\Domains\Sales\Models\SalesActivity;
+use App\Domains\Sales\Models\SalesLead;
+use App\Domains\Messaging\Models\WhatsAppBatch;
+use App\Domains\Messaging\Models\WhatsAppBatchItem;
+use App\Domains\Offline\Models\WorkshopRegistration;
+use App\Domains\Messaging\Services\WhatsAppBatchService;
+use App\Domains\Messaging\Services\WhatsAppCloudService;
+use App\Domains\Messaging\Services\WhatsAppService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;

@@ -2,12 +2,12 @@
 
 namespace App\Domains\Accounting\Console\Commands;
 
-use App\Models\Order;
-use App\Models\Invoice;
-use App\Models\Payment;
-use App\Models\Transaction;
-use App\Models\LearningPathEnrollment;
-use App\Models\StudentCourseEnrollment;
+use App\Domains\Accounting\Models\Order;
+use App\Domains\Accounting\Models\Invoice;
+use App\Domains\Accounting\Models\Payment;
+use App\Domains\Accounting\Models\Transaction;
+use App\Domains\Learning\Models\LearningPathEnrollment;
+use App\Domains\Learning\Models\StudentCourseEnrollment;
 use App\Models\ActivityLog;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;

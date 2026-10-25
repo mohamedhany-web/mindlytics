@@ -3,9 +3,9 @@
 namespace App\Domains\Accounting\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\InstructorAgreement;
-use App\Models\OfflineCourse;
-use App\Models\AdvancedCourse;
+use App\Domains\Accounting\Models\InstructorAgreement;
+use App\Domains\Offline\Models\OfflineCourse;
+use App\Domains\Learning\Models\AdvancedCourse;
 use App\Models\User;
 use Illuminate\Http\Request;
 

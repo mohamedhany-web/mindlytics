@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
-use App\Models\AdvancedCourse;
-use App\Models\StudentCourseEnrollment;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Learning\Models\StudentCourseEnrollment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\File;

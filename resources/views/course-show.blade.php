@@ -1422,7 +1422,7 @@
                         </div>
                     </div>
 
-                    @if($course->instructor && \App\Models\InstructorProfile::where('user_id', $course->instructor->id)->where('status', 'approved')->exists())
+                    @if($course->instructor && \App\Domains\Learning\Models\InstructorProfile::where('user_id', $course->instructor->id)->where('status', 'approved')->exists())
                     <div class="mb-6 fade-in-up" style="animation-delay: 0.15s;">
                         <span class="text-sm text-gray-600 font-medium">{{ __('public.instructor_label') }}</span>
                         <a href="{{ route('public.instructors.show', $course->instructor) }}" class="text-blue-600 hover:text-blue-700 font-bold hover:underline">{{ $course->instructor->name }}</a>

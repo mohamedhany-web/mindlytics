@@ -2,8 +2,8 @@
 
 namespace App\Domains\Scholarship\Services;
 
-use App\Models\AdvancedCourse;
-use App\Models\ScholarshipProgram;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Scholarship\Models\ScholarshipProgram;
 use App\Support\BranchContext;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;

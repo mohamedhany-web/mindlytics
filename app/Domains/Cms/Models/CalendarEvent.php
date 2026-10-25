@@ -4,6 +4,10 @@ namespace App\Domains\Cms\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Domains\Learning\Models\AcademicSubject;
+use App\Domains\Learning\Models\AcademicYear;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Models\User;
 
 class CalendarEvent extends Model
 {
@@ -117,7 +121,7 @@ class CalendarEvent extends Model
     public static function getStudentEvents($userId, $startDate = null, $endDate = null)
     {
         // جلب IDs الكورسات المسجل فيها الطالب
-        $enrolledCourseIds = \App\Models\StudentCourseEnrollment::where('user_id', $userId)
+        $enrolledCourseIds = \App\Domains\Learning\Models\StudentCourseEnrollment::where('user_id', $userId)
             ->where('status', 'active')
             ->pluck('advanced_course_id')
             ->filter()
@@ -128,7 +132,7 @@ class CalendarEvent extends Model
         $yearIds = [];
         $subjectIds = [];
         if (!empty($enrolledCourseIds)) {
-            $courses = \App\Models\AdvancedCourse::whereIn('id', $enrolledCourseIds)
+            $courses = \App\Domains\Learning\Models\AdvancedCourse::whereIn('id', $enrolledCourseIds)
                 ->select('academic_year_id', 'academic_subject_id')
                 ->get();
             

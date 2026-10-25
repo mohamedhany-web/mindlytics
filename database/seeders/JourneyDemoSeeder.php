@@ -2,11 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\AcademicYear;
-use App\Models\AdvancedCourse;
-use App\Models\JourneyProfile;
-use App\Models\JourneyShareEvent;
-use App\Models\PortfolioProject;
+use App\Domains\Learning\Models\AcademicYear;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Community\Models\JourneyProfile;
+use App\Domains\Community\Models\JourneyShareEvent;
+use App\Domains\Community\Models\PortfolioProject;
 use App\Models\User;
 use App\Domains\Community\Services\JourneyAchievementService;
 use App\Domains\Community\Services\JourneyProfileService;

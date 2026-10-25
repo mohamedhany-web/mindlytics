@@ -3,10 +3,10 @@
 namespace App\Domains\Accounting\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Expense;
-use App\Models\Invoice;
-use App\Models\OfflineCourseEnrollment;
-use App\Support\AccountingAnalytics;
+use App\Domains\Accounting\Models\Expense;
+use App\Domains\Accounting\Models\Invoice;
+use App\Domains\Offline\Models\OfflineCourseEnrollment;
+use App\Domains\Accounting\Support\AccountingAnalytics;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;

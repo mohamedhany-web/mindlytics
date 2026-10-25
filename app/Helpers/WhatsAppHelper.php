@@ -15,7 +15,7 @@ if (!function_exists('sendExamResultToParent')) {
     /**
      * إرسال نتيجة امتحان لولي الأمر
      */
-    function sendExamResultToParent(\App\Models\ExamAttempt $attempt): bool
+    function sendExamResultToParent(\App\Domains\Learning\Models\ExamAttempt $attempt): bool
     {
         try {
             $student = $attempt->user;

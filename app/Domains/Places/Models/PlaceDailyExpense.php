@@ -4,6 +4,8 @@ namespace App\Domains\Places\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Domains\Offline\Models\OfflineLocation;
+use App\Models\User;
 
 class PlaceDailyExpense extends Model
 {

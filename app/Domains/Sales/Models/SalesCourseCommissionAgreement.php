@@ -5,6 +5,10 @@ namespace App\Domains\Sales\Models;
 use App\Domains\Sales\Services\SalesCommissionTierService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Learning\Models\Course;
+use App\Domains\Offline\Models\OfflineCourse;
+use App\Models\User;
 
 class SalesCourseCommissionAgreement extends Model
 {

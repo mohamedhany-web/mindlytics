@@ -2,11 +2,11 @@
 
 namespace App\Domains\Sales\Services;
 
-use App\Models\AdvancedCourse;
-use App\Models\Course;
-use App\Models\OfflineCourse;
-use App\Models\SalesCourseCommissionAgreement;
-use App\Models\SalesLead;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Learning\Models\Course;
+use App\Domains\Offline\Models\OfflineCourse;
+use App\Domains\Sales\Models\SalesCourseCommissionAgreement;
+use App\Domains\Sales\Models\SalesLead;
 use App\Models\User;
 use Carbon\Carbon;
 

@@ -5,6 +5,9 @@ namespace App\Domains\Accounting\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Offline\Models\OfflineCourse;
+use App\Models\User;
 
 class InstructorAgreement extends Model
 {

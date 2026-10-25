@@ -2,11 +2,11 @@
 
 namespace App\Domains\Scholarship\Services;
 
-use App\Models\AdvancedCourse;
-use App\Models\CourseSection;
-use App\Models\CurriculumItem;
-use App\Models\ScholarshipGroup;
-use App\Models\ScholarshipRegistration;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Learning\Models\CourseSection;
+use App\Domains\Learning\Models\CurriculumItem;
+use App\Domains\Scholarship\Models\ScholarshipGroup;
+use App\Domains\Scholarship\Models\ScholarshipRegistration;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Database\Eloquent\Relations\Relation;

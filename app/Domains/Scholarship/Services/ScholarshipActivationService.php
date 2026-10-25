@@ -2,9 +2,9 @@
 
 namespace App\Domains\Scholarship\Services;
 
-use App\Mail\CourseEnrollmentActivatedMail;
-use App\Models\ScholarshipRegistration;
-use App\Models\StudentCourseEnrollment;
+use App\Domains\Learning\Mail\CourseEnrollmentActivatedMail;
+use App\Domains\Scholarship\Models\ScholarshipRegistration;
+use App\Domains\Learning\Models\StudentCourseEnrollment;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;

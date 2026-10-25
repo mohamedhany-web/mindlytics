@@ -3,9 +3,9 @@
 namespace App\Domains\Marketing\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\AdvancedCourse;
-use App\Models\MarketingCustomerSurvey;
-use App\Services\CustomerSurveyRewardService;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Marketing\Models\MarketingCustomerSurvey;
+use App\Domains\Marketing\Services\CustomerSurveyRewardService;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 

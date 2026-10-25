@@ -4,8 +4,8 @@ namespace App\Domains\Accounting\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
-use App\Models\Package;
-use App\Models\AdvancedCourse;
+use App\Domains\Accounting\Models\Package;
+use App\Domains\Learning\Models\AdvancedCourse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 

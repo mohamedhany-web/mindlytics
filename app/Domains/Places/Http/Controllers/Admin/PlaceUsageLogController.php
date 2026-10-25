@@ -3,12 +3,12 @@
 namespace App\Domains\Places\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\OfflineLocation;
-use App\Models\PlaceMonthlySettlement;
-use App\Models\PlaceDailyExpense;
-use App\Models\PlaceUsageLog;
-use App\Models\Wallet;
-use App\Services\PlaceSettlementService;
+use App\Domains\Offline\Models\OfflineLocation;
+use App\Domains\Places\Models\PlaceMonthlySettlement;
+use App\Domains\Places\Models\PlaceDailyExpense;
+use App\Domains\Places\Models\PlaceUsageLog;
+use App\Domains\Accounting\Models\Wallet;
+use App\Domains\Places\Services\PlaceSettlementService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 

@@ -3,10 +3,10 @@
 namespace App\Domains\Community\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
-use App\Models\AcademicYear;
-use App\Models\JourneyProfile;
-use App\Models\PortfolioProject;
-use App\Services\JourneyShareCardService;
+use App\Domains\Learning\Models\AcademicYear;
+use App\Domains\Community\Models\JourneyProfile;
+use App\Domains\Community\Models\PortfolioProject;
+use App\Domains\Community\Services\JourneyShareCardService;
 use Illuminate\Http\Request;
 
 class PortfolioController extends Controller

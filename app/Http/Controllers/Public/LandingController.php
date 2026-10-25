@@ -3,12 +3,13 @@
 namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
-use App\Models\AcademicYear;
-use App\Models\AdvancedCourse;
-use App\Models\LectureWatchProgress;
-use App\Models\LessonProgress;
-use App\Models\OfflineCourse;
-use App\Models\PopupAd;
+use App\Domains\Learning\Models\AcademicYear;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Learning\Models\LectureWatchProgress;
+use App\Domains\Learning\Models\LessonProgress;
+use App\Domains\Learning\Models\InstructorProfile;
+use App\Domains\Offline\Models\OfflineCourse;
+use App\Domains\Marketing\Models\PopupAd;
 use App\Models\User;
 use App\Support\BranchContext;
 use Illuminate\Support\Str;

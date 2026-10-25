@@ -20,7 +20,7 @@
                 @elseif($personal_branding->status == 'rejected') bg-rose-100 text-rose-700
                 @else bg-slate-100 text-slate-600
                 @endif">
-                {{ \App\Models\InstructorProfile::statusLabel($personal_branding->status) }}
+                {{ \App\Domains\Learning\Models\InstructorProfile::statusLabel($personal_branding->status) }}
             </span>
         </div>
         <div class="p-5 sm:p-8 space-y-6">

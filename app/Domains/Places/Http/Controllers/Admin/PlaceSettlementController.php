@@ -3,10 +3,10 @@
 namespace App\Domains\Places\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\OfflineLocation;
-use App\Models\PlaceMonthlySettlement;
-use App\Models\Wallet;
-use App\Services\PlaceSettlementService;
+use App\Domains\Offline\Models\OfflineLocation;
+use App\Domains\Places\Models\PlaceMonthlySettlement;
+use App\Domains\Accounting\Models\Wallet;
+use App\Domains\Places\Services\PlaceSettlementService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 

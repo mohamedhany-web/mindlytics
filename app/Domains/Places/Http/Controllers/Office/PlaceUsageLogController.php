@@ -8,7 +8,7 @@ namespace App\Domains\Places\Http\Controllers\Office;
 
 use App\Http\Controllers\Controller;
 
-use App\Models\OfflineCourse;
+use App\Domains\Offline\Models\OfflineCourse;
 
 use App\Domains\Places\Models\PlaceDailyExpense;
 

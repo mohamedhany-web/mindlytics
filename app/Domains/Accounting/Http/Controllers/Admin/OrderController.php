@@ -3,11 +3,11 @@
 namespace App\Domains\Accounting\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Order;
-use App\Models\Invoice;
-use App\Models\Payment;
-use App\Models\Transaction;
-use App\Models\StudentCourseEnrollment;
+use App\Domains\Accounting\Models\Order;
+use App\Domains\Accounting\Models\Invoice;
+use App\Domains\Accounting\Models\Payment;
+use App\Domains\Accounting\Models\Transaction;
+use App\Domains\Learning\Models\StudentCourseEnrollment;
 use App\Models\ActivityLog;
 use App\Domains\Accounting\Services\InstructorCoursePercentageService;
 use Illuminate\Http\Request;
@@ -390,12 +390,12 @@ class OrderController extends Controller
                     if (!\Illuminate\Support\Facades\Schema::hasTable('learning_path_enrollments')) {
                         \Log::warning('Learning path enrollment skipped: table learning_path_enrollments does not exist. Run migrations.');
                     } else {
-                        $existingPathEnrollment = \App\Models\LearningPathEnrollment::where('user_id', $order->user_id)
+                        $existingPathEnrollment = \App\Domains\Learning\Models\LearningPathEnrollment::where('user_id', $order->user_id)
                             ->where('academic_year_id', $order->academic_year_id)
                             ->first();
 
                         if (!$existingPathEnrollment) {
-                            $pathEnrollment = \App\Models\LearningPathEnrollment::create([
+                            $pathEnrollment = \App\Domains\Learning\Models\LearningPathEnrollment::create([
                                 'user_id' => $order->user_id,
                                 'academic_year_id' => $order->academic_year_id,
                                 'status' => 'active',
@@ -725,7 +725,7 @@ class OrderController extends Controller
      * تسجيل الطالب في جميع الكورسات في المسار (المجانية والمدفوعة)
      * لا يرمي استثناءات؛ أي خطأ يُسجّل ويُتجاهل حتى لا تكسر الموافقة على الطلب
      */
-    private function enrollInPathCourses(\App\Models\LearningPathEnrollment $enrollment)
+    private function enrollInPathCourses(\App\Domains\Learning\Models\LearningPathEnrollment $enrollment)
     {
         try {
             Log::info('enrollInPathCourses: start', ['enrollment_id' => $enrollment->id, 'user_id' => $enrollment->user_id, 'academic_year_id' => $enrollment->academic_year_id]);

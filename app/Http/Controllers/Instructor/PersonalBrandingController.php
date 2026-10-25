@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
-use App\Models\InstructorProfile;
+use App\Domains\Learning\Models\InstructorProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 

@@ -2,15 +2,15 @@
 
 namespace Tests\Unit;
 
-use App\Http\Controllers\Admin\WorkshopController;
-use App\Models\EmployeeJob;
-use App\Models\SalesLead;
-use App\Models\SalesLeadGroup;
+use App\Domains\Offline\Http\Controllers\Admin\WorkshopController;
+use App\Domains\Hr\Models\EmployeeJob;
+use App\Domains\Sales\Models\SalesLead;
+use App\Domains\Sales\Models\SalesLeadGroup;
 use App\Models\User;
-use App\Models\Workshop;
-use App\Models\WorkshopRegistration;
-use App\Services\SalesLeadMovementPolicy;
-use App\Services\SalesNotificationService;
+use App\Domains\Offline\Models\Workshop;
+use App\Domains\Offline\Models\WorkshopRegistration;
+use App\Domains\Sales\Services\SalesLeadMovementPolicy;
+use App\Domains\Sales\Services\SalesNotificationService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -292,7 +292,7 @@ class WorkshopConvertToLeadsTest extends TestCase
 
     public function test_workshop_convert_view_always_renders_group_options(): void
     {
-        $blade = file_get_contents(resource_path('views/admin/workshops/show.blade.php'));
+        $blade = file_get_contents(app_path('Domains/Offline/resources/views/admin/workshops/show.blade.php'));
 
         $this->assertStringContainsString('@foreach(($salesLeadGroups ?? []) as $g)', $blade);
         $this->assertStringContainsString('retransfer_converted', $blade);

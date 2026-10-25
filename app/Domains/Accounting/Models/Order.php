@@ -6,6 +6,10 @@ use App\Models\Concerns\AssignsDefaultBranchOnCreate;
 use App\Models\Concerns\QueriesByBranch;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Domains\Learning\Models\AcademicYear;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Models\Branch;
+use App\Models\User;
 
 class Order extends Model
 {

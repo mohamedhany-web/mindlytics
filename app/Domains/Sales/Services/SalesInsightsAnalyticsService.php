@@ -2,10 +2,10 @@
 
 namespace App\Domains\Sales\Services;
 
-use App\Models\OfflineCourseEnrollment;
-use App\Models\SalesActivity;
-use App\Models\SalesLead;
-use App\Models\StudentCourseEnrollment;
+use App\Domains\Offline\Models\OfflineCourseEnrollment;
+use App\Domains\Sales\Models\SalesActivity;
+use App\Domains\Sales\Models\SalesLead;
+use App\Domains\Learning\Models\StudentCourseEnrollment;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;

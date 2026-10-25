@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Models\User;
 
 class ScholarshipProgram extends Model
 {

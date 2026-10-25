@@ -2,9 +2,9 @@
 
 namespace App\Domains\Messaging\Services;
 
-use App\Models\WhatsAppMetaTemplate;
-use App\Models\Workshop;
-use App\Models\WorkshopRegistration;
+use App\Domains\Messaging\Models\WhatsAppMetaTemplate;
+use App\Domains\Offline\Models\Workshop;
+use App\Domains\Offline\Models\WorkshopRegistration;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 

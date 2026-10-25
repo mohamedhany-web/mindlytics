@@ -3,11 +3,11 @@
 namespace App\Domains\Cms\Services;
 
 use App\Models\Notification;
-use App\Models\Lecture;
-use App\Models\Exam;
-use App\Models\Assignment;
-use App\Models\LectureAssignment;
-use App\Models\CalendarEvent;
+use App\Domains\Learning\Models\Lecture;
+use App\Domains\Learning\Models\Exam;
+use App\Domains\Learning\Models\Assignment;
+use App\Domains\Learning\Models\LectureAssignment;
+use App\Domains\Cms\Models\CalendarEvent;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;

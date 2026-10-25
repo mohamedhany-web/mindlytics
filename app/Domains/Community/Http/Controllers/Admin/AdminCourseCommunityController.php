@@ -3,10 +3,10 @@
 namespace App\Domains\Community\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\AdvancedCourse;
-use App\Models\CourseCommunityComment;
-use App\Models\CourseCommunityPost;
-use App\Models\CourseCommunityPostImage;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Community\Models\CourseCommunityComment;
+use App\Domains\Community\Models\CourseCommunityPost;
+use App\Domains\Community\Models\CourseCommunityPostImage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;

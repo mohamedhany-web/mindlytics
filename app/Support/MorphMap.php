@@ -26,17 +26,17 @@ final class MorphMap
             'App\Models\User' => \App\Models\User::class,
 
             // curriculum_items.item_type
-            'App\Models\Lecture' => \App\Models\Lecture::class,
-            'App\Models\Assignment' => \App\Models\Assignment::class,
-            'App\Models\AdvancedExam' => \App\Models\AdvancedExam::class,
-            'App\Models\CourseLesson' => \App\Models\CourseLesson::class,
-            'App\Models\LearningPattern' => \App\Models\LearningPattern::class,
+            'App\Models\Lecture' => \App\Domains\Learning\Models\Lecture::class,
+            'App\Models\Assignment' => \App\Domains\Learning\Models\Assignment::class,
+            'App\Models\AdvancedExam' => \App\Domains\Learning\Models\AdvancedExam::class,
+            'App\Models\CourseLesson' => \App\Domains\Learning\Models\CourseLesson::class,
+            'App\Models\LearningPattern' => \App\Domains\Learning\Models\LearningPattern::class,
 
             // offline_curriculum_items.item_type
-            'App\Models\OfflineLecture' => \App\Models\OfflineLecture::class,
-            'App\Models\OfflineCourseResource' => \App\Models\OfflineCourseResource::class,
-            'App\Models\OfflineActivity' => \App\Models\OfflineActivity::class,
-            'App\Models\OfflineCurriculumNote' => \App\Models\OfflineCurriculumNote::class,
+            'App\Models\OfflineLecture' => \App\Domains\Offline\Models\OfflineLecture::class,
+            'App\Models\OfflineCourseResource' => \App\Domains\Offline\Models\OfflineCourseResource::class,
+            'App\Models\OfflineActivity' => \App\Domains\Offline\Models\OfflineActivity::class,
+            'App\Models\OfflineCurriculumNote' => \App\Domains\Offline\Models\OfflineCurriculumNote::class,
 
             // course_community_reactions.reactable_type
             'App\Models\CourseCommunityPost' => \App\Domains\Community\Models\CourseCommunityPost::class,

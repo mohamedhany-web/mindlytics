@@ -98,9 +98,9 @@ class AppServiceProvider extends ServiceProvider
             // صفحات عامة تستخدم unified-navbar بدون layouts.public
             'courses',
             'course-show',
-            'public.checkout',
-            'public.learning-paths',
-            'public.learning-path-show',
+            'accounting::public.checkout',
+            'learning::public.learning-paths',
+            'learning::public.learning-path-show',
             'auth.login',
             'auth.register',
             'auth.forgot-password',

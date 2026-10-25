@@ -7,8 +7,8 @@ use App\Domains\Messaging\Models\WhatsAppMessage;
 use App\Domains\Cms\Models\StudentReport;
 use App\Domains\Messaging\Models\MessageTemplate;
 use App\Models\User;
-use App\Models\AdvancedCourse;
-use App\Services\WhatsAppService;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Messaging\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 

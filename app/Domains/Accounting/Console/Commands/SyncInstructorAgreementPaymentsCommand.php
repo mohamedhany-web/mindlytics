@@ -2,10 +2,10 @@
 
 namespace App\Domains\Accounting\Console\Commands;
 
-use App\Models\AgreementPayment;
-use App\Models\InstructorAgreement;
-use App\Models\StudentCourseEnrollment;
-use App\Services\InstructorCoursePercentageService;
+use App\Domains\Accounting\Models\AgreementPayment;
+use App\Domains\Accounting\Models\InstructorAgreement;
+use App\Domains\Learning\Models\StudentCourseEnrollment;
+use App\Domains\Accounting\Services\InstructorCoursePercentageService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 

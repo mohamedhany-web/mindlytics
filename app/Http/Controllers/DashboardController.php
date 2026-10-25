@@ -4,20 +4,20 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Course;
+use App\Domains\Learning\Models\Course;
 use App\Models\User;
-use App\Models\Subject;
-use App\Models\Classroom;
-use App\Models\Order;
-use App\Models\AdvancedCourse;
-use App\Models\ContactMessage;
-use App\Models\LectureAssignment;
-use App\Models\Exam;
-use App\Models\Certificate;
-use App\Models\LectureVideoQuestionAnswer;
-use App\Models\OfflineCourseEnrollment;
-use App\Models\OfflineCourseBooking;
-use App\Models\ScholarshipRegistration;
+use App\Domains\Learning\Models\Subject;
+use App\Domains\Learning\Models\Classroom;
+use App\Domains\Accounting\Models\Order;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Cms\Models\ContactMessage;
+use App\Domains\Learning\Models\LectureAssignment;
+use App\Domains\Learning\Models\Exam;
+use App\Domains\Learning\Models\Certificate;
+use App\Domains\Learning\Models\LectureVideoQuestionAnswer;
+use App\Domains\Offline\Models\OfflineCourseEnrollment;
+use App\Domains\Offline\Models\OfflineCourseBooking;
+use App\Domains\Scholarship\Models\ScholarshipRegistration;
 
 class DashboardController extends Controller
 {
@@ -78,7 +78,7 @@ class DashboardController extends Controller
         
         try {
             // معرفات الكورسات التي يدرّسها المدرب: مباشرة (instructor_id) + المعينة له في المسارات (assigned_courses)
-            $directCourseIds = \App\Models\AdvancedCourse::where('instructor_id', $user->id)->pluck('id');
+            $directCourseIds = \App\Domains\Learning\Models\AdvancedCourse::where('instructor_id', $user->id)->pluck('id');
             $assignedFromPaths = $user->teachingLearningPaths()->get()->flatMap(function ($ay) {
                 $ids = json_decode($ay->pivot->assigned_courses ?? '[]', true);
                 return is_array($ids) ? $ids : [];
@@ -90,7 +90,7 @@ class DashboardController extends Controller
 
             // الكورسات (آخر 5 للعرض)
             $my_courses = $myCoursesCount > 0
-                ? \App\Models\AdvancedCourse::whereIn('id', $teachingCourseIds)
+                ? \App\Domains\Learning\Models\AdvancedCourse::whereIn('id', $teachingCourseIds)
                     ->with(['academicSubject', 'academicYear'])
                     ->withCount(['enrollments as active_students_count' => function ($q) {
                         $q->where('status', 'active');
@@ -105,34 +105,34 @@ class DashboardController extends Controller
                 'my_courses' => $myCoursesCount,
                 'total_students' => $teachingCourseIds->isEmpty()
                     ? 0
-                    : \App\Models\StudentCourseEnrollment::whereIn('advanced_course_id', $teachingCourseIds)
+                    : \App\Domains\Learning\Models\StudentCourseEnrollment::whereIn('advanced_course_id', $teachingCourseIds)
                         ->where('status', 'active')
                         ->distinct('user_id')
                         ->count('user_id'),
                 'my_classrooms' => Classroom::where('teacher_id', $user->id)->count(),
                 'total_lectures' => $teachingCourseIds->isEmpty()
                     ? 0
-                    : \App\Models\Lecture::whereIn('course_id', $teachingCourseIds)->count(),
+                    : \App\Domains\Learning\Models\Lecture::whereIn('course_id', $teachingCourseIds)->count(),
                 'upcoming_lectures' => $teachingCourseIds->isEmpty()
                     ? 0
-                    : \App\Models\Lecture::whereIn('course_id', $teachingCourseIds)
+                    : \App\Domains\Learning\Models\Lecture::whereIn('course_id', $teachingCourseIds)
                         ->where('status', 'scheduled')
                         ->where('scheduled_at', '>=', now())
                         ->count(),
-                'total_assignments' => \App\Models\Assignment::where('teacher_id', $user->id)->count(),
-                'pending_submissions' => \App\Models\AssignmentSubmission::whereHas('assignment', function ($q) use ($user) {
+                'total_assignments' => \App\Domains\Learning\Models\Assignment::where('teacher_id', $user->id)->count(),
+                'pending_submissions' => \App\Domains\Learning\Models\AssignmentSubmission::whereHas('assignment', function ($q) use ($user) {
                     $q->where('teacher_id', $user->id);
                 })->whereNull('graded_at')->count(),
-                'total_exams' => \App\Models\Exam::where('created_by', $user->id)->count(),
+                'total_exams' => \App\Domains\Learning\Models\Exam::where('created_by', $user->id)->count(),
                 'total_groups' => $teachingCourseIds->isEmpty()
                     ? 0
-                    : \App\Models\Group::whereIn('course_id', $teachingCourseIds)->count(),
+                    : \App\Domains\Learning\Models\Group::whereIn('course_id', $teachingCourseIds)->count(),
             ];
 
             // المحاضرات القادمة (للكورسات التي يدرّسها فقط)
             $upcoming_lectures = $teachingCourseIds->isEmpty()
                 ? collect()
-                : \App\Models\Lecture::whereIn('course_id', $teachingCourseIds)
+                : \App\Domains\Learning\Models\Lecture::whereIn('course_id', $teachingCourseIds)
                 ->where('status', 'scheduled')
                 ->where('scheduled_at', '>=', now())
                 ->with(['course', 'lesson'])
@@ -141,7 +141,7 @@ class DashboardController extends Controller
                 ->get();
 
             // الواجبات المعلقة (تسليمات تحتاج تقييم)
-            $pending_assignments = \App\Models\AssignmentSubmission::whereHas('assignment', function($q) use ($user) {
+            $pending_assignments = \App\Domains\Learning\Models\AssignmentSubmission::whereHas('assignment', function($q) use ($user) {
                     $q->where('teacher_id', $user->id);
                 })
                 ->whereNull('graded_at')
@@ -153,7 +153,7 @@ class DashboardController extends Controller
             // المجموعات (للكورسات التي يدرّسها فقط)
             $my_groups = $teachingCourseIds->isEmpty()
                 ? collect()
-                : \App\Models\Group::whereIn('course_id', $teachingCourseIds)
+                : \App\Domains\Learning\Models\Group::whereIn('course_id', $teachingCourseIds)
                     ->with(['course', 'members'])
                     ->latest()
                     ->take(5)

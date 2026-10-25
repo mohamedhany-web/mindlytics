@@ -2,11 +2,11 @@
 
 namespace App\Domains\Community\Support;
 
-use App\Models\AdvancedCourse;
-use App\Models\CourseCommunityComment;
-use App\Models\CourseCommunityPost;
-use App\Models\CourseCommunityPostImage;
-use App\Models\CourseCommunityReaction;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Community\Models\CourseCommunityComment;
+use App\Domains\Community\Models\CourseCommunityPost;
+use App\Domains\Community\Models\CourseCommunityPostImage;
+use App\Domains\Community\Models\CourseCommunityReaction;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;

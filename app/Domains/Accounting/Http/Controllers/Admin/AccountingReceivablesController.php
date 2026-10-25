@@ -3,16 +3,16 @@
 namespace App\Domains\Accounting\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\AccountingDebt;
-use App\Models\AccountingDebtRepayment;
-use App\Models\Expense;
-use App\Models\InstallmentPayment;
-use App\Models\Invoice;
-use App\Models\OfflineCourseEnrollment;
-use App\Models\Order;
-use App\Models\Wallet;
-use App\Models\WithdrawalRequest;
-use App\Support\AccountingAnalytics;
+use App\Domains\Accounting\Models\AccountingDebt;
+use App\Domains\Accounting\Models\AccountingDebtRepayment;
+use App\Domains\Accounting\Models\Expense;
+use App\Domains\Accounting\Models\InstallmentPayment;
+use App\Domains\Accounting\Models\Invoice;
+use App\Domains\Offline\Models\OfflineCourseEnrollment;
+use App\Domains\Accounting\Models\Order;
+use App\Domains\Accounting\Models\Wallet;
+use App\Domains\Accounting\Models\WithdrawalRequest;
+use App\Domains\Accounting\Support\AccountingAnalytics;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;

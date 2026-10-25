@@ -3,9 +3,9 @@
 namespace App\Domains\Accounting\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
-use App\Models\AdvancedCourse;
-use App\Models\Order;
-use App\Models\Coupon;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Accounting\Models\Order;
+use App\Domains\Accounting\Models\Coupon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use App\Domains\Marketing\Services\ReferralService;
@@ -103,7 +103,7 @@ class OrderController extends Controller
         $couponId = null;
         $couponDiscountAmount = 0;
         $appliedCoupon = null;
-        $workshopPromoService = app(\App\Services\WorkshopPromoService::class);
+        $workshopPromoService = app(\App\Domains\Offline\Services\WorkshopPromoService::class);
 
         // خصم كود الورشة (كوبون خاص تلقائي)
         if (! $request->filled('applied_coupon_id')) {
@@ -123,7 +123,7 @@ class OrderController extends Controller
                         'order_amount' => $originalAmount,
                         'final_amount' => $finalAmount,
                     ]);
-                    $activation = \App\Models\WorkshopPromoActivation::where('coupon_id', $workshopCoupon->id)->first();
+                    $activation = \App\Domains\Offline\Models\WorkshopPromoActivation::where('coupon_id', $workshopCoupon->id)->first();
                     if ($activation) {
                         $workshopPromoService->markUsed($activation, 'advanced_course', $advancedCourse->id);
                     }
@@ -160,7 +160,7 @@ class OrderController extends Controller
                         'final_amount' => $finalAmount,
                     ]);
 
-                    $activation = \App\Models\WorkshopPromoActivation::where('coupon_id', $coupon->id)->first();
+                    $activation = \App\Domains\Offline\Models\WorkshopPromoActivation::where('coupon_id', $coupon->id)->first();
                     if ($activation) {
                         $workshopPromoService->markUsed($activation, 'advanced_course', $advancedCourse->id);
                     }

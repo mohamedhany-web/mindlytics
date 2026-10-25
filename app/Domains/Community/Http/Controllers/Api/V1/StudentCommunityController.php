@@ -3,12 +3,12 @@
 namespace App\Domains\Community\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\AdvancedCourse;
-use App\Models\CourseCommunityComment;
-use App\Models\CourseCommunityPost;
-use App\Models\CourseCommunityPostImage;
-use App\Models\CourseCommunityReaction;
-use App\Support\CourseCommunityFeedBuilder;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Community\Models\CourseCommunityComment;
+use App\Domains\Community\Models\CourseCommunityPost;
+use App\Domains\Community\Models\CourseCommunityPostImage;
+use App\Domains\Community\Models\CourseCommunityReaction;
+use App\Domains\Community\Support\CourseCommunityFeedBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;

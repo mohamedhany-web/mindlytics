@@ -4,6 +4,8 @@ namespace App\Domains\Community\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Models\User;
 
 class UserAchievement extends Model
 {

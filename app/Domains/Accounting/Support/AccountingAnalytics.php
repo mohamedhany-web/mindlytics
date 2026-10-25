@@ -2,15 +2,15 @@
 
 namespace App\Domains\Accounting\Support;
 
-use App\Models\Expense;
-use App\Models\InstallmentPayment;
-use App\Models\Invoice;
-use App\Models\OfflineCourseEnrollment;
-use App\Models\Order;
-use App\Models\Payment;
-use App\Models\StudentCourseEnrollment;
-use App\Models\Wallet;
-use App\Models\WithdrawalRequest;
+use App\Domains\Accounting\Models\Expense;
+use App\Domains\Accounting\Models\InstallmentPayment;
+use App\Domains\Accounting\Models\Invoice;
+use App\Domains\Offline\Models\OfflineCourseEnrollment;
+use App\Domains\Accounting\Models\Order;
+use App\Domains\Accounting\Models\Payment;
+use App\Domains\Learning\Models\StudentCourseEnrollment;
+use App\Domains\Accounting\Models\Wallet;
+use App\Domains\Accounting\Models\WithdrawalRequest;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
