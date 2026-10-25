@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Domains\Accounting\Models\Expense;
 use App\Models\User;
 use App\Domains\Accounting\Models\Wallet;
+use App\Domains\Accounting\Support\DocumentNumber;
 
 class EmployeeSalaryPayment extends Model
 {
@@ -78,6 +79,6 @@ class EmployeeSalaryPayment extends Model
      */
     public static function generatePaymentNumber(): string
     {
-        return 'PAY-' . date('Y') . '-' . str_pad(self::count() + 1, 6, '0', STR_PAD_LEFT);
+        return DocumentNumber::next(self::class, 'payment_number', 'PAY-'.date('Y').'-', 6);
     }
 }

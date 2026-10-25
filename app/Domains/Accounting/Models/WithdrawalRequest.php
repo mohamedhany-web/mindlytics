@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\User;
+use App\Domains\Accounting\Support\DocumentNumber;
 
 class WithdrawalRequest extends Model
 {
@@ -49,7 +50,7 @@ class WithdrawalRequest extends Model
     {
         static::creating(function (WithdrawalRequest $request) {
             if (empty($request->request_number)) {
-                $request->request_number = 'WDR-' . date('Y') . '-' . str_pad(WithdrawalRequest::count() + 1, 6, '0', STR_PAD_LEFT);
+                $request->request_number = DocumentNumber::next(WithdrawalRequest::class, 'request_number', 'WDR-'.date('Y').'-', 6);
             }
         });
     }

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Domains\Learning\Models\AdvancedCourse;
 use App\Domains\Offline\Models\OfflineCourse;
 use App\Models\User;
+use App\Domains\Accounting\Support\DocumentNumber;
 
 class InstructorAgreement extends Model
 {
@@ -129,7 +130,7 @@ class InstructorAgreement extends Model
      */
     public static function generateAgreementNumber(): string
     {
-        return 'AGR-' . date('Y') . '-' . str_pad(self::count() + 1, 6, '0', STR_PAD_LEFT);
+        return DocumentNumber::next(self::class, 'agreement_number', 'AGR-'.date('Y').'-', 6);
     }
 
     /**

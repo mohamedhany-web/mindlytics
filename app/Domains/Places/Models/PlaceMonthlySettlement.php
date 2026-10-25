@@ -10,6 +10,7 @@ use App\Domains\Accounting\Models\Expense;
 use App\Domains\Accounting\Models\Wallet;
 use App\Domains\Offline\Models\OfflineLocation;
 use App\Models\User;
+use App\Domains\Accounting\Support\DocumentNumber;
 
 class PlaceMonthlySettlement extends Model
 {
@@ -109,8 +110,6 @@ class PlaceMonthlySettlement extends Model
 
     public static function generateNumber(): string
     {
-        $count = static::count() + 1;
-
-        return 'PMS-' . now()->format('Ym') . '-' . str_pad((string) $count, 4, '0', STR_PAD_LEFT);
+        return DocumentNumber::next(static::class, 'settlement_number', 'PMS-'.now()->format('Ym').'-', 4);
     }
 }

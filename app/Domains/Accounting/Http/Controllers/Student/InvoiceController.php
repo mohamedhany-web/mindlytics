@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use App\Domains\Accounting\Support\DocumentNumber;
 
 class InvoiceController extends Controller
 {
@@ -102,7 +103,7 @@ class InvoiceController extends Controller
         DB::beginTransaction();
         try {
             $proofPath = $request->file('payment_proof')->store('payment-proofs', 'public');
-            $paymentNumber = 'PAY-' . str_pad((string) (Payment::count() + 1), 8, '0', STR_PAD_LEFT);
+            $paymentNumber = DocumentNumber::next(Payment::class, 'payment_number', 'PAY-', 8);
 
             Payment::create([
                 'payment_number' => $paymentNumber,

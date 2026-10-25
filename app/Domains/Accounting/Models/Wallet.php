@@ -6,6 +6,10 @@ use App\Models\Concerns\QueriesByBranch;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use App\Models\Branch;
+use App\Models\User;
 
 class Wallet extends Model
 {
@@ -131,38 +135,11 @@ class Wallet extends Model
      */
     public function deposit($amount, $paymentId = null, $transactionId = null, $notes = null)
     {
-        $balanceBefore = (float) $this->balance;
-        $this->increment('balance', $amount);
-        $balanceAfter = (float) $this->fresh()->balance;
-
-        $table = (new WalletTransaction)->getTable();
-
-        $data = [
-            'wallet_id' => $this->id,
-            'type' => 'deposit',
-            'amount' => $amount,
-            'balance_after' => $balanceAfter,
-        ];
-
-        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'balance_before')) {
-            $data['balance_before'] = $balanceBefore;
-        }
-        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'description')) {
-            $data['description'] = $notes ?? '';
-        } elseif (\Illuminate\Support\Facades\Schema::hasColumn($table, 'notes')) {
-            $data['notes'] = $notes;
-        }
-        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'payment_id')) {
-            $data['payment_id'] = $paymentId;
-        }
-        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'transaction_id')) {
-            $data['transaction_id'] = $transactionId;
-        }
-        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'created_by')) {
-            $data['created_by'] = auth()->id();
-        }
-
-        return WalletTransaction::create($data);
+        return $this->recordMovement('deposit', $amount, false, $notes, [
+            'payment_id' => $paymentId,
+            'transaction_id' => $transactionId,
+            'created_by' => auth()->id(),
+        ]);
     }
 
     /**
@@ -170,36 +147,9 @@ class Wallet extends Model
      */
     public function withdraw($amount, $notes = null)
     {
-        if ($this->balance < $amount) {
-            throw new \Exception('رصيد المحفظة غير كافي');
-        }
-
-        $balanceBefore = (float) $this->balance;
-        $this->decrement('balance', $amount);
-        $balanceAfter = (float) $this->fresh()->balance;
-
-        $table = (new WalletTransaction)->getTable();
-
-        $data = [
-            'wallet_id' => $this->id,
-            'type' => 'withdrawal',
-            'amount' => $amount,
-            'balance_after' => $balanceAfter,
-        ];
-
-        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'balance_before')) {
-            $data['balance_before'] = $balanceBefore;
-        }
-        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'description')) {
-            $data['description'] = $notes ?? '';
-        } elseif (\Illuminate\Support\Facades\Schema::hasColumn($table, 'notes')) {
-            $data['notes'] = $notes;
-        }
-        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'created_by')) {
-            $data['created_by'] = auth()->id();
-        }
-
-        return WalletTransaction::create($data);
+        return $this->recordMovement('withdrawal', $amount, true, $notes, [
+            'created_by' => auth()->id(),
+        ]);
     }
 
     /**
@@ -207,42 +157,59 @@ class Wallet extends Model
      */
     public function refund($amount, $paymentId = null, $transactionId = null, $notes = null, $createdBy = null)
     {
-        if ((float) $this->balance < (float) $amount) {
-            throw new \Exception('رصيد المحفظة غير كافي');
-        }
+        return $this->recordMovement('refund', $amount, true, $notes, [
+            'payment_id' => $paymentId,
+            'transaction_id' => $transactionId,
+            'created_by' => $createdBy ?? auth()->id(),
+        ]);
+    }
 
-        $balanceBefore = (float) $this->balance;
-        $this->decrement('balance', $amount);
-        $balanceAfter = (float) $this->fresh()->balance;
+    /**
+     * تغيير الرصيد وتسجيل الحركة معاً أو لا شيء، على صف المحفظة مقفولاً (docs/ACCOUNTING_AUDIT.md → M1):
+     * - فحص الرصيد يتم على القيمة الحالية في قاعدة البيانات لا على نسخة قديمة في الذاكرة، فسحبان متزامنان لا يجعلان الرصيد سالباً.
+     * - لو فشل تسجيل الحركة يُلغى تغيير الرصيد أيضاً (كان الرصيد يتغير بدون حركة).
+     *
+     * @param  array<string, mixed>  $optional  أعمدة تُكتب فقط إن كانت موجودة في جدول الحركات
+     */
+    private function recordMovement(string $type, $amount, bool $outgoing, $notes, array $optional): WalletTransaction
+    {
+        return DB::transaction(function () use ($type, $amount, $outgoing, $notes, $optional) {
+            $locked = static::query()->withoutGlobalScopes()->whereKey($this->getKey())->lockForUpdate()->firstOrFail();
 
-        $table = (new WalletTransaction)->getTable();
+            $balanceBefore = (float) $locked->balance;
+            if ($outgoing && $balanceBefore < (float) $amount) {
+                throw new \Exception('رصيد المحفظة غير كافي');
+            }
 
-        $data = [
-            'wallet_id' => $this->id,
-            'type' => 'refund',
-            'amount' => $amount,
-            'balance_after' => $balanceAfter,
-        ];
+            $outgoing ? $locked->decrement('balance', $amount) : $locked->increment('balance', $amount);
+            $balanceAfter = (float) $locked->fresh()->balance;
+            $this->setRawAttributes(array_merge($this->getAttributes(), ['balance' => $locked->balance]), true);
 
-        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'balance_before')) {
-            $data['balance_before'] = $balanceBefore;
-        }
-        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'description')) {
-            $data['description'] = $notes ?? '';
-        } elseif (\Illuminate\Support\Facades\Schema::hasColumn($table, 'notes')) {
-            $data['notes'] = $notes;
-        }
-        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'payment_id')) {
-            $data['payment_id'] = $paymentId;
-        }
-        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'transaction_id')) {
-            $data['transaction_id'] = $transactionId;
-        }
-        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'created_by')) {
-            $data['created_by'] = $createdBy ?? auth()->id();
-        }
+            $table = (new WalletTransaction)->getTable();
 
-        return WalletTransaction::create($data);
+            $data = [
+                'wallet_id' => $this->id,
+                'type' => $type,
+                'amount' => $amount,
+                'balance_after' => $balanceAfter,
+            ];
+
+            if (Schema::hasColumn($table, 'balance_before')) {
+                $data['balance_before'] = $balanceBefore;
+            }
+            if (Schema::hasColumn($table, 'description')) {
+                $data['description'] = $notes ?? '';
+            } elseif (Schema::hasColumn($table, 'notes')) {
+                $data['notes'] = $notes;
+            }
+            foreach ($optional as $column => $value) {
+                if (Schema::hasColumn($table, $column)) {
+                    $data[$column] = $value;
+                }
+            }
+
+            return WalletTransaction::create($data);
+        });
     }
 
     /**

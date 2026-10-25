@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
+use App\Domains\Accounting\Support\DocumentNumber;
 
 class OrderController extends Controller
 {
@@ -143,8 +144,9 @@ class OrderController extends Controller
         try {
             DB::beginTransaction();
 
-            // إعادة تحميل الطلب لتجنب Race Conditions
-            $order->refresh();
+            // قفل صف الطلب حتى نهاية الـ transaction: موافقتان متزامنتان (ضغطتان أو مشرفان) لا تمرّان معاً
+            // فلا تتكرر الفاتورة والدفعة والإيداع (docs/ACCOUNTING_AUDIT.md → H1)
+            $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
             
             // التحقق مرة أخرى بعد إعادة التحميل
             if ($order->status !== Order::STATUS_PENDING) {
@@ -203,7 +205,7 @@ class OrderController extends Controller
 
             // إنشاء الفاتورة تلقائياً
             Log::info('Order approve: creating invoice', ['order_id' => $order->id, 'type' => $orderType]);
-            $invoiceNumber = 'INV-' . str_pad(Invoice::count() + 1, 8, '0', STR_PAD_LEFT);
+            $invoiceNumber = DocumentNumber::next(Invoice::class, 'invoice_number', 'INV-', 8);
             $invoice = Invoice::create([
                 'invoice_number' => $invoiceNumber,
                 'user_id' => $order->user_id,
@@ -230,7 +232,7 @@ class OrderController extends Controller
 
             // إنشاء المدفوعات تلقائياً
             Log::info('Order approve: creating payment', ['order_id' => $order->id]);
-            $paymentNumber = 'PAY-' . str_pad(Payment::count() + 1, 8, '0', STR_PAD_LEFT);
+            $paymentNumber = DocumentNumber::next(Payment::class, 'payment_number', 'PAY-', 8);
             
             // تحويل طريقة الدفع من order إلى payment
             $paymentMethodMap = [
@@ -285,15 +287,18 @@ class OrderController extends Controller
                             $description
                         );
                     } catch (\Throwable $e) {
-                        \Log::warning('Wallet deposit skipped during order approval: ' . $e->getMessage(), ['order_id' => $order->id, 'wallet_id' => $order->wallet_id]);
-                        // لا نوقف الموافقة في حالة فشل الإيداع (مثلاً عمود notes غير موجود في جدول wallet_transactions)
+                        // فشل الإيداع يوقف الموافقة كلها (تراجع كامل): كانت تكتمل والدفعة مربوطة بمحفظة لم يدخلها المبلغ،
+                        // فيختلف رصيد المحفظة عن مدفوعاتها (docs/ACCOUNTING_AUDIT.md → M1)
+                        Log::error('Order approve: wallet deposit failed, approval rolled back', ['order_id' => $order->id, 'wallet_id' => $order->wallet_id, 'message' => $e->getMessage()]);
+
+                        throw new \RuntimeException('تعذّر إيداع المبلغ في المحفظة المختارة، لذلك لم يتم اعتماد الطلب. راجع المحفظة ثم أعد المحاولة.', 0, $e);
                     }
                 }
             }
 
             // إنشاء معاملة مالية (إيراد)
             Log::info('Order approve: creating transaction', ['order_id' => $order->id]);
-            $transactionNumber = 'TXN-' . str_pad(Transaction::count() + 1, 8, '0', STR_PAD_LEFT);
+            $transactionNumber = DocumentNumber::next(Transaction::class, 'transaction_number', 'TXN-', 8);
             $transactionDescription = $isLearningPath 
                 ? 'دفعة مقابل تسجيل في المسار التعليمي: ' . ($order->learningPath?->name ?? 'مسار تعليمي')
                 : 'دفعة مقابل تسجيل في الكورس: ' . ($order->course?->title ?? 'كورس');
@@ -641,7 +646,8 @@ class OrderController extends Controller
         try {
             DB::beginTransaction();
 
-            $order->refresh();
+            // نفس قفل الموافقة: لا يتزامن رفض مع موافقة على نفس الطلب
+            $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
 
             if ($order->status !== Order::STATUS_PENDING) {
                 DB::rollBack();

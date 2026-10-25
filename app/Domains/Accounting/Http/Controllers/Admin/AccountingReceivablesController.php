@@ -19,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use App\Domains\Accounting\Support\DocumentNumber;
 
 class AccountingReceivablesController extends Controller
 {
@@ -127,7 +128,7 @@ class AccountingReceivablesController extends Controller
 
         DB::beginTransaction();
         try {
-            $debtNumber = 'DEB-'.str_pad((string) (AccountingDebt::count() + 1), 6, '0', STR_PAD_LEFT);
+            $debtNumber = DocumentNumber::next(AccountingDebt::class, 'debt_number', 'DEB-', 6);
 
             $debt = AccountingDebt::create([
                 'debt_number' => $debtNumber,

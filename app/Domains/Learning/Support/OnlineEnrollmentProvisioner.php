@@ -13,6 +13,7 @@ use App\Domains\Accounting\Models\WalletTransaction;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Domains\Accounting\Support\DocumentNumber;
 
 class OnlineEnrollmentProvisioner
 {
@@ -165,7 +166,7 @@ class OnlineEnrollmentProvisioner
             }
 
             $transaction = Transaction::create([
-                'transaction_number' => 'ONL-TXN-' . str_pad((string) (Transaction::count() + 1), 6, '0', STR_PAD_LEFT),
+                'transaction_number' => DocumentNumber::next(Transaction::class, 'transaction_number', 'ONL-TXN-', 6),
                 'user_id' => $student->id,
                 'payment_id' => $payment->id,
                 'invoice_id' => $invoice->id,

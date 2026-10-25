@@ -12,6 +12,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Domains\Accounting\Support\DocumentNumber;
 
 class PlaceSettlementService
 {
@@ -166,7 +167,7 @@ class PlaceSettlementService
         $location = $settlement->location;
         $periodLabel = Carbon::createFromFormat('Y-m', $settlement->period_month)->locale('ar')->translatedFormat('F Y');
 
-        $expenseNumber = 'EXP-' . str_pad((string) (Expense::count() + 1), 8, '0', STR_PAD_LEFT);
+        $expenseNumber = DocumentNumber::next(Expense::class, 'expense_number', 'EXP-', 8);
 
         return Expense::create([
             'expense_number' => $expenseNumber,

@@ -12,6 +12,7 @@ use App\Models\ActivityLog;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use App\Domains\Accounting\Support\DocumentNumber;
 
 /**
  * تشغيل خطوات الموافقة على الطلب لاكتشاف سبب الخطأ
@@ -61,7 +62,7 @@ class TestOrderApprove extends Command
             $this->info("Step 2: Order type OK (isLearningPath={$isLearningPath}, type={$orderType})");
 
             $this->info("Step 3: Creating Invoice...");
-            $invoiceNumber = 'INV-' . str_pad(Invoice::count() + 1, 8, '0', STR_PAD_LEFT);
+            $invoiceNumber = DocumentNumber::next(Invoice::class, 'invoice_number', 'INV-', 8);
             $invoice = Invoice::create([
                 'invoice_number' => $invoiceNumber,
                 'user_id' => $order->user_id,
@@ -89,7 +90,7 @@ class TestOrderApprove extends Command
             $this->info("Step 4: Creating Payment...");
             $paymentMethodMap = ['bank_transfer' => 'bank_transfer', 'cash' => 'cash', 'other' => 'other'];
             $paymentMethod = $paymentMethodMap[$order->payment_method] ?? 'other';
-            $paymentNumber = 'PAY-' . str_pad(Payment::count() + 1, 8, '0', STR_PAD_LEFT);
+            $paymentNumber = DocumentNumber::next(Payment::class, 'payment_number', 'PAY-', 8);
             $payment = Payment::create([
                 'payment_number' => $paymentNumber,
                 'invoice_id' => $invoice->id,
@@ -105,7 +106,7 @@ class TestOrderApprove extends Command
             $this->info("  Payment created: " . $payment->payment_number);
 
             $this->info("Step 5: Creating Transaction...");
-            $transactionNumber = 'TXN-' . str_pad(Transaction::count() + 1, 8, '0', STR_PAD_LEFT);
+            $transactionNumber = DocumentNumber::next(Transaction::class, 'transaction_number', 'TXN-', 8);
             $transaction = Transaction::create([
                 'transaction_number' => $transactionNumber,
                 'user_id' => $order->user_id,

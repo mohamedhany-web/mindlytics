@@ -12,6 +12,7 @@ use App\Domains\Accounting\Models\Wallet;
 use App\Domains\Accounting\Models\WalletTransaction;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use App\Domains\Accounting\Support\DocumentNumber;
 
 /**
  * إنشاء تسجيل أوفلاين مع فاتورة/دفعة (مشترك بين لوحة التحكم والحجز العام).
@@ -176,7 +177,7 @@ class OfflineEnrollmentProvisioner
             return null;
         }
 
-        $paymentNumber = 'OFF-PAY-' . str_pad((string) (Payment::count() + 1), 6, '0', STR_PAD_LEFT);
+        $paymentNumber = DocumentNumber::next(Payment::class, 'payment_number', 'OFF-PAY-', 6);
 
         $walletId = isset($data['wallet_id']) ? (int) $data['wallet_id'] : null;
         if ($walletId <= 0) {
@@ -228,7 +229,7 @@ class OfflineEnrollmentProvisioner
             }
         }
 
-        $transactionNumber = 'OFF-TXN-' . str_pad((string) (Transaction::count() + 1), 6, '0', STR_PAD_LEFT);
+        $transactionNumber = DocumentNumber::next(Transaction::class, 'transaction_number', 'OFF-TXN-', 6);
 
         $txDescription = 'دفعة كورس أوفلاين: '.($course->title ?? '');
         if ($wallet) {

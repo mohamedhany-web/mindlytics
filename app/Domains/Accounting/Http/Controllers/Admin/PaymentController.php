@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Domains\Accounting\Support\DocumentNumber;
 
 class PaymentController extends Controller
 {
@@ -165,7 +166,7 @@ class PaymentController extends Controller
             DB::beginTransaction();
 
             $payment = Payment::create([
-                'payment_number' => 'PAY-' . str_pad(Payment::count() + 1, 8, '0', STR_PAD_LEFT),
+                'payment_number' => DocumentNumber::next(Payment::class, 'payment_number', 'PAY-', 8),
                 'invoice_id' => $invoice->id,
                 'user_id' => $paymentUserId,
                 'payment_method' => $validated['payment_method'],
@@ -191,7 +192,7 @@ class PaymentController extends Controller
                 );
             }
 
-            $transactionNumber = 'TXN-' . str_pad(\App\Models\Transaction::count() + 1, 8, '0', STR_PAD_LEFT);
+            $transactionNumber = DocumentNumber::next(\App\Domains\Accounting\Models\Transaction::class, 'transaction_number', 'TXN-', 8);
             $metadata = [
                 'invoice_id' => $invoice->id,
                 'payment_id' => $payment->id,

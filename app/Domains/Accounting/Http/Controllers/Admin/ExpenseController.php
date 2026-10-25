@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
+use App\Domains\Accounting\Support\DocumentNumber;
 
 class ExpenseController extends Controller
 {
@@ -151,7 +152,7 @@ class ExpenseController extends Controller
 
         try {
             // إنشاء رقم المصروف
-            $expenseNumber = 'EXP-' . str_pad(Expense::count() + 1, 8, '0', STR_PAD_LEFT);
+            $expenseNumber = DocumentNumber::next(Expense::class, 'expense_number', 'EXP-', 8);
 
             // رفع المرفق إذا كان موجوداً
             $attachmentPath = null;
@@ -310,8 +311,8 @@ class ExpenseController extends Controller
             }
 
             // إنشاء معاملة مالية (مصروف)
-            $transactionNumber = 'TXN-' . str_pad(\App\Models\Transaction::count() + 1, 8, '0', STR_PAD_LEFT);
-            $transaction = \App\Models\Transaction::create([
+            $transactionNumber = DocumentNumber::next(\App\Domains\Accounting\Models\Transaction::class, 'transaction_number', 'TXN-', 8);
+            $transaction = \App\Domains\Accounting\Models\Transaction::create([
                 'transaction_number' => $transactionNumber,
                 'user_id' => $expense->created_by ?? auth()->id(),
                 'payment_id' => null,

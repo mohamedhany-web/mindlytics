@@ -11,6 +11,7 @@ use App\Domains\Accounting\Models\Wallet;
 use App\Domains\Accounting\Models\WalletTransaction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Domains\Accounting\Support\DocumentNumber;
 
 class TransactionRefundService
 {
@@ -430,6 +431,6 @@ class TransactionRefundService
 
     private function nextTransactionNumber(): string
     {
-        return 'TXN-' . str_pad((string) (Transaction::count() + 1), 8, '0', STR_PAD_LEFT);
+        return DocumentNumber::next(Transaction::class, 'transaction_number', 'TXN-', 8);
     }
 }

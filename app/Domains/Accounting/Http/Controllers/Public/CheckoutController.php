@@ -33,6 +33,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
+use App\Domains\Accounting\Support\DocumentNumber;
 
 class CheckoutController extends Controller
 {
@@ -628,13 +629,21 @@ class CheckoutController extends Controller
 
         DB::beginTransaction();
         try {
-            $this->approveOrderAfterOnlinePayment(
-                $order,
-                'kashier',
-                $query['transactionId'] ?? null,
-                $query,
-                'كاشير'
-            );
+            // قفل الطلب: عودتان متزامنتان من كاشير (تحديث الصفحة مثلاً) لا تعتمدان نفس الطلب مرتين (docs/ACCOUNTING_AUDIT.md → H1)
+            $order = Order::with(['course', 'learningPath'])->whereKey($order->id)->lockForUpdate()->firstOrFail();
+            if ($order->status === Order::STATUS_PENDING) {
+                $this->approveOrderAfterOnlinePayment(
+                    $order,
+                    'kashier',
+                    $query['transactionId'] ?? null,
+                    $query,
+                    'كاشير'
+                );
+            } elseif ($order->status !== Order::STATUS_APPROVED) {
+                DB::rollBack();
+
+                return redirect()->route('public.courses')->with('error', 'الطلب غير موجود أو تم معالجته مسبقاً.');
+            }
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -1034,7 +1043,7 @@ class CheckoutController extends Controller
 
         $noteLine = 'دفع عبر '.$gatewayLabel.' - طلب #'.$order->id;
 
-        $invoiceNumber = 'INV-' . str_pad(Invoice::count() + 1, 8, '0', STR_PAD_LEFT);
+        $invoiceNumber = DocumentNumber::next(Invoice::class, 'invoice_number', 'INV-', 8);
         $invoice = Invoice::create([
             'invoice_number' => $invoiceNumber,
             'user_id' => $order->user_id,
@@ -1064,7 +1073,7 @@ class CheckoutController extends Controller
         $feeAmount = $applyFee ? $feeCalc['fee'] : 0.0;
         $feeDetail = $applyFee ? $feeCalc['detail'] : null;
 
-        $paymentNumber = 'PAY-' . str_pad(Payment::count() + 1, 8, '0', STR_PAD_LEFT);
+        $paymentNumber = DocumentNumber::next(Payment::class, 'payment_number', 'PAY-', 8);
         $payment = Payment::create([
             'payment_number' => $paymentNumber,
             'invoice_id' => $invoice->id,
@@ -1083,7 +1092,7 @@ class CheckoutController extends Controller
             'notes' => $noteLine,
         ]);
 
-        $transactionNumber = 'TXN-' . str_pad(Transaction::count() + 1, 8, '0', STR_PAD_LEFT);
+        $transactionNumber = DocumentNumber::next(Transaction::class, 'transaction_number', 'TXN-', 8);
         Transaction::create([
             'transaction_number' => $transactionNumber,
             'user_id' => $order->user_id,
@@ -1108,7 +1117,7 @@ class CheckoutController extends Controller
         ]);
 
         if ($feeAmount > 0) {
-            $feeTxnNumber = 'TXN-' . str_pad(Transaction::count() + 1, 8, '0', STR_PAD_LEFT);
+            $feeTxnNumber = DocumentNumber::next(Transaction::class, 'transaction_number', 'TXN-', 8);
             Transaction::create([
                 'transaction_number' => $feeTxnNumber,
                 'user_id' => $order->user_id,

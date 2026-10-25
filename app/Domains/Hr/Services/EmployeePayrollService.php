@@ -17,6 +17,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use App\Domains\Sales\Services\SalesDailyReportService;
+use App\Domains\Accounting\Support\DocumentNumber;
 
 class EmployeePayrollService
 {
@@ -110,7 +111,7 @@ class EmployeePayrollService
                 $receiptPath = $receipt->store('receipts/employee-salary-payments', 'public');
             }
 
-            $expenseNumber = 'EXP-'.str_pad((string) (Expense::count() + 1), 8, '0', STR_PAD_LEFT);
+            $expenseNumber = DocumentNumber::next(Expense::class, 'expense_number', 'EXP-', 8);
             $paymentMethod = match ($wallet->type) {
                 'vodafone_cash', 'instapay' => 'wallet',
                 'bank_transfer' => 'bank_transfer',
@@ -154,7 +155,7 @@ class EmployeePayrollService
             );
 
             $transaction = Transaction::create([
-                'transaction_number' => 'TXN-'.str_pad((string) (Transaction::count() + 1), 8, '0', STR_PAD_LEFT),
+                'transaction_number' => DocumentNumber::next(Transaction::class, 'transaction_number', 'TXN-', 8),
                 'user_id' => $paidBy,
                 'expense_id' => $expense->id,
                 'type' => 'debit',

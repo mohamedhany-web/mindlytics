@@ -5,6 +5,7 @@ namespace App\Domains\Places\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Domains\Offline\Models\OfflineLocation;
+use App\Domains\Accounting\Support\DocumentNumber;
 
 class PlaceInvoice extends Model
 {
@@ -41,9 +42,7 @@ class PlaceInvoice extends Model
 
     public static function generateNumber(): string
     {
-        $count = static::count() + 1;
-
-        return 'PLI-' . now()->format('Ym') . '-' . str_pad((string) $count, 4, '0', STR_PAD_LEFT);
+        return DocumentNumber::next(static::class, 'invoice_number', 'PLI-'.now()->format('Ym').'-', 4);
     }
 
     public function getStatusLabelAttribute(): string

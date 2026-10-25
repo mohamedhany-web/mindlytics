@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Carbon\Carbon;
+use App\Domains\Accounting\Support\DocumentNumber;
 
 class SubscriptionController extends Controller
 {
@@ -147,7 +148,7 @@ class SubscriptionController extends Controller
             DB::beginTransaction();
 
             // إنشاء Invoice تلقائياً للاشتراك
-            $invoiceNumber = 'INV-' . str_pad(Invoice::count() + 1, 8, '0', STR_PAD_LEFT);
+            $invoiceNumber = DocumentNumber::next(Invoice::class, 'invoice_number', 'INV-', 8);
             $invoice = Invoice::create([
                 'invoice_number' => $invoiceNumber,
                 'user_id' => $validated['user_id'],

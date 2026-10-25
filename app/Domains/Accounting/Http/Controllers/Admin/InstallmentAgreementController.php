@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use App\Domains\Accounting\Support\DocumentNumber;
 
 class InstallmentAgreementController extends Controller
 {
@@ -401,7 +402,7 @@ class InstallmentAgreementController extends Controller
 
                     // إذا لم يكن هناك Invoice، أنشئ واحدة
                     if (!$invoice) {
-                        $invoiceNumber = 'INV-' . str_pad(Invoice::count() + 1, 8, '0', STR_PAD_LEFT);
+                        $invoiceNumber = DocumentNumber::next(Invoice::class, 'invoice_number', 'INV-', 8);
                         $invoice = Invoice::create([
                             'invoice_number' => $invoiceNumber,
                             'user_id' => $agreement->user_id,
@@ -427,7 +428,7 @@ class InstallmentAgreementController extends Controller
                     }
 
                     // إنشاء Payment
-                    $paymentNumber = 'PAY-' . str_pad(Payment::count() + 1, 8, '0', STR_PAD_LEFT);
+                    $paymentNumber = DocumentNumber::next(Payment::class, 'payment_number', 'PAY-', 8);
                     $paymentRecord = Payment::create([
                         'payment_number' => $paymentNumber,
                         'invoice_id' => $invoice->id,
@@ -443,7 +444,7 @@ class InstallmentAgreementController extends Controller
                     ]);
 
                     // إنشاء Transaction
-                    $transactionNumber = 'TXN-' . str_pad(Transaction::count() + 1, 8, '0', STR_PAD_LEFT);
+                    $transactionNumber = DocumentNumber::next(Transaction::class, 'transaction_number', 'TXN-', 8);
                     Transaction::create([
                         'transaction_number' => $transactionNumber,
                         'user_id' => $agreement->user_id,

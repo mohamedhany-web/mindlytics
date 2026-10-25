@@ -8,6 +8,7 @@ use App\Domains\Accounting\Models\Transaction;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Domains\Accounting\Support\DocumentNumber;
 
 class SalesWinCommissionService
 {
@@ -46,7 +47,7 @@ class SalesWinCommissionService
 
         DB::beginTransaction();
         try {
-            $txnNumber = 'SALE-COM-'.str_pad((string) (Transaction::count() + 1), 6, '0', STR_PAD_LEFT);
+            $txnNumber = DocumentNumber::next(Transaction::class, 'transaction_number', 'SALE-COM-', 6);
 
             $metadata = [
                 'sales_lead_id' => $lead->id,
@@ -92,7 +93,7 @@ class SalesWinCommissionService
 
             $bonusTxn = null;
             if ($bonus > 0.009) {
-                $bonusTxnNumber = 'SALE-BON-'.str_pad((string) (Transaction::count() + 1), 6, '0', STR_PAD_LEFT);
+                $bonusTxnNumber = DocumentNumber::next(Transaction::class, 'transaction_number', 'SALE-BON-', 6);
                 $bonusTxn = Transaction::create([
                     'transaction_number' => $bonusTxnNumber,
                     'user_id' => $rep->id,

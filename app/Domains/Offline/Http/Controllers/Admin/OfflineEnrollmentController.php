@@ -18,6 +18,7 @@ use App\Domains\Accounting\Services\AutoInstallmentAgreementService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Domains\Accounting\Support\DocumentNumber;
 
 class OfflineEnrollmentController extends Controller
 {
@@ -387,7 +388,7 @@ class OfflineEnrollmentController extends Controller
                 }
 
                 Transaction::create([
-                    'transaction_number' => 'OFF-REF-'.str_pad((string) (Transaction::count() + 1), 6, '0', STR_PAD_LEFT),
+                    'transaction_number' => DocumentNumber::next(Transaction::class, 'transaction_number', 'OFF-REF-', 6),
                     'user_id' => $enrollment->user_id,
                     'invoice_id' => $enrollment->invoice_id,
                     'type' => 'debit',
@@ -523,7 +524,7 @@ class OfflineEnrollmentController extends Controller
 
         $enrollment->loadMissing('course');
 
-        $paymentNumber = 'OFF-PAY-' . str_pad(Payment::count() + 1, 6, '0', STR_PAD_LEFT);
+        $paymentNumber = DocumentNumber::next(Payment::class, 'payment_number', 'OFF-PAY-', 6);
 
         $walletId = isset($data['wallet_id']) ? (int) $data['wallet_id'] : null;
         if ($walletId <= 0) {
@@ -575,7 +576,7 @@ class OfflineEnrollmentController extends Controller
             }
         }
 
-        $transactionNumber = 'OFF-TXN-' . str_pad(Transaction::count() + 1, 6, '0', STR_PAD_LEFT);
+        $transactionNumber = DocumentNumber::next(Transaction::class, 'transaction_number', 'OFF-TXN-', 6);
 
         $courseTitle = $enrollment->course->title ?? '';
         $txDescription = 'دفعة كورس أوفلاين: '.$courseTitle;
