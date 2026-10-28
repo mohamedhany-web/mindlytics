@@ -807,6 +807,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
                 Route::get('/{offlineCourse}/resources', [\App\Http\Controllers\Student\OfflineCourseController::class, 'resources'])->name('resources');
                 Route::get('/{offlineCourse}/lectures', [\App\Http\Controllers\Student\OfflineCourseController::class, 'lectures'])->name('lectures');
                 Route::get('/{offlineCourse}/lectures/{lecture}/watch', [\App\Http\Controllers\Student\OfflineCourseController::class, 'watchLectureRecording'])->name('lectures.watch');
+                Route::get('/{offlineCourse}/lectures/{lecture}/stream', [\App\Http\Controllers\Student\OfflineCourseController::class, 'streamLectureRecording'])->name('lectures.stream');
                 Route::get('/{offlineCourse}/activities/{activity}', [\App\Http\Controllers\Student\OfflineCourseController::class, 'activityShow'])->name('activities.show');
                 Route::post('/{offlineCourse}/activities/{activity}/submit', [\App\Http\Controllers\Student\OfflineCourseController::class, 'activitySubmit'])->name('activities.submit');
                 Route::get('/{offlineCourse}', [\App\Http\Controllers\Student\OfflineCourseController::class, 'show'])->name('show');
@@ -820,6 +821,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
                 Route::get('/{offlineCourse}/resources', [\App\Http\Controllers\Student\OfflineCourseController::class, 'resources'])->name('resources');
                 Route::get('/{offlineCourse}/lectures', [\App\Http\Controllers\Student\OfflineCourseController::class, 'lectures'])->name('lectures');
                 Route::get('/{offlineCourse}/lectures/{lecture}/watch', [\App\Http\Controllers\Student\OfflineCourseController::class, 'watchLectureRecording'])->name('lectures.watch');
+                Route::get('/{offlineCourse}/lectures/{lecture}/stream', [\App\Http\Controllers\Student\OfflineCourseController::class, 'streamLectureRecording'])->name('lectures.stream');
                 Route::get('/{offlineCourse}/activities/{activity}', [\App\Http\Controllers\Student\OfflineCourseController::class, 'activityShow'])->name('activities.show');
                 Route::post('/{offlineCourse}/activities/{activity}/submit', [\App\Http\Controllers\Student\OfflineCourseController::class, 'activitySubmit'])->name('activities.submit');
                 Route::get('/{offlineCourse}', [\App\Http\Controllers\Student\OfflineCourseController::class, 'show'])->name('show');
@@ -2566,6 +2568,7 @@ Route::middleware(['auth', 'prevent-concurrent'])->group(function () {
             Route::post('lectures/recording-upload-url', [\App\Http\Controllers\Instructor\OfflineLectureController::class, 'createRecordingUploadUrl'])->name('lectures.recording-upload-url');
             Route::post('lectures/recording-upload', [\App\Http\Controllers\Instructor\OfflineLectureController::class, 'uploadRecording'])->name('lectures.recording-upload');
             Route::get('lectures/{lecture}/watch', [\App\Http\Controllers\Instructor\OfflineLectureController::class, 'watchRecording'])->name('lectures.watch');
+            Route::get('lectures/{lecture}/stream', [\App\Http\Controllers\Instructor\OfflineLectureController::class, 'streamRecording'])->name('lectures.stream');
             Route::resource('lectures', \App\Http\Controllers\Instructor\OfflineLectureController::class)->parameters(['lecture' => 'lecture']);
             Route::resource('activities', \App\Http\Controllers\Instructor\OfflineActivityController::class)->parameters(['activity' => 'activity']);
             Route::post('activities/{activity}/submissions/{submission}/grade', [\App\Http\Controllers\Instructor\OfflineActivityController::class, 'gradeSubmission'])->name('activities.submissions.grade');

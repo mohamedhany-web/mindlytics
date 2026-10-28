@@ -164,7 +164,10 @@ if (!function_exists('storage_inline_media_url')) {
             $expires = $expires ?? now()->addDays(7);
 
             if (method_exists($driver, 'temporaryUrl')) {
-                return $driver->temporaryUrl($path, $expires);
+                // inline حتى يشغّل المتصفح الفيديو بدل تنزيله كمرفق
+                return $driver->temporaryUrl($path, $expires, [
+                    'ResponseContentDisposition' => 'inline',
+                ]);
             }
 
             return $driver->url($path);

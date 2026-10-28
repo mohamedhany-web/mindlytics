@@ -17,9 +17,12 @@ class VideoProtectionMiddleware
         $response->headers->set('Pragma', 'no-cache');
         $response->headers->set('Expires', '0');
         
-        // منع التضمين في مواقع أخرى
+        // منع التضمين في مواقع أخرى — مع السماح بوسائط HTTPS (تسجيلات R2/CDN)
         $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
-        $response->headers->set('Content-Security-Policy', "frame-ancestors 'self'");
+        $response->headers->set(
+            'Content-Security-Policy',
+            "frame-ancestors 'self'; media-src 'self' https: blob:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://drive.google.com https://docs.google.com https://iframe.mediadelivery.net https://player.mediadelivery.net https://*.mediadelivery.net https://*.b-cdn.net https://*.bunnycdn.com"
+        );
         
         // حماية إضافية
         $response->headers->set('X-Content-Type-Options', 'nosniff');

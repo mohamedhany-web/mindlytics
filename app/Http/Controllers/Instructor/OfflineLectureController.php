@@ -534,6 +534,19 @@ class OfflineLectureController extends Controller
     }
 
     /**
+     * بث ملف التسجيل المخزَّن للمدرب (مصدر <video>).
+     */
+    public function streamRecording(OfflineCourse $offlineCourse, OfflineLecture $lecture)
+    {
+        $this->authorizeInstructor($offlineCourse);
+        if ($lecture->offline_course_id !== $offlineCourse->id) {
+            abort(404);
+        }
+
+        return $lecture->streamStoredRecordingResponse();
+    }
+
+    /**
      * مشاهدة تسجيل المحاضرة داخل المنصة (للمدرب — iframe/بوب أب).
      */
     public function watchRecording(OfflineCourse $offlineCourse, OfflineLecture $lecture)
@@ -543,21 +556,26 @@ class OfflineLectureController extends Controller
             abort(404);
         }
 
-        $raw = $lecture->playbackUrl() ?: ($lecture->recording_url ? trim((string) $lecture->recording_url) : '');
-        if ($raw === '') {
-            abort(404, 'لا يوجد تسجيل لهذه المحاضرة');
-        }
-
         if ($lecture->hasStoredRecording()) {
+            $streamSrc = route('instructor.offline-courses.lectures.stream', [
+                'offlineCourse' => $offlineCourse,
+                'lecture' => $lecture,
+            ]);
+
             return response()
                 ->view('video.protected-embed', [
                     'type' => 'html5',
-                    'src' => $raw,
+                    'src' => $streamSrc,
                     'mime' => $lecture->recording_mime ?: 'video/mp4',
                     'title' => $lecture->title ?: 'التسجيل',
                 ])
                 ->header('Cache-Control', 'private, no-store, no-cache, must-revalidate')
                 ->header('Pragma', 'no-cache');
+        }
+
+        $raw = $lecture->playbackUrl() ?: ($lecture->recording_url ? trim((string) $lecture->recording_url) : '');
+        if ($raw === '') {
+            abort(404, 'لا يوجد تسجيل لهذه المحاضرة');
         }
 
         $source = VideoHelper::getVideoSource($raw);
