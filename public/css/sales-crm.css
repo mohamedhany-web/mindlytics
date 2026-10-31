@@ -518,42 +518,57 @@ button, input, select, textarea { font: inherit; }
   .crm-record-grid { grid-template-columns: 1fr; }
 }
 
-/* ── Bridge: صفحات الأدمن القديمة داخل CRM shell ── */
+/* ── Bridge: صفحات الأدمن/المانجر القديمة داخل CRM shell → SuiteCRM look ── */
 body.crm-body .crm-page .rounded-2xl,
-body.crm-body .crm-page .rounded-xl {
+body.crm-body .crm-page .rounded-xl,
+body.crm-body .crm-page .rounded-lg {
   border-radius: 6px !important;
 }
 body.crm-body .crm-page .shadow-lg,
 body.crm-body .crm-page .shadow,
-body.crm-body .crm-page .shadow-md {
+body.crm-body .crm-page .shadow-md,
+body.crm-body .crm-page .shadow-sm {
   box-shadow: 0 2px 8px rgba(32, 41, 54, .08) !important;
 }
 body.crm-body .crm-page .border-slate-200,
-body.crm-body .crm-page .border-slate-100 {
+body.crm-body .crm-page .border-slate-100,
+body.crm-body .crm-page .border-slate-300,
+body.crm-body .crm-page .border-gray-200 {
   border-color: #E2E5EA !important;
 }
 body.crm-body .crm-page .bg-white {
   background: #fff !important;
 }
-body.crm-body .crm-page .font-black {
+body.crm-body .crm-page .font-black,
+body.crm-body .crm-page .font-extrabold {
   font-weight: 700 !important;
   letter-spacing: 0;
 }
-body.crm-body .crm-page .text-slate-900 {
+body.crm-body .crm-page .text-slate-900,
+body.crm-body .crm-page .text-gray-900 {
   color: var(--crm-ink) !important;
+}
+body.crm-body .crm-page .text-slate-600,
+body.crm-body .crm-page .text-slate-500,
+body.crm-body .crm-page .text-gray-600 {
+  color: #4B5563 !important;
 }
 body.crm-body .crm-page .text-emerald-700,
 body.crm-body .crm-page .text-teal-700,
-body.crm-body .crm-page a.text-emerald-700 {
+body.crm-body .crm-page .text-emerald-600,
+body.crm-body .crm-page a.text-emerald-700,
+body.crm-body .crm-page a.text-emerald-600 {
   color: var(--crm-link) !important;
 }
 body.crm-body .crm-page .bg-emerald-600,
 body.crm-body .crm-page .bg-teal-600,
 body.crm-body .crm-page .bg-emerald-500,
 body.crm-body .crm-page button.bg-emerald-600,
-body.crm-body .crm-page a.bg-emerald-600 {
+body.crm-body .crm-page a.bg-emerald-600,
+body.crm-body .crm-page .hover\:bg-emerald-700:hover {
   background: var(--crm-link) !important;
   border-color: var(--crm-link) !important;
+  color: #fff !important;
 }
 body.crm-body .crm-page .bg-slate-900,
 body.crm-body .crm-page .bg-slate-800,
@@ -563,8 +578,12 @@ body.crm-body .crm-page button.bg-slate-900 {
 body.crm-body .crm-page .bg-gradient-to-br,
 body.crm-body .crm-page .bg-gradient-to-r,
 body.crm-body .crm-page .bg-gradient-to-l,
-body.crm-body .crm-page [class*="from-slate-900"],
+body.crm-body .crm-page [class*="from-slate"],
 body.crm-body .crm-page [class*="from-emerald"],
+body.crm-body .crm-page [class*="from-sky"],
+body.crm-body .crm-page [class*="from-amber"],
+body.crm-body .crm-page [class*="from-violet"],
+body.crm-body .crm-page [class*="from-orange"],
 body.crm-body .crm-page [class*="via-emerald"] {
   background: var(--crm-nav) !important;
   background-image: none !important;
@@ -575,27 +594,222 @@ body.crm-body .crm-page .bg-teal-50,
 body.crm-body .crm-page .bg-violet-50,
 body.crm-body .crm-page .bg-amber-50,
 body.crm-body .crm-page .bg-sky-50,
-body.crm-body .crm-page .bg-blue-50 {
+body.crm-body .crm-page .bg-blue-50,
+body.crm-body .crm-page .bg-rose-50,
+body.crm-body .crm-page .bg-orange-50,
+body.crm-body .crm-page .bg-indigo-50 {
   background: #F7F8FA !important;
+}
+body.crm-body .crm-page .bg-slate-50,
+body.crm-body .crm-page .bg-gray-50 {
+  background: #EEF1F4 !important;
 }
 body.crm-body .crm-page input,
 body.crm-body .crm-page select,
 body.crm-body .crm-page textarea {
   border-radius: 3px !important;
   border-color: #C9CDD2 !important;
+  box-shadow: none !important;
 }
-body.crm-body .crm-page .space-y-6 > :not([hidden]) ~ :not([hidden]) {
-  margin-top: 16px;
+body.crm-body .crm-page input:focus,
+body.crm-body .crm-page select:focus,
+body.crm-body .crm-page textarea:focus {
+  outline: none !important;
+  border-color: var(--crm-slate) !important;
+  box-shadow: 0 0 0 2px rgba(98, 117, 135, .18) !important;
 }
+body.crm-body .crm-page .space-y-6 > :not([hidden]) ~ :not([hidden]),
+body.crm-body .crm-page .space-y-5 > :not([hidden]) ~ :not([hidden]),
+body.crm-body .crm-page .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 14px;
+}
+
+/* Section headers → SuiteCRM dashlet heads */
 body.crm-body .crm-page section.rounded-2xl > .px-4.py-3.border-b,
-body.crm-body .crm-page section.rounded-2xl > .border-b {
+body.crm-body .crm-page section.rounded-2xl > .px-4.py-4.border-b,
+body.crm-body .crm-page section.rounded-2xl > .border-b,
+body.crm-body .crm-page section.rounded-xl > .border-b,
+body.crm-body .crm-page .rounded-2xl > .bg-slate-50.border-b,
+body.crm-body .crm-page .rounded-2xl > [class*="bg-slate-50"].border-b,
+body.crm-body .crm-page .rounded-2xl > .px-4.py-4.border-b {
   background: var(--crm-nav) !important;
   color: #fff !important;
   border-color: transparent !important;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
 }
+body.crm-body .crm-page section.rounded-2xl > .border-b h1,
 body.crm-body .crm-page section.rounded-2xl > .border-b h2,
 body.crm-body .crm-page section.rounded-2xl > .border-b h3,
 body.crm-body .crm-page section.rounded-2xl > .border-b p,
-body.crm-body .crm-page section.rounded-2xl > .border-b span {
+body.crm-body .crm-page section.rounded-2xl > .border-b span,
+body.crm-body .crm-page section.rounded-2xl > .border-b a,
+body.crm-body .crm-page .rounded-2xl > .border-b h2,
+body.crm-body .crm-page .rounded-2xl > .border-b h3,
+body.crm-body .crm-page .rounded-2xl > .border-b p,
+body.crm-body .crm-page .rounded-2xl > .border-b span,
+body.crm-body .crm-page .rounded-2xl > .border-b a:not(.crm-btn) {
   color: #fff !important;
+}
+body.crm-body .crm-page .rounded-2xl > .border-b a.inline-flex,
+body.crm-body .crm-page .rounded-2xl > .border-b button.inline-flex {
+  background: rgba(255,255,255,.12) !important;
+  border-color: rgba(255,255,255,.28) !important;
+  color: #fff !important;
+  border-radius: 3px !important;
+  height: 32px;
+  padding: 0 12px !important;
+}
+body.crm-body .crm-page .rounded-2xl > .border-b a.inline-flex:hover,
+body.crm-body .crm-page .rounded-2xl > .border-b button.inline-flex:hover {
+  background: rgba(255,255,255,.22) !important;
+}
+
+/* Decorative gradient icon tiles → compact SuiteCRM chip */
+body.crm-body .crm-page .w-11.h-11.rounded-xl,
+body.crm-body .crm-page .w-12.h-12.rounded-xl,
+body.crm-body .crm-page .w-10.h-10.rounded-xl,
+body.crm-body .crm-page .w-11.h-11.rounded-lg {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+  background: rgba(255,255,255,.16) !important;
+  background-image: none !important;
+}
+
+/* Stat tiles flatten */
+body.crm-body .crm-page .rounded-xl.border.p-4,
+body.crm-body .crm-page .rounded-xl.border.bg-white.p-4,
+body.crm-body .crm-page .rounded-xl.border[class*="bg-"] {
+  border-radius: 4px !important;
+  border-color: #E2E5EA !important;
+  box-shadow: none !important;
+  background: #fff !important;
+}
+body.crm-body .crm-page .text-2xl.font-black,
+body.crm-body .crm-page .text-3xl.font-black {
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  color: var(--crm-ink) !important;
+}
+
+/* Tables → SuiteCRM */
+body.crm-body .crm-page table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: #fff;
+}
+body.crm-body .crm-page thead tr,
+body.crm-body .crm-page thead {
+  background: var(--crm-slate) !important;
+}
+body.crm-body .crm-page thead th {
+  text-align: start;
+  padding: 9px 10px !important;
+  font-weight: 700 !important;
+  font-size: 12.5px !important;
+  color: #fff !important;
+  border: 0 !important;
+  white-space: nowrap;
+  background: var(--crm-slate) !important;
+}
+body.crm-body .crm-page tbody td {
+  padding: 9px 10px !important;
+  border-bottom: 1px solid var(--crm-line) !important;
+  background: #fff !important;
+  vertical-align: middle;
+}
+body.crm-body .crm-page tbody tr:hover td {
+  background: #F7F8FA !important;
+}
+
+/* Buttons / badges */
+body.crm-body .crm-page a.inline-flex.items-center,
+body.crm-body .crm-page button.inline-flex.items-center {
+  border-radius: 3px !important;
+  font-weight: 700 !important;
+}
+body.crm-body .crm-page .rounded-full {
+  border-radius: 3px !important;
+}
+body.crm-body .crm-page [class*="bg-emerald-100"],
+body.crm-body .crm-page [class*="bg-amber-100"],
+body.crm-body .crm-page [class*="bg-rose-100"],
+body.crm-body .crm-page [class*="bg-sky-100"],
+body.crm-body .crm-page [class*="bg-violet-100"],
+body.crm-body .crm-page [class*="bg-blue-100"] {
+  background: #EEF1F4 !important;
+  color: #374151 !important;
+  border-color: #E2E5EA !important;
+}
+
+/* Strip old full-page wrappers when nested in CRM shell */
+body.crm-body .crm-page > div[style*="min-height"],
+body.crm-body .crm-page > div[style*="background: #f8fafc"],
+body.crm-body .crm-page > div[style*="background:#f8fafc"] {
+  min-height: 0 !important;
+  background: transparent !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Admin hub shortcut cards */
+body.crm-body .crm-ops-grid {
+  display: grid;
+  gap: 16px;
+}
+body.crm-body .crm-ops-group {
+  background: var(--crm-panel);
+  border: 1px solid #E2E5EA;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(32, 41, 54, .08);
+  overflow: hidden;
+}
+body.crm-body .crm-ops-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--crm-nav);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+body.crm-body .crm-ops-group-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0;
+}
+body.crm-body .crm-ops-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  color: var(--crm-ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--crm-line);
+  border-inline-end: 1px solid var(--crm-line);
+  font-size: 13px;
+  font-weight: 600;
+  background: #fff;
+}
+body.crm-body .crm-ops-link:hover {
+  background: #F7F8FA;
+  color: var(--crm-link);
+}
+body.crm-body .crm-ops-link i {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background: var(--crm-nav);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex: none;
 }

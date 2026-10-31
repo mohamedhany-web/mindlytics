@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.layout')
 
 @section('title', 'صفحات Facebook & Instagram')
 @section('header', 'إدارة الصفحات')

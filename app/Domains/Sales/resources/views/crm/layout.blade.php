@@ -70,6 +70,12 @@
       .crm-good{color:var(--crm-good);font-weight:700}.crm-bad{color:var(--crm-bad);font-weight:700}.crm-warn{color:var(--crm-warn);font-weight:700}.crm-muted{color:#4B5563}
       .crm-btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;border:0;border-radius:3px;font:inherit;font-size:13px;font-weight:700;color:#fff;cursor:pointer;text-decoration:none;white-space:nowrap}
       .crm-btn-primary{background:var(--crm-link)}.crm-btn-dark{background:var(--crm-nav)}.crm-btn-slate{background:var(--crm-slate)}
+      .crm-ops-grid{display:grid;gap:16px}.crm-ops-group{background:#fff;border:1px solid #E2E5EA;border-radius:6px;box-shadow:0 2px 8px rgba(32,41,54,.08);overflow:hidden}
+      .crm-ops-group-head{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--crm-nav);color:#fff;font-size:14px;font-weight:700}
+      .crm-ops-group-body{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+      .crm-ops-link{display:flex;align-items:center;gap:10px;padding:12px 14px;color:var(--crm-ink);text-decoration:none;border-bottom:1px solid var(--crm-line);border-inline-end:1px solid var(--crm-line);font-size:13px;font-weight:600;background:#fff}
+      .crm-ops-link:hover{background:#F7F8FA;color:var(--crm-link)}
+      .crm-ops-link i{width:28px;height:28px;border-radius:4px;background:var(--crm-nav);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex:none}
     </style>
     <link rel="stylesheet" href="{{ asset('css/sales-crm.css') }}?v={{ $crmCssVer }}">
     {{-- Preflight بتاع Tailwind بيمسح خلفيات الجداول/الكروت ويخلي الواجهة باينة «متهالكة» --}}

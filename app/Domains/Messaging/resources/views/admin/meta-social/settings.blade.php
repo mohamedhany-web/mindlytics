@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.layout')
 
 @section('title', 'إعدادات Meta Social')
 @section('header', 'ربط Meta — Facebook & Instagram')

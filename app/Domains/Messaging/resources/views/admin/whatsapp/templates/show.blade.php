@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.layout')
 
 @section('title', $template->displayTitle() . ' — قالب واتساب')
 @section('header', 'قسم الواتساب')

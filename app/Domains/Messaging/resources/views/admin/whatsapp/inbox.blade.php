@@ -1,4 +1,4 @@
-@extends($waLayout ?? 'layouts.admin')
+@extends($waLayout ?? 'sales::crm.layout')
 
 @section('title', $waPageTitle ?? 'محادثات الواتساب - Mindlytics')
 @section('header', $waPageHeader ?? 'قسم الواتساب')

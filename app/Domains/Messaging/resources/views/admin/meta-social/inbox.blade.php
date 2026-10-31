@@ -1,4 +1,4 @@
-@extends($msLayout ?? 'layouts.admin')
+@extends($msLayout ?? 'sales::crm.layout')
 
 @section('title', ($waInboxTitle ?? 'Meta Inbox').' — Mindlytics')
 @section('header', $waInboxTitle ?? 'Meta Inbox')

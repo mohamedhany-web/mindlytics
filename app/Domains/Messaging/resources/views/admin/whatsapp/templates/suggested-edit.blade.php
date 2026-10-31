@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.layout')
 
 @section('title', 'تعديل قالب مقترح — ' . $suggested->title)
 @section('header', 'قسم الواتساب')

@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.layout')
 
 @section('title', $campaign['name'] ?? 'حملة Meta')
 @section('header', 'Meta Ads — تفاصيل الحملة')

@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.layout')
 
 @section('title', 'Lead Center — Meta Business Suite')
 @section('header', 'Lead Center')

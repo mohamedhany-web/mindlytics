@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.layout')
 
 @section('title', 'إرسال دعوة جروب من Excel')
 @section('header', 'قسم الواتساب')

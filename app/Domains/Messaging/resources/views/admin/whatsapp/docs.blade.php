@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.layout')
 
 @section('title', 'توثيق الواتساب - Mindlytics')
 @section('header', 'قسم الواتساب')
