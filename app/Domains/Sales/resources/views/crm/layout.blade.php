@@ -54,7 +54,7 @@
       .crm-icon-btn:hover{background:var(--crm-nav-2)}
       .crm-search{display:flex;align-items:center;gap:6px;margin:10px 8px;padding:0 10px;height:32px;border-radius:3px;background:var(--crm-nav-2);width:200px}
       .crm-search input{flex:1;min-width:0;border:0;background:transparent;color:#fff;font:inherit;font-size:13px;outline:none}
-      .crm-page{padding:18px 20px 48px;max-width:1400px;margin:0 auto;width:100%}
+      .crm-page{padding:18px 24px 48px;max-width:none;margin:0;width:100%}
       .crm-title{margin:0;font-size:28px;font-weight:300;color:#5F5F5F}
       .crm-card{background:var(--crm-panel)!important;border:1px solid #E2E5EA;border-radius:6px;box-shadow:0 2px 8px rgba(32,41,54,.08);overflow:hidden}
       .crm-dashlet-head{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--crm-nav)!important;color:#fff!important}

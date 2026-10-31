@@ -166,9 +166,9 @@ button, input, select, textarea { font: inherit; }
 .crm-search input::placeholder { color: #D9D5E2; }
 
 .crm-page {
-  padding: 18px 20px 48px;
-  max-width: 1400px;
-  margin: 0 auto;
+  padding: 18px 24px 48px;
+  max-width: none;
+  margin: 0;
   width: 100%;
 }
 
