@@ -176,7 +176,9 @@ class SalesCrmSmokeTest extends SmokeTestCase
             foreach ($modules as $module) {
                 $this->page($ctx['prefix'].'/'.$module);
             }
-            $this->page($ctx['prefix'].'/reports/kpi');
+            // KPI/اليومي يفتحان التقارير القديمة المختبرة عبر hop واحد (بدون حلقة)
+            $this->get($ctx['prefix'].'/reports/kpi')->assertRedirect();
+            $this->get($ctx['prefix'].'/reports/daily')->assertRedirect();
             if ($ctx['admin']) {
                 $this->page($ctx['prefix'].'/admin');
             } else {
@@ -200,8 +202,8 @@ class SalesCrmSmokeTest extends SmokeTestCase
 
         $this->actingAs($this->admin);
         $this->get('/admin/sales/leads')->assertRedirect('/admin/crm/leads');
-        $this->get('/admin/sales/reports')->assertRedirect('/admin/crm/reports');
-        $this->get('/admin/sales/kpi')->assertRedirect('/admin/crm/reports/kpi');
+        $this->get('/admin/crm/reports/kpi')->assertRedirect();
+        $this->get('/admin/sales/leads/'.$this->outsiderLead->id)->assertRedirect('/admin/crm/leads/'.$this->outsiderLead->id);
     }
 
     /** يفتح كل روابط الشريط العلوي (قوائم الوحدات و«+») للدور الحالي: ممنوع 403 أو 404 أو 500. */

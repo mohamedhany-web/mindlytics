@@ -34,12 +34,12 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('sales')->name('sales.')->group(function () {
     $toCrm = fn (string $name, array $params = []) => redirect()->route('admin.crm.'.$name, $params);
 
-    Route::get('reports', fn () => $toCrm('reports.index'))->name('reports.index');
+    Route::get('reports', [SalesReportController::class, 'index'])->name('reports.index');
     Route::get('reports/employee', [SalesReportController::class, 'employee'])->name('reports.employee');
     Route::get('reports/export', [SalesReportController::class, 'export'])->name('reports.export');
     Route::get('reports/pdf', [SalesReportController::class, 'pdfExport'])->name('reports.pdf');
     Route::get('reports/daily-export', [SalesReportController::class, 'dailyExport'])->name('reports.daily-export');
-    Route::get('daily-reports', fn () => $toCrm('reports.daily'))->name('daily-reports.index');
+    Route::get('daily-reports', [SalesDailyReportController::class, 'index'])->name('daily-reports.index');
     Route::get('daily-reports/export', [SalesDailyReportController::class, 'export'])->name('daily-reports.export');
     Route::get('daily-reports/settings', [SalesDailyReportController::class, 'settings'])->name('daily-reports.settings');
     Route::put('daily-reports/settings', [SalesDailyReportController::class, 'updateSettings'])->name('daily-reports.settings.update');
@@ -71,7 +71,7 @@ Route::prefix('sales')->name('sales.')->group(function () {
     Route::get('schedule-calendar', fn () => $toCrm('calendar.index'))->name('schedule-calendar.index');
     Route::get('team-daily-reports', [SalesTeamDailyReportController::class, 'index'])->name('team-daily-reports.index');
     Route::get('team-daily-reports/{teamDailyReport}', [SalesTeamDailyReportController::class, 'show'])->name('team-daily-reports.show');
-    Route::get('kpi', fn () => $toCrm('reports.kpi'))->name('kpi.index');
+    Route::get('kpi', [SalesKpiController::class, 'index'])->name('kpi.index');
     Route::get('kpi/targets', [SalesKpiController::class, 'targets'])->name('kpi.targets');
     Route::put('kpi/targets', [SalesKpiController::class, 'updateTargets'])->name('kpi.targets.update');
     Route::get('day-blocks', [SalesDayBlockController::class, 'index'])->name('day-blocks.index');

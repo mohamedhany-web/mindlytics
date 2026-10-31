@@ -20,12 +20,12 @@ use Illuminate\Support\Facades\Route;
 $toCrm = fn (string $name, array $params = []) => redirect()->route('employee.crm.'.$name, $params);
 
 Route::get('/', fn () => $toCrm('home'))->name('dashboard');
-Route::get('kpi', fn () => $toCrm('reports.kpi'))->name('kpi.index');
-Route::get('penalties', fn () => $toCrm('reports.index'))->name('penalties.index');
+Route::get('kpi', [SalesKpiController::class, 'index'])->name('kpi.index');
+Route::get('penalties', [SalesPenaltiesController::class, 'index'])->name('penalties.index');
 Route::get('commissions', fn () => $toCrm('opportunities.index', ['quick' => 'won_month']))->name('commissions.index');
 Route::get('courses', [SalesCourseCatalogController::class, 'index'])->name('courses.index');
 Route::get('reports', fn () => $toCrm('reports.index'))->name('reports.index');
-Route::get('daily-reports', fn () => $toCrm('reports.daily'))->name('daily-reports.index');
+Route::get('daily-reports', [SalesDailyReportController::class, 'index'])->name('daily-reports.index');
 Route::get('daily-reports/edit', [SalesDailyReportController::class, 'edit'])->name('daily-reports.edit');
 Route::post('daily-reports', [SalesDailyReportController::class, 'store'])->name('daily-reports.store');
 Route::post('daily-reports/sync-auto', [SalesDailyReportController::class, 'syncAuto'])->name('daily-reports.sync-auto');
