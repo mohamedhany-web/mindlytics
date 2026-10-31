@@ -25,6 +25,7 @@ Route::prefix('offline-courses/{offlineCourse}')->name('offline-courses.')->grou
     Route::post('lectures/recording-upload-url', [OfflineLectureController::class, 'createRecordingUploadUrl'])->name('lectures.recording-upload-url');
     Route::post('lectures/recording-upload', [OfflineLectureController::class, 'uploadRecording'])->name('lectures.recording-upload');
     Route::get('lectures/{lecture}/watch', [OfflineLectureController::class, 'watchRecording'])->name('lectures.watch');
+    Route::get('lectures/{lecture}/stream', [OfflineLectureController::class, 'streamRecording'])->name('lectures.stream');
     Route::resource('lectures', OfflineLectureController::class)->parameters(['lecture' => 'lecture']);
     Route::resource('activities', OfflineActivityController::class)->parameters(['activity' => 'activity']);
     Route::post('activities/{activity}/submissions/{submission}/grade', [OfflineActivityController::class, 'gradeSubmission'])->name('activities.submissions.grade');

@@ -22,6 +22,7 @@ Route::prefix('offline-courses')->name('student.offline-courses.')->group(functi
     Route::get('/{offlineCourse}/resources', [OfflineCourseController::class, 'resources'])->name('resources');
     Route::get('/{offlineCourse}/lectures', [OfflineCourseController::class, 'lectures'])->name('lectures');
     Route::get('/{offlineCourse}/lectures/{lecture}/watch', [OfflineCourseController::class, 'watchLectureRecording'])->name('lectures.watch');
+    Route::get('/{offlineCourse}/lectures/{lecture}/stream', [OfflineCourseController::class, 'streamLectureRecording'])->name('lectures.stream');
     Route::get('/{offlineCourse}/activities/{activity}', [OfflineCourseController::class, 'activityShow'])->name('activities.show');
     Route::post('/{offlineCourse}/activities/{activity}/submit', [OfflineCourseController::class, 'activitySubmit'])->name('activities.submit');
     Route::get('/{offlineCourse}', [OfflineCourseController::class, 'show'])->name('show');
@@ -35,6 +36,7 @@ Route::prefix('online-courses')->name('student.online-courses.')->group(function
     Route::get('/{offlineCourse}/resources', [OfflineCourseController::class, 'resources'])->name('resources');
     Route::get('/{offlineCourse}/lectures', [OfflineCourseController::class, 'lectures'])->name('lectures');
     Route::get('/{offlineCourse}/lectures/{lecture}/watch', [OfflineCourseController::class, 'watchLectureRecording'])->name('lectures.watch');
+    Route::get('/{offlineCourse}/lectures/{lecture}/stream', [OfflineCourseController::class, 'streamLectureRecording'])->name('lectures.stream');
     Route::get('/{offlineCourse}/activities/{activity}', [OfflineCourseController::class, 'activityShow'])->name('activities.show');
     Route::post('/{offlineCourse}/activities/{activity}/submit', [OfflineCourseController::class, 'activitySubmit'])->name('activities.submit');
     Route::get('/{offlineCourse}', [OfflineCourseController::class, 'show'])->name('show');

@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Domains\Offline\Models\WorkshopPromoCode;
 use App\Services\Branch\BranchResolver;
 use App\Domains\Offline\Services\WorkshopPromoService;
+use App\Support\PhoneCountry;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -143,8 +144,7 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $nationalNumber = preg_replace('/\D/', '', (string) $request->phone);
-        $nationalNumber = ltrim($nationalNumber, '0');
+        $nationalNumber = PhoneCountry::nationalNumber($country, $request->phone);
         if (! preg_match($country['validation']['regex'], $nationalNumber)) {
             $example = $country['example'] ?? $country['placeholder'] ?? '';
 

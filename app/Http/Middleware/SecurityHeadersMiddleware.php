@@ -48,6 +48,9 @@ class SecurityHeadersMiddleware
                    "https://cdnjs.cloudflare.com " .
                    "https://cdn.jsdelivr.net; " .
                    "img-src 'self' data: https: blob:; " .
+                   // تسجيلات المحاضرات المرفوعة (R2/CDN) تُشغَّل عبر <video src="https://...">
+                   // بدون media-src يرث default-src 'self' فيحظر المتصفح الفيديو الخارجي.
+                   "media-src 'self' https: blob:; " .
                    "connect-src 'self' https: ws: wss: " .
                    "https://app.fawaterk.com " .
                    "https://staging.fawaterk.com; " .

@@ -247,6 +247,7 @@ GET|HEAD offline-courses/{offlineCourse}/schedule [student.offline-courses.sched
 GET|HEAD offline-courses/{offlineCourse}/resources [student.offline-courses.resources] {web,auth,prevent-concurrent,role:student}
 GET|HEAD offline-courses/{offlineCourse}/lectures [student.offline-courses.lectures] {web,auth,prevent-concurrent,role:student}
 GET|HEAD offline-courses/{offlineCourse}/lectures/{lecture}/watch [student.offline-courses.lectures.watch] {web,auth,prevent-concurrent,role:student}
+GET|HEAD offline-courses/{offlineCourse}/lectures/{lecture}/stream [student.offline-courses.lectures.stream] {web,auth,prevent-concurrent,role:student}
 GET|HEAD offline-courses/{offlineCourse}/activities/{activity} [student.offline-courses.activities.show] {web,auth,prevent-concurrent,role:student}
 POST offline-courses/{offlineCourse}/activities/{activity}/submit [student.offline-courses.activities.submit] {web,auth,prevent-concurrent,role:student}
 GET|HEAD offline-courses/{offlineCourse} [student.offline-courses.show] {web,auth,prevent-concurrent,role:student}
@@ -256,6 +257,7 @@ GET|HEAD online-courses/{offlineCourse}/schedule [student.online-courses.schedul
 GET|HEAD online-courses/{offlineCourse}/resources [student.online-courses.resources] {web,auth,prevent-concurrent,role:student}
 GET|HEAD online-courses/{offlineCourse}/lectures [student.online-courses.lectures] {web,auth,prevent-concurrent,role:student}
 GET|HEAD online-courses/{offlineCourse}/lectures/{lecture}/watch [student.online-courses.lectures.watch] {web,auth,prevent-concurrent,role:student}
+GET|HEAD online-courses/{offlineCourse}/lectures/{lecture}/stream [student.online-courses.lectures.stream] {web,auth,prevent-concurrent,role:student}
 GET|HEAD online-courses/{offlineCourse}/activities/{activity} [student.online-courses.activities.show] {web,auth,prevent-concurrent,role:student}
 POST online-courses/{offlineCourse}/activities/{activity}/submit [student.online-courses.activities.submit] {web,auth,prevent-concurrent,role:student}
 GET|HEAD online-courses/{offlineCourse} [student.online-courses.show] {web,auth,prevent-concurrent,role:student}
@@ -1688,6 +1690,7 @@ GET|HEAD instructor/offline-courses/{offlineCourse}/lectures/sessions/{session} 
 POST instructor/offline-courses/{offlineCourse}/lectures/recording-upload-url [instructor.offline-courses.lectures.recording-upload-url] {web,auth,prevent-concurrent,auth,role:instructor|teacher}
 POST instructor/offline-courses/{offlineCourse}/lectures/recording-upload [instructor.offline-courses.lectures.recording-upload] {web,auth,prevent-concurrent,auth,role:instructor|teacher}
 GET|HEAD instructor/offline-courses/{offlineCourse}/lectures/{lecture}/watch [instructor.offline-courses.lectures.watch] {web,auth,prevent-concurrent,auth,role:instructor|teacher}
+GET|HEAD instructor/offline-courses/{offlineCourse}/lectures/{lecture}/stream [instructor.offline-courses.lectures.stream] {web,auth,prevent-concurrent,auth,role:instructor|teacher}
 GET|HEAD instructor/offline-courses/{offlineCourse}/lectures [instructor.offline-courses.lectures.index] {web,auth,prevent-concurrent,auth,role:instructor|teacher}
 GET|HEAD instructor/offline-courses/{offlineCourse}/lectures/create [instructor.offline-courses.lectures.create] {web,auth,prevent-concurrent,auth,role:instructor|teacher}
 POST instructor/offline-courses/{offlineCourse}/lectures [instructor.offline-courses.lectures.store] {web,auth,prevent-concurrent,auth,role:instructor|teacher}

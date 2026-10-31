@@ -8,6 +8,7 @@ use App\Models\TwoFactorLog;
 use App\Models\User;
 use App\Domains\Offline\Models\WorkshopPromoCode;
 use App\Support\BranchContext;
+use App\Support\PhoneCountry;
 use App\Domains\Offline\Services\WorkshopPromoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -341,8 +342,7 @@ class AuthController extends Controller
         if (!$country || !isset($country['validation']['regex'])) {
             return back()->withErrors(['phone' => 'كود الدولة غير مدعوم.'])->withInput()->with(compact('phoneCountries', 'defaultCountry'));
         }
-        $nationalNumber = preg_replace('/\D/', '', $request->phone);
-        $nationalNumber = ltrim($nationalNumber, '0');
+        $nationalNumber = PhoneCountry::nationalNumber($country, $request->phone);
         if (!preg_match($country['validation']['regex'], $nationalNumber)) {
             $example = $country['example'] ?? $country['placeholder'] ?? '';
             return back()->withErrors(['phone' => 'رقم الهاتف غير صحيح لهذه الدولة. مثال: ' . $example])->withInput()->with(compact('phoneCountries', 'defaultCountry'));

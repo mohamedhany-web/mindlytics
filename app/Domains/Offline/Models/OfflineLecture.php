@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class OfflineLecture extends Model
 {
@@ -76,6 +78,48 @@ class OfflineLecture extends Model
         $external = trim((string) ($this->recording_url ?? ''));
 
         return $external !== '' ? $external : null;
+    }
+
+    /**
+     * بث/توجيه ملف التسجيل المخزَّن (R2 موقّع أو قرص محلي) للمشغّل HTML5.
+     */
+    public function streamStoredRecordingResponse(): SymfonyResponse
+    {
+        if (! $this->hasStoredRecording()) {
+            abort(404, 'لا يوجد تسجيل لهذه المحاضرة');
+        }
+
+        $disk = $this->recording_disk ?: offline_lecture_recordings_disk();
+        $path = (string) $this->recording_path;
+        $mime = $this->recording_mime ?: 'video/mp4';
+        $filename = $this->recording_original_name ?: basename($path);
+
+        try {
+            if (! Storage::disk($disk)->exists($path)) {
+                abort(404, 'ملف التسجيل غير موجود');
+            }
+        } catch (\Throwable $e) {
+            report($e);
+            abort(404, 'ملف التسجيل غير متاح');
+        }
+
+        $url = $this->playbackUrl(now()->addHours(4));
+        if (is_string($url) && $url !== '' && preg_match('#^https?://#i', $url)) {
+            $appHost = strtolower((string) (parse_url((string) config('app.url'), PHP_URL_HOST) ?: ''));
+            $urlHost = strtolower((string) (parse_url($url, PHP_URL_HOST) ?: ''));
+            // روابط R2/CDN الخارجية → تحويل سريع (لا نمرّر الجيجابايت عبر PHP)
+            if ($urlHost !== '' && ($appHost === '' || $urlHost !== $appHost)) {
+                return redirect()->away($url);
+            }
+        }
+
+        return Storage::disk($disk)->response($path, $filename, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="'.str_replace('"', '', $filename).'"',
+            'Accept-Ranges' => 'bytes',
+            'Cache-Control' => 'private, no-store, no-cache, must-revalidate',
+            'Pragma' => 'no-cache',
+        ]);
     }
 
     public function course(): BelongsTo
