@@ -31,6 +31,7 @@ Route::prefix('meta-social')->name('meta-social.')->group(function () {
     Route::post('/pages/{page}/activate', [MetaSocialPageController::class, 'activate'])->name('pages.activate');
     Route::post('/pages/{page}/deactivate', [MetaSocialPageController::class, 'deactivate'])->name('pages.deactivate');
     Route::post('/pages/{page}/sync-conversations', [MetaSocialPageController::class, 'syncConversations'])->name('pages.sync-conversations');
+    Route::post('/sync-history', [MetaSocialPageController::class, 'syncHistory'])->name('sync-history');
     Route::get('/agents', [MetaSocialAgentLinkController::class, 'index'])->name('agents.index');
     Route::post('/agents/sync', [MetaSocialAgentLinkController::class, 'sync'])->name('agents.sync');
     Route::post('/agents', [MetaSocialAgentLinkController::class, 'store'])->name('agents.store');

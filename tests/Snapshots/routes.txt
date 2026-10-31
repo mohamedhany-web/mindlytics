@@ -1459,6 +1459,7 @@ POST admin/meta-social/pages/activate-all [admin.meta-social.pages.activate-all]
 POST admin/meta-social/pages/{page}/activate [admin.meta-social.pages.activate] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/meta-social/pages/{page}/deactivate [admin.meta-social.pages.deactivate] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/meta-social/pages/{page}/sync-conversations [admin.meta-social.pages.sync-conversations] {web,auth,prevent-concurrent,role:admin|super_admin}
+POST admin/meta-social/sync-history [admin.meta-social.sync-history] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/meta-social/agents [admin.meta-social.agents.index] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/meta-social/agents/sync [admin.meta-social.agents.sync] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/meta-social/agents [admin.meta-social.agents.store] {web,auth,prevent-concurrent,role:admin|super_admin}

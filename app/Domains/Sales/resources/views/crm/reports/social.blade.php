@@ -6,6 +6,34 @@
     'subtitle' => 'اختَر موظفًا وفترة — السيستم يجيب ردوده من الإنبوكس تلقائيًا',
 ])
 
+@if(!empty($canSyncMeta) && \Illuminate\Support\Facades\Route::has('admin.meta-social.sync-history'))
+<section class="crm-card" style="margin-bottom:14px;padding:14px">
+    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:end;justify-content:space-between">
+        <div style="flex:1;min-width:220px">
+            <strong style="display:block;margin-bottom:4px"><i class="fab fa-meta" style="margin-inline-end:6px"></i>مزامنة التاريخ من Meta</strong>
+            <p class="crm-muted" style="margin:0;font-size:12px">بتجيب المحادثات والرسائل القديمة من ماسنجر/إنستجرام عشان التقرير والإنبوكس يبقوا كاملين. لو السيرفر بيقطع الطلب الطويل استخدم الأمر: <code style="font-size:11px">php artisan meta-social:sync-history</code></p>
+        </div>
+        <form method="post" action="{{ route('admin.meta-social.sync-history') }}" style="display:flex;flex-wrap:wrap;gap:8px;align-items:end"
+              onsubmit="return confirm('هنسحب المحادثات والرسائل القديمة من Meta. العملية ممكن تاخد وقت — متابعة؟')">
+            @csrf
+            <input type="hidden" name="redirect_to" value="social">
+            <label class="crm-label" style="min-width:200px">الصفحة
+                <select name="page_id" class="crm-select">
+                    <option value="">كل الصفحات النشطة</option>
+                    @foreach($metaPages as $page)
+                        <option value="{{ $page->id }}">{{ $page->page_name ?: $page->page_id }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <button type="submit" class="crm-btn crm-btn-dark"><i class="fas fa-cloud-download-alt"></i> مزامنة من Meta</button>
+        </form>
+    </div>
+    @if($metaPages->isEmpty())
+        <p class="crm-muted" style="margin:10px 0 0;font-size:12px">مفيش صفحات نشطة — من صفحات Meta زامن الصفحات وفعّلها الأول.</p>
+    @endif
+</section>
+@endif
+
 <form method="get" class="crm-card" style="padding:14px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:end">
     <label class="crm-label" style="min-width:200px">الموظف
         @if($crm->isRep())

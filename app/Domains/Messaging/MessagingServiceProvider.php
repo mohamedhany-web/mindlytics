@@ -20,6 +20,12 @@ class MessagingServiceProvider extends ServiceProvider
         // view('messaging::admin.whatsapp.index') و view('messaging::admin.meta-social.inbox') و view('messaging::employee.whatsapp.queue')
         $this->loadViewsFrom(__DIR__.'/resources/views', 'messaging');
 
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                \App\Domains\Messaging\Console\Commands\SyncMetaSocialHistoryCommand::class,
+            ]);
+        }
+
         // كلاسات Tailwind المشتركة (كانت في AppServiceProvider على admin.whatsapp.* و admin.meta-social.*)
         View::composer(['messaging::admin.whatsapp.*'], function ($view) {
             $view->with([

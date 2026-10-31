@@ -25,11 +25,75 @@ class MetaSocialInboxService
     }
 
     /**
+     * مزامنة التاريخ من Meta لكل الصفحات النشطة (أو صفحة واحدة): محادثات + رسائل قديمة.
+     *
+     * @return array{success: bool, pages?: int, synced?: int, messages?: int, errors?: list<string>, error?: string}
+     */
+    public function syncHistoryFromMeta(?int $pageId = null, int $maxConversationPages = 50): array
+    {
+        if (! $this->tablesReady()) {
+            return ['success' => false, 'error' => 'جداول Meta غير جاهزة — نفّذ migrate أولاً'];
+        }
+
+        @set_time_limit(0);
+        @ini_set('max_execution_time', '0');
+
+        $query = MetaSocialPage::query()->where('is_active', true)->orderBy('page_name');
+        if ($pageId && $pageId > 0) {
+            $query->where('id', $pageId);
+        }
+
+        $pages = $query->get();
+        if ($pages->isEmpty()) {
+            return [
+                'success' => false,
+                'error' => $pageId
+                    ? 'الصفحة غير موجودة أو غير مفعّلة'
+                    : 'لا توجد صفحات نشطة — زامن الصفحات من Meta وفعّلها أولاً',
+            ];
+        }
+
+        $totalConversations = 0;
+        $totalMessages = 0;
+        $errors = [];
+        $pagesDone = 0;
+
+        foreach ($pages as $page) {
+            $platforms = [MetaSocialConversation::PLATFORM_MESSENGER];
+            if (method_exists($page, 'hasInstagram') && $page->hasInstagram()) {
+                $platforms[] = MetaSocialConversation::PLATFORM_INSTAGRAM;
+            }
+
+            foreach ($platforms as $platform) {
+                $result = $this->syncConversationsForPage($page, $platform, $maxConversationPages);
+                if ($result['success'] ?? false) {
+                    $totalConversations += (int) ($result['synced'] ?? 0);
+                    $totalMessages += (int) ($result['messages'] ?? 0);
+                } else {
+                    $errors[] = trim(($page->page_name ?: $page->page_id).' / '.$platform.': '.($result['error'] ?? 'فشل'));
+                }
+            }
+            $pagesDone++;
+        }
+
+        $ok = $pagesDone > 0 && ($totalConversations > 0 || $totalMessages > 0 || $errors === []);
+
+        return [
+            'success' => $ok || ($errors === [] && $pagesDone > 0),
+            'pages' => $pagesDone,
+            'synced' => $totalConversations,
+            'messages' => $totalMessages,
+            'errors' => $errors,
+            'error' => $errors[0] ?? null,
+        ];
+    }
+
+    /**
      * مزامنة كل المحادثات وكل الرسائل المتاحة من Graph (مع pagination).
      *
      * @return array{success: bool, synced?: int, messages?: int, error?: string}
      */
-    public function syncConversationsForPage(MetaSocialPage $page, string $platform = 'messenger'): array
+    public function syncConversationsForPage(MetaSocialPage $page, string $platform = 'messenger', int $maxConversationPages = 50): array
     {
         $token = (string) $page->page_access_token;
         if ($token === '') {
@@ -50,7 +114,7 @@ class MetaSocialInboxService
             $synced = 0;
             $messagesImported = 0;
             $pagesFetched = 0;
-            $maxConversationPages = 50; // حماية: حتى ~5000 محادثة
+            $maxConversationPages = max(1, min(200, $maxConversationPages)); // حماية: حتى ~20000 محادثة
 
             while ($url && $pagesFetched < $maxConversationPages) {
                 $response = $pagesFetched === 0

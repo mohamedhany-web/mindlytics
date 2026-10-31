@@ -4,6 +4,7 @@ namespace App\Domains\Sales\Http\Controllers\Crm;
 
 use App\Domains\Messaging\Models\MetaSocialConversation;
 use App\Domains\Messaging\Models\MetaSocialMessage;
+use App\Domains\Messaging\Models\MetaSocialPage;
 use App\Domains\Messaging\Models\WhatsAppConversation;
 use App\Domains\Messaging\Models\WhatsAppConversationMessage;
 use App\Domains\Sales\Http\Controllers\Crm\Concerns\InteractsWithCrm;
@@ -88,6 +89,10 @@ class CrmSocialReportController extends Controller
             'employee_replies' => $employeeReplies->count(),
         ];
 
+        $metaPages = Schema::hasTable('meta_social_pages')
+            ? MetaSocialPage::query()->where('is_active', true)->orderBy('page_name')->get(['id', 'page_name', 'page_id'])
+            : collect();
+
         return $this->crmView($scope, 'reports', 'reports.social', [
             'from' => $from,
             'to' => $to,
@@ -104,6 +109,8 @@ class CrmSocialReportController extends Controller
             'filterStage' => (string) $request->input('stage', ''),
             'filterChannel' => (string) $request->input('channel', 'all'),
             'q' => trim((string) $request->input('q', '')),
+            'metaPages' => $metaPages,
+            'canSyncMeta' => $scope->isAdmin() || $scope->isManager(),
         ]);
     }
 

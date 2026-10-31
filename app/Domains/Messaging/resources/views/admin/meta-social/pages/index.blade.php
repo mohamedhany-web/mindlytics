@@ -20,7 +20,10 @@
         'actions' => '
             <a href="' . route('admin.meta-social.oauth.redirect') . '" class="' . $smBtnMeta . '"><i class="fas fa-plus"></i> ربط حساب Meta</a>
             <form method="post" action="' . route('admin.meta-social.pages.sync') . '" class="inline">' . csrf_field() . '
-                <button type="submit" class="' . $smBtnPrimary . '"><i class="fas fa-sync"></i> مزامنة الكل</button>
+                <button type="submit" class="' . $smBtnPrimary . '"><i class="fas fa-sync"></i> مزامنة الصفحات</button>
+            </form>
+            <form method="post" action="' . route('admin.meta-social.sync-history') . '" class="inline" onsubmit="return confirm(\'هنسحب كل المحادثات والرسائل القديمة من الصفحات النشطة. ممكن تاخد وقت — متابعة؟\')">' . csrf_field() . '
+                <button type="submit" class="' . $smBtnSecondary . '"><i class="fas fa-cloud-download-alt"></i> جلب التاريخ (اللي فات)</button>
             </form>
         ',
     ])

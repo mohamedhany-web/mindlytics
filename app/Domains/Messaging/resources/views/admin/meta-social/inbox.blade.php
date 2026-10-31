@@ -60,6 +60,17 @@
             <span class="bs-chip bs-chip--live" id="bs-live-chip"><i class="fas fa-circle"></i> Live</span>
             <span class="bs-chip bs-chip--unread" id="bs-unread-chip">{{ $unreadTotal }} غير مقروء</span>
             @unless($msHideAdminLinks)
+                @if(\Illuminate\Support\Facades\Route::has('admin.meta-social.sync-history'))
+                    <form method="post" action="{{ route('admin.meta-social.sync-history') }}" class="inline"
+                          onsubmit="return confirm('هنسحب المحادثات والرسائل القديمة من Meta للصفحة المختارة (أو الكل). متابعة؟')">
+                        @csrf
+                        <input type="hidden" name="redirect_to" value="inbox">
+                        <input type="hidden" name="page_id" value="{{ $pageId > 0 ? $pageId : '' }}">
+                        <button type="submit" class="bs-btn-ghost hidden sm:inline-flex" title="جلب التاريخ من Meta">
+                            <i class="fas fa-cloud-download-alt"></i> جلب اللي فات
+                        </button>
+                    </form>
+                @endif
                 <a href="{{ route('admin.meta-social.pages.index') }}" class="bs-btn-ghost hidden md:inline-flex"><i class="fab fa-facebook"></i> الصفحات</a>
                 <a href="{{ route('admin.meta-social.settings') }}" class="bs-btn-ghost hidden md:inline-flex"><i class="fas fa-cog"></i></a>
             @endunless

@@ -119,29 +119,66 @@ class MetaSocialPageController extends Controller
 
     public function syncConversations(MetaSocialPage $page, Request $request): RedirectResponse
     {
-        $platform = $request->query('platform', 'messenger');
-        $result = $this->inbox->syncConversationsForPage($page, $platform);
+        $result = $this->inbox->syncHistoryFromMeta((int) $page->id);
 
         $totalConversations = (int) ($result['synced'] ?? 0);
         $totalMessages = (int) ($result['messages'] ?? 0);
+        $ok = (bool) ($result['success'] ?? false);
+        $message = $ok
+            ? "تمت مزامنة التاريخ من Meta: {$totalConversations} محادثة و {$totalMessages} رسالة جديدة"
+            : ($result['error'] ?? 'فشل');
 
-        if ($page->hasInstagram()) {
-            $ig = $this->inbox->syncConversationsForPage($page, 'instagram');
-            $totalConversations += (int) ($ig['synced'] ?? 0);
-            $totalMessages += (int) ($ig['messages'] ?? 0);
-            if (! ($result['success'] ?? false) && ($ig['success'] ?? false)) {
-                $result = $ig;
-            }
+        if (! empty($result['errors'])) {
+            $message .= ' — '.implode(' | ', array_slice($result['errors'], 0, 3));
         }
 
-        $ok = (bool) ($result['success'] ?? false);
+        $redirect = $request->input('redirect_to') === 'social'
+            ? (redirect()->route('admin.crm.reports.social'))
+            : redirect()->route('admin.meta-social.inbox.index', ['page' => $page->id]);
 
-        return redirect()->route('admin.meta-social.inbox.index', ['page' => $page->id])
-            ->with(
-                $ok ? 'success' : 'error',
-                $ok
-                    ? "تمت مزامنة {$totalConversations} محادثة و {$totalMessages} رسالة جديدة من Meta"
-                    : ($result['error'] ?? 'فشل')
-            );
+        return $redirect->with($ok ? 'success' : 'error', $message);
+    }
+
+    /**
+     * مزامنة تاريخ كل الصفحات النشطة (أو صفحة محددة) من Meta.
+     */
+    public function syncHistory(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'page_id' => 'nullable|integer',
+            'redirect_to' => 'nullable|string|max:40',
+        ]);
+
+        $pageId = isset($validated['page_id']) ? (int) $validated['page_id'] : null;
+        if ($pageId === 0) {
+            $pageId = null;
+        }
+
+        $result = $this->inbox->syncHistoryFromMeta($pageId);
+        $ok = (bool) ($result['success'] ?? false);
+        $message = $ok
+            ? sprintf(
+                'تمت مزامنة التاريخ من Meta: %d صفحة · %d محادثة · %d رسالة جديدة',
+                (int) ($result['pages'] ?? 0),
+                (int) ($result['synced'] ?? 0),
+                (int) ($result['messages'] ?? 0)
+            )
+            : ($result['error'] ?? 'فشل المزامنة من Meta');
+
+        if (! empty($result['errors'])) {
+            $message .= ' — '.implode(' | ', array_slice($result['errors'], 0, 3));
+        }
+
+        $redirectTo = (string) ($validated['redirect_to'] ?? '');
+        if ($redirectTo === 'social' && \Illuminate\Support\Facades\Route::has('admin.crm.reports.social')) {
+            return redirect()->route('admin.crm.reports.social')->with($ok ? 'success' : 'error', $message);
+        }
+        if ($redirectTo === 'inbox') {
+            return redirect()->route('admin.meta-social.inbox.index', array_filter([
+                'page' => $pageId,
+            ]))->with($ok ? 'success' : 'error', $message);
+        }
+
+        return back()->with($ok ? 'success' : 'error', $message);
     }
 }
