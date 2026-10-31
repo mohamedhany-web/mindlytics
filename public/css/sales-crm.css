@@ -17,17 +17,25 @@
   --crm-nepal: #93A4B3;
 }
 
+*, *::before, *::after { box-sizing: border-box; }
+
 body.crm-body {
   margin: 0;
-  background: var(--crm-bg);
+  min-height: 100vh;
+  background: var(--crm-bg) !important;
   color: var(--crm-ink);
-  font-family: "Cairo", sans-serif;
+  font-family: "Cairo", "Segoe UI", Tahoma, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
+
+button, input, select, textarea { font: inherit; }
 
 [x-cloak] { display: none !important; }
 
 .crm-nav {
-  background: var(--crm-nav);
+  background: var(--crm-nav) !important;
+  color: #fff;
   height: 56px;
   display: flex;
   align-items: stretch;
@@ -35,6 +43,7 @@ body.crm-body {
   padding: 0 14px;
   position: relative;
   z-index: 40;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, .18);
 }
 
 .crm-brand {
@@ -156,7 +165,12 @@ body.crm-body {
 
 .crm-search input::placeholder { color: #D9D5E2; }
 
-.crm-page { padding: 16px 20px 40px; max-width: 1400px; margin: 0 auto; }
+.crm-page {
+  padding: 18px 20px 48px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
 
 .crm-title {
   margin: 0;
@@ -164,6 +178,7 @@ body.crm-body {
   font-weight: 300;
   color: #5F5F5F;
   letter-spacing: .03em;
+  line-height: 1.2;
 }
 
 .crm-subtitle {
@@ -205,17 +220,20 @@ body.crm-body {
 .crm-btn:disabled { opacity: .55; cursor: not-allowed; }
 
 .crm-card {
-  background: var(--crm-panel);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, .2);
+  background: var(--crm-panel) !important;
+  border: 1px solid #E2E5EA;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(32, 41, 54, .08);
+  overflow: hidden;
 }
 
 .crm-dashlet-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 14px;
-  background: var(--crm-nav);
-  color: #fff;
+  padding: 10px 14px;
+  background: var(--crm-nav) !important;
+  color: #fff !important;
 }
 
 .crm-dashlet-head h2 {
@@ -223,7 +241,10 @@ body.crm-body {
   font-size: 14px;
   font-weight: 700;
   flex: 1;
+  color: inherit;
 }
+
+.crm-dashlet-head i { opacity: .92; }
 
 .crm-dashlet-foot {
   display: flex;
@@ -238,23 +259,35 @@ body.crm-body {
 
 .crm-dashlet-foot a { color: #fff; font-weight: 700; text-decoration: underline; }
 
-.crm-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.crm-table thead tr { background: var(--crm-slate); color: #fff; }
+.crm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: #fff;
+}
+.crm-table thead tr {
+  background: var(--crm-slate) !important;
+  color: #fff !important;
+}
 .crm-table th {
   text-align: start;
-  padding: 8px 10px;
+  padding: 9px 10px;
   font-weight: 700;
   font-size: 12.5px;
   white-space: nowrap;
+  color: #fff !important;
+  border: 0;
 }
 .crm-table th a { color: #fff; text-decoration: none; }
 .crm-table td {
-  padding: 8px 10px;
+  padding: 9px 10px;
   border-bottom: 1px solid var(--crm-line);
   vertical-align: middle;
+  background: #fff;
 }
-.crm-table tbody tr:hover { background: #FAFAFB; }
-.crm-table-plain thead tr { background: transparent; color: #374151; }
+.crm-table tbody tr:hover td { background: #FAFAFB; }
+.crm-table-plain thead tr { background: transparent !important; color: #374151 !important; }
+.crm-table-plain th { color: #374151 !important; }
 
 .crm-link { color: var(--crm-link); font-weight: 700; text-decoration: none; }
 .crm-link:hover { color: var(--crm-link-hover); text-decoration: underline; }
@@ -395,14 +428,26 @@ body.crm-body {
 .crm-subpanel-head h3 { margin: 0; font-size: 13px; font-weight: 700; flex: 1; }
 
 .crm-stat {
-  padding: 14px 8px;
+  padding: 16px 12px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   text-align: center;
+  min-height: 88px;
+  justify-content: center;
 }
-.crm-stat b { font-size: 22px; }
-.crm-stat span { font-size: 11px; font-weight: 700; color: #4B5563; }
+.crm-stat b {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--crm-ink);
+}
+.crm-stat span {
+  font-size: 11px;
+  font-weight: 700;
+  color: #4B5563;
+  line-height: 1.35;
+}
 
 .crm-bar { display: block; height: 14px; background: #EEF0F2; }
 .crm-bar > span { display: block; height: 14px; }
