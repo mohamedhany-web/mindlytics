@@ -160,6 +160,50 @@ class SalesCrmSmokeTest extends SmokeTestCase
         $this->assertNavLinksWork($home);
     }
 
+    public function test_suite_modules_open_for_rep_manager_and_admin(): void
+    {
+        $modules = [
+            'accounts', 'contacts', 'activities', 'calls', 'meetings', 'tasks', 'notes', 'emails',
+            'calendar', 'campaigns', 'cases', 'documents', 'quotes', 'reports', 'opportunities',
+        ];
+
+        foreach ([
+            ['user' => $this->rep, 'prefix' => '/employee/crm', 'admin' => false],
+            ['user' => $this->manager, 'prefix' => '/employee/crm', 'admin' => true],
+            ['user' => $this->admin, 'prefix' => '/admin/crm', 'admin' => true],
+        ] as $ctx) {
+            $this->actingAs($ctx['user']);
+            foreach ($modules as $module) {
+                $this->page($ctx['prefix'].'/'.$module);
+            }
+            $this->page($ctx['prefix'].'/reports/kpi');
+            if ($ctx['admin']) {
+                $this->page($ctx['prefix'].'/admin');
+            } else {
+                $this->get($ctx['prefix'].'/admin')->assertForbidden();
+            }
+        }
+    }
+
+    public function test_legacy_sales_get_pages_redirect_into_crm(): void
+    {
+        $this->actingAs($this->rep);
+        $this->get('/employee/sales')->assertRedirect('/employee/crm');
+        $this->get('/employee/sales/leads')->assertRedirect('/employee/crm/leads');
+        $this->get('/employee/sales/follow-ups')->assertRedirect('/employee/crm/leads?quick=today');
+        $this->get('/employee/sales/leads/'.$this->repLead->id)->assertRedirect('/employee/crm/leads/'.$this->repLead->id);
+
+        $this->actingAs($this->manager);
+        $this->get('/employee/sales-manager')->assertRedirect('/employee/crm');
+        $this->get('/employee/sales-manager/pipeline')->assertRedirect('/employee/crm/opportunities');
+        $this->get('/employee/sales-manager/leads')->assertRedirect('/employee/crm/leads');
+
+        $this->actingAs($this->admin);
+        $this->get('/admin/sales/leads')->assertRedirect('/admin/crm/leads');
+        $this->get('/admin/sales/reports')->assertRedirect('/admin/crm/reports');
+        $this->get('/admin/sales/kpi')->assertRedirect('/admin/crm/reports/kpi');
+    }
+
     /** يفتح كل روابط الشريط العلوي (قوائم الوحدات و«+») للدور الحالي: ممنوع 403 أو 404 أو 500. */
     private function assertNavLinksWork(TestResponse $page): void
     {

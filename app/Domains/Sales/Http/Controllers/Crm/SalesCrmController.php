@@ -8,6 +8,8 @@ use App\Domains\Hr\Models\EmployeeSalaryDeduction;
 use App\Domains\Messaging\Models\MetaSocialConversation;
 use App\Domains\Messaging\Models\WhatsAppConversation;
 use App\Domains\Messaging\Services\WhatsAppQueueService;
+use App\Domains\Sales\Models\CrmCase;
+use App\Domains\Sales\Models\CrmDocument;
 use App\Domains\Sales\Models\SalesActivity;
 use App\Domains\Sales\Models\SalesInterestType;
 use App\Domains\Sales\Models\SalesLead;
@@ -206,7 +208,9 @@ class SalesCrmController extends Controller
         $byStage = $this->dealsQuery($scope)->whereIn('stage', self::DEAL_STAGES)
             ->selectRaw('stage, COUNT(*) as c, COALESCE(SUM(expected_value), 0) as v')->groupBy('stage')->get()->keyBy('stage');
 
-        return $this->view($scope, 'deals', 'deals.index', [
+        $module = str_contains((string) $request->route()?->getName(), 'opportunities') ? 'opportunities' : 'deals';
+
+        return $this->view($scope, $module, 'deals.index', [
             'deals' => $deals,
             'quick' => $quick,
             'byStage' => $byStage,
@@ -231,7 +235,9 @@ class SalesCrmController extends Controller
                 }
             })->orderBy('id')->get();
 
-        return $this->view($scope, 'deals', 'deals.show', $data);
+        $module = str_contains((string) $request->route()?->getName(), 'opportunities') ? 'opportunities' : 'deals';
+
+        return $this->view($scope, $module, 'deals.show', $data);
     }
 
     // ───────────────────────── تحويل لطالب (ربط بطلب) ─────────────────────────
@@ -431,6 +437,12 @@ class SalesCrmController extends Controller
             'netPaid' => $order ? $this->linker->netPaid($order) : null,
             'daysInStage' => $lead->stage_entered_at ? (int) $lead->stage_entered_at->diffInDays(now()) : null,
             'members' => $scope->canManage() ? $scope->members() : collect(),
+            'cases' => CrmCase::query()->where('sales_lead_id', $lead->id)->latest('id')->limit(10)->get(),
+            'documents' => CrmDocument::query()
+                ->where(fn ($q) => $q->where('parent_type', SalesLead::class)->where('parent_id', $lead->id))
+                ->latest('id')->limit(10)->get(),
+            'commissionAmount' => (float) ($lead->commission_amount ?? 0),
+            'commissionReversed' => (float) ($lead->commission_reversed_amount ?? 0),
         ];
     }
 

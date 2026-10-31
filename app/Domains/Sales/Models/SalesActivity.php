@@ -45,10 +45,25 @@ class SalesActivity extends Model
         'closed_won',
     ];
 
+    public const STATUSES = [
+        'planned' => 'مخطط',
+        'held' => 'تم',
+        'not_held' => 'لم يتم',
+        'completed' => 'مكتمل',
+        'deferred' => 'مؤجّل',
+    ];
+
     protected $fillable = [
         'sales_lead_id',
         'user_id',
         'type',
+        'status',
+        'direction',
+        'scheduled_at',
+        'due_at',
+        'completed_at',
+        'parent_type',
+        'parent_id',
         'outcome',
         'duration_seconds',
         'recording_url',
@@ -62,6 +77,9 @@ class SalesActivity extends Model
         return [
             'meta' => 'array',
             'duration_seconds' => 'integer',
+            'scheduled_at' => 'datetime',
+            'due_at' => 'datetime',
+            'completed_at' => 'datetime',
         ];
     }
 

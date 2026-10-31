@@ -5,7 +5,6 @@ use App\Domains\Sales\Http\Controllers\Employee\SalesManagerAttendancePermission
 use App\Domains\Sales\Http\Controllers\Employee\SalesManagerCampaignReportController;
 use App\Domains\Sales\Http\Controllers\Employee\SalesManagerCommissionController;
 use App\Domains\Sales\Http\Controllers\Employee\SalesManagerDailyReportController;
-use App\Domains\Sales\Http\Controllers\Employee\SalesManagerDashboardController;
 use App\Domains\Sales\Http\Controllers\Employee\SalesManagerDistributionController;
 use App\Domains\Sales\Http\Controllers\Employee\SalesManagerFollowUpController;
 use App\Domains\Sales\Http\Controllers\Employee\SalesManagerKpiController;
@@ -24,16 +23,17 @@ use App\Domains\Sales\Http\Controllers\Employee\SalesManagerTransferController;
 use Illuminate\Support\Facades\Route;
 
 /**
- * بوابة مدير المبيعات.
- * يُحمَّل من routes/web/employee.php داخل مجموعة employee → مجموعة sales.manager (prefix: employee/sales-manager، name: employee.sales-manager.) وفي نفس موضعه القديم.
+ * بوابة مدير المبيعات — صفحات العرض الرئيسية تُحوَّل إلى CRM.
  */
-Route::get('/', [SalesManagerDashboardController::class, 'index'])->name('dashboard');
-Route::get('live-board', [SalesManagerLiveBoardController::class, 'index'])->name('live-board');
-Route::get('pipeline', [SalesManagerPipelineController::class, 'index'])->name('pipeline');
-Route::get('kpi', [SalesManagerKpiController::class, 'index'])->name('kpi.index');
+$toCrm = fn (string $name, array $params = []) => redirect()->route('employee.crm.'.$name, $params);
+
+Route::get('/', fn () => $toCrm('home'))->name('dashboard');
+Route::get('live-board', fn () => $toCrm('home'))->name('live-board');
+Route::get('pipeline', fn () => $toCrm('opportunities.index'))->name('pipeline');
+Route::get('kpi', fn () => $toCrm('reports.kpi'))->name('kpi.index');
 Route::get('kpi/targets', [SalesManagerKpiController::class, 'targets'])->name('kpi.targets');
 Route::put('kpi/targets', [SalesManagerKpiController::class, 'updateTargets'])->name('kpi.targets.update');
-Route::get('campaign-reports', [SalesManagerCampaignReportController::class, 'index'])->name('campaign-reports.index');
+Route::get('campaign-reports', fn () => $toCrm('reports.campaigns'))->name('campaign-reports.index');
 Route::get('campaign-reports/export', [SalesManagerCampaignReportController::class, 'export'])->name('campaign-reports.export');
 Route::get('scorecard', [SalesManagerScorecardController::class, 'index'])->name('scorecard.index');
 Route::get('scorecard/pdf', [SalesManagerScorecardController::class, 'exportPdf'])->name('scorecard.pdf');
@@ -44,18 +44,18 @@ Route::get('scorecard/{employee}/pdf', [SalesManagerScorecardController::class, 
 Route::get('team/{employee}', [SalesManagerTeamController::class, 'show'])->name('team.show');
 Route::get('team/{employee}/report', [SalesManagerTeamController::class, 'report'])->name('team.report');
 Route::get('team/{employee}/report/pdf', [SalesManagerTeamController::class, 'reportPdf'])->name('team.report.pdf');
-Route::get('leads', [SalesManagerLeadController::class, 'index'])->name('leads.index');
-Route::get('leads/{lead}', [SalesManagerLeadController::class, 'show'])->name('leads.show');
+Route::get('leads', fn () => $toCrm('leads.index'))->name('leads.index');
+Route::get('leads/{lead}', fn ($lead) => redirect()->route('employee.crm.leads.show', $lead))->name('leads.show');
 Route::post('leads/{lead}/transfer', [SalesManagerLeadController::class, 'transfer'])->name('leads.transfer');
 Route::get('distribution', [SalesManagerDistributionController::class, 'index'])->name('distribution.index');
 Route::post('distribution/{lead}/assign', [SalesManagerDistributionController::class, 'assign'])->name('distribution.assign');
 Route::get('org-chart', [SalesManagerOrgChartController::class, 'index'])->name('org-chart.index');
-Route::get('schedule-calendar', [SalesManagerScheduleCalendarController::class, 'index'])->name('schedule-calendar.index');
-Route::get('shifts', [SalesManagerShiftController::class, 'index'])->name('shifts.index');
+Route::get('schedule-calendar', fn () => $toCrm('calendar.index'))->name('schedule-calendar.index');
+Route::get('shifts', fn () => $toCrm('calendar.index'))->name('shifts.index');
 Route::get('shifts/{employee}', [SalesManagerShiftController::class, 'show'])->name('shifts.show')->whereNumber('employee');
 Route::get('shift-swaps', [SalesManagerShiftSwapController::class, 'index'])->name('shift-swaps.index');
 Route::post('shift-swaps/{swap}/review', [SalesManagerShiftSwapController::class, 'review'])->name('shift-swaps.review')->whereNumber('swap');
-Route::get('follow-ups', [SalesManagerFollowUpController::class, 'index'])->name('follow-ups.index');
+Route::get('follow-ups', fn () => $toCrm('leads.index', ['quick' => 'today']))->name('follow-ups.index');
 Route::get('transfer', [SalesManagerTransferController::class, 'index'])->name('transfer.index');
 Route::post('transfer', [SalesManagerTransferController::class, 'store'])->name('transfer.store');
 Route::get('attendance', [SalesManagerAttendanceController::class, 'index'])->name('attendance.index');
@@ -70,11 +70,11 @@ Route::post('attendance/employees/{employee}/unlocks/{unlock}/revoke', [SalesMan
 Route::post('attendance/records/{record}/approve', [SalesManagerAttendanceController::class, 'approve'])->name('attendance.approve');
 Route::post('attendance/records/{record}/reject', [SalesManagerAttendanceController::class, 'reject'])->name('attendance.reject');
 Route::post('attendance/records/{record}/waive-late', [SalesManagerAttendanceController::class, 'waiveLate'])->name('attendance.waive-late');
-Route::get('ops-board', [SalesManagerOpsBoardController::class, 'index'])->name('ops-board');
+Route::get('ops-board', fn () => $toCrm('admin.index'))->name('ops-board');
 Route::get('presence', [SalesManagerPresenceController::class, 'index'])->name('presence.index');
 Route::get('presence/poll', [SalesManagerPresenceController::class, 'poll'])->name('presence.poll');
 Route::post('presence/violations/{violation}/acknowledge', [SalesManagerPresenceController::class, 'acknowledge'])->name('presence.acknowledge');
-Route::get('daily-reports', [SalesManagerDailyReportController::class, 'index'])->name('daily-reports.index');
+Route::get('daily-reports', fn () => $toCrm('reports.daily'))->name('daily-reports.index');
 Route::get('daily-reports/{report}', [SalesManagerDailyReportController::class, 'show'])->name('daily-reports.show');
 Route::get('commissions', [SalesManagerCommissionController::class, 'index'])->name('commissions.index');
 Route::get('commissions/{employee}', [SalesManagerCommissionController::class, 'show'])->name('commissions.show')->whereNumber('employee');

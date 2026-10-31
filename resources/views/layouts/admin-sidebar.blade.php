@@ -177,7 +177,7 @@
             </li>
 
             @php
-                $salesMenuOpen = request()->routeIs('admin.sales.*');
+                $salesMenuOpen = request()->routeIs('admin.sales.*') || request()->routeIs('admin.crm.*');
             @endphp
             <li x-data="{ open: {{ $salesMenuOpen ? 'true' : 'false' }} }">
                 <button type="button" @click="open = !open" :aria-expanded="open"
@@ -195,184 +195,48 @@
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.crm.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
                             <i class="fas fa-table-cells-large w-4"></i>
-                            <span>CRM المبيعات (جديد)</span>
-                        </a>
-                    </li>
-                    @endif
-                    <li>
-                        <a href="{{ route('admin.sales.reports.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.reports.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-chart-line w-4"></i>
-                            <span>تقارير المبيعات</span>
+                            <span>CRM المبيعات</span>
                         </a>
                     </li>
                     <li>
-                        <a href="{{ route('admin.sales.daily-reports.index') }}"
+                        <a href="{{ route('admin.crm.admin.index') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.daily-reports.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-clipboard-list w-4"></i>
-                            <span>التقارير اليومية (موظفين)</span>
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.crm.admin.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-gear w-4"></i>
+                            <span>إدارة CRM</span>
                         </a>
                     </li>
                     <li>
-                        <a href="{{ route('admin.sales.categories.index') }}"
+                        <a href="{{ route('admin.crm.leads.index') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.categories.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-tags w-4"></i>
-                            <span>تصنيفات العملاء</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.sales.interest-types.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.interest-types.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-heart w-4"></i>
-                            <span>أنواع الاهتمام</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.sales.specialties.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.specialties.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-user-graduate w-4"></i>
-                            <span>تخصصات السيلز</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.sales.distribution.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.distribution.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-share-alt w-4"></i>
-                            <span>لوحة التوزيع</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.sales.org-chart.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.org-chart.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-sitemap w-4"></i>
-                            <span>هيكل السيلز</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.sales.schedule-calendar.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.schedule-calendar.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-calendar-week w-4"></i>
-                            <span>تقويم الشيفت</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.sales.shifts.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.shifts.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-users-between-lines w-4"></i>
-                            <span>شيفتات وقنوات المبيعات</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.sales.leads.import') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.leads.import*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-file-upload w-4"></i>
-                            <span>استيراد دفعة عملاء</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.sales.leads.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.leads.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-users w-4"></i>
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.crm.leads.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-user-plus w-4"></i>
                             <span>العملاء المحتملون</span>
                         </a>
                     </li>
                     <li>
-                        <a href="{{ route('admin.sales.groups.index') }}"
+                        <a href="{{ route('admin.crm.reports.index') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.groups.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-layer-group w-4"></i>
-                            <span>مجموعات العملاء</span>
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.crm.reports.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-chart-line w-4"></i>
+                            <span>تقارير CRM</span>
+                        </a>
+                    </li>
+                    @endif
+                    <li>
+                        <a href="{{ route('admin.crm.opportunities.index') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.crm.opportunities.*') || request()->routeIs('admin.crm.deals.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-project-diagram w-4"></i>
+                            <span>الفرص / الصفقات</span>
                         </a>
                     </li>
                     <li>
-                        <a href="{{ route('admin.sales.transfer.index') }}"
+                        <a href="{{ route('admin.crm.accounts.index') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.transfer.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-random w-4"></i>
-                            <span>تحويل بيانات موظف</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.sales.sales-teams.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.sales-teams.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-users-cog w-4"></i>
-                            <span>فرق المبيعات</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.sales.team-daily-reports.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.team-daily-reports.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-clipboard-check w-4"></i>
-                            <span>تقارير فرق المبيعات</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.sales.audit-log.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.audit-log.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-clipboard-list w-4"></i>
-                            <span>سجل أنشطة المبيعات</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.sales.policy.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.policy.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-scale-balanced w-4"></i>
-                            <span>قواعد السيلز</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.sales.kpi.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.kpi.index') && !request()->routeIs('admin.sales.kpi.targets*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-bullseye w-4"></i>
-                            <span>مراقبة KPIs المبيعات</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.sales.kpi.targets') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.kpi.targets*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-sliders-h w-4"></i>
-                            <span>أهداف المبيعات</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.sales.day-blocks.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.day-blocks.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-clock w-4"></i>
-                            <span>جدول يوم السيلز (Blocks)</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.sales.insights.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.insights.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-lightbulb w-4"></i>
-                            <span>Insights الموظفين</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.sales.crm-compliance.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.crm-compliance.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-user-check w-4"></i>
-                            <span>تدقيق استخدام CRM</span>
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.crm.accounts.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-building w-4"></i>
+                            <span>الحسابات</span>
                         </a>
                     </li>
                     <li>
@@ -388,11 +252,11 @@
                         </a>
                     </li>
                     <li>
-                        <a href="{{ route('admin.sales.commissions.index') }}"
+                        <a href="{{ route('admin.sales.leads.import') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.commissions.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-coins w-4"></i>
-                            <span>كوميشن المبيعات</span>
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.leads.import*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-file-upload w-4"></i>
+                            <span>استيراد عملاء</span>
                         </a>
                     </li>
                 </ul>

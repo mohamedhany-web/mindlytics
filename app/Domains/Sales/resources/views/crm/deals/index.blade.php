@@ -1,10 +1,10 @@
 @extends('sales::crm.layout')
 
-@section('title', 'الصفقات')
+@section('title', ($crmModule ?? '') === 'opportunities' ? 'الفرص' : 'الصفقات')
 
 @use('App\Domains\Sales\Models\SalesLead')
 @php
-    $indexRoute = $crm->route('deals.index');
+    $indexRoute = ($crmModule ?? '') === 'opportunities' ? $crm->route('opportunities.index') : $crm->route('deals.index');
     $q = fn (array $extra) => route($indexRoute, array_filter(array_merge(request()->except('page'), $extra), fn ($v) => $v !== null && $v !== ''));
     $quicks = ['open' => 'مفتوحة', 'won_pending' => 'فاز — بانتظار اعتماد العمولة', 'won_month' => 'فاز هذا الشهر', 'refunded' => 'عمولة مسترجعة', 'all' => 'الكل'];
     $stageOrder = \App\Domains\Sales\Http\Controllers\Crm\SalesCrmController::DEAL_STAGES;

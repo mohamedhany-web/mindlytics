@@ -32,12 +32,14 @@ use Illuminate\Support\Facades\Route;
  * وفي نفس موضعه القديم.
  */
 Route::prefix('sales')->name('sales.')->group(function () {
-    Route::get('reports', [SalesReportController::class, 'index'])->name('reports.index');
+    $toCrm = fn (string $name, array $params = []) => redirect()->route('admin.crm.'.$name, $params);
+
+    Route::get('reports', fn () => $toCrm('reports.index'))->name('reports.index');
     Route::get('reports/employee', [SalesReportController::class, 'employee'])->name('reports.employee');
     Route::get('reports/export', [SalesReportController::class, 'export'])->name('reports.export');
     Route::get('reports/pdf', [SalesReportController::class, 'pdfExport'])->name('reports.pdf');
     Route::get('reports/daily-export', [SalesReportController::class, 'dailyExport'])->name('reports.daily-export');
-    Route::get('daily-reports', [SalesDailyReportController::class, 'index'])->name('daily-reports.index');
+    Route::get('daily-reports', fn () => $toCrm('reports.daily'))->name('daily-reports.index');
     Route::get('daily-reports/export', [SalesDailyReportController::class, 'export'])->name('daily-reports.export');
     Route::get('daily-reports/settings', [SalesDailyReportController::class, 'settings'])->name('daily-reports.settings');
     Route::put('daily-reports/settings', [SalesDailyReportController::class, 'updateSettings'])->name('daily-reports.settings.update');
@@ -66,10 +68,10 @@ Route::prefix('sales')->name('sales.')->group(function () {
     Route::post('distribution/{lead}/assign', [SalesDistributionController::class, 'assign'])->name('distribution.assign');
     Route::get('org-chart', [SalesOrgChartController::class, 'index'])->name('org-chart.index');
     Route::put('org-chart/{user}', [SalesOrgChartController::class, 'update'])->name('org-chart.update')->whereNumber('user');
-    Route::get('schedule-calendar', [SalesScheduleCalendarController::class, 'index'])->name('schedule-calendar.index');
+    Route::get('schedule-calendar', fn () => $toCrm('calendar.index'))->name('schedule-calendar.index');
     Route::get('team-daily-reports', [SalesTeamDailyReportController::class, 'index'])->name('team-daily-reports.index');
     Route::get('team-daily-reports/{teamDailyReport}', [SalesTeamDailyReportController::class, 'show'])->name('team-daily-reports.show');
-    Route::get('kpi', [SalesKpiController::class, 'index'])->name('kpi.index');
+    Route::get('kpi', fn () => $toCrm('reports.kpi'))->name('kpi.index');
     Route::get('kpi/targets', [SalesKpiController::class, 'targets'])->name('kpi.targets');
     Route::put('kpi/targets', [SalesKpiController::class, 'updateTargets'])->name('kpi.targets.update');
     Route::get('day-blocks', [SalesDayBlockController::class, 'index'])->name('day-blocks.index');
@@ -80,17 +82,17 @@ Route::prefix('sales')->name('sales.')->group(function () {
     Route::post('course-commission-agreements', [SalesCourseCommissionAgreementController::class, 'store'])->name('course-commission-agreements.store');
     Route::put('course-commission-agreements/{agreement}', [SalesCourseCommissionAgreementController::class, 'update'])->name('course-commission-agreements.update');
     Route::delete('course-commission-agreements/{agreement}', [SalesCourseCommissionAgreementController::class, 'destroy'])->name('course-commission-agreements.destroy');
-    Route::get('insights', [SalesInsightsController::class, 'index'])->name('insights.index');
-    Route::get('crm-compliance', [SalesCrmComplianceController::class, 'index'])->name('crm-compliance.index');
+    Route::get('insights', fn () => $toCrm('reports.index'))->name('insights.index');
+    Route::get('crm-compliance', fn () => $toCrm('admin.index'))->name('crm-compliance.index');
     Route::get('crm-compliance/employees/{employee}', [SalesCrmComplianceController::class, 'show'])->name('crm-compliance.show')->whereNumber('employee');
     Route::get('crm-compliance/leads/{lead}', [SalesCrmComplianceController::class, 'lead'])->name('crm-compliance.lead')->whereNumber('lead');
-    Route::get('shifts', [SalesShiftController::class, 'index'])->name('shifts.index');
+    Route::get('shifts', fn () => $toCrm('calendar.index'))->name('shifts.index');
     Route::post('shifts/import-demo', [SalesShiftController::class, 'importDemo'])->name('shifts.import-demo');
     Route::put('shifts/plans/{plan}', [SalesShiftController::class, 'updatePlan'])->name('shifts.update-plan')->whereNumber('plan');
     Route::post('shifts/plans/{plan}/segments', [SalesShiftController::class, 'storeSegment'])->name('shifts.segments.store')->whereNumber('plan');
     Route::put('shifts/segments/{segment}', [SalesShiftController::class, 'updateSegment'])->name('shifts.segments.update')->whereNumber('segment');
     Route::delete('shifts/segments/{segment}', [SalesShiftController::class, 'destroySegment'])->name('shifts.segments.destroy')->whereNumber('segment');
-    Route::get('commissions', [SalesCommissionController::class, 'index'])->name('commissions.index');
+    Route::get('commissions', fn () => $toCrm('opportunities.index', ['quick' => 'won_month']))->name('commissions.index');
     Route::get('commissions/{user}', [SalesCommissionController::class, 'show'])->name('commissions.show')->whereNumber('user');
     Route::post('commissions/{user}/settle', [SalesCommissionController::class, 'settle'])->name('commissions.settle')->whereNumber('user');
     Route::get('win-approvals', [SalesWinApprovalController::class, 'index'])->name('win-approvals.index');
@@ -109,7 +111,9 @@ Route::prefix('sales')->name('sales.')->group(function () {
     Route::post('leads/import', [SalesLeadController::class, 'importStore'])->name('leads.import.store');
     Route::post('leads/{lead}/activities', [SalesLeadController::class, 'storeActivity'])->name('leads.activities.store');
     Route::post('leads/{lead}/confirm-win', [SalesLeadController::class, 'confirmWin'])->name('leads.confirm-win');
-    Route::resource('leads', SalesLeadController::class);
+    Route::get('leads', fn () => $toCrm('leads.index'))->name('leads.index');
+    Route::get('leads/{lead}', fn ($lead) => redirect()->route('admin.crm.leads.show', $lead))->whereNumber('lead')->name('leads.show');
+    Route::resource('leads', SalesLeadController::class)->except(['index', 'show']);
 
     Route::get('categories', [SalesLeadCategoryController::class, 'index'])->name('categories.index');
     Route::post('categories', [SalesLeadCategoryController::class, 'store'])->name('categories.store');

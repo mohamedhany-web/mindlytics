@@ -23,14 +23,20 @@
 @endphp
 
 @section('content')
-<div x-data="{ tab: 'overview', actions: false, transfer: false, rel: { activities: true, history: true, conversations: false, order: {{ $order ? 'true' : 'false' }}, transfers: false } }" style="display: flex; flex-direction: column; gap: 14px">
+<div x-data="{ tab: 'overview', actions: false, transfer: false, rel: { activities: true, history: true, conversations: false, order: {{ $order ? 'true' : 'false' }}, transfers: false, cases: false, documents: false, commission: false } }" style="display: flex; flex-direction: column; gap: 14px">
     <div style="position: sticky; top: 0; z-index: 30; background: #F5F5F5; padding: 6px 0; display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
         <a href="{{ route($crm->route('leads.index')) }}" aria-label="رجوع للقائمة" style="width: 28px; height: 28px; border: 1px solid #534D64; border-radius: 3px; display: flex; align-items: center; justify-content: center; color: #534D64"><i class="fas fa-chevron-right"></i></a>
         <h1 style="margin: 0; font-size: 26px; font-weight: 400">{{ $lead->name }}</h1>
         <span class="crm-chip" style="cursor: default">{{ SalesLead::stageLabel((string) $lead->stage) }}</span>
         <span style="flex: 1"></span>
         @if($editUrl)<a href="{{ $editUrl }}" class="crm-btn crm-btn-muted">تعديل</a>@endif
-        @if($dealLike)<a href="{{ route($crm->route('deals.show'), $lead->id) }}" class="crm-btn crm-btn-dark">الصفقة</a>@endif
+        @if($dealLike)<a href="{{ route($crm->route('opportunities.show'), $lead->id) }}" class="crm-btn crm-btn-dark">الفرصة</a>@endif
+        @if(Route::has($crm->route('cases.create')))
+            <a href="{{ route($crm->route('cases.create'), ['sales_lead_id' => $lead->id]) }}" class="crm-btn crm-btn-outline">＋ تذكرة</a>
+        @endif
+        @if(Route::has($crm->route('activities.create')))
+            <a href="{{ route($crm->route('activities.create'), ['type' => 'call']) }}" class="crm-btn crm-btn-outline">＋ مكالمة</a>
+        @endif
         <div style="position: relative" @click.outside="actions = false">
             <button type="button" class="crm-btn crm-btn-slate" @click="actions = ! actions" :aria-expanded="actions">إجراءات <i class="fas fa-caret-down"></i></button>
             <div x-cloak x-show="actions" role="menu" style="position: absolute; left: 0; top: 34px; width: 220px; background: #627587; box-shadow: 0 4px 10px rgba(0,0,0,.3); padding: 4px 0; z-index: 40">
@@ -154,6 +160,9 @@
                     <button type="button" :class="rel.conversations && 'is-active'" @click="rel.conversations = ! rel.conversations" :aria-pressed="rel.conversations">المحادثات {{ $conversations->count() }}</button>
                     <button type="button" :class="rel.order && 'is-active'" @click="rel.order = ! rel.order" :aria-pressed="rel.order">الطلبات {{ $order ? 1 : 0 }}</button>
                     <button type="button" :class="rel.transfers && 'is-active'" @click="rel.transfers = ! rel.transfers" :aria-pressed="rel.transfers">التحويلات {{ $transfers->count() }}</button>
+                    <button type="button" :class="rel.cases && 'is-active'" @click="rel.cases = ! rel.cases" :aria-pressed="rel.cases">التذاكر {{ $cases->count() }}</button>
+                    <button type="button" :class="rel.documents && 'is-active'" @click="rel.documents = ! rel.documents" :aria-pressed="rel.documents">المستندات {{ $documents->count() }}</button>
+                    <button type="button" :class="rel.commission && 'is-active'" @click="rel.commission = ! rel.commission" :aria-pressed="rel.commission">العمولة</button>
                 </div>
 
                 <div class="crm-subpanel" x-show="rel.activities">
@@ -224,6 +233,59 @@
                             @empty
                                 <tr><td colspan="5" class="crm-muted" style="text-align: center">مفيش تحويلات.</td></tr>
                             @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="crm-subpanel" x-cloak x-show="rel.cases">
+                    <div class="crm-subpanel-head"><h3>التذاكر</h3>
+                        <a class="crm-btn crm-btn-primary crm-btn-sm" href="{{ route($crm->route('cases.create'), ['sales_lead_id' => $lead->id]) }}">＋ تذكرة</a>
+                    </div>
+                    <table class="crm-table crm-table-plain">
+                        <thead><tr><th>الموضوع</th><th>الحالة</th><th>الأولوية</th></tr></thead>
+                        <tbody>
+                            @forelse($cases as $caseRow)
+                                <tr>
+                                    <td><a class="crm-link" href="{{ route($crm->route('cases.show'), $caseRow) }}">{{ $caseRow->subject }}</a></td>
+                                    <td>{{ \App\Domains\Sales\Models\CrmCase::STATUSES[$caseRow->status] ?? $caseRow->status }}</td>
+                                    <td>{{ \App\Domains\Sales\Models\CrmCase::PRIORITIES[$caseRow->priority] ?? $caseRow->priority }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="3" class="crm-muted" style="text-align: center">لا تذاكر.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="crm-subpanel" x-cloak x-show="rel.documents">
+                    <div class="crm-subpanel-head"><h3>المستندات</h3>
+                        <a class="crm-btn crm-btn-primary crm-btn-sm" href="{{ route($crm->route('documents.create'), ['sales_lead_id' => $lead->id]) }}">＋ مستند</a>
+                    </div>
+                    <table class="crm-table crm-table-plain">
+                        <thead><tr><th>الاسم</th><th>النوع</th><th>التاريخ</th></tr></thead>
+                        <tbody>
+                            @forelse($documents as $doc)
+                                <tr>
+                                    <td><a class="crm-link" href="{{ route($crm->route('documents.show'), $doc) }}">{{ $doc->title }}</a></td>
+                                    <td>{{ $doc->category ?: '—' }}</td>
+                                    <td class="crm-muted">{{ $doc->created_at?->format('d/m H:i') }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="3" class="crm-muted" style="text-align: center">لا مستندات.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="crm-subpanel" x-cloak x-show="rel.commission">
+                    <div class="crm-subpanel-head"><h3>العمولة</h3>
+                        @if($dealLike)<a class="crm-btn crm-btn-dark crm-btn-sm" href="{{ route($crm->route('opportunities.show'), $lead->id) }}">عرض الفرصة</a>@endif
+                    </div>
+                    <table class="crm-table crm-table-plain">
+                        <tbody>
+                            <tr><td>المبلغ</td><td style="font-weight:700">{{ number_format($commissionAmount, 2) }}</td></tr>
+                            <tr><td>مسترد</td><td>{{ number_format($commissionReversed, 2) }}</td></tr>
+                            <tr><td>صافي</td><td class="crm-good">{{ number_format($commissionAmount - $commissionReversed, 2) }}</td></tr>
                         </tbody>
                     </table>
                 </div>

@@ -2,6 +2,12 @@
 
 namespace App\Domains\Sales\Support;
 
+use App\Domains\Sales\Models\CrmAccount;
+use App\Domains\Sales\Models\CrmCampaign;
+use App\Domains\Sales\Models\CrmCase;
+use App\Domains\Sales\Models\CrmContact;
+use App\Domains\Sales\Models\CrmDocument;
+use App\Domains\Sales\Models\SalesActivity;
 use App\Domains\Sales\Models\SalesLead;
 use App\Domains\Sales\Services\SalesTeamService;
 use App\Models\User;
@@ -65,9 +71,52 @@ final class CrmScope
     /** عملاء ضمن النطاق. */
     public function leads(): Builder
     {
-        $query = SalesLead::query();
+        return $this->scoped(SalesLead::query());
+    }
+
+    public function accounts(): Builder
+    {
+        return $this->scoped(CrmAccount::query());
+    }
+
+    public function contacts(): Builder
+    {
+        return $this->scoped(CrmContact::query());
+    }
+
+    public function campaigns(): Builder
+    {
+        return $this->scoped(CrmCampaign::query());
+    }
+
+    public function cases(): Builder
+    {
+        return $this->scoped(CrmCase::query());
+    }
+
+    public function documents(): Builder
+    {
+        return $this->scoped(CrmDocument::query());
+    }
+
+    public function activities(): Builder
+    {
+        $query = SalesActivity::query();
         if ($this->assigneeIds !== null) {
-            $query->whereIn('assigned_to', $this->assigneeIds === [] ? [0] : $this->assigneeIds);
+            $ids = $this->assigneeIds === [] ? [0] : $this->assigneeIds;
+            $query->where(function ($q) use ($ids) {
+                $q->whereIn('user_id', $ids)
+                    ->orWhereHas('lead', fn ($l) => $l->whereIn('assigned_to', $ids));
+            });
+        }
+
+        return $query;
+    }
+
+    private function scoped(Builder $query, string $column = 'assigned_to'): Builder
+    {
+        if ($this->assigneeIds !== null) {
+            $query->whereIn($column, $this->assigneeIds === [] ? [0] : $this->assigneeIds);
         }
 
         return $query;
@@ -76,6 +125,11 @@ final class CrmScope
     public function canSee(SalesLead $lead): bool
     {
         return $this->assigneeIds === null || in_array((int) $lead->assigned_to, $this->assigneeIds, true);
+    }
+
+    public function canSeeAssigned(?int $assignedTo): bool
+    {
+        return $this->assigneeIds === null || ($assignedTo !== null && in_array((int) $assignedTo, $this->assigneeIds, true));
     }
 
     /** يقدر يعدّل بيانات العميل ويحرّك مرحلته (صاحب العميل أو الأدمن). */
