@@ -28,7 +28,7 @@
                 @elseif($profile->status == 'rejected') bg-rose-100 text-rose-700
                 @else bg-slate-100 text-slate-600
                 @endif">
-                {{ __('instructor.status_label') }}: {{ \App\Models\InstructorProfile::statusLabel($profile->status) }}
+                {{ __('instructor.status_label') }}: {{ \App\Domains\Learning\Models\InstructorProfile::statusLabel($profile->status) }}
             </span>
             @if($profile->rejection_reason)
                 <p class="text-sm text-rose-600 mt-2">{{ __('instructor.rejection_reason_label') }}: {{ $profile->rejection_reason }}</p>

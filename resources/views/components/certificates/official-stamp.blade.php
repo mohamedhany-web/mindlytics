@@ -1,6 +1,6 @@
 {{-- ختم حبر دائري احترافي — نمط الأختام الرسمية المصرية --}}
 @php
-    $branding = $branding ?? \App\Models\CertificateBranding::current();
+    $branding = $branding ?? \App\Domains\Learning\Models\CertificateBranding::current();
     $academyEn = $stampAcademyNameEn
         ?? (filled($branding->academy_name) ? $branding->academy_name : 'Mindlytics Academy');
     $academyAr = $stampAcademyNameAr

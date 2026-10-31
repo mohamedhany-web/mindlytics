@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Services\FawaterakService;
+use App\Domains\Accounting\Services\FawaterakService;
 use App\Support\PlatformSettings;
 use App\Support\SiteBranding;
 use Illuminate\Http\Request;

@@ -1,8 +1,8 @@
 {{-- Routes certificate templates: new Mindlytics designs or legacy achievement --}}
 @php
     $template = $template ?? ($certificate->template ?? 'emerald-classic');
-    $designs = array_keys(\App\Services\CertificateIssueService::designCatalog());
-    $legacy = array_keys(\App\Models\Certificate::legacyTemplates());
+    $designs = array_keys(\App\Domains\Learning\Services\CertificateIssueService::designCatalog());
+    $legacy = array_keys(\App\Domains\Learning\Models\Certificate::legacyTemplates());
     $isDesign = in_array($template, $designs, true);
 
     $studentName = $studentName
@@ -44,7 +44,7 @@
         'serialLabel' => $isRtl ? 'الرقم التسلسلي' : 'Serial Number',
         'dateLabel' => $isRtl ? 'التاريخ' : 'Date',
         'templateDomId' => $templateDomId ?? 'certificate-template',
-        'branding' => $branding ?? \App\Models\CertificateBranding::current(),
+        'branding' => $branding ?? \App\Domains\Learning\Models\CertificateBranding::current(),
     ])
 @else
     @php

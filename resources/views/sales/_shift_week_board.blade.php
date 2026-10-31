@@ -10,7 +10,7 @@
     $highlightUserId = $highlightUserId ?? null;
     $compact = $compact ?? false;
     $editable = $editable ?? false;
-    $schedule = app(\App\Services\SalesShiftScheduleService::class);
+    $schedule = app(\App\Domains\Sales\Services\SalesShiftScheduleService::class);
 @endphp
 
 <section class="rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden {{ $compact ? '' : '' }}">

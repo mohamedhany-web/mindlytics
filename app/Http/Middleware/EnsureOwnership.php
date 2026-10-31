@@ -53,14 +53,14 @@ class EnsureOwnership
                 break;
 
             case 'order':
-                $order = $param instanceof \App\Models\Order ? $param : \App\Models\Order::findOrFail($resourceId);
+                $order = $param instanceof \App\Domains\Accounting\Models\Order ? $param : \App\Domains\Accounting\Models\Order::findOrFail($resourceId);
                 if ($order->user_id != $user->id) {
                     abort(403, 'غير مسموح لك بالوصول إلى هذا الطلب');
                 }
                 break;
 
             case 'assignment':
-                $assignment = $param instanceof \App\Models\Assignment ? $param : \App\Models\Assignment::findOrFail($resourceId);
+                $assignment = $param instanceof \App\Domains\Learning\Models\Assignment ? $param : \App\Domains\Learning\Models\Assignment::findOrFail($resourceId);
                 // التحقق من أن المستخدم هو الطالب أو المدرب
                 if ($user->isStudent()) {
                     // للطلاب: التحقق من التسجيل في الكورس
@@ -69,7 +69,7 @@ class EnsureOwnership
                     }
                 } elseif ($user->isInstructor()) {
                     // للمدربين: التحقق من أن الواجب يخص الكورس الذي يدرسه
-                    $course = \App\Models\AdvancedCourse::find($assignment->advanced_course_id);
+                    $course = \App\Domains\Learning\Models\AdvancedCourse::find($assignment->advanced_course_id);
                     if (!$course || $course->instructor_id != $user->id) {
                         abort(403, 'غير مسموح لك بالوصول إلى هذا الواجب');
                     }
@@ -79,7 +79,7 @@ class EnsureOwnership
                 break;
 
             case 'course':
-                $course = $param instanceof \App\Models\AdvancedCourse ? $param : \App\Models\AdvancedCourse::findOrFail($resourceId);
+                $course = $param instanceof \App\Domains\Learning\Models\AdvancedCourse ? $param : \App\Domains\Learning\Models\AdvancedCourse::findOrFail($resourceId);
                 if ($user->isStudent()) {
                     // للطلاب: التحقق من التسجيل
                     if (!$user->isEnrolledIn($resourceId)) {
@@ -96,7 +96,7 @@ class EnsureOwnership
                 break;
 
             case 'enrollment':
-                $enrollment = $param instanceof \App\Models\StudentCourseEnrollment ? $param : \App\Models\StudentCourseEnrollment::findOrFail($resourceId);
+                $enrollment = $param instanceof \App\Domains\Learning\Models\StudentCourseEnrollment ? $param : \App\Domains\Learning\Models\StudentCourseEnrollment::findOrFail($resourceId);
                 if ($user->isStudent()) {
                     if ($enrollment->user_id != $user->id) {
                         abort(403, 'غير مسموح لك بالوصول إلى هذه التسجيلات');
@@ -112,14 +112,14 @@ class EnsureOwnership
                 break;
 
             case 'wallet':
-                $wallet = $param instanceof \App\Models\Wallet ? $param : \App\Models\Wallet::findOrFail($resourceId);
+                $wallet = $param instanceof \App\Domains\Accounting\Models\Wallet ? $param : \App\Domains\Accounting\Models\Wallet::findOrFail($resourceId);
                 if ($wallet->user_id != $user->id) {
                     abort(403, 'غير مسموح لك بالوصول إلى هذه المحفظة');
                 }
                 break;
 
             case 'invoice':
-                $invoice = $param instanceof \App\Models\Invoice ? $param : \App\Models\Invoice::findOrFail($resourceId);
+                $invoice = $param instanceof \App\Domains\Accounting\Models\Invoice ? $param : \App\Domains\Accounting\Models\Invoice::findOrFail($resourceId);
                 if ($invoice->user_id != $user->id) {
                     abort(403, 'غير مسموح لك بالوصول إلى هذه الفاتورة');
                 }

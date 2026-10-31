@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\EmployeeJob;
-use App\Models\SalesShiftPlan;
-use App\Models\SalesShiftSegment;
-use App\Models\SalesShiftSwapRequest;
-use App\Models\SalesTeam;
-use App\Models\SalesTeamMember;
+use App\Domains\Hr\Models\EmployeeJob;
+use App\Domains\Sales\Models\SalesShiftPlan;
+use App\Domains\Sales\Models\SalesShiftSegment;
+use App\Domains\Sales\Models\SalesShiftSwapRequest;
+use App\Domains\Sales\Models\SalesTeam;
+use App\Domains\Sales\Models\SalesTeamMember;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Schema\Blueprint;
@@ -26,7 +26,7 @@ class SalesManagerShiftHttpTest extends TestCase
 
         $this->withoutMiddleware(\App\Http\Middleware\EnsureEmployeeWorkAccess::class);
 
-        $this->mock(\App\Services\WhatsAppQueueService::class, function ($mock) {
+        $this->mock(\App\Domains\Messaging\Services\WhatsAppQueueService::class, function ($mock) {
             $mock->shouldReceive('pendingCount')->andReturn(0);
         });
 
@@ -218,7 +218,7 @@ class SalesManagerShiftHttpTest extends TestCase
         ]);
 
         Carbon::setTestNow(Carbon::parse('2026-08-08 15:00:00')); // Saturday 3pm
-        $dow = app(\App\Services\SalesShiftScheduleService::class)->salesDayIndex(now());
+        $dow = app(\App\Domains\Sales\Services\SalesShiftScheduleService::class)->salesDayIndex(now());
 
         $segment = SalesShiftSegment::query()->create([
             'sales_shift_plan_id' => $plan->id,
@@ -344,7 +344,7 @@ class SalesManagerShiftHttpTest extends TestCase
     {
         ['rep1' => $rep1, 'rep2' => $rep2, 'outsider' => $outsider, 'plan' => $plan] = $this->seedTeamWithShifts();
 
-        $dow = app(\App\Services\SalesShiftScheduleService::class)->salesDayIndex(now());
+        $dow = app(\App\Domains\Sales\Services\SalesShiftScheduleService::class)->salesDayIndex(now());
 
         SalesShiftSegment::query()->create([
             'sales_shift_plan_id' => $plan->id,
@@ -357,7 +357,7 @@ class SalesManagerShiftHttpTest extends TestCase
             'sort_order' => 0,
         ]);
 
-        $svc = app(\App\Services\SalesShiftScheduleService::class);
+        $svc = app(\App\Domains\Sales\Services\SalesShiftScheduleService::class);
         $live = $svc->buildTeamLivePanel([$rep1->id, $rep2->id], $plan);
 
         $names = collect($live['active_now'])->pluck('user_name')->all();

@@ -2,18 +2,19 @@
 
 namespace Database\Seeders;
 
-use App\Models\AcademicYear;
-use App\Models\AdvancedCourse;
-use App\Models\JourneyProfile;
-use App\Models\JourneyShareEvent;
-use App\Models\PortfolioProject;
+use App\Domains\Learning\Models\AcademicYear;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Community\Models\JourneyProfile;
+use App\Domains\Community\Models\JourneyShareEvent;
+use App\Domains\Community\Models\PortfolioProject;
 use App\Models\User;
-use App\Services\JourneyAchievementService;
-use App\Services\JourneyProfileService;
+use App\Domains\Community\Services\JourneyAchievementService;
+use App\Domains\Community\Services\JourneyProfileService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Relations\Relation;
 
 class JourneyDemoSeeder extends Seeder
 {
@@ -348,7 +349,7 @@ class JourneyDemoSeeder extends Seeder
                     for ($n = 0; $n < (3 - $i + ($projectData['featured'] ? 2 : 0)); $n++) {
                         JourneyShareEvent::create([
                             'user_id' => $user->id,
-                            'shareable_type' => PortfolioProject::class,
+                            'shareable_type' => Relation::getMorphAlias(PortfolioProject::class),
                             'shareable_id' => $project->id,
                             'channel' => $channel,
                             'card_type' => $project->is_featured ? 'featured' : 'project_verified',
@@ -361,7 +362,7 @@ class JourneyDemoSeeder extends Seeder
 
             JourneyShareEvent::create([
                 'user_id' => $user->id,
-                'shareable_type' => JourneyProfile::class,
+                'shareable_type' => Relation::getMorphAlias(JourneyProfile::class),
                 'shareable_id' => $profile->id,
                 'channel' => 'profile_view',
                 'card_type' => 'profile',
@@ -370,7 +371,7 @@ class JourneyDemoSeeder extends Seeder
             ]);
             JourneyShareEvent::create([
                 'user_id' => $user->id,
-                'shareable_type' => JourneyProfile::class,
+                'shareable_type' => Relation::getMorphAlias(JourneyProfile::class),
                 'shareable_id' => $profile->id,
                 'channel' => 'linkedin',
                 'card_type' => 'profile',

@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use App\Models\Subject;
-use App\Models\School;
+use App\Domains\Learning\Models\Subject;
+use App\Domains\Learning\Models\School;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 

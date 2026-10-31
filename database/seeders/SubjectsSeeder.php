@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\AcademicYear;
-use App\Models\AcademicSubject;
+use App\Domains\Learning\Models\AcademicYear;
+use App\Domains\Learning\Models\AcademicSubject;
 
 class SubjectsSeeder extends Seeder
 {

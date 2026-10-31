@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\User;
-use App\Services\ReferralService;
+use App\Domains\Marketing\Services\ReferralService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -49,9 +49,9 @@ class ProcessStudentRegistration implements ShouldQueue
             if ($this->promoCode) {
                 $user = User::find($this->userId);
                 if ($user) {
-                    $existing = \App\Models\WorkshopPromoActivation::where('user_id', $user->id)->exists();
+                    $existing = \App\Domains\Offline\Models\WorkshopPromoActivation::where('user_id', $user->id)->exists();
                     if (! $existing) {
-                        $result = app(\App\Services\WorkshopPromoService::class)->activateForUser($user, $this->promoCode);
+                        $result = app(\App\Domains\Offline\Services\WorkshopPromoService::class)->activateForUser($user, $this->promoCode);
                         if (! ($result['success'] ?? false)) {
                             Log::warning('Workshop promo failed in registration job', [
                                 'user_id' => $this->userId,

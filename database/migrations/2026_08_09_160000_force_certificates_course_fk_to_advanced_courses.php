@@ -15,7 +15,7 @@ return new class extends Migration
             return;
         }
 
-        app(\App\Support\CertificateCourseForeignKey::class)->fix();
+        app(\App\Domains\Learning\Support\CertificateCourseForeignKey::class)->fix();
     }
 
     public function down(): void

@@ -1,6 +1,6 @@
 <?php
 
-use App\Services\InstructorCoursePercentageService;
+use App\Domains\Accounting\Services\InstructorCoursePercentageService;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;

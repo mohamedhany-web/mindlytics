@@ -31,10 +31,18 @@
                     </label>
                     <input type="text" name="name" id="name" value="{{ old('name', $permission->name) }}" required
                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                           placeholder="مثال: manage_courses">
-                    <p class="mt-1 text-xs text-gray-500">
-                        اسم فريد باللغة الإنجليزية (بدون مسافات، استخدم underscore)
-                    </p>
+                           placeholder="مثال: manage_courses"
+                           {{ $nameLocked ? 'readonly' : '' }}>
+                    @if($nameLocked)
+                        <p class="mt-1 text-xs text-blue-600">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            الصلاحية مرتبطة بأدوار أو مستخدمين، لذلك لا يمكن تعديل اسمها
+                        </p>
+                    @else
+                        <p class="mt-1 text-xs text-gray-500">
+                            اسم فريد باللغة الإنجليزية (بدون مسافات، استخدم underscore)
+                        </p>
+                    @endif
                     @error('name')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror

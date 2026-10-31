@@ -283,7 +283,7 @@
                 <td>{{ $lead->name }}</td>
                 <td class="text-left">{{ $lead->phone ?? '—' }}</td>
                 <td class="text-center">{{ $lead->group?->name ?? '—' }}</td>
-                <td class="text-center">{{ \App\Models\SalesLead::stageLabel($lead->stage) }}</td>
+                <td class="text-center">{{ \App\Domains\Sales\Models\SalesLead::stageLabel($lead->stage) }}</td>
                 <td class="text-center">{{ $contactLabel }}</td>
                 <td class="text-center">{{ $lead->last_contacted_at?->format('Y-m-d') ?? '—' }}</td>
                 <td class="text-center">{{ $lead->creator?->name ?? '—' }}</td>
@@ -314,7 +314,7 @@
         @forelse($report['activities'] as $activity)
             <tr>
                 <td class="text-center">{{ $activity->created_at?->format('Y-m-d H:i') }}</td>
-                <td class="text-center">{{ \App\Models\SalesActivity::typeLabel($activity->type) }}</td>
+                <td class="text-center">{{ \App\Domains\Sales\Models\SalesActivity::typeLabel($activity->type) }}</td>
                 <td>{{ $activity->lead?->name ?? '—' }}</td>
                 <td>{{ \Illuminate\Support\Str::limit($activity->title ?: ($activity->body ?? '—'), 120) }}</td>
             </tr>

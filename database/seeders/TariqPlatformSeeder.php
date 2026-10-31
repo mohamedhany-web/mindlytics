@@ -5,13 +5,13 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
-use App\Models\School;
-use App\Models\Subject;
-use App\Models\Course;
-use App\Models\Lesson;
-use App\Models\QuestionBank;
-use App\Models\Question;
-use App\Models\Exam;
+use App\Domains\Learning\Models\School;
+use App\Domains\Learning\Models\Subject;
+use App\Domains\Learning\Models\Course;
+use App\Domains\Learning\Models\Lesson;
+use App\Domains\Learning\Models\QuestionBank;
+use App\Domains\Learning\Models\Question;
+use App\Domains\Learning\Models\Exam;
 
 class TariqPlatformSeeder extends Seeder
 {

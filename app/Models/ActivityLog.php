@@ -74,7 +74,10 @@ class ActivityLog extends Model
     public function model()
     {
         if ($this->model_type && $this->model_id) {
-            return $this->model_type::find($this->model_id);
+            // model_type قد يكون اسم كلاس قديم (قبل النقل إلى app/Domains) أو اسماً مختصراً مثل 'User'
+            $class = \App\Support\LegacyClassAliases::resolve($this->model_type);
+
+            return class_exists($class) ? $class::find($this->model_id) : null;
         }
         return null;
     }

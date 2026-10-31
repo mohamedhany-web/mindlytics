@@ -4,7 +4,7 @@ namespace Tests\Unit;
 
 use App\Models\User;
 use App\Support\PenaltyWindow;
-use App\Support\SalesDailyReportSettings;
+use App\Domains\Sales\Support\SalesDailyReportSettings;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;

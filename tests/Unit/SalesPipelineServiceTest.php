@@ -2,9 +2,9 @@
 
 namespace Tests\Unit;
 
-use App\Models\SalesLead;
+use App\Domains\Sales\Models\SalesLead;
 use App\Models\User;
-use App\Services\SalesPipelineService;
+use App\Domains\Sales\Services\SalesPipelineService;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
-use App\Models\AdvancedCourse;
+use App\Domains\Learning\Models\AdvancedCourse;
 use App\Models\User;
 use App\Support\BranchContext;
 use Illuminate\Http\Request;
@@ -36,13 +36,13 @@ class PageController extends Controller
 
     public function faq()
     {
-        $faqs = \App\Models\FAQ::active()
+        $faqs = \App\Domains\Cms\Models\FAQ::active()
             ->orderBy('order')
             ->orderBy('created_at', 'desc')
             ->get()
             ->groupBy('category');
         
-        $categories = \App\Models\FAQ::active()
+        $categories = \App\Domains\Cms\Models\FAQ::active()
             ->distinct()
             ->pluck('category')
             ->filter()
@@ -115,7 +115,7 @@ class PageController extends Controller
     public function pricing()
     {
         // جلب الباقات النشطة من قاعدة البيانات
-        $packages = \App\Models\Package::active()
+        $packages = \App\Domains\Accounting\Models\Package::active()
             ->visibleOnCurrentHost()
             ->whereHas('courses', function ($q) {
                 $q->where('advanced_courses.is_active', true)->visibleOnCurrentHost();
@@ -174,7 +174,7 @@ class PageController extends Controller
 
     public function groups()
     {
-        $offlineGroups = \App\Models\OfflineCourseGroup::query()
+        $offlineGroups = \App\Domains\Offline\Models\OfflineCourseGroup::query()
             ->where('public_booking_enabled', true)
             ->whereNotNull('public_slug')
             ->where('is_active', true)
@@ -186,7 +186,7 @@ class PageController extends Controller
             ->latest('id')
             ->get();
 
-        $onlineGroups = \App\Models\OfflineCourseGroup::query()
+        $onlineGroups = \App\Domains\Offline\Models\OfflineCourseGroup::query()
             ->where('online_booking_enabled', true)
             ->whereNotNull('online_slug')
             ->where('is_active', true)

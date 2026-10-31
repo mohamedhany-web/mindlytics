@@ -2,13 +2,13 @@
 
 namespace Tests\Unit;
 
-use App\Models\MetaSocialConversation;
-use App\Models\MetaSocialMessage;
-use App\Models\MetaSocialPage;
-use App\Models\SalesLead;
-use App\Models\SalesLeadCategory;
+use App\Domains\Messaging\Models\MetaSocialConversation;
+use App\Domains\Messaging\Models\MetaSocialMessage;
+use App\Domains\Messaging\Models\MetaSocialPage;
+use App\Domains\Sales\Models\SalesLead;
+use App\Domains\Sales\Models\SalesLeadCategory;
 use App\Models\User;
-use App\Services\MetaSocial\MetaSocialCrmService;
+use App\Domains\Messaging\Services\MetaSocialCrmService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;

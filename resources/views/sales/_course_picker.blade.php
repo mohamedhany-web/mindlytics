@@ -11,7 +11,7 @@
     <label class="{{ $labelClass }}">نوع الكورس</label>
     <select name="course_type" id="lead_course_type" class="{{ $inputClass }}">
         <option value="">— بدون —</option>
-        @foreach(\App\Models\SalesLead::COURSE_TYPES as $k => $label)
+        @foreach(\App\Domains\Sales\Models\SalesLead::COURSE_TYPES as $k => $label)
             <option value="{{ $k }}" @selected($courseType === $k)>{{ $label }}</option>
         @endforeach
     </select>

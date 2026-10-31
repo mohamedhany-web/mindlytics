@@ -27,6 +27,10 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->scoped(\App\Support\BranchContext::class, fn () => new \App\Support\BranchContext(null));
+
+        // التوافق مع نقل الكلاسات إلى app/Domains (docs/MODULARIZATION_PLAN.md)
+        \App\Support\LegacyClassAliases::register();
+        \App\Support\MorphMap::register();
     }
 
     /**
@@ -94,9 +98,9 @@ class AppServiceProvider extends ServiceProvider
             // صفحات عامة تستخدم unified-navbar بدون layouts.public
             'courses',
             'course-show',
-            'public.checkout',
-            'public.learning-paths',
-            'public.learning-path-show',
+            'accounting::public.checkout',
+            'learning::public.learning-paths',
+            'learning::public.learning-path-show',
             'auth.login',
             'auth.register',
             'auth.forgot-password',
@@ -104,7 +108,7 @@ class AppServiceProvider extends ServiceProvider
             'auth.two-factor.setup',
             'auth.two-factor.challenge',
             'welcome',
-            'community.layouts.guest',
+            'community::portal.layouts.guest',
         ];
         View::composer($brandingViews, function ($view) {
             $view->with('platformLogoUrl', SiteBranding::logoUrl());
@@ -118,76 +122,7 @@ class AppServiceProvider extends ServiceProvider
             }
         });
 
-        View::composer([
-            'admin.hr.jobs.*',
-            'admin.hr.applications.*',
-            'admin.hr.rubrics.*',
-        ], function ($view) {
-            $view->with([
-                'hrInputClass' => 'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500',
-                'hrSelectClass' => 'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500',
-                'hrTextareaClass' => 'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 resize-y min-h-[100px]',
-                'hrLabelClass' => 'block text-xs font-semibold text-slate-700 mb-1.5',
-                'hrBtnPrimary' => 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white text-sm font-semibold shadow-lg shadow-pink-500/20 transition-all',
-                'hrBtnSecondary' => 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border-2 border-slate-200 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-all',
-                'hrBtnDark' => 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold transition-all',
-                'hrSectionClass' => 'rounded-2xl bg-white border-2 border-slate-200/50 shadow-xl overflow-hidden',
-            ]);
-        });
-
-        View::composer(['admin.scholarships.*'], function ($view) {
-            $view->with([
-                'schInputClass' => 'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all',
-                'schSelectClass' => 'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all',
-                'schTextareaClass' => 'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y min-h-[100px] transition-all',
-                'schLabelClass' => 'block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2',
-                'schBtnPrimary' => 'inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-200 text-sm',
-                'schBtnSecondary' => 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-all',
-                'schBtnDark' => 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold transition-all',
-                'schSectionClass' => 'rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden',
-            ]);
-        });
-
-        View::composer(['admin.investment.*'], function ($view) {
-            $view->with([
-                'invInputClass' => 'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all',
-                'invSelectClass' => 'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all',
-                'invTextareaClass' => 'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 resize-y min-h-[100px] transition-all',
-                'invLabelClass' => 'block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2',
-                'invBtnPrimary' => 'inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-700 hover:to-orange-600 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-200 text-sm',
-                'invBtnSecondary' => 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-all',
-                'invBtnDark' => 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold transition-all',
-                'invSectionClass' => 'rounded-2xl bg-white border border-slate-200 shadow-lg overflow-hidden',
-            ]);
-        });
-
-        View::composer(['admin.whatsapp.*'], function ($view) {
-            $view->with([
-                'waInputClass' => 'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500',
-                'waSelectClass' => 'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500',
-                'waTextareaClass' => 'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 resize-y min-h-[120px]',
-                'waLabelClass' => 'block text-xs font-semibold text-slate-700 mb-1.5',
-                'waBtnPrimary' => 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-700 hover:to-green-600 text-white text-sm font-semibold shadow-lg shadow-emerald-500/20 transition-all',
-                'waBtnSecondary' => 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border-2 border-slate-200 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-all',
-                'waBtnDark' => 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold transition-all',
-                'waSectionClass' => 'rounded-2xl bg-white border-2 border-slate-200/50 shadow-xl overflow-hidden',
-            ]);
-        });
-
-        View::composer(['admin.meta-social.*'], function ($view) {
-            $view->with([
-                'smInputClass' => 'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500',
-                'smSelectClass' => 'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500',
-                'smTextareaClass' => 'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 resize-y min-h-[120px]',
-                'smLabelClass' => 'block text-xs font-semibold text-slate-700 mb-1.5',
-                'smBtnPrimary' => 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-600 to-blue-500 hover:from-sky-700 hover:to-blue-600 text-white text-sm font-semibold shadow-lg shadow-sky-500/20 transition-all',
-                'smBtnSecondary' => 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border-2 border-slate-200 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-all',
-                'smBtnMeta' => 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#0866FF] hover:bg-[#0654d4] text-white text-sm font-semibold shadow-lg shadow-[#0866FF]/20 transition-all',
-                'smSectionClass' => 'rounded-2xl bg-white border-2 border-slate-200/50 shadow-xl overflow-hidden',
-            ]);
-        });
-
-        View::composer(['components.unified-footer', 'public.contact'], function ($view) {
+        View::composer(['components.unified-footer', 'cms::public.contact'], function ($view) {
             $view->with('platformContact', PlatformSettings::contactPage());
         });
 
@@ -195,7 +130,7 @@ class AppServiceProvider extends ServiceProvider
             try {
                 $user = auth()->user();
                 if ($user?->isSubjectToWorkSchedule()) {
-                    $view->with('employeeAttendance', app(\App\Services\EmployeeAttendanceService::class)->getState($user));
+                    $view->with('employeeAttendance', app(\App\Domains\Hr\Services\EmployeeAttendanceService::class)->getState($user));
                 }
             } catch (\Throwable $e) {
                 report($e);
@@ -219,16 +154,6 @@ class AppServiceProvider extends ServiceProvider
 
         // Observers للنماذج - مع تحسينات الأداء
         \App\Models\User::observe(\App\Observers\UserObserver::class);
-        \App\Models\StudentCourseEnrollment::observe(\App\Observers\EnrollmentObserver::class);
-        \App\Models\Exam::observe(\App\Observers\ExamObserver::class);
-        \App\Models\AdvancedCourse::observe(\App\Observers\AdvancedCourseObserver::class);
-        \App\Models\ExamAttempt::observe(\App\Observers\ExamAttemptObserver::class);
-        
-        // Observers للتقويم والإشعارات
-        \App\Models\Lecture::observe(\App\Observers\LectureObserver::class);
-        \App\Models\Assignment::observe(\App\Observers\AssignmentObserver::class);
-        \App\Models\LectureAssignment::observe(\App\Observers\LectureAssignmentObserver::class);
-        \App\Models\EmployeeSalaryDeduction::observe(\App\Observers\EmployeeSalaryDeductionObserver::class);
 
         // تفعيل Event Listeners لتسجيل النشاطات
         \Illuminate\Support\Facades\Event::listen(

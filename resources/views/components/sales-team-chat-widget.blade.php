@@ -5,7 +5,7 @@
         $stcUser = auth()->user();
         $stcShow = $stcUser
             && $stcUser->isSalesStaff()
-            && app(\App\Services\SalesTeamService::class)->teamFor($stcUser);
+            && app(\App\Domains\Sales\Services\SalesTeamService::class)->teamFor($stcUser);
     } catch (\Throwable $e) {
         report($e);
         $stcShow = false;

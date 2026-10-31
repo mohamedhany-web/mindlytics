@@ -5,13 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Branch;
-use App\Models\Course;
-use App\Models\Subject;
-use App\Models\Exam;
-use App\Models\QuestionBank;
+use App\Domains\Learning\Models\Course;
+use App\Domains\Learning\Models\Subject;
+use App\Domains\Learning\Models\Exam;
+use App\Domains\Learning\Models\QuestionBank;
 use App\Models\ActivityLog;
-use App\Models\VideoWatch;
-use App\Models\ExamAttempt;
+use App\Domains\Learning\Models\VideoWatch;
+use App\Domains\Learning\Models\ExamAttempt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -46,7 +46,7 @@ class AdminController extends Controller
         
         $stats = array_merge($cachedStats, [
             // البيانات الديناميكية التي تحتاج تحديث فوري
-            'wallets' => \App\Models\Wallet::academyWallets()->where('is_active', true)->get(),
+            'wallets' => \App\Domains\Accounting\Models\Wallet::academyWallets()->where('is_active', true)->get(),
             'recent_activities' => ActivityLog::with('user')
                                             ->latest()
                                             ->take(10)
@@ -64,21 +64,21 @@ class AdminController extends Controller
         $monthlyStats = [
             'new_users_this_month' => User::whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count(),
             'exams_this_month' => Exam::whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count(),
-            'course_enrollments_this_month' => \App\Models\StudentCourseEnrollment::whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count(),
+            'course_enrollments_this_month' => \App\Domains\Learning\Models\StudentCourseEnrollment::whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count(),
         ];
 
         // إيرادات الشهر السابق لنفس عدد أيام الشهر الحالي (مثلاً 1–24 آذار مقابل 1–24 شباط)
         $lastDayPrevMonth = (int) $previousPeriodEnd->format('j');
         $targetDay = min((int) $now->format('j'), $lastDayPrevMonth);
         $previousMonthMtdEnd = $previousPeriodStart->copy()->addDays($targetDay - 1)->endOfDay();
-        $previousMonthMtdRevenue = (float) (\App\Models\Payment::where('status', 'completed')
+        $previousMonthMtdRevenue = (float) (\App\Domains\Accounting\Models\Payment::where('status', 'completed')
             ->whereBetween('paid_at', [$previousPeriodStart->copy()->startOfDay(), $previousMonthMtdEnd])
             ->sum('amount') ?? 0);
 
-        $monthlyExpenses = (float) (\App\Models\Expense::where('status', 'approved')
+        $monthlyExpenses = (float) (\App\Domains\Accounting\Models\Expense::where('status', 'approved')
             ->whereBetween('expense_date', [$currentPeriodStart->toDateString(), $currentPeriodEnd->toDateString()])
             ->sum('amount') ?? 0);
-        $previousMonthMtdExpenses = (float) (\App\Models\Expense::where('status', 'approved')
+        $previousMonthMtdExpenses = (float) (\App\Domains\Accounting\Models\Expense::where('status', 'approved')
             ->whereBetween('expense_date', [$previousPeriodStart->toDateString(), $previousMonthMtdEnd->toDateString()])
             ->sum('amount') ?? 0);
 
@@ -96,12 +96,12 @@ class AdminController extends Controller
                 User::where('role', 'student')->whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])->count()
             ),
             'new_courses' => $this->calculateChange(
-                \App\Models\AdvancedCourse::whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count(),
-                \App\Models\AdvancedCourse::whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])->count()
+                \App\Domains\Learning\Models\AdvancedCourse::whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count(),
+                \App\Domains\Learning\Models\AdvancedCourse::whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])->count()
             ),
             'active_enrollments' => $this->calculateChange(
-                \App\Models\StudentCourseEnrollment::where('status', 'active')->whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count(),
-                \App\Models\StudentCourseEnrollment::where('status', 'active')->whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])->count()
+                \App\Domains\Learning\Models\StudentCourseEnrollment::where('status', 'active')->whereBetween('created_at', [$currentPeriodStart, $currentPeriodEnd])->count(),
+                \App\Domains\Learning\Models\StudentCourseEnrollment::where('status', 'active')->whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])->count()
             ),
             'monthly_revenue' => $this->calculateChange(
                 $stats['monthly_revenue'],
@@ -156,20 +156,20 @@ class AdminController extends Controller
         $recent_users = User::latest()->take(5)->get();
         
         // جلب الكورسات مع العلاقات بشكل آمن
-        $recent_courses = \App\Models\AdvancedCourse::with(['academicSubject'])
+        $recent_courses = \App\Domains\Learning\Models\AdvancedCourse::with(['academicSubject'])
             ->latest()
             ->take(5)
             ->get();
             
         // الفواتير المعلقة
-        $pending_invoices = \App\Models\Invoice::where('status', 'pending')
+        $pending_invoices = \App\Domains\Accounting\Models\Invoice::where('status', 'pending')
             ->with('user')
             ->latest()
             ->take(5)
             ->get();
             
         // المدفوعات الأخيرة
-        $recent_payments = \App\Models\Payment::where('status', 'completed')
+        $recent_payments = \App\Domains\Accounting\Models\Payment::where('status', 'completed')
             ->with(['user', 'invoice'])
             ->latest()
             ->take(5)
@@ -224,30 +224,30 @@ class AdminController extends Controller
                 ->get();
         }
 
-        $pendingInvoicesSummary = \App\Models\Invoice::selectRaw('COUNT(*) as count, COALESCE(SUM(total_amount), 0) as amount')
+        $pendingInvoicesSummary = \App\Domains\Accounting\Models\Invoice::selectRaw('COUNT(*) as count, COALESCE(SUM(total_amount), 0) as amount')
             ->where('status', 'pending')
             ->first();
 
-        $overdueInvoicesSummary = \App\Models\Invoice::selectRaw('COUNT(*) as count, COALESCE(SUM(total_amount), 0) as amount')
+        $overdueInvoicesSummary = \App\Domains\Accounting\Models\Invoice::selectRaw('COUNT(*) as count, COALESCE(SUM(total_amount), 0) as amount')
             ->where('status', 'overdue')
             ->first();
 
-        $pendingOrdersSummary = \App\Models\Order::selectRaw('COUNT(*) as count, COALESCE(SUM(amount), 0) as amount')
+        $pendingOrdersSummary = \App\Domains\Accounting\Models\Order::selectRaw('COUNT(*) as count, COALESCE(SUM(amount), 0) as amount')
             ->where('status', 'pending')
             ->first();
 
         $inactiveStudentsCount = User::where('role', 'student')->where('is_active', false)->count();
         $inactiveStudentLatest = User::where('role', 'student')->where('is_active', false)->latest()->first();
 
-        $pendingInstallmentsSummary = \App\Models\InstallmentAgreement::selectRaw('COUNT(*) as count, COALESCE(SUM(total_amount), 0) as amount')
+        $pendingInstallmentsSummary = \App\Domains\Accounting\Models\InstallmentAgreement::selectRaw('COUNT(*) as count, COALESCE(SUM(total_amount), 0) as amount')
             ->whereIn('status', ['pending', 'awaiting_approval'])
             ->first();
 
         $communityStats = [
-            'competitions_count' => \App\Models\CommunityCompetition::count(),
-            'competitions_active' => \App\Models\CommunityCompetition::active()->count(),
-            'datasets_count' => \App\Models\CommunityDataset::count(),
-            'datasets_active' => \App\Models\CommunityDataset::active()->count(),
+            'competitions_count' => \App\Domains\Community\Models\CommunityCompetition::count(),
+            'competitions_active' => \App\Domains\Community\Models\CommunityCompetition::active()->count(),
+            'datasets_count' => \App\Domains\Community\Models\CommunityDataset::count(),
+            'datasets_active' => \App\Domains\Community\Models\CommunityDataset::active()->count(),
         ];
 
         $centralAcademyBranchId = null;
@@ -1032,7 +1032,7 @@ class AdminController extends Controller
                         ->latest()
                         ->paginate(15);
 
-        return view('admin.courses.index', compact('courses'));
+        return view('learning::admin.courses.index', compact('courses'));
     }
 
     /**

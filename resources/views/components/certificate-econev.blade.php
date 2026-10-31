@@ -1,6 +1,6 @@
 {{-- Certificate of Achievement — HTML/CSS with academy branding assets --}}
 @php
-    $branding = $branding ?? \App\Models\CertificateBranding::current();
+    $branding = $branding ?? \App\Domains\Learning\Models\CertificateBranding::current();
     $templateKey = $template ?? ($certificate->template ?? $branding->default_template ?? 'achievement');
     if ($templateKey === 'econev') {
         $templateKey = 'achievement';

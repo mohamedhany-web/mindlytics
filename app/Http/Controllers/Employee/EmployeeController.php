@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
-use App\Models\EmployeeTask;
-use App\Models\SalesLead;
+use App\Domains\Hr\Models\EmployeeTask;
+use App\Domains\Sales\Models\SalesLead;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 

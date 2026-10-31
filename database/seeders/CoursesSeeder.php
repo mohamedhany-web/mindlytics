@@ -6,11 +6,11 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use App\Models\User;
-use App\Models\AdvancedCourse;
-use App\Models\CourseSection;
-use App\Models\CourseLesson;
-use App\Models\AcademicYear;
-use App\Models\AcademicSubject;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Learning\Models\CourseSection;
+use App\Domains\Learning\Models\CourseLesson;
+use App\Domains\Learning\Models\AcademicYear;
+use App\Domains\Learning\Models\AcademicSubject;
 
 // زيادة حد الذاكرة
 ini_set('memory_limit', '1024M');

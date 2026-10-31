@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Services\SalesShiftPlanImporter;
+use App\Domains\Sales\Services\SalesShiftPlanImporter;
 use Illuminate\Database\Seeder;
 
 class SalesShiftPlanSeeder extends Seeder

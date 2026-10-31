@@ -1,0 +1,341 @@
+<?php
+
+namespace App\Domains\Accounting\Http\Controllers\Admin;
+
+use App\Domains\Accounting\Events\PaymentRefunded;
+use App\Http\Controllers\Controller;
+use App\Domains\Accounting\Models\Payment;
+use App\Domains\Accounting\Models\Invoice;
+use App\Models\User;
+use App\Domains\Accounting\Models\Wallet;
+use App\Domains\Accounting\Models\WalletTransaction;
+use App\Models\ActivityLog;
+use App\Domains\Accounting\Services\AutoInstallmentAgreementService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+use App\Domains\Accounting\Support\DocumentNumber;
+
+class PaymentController extends Controller
+{
+    /**
+     * عرض قائمة المدفوعات
+     * محمي من: XSS, SQL Injection, Brute Force
+     */
+    public function index(Request $request)
+    {
+        try {
+            // التحقق من الصلاحيات
+            if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
+                abort(403, 'غير مصرح لك بالوصول لهذه الصفحة');
+            }
+
+            $query = Payment::with(['user', 'invoice', 'wallet', 'installmentPayment', 'transactions']);
+
+            // فلترة حسب الحالة - حماية من SQL Injection
+            if ($request->filled('status')) {
+                $status = strip_tags(trim($request->status));
+                $status = preg_replace('/[^a-z_]/', '', $status);
+                if (in_array($status, ['pending', 'completed', 'processing', 'failed', 'cancelled', 'refunded'], true)) {
+                    $query->where('status', $status);
+                }
+            }
+
+            if ($request->filled('date_from')) {
+                try {
+                    $query->whereDate('created_at', '>=', Carbon::parse($request->date_from)->format('Y-m-d'));
+                } catch (\Throwable $e) {
+                }
+            }
+            if ($request->filled('date_to')) {
+                try {
+                    $query->whereDate('created_at', '<=', Carbon::parse($request->date_to)->format('Y-m-d'));
+                } catch (\Throwable $e) {
+                }
+            }
+
+            // البحث - حماية من XSS و SQL Injection
+            if ($request->filled('search')) {
+                $search = strip_tags(trim((string) $request->search));
+                $search = preg_replace('/[^a-zA-Z0-9\u0600-\u06FF\s@._-]/u', '', $search);
+                if (strlen($search) > 0 && strlen($search) <= 255) {
+                    $like = '%'.$search.'%';
+                    $query->where(function ($q) use ($like) {
+                        $q->where('payment_number', 'like', $like)
+                            ->orWhere('reference_number', 'like', $like)
+                            ->orWhereHas('user', function ($uq) use ($like) {
+                                $uq->where('name', 'like', $like)
+                                    ->orWhere('phone', 'like', $like)
+                                    ->orWhere('email', 'like', $like);
+                            });
+                    });
+                }
+            }
+
+            $sort = $request->get('sort', 'created_at');
+            $dir = strtolower((string) $request->get('dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+            $allowedSort = ['created_at', 'amount', 'payment_number', 'paid_at'];
+            if (! in_array($sort, $allowedSort, true)) {
+                $sort = 'created_at';
+            }
+            $query->orderBy($sort, $dir);
+
+            $perPage = min(100, max(10, (int) $request->get('per_page', 25)));
+
+            $payments = $query->paginate($perPage)->withQueryString();
+
+            // إحصائيات سريعة
+            $stats = [
+                'total' => Payment::count(),
+                'completed' => Payment::where('status', 'completed')->count(),
+                'pending' => Payment::where('status', 'pending')->count(),
+                'failed' => Payment::where('status', 'failed')->count(),
+                'total_amount' => Payment::where('status', 'completed')->sum('amount'),
+            ];
+
+            return view('accounting::admin.payments.index', compact('payments', 'stats'));
+        } catch (\Exception $e) {
+            Log::error('Error in PaymentController@index: ' . $e->getMessage());
+            abort(500, 'حدث خطأ أثناء تحميل الصفحة');
+        }
+    }
+
+    public function create()
+    {
+        $invoices = Invoice::with(['user', 'payments' => function ($query) {
+                $query->where('status', 'completed');
+            }])
+            ->get()
+            ->filter(fn ($invoice) => $invoice->remaining_amount > 0)
+            ->values();
+
+        $users = User::where('role', 'student')->where('is_active', true)->orderBy('name')->get();
+        $wallets = Wallet::academyWallets()->where('is_active', true)->orderBy('name')->get();
+
+        return view('accounting::admin.payments.create', compact('invoices', 'users', 'wallets'));
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'invoice_id' => 'required|exists:invoices,id',
+            'user_id' => 'nullable|exists:users,id',
+            'payment_method' => 'required|in:cash,card,bank_transfer,online,wallet,other',
+            'wallet_id' => 'nullable|required_if:payment_method,wallet|exists:wallets,id',
+            'amount' => 'required|numeric|min:0.01',
+            'notes' => 'nullable|string',
+        ]);
+
+        $invoice = Invoice::with('user', 'payments')->findOrFail($validated['invoice_id']);
+
+        $paymentUserId = null;
+        if ($invoice->isCompanyClient() || empty($invoice->user_id)) {
+            $paymentUserId = null;
+        } else {
+            $paymentUserId = (int) ($validated['user_id'] ?? $invoice->user_id);
+            if ((int) $invoice->user_id !== $paymentUserId) {
+                return back()->withErrors(['invoice_id' => 'هذه الفاتورة لا تتبع الطالب المحدد.'])->withInput();
+            }
+        }
+
+        $remainingAmount = $invoice->remaining_amount;
+        if ($remainingAmount <= 0) {
+            return back()->withErrors(['invoice_id' => 'تم سداد هذه الفاتورة بالفعل.'])->withInput();
+        }
+
+        if ($validated['amount'] > $remainingAmount) {
+            return back()->withErrors([
+                'amount' => 'لا يمكن دفع مبلغ أكبر من المتبقي (' . number_format($remainingAmount, 2) . ' ج.م).' ,
+            ])->withInput();
+        }
+
+        $walletForPayment = null;
+        if ($validated['payment_method'] === 'wallet') {
+            $walletForPayment = Wallet::academyWallets()
+                ->where('id', $validated['wallet_id'])
+                ->where('is_active', true)
+                ->first();
+            if (! $walletForPayment) {
+                return back()->withErrors(['wallet_id' => 'المحفظة غير موجودة أو غير مفعّلة.'])->withInput();
+            }
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $payment = Payment::create([
+                'payment_number' => DocumentNumber::next(Payment::class, 'payment_number', 'PAY-', 8),
+                'invoice_id' => $invoice->id,
+                'user_id' => $paymentUserId,
+                'payment_method' => $validated['payment_method'],
+                'wallet_id' => $walletForPayment ? $walletForPayment->id : null,
+                'amount' => $validated['amount'],
+                'currency' => 'EGP',
+                'status' => 'completed',
+                'paid_at' => now(),
+                'processed_by' => auth()->id(),
+                'notes' => $validated['notes'],
+            ]);
+
+            if ($walletForPayment) {
+                $depositNotes = 'إيداع من دفعة فاتورة: ' . $invoice->invoice_number;
+                if ($invoice->isCompanyClient()) {
+                    $depositNotes .= ' — ' . $invoice->clientDisplayName();
+                }
+                $walletForPayment->deposit(
+                    (float) $validated['amount'],
+                    $payment->id,
+                    null,
+                    $depositNotes
+                );
+            }
+
+            $transactionNumber = DocumentNumber::next(\App\Domains\Accounting\Models\Transaction::class, 'transaction_number', 'TXN-', 8);
+            $metadata = [
+                'invoice_id' => $invoice->id,
+                'payment_id' => $payment->id,
+                'payment_method' => $validated['payment_method'],
+                'client_type' => $invoice->isCompanyClient() ? 'company' : 'student',
+                'company_name' => $invoice->isCompanyClient() ? $invoice->company_name : null,
+            ];
+            if ($walletForPayment) {
+                $metadata['wallet_id'] = $walletForPayment->id;
+            }
+
+            $clientLabel = $invoice->clientDisplayName();
+            $transaction = \App\Domains\Accounting\Models\Transaction::create([
+                'transaction_number' => $transactionNumber,
+                'user_id' => $paymentUserId,
+                'payment_id' => $payment->id,
+                'invoice_id' => $invoice->id,
+                'expense_id' => null,
+                'subscription_id' => null,
+                'type' => 'credit',
+                'category' => $invoice->type === 'subscription' ? 'subscription' : ($invoice->isCompanyClient() ? 'other' : 'course_payment'),
+                'amount' => $validated['amount'],
+                'currency' => 'EGP',
+                'description' => 'دفعة للفاتورة: ' . $invoice->invoice_number . ' — ' . $clientLabel . ' - ' . $invoice->description
+                    . ($walletForPayment ? ' — محفظة: ' . ($walletForPayment->name ?? '') : ''),
+                'status' => 'completed',
+                'metadata' => $metadata,
+                'created_by' => auth()->id(),
+            ]);
+
+            if ($walletForPayment) {
+                $walletTransaction = WalletTransaction::where('wallet_id', $walletForPayment->id)
+                    ->where('payment_id', $payment->id)
+                    ->where('type', 'deposit')
+                    ->latest()
+                    ->first();
+                if ($walletTransaction) {
+                    $walletTransaction->update(['transaction_id' => $transaction->id]);
+                }
+            }
+
+            $invoice->refresh();
+            if ($invoice->remaining_amount <= 0 && ! $invoice->isPaid()) {
+                $invoice->markAsPaid();
+            }
+            if ((float) $invoice->remaining_amount > 0) {
+                app(AutoInstallmentAgreementService::class)->ensureFromInvoice($invoice, auth()->id());
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('PaymentController@store failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
+            return back()->with('error', 'تعذر حفظ الدفعة: ' . $e->getMessage())->withInput();
+        }
+
+        return redirect()->route('admin.payments.index')
+            ->with('success', 'تم إنشاء الدفعة بنجاح');
+    }
+
+    public function show(Payment $payment)
+    {
+        $payment->load('user', 'invoice', 'order', 'processedBy', 'transactions');
+        return view('accounting::admin.payments.show', compact('payment'));
+    }
+
+    public function edit(Payment $payment)
+    {
+        $payment->load('invoice');
+
+        $invoices = Invoice::with(['user', 'payments' => function ($query) {
+                $query->where('status', 'completed');
+            }])
+            ->get()
+            ->filter(function ($invoice) use ($payment) {
+                return $invoice->remaining_amount > 0 || $invoice->id === $payment->invoice_id;
+            })
+            ->values();
+
+        $users = User::where('role', 'student')->where('is_active', true)->orderBy('name')->get();
+        return view('accounting::admin.payments.edit', compact('payment', 'invoices', 'users'));
+    }
+
+    public function update(Request $request, Payment $payment)
+    {
+        $validated = $request->validate([
+            'invoice_id' => 'required|exists:invoices,id',
+            'user_id' => 'nullable|exists:users,id',
+            'payment_method' => 'required|in:cash,card,bank_transfer,online,wallet,other',
+            'amount' => 'required|numeric|min:0.01',
+            'status' => 'required|in:pending,completed,failed,cancelled,refunded',
+            'notes' => 'nullable|string',
+        ]);
+
+        $invoice = Invoice::with('payments')->findOrFail($validated['invoice_id']);
+
+        $paymentUserId = null;
+        if ($invoice->isCompanyClient() || empty($invoice->user_id)) {
+            $paymentUserId = null;
+        } else {
+            $paymentUserId = (int) ($validated['user_id'] ?? $invoice->user_id);
+            if ((int) $invoice->user_id !== $paymentUserId) {
+                return back()->withErrors(['invoice_id' => 'هذه الفاتورة لا تتبع الطالب المحدد.'])->withInput();
+            }
+        }
+
+        $currentRemaining = $invoice->remaining_amount + ($payment->status === 'completed' ? $payment->amount : 0);
+
+        if ($validated['status'] === 'completed' && $validated['amount'] > $currentRemaining) {
+            return back()->withErrors([
+                'amount' => 'لا يمكن دفع مبلغ أكبر من المتبقي (' . number_format(max($currentRemaining, 0), 2) . ' ج.م).' ,
+            ])->withInput();
+        }
+
+        $wasRefunded = $payment->status === 'refunded';
+        $payment->update([
+            'invoice_id' => $invoice->id,
+            'user_id' => $paymentUserId,
+            'payment_method' => $validated['payment_method'],
+            'amount' => $validated['amount'],
+            'status' => $validated['status'],
+            'notes' => $validated['notes'],
+        ]);
+
+        $invoice->refresh();
+        if ($invoice->remaining_amount <= 0 && !$invoice->isPaid()) {
+            $invoice->markAsPaid();
+        }
+
+        if (! $wasRefunded && $payment->status === 'refunded') {
+            PaymentRefunded::dispatch((int) $payment->id, (float) $payment->amount);
+        }
+
+        return redirect()->route('admin.payments.index')
+            ->with('success', 'تم تحديث الدفعة بنجاح');
+    }
+
+    public function destroy(Payment $payment)
+    {
+        $payment->delete();
+        return redirect()->route('admin.payments.index')
+            ->with('success', 'تم حذف الدفعة بنجاح');
+    }
+}

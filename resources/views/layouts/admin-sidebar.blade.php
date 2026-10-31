@@ -189,6 +189,16 @@
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
                 <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
+                    @if(Route::has('admin.crm.home'))
+                    <li>
+                        <a href="{{ route('admin.crm.home') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.crm.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-table-cells-large w-4"></i>
+                            <span>CRM المبيعات (جديد)</span>
+                        </a>
+                    </li>
+                    @endif
                     <li>
                         <a href="{{ route('admin.sales.reports.index') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
@@ -366,7 +376,7 @@
                         </a>
                     </li>
                     <li>
-                        @php $pendingWinApprovals = \App\Models\SalesLead::pendingWinApproval()->count(); @endphp
+                        @php $pendingWinApprovals = \App\Domains\Sales\Models\SalesLead::pendingWinApproval()->count(); @endphp
                         <a href="{{ route('admin.sales.win-approvals.index') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
                            class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.win-approvals.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
@@ -769,7 +779,7 @@
                             <i class="fas fa-shopping-cart w-4"></i>
                             <span>{{ __('admin.orders') }}</span>
                             @php
-                                $pendingOrders = \App\Models\Order::where('status', 'pending')->count();
+                                $pendingOrders = \App\Domains\Accounting\Models\Order::where('status', 'pending')->count();
                             @endphp
                             @if($pendingOrders > 0)
                                 <span class="mr-auto bg-blue-500 text-white text-xs font-bold rounded-full px-2 py-1 shadow-lg">{{ $pendingOrders }}</span>
@@ -928,7 +938,7 @@
                             <span>{{ __('admin.withdrawal_requests') }}</span>
                             @php
                                 try {
-                                    $pendingWithdrawals = \App\Models\WithdrawalRequest::where('status', 'pending')->count();
+                                    $pendingWithdrawals = \App\Domains\Accounting\Models\WithdrawalRequest::where('status', 'pending')->count();
                                 } catch (\Exception $e) {
                                     $pendingWithdrawals = 0;
                                 }
@@ -1297,7 +1307,7 @@
                             <span>{{ __('admin.learning_path_enrollments') }}</span>
                             @php
                                 try {
-                                    $pendingEnrollments = \App\Models\LearningPathEnrollment::where('status', 'pending')->count();
+                                    $pendingEnrollments = \App\Domains\Learning\Models\LearningPathEnrollment::where('status', 'pending')->count();
                                 } catch (\Exception $e) {
                                     $pendingEnrollments = 0;
                                 }
@@ -1598,7 +1608,7 @@
                             <span>حجوزات الأونلاين</span>
                             @php
                                 try {
-                                    $pendingOnlineBookingsMenu2 = \App\Models\OfflineCourseBooking::where('status', 'pending')->where('booking_channel', 'online')->count();
+                                    $pendingOnlineBookingsMenu2 = \App\Domains\Offline\Models\OfflineCourseBooking::where('status', 'pending')->where('booking_channel', 'online')->count();
                                 } catch (\Exception $e) {
                                     $pendingOnlineBookingsMenu2 = 0;
                                 }
@@ -1657,7 +1667,7 @@
                             <span>{{ __('admin.offline_courses_list') }}</span>
                             @php
                                 try {
-                                    $activeOfflineCourses = \App\Models\OfflineCourse::where('status', 'active')->count();
+                                    $activeOfflineCourses = \App\Domains\Offline\Models\OfflineCourse::where('status', 'active')->count();
                                 } catch (\Exception $e) {
                                     $activeOfflineCourses = 0;
                                 }
@@ -1683,7 +1693,7 @@
                             <span>حجوزات أوفلاين</span>
                             @php
                                 try {
-                                    $pendingOfflineBookingsMenu = \App\Models\OfflineCourseBooking::where('status', 'pending')->where('booking_channel', 'offline')->count();
+                                    $pendingOfflineBookingsMenu = \App\Domains\Offline\Models\OfflineCourseBooking::where('status', 'pending')->where('booking_channel', 'offline')->count();
                                 } catch (\Exception $e) {
                                     $pendingOfflineBookingsMenu = 0;
                                 }
@@ -1758,7 +1768,7 @@
                             <span>{{ __('admin.employee_tasks') }}</span>
                             @php
                                 try {
-                                    $pendingTasks = \App\Models\EmployeeTask::where('status', 'pending')->count();
+                                    $pendingTasks = \App\Domains\Hr\Models\EmployeeTask::where('status', 'pending')->count();
                                 } catch (\Exception $e) {
                                     $pendingTasks = 0;
                                 }
@@ -1840,7 +1850,7 @@
                             <span>{{ __('admin.instructor_tasks') }}</span>
                             @php
                                 try {
-                                    $pendingInstructorTasks = \App\Models\Task::whereIn('user_id', \App\Models\User::whereIn('role', ['instructor', 'teacher'])->pluck('id'))->where('status', 'pending')->count();
+                                    $pendingInstructorTasks = \App\Domains\Learning\Models\Task::whereIn('user_id', \App\Models\User::whereIn('role', ['instructor', 'teacher'])->pluck('id'))->where('status', 'pending')->count();
                                 } catch (\Exception $e) {
                                     $pendingInstructorTasks = 0;
                                 }
@@ -1858,7 +1868,7 @@
                             <span>{{ __('admin.instructor_requests_join') }}</span>
                             @php
                                 try {
-                                    $pendingInstructorRequests = \App\Models\InstructorRequest::where('status', 'pending')->count();
+                                    $pendingInstructorRequests = \App\Domains\Learning\Models\InstructorRequest::where('status', 'pending')->count();
                                 } catch (\Exception $e) {
                                     $pendingInstructorRequests = 0;
                                 }
@@ -1876,7 +1886,7 @@
                             <span>{{ __('admin.leaves') }}</span>
                             @php
                                 try {
-                                    $pendingLeaves = \App\Models\LeaveRequest::where('status', 'pending')->count();
+                                    $pendingLeaves = \App\Domains\Hr\Models\LeaveRequest::where('status', 'pending')->count();
                                 } catch (\Exception $e) {
                                     $pendingLeaves = 0;
                                 }
@@ -1967,7 +1977,7 @@
                             <i class="fas fa-list w-4"></i>
                             <span>{{ __('admin.certificates_list') }}</span>
                             @php
-                                $totalCertificates = \App\Models\Certificate::count();
+                                $totalCertificates = \App\Domains\Learning\Models\Certificate::count();
                             @endphp
                             @if($totalCertificates > 0)
                                 <span class="mr-auto bg-blue-400 text-white text-xs font-bold rounded-full px-2 py-0.5 shadow-lg">{{ $totalCertificates }}</span>
@@ -1983,7 +1993,7 @@
                         </a>
                     </li>
                     @php
-                        $pendingCertificates = \App\Models\Certificate::where(function($q) {
+                        $pendingCertificates = \App\Domains\Learning\Models\Certificate::where(function($q) {
                             $q->where('status', 'pending')->orWhere('is_verified', false);
                         })->count();
                     @endphp
@@ -2136,7 +2146,7 @@
                             <i class="fas fa-envelope w-4"></i>
                             <span>{{ __('admin.contact_messages') }}</span>
                             @php
-                                $unreadCount = \App\Models\ContactMessage::whereNull('read_at')->count();
+                                $unreadCount = \App\Domains\Cms\Models\ContactMessage::whereNull('read_at')->count();
                             @endphp
                             @if($unreadCount > 0)
                                 <span class="mr-auto bg-[#FFD34E] text-[#1F3A56] text-xs font-bold rounded-full px-2 py-1 shadow-lg">{{ $unreadCount }}</span>

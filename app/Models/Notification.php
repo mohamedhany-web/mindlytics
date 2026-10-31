@@ -252,7 +252,7 @@ class Notification extends Model
      */
     public static function sendToCourseStudents($courseId, $data)
     {
-        $studentIds = \App\Models\StudentCourseEnrollment::where('advanced_course_id', $courseId)
+        $studentIds = \App\Domains\Learning\Models\StudentCourseEnrollment::where('advanced_course_id', $courseId)
                                                         ->where('status', 'active')
                                                         ->pluck('user_id');
         return self::sendToUsers($studentIds, $data);
@@ -263,8 +263,8 @@ class Notification extends Model
      */
     public static function sendToYearStudents($yearId, $data)
     {
-        $courseIds = \App\Models\AdvancedCourse::where('academic_year_id', $yearId)->pluck('id');
-        $studentIds = \App\Models\StudentCourseEnrollment::whereIn('advanced_course_id', $courseIds)
+        $courseIds = \App\Domains\Learning\Models\AdvancedCourse::where('academic_year_id', $yearId)->pluck('id');
+        $studentIds = \App\Domains\Learning\Models\StudentCourseEnrollment::whereIn('advanced_course_id', $courseIds)
                                                         ->where('status', 'active')
                                                         ->pluck('user_id')
                                                         ->unique();
@@ -276,8 +276,8 @@ class Notification extends Model
      */
     public static function sendToSubjectStudents($subjectId, $data)
     {
-        $courseIds = \App\Models\AdvancedCourse::where('academic_subject_id', $subjectId)->pluck('id');
-        $studentIds = \App\Models\StudentCourseEnrollment::whereIn('advanced_course_id', $courseIds)
+        $courseIds = \App\Domains\Learning\Models\AdvancedCourse::where('academic_subject_id', $subjectId)->pluck('id');
+        $studentIds = \App\Domains\Learning\Models\StudentCourseEnrollment::whereIn('advanced_course_id', $courseIds)
                                                         ->where('status', 'active')
                                                         ->pluck('user_id')
                                                         ->unique();

@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\EmployeeJob;
-use App\Models\ModeratorMarketingCalendarEvent;
-use App\Models\ModeratorMarketingPlan;
-use App\Models\ModeratorMarketingPlatform;
+use App\Domains\Hr\Models\EmployeeJob;
+use App\Domains\Marketing\Models\ModeratorMarketingCalendarEvent;
+use App\Domains\Marketing\Models\ModeratorMarketingPlan;
+use App\Domains\Marketing\Models\ModeratorMarketingPlatform;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Hash;
@@ -23,7 +23,7 @@ class BusinessDeveloperMarketingCommandCenterTest extends TestCase
             \App\Http\Middleware\PreventConcurrentSessions::class,
         ]);
 
-        $this->mock(\App\Services\WhatsAppQueueService::class, function ($mock) {
+        $this->mock(\App\Domains\Messaging\Services\WhatsAppQueueService::class, function ($mock) {
             $mock->shouldReceive('pendingCount')->andReturn(0);
         });
 

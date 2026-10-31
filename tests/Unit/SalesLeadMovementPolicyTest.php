@@ -2,8 +2,8 @@
 
 namespace Tests\Unit;
 
-use App\Models\SalesLead;
-use App\Services\SalesLeadMovementPolicy;
+use App\Domains\Sales\Models\SalesLead;
+use App\Domains\Sales\Services\SalesLeadMovementPolicy;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;

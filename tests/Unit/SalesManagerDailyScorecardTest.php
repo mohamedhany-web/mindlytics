@@ -2,15 +2,15 @@
 
 namespace Tests\Unit;
 
-use App\Models\EmployeeJob;
-use App\Models\EmployeeSalaryDeduction;
-use App\Models\SalesActivity;
-use App\Models\SalesLead;
-use App\Models\SalesManagerDailyReview;
-use App\Models\SalesTeam;
-use App\Models\SalesTeamMember;
+use App\Domains\Hr\Models\EmployeeJob;
+use App\Domains\Hr\Models\EmployeeSalaryDeduction;
+use App\Domains\Sales\Models\SalesActivity;
+use App\Domains\Sales\Models\SalesLead;
+use App\Domains\Sales\Models\SalesManagerDailyReview;
+use App\Domains\Sales\Models\SalesTeam;
+use App\Domains\Sales\Models\SalesTeamMember;
 use App\Models\User;
-use App\Services\SalesManagerDailyScorecardService;
+use App\Domains\Sales\Services\SalesManagerDailyScorecardService;
 use Carbon\Carbon;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Hash;

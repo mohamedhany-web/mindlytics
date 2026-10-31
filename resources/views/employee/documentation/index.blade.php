@@ -6,7 +6,7 @@
 @section('content')
 @php
     $isSales = auth()->user()?->isSalesStaff();
-    $stages = \App\Models\SalesLead::STAGES;
+    $stages = \App\Domains\Sales\Models\SalesLead::STAGES;
 @endphp
 <div class="p-4 sm:p-6 lg:p-8 space-y-6">
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6">
@@ -198,7 +198,7 @@
         </h2>
         <p class="text-sm text-slate-600">أي نشاط من نوع «مكالمة» يجب أن يكون له نتيجة. هذا يغذي KPI اليومي ولوحة المدير.</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
-            @foreach(\App\Models\SalesActivity::OUTCOMES as $k => $label)
+            @foreach(\App\Domains\Sales\Models\SalesActivity::OUTCOMES as $k => $label)
                 <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
                     <p class="font-bold text-slate-800">{{ $label }}</p>
                     <p class="text-xs text-slate-500 mt-1">
@@ -276,7 +276,7 @@
             <li>كل مرحلة أعمق تحتاج متابعة مجدولة (ما عدا الاستراحات/الحالات المغلقة).</li>
             <li>Lost و Objection دائماً بسبب واضح قابل للتحليل.</li>
             <li>لا يمكن إعادة فتح Lead مغلق (Lost / Dormant / Enrollment) من واجهتك — راجع الإدارة.</li>
-            <li>Lead راكد بلا تواصل لمدة {{ \App\Models\SalesLead::STALE_CONTACT_DAYS }} أيام يدخل قائمة المهام العاجلة.</li>
+            <li>Lead راكد بلا تواصل لمدة {{ \App\Domains\Sales\Models\SalesLead::STALE_CONTACT_DAYS }} أيام يدخل قائمة المهام العاجلة.</li>
             <li>التقرير اليومي غير المسلَّم يؤثر على KPI وقد ينشئ خصماً حسب إعدادات الإدارة.</li>
             <li>أنت مسؤول عن دقة بيانات العميل وجودة الملاحظات في النظام.</li>
         </ul>

@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Models\EmployeeJob;
-use App\Models\SalesActivity;
-use App\Models\SalesLead;
-use App\Models\SalesTeam;
-use App\Models\SalesTeamMember;
+use App\Domains\Hr\Models\EmployeeJob;
+use App\Domains\Sales\Models\SalesActivity;
+use App\Domains\Sales\Models\SalesLead;
+use App\Domains\Sales\Models\SalesTeam;
+use App\Domains\Sales\Models\SalesTeamMember;
 use App\Models\User;
-use App\Services\SalesManagerHubService;
+use App\Domains\Sales\Services\SalesManagerHubService;
 use Carbon\Carbon;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Hash;
@@ -23,7 +23,7 @@ class SalesManagerHubDashboardTest extends TestCase
 
         $this->withoutMiddleware(\App\Http\Middleware\EnsureEmployeeWorkAccess::class);
 
-        $this->mock(\App\Services\WhatsAppQueueService::class, function ($mock) {
+        $this->mock(\App\Domains\Messaging\Services\WhatsAppQueueService::class, function ($mock) {
             $mock->shouldReceive('pendingCount')->andReturn(0);
         });
 

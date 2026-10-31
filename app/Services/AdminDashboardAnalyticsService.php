@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
-use App\Models\AdvancedCourse;
-use App\Models\OfflineCourseEnrollment;
-use App\Models\Order;
-use App\Models\Payment;
-use App\Models\StudentCourseEnrollment;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Offline\Models\OfflineCourseEnrollment;
+use App\Domains\Accounting\Models\Order;
+use App\Domains\Accounting\Models\Payment;
+use App\Domains\Learning\Models\StudentCourseEnrollment;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;

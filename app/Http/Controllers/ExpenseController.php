@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Expense;
-use App\Models\Wallet;
+use App\Domains\Accounting\Models\Expense;
+use App\Domains\Accounting\Models\Wallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -63,7 +63,7 @@ class ExpenseController extends Controller
                 ->sum('amount'),
         ];
 
-        return view('admin.expenses.index', compact('expenses', 'stats'));
+        return view('accounting::admin.expenses.index', compact('expenses', 'stats'));
     }
 
     /**
@@ -79,7 +79,7 @@ class ExpenseController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('admin.expenses.create', compact('wallets'));
+        return view('accounting::admin.expenses.create', compact('wallets'));
     }
 
     /**
@@ -150,7 +150,7 @@ class ExpenseController extends Controller
     public function show(Expense $expense)
     {
         $expense->load(['wallet', 'approvedBy', 'createdBy']);
-        return view('admin.expenses.show', compact('expense'));
+        return view('accounting::admin.expenses.show', compact('expense'));
     }
 
     /**
@@ -166,7 +166,7 @@ class ExpenseController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('admin.expenses.edit', compact('expense', 'wallets'));
+        return view('accounting::admin.expenses.edit', compact('expense', 'wallets'));
     }
 
     /**
@@ -225,8 +225,8 @@ class ExpenseController extends Controller
         ]);
 
         // إنشاء معاملة مالية (مصروف)
-        $transactionNumber = 'TXN-' . str_pad(\App\Models\Transaction::count() + 1, 8, '0', STR_PAD_LEFT);
-        \App\Models\Transaction::create([
+        $transactionNumber = 'TXN-' . str_pad(\App\Domains\Accounting\Models\Transaction::count() + 1, 8, '0', STR_PAD_LEFT);
+        \App\Domains\Accounting\Models\Transaction::create([
             'transaction_number' => $transactionNumber,
             'user_id' => $expense->created_by ?? auth()->id(),
             'payment_id' => null,

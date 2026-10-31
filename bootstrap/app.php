@@ -33,7 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // File Upload Security - حماية رفع الملفات
         $middleware->appendToGroup('web', \App\Http\Middleware\FileUploadSecurityMiddleware::class);
         
-        $middleware->appendToGroup('web', \App\Http\Middleware\RecordMarketingRegionVisit::class);
+        $middleware->appendToGroup('web', \App\Domains\Marketing\Http\Middleware\RecordMarketingRegionVisit::class);
 
         // إضافة Middleware مراقبة الأنشطة لجميع الطلبات
         $middleware->append(\App\Http\Middleware\LogActivityMiddleware::class);
@@ -52,11 +52,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'guest-only' => \App\Http\Middleware\EnsureGuestOnly::class,
             'prevent-concurrent' => \App\Http\Middleware\PreventConcurrentSessions::class,
             'landing.locale' => \App\Http\Middleware\SetLandingLocale::class,
-            'community.contributor' => \App\Http\Middleware\EnsureCommunityContributor::class,
-            'sales.employee' => \App\Http\Middleware\EnsureSalesEmployee::class,
-            'sales.manager' => \App\Http\Middleware\EnsureSalesManager::class,
-            'sales.staff' => \App\Http\Middleware\EnsureSalesStaff::class,
-            'moderator.employee' => \App\Http\Middleware\EnsureModeratorEmployee::class,
+            'community.contributor' => \App\Domains\Community\Http\Middleware\EnsureCommunityContributor::class,
+            'sales.employee' => \App\Domains\Sales\Http\Middleware\EnsureSalesEmployee::class,
+            'sales.manager' => \App\Domains\Sales\Http\Middleware\EnsureSalesManager::class,
+            'sales.staff' => \App\Domains\Sales\Http\Middleware\EnsureSalesStaff::class,
+            'moderator.employee' => \App\Domains\Marketing\Http\Middleware\EnsureModeratorEmployee::class,
             'employee.work' => \App\Http\Middleware\EnsureEmployeeWorkAccess::class,
             'api.student' => \App\Http\Middleware\EnsureApiStudent::class,
             'api.instructor' => \App\Http\Middleware\EnsureApiInstructor::class,
@@ -224,27 +224,5 @@ return Application::configure(basePath: dirname(__DIR__))
                 ], 500);
             }
         });
-    })
-    ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule): void {
-        $schedule->command('sales:send-followup-reminders')->dailyAt('08:00');
-        $schedule->command('sales:remind-daily-report')->everyFifteenMinutes();
-        $schedule->command('sales:evaluate-enforcement')->dailyAt('09:30');
-        $schedule->command('sales:apply-daily-report-penalties')->dailyAt('01:30');
-        $schedule->command('sales:apply-daily-kpi-penalties')->dailyAt('01:45');
-        $schedule->command('sales:enforce-import-contact')->dailyAt('10:00');
-        $schedule->command('employees:remind-daily-report')->dailyAt('16:30');
-        $schedule->command('employees:apply-daily-report-penalties')->dailyAt('02:00');
-        $schedule->command('employees:apply-attendance-penalties')->dailyAt('02:30');
-        $schedule->command('employees:check-presence')->everyMinute();
-        $schedule->command('marketing:remind-today-events')
-            ->dailyAt(\App\Support\MarketingPlanSettings::reminderTime());
-        $schedule->command('marketing:apply-execution-penalties')
-            ->dailyAt(\App\Support\MarketingPlanSettings::confirmationDeadlineTime());
-
-        // طابور الواتساب فقط — معزول عن sales والتسجيل وغيرها
-        $schedule->command('queue:work --queue=whatsapp --stop-when-empty --max-time=55 --max-jobs=50')
-            ->everyMinute()
-            ->withoutOverlapping()
-            ->runInBackground();
     })
     ->create();

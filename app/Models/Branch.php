@@ -6,6 +6,15 @@ use App\Services\Branch\BranchResolver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use App\Domains\Accounting\Models\Invoice;
+use App\Domains\Accounting\Models\Order;
+use App\Domains\Accounting\Models\Payment;
+use App\Domains\Accounting\Models\Transaction;
+use App\Domains\Accounting\Models\Wallet;
+use App\Domains\Accounting\Models\WalletTransaction;
+use App\Domains\Offline\Models\OfflineCourse;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Learning\Models\StudentCourseEnrollment;
 
 class Branch extends Model
 {

@@ -2,13 +2,13 @@
 
 namespace Tests\Unit;
 
-use App\Models\AdvancedCourse;
-use App\Models\CourseSection;
-use App\Models\CurriculumItem;
-use App\Models\Lecture;
-use App\Models\LectureWatchProgress;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Learning\Models\CourseSection;
+use App\Domains\Learning\Models\CurriculumItem;
+use App\Domains\Learning\Models\Lecture;
+use App\Domains\Learning\Models\LectureWatchProgress;
 use App\Models\User;
-use App\Services\CourseProgressService;
+use App\Domains\Learning\Services\CourseProgressService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;

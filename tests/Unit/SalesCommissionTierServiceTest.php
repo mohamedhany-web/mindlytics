@@ -3,7 +3,7 @@
 namespace Tests\Unit;
 
 use App\Models\User;
-use App\Services\SalesCommissionTierService;
+use App\Domains\Sales\Services\SalesCommissionTierService;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -121,7 +121,7 @@ class SalesCommissionTierServiceTest extends TestCase
 
         // buildBreakdown يتوقع SalesLead models مع sum('commission_amount')
         $fakeLeads = collect(range(1, 10))->map(function ($i) {
-            $lead = new \App\Models\SalesLead;
+            $lead = new \App\Domains\Sales\Models\SalesLead;
             $lead->forceFill(['id' => $i, 'commission_amount' => 0]);
             $lead->id = $i;
 

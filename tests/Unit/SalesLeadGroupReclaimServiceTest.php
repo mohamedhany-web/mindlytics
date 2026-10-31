@@ -2,7 +2,7 @@
 
 namespace Tests\Unit;
 
-use App\Services\SalesLeadGroupReclaimService;
+use App\Domains\Sales\Services\SalesLeadGroupReclaimService;
 use Tests\TestCase;
 
 class SalesLeadGroupReclaimServiceTest extends TestCase

@@ -7,8 +7,8 @@
 @php
     $user = auth()->user();
     $memberSince = $user->created_at ? $user->created_at->copy()->locale('ar')->translatedFormat('d F Y') : '—';
-    $myCoursesCount = \App\Models\AdvancedCourse::where('instructor_id', $user->id)->count();
-    $totalStudents = \App\Models\StudentCourseEnrollment::whereHas('course', function($q) use ($user) {
+    $myCoursesCount = \App\Domains\Learning\Models\AdvancedCourse::where('instructor_id', $user->id)->count();
+    $totalStudents = \App\Domains\Learning\Models\StudentCourseEnrollment::whereHas('course', function($q) use ($user) {
         $q->where('instructor_id', $user->id);
     })->where('status', 'active')->distinct('user_id')->count();
     $lastLogin = $user->last_login_at ? $user->last_login_at->copy()->locale('ar')->diffForHumans() : '—';

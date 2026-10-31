@@ -3,14 +3,14 @@
 namespace App\Http\Controllers\Branch;
 
 use App\Http\Controllers\Controller;
-use App\Models\AcademicYear;
+use App\Domains\Learning\Models\AcademicYear;
 use App\Models\ActivityLog;
-use App\Models\AdvancedCourse;
-use App\Models\Invoice;
-use App\Models\OfflineCourse;
-use App\Models\Order;
-use App\Models\Payment;
-use App\Models\StudentCourseEnrollment;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Accounting\Models\Invoice;
+use App\Domains\Offline\Models\OfflineCourse;
+use App\Domains\Accounting\Models\Order;
+use App\Domains\Accounting\Models\Payment;
+use App\Domains\Learning\Models\StudentCourseEnrollment;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;

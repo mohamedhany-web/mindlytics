@@ -2,7 +2,7 @@
 
 namespace Tests\Unit;
 
-use App\Services\MetaSocial\MetaSocialContactCaptureService;
+use App\Domains\Messaging\Services\MetaSocialContactCaptureService;
 use Tests\TestCase;
 
 class MetaSocialContactCaptureServiceTest extends TestCase

@@ -89,7 +89,7 @@
         @endif
 
         @if($hasSalesManagerPortal)
-        @php $waQueueCount = app(\App\Services\WhatsAppQueueService::class)->pendingCount(); @endphp
+        @php $waQueueCount = app(\App\Domains\Messaging\Services\WhatsAppQueueService::class)->pendingCount(); @endphp
         <div class="border-t border-slate-700/50 my-2 pt-2">
             <p class="px-4 text-xs font-semibold text-amber-400/90 uppercase tracking-wider mb-1">واتساب — طلبات</p>
             <a href="{{ route('employee.sales-manager.whatsapp.queue.index') }}"
@@ -105,6 +105,14 @@
         @if(auth()->user()->isSalesEmployee())
         <div class="border-t border-slate-700/50 my-2 pt-2">
             <p class="px-4 text-xs font-semibold text-emerald-400/90 uppercase tracking-wider mb-1">المبيعات</p>
+            @if(Route::has('employee.crm.home'))
+            <a href="{{ route('employee.crm.home') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.crm.*') ? 'bg-[#534D64] text-white shadow-lg' : 'text-slate-200 bg-slate-700/40 hover:bg-slate-700/70 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-table-cells-large text-base"></i>
+                <span>CRM المبيعات (جديد)</span>
+            </a>
+            @endif
             <a href="{{ route('employee.sales.dashboard') }}"
                class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.dashboard') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
                @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
@@ -205,6 +213,16 @@
         @if($hasSalesManagerPortal)
         <div class="border-t border-slate-700/50 my-2 pt-2">
             <p class="px-4 text-xs font-semibold text-teal-400/90 uppercase tracking-wider mb-1">{{ $isBusinessDeveloper ? 'Business Developer — المبيعات' : 'مدير المبيعات' }}</p>
+            @if(! auth()->user()->isSalesEmployee())
+            @if(Route::has('employee.crm.home'))
+            <a href="{{ route('employee.crm.home') }}"
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.crm.*') ? 'bg-[#534D64] text-white shadow-lg' : 'text-slate-200 bg-slate-700/40 hover:bg-slate-700/70 hover:text-white' }}"
+               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
+                <i class="fas fa-table-cells-large text-base"></i>
+                <span>CRM المبيعات (جديد)</span>
+            </a>
+            @endif
+            @endif
             <a href="{{ route('employee.sales-manager.dashboard') }}"
                class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.dashboard') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
                @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
@@ -348,12 +366,12 @@
             </a>
             @php
                 try {
-                    $pendingShiftSwapsCount = \App\Models\SalesShiftSwapRequest::query()
+                    $pendingShiftSwapsCount = \App\Domains\Sales\Models\SalesShiftSwapRequest::query()
                         ->where('status', 'pending')
                         ->when($hasSalesManagerPortal, function ($q) {
-                            $team = app(\App\Services\SalesTeamService::class)->teamFor(auth()->user());
+                            $team = app(\App\Domains\Sales\Services\SalesTeamService::class)->teamFor(auth()->user());
                             if (auth()->user()?->isBusinessDeveloper()) {
-                                $ids = app(\App\Services\SalesTeamService::class)->allSalesEmployeeIds();
+                                $ids = app(\App\Domains\Sales\Services\SalesTeamService::class)->allSalesEmployeeIds();
                                 $q->where(function ($q2) use ($ids) {
                                     $q2->whereIn('requester_id', $ids)->orWhereIn('partner_id', $ids);
                                 });

@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\AdvancedCourse;
+use App\Domains\Learning\Models\AdvancedCourse;
 use App\Models\Notification;
-use App\Models\StudentCourseEnrollment;
+use App\Domains\Learning\Models\StudentCourseEnrollment;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;

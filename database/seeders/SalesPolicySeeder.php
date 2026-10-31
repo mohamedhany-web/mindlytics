@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\SalesPolicyRule;
-use App\Models\SalesPolicySection;
-use App\Models\SalesPolicySettings;
+use App\Domains\Sales\Models\SalesPolicyRule;
+use App\Domains\Sales\Models\SalesPolicySection;
+use App\Domains\Sales\Models\SalesPolicySettings;
 use Illuminate\Database\Seeder;
 
 class SalesPolicySeeder extends Seeder

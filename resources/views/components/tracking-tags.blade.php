@@ -7,7 +7,7 @@
 @props(['placement' => 'head'])
 
 @php
-    $t = \App\Support\MarketingWebAnalyticsSettings::forTracking();
+    $t = \App\Domains\Marketing\Support\MarketingWebAnalyticsSettings::forTracking();
     $analyticsEnabled = (bool) $t['enabled'];
     $gtmId = $t['gtm_container_id'];
     $clarityId = $t['clarity_project_id'];

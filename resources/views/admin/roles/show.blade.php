@@ -77,7 +77,7 @@
                                 </h4>
                                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                     @foreach($groupPermissions as $permission)
-                                        <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer {{ in_array($permission->id, $role->permissions->pluck('id')->toArray()) ? 'bg-blue-50 border-blue-300 : '' }}">
+                                        <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer {{ in_array($permission->id, $role->permissions->pluck('id')->toArray()) ? 'bg-blue-50 border-blue-300' : '' }}">
                                             <input type="checkbox" name="permissions[]" value="{{ $permission->id }}"
                                                    {{ in_array($permission->id, $role->permissions->pluck('id')->toArray()) ? 'checked' : '' }}
                                                    class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">

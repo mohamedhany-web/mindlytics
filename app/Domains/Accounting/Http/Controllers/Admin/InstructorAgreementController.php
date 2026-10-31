@@ -1,0 +1,332 @@
+<?php
+
+namespace App\Domains\Accounting\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Domains\Accounting\Models\InstructorAgreement;
+use App\Domains\Accounting\Services\InstructorCoursePercentageService;
+use App\Domains\Accounting\Models\AgreementPayment;
+use App\Models\User;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Models\ActivityLog;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Validator;
+
+class InstructorAgreementController extends Controller
+{
+    /**
+     * عرض قائمة الاتفاقيات
+     * محمي من: Unauthorized Access, SQL Injection, XSS
+     */
+    public function index(Request $request)
+    {
+        // التحقق من الصلاحيات
+        if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
+            abort(403, 'غير مصرح لك بالوصول لهذه الصفحة');
+        }
+
+        try {
+            // Sanitization
+            $instructorId = filter_var($request->input('instructor_id'), FILTER_VALIDATE_INT);
+            $status = strip_tags(trim($request->input('status', '')));
+            $type = strip_tags(trim($request->input('type', '')));
+            $search = strip_tags(trim($request->input('search', '')));
+
+            $query = InstructorAgreement::with(['instructor', 'createdBy'])
+                ->withCount(['payments', 'paidPayments']);
+
+            if ($instructorId && $instructorId > 0) {
+                $query->where('instructor_id', $instructorId);
+            }
+
+            if ($status && in_array($status, ['draft', 'active', 'suspended', 'terminated', 'completed'])) {
+                $query->where('status', $status);
+            }
+
+            if ($type && in_array($type, ['course_price', 'hourly_rate', 'monthly_salary'])) {
+                $query->where('type', $type);
+            }
+
+            if ($search && strlen($search) <= 255) {
+                $search = preg_replace('/[^a-zA-Z0-9\s\u0600-\u06FF]/', '', $search);
+                $query->where(function($q) use ($search) {
+                    $q->where('agreement_number', 'like', '%' . $search . '%')
+                      ->orWhere('title', 'like', '%' . $search . '%')
+                      ->orWhereHas('instructor', function($q) use ($search) {
+                          $q->where('name', 'like', '%' . $search . '%')
+                            ->orWhere('phone', 'like', '%' . $search . '%');
+                      });
+                });
+            }
+
+            $agreements = $query->orderBy('created_at', 'desc')->paginate(20);
+            // جلب جميع المدربين (instructor أو teacher) من عمود role فقط لتجنب أخطاء علاقة roles
+            $instructors = User::whereIn('role', ['instructor', 'teacher'])
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name', 'email', 'phone', 'role']);
+
+            $stats = [
+                'total' => InstructorAgreement::count(),
+                'active' => InstructorAgreement::where('status', InstructorAgreement::STATUS_ACTIVE)->count(),
+                'draft' => InstructorAgreement::where('status', InstructorAgreement::STATUS_DRAFT)->count(),
+                'total_earned' => AgreementPayment::where('status', AgreementPayment::STATUS_PAID)->sum('amount'),
+            ];
+
+            return view('accounting::admin.agreements.index', compact('agreements', 'instructors', 'stats'));
+        } catch (\Exception $e) {
+            Log::error('Error loading agreements: ' . $e->getMessage());
+            abort(500, 'حدث خطأ أثناء تحميل الاتفاقيات');
+        }
+    }
+
+    public function create()
+    {
+        // المدربون الذين لديهم على الأقل كورس أونلاين مُعيَّن لهم (instructor_id)
+        $instructorIdsWithCourses = AdvancedCourse::where('is_active', true)
+            ->whereNotNull('instructor_id')
+            ->distinct()
+            ->pluck('instructor_id');
+        $instructors = User::where(function($q) {
+                $q->where('role', 'instructor')
+                  ->orWhere('role', 'teacher')
+                  ->orWhereHas('roles', function($roleQuery) {
+                      $roleQuery->whereIn('name', ['instructor', 'teacher']);
+                  });
+            })
+            ->where('is_active', true)
+            ->whereIn('id', $instructorIdsWithCourses)
+            ->orderBy('name')
+            ->get();
+        $advancedCourses = AdvancedCourse::where('is_active', true)
+            ->whereNotNull('instructor_id')
+            ->orderBy('title')
+            ->get(['id', 'title', 'instructor_id']);
+        return view('accounting::admin.agreements.create', compact('instructors', 'advancedCourses'));
+    }
+
+    public function store(Request $request)
+    {
+        $rules = [
+            'instructor_id' => 'required|exists:users,id',
+            'type' => 'required|in:course_price,hourly_rate,monthly_salary,course_percentage',
+            'rate' => 'nullable|numeric|min:0',
+            'advanced_course_id' => 'required_if:type,course_percentage|nullable|exists:advanced_courses,id',
+            'course_percentage' => 'required_if:type,course_percentage|nullable|numeric|min:0|max:100',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'start_date' => 'required|date',
+            'end_date' => 'nullable|date|after:start_date',
+            'status' => 'required|in:draft,active,suspended,terminated,completed',
+            'terms' => 'nullable|string',
+            'notes' => 'nullable|string',
+        ];
+        $request->validate($rules);
+
+        $isCoursePercentage = $request->type === 'course_percentage';
+        $agreement = InstructorAgreement::create([
+            'instructor_id' => $request->instructor_id,
+            'type' => $isCoursePercentage ? 'course_price' : $request->type,
+            'rate' => $isCoursePercentage ? 0 : (float) $request->rate,
+            'billing_type' => $isCoursePercentage ? InstructorAgreement::BILLING_COURSE_PERCENTAGE : null,
+            'advanced_course_id' => $isCoursePercentage ? $request->advanced_course_id : null,
+            'course_percentage' => $isCoursePercentage ? (float) $request->course_percentage : null,
+            'agreement_number' => InstructorAgreement::generateAgreementNumber(),
+            'title' => $request->title,
+            'description' => $request->description,
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date,
+            'status' => $request->status,
+            'terms' => $request->terms,
+            'notes' => $request->notes,
+            'created_by' => auth()->id(),
+        ]);
+
+        return redirect()->route('admin.agreements.show', $agreement)
+            ->with('success', 'تم إنشاء الاتفاقية بنجاح');
+    }
+
+    public function show(InstructorAgreement $agreement)
+    {
+        if ($agreement->isCoursePercentageType()
+            && $agreement->status === InstructorAgreement::STATUS_ACTIVE
+            && $agreement->advanced_course_id) {
+            InstructorCoursePercentageService::syncMissingPaymentsForAgreement($agreement);
+        }
+
+        $agreement->load(['instructor', 'createdBy', 'advancedCourse', 'payments.course', 'payments.lecture', 'payments.enrollment.student']);
+        
+        $stats = [
+            'total_earned' => $agreement->paidPayments()->sum('amount'),
+            'pending_amount' => $agreement->approvedPayments()->sum('amount'),
+            'total_payments' => $agreement->payments()->count(),
+            'paid_payments' => $agreement->paidPayments()->count(),
+        ];
+
+        return view('accounting::admin.agreements.show', compact('agreement', 'stats'));
+    }
+
+    /**
+     * تطبيق النسبة الحالية للاتفاقية على مدفوعات التفعيل المسجّلة بالنسبة القديمة.
+     */
+    public function applyPercentage(Request $request, InstructorAgreement $agreement)
+    {
+        if (! Auth::check() || ! Auth::user()->isSuperAdmin()) {
+            abort(403);
+        }
+
+        if (! $agreement->isCoursePercentageType()) {
+            return back()->with('error', 'هذه الاتفاقية ليست من نوع نسبة من الكورس.');
+        }
+
+        $includePaid = $request->boolean('include_paid');
+        $result = InstructorCoursePercentageService::applyCurrentPercentageToExistingPayments(
+            $agreement,
+            $includePaid,
+        );
+
+        $pct = number_format((float) $agreement->course_percentage, 2);
+        $parts = [
+            "تم تطبيق النسبة {$pct}%",
+            "تحديث: {$result['updated']}",
+        ];
+        if ($result['created'] > 0) {
+            $parts[] = "إنشاء ناقص: {$result['created']}";
+        }
+        if ($result['skipped_paid'] > 0) {
+            $parts[] = "تم تخطي مدفوع: {$result['skipped_paid']}";
+        }
+        if (abs($result['total_delta']) >= 0.01) {
+            $sign = $result['total_delta'] > 0 ? '+' : '';
+            $parts[] = 'فرق الإجمالي: '.$sign.number_format($result['total_delta'], 2).' ج.م';
+        }
+
+        return back()->with('success', implode(' · ', $parts));
+    }
+
+    public function updatePayment(Request $request, AgreementPayment $payment)
+    {
+        if (! Auth::check() || ! Auth::user()->isSuperAdmin()) {
+            abort(403);
+        }
+
+        if ($payment->status === AgreementPayment::STATUS_PAID && $payment->transfer_receipt_path) {
+            return back()->with('error', 'لا يمكن تعديل مدفوعة تم تحويلها ورفع إيصال لها.');
+        }
+
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0',
+            'description' => 'nullable|string|max:500',
+            'notes' => 'nullable|string|max:1000',
+            'status' => 'nullable|in:pending,approved,rejected,cancelled',
+        ]);
+
+        $payment->update([
+            'amount' => $validated['amount'],
+            'description' => $validated['description'] ?? $payment->description,
+            'notes' => $validated['notes'] ?? $payment->notes,
+            'status' => $validated['status'] ?? $payment->status,
+        ]);
+
+        return back()->with('success', 'تم تحديث المدفوعة بنجاح.');
+    }
+
+    public function destroyPayment(AgreementPayment $payment)
+    {
+        if (! Auth::check() || ! Auth::user()->isSuperAdmin()) {
+            abort(403);
+        }
+
+        if ($payment->status === AgreementPayment::STATUS_PAID) {
+            return back()->with('error', 'لا يمكن حذف مدفوعة تم دفعها للمدرب — يمكنك تعديل المبلغ إن لم يُرفع إيصال بعد.');
+        }
+
+        $payment->delete();
+
+        return back()->with('success', 'تم حذف المدفوعة من سجل الاتفاقية.');
+    }
+
+    public function edit(InstructorAgreement $agreement)
+    {
+        $instructorIdsWithCourses = AdvancedCourse::where('is_active', true)
+            ->whereNotNull('instructor_id')
+            ->distinct()
+            ->pluck('instructor_id')
+            ->push($agreement->instructor_id)
+            ->filter()
+            ->unique()
+            ->values();
+        $instructors = User::where(function($q) {
+                $q->where('role', 'instructor')
+                  ->orWhere('role', 'teacher')
+                  ->orWhereHas('roles', function($roleQuery) {
+                      $roleQuery->whereIn('name', ['instructor', 'teacher']);
+                  });
+            })
+            ->where('is_active', true)
+            ->whereIn('id', $instructorIdsWithCourses)
+            ->orderBy('name')
+            ->get();
+        $advancedCourses = AdvancedCourse::where('is_active', true)
+            ->whereNotNull('instructor_id')
+            ->orderBy('title')
+            ->get(['id', 'title', 'instructor_id']);
+        return view('accounting::admin.agreements.edit', compact('agreement', 'instructors', 'advancedCourses'));
+    }
+
+    public function update(Request $request, InstructorAgreement $agreement)
+    {
+        $rules = [
+            'instructor_id' => 'required|exists:users,id',
+            'type' => 'required|in:course_price,hourly_rate,monthly_salary,course_percentage',
+            'rate' => 'nullable|numeric|min:0',
+            'advanced_course_id' => 'required_if:type,course_percentage|nullable|exists:advanced_courses,id',
+            'course_percentage' => 'required_if:type,course_percentage|nullable|numeric|min:0|max:100',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'start_date' => 'required|date',
+            'end_date' => 'nullable|date|after:start_date',
+            'status' => 'required|in:draft,active,suspended,terminated,completed',
+            'terms' => 'nullable|string',
+            'notes' => 'nullable|string',
+        ];
+        $request->validate($rules);
+
+        $isCoursePercentage = $request->type === 'course_percentage';
+        $agreement->update([
+            'instructor_id' => $request->instructor_id,
+            'type' => $isCoursePercentage ? 'course_price' : $request->type,
+            'rate' => $isCoursePercentage ? 0 : (float) $request->rate,
+            'billing_type' => $isCoursePercentage ? InstructorAgreement::BILLING_COURSE_PERCENTAGE : null,
+            'advanced_course_id' => $isCoursePercentage ? $request->advanced_course_id : null,
+            'course_percentage' => $isCoursePercentage ? (float) $request->course_percentage : null,
+            'title' => $request->title,
+            'description' => $request->description,
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date,
+            'status' => $request->status,
+            'terms' => $request->terms,
+            'notes' => $request->notes,
+        ]);
+
+        return redirect()->route('admin.agreements.show', $agreement)
+            ->with('success', 'تم تحديث الاتفاقية بنجاح');
+    }
+
+    public function destroy(InstructorAgreement $agreement)
+    {
+        if ($agreement->payments()->where('status', AgreementPayment::STATUS_PAID)->exists()) {
+            return redirect()->back()
+                ->with('error', 'لا يمكن حذف الاتفاقية لأنها تحتوي على مدفوعات مكتملة');
+        }
+
+        $agreement->delete();
+
+        return redirect()->route('admin.agreements.index')
+            ->with('success', 'تم حذف الاتفاقية بنجاح');
+    }
+}

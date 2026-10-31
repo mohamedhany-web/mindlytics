@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
-use App\Models\Assignment;
-use App\Models\CalendarEvent;
-use App\Models\Exam;
-use App\Models\Lecture;
-use App\Models\LectureAssignment;
+use App\Domains\Learning\Models\Assignment;
+use App\Domains\Cms\Models\CalendarEvent;
+use App\Domains\Learning\Models\Exam;
+use App\Domains\Learning\Models\Lecture;
+use App\Domains\Learning\Models\LectureAssignment;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;

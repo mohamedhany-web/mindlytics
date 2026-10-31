@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Notification;
 use App\Models\User;
-use App\Models\AdvancedCourse;
-use App\Models\AcademicYear;
-use App\Models\AcademicSubject;
+use App\Domains\Learning\Models\AdvancedCourse;
+use App\Domains\Learning\Models\AcademicYear;
+use App\Domains\Learning\Models\AcademicSubject;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -384,7 +384,7 @@ class NotificationController extends Controller
             case 'course_students':
                 if ($targetId) {
                     Notification::sendToCourseStudents($targetId, $data);
-                    return \App\Models\StudentCourseEnrollment::where('advanced_course_id', $targetId)
+                    return \App\Domains\Learning\Models\StudentCourseEnrollment::where('advanced_course_id', $targetId)
                                                              ->where('status', 'active')
                                                              ->count();
                 }
@@ -394,7 +394,7 @@ class NotificationController extends Controller
                 if ($targetId) {
                     Notification::sendToYearStudents($targetId, $data);
                     $courseIds = AdvancedCourse::where('academic_year_id', $targetId)->pluck('id');
-                    return \App\Models\StudentCourseEnrollment::whereIn('advanced_course_id', $courseIds)
+                    return \App\Domains\Learning\Models\StudentCourseEnrollment::whereIn('advanced_course_id', $courseIds)
                                                              ->where('status', 'active')
                                                              ->distinct('user_id')
                                                              ->count();
@@ -405,7 +405,7 @@ class NotificationController extends Controller
                 if ($targetId) {
                     Notification::sendToSubjectStudents($targetId, $data);
                     $courseIds = AdvancedCourse::where('academic_subject_id', $targetId)->pluck('id');
-                    return \App\Models\StudentCourseEnrollment::whereIn('advanced_course_id', $courseIds)
+                    return \App\Domains\Learning\Models\StudentCourseEnrollment::whereIn('advanced_course_id', $courseIds)
                                                              ->where('status', 'active')
                                                              ->distinct('user_id')
                                                              ->count();
@@ -594,7 +594,7 @@ class NotificationController extends Controller
 
                 case 'course_students':
                     if ($targetId && $targetId > 0) {
-                        $count = \App\Models\StudentCourseEnrollment::where('advanced_course_id', $targetId)
+                        $count = \App\Domains\Learning\Models\StudentCourseEnrollment::where('advanced_course_id', $targetId)
                                                                   ->where('status', 'active')
                                                                   ->count();
                     }
@@ -603,7 +603,7 @@ class NotificationController extends Controller
                 case 'year_students':
                     if ($targetId && $targetId > 0) {
                         $courseIds = AdvancedCourse::where('academic_year_id', $targetId)->pluck('id');
-                        $count = \App\Models\StudentCourseEnrollment::whereIn('advanced_course_id', $courseIds)
+                        $count = \App\Domains\Learning\Models\StudentCourseEnrollment::whereIn('advanced_course_id', $courseIds)
                                                                   ->where('status', 'active')
                                                                   ->distinct('user_id')
                                                                   ->count();
@@ -613,7 +613,7 @@ class NotificationController extends Controller
                 case 'subject_students':
                     if ($targetId && $targetId > 0) {
                         $courseIds = AdvancedCourse::where('academic_subject_id', $targetId)->pluck('id');
-                        $count = \App\Models\StudentCourseEnrollment::whereIn('advanced_course_id', $courseIds)
+                        $count = \App\Domains\Learning\Models\StudentCourseEnrollment::whereIn('advanced_course_id', $courseIds)
                                                                   ->where('status', 'active')
                                                                   ->distinct('user_id')
                                                                   ->count();
