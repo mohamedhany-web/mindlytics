@@ -23,6 +23,11 @@ use Illuminate\Support\Facades\Route;
 
         require app_path('Domains/Sales/routes/employee/staff.php');
 
+        // CRM الموحّد لموظف ومدير المبيعات (docs/SALES_CRM.md)
+        Route::middleware('sales.staff')->prefix('crm')->name('crm.')->group(function () {
+            require app_path('Domains/Sales/routes/crm.php');
+        });
+
         // Messenger & Instagram لموظفي/مديري المبيعات (كل الرسايل — الربط عند الرد/الأكشن)
         require app_path('Domains/Messaging/routes/employee/meta-social-inbox.php');
 

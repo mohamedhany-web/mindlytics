@@ -17,6 +17,11 @@ use Symfony\Component\Finder\Finder;
  */
 final class ModularityChecks
 {
+    /** ملفات routes تُحمَّل عمداً أكثر من مرة (نفس الشاشات بمسارين). */
+    public const SHARED_ROUTE_FILES = [
+        'Domains/Sales/routes/crm.php' => 2, // employee/crm و admin/crm (docs/SALES_CRM.md)
+    ];
+
     /**
      * Views غير موجودة من قبل النقل (ترجع 500 على main أيضاً) – موثّقة في القسم 15 و 16 من الخطة.
      * لا تضف أسماء جديدة هنا: أي view مفقود جديد يعني أن النقل كسر شيئاً.
@@ -218,6 +223,10 @@ final class ModularityChecks
             $text = file_get_contents($path);
             if (preg_match_all('/[\'"]\\\\{0,2}App\\\\{1,2}Domains\\\\/', $text, $m, PREG_OFFSET_CAPTURE)) {
                 foreach ($m[0] as [, $offset]) {
+                    // @use('App\Domains\…') استيراد كلاس في القالب، ليس اسماً محفوظاً
+                    if (substr($text, max(0, $offset - 5), 5) === '@use(') {
+                        continue;
+                    }
                     $problems[] = self::rel($path).':'.(substr_count(substr($text, 0, $offset), "\n") + 1).' quoted moved class name in a template';
                 }
             }
@@ -266,8 +275,9 @@ final class ModularityChecks
         foreach ((new Finder)->files()->in(app_path('Domains'))->path('/routes/')->name('*.php') as $file) {
             $relative = 'Domains/'.str_replace('\\', '/', substr($file->getPathname(), strlen(app_path('Domains')) + 1));
             $count = substr_count($requireSources, "app_path('{$relative}')");
-            if ($count !== 1) {
-                $problems[] = "route file app/{$relative} is required {$count} times (expected 1)";
+            $expected = self::SHARED_ROUTE_FILES[$relative] ?? 1;
+            if ($count !== $expected) {
+                $problems[] = "route file app/{$relative} is required {$count} times (expected {$expected})";
             }
         }
 

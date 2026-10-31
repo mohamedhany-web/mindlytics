@@ -189,6 +189,16 @@
                     <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
                 </button>
                 <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
+                    @if(Route::has('admin.crm.home'))
+                    <li>
+                        <a href="{{ route('admin.crm.home') }}"
+                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.crm.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
+                            <i class="fas fa-table-cells-large w-4"></i>
+                            <span>CRM المبيعات (جديد)</span>
+                        </a>
+                    </li>
+                    @endif
                     <li>
                         <a href="{{ route('admin.sales.reports.index') }}"
                            @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"

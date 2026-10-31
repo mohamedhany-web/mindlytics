@@ -28,6 +28,29 @@ final class PhoneKey
     }
 
     /**
+     * رابط wa.me بالصيغة الدولية: 010… ← 2010… (مصر)، 07… ← 9627… (الأردن)، والدولي كما هو.
+     */
+    public static function whatsappUrl(?string $phone): ?string
+    {
+        $digits = preg_replace('/\D+/', '', (string) $phone) ?? '';
+        if (str_starts_with($digits, '00')) {
+            $digits = substr($digits, 2);
+        }
+        if ($digits === '' || strlen($digits) < 8) {
+            return null;
+        }
+        if (str_starts_with($digits, '07') && strlen($digits) === 10) {
+            $digits = '962'.substr($digits, 1);
+        } elseif (str_starts_with($digits, '0')) {
+            $digits = '20'.substr($digits, 1);
+        } elseif (str_starts_with($digits, '1') && strlen($digits) === 10) {
+            $digits = '20'.$digits;
+        }
+
+        return 'https://wa.me/'.$digits;
+    }
+
+    /**
      * جزء يُستخدم في LIKE لتضييق البحث قبل المقارنة الدقيقة (آخر 7 أرقام لا تتأثر بمسافات أو شرطات قبلها غالباً).
      */
     public static function likeTail(?string $phone): ?string

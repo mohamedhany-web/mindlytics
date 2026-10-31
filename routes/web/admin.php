@@ -39,6 +39,11 @@ use Illuminate\Support\Facades\Route;
 
         require app_path('Domains/Sales/routes/admin/sales.php');
 
+        // نفس CRM المبيعات بنطاق كل البيانات (docs/SALES_CRM.md)
+        Route::prefix('crm')->name('crm.')->group(function () {
+            require app_path('Domains/Sales/routes/crm.php');
+        });
+
         // HR (Recruitment / ATS)
         require app_path('Domains/Hr/routes/admin/recruitment.php');
 
