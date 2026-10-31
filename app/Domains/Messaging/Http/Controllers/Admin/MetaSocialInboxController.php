@@ -23,6 +23,11 @@ class MetaSocialInboxController extends Controller
         private MetaSocialCrmService $crm,
     ) {}
 
+    protected function metaInboxLayout(): string
+    {
+        return 'sales::crm.layout';
+    }
+
     protected function metaInboxService(): MetaSocialInboxService
     {
         return $this->inbox;

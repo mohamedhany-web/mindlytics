@@ -38,14 +38,20 @@ final class CrmNavigation
                     ['عرض العملاء المحتملين', $c.'leads.index'],
                     ['＋ عميل محتمل', $c.'leads.create'],
                     $scope->isRep() ? ['مجموعات العملاء', 'employee.sales.groups.index'] : null,
+                    $scope->isAdmin() ? ['مجموعات العملاء', 'admin.sales.groups.index'] : null,
+                    $scope->isAdmin() ? ['استيراد دفعة', 'admin.sales.leads.import'] : null,
+                    $scope->isAdmin() ? ['تصنيفات العملاء', 'admin.sales.categories.index'] : null,
+                    $scope->isAdmin() ? ['أنواع الاهتمام', 'admin.sales.interest-types.index'] : null,
                 ])),
             ],
             [
                 'key' => 'opportunities', 'label' => 'الفرص', 'route' => $c.'opportunities.index',
-                'items' => [
+                'items' => array_values(array_filter([
                     ['عرض الفرص', $c.'opportunities.index'],
                     ['بانتظار الاعتماد', $c.'opportunities.index', ['quick' => 'won_pending']],
-                ],
+                    $scope->isAdmin() ? ['اعتماد الفوز', 'admin.sales.win-approvals.index'] : null,
+                    $scope->isAdmin() ? ['الكوميشن', 'admin.sales.commissions.index'] : null,
+                ])),
             ],
             [
                 'key' => 'activities', 'label' => 'الأنشطة', 'route' => $c.'activities.index',
@@ -67,14 +73,18 @@ final class CrmNavigation
                     $scope->isManager() ? ['تقويم الفريق', 'employee.sales-manager.schedule-calendar.index'] : null,
                     $scope->isManager() ? ['شيفتات الفريق', 'employee.sales-manager.shifts.index'] : null,
                     $scope->isManager() ? ['تبديل الشيفتات', 'employee.sales-manager.shift-swaps.index'] : null,
+                    $scope->isAdmin() ? ['تقويم الشيفت', 'admin.sales.schedule-calendar.index'] : null,
+                    $scope->isAdmin() ? ['شيفتات وقنوات', 'admin.sales.shifts.index'] : null,
+                    $scope->isAdmin() ? ['جدول Blocks', 'admin.sales.day-blocks.index'] : null,
                 ])),
             ],
             [
                 'key' => 'campaigns', 'label' => 'الحملات', 'route' => $c.'campaigns.index',
-                'items' => [
+                'items' => array_values(array_filter([
                     ['عرض الحملات', $c.'campaigns.index'],
                     ['＋ حملة جديدة', $c.'campaigns.create'],
-                ],
+                    $scope->isAdmin() ? ['مجموعات العملاء', 'admin.sales.groups.index'] : null,
+                ])),
             ],
             [
                 'key' => 'cases', 'label' => 'التذاكر', 'route' => $c.'cases.index',
@@ -94,7 +104,9 @@ final class CrmNavigation
                 'key' => 'quotes', 'label' => 'عروض الأسعار', 'route' => $c.'quotes.index',
                 'items' => array_values(array_filter([
                     ['الطلبات والعروض', $c.'quotes.index'],
-                    ['معلومات الكورسات', 'employee.sales.course-board.index'],
+                    $scope->isRep() || $scope->isManager() ? ['معلومات الكورسات', 'employee.sales.course-board.index'] : null,
+                    $scope->isAdmin() ? ['معلومات الكورسات', 'admin.sales-course-board.index'] : null,
+                    $scope->isAdmin() ? ['توصيف الدبلومات', 'admin.sales-diploma-board.index'] : null,
                 ])),
             ],
             [
@@ -110,6 +122,14 @@ final class CrmNavigation
                     $scope->isManager() ? ['تقارير يومية', 'employee.sales-manager.daily-reports.index'] : null,
                     $scope->isRep() ? ['العمولات', 'employee.sales.commissions.index'] : null,
                     $scope->isManager() ? ['عمولات الفريق', 'employee.sales-manager.commissions.index'] : null,
+                    $scope->isAdmin() ? ['تقارير المبيعات', 'admin.sales.reports.index'] : null,
+                    $scope->isAdmin() ? ['التقارير اليومية', 'admin.sales.daily-reports.index'] : null,
+                    $scope->isAdmin() ? ['إعداد التقرير اليومي', 'admin.sales.daily-reports.settings'] : null,
+                    $scope->isAdmin() ? ['تقارير الفرق', 'admin.sales.team-daily-reports.index'] : null,
+                    $scope->isAdmin() ? ['مراقبة KPIs', 'admin.sales.kpi.index'] : null,
+                    $scope->isAdmin() ? ['أهداف المبيعات', 'admin.sales.kpi.targets'] : null,
+                    $scope->isAdmin() ? ['Insights', 'admin.sales.insights.index'] : null,
+                    $scope->isAdmin() ? ['الكوميشن', 'admin.sales.commissions.index'] : null,
                 ])),
             ],
             [
@@ -120,7 +140,10 @@ final class CrmNavigation
                     $scope->isRep() ? ['Messenger / Instagram', 'employee.sales.meta-social.inbox.index'] : null,
                     $scope->isManager() ? ['واتساب الفريق', 'employee.sales-manager.whatsapp.inbox.index'] : null,
                     $scope->isManager() ? ['طابور بلا موظف', 'employee.sales-manager.whatsapp.queue.index'] : null,
-                    $scope->isAdmin() ? ['واتساب الأدمن', 'admin.whatsapp.inbox'] : null,
+                    $scope->isAdmin() ? ['واتساب', 'admin.whatsapp.inbox'] : null,
+                    $scope->isAdmin() ? ['Messenger / Instagram', 'admin.meta-social.inbox.index'] : null,
+                    $scope->isAdmin() ? ['مركز ليدات Meta', 'admin.meta-social.leads.index'] : null,
+                    $scope->isAdmin() ? ['إعدادات واتساب', 'admin.whatsapp.settings'] : null,
                 ])),
             ],
             [
@@ -128,6 +151,15 @@ final class CrmNavigation
                 'items' => array_values(array_filter([
                     ['لوحة إدارة CRM', $c.'admin.index'],
                     $scope->isAdmin() ? ['اعتماد الفوز', $c.'win-approvals.index'] : null,
+                    $scope->isAdmin() ? ['اعتماد الفوز (تفصيلي)', 'admin.sales.win-approvals.index'] : null,
+                    $scope->isAdmin() ? ['لوحة التوزيع', 'admin.sales.distribution.index'] : null,
+                    $scope->isAdmin() ? ['هيكل السيلز', 'admin.sales.org-chart.index'] : null,
+                    $scope->isAdmin() ? ['فرق المبيعات', 'admin.sales.sales-teams.index'] : null,
+                    $scope->isAdmin() ? ['تخصصات السيلز', 'admin.sales.specialties.index'] : null,
+                    $scope->isAdmin() ? ['تحويل بيانات موظف', 'admin.sales.transfer.index'] : null,
+                    $scope->isAdmin() ? ['قواعد السيلز', 'admin.sales.policy.index'] : null,
+                    $scope->isAdmin() ? ['تدقيق CRM', 'admin.sales.crm-compliance.index'] : null,
+                    $scope->isAdmin() ? ['سجل أنشطة', 'admin.sales.audit-log.index'] : null,
                     $scope->isManager() ? ['توزيع الاهتمام', 'employee.sales-manager.distribution.index'] : null,
                     $scope->isManager() ? ['اللوحة الحية', 'employee.sales-manager.live-board'] : null,
                     $scope->isManager() ? ['متابعة الفريق', 'employee.sales-manager.ops-board'] : null,
@@ -135,7 +167,7 @@ final class CrmNavigation
                     $scope->isManager() ? ['حضور الفريق', 'employee.sales-manager.attendance.index'] : null,
                     $scope->isManager() ? ['مراقبة التواجد', 'employee.sales-manager.presence.index'] : null,
                     $scope->isManager() ? ['تحويل Leads', 'employee.sales-manager.transfer.index'] : null,
-                    ['قواعد المبيعات', 'employee.sales.policy.index'],
+                    $scope->isRep() ? ['قواعد المبيعات', 'employee.sales.policy.index'] : null,
                 ])),
             ],
         ];

@@ -583,9 +583,11 @@ class CrmModuleController extends Controller
             : ($scope->isManager() && \Illuminate\Support\Facades\Route::has('employee.sales-manager.whatsapp.inbox.index')
                 ? route('employee.sales-manager.whatsapp.inbox.index')
                 : (\Illuminate\Support\Facades\Route::has('admin.whatsapp.inbox') ? route('admin.whatsapp.inbox') : null));
-        $metaRoute = \Illuminate\Support\Facades\Route::has('employee.sales.meta-social.inbox.index')
-            ? route('employee.sales.meta-social.inbox.index')
-            : null;
+        $metaRoute = $scope->isAdmin() && \Illuminate\Support\Facades\Route::has('admin.meta-social.inbox.index')
+            ? route('admin.meta-social.inbox.index')
+            : (\Illuminate\Support\Facades\Route::has('employee.sales.meta-social.inbox.index')
+                ? route('employee.sales.meta-social.inbox.index')
+                : null);
 
         return $this->crmView($scope, 'inbox', 'inbox.index', compact('waRoute', 'metaRoute'));
     }
@@ -614,8 +616,27 @@ class CrmModuleController extends Controller
 
         $has = fn (string $r) => \Illuminate\Support\Facades\Route::has($r);
         $cards = array_values(array_filter([
-            $scope->isAdmin() ? ['title' => 'اعتماد صفقات الفوز', 'url' => route($scope->route('win-approvals.index')), 'icon' => 'fa-trophy'] : null,
+            $scope->isAdmin() && $has('admin.sales.win-approvals.index') ? ['title' => 'اعتماد صفقات الفوز', 'url' => route('admin.sales.win-approvals.index'), 'icon' => 'fa-trophy'] : ($scope->isAdmin() ? ['title' => 'اعتماد صفقات الفوز', 'url' => route($scope->route('win-approvals.index')), 'icon' => 'fa-trophy'] : null),
             ['title' => 'الفرص بانتظار الاعتماد', 'url' => route($scope->route('opportunities.index'), ['quick' => 'won_pending']), 'icon' => 'fa-handshake'],
+            $scope->isAdmin() && $has('admin.sales.distribution.index') ? ['title' => 'لوحة التوزيع', 'url' => route('admin.sales.distribution.index'), 'icon' => 'fa-share-nodes'] : null,
+            $scope->isAdmin() && $has('admin.sales.org-chart.index') ? ['title' => 'هيكل السيلز', 'url' => route('admin.sales.org-chart.index'), 'icon' => 'fa-sitemap'] : null,
+            $scope->isAdmin() && $has('admin.sales.sales-teams.index') ? ['title' => 'فرق المبيعات', 'url' => route('admin.sales.sales-teams.index'), 'icon' => 'fa-users'] : null,
+            $scope->isAdmin() && $has('admin.sales.specialties.index') ? ['title' => 'تخصصات السيلز', 'url' => route('admin.sales.specialties.index'), 'icon' => 'fa-tags'] : null,
+            $scope->isAdmin() && $has('admin.sales.transfer.index') ? ['title' => 'تحويل بيانات', 'url' => route('admin.sales.transfer.index'), 'icon' => 'fa-right-left'] : null,
+            $scope->isAdmin() && $has('admin.sales.policy.index') ? ['title' => 'قواعد السيلز', 'url' => route('admin.sales.policy.index'), 'icon' => 'fa-scale-balanced'] : null,
+            $scope->isAdmin() && $has('admin.sales.kpi.index') ? ['title' => 'مراقبة KPIs', 'url' => route('admin.sales.kpi.index'), 'icon' => 'fa-chart-pie'] : null,
+            $scope->isAdmin() && $has('admin.sales.kpi.targets') ? ['title' => 'أهداف المبيعات', 'url' => route('admin.sales.kpi.targets'), 'icon' => 'fa-bullseye'] : null,
+            $scope->isAdmin() && $has('admin.sales.reports.index') ? ['title' => 'تقارير المبيعات', 'url' => route('admin.sales.reports.index'), 'icon' => 'fa-file-invoice'] : null,
+            $scope->isAdmin() && $has('admin.sales.daily-reports.index') ? ['title' => 'التقارير اليومية', 'url' => route('admin.sales.daily-reports.index'), 'icon' => 'fa-calendar-day'] : null,
+            $scope->isAdmin() && $has('admin.sales.commissions.index') ? ['title' => 'الكوميشن', 'url' => route('admin.sales.commissions.index'), 'icon' => 'fa-coins'] : null,
+            $scope->isAdmin() && $has('admin.sales.groups.index') ? ['title' => 'مجموعات العملاء', 'url' => route('admin.sales.groups.index'), 'icon' => 'fa-layer-group'] : null,
+            $scope->isAdmin() && $has('admin.sales.leads.import') ? ['title' => 'استيراد عملاء', 'url' => route('admin.sales.leads.import'), 'icon' => 'fa-file-import'] : null,
+            $scope->isAdmin() && $has('admin.sales.shifts.index') ? ['title' => 'شيفتات وقنوات', 'url' => route('admin.sales.shifts.index'), 'icon' => 'fa-clock'] : null,
+            $scope->isAdmin() && $has('admin.sales.crm-compliance.index') ? ['title' => 'تدقيق CRM', 'url' => route('admin.sales.crm-compliance.index'), 'icon' => 'fa-clipboard-check'] : null,
+            $scope->isAdmin() && $has('admin.sales.audit-log.index') ? ['title' => 'سجل الأنشطة', 'url' => route('admin.sales.audit-log.index'), 'icon' => 'fa-history'] : null,
+            $scope->isAdmin() && $has('admin.sales-course-board.index') ? ['title' => 'معلومات الكورسات', 'url' => route('admin.sales-course-board.index'), 'icon' => 'fa-table'] : null,
+            $scope->isAdmin() && $has('admin.sales-diploma-board.index') ? ['title' => 'توصيف الدبلومات', 'url' => route('admin.sales-diploma-board.index'), 'icon' => 'fa-graduation-cap'] : null,
+            $scope->isAdmin() && $has('admin.whatsapp.inbox') ? ['title' => 'واتساب', 'url' => route('admin.whatsapp.inbox'), 'icon' => 'fa-comment-dots'] : null,
             $has('employee.sales-manager.distribution.index') ? ['title' => 'توزيع الاهتمام', 'url' => route('employee.sales-manager.distribution.index'), 'icon' => 'fa-share-nodes'] : null,
             $has('employee.sales-manager.scorecard.index') ? ['title' => 'Scorecard', 'url' => route('employee.sales-manager.scorecard.index'), 'icon' => 'fa-shield-halved'] : null,
             $has('employee.sales-manager.attendance.index') ? ['title' => 'حضور الفريق', 'url' => route('employee.sales-manager.attendance.index'), 'icon' => 'fa-clock'] : null,

@@ -176,31 +176,16 @@
                 </a>
             </li>
 
-            @php
-                $salesMenuOpen = request()->routeIs('admin.sales.*') || request()->routeIs('admin.crm.*');
-            @endphp
-            <li x-data="{ open: {{ $salesMenuOpen ? 'true' : 'false' }} }">
-                <button type="button" @click="open = !open" :aria-expanded="open"
-                        class="flex items-center justify-between w-full px-4 py-3 rounded-xl hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white group">
-                    <div class="flex items-center gap-3">
-                        <i class="fas fa-handshake w-5 text-emerald-400 group-hover:text-white"></i>
-                        <span class="font-medium">المبيعات</span>
-                    </div>
-                    <i class="fas fa-chevron-down transition-transform duration-300 text-slate-400" :class="open ? 'rotate-180' : ''"></i>
-                </button>
-                <ul x-show="open" x-transition x-cloak class="admin-sidebar-sub">
-                    @if(Route::has('admin.crm.home'))
-                    <li>
-                        <a href="{{ route('admin.crm.home') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.crm.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-table-cells-large w-4"></i>
-                            <span>CRM المبيعات</span>
-                        </a>
-                    </li>
-                    @endif
-                </ul>
+            @if(Route::has('admin.crm.home'))
+            <li>
+                <a href="{{ route('admin.crm.home') }}"
+                   @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
+                   class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 {{ request()->routeIs('admin.crm.*') || request()->routeIs('admin.sales.*') || request()->routeIs('admin.sales-course-board.*') || request()->routeIs('admin.sales-diploma-board.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}">
+                    <i class="fas fa-handshake w-5 {{ request()->routeIs('admin.crm.*') || request()->routeIs('admin.sales.*') ? 'text-white' : 'text-emerald-400' }}"></i>
+                    <span class="font-medium">CRM المبيعات</span>
+                </a>
             </li>
+            @endif
 
             @php
                 $whatsappMenuOpen = request()->routeIs('admin.whatsapp.*');

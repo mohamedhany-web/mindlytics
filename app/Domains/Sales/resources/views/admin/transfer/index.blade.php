@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.layout')
 
 @section('title', 'تحويل بيانات موظف — المبيعات')
 @section('header', 'المبيعات — تحويل بيانات موظف')

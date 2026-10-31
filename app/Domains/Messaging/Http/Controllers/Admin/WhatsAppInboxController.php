@@ -24,6 +24,7 @@ class WhatsAppInboxController extends Controller
     protected function inboxExtraViewData(): array
     {
         return [
+            'waLayout' => 'sales::crm.layout',
             'waImmersiveInbox' => true,
             'waInboxTitle' => 'محادثات الواتساب',
             'waInboxSubtitle' => 'ردّ على العملاء وتابع الـ Pipeline والـ CRM',

@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('sales::crm.layout')
 
 @section('title', 'إضافة توصيف دبلومة')
 @section('header', 'توصيف دبلومة جديدة')

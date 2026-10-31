@@ -646,7 +646,7 @@ GET|HEAD admin/sales/sales-teams [admin.sales.sales-teams.index] {web,auth,preve
 GET|HEAD admin/sales/sales-teams/create [admin.sales.sales-teams.create] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/sales/sales-teams [admin.sales.sales-teams.store] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/sales/sales-teams/{sales_team}/edit [admin.sales.sales-teams.edit] {web,auth,prevent-concurrent,role:admin|super_admin}
-PUT admin/sales/sales-teams/{sales_team} [admin.sales.sales-teams.update] {web,auth,prevent-concurrent,role:admin|super_admin}
+PUT|PATCH admin/sales/sales-teams/{sales_team} [admin.sales.sales-teams.update] {web,auth,prevent-concurrent,role:admin|super_admin}
 DELETE admin/sales/sales-teams/{sales_team} [admin.sales.sales-teams.destroy] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/sales/interest-types [admin.sales.interest-types.index] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/sales/interest-types [admin.sales.interest-types.store] {web,auth,prevent-concurrent,role:admin|super_admin}
@@ -705,7 +705,7 @@ GET|HEAD admin/sales/groups [admin.sales.groups.index] {web,auth,prevent-concurr
 GET|HEAD admin/sales/groups/create [admin.sales.groups.create] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/sales/groups [admin.sales.groups.store] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/sales/groups/{group} [admin.sales.groups.show] {web,auth,prevent-concurrent,role:admin|super_admin}
-PUT admin/sales/groups/{group} [admin.sales.groups.update] {web,auth,prevent-concurrent,role:admin|super_admin}
+PUT|PATCH admin/sales/groups/{group} [admin.sales.groups.update] {web,auth,prevent-concurrent,role:admin|super_admin}
 DELETE admin/sales/groups/{group} [admin.sales.groups.destroy] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/sales/groups/{group}/whatsapp-bulk [admin.sales.groups.whatsapp.store] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/sales/groups/{group}/whatsapp-batches/{batch} [admin.sales.groups.whatsapp-batches.show] {web,auth,prevent-concurrent,role:admin|super_admin}
@@ -717,9 +717,9 @@ POST admin/sales/leads/import [admin.sales.leads.import.store] {web,auth,prevent
 POST admin/sales/leads/{lead}/activities [admin.sales.leads.activities.store] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/sales/leads/{lead}/confirm-win [admin.sales.leads.confirm-win] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/sales/leads [admin.sales.leads.index] {web,auth,prevent-concurrent,role:admin|super_admin}
-GET|HEAD admin/sales/leads/{lead} [admin.sales.leads.show] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/sales/leads/create [admin.sales.leads.create] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/sales/leads [admin.sales.leads.store] {web,auth,prevent-concurrent,role:admin|super_admin}
+GET|HEAD admin/sales/leads/{lead} [admin.sales.leads.show] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/sales/leads/{lead}/edit [admin.sales.leads.edit] {web,auth,prevent-concurrent,role:admin|super_admin}
 PUT admin/sales/leads/{lead} [admin.sales.leads.update] {web,auth,prevent-concurrent,role:admin|super_admin}
 PATCH admin/sales/leads/{lead} [admin.sales.] {web,auth,prevent-concurrent,role:admin|super_admin}
