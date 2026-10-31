@@ -24,9 +24,9 @@
 @endphp
 
 <div class="space-y-4" x-data="fastLeadCreate({
-    followPreset: @json($defaultFollow),
-    followChannel: @json(old('follow_up_channel', 'call')),
-    customFollow: @json(old('next_follow_up_at', '')),
+    followPreset: {{ \Illuminate\Support\Js::from($defaultFollow) }},
+    followChannel: {{ \Illuminate\Support\Js::from(old('follow_up_channel', 'call')) }},
+    customFollow: {{ \Illuminate\Support\Js::from(old('next_follow_up_at', '')) }},
     showDetails: {{ $hasExtra ? 'true' : 'false' }},
 })">
 

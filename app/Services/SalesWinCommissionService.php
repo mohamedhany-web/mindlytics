@@ -46,6 +46,14 @@ class SalesWinCommissionService
 
         DB::beginTransaction();
         try {
+            // قفل صف الـ Lead: ضغطتان على «اعتماد» (أو اعتماد ورفض معاً) لا تصرفان عمولتين
+            $locked = SalesLead::query()->whereKey($lead->id)->lockForUpdate()->first();
+            if (! $locked || $locked->won_confirmed_at || $locked->stage !== SalesLead::WON_STAGE) {
+                DB::rollBack();
+
+                return ['success' => false, 'error' => 'تم اعتماد هذا الـ lead مسبقاً.'];
+            }
+
             $txnNumber = 'SALE-COM-'.str_pad((string) (Transaction::count() + 1), 6, '0', STR_PAD_LEFT);
 
             $metadata = [
@@ -188,16 +196,28 @@ class SalesWinCommissionService
         }
 
         $previousStage = SalesLead::WON_STAGE;
-        $lead->forceFill([
-            'stage' => 'offer_sent',
-            'stage_entered_at' => now(),
-            'closed_at' => null,
-            'won_confirmed_at' => null,
-            'won_confirmed_by' => null,
-            'commission_amount' => null,
-            'commission_transaction_id' => null,
-            'commission_notes' => null,
-        ])->save();
+        // نفس قفل الاعتماد: لا يُرفض Lead اعتُمد للتو في طلب متزامن (كانت العمولة تبقى مصروفة بلا Lead)
+        $rejected = DB::transaction(function () use ($lead) {
+            $locked = SalesLead::query()->whereKey($lead->id)->lockForUpdate()->first();
+            if (! $locked || $locked->won_confirmed_at || $locked->stage !== SalesLead::WON_STAGE) {
+                return false;
+            }
+            $lead->forceFill([
+                'stage' => 'offer_sent',
+                'stage_entered_at' => now(),
+                'closed_at' => null,
+                'won_confirmed_at' => null,
+                'won_confirmed_by' => null,
+                'commission_amount' => null,
+                'commission_transaction_id' => null,
+                'commission_notes' => null,
+            ])->save();
+
+            return true;
+        });
+        if (! $rejected) {
+            return ['success' => false, 'error' => 'لا يمكن رفض هذه الصفقة.'];
+        }
 
         SalesActivity::create([
             'sales_lead_id' => $lead->id,

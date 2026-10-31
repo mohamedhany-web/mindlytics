@@ -4,10 +4,10 @@
 
 @section('content')
 <div class="px-4 py-8" x-data="courseBuilder({
-        tracks: @json($trackOptions),
+        tracks: {{ \Illuminate\Support\Js::from($trackOptions) }},
         selectedTrack: '{{ old('academic_year_id', $selectedTrack) }}',
         selectedSubject: '{{ old('academic_subject_id', $selectedSubject) }}',
-        selectedSkills: @json(old('skills', [])),
+        selectedSkills: {{ \Illuminate\Support\Js::from(old('skills', [])) }},
     })" x-init="init()">
     <div class="w-full max-w-full space-y-8">
         <div class="bg-gradient-to-br from-indigo-500 via-sky-500 to-emerald-500 rounded-3xl p-6 sm:p-8 shadow-xl text-white relative overflow-hidden">
