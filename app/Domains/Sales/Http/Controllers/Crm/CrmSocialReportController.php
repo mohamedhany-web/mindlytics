@@ -13,6 +13,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
@@ -32,40 +33,69 @@ class CrmSocialReportController extends Controller
         abort_unless(
             $this->access->allows($scope->user, 'ops.meta', $scope)
             || $this->access->allows($scope->user, 'ops.whatsapp', $scope)
-            || $this->access->allows($scope->user, 'module.reports', $scope),
+            || $this->access->allows($scope->user, 'module.reports', $scope)
+            || $this->access->allows($scope->user, 'ops.social_report', $scope),
             403
         );
 
-        $from = Carbon::parse((string) $request->input('from', now()->toDateString()))->startOfDay();
+        $from = Carbon::parse((string) $request->input('from', now()->subDays(6)->toDateString()))->startOfDay();
         $to = Carbon::parse((string) $request->input('to', now()->toDateString()))->endOfDay();
         if ($from->gt($to)) {
             [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
         }
 
-        $members = $scope->isRep()
+        $staffOptions = $scope->isRep()
             ? collect([$scope->user])
-            : $scope->members();
+            : $scope->members()->sortBy('name')->values();
 
-        $memberIds = $members->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $memberIds = $staffOptions->pluck('id')->map(fn ($id) => (int) $id)->all();
         if ($memberIds === []) {
             $memberIds = [(int) $scope->user->id];
+            $staffOptions = collect([$scope->user]);
         }
 
-        $replyRows = $this->replyRows($memberIds, $from, $to, $members);
+        $filterUserId = (int) $request->input('user_id', 0);
+        if ($scope->isRep()) {
+            $filterUserId = (int) $scope->user->id;
+        } elseif ($filterUserId > 0 && ! in_array($filterUserId, $memberIds, true)) {
+            abort(403);
+        }
+
+        $replyMemberIds = $filterUserId > 0 ? [$filterUserId] : $memberIds;
+        $replyMembers = $staffOptions->whereIn('id', $replyMemberIds)->values();
+        if ($replyMembers->isEmpty() && $filterUserId > 0) {
+            $u = User::query()->find($filterUserId);
+            $replyMembers = $u ? collect([$u]) : collect();
+        }
+
+        $replyRows = $this->replyRows($replyMemberIds, $from, $to, $replyMembers);
+        $employeeReplies = $filterUserId > 0
+            ? $this->employeeReplies($filterUserId, $from, $to, (string) $request->input('channel', 'all'))
+            : collect();
+
         $messengerCustomers = $this->messengerCustomers($scope, $request);
         $whatsappCustomers = $this->whatsappCustomers($scope, $request);
+
+        $selectedUser = $filterUserId > 0
+            ? ($staffOptions->firstWhere('id', $filterUserId) ?? User::query()->find($filterUserId))
+            : null;
 
         $totals = [
             'whatsapp' => (int) collect($replyRows)->sum('whatsapp'),
             'messenger' => (int) collect($replyRows)->sum('messenger'),
             'messenger_customers' => $messengerCustomers->total(),
             'whatsapp_customers' => $whatsappCustomers->total(),
+            'employee_replies' => $employeeReplies->count(),
         ];
 
         return $this->crmView($scope, 'reports', 'reports.social', [
             'from' => $from,
             'to' => $to,
             'replyRows' => $replyRows,
+            'employeeReplies' => $employeeReplies,
+            'selectedUser' => $selectedUser,
+            'filterUserId' => $filterUserId,
+            'staffOptions' => $staffOptions,
             'messengerCustomers' => $messengerCustomers,
             'whatsappCustomers' => $whatsappCustomers,
             'totals' => $totals,
@@ -84,7 +114,8 @@ class CrmSocialReportController extends Controller
     private function replyRows(array $memberIds, Carbon $from, Carbon $to, $members): array
     {
         $wa = [];
-        if (Schema::hasTable('whatsapp_conversation_messages')) {
+        if (Schema::hasTable('whatsapp_conversation_messages')
+            && Schema::hasColumn('whatsapp_conversation_messages', 'sent_by_user_id')) {
             $wa = WhatsAppConversationMessage::query()
                 ->selectRaw('sent_by_user_id as uid, COUNT(*) as c')
                 ->where('direction', 'outbound')
@@ -96,7 +127,8 @@ class CrmSocialReportController extends Controller
         }
 
         $meta = [];
-        if (Schema::hasTable('meta_social_messages')) {
+        if (Schema::hasTable('meta_social_messages')
+            && Schema::hasColumn('meta_social_messages', 'sent_by_user_id')) {
             $meta = MetaSocialMessage::query()
                 ->selectRaw('sent_by_user_id as uid, COUNT(*) as c')
                 ->where('direction', 'outbound')
@@ -127,6 +159,72 @@ class CrmSocialReportController extends Controller
         usort($rows, fn ($a, $b) => $b['total'] <=> $a['total']);
 
         return $rows;
+    }
+
+    /**
+     * كل ردود موظف واحد في الفترة (واتساب + ماسنجر) مرتّبة زمنيًا.
+     *
+     * @return Collection<int, array{channel: string, at: Carbon, body: string, customer: string, phone: string, conversation_id: int|null}>
+     */
+    private function employeeReplies(int $userId, Carbon $from, Carbon $to, string $channel): Collection
+    {
+        $rows = collect();
+        $channel = in_array($channel, ['whatsapp', 'messenger', 'all'], true) ? $channel : 'all';
+
+        if (($channel === 'all' || $channel === 'whatsapp')
+            && Schema::hasTable('whatsapp_conversation_messages')
+            && Schema::hasColumn('whatsapp_conversation_messages', 'sent_by_user_id')) {
+            WhatsAppConversationMessage::query()
+                ->with(['conversation:id,phone_number,contact_name'])
+                ->where('direction', 'outbound')
+                ->where('sent_by_user_id', $userId)
+                ->whereBetween('created_at', [$from, $to])
+                ->orderByDesc('created_at')
+                ->limit(500)
+                ->get()
+                ->each(function (WhatsAppConversationMessage $msg) use ($rows) {
+                    $conv = $msg->conversation;
+                    $rows->push([
+                        'channel' => 'whatsapp',
+                        'at' => $msg->sent_at ?? $msg->created_at,
+                        'body' => $msg->displayBody(),
+                        'customer' => $conv?->displayName() ?? 'عميل واتساب',
+                        'phone' => $conv ? $conv->formattedPhone() : '—',
+                        'conversation_id' => $conv?->id,
+                    ]);
+                });
+        }
+
+        if (($channel === 'all' || $channel === 'messenger')
+            && Schema::hasTable('meta_social_messages')
+            && Schema::hasColumn('meta_social_messages', 'sent_by_user_id')) {
+            MetaSocialMessage::query()
+                ->with(['conversation:id,participant_name,participant_username,phone,platform'])
+                ->where('direction', 'outbound')
+                ->where('sent_by_user_id', $userId)
+                ->whereBetween('created_at', [$from, $to])
+                ->orderByDesc('created_at')
+                ->limit(500)
+                ->get()
+                ->each(function (MetaSocialMessage $msg) use ($rows) {
+                    $conv = $msg->conversation;
+                    $phone = $conv && $conv->phone && ! str_starts_with((string) $conv->phone, 'meta_')
+                        ? (string) $conv->phone
+                        : '—';
+                    $rows->push([
+                        'channel' => $conv?->platform === 'instagram' ? 'instagram' : 'messenger',
+                        'at' => $msg->sent_at ?? $msg->created_at,
+                        'body' => $msg->displayBody(),
+                        'customer' => $conv?->displayName() ?? 'عميل ماسنجر',
+                        'phone' => $phone,
+                        'conversation_id' => $conv?->id,
+                    ]);
+                });
+        }
+
+        return $rows
+            ->sortByDesc(fn ($r) => $r['at']?->timestamp ?? 0)
+            ->values();
     }
 
     private function messengerCustomers($scope, Request $request)

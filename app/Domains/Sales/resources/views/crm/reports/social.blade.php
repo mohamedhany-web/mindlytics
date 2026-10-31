@@ -3,15 +3,35 @@
 @section('content')
 @include('sales::crm.partials.module-header', [
     'title' => 'تقرير ماسنجر وواتساب',
-    'subtitle' => 'ردود الموظفين التلقائية + العملاء ومراحلهم في القنوات',
+    'subtitle' => 'اختَر موظفًا وفترة — السيستم يجيب ردوده من الإنبوكس تلقائيًا',
 ])
 
 <form method="get" class="crm-card" style="padding:14px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:end">
+    <label class="crm-label" style="min-width:200px">الموظف
+        @if($crm->isRep())
+            <input type="hidden" name="user_id" value="{{ $filterUserId }}">
+            <input type="text" class="crm-input" value="{{ $selectedUser?->name ?? auth()->user()->name }}" readonly>
+        @else
+            <select name="user_id" class="crm-select">
+                <option value="">كل الفريق</option>
+                @foreach($staffOptions as $staff)
+                    <option value="{{ $staff->id }}" @selected($filterUserId === (int) $staff->id)>{{ $staff->name }}</option>
+                @endforeach
+            </select>
+        @endif
+    </label>
     <label class="crm-label" style="min-width:140px">من
         <input type="date" name="from" value="{{ $from->toDateString() }}" class="crm-input">
     </label>
     <label class="crm-label" style="min-width:140px">إلى
         <input type="date" name="to" value="{{ $to->toDateString() }}" class="crm-input">
+    </label>
+    <label class="crm-label" style="min-width:150px">القناة
+        <select name="channel" class="crm-select">
+            <option value="all" @selected($filterChannel === 'all')>الكل</option>
+            <option value="whatsapp" @selected($filterChannel === 'whatsapp')>واتساب فقط</option>
+            <option value="messenger" @selected($filterChannel === 'messenger')>ماسنجر / إنستجرام</option>
+        </select>
     </label>
     <label class="crm-label" style="min-width:180px">بحث عميل
         <input type="search" name="q" value="{{ $q }}" placeholder="اسم أو رقم…" class="crm-input">
@@ -24,19 +44,73 @@
             @endforeach
         </select>
     </label>
-    <button class="crm-btn crm-btn-primary" type="submit">تطبيق</button>
+    <button class="crm-btn crm-btn-primary" type="submit"><i class="fas fa-filter"></i> عرض الردود</button>
+    @if($filterUserId || $q || $filterStage || $filterChannel !== 'all')
+        <a class="crm-btn crm-btn-slate" href="{{ route($crm->route('reports.social')) }}">مسح الفلاتر</a>
+    @endif
 </form>
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:14px">
     <div class="crm-card crm-stat"><b>{{ number_format($totals['whatsapp'] + $totals['messenger']) }}</b><span>إجمالي الردود في الفترة</span></div>
     <div class="crm-card crm-stat"><b>{{ number_format($totals['whatsapp']) }}</b><span>ردود واتساب</span></div>
     <div class="crm-card crm-stat"><b>{{ number_format($totals['messenger']) }}</b><span>ردود ماسنجر / إنستجرام</span></div>
+    @if($filterUserId)
+        <div class="crm-card crm-stat"><b>{{ number_format($totals['employee_replies']) }}</b><span>ردود {{ $selectedUser?->name }} المعروضة</span></div>
+    @endif
     <div class="crm-card crm-stat"><b>{{ number_format($totals['messenger_customers']) }}</b><span>عملاء ماسنجر (صفحة)</span></div>
     <div class="crm-card crm-stat"><b>{{ number_format($totals['whatsapp_customers']) }}</b><span>عملاء واتساب (صفحة)</span></div>
 </div>
 
+@if($filterUserId && $selectedUser)
 <section class="crm-card" style="margin-bottom:16px">
-    <div class="crm-dashlet-head"><i class="fas fa-comments"></i><h2>ردود الموظفين (تلقائي من الإنبوكس)</h2></div>
+    <div class="crm-dashlet-head">
+        <i class="fas fa-user-check"></i>
+        <h2>ردود {{ $selectedUser->name }} — من {{ $from->format('d/m/Y') }} إلى {{ $to->format('d/m/Y') }}</h2>
+        <span style="margin-inline-start:auto;font-size:12px;opacity:.9">{{ number_format($employeeReplies->count()) }} رسالة (حد أقصى 500 لكل قناة)</span>
+    </div>
+    <div style="overflow-x:auto">
+        <table class="crm-table">
+            <thead>
+                <tr>
+                    <th>الوقت</th>
+                    <th>القناة</th>
+                    <th>العميل</th>
+                    <th>الهاتف</th>
+                    <th>نص الرد</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($employeeReplies as $reply)
+                    @php
+                        $channelLabel = match($reply['channel']) {
+                            'whatsapp' => 'واتساب',
+                            'instagram' => 'إنستجرام',
+                            default => 'ماسنجر',
+                        };
+                    @endphp
+                    <tr>
+                        <td style="white-space:nowrap">{{ $reply['at']?->format('d/m/Y H:i') ?? '—' }}</td>
+                        <td><span class="crm-status-pill">{{ $channelLabel }}</span></td>
+                        <td><strong>{{ $reply['customer'] }}</strong></td>
+                        <td dir="ltr">{{ $reply['phone'] }}</td>
+                        <td style="max-width:420px;white-space:pre-wrap;word-break:break-word">{{ \Illuminate\Support\Str::limit($reply['body'], 280) }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="5" class="crm-muted" style="text-align:center;padding:18px">
+                            مفيش ردود لـ {{ $selectedUser->name }} في الفترة دي
+                            @if($filterChannel !== 'all') (حسب فلتر القناة) @endif.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</section>
+@endif
+
+<section class="crm-card" style="margin-bottom:16px">
+    <div class="crm-dashlet-head"><i class="fas fa-comments"></i><h2>ملخص ردود الموظفين (تلقائي من الإنبوكس)</h2></div>
     <div style="overflow-x:auto">
         <table class="crm-table">
             <thead>
@@ -45,6 +119,7 @@
                     <th>واتساب</th>
                     <th>ماسنجر / إنستجرام</th>
                     <th>الإجمالي</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -54,9 +129,14 @@
                         <td>{{ $row['whatsapp'] }}</td>
                         <td>{{ $row['messenger'] }}</td>
                         <td class="crm-good">{{ $row['total'] }}</td>
+                        <td>
+                            @unless($crm->isRep())
+                                <a class="crm-link" href="{{ route($crm->route('reports.social'), ['user_id' => $row['user']->id, 'from' => $from->toDateString(), 'to' => $to->toDateString(), 'channel' => $filterChannel]) }}">عرض ردوده</a>
+                            @endunless
+                        </td>
                     </tr>
                 @empty
-                    <tr><td colspan="4" class="crm-muted" style="text-align:center;padding:18px">لا ردود في الفترة المحددة.</td></tr>
+                    <tr><td colspan="5" class="crm-muted" style="text-align:center;padding:18px">لا ردود في الفترة المحددة.</td></tr>
                 @endforelse
             </tbody>
         </table>
