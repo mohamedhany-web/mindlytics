@@ -176,11 +176,13 @@ class SalesCrmSmokeTest extends SmokeTestCase
             foreach ($modules as $module) {
                 $this->page($ctx['prefix'].'/'.$module);
             }
-            // KPI/اليومي يفتحان التقارير القديمة المختبرة عبر hop واحد (بدون حلقة)
-            $this->get($ctx['prefix'].'/reports/kpi')->assertRedirect();
-            $this->get($ctx['prefix'].'/reports/daily')->assertRedirect();
+            $this->page($ctx['prefix'].'/reports/kpi');
+            $this->page($ctx['prefix'].'/reports/daily');
+            $this->page($ctx['prefix'].'/inbox');
+            $this->page($ctx['prefix'].'/leads/create');
             if ($ctx['admin']) {
                 $this->page($ctx['prefix'].'/admin');
+                $this->page($ctx['prefix'].'/win-approvals');
             } else {
                 $this->get($ctx['prefix'].'/admin')->assertForbidden();
             }
@@ -202,8 +204,16 @@ class SalesCrmSmokeTest extends SmokeTestCase
 
         $this->actingAs($this->admin);
         $this->get('/admin/sales/leads')->assertRedirect('/admin/crm/leads');
-        $this->get('/admin/crm/reports/kpi')->assertRedirect();
+        $this->get('/admin/sales/kpi')->assertRedirect('/admin/crm/reports/kpi');
+        $this->get('/admin/sales/policy')->assertRedirect('/admin/crm/admin');
         $this->get('/admin/sales/leads/'.$this->outsiderLead->id)->assertRedirect('/admin/crm/leads/'.$this->outsiderLead->id);
+        $this->actingAs($this->rep);
+        $this->get('/employee/sales/leads/create')->assertRedirect('/employee/crm/leads/create');
+        $this->get('/employee/sales/kpi')->assertRedirect('/employee/crm/reports/kpi');
+        $this->get('/employee/sales/policy')->assertRedirect('/employee/crm/home');
+        $this->actingAs($this->manager);
+        $this->get('/employee/sales-manager/scorecard')->assertRedirect('/employee/crm/reports');
+        $this->get('/employee/sales-manager/attendance')->assertRedirect('/employee/crm/admin');
     }
 
     /** يفتح كل روابط الشريط العلوي (قوائم الوحدات و«+») للدور الحالي: ممنوع 403 أو 404 أو 500. */

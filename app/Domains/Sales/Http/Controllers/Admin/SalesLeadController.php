@@ -124,7 +124,7 @@ class SalesLeadController extends Controller
 
         $warnings = $this->duplicateWarnings($request, (int) $validated['assigned_to']);
 
-        return redirect()->route('admin.sales.leads.show', $lead)
+        return redirect()->route('admin.crm.leads.show', $lead)
             ->with('success', 'تم إضافة العميل المحتمل')
             ->with('sales_duplicate_warnings', $warnings);
     }
@@ -233,7 +233,7 @@ class SalesLeadController extends Controller
             ? ' (بدون إسناد موظف — يمكن التوزيع لاحقاً)'
             : '';
 
-        return redirect()->route('admin.sales.leads.index', array_filter([
+        return redirect()->route('admin.crm.leads.index', array_filter([
             'category_id' => $validated['category_id'],
             'import_batch' => $result['batch_id'],
             'group_id' => $validated['group_id'] ?? null,
@@ -337,7 +337,7 @@ class SalesLeadController extends Controller
 
         $warnings = $this->duplicateWarnings($request, (int) $validated['assigned_to'], $lead->id);
 
-        return redirect()->route('admin.sales.leads.show', $lead)
+        return redirect()->route('admin.crm.leads.show', $lead)
             ->with('success', 'تم حفظ التعديلات')
             ->with('sales_duplicate_warnings', $warnings);
     }
@@ -356,7 +356,7 @@ class SalesLeadController extends Controller
             'الإدارة حذفت عميلاً محتملاً: ' . $name
         );
 
-        return redirect()->route('admin.sales.leads.index')
+        return redirect()->route('admin.crm.leads.index')
             ->with('success', 'تم حذف السجل');
     }
 

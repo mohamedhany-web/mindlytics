@@ -547,35 +547,62 @@ class CrmModuleController extends Controller
         return $this->crmView($scope, 'reports', 'reports.index', compact('links'));
     }
 
-    public function reportsKpi(Request $request): RedirectResponse
+    public function reportsKpi(Request $request): View
     {
         $scope = $this->scope($request);
-        $route = $scope->isRep() ? 'employee.sales.kpi.index'
-            : ($scope->isManager() ? 'employee.sales-manager.kpi.index' : 'admin.sales.kpi.index');
+        $leads = $scope->leads();
+        $open = (clone $leads)->openPipeline()->count();
+        $today = (clone $leads)->openPipeline()->whereBetween('next_follow_up_at', [today(), today()->endOfDay()])->count();
+        $overdue = (clone $leads)->openPipeline()->where('next_follow_up_at', '<', now())->count();
+        $wonMonth = (clone $leads)->whereNotNull('won_confirmed_at')->where('won_confirmed_at', '>=', now()->startOfMonth())->count();
 
-        return redirect()->route($route);
+        return $this->crmView($scope, 'reports', 'reports.kpi', compact('open', 'today', 'overdue', 'wonMonth'));
     }
 
-    public function reportsDaily(Request $request): RedirectResponse
+    public function reportsDaily(Request $request): View
     {
         $scope = $this->scope($request);
-        $route = $scope->isRep() ? 'employee.sales.daily-reports.index'
-            : ($scope->isManager() ? 'employee.sales-manager.daily-reports.index' : 'admin.sales.daily-reports.index');
+        $activities = $scope->activities()->whereDate('created_at', today())->with(['lead:id,name', 'user:id,name'])->latest('id')->limit(50)->get();
 
-        return redirect()->route($route);
+        return $this->crmView($scope, 'reports', 'reports.daily', compact('activities'));
     }
 
-    public function reportsCampaigns(Request $request): RedirectResponse
+    public function reportsCampaigns(Request $request): View
     {
         $scope = $this->scope($request);
-        if ($scope->isManager() && \Illuminate\Support\Facades\Route::has('employee.sales-manager.campaign-reports.index')) {
-            return redirect()->route('employee.sales-manager.campaign-reports.index');
-        }
-        if ($scope->isAdmin() && \Illuminate\Support\Facades\Route::has('admin.sales.reports.index')) {
-            return redirect()->route('admin.sales.reports.index');
-        }
+        $campaigns = $scope->campaigns()->latest('id')->limit(50)->get();
 
-        return redirect()->route($scope->route('reports.index'));
+        return $this->crmView($scope, 'reports', 'reports.campaigns', compact('campaigns'));
+    }
+
+    public function inboxIndex(Request $request): View
+    {
+        $scope = $this->scope($request);
+        $waRoute = $scope->isRep() && \Illuminate\Support\Facades\Route::has('employee.sales.whatsapp.inbox.index')
+            ? route('employee.sales.whatsapp.inbox.index')
+            : ($scope->isManager() && \Illuminate\Support\Facades\Route::has('employee.sales-manager.whatsapp.inbox.index')
+                ? route('employee.sales-manager.whatsapp.inbox.index')
+                : (\Illuminate\Support\Facades\Route::has('admin.whatsapp.inbox') ? route('admin.whatsapp.inbox') : null));
+        $metaRoute = $scope->isRep() && \Illuminate\Support\Facades\Route::has('employee.sales.meta-social.inbox.index')
+            ? route('employee.sales.meta-social.inbox.index')
+            : null;
+
+        return $this->crmView($scope, 'inbox', 'inbox.index', compact('waRoute', 'metaRoute'));
+    }
+
+    public function winApprovalsIndex(Request $request): View
+    {
+        $scope = $this->scope($request);
+        abort_unless($scope->isAdmin(), 403);
+
+        $leads = SalesLead::query()
+            ->pendingWinApproval()
+            ->with(['assignee:id,name'])
+            ->orderByDesc('closed_at')
+            ->paginate(25)
+            ->withQueryString();
+
+        return $this->crmView($scope, 'admin', 'win-approvals.index', compact('leads'));
     }
 
     // ─── Admin hub ────────────────────────────────────────────
@@ -586,16 +613,14 @@ class CrmModuleController extends Controller
         abort_unless($scope->canManage(), 403);
 
         $cards = array_values(array_filter([
-            ['title' => 'اعتماد صفقات الفوز', 'url' => $scope->isAdmin() && \Illuminate\Support\Facades\Route::has('admin.sales.win-approvals.index') ? route('admin.sales.win-approvals.index') : route($scope->route('opportunities.index'), ['quick' => 'won_pending']), 'icon' => 'fa-trophy'],
-            ['title' => 'التوزيع', 'url' => $scope->isAdmin() && \Illuminate\Support\Facades\Route::has('admin.sales.distribution.index') ? route('admin.sales.distribution.index') : (\Illuminate\Support\Facades\Route::has('employee.sales-manager.distribution.index') ? route('employee.sales-manager.distribution.index') : null), 'icon' => 'fa-share-nodes'],
-            ['title' => 'فرق المبيعات', 'url' => $scope->isAdmin() && \Illuminate\Support\Facades\Route::has('admin.sales.sales-teams.index') ? route('admin.sales.sales-teams.index') : (\Illuminate\Support\Facades\Route::has('employee.sales-manager.org-chart.index') ? route('employee.sales-manager.org-chart.index') : null), 'icon' => 'fa-users'],
-            ['title' => 'السياسات', 'url' => $scope->isAdmin() && \Illuminate\Support\Facades\Route::has('admin.sales.policy.index') ? route('admin.sales.policy.index') : (\Illuminate\Support\Facades\Route::has('employee.sales.policy.index') ? route('employee.sales.policy.index') : null), 'icon' => 'fa-scale-balanced'],
-            ['title' => 'التصنيفات', 'url' => $scope->isAdmin() && \Illuminate\Support\Facades\Route::has('admin.sales.categories.index') ? route('admin.sales.categories.index') : null, 'icon' => 'fa-tags'],
-            ['title' => 'أنواع الاهتمام', 'url' => $scope->isAdmin() && \Illuminate\Support\Facades\Route::has('admin.sales.interest-types.index') ? route('admin.sales.interest-types.index') : null, 'icon' => 'fa-heart'],
-            ['title' => 'التدقيق', 'url' => $scope->isAdmin() && \Illuminate\Support\Facades\Route::has('admin.sales.audit-log.index') ? route('admin.sales.audit-log.index') : null, 'icon' => 'fa-clipboard-list'],
-            ['title' => 'CRM Compliance', 'url' => $scope->isAdmin() && \Illuminate\Support\Facades\Route::has('admin.sales.crm-compliance.index') ? route('admin.sales.crm-compliance.index') : null, 'icon' => 'fa-shield-halved'],
-            ['title' => 'الكوميشن', 'url' => $scope->isAdmin() && \Illuminate\Support\Facades\Route::has('admin.sales.commissions.index') ? route('admin.sales.commissions.index') : (\Illuminate\Support\Facades\Route::has('employee.sales-manager.commissions.index') ? route('employee.sales-manager.commissions.index') : null), 'icon' => 'fa-coins'],
-            ['title' => 'Scorecard', 'url' => \Illuminate\Support\Facades\Route::has('employee.sales-manager.scorecard.index') ? route('employee.sales-manager.scorecard.index') : null, 'icon' => 'fa-chart-simple'],
+            $scope->isAdmin() ? ['title' => 'اعتماد صفقات الفوز', 'url' => route($scope->route('win-approvals.index')), 'icon' => 'fa-trophy'] : null,
+            ['title' => 'الفرص بانتظار الاعتماد', 'url' => route($scope->route('opportunities.index'), ['quick' => 'won_pending']), 'icon' => 'fa-handshake'],
+            ['title' => 'العملاء المحتملون', 'url' => route($scope->route('leads.index')), 'icon' => 'fa-user-plus'],
+            ['title' => 'التقويم والشيفت', 'url' => route($scope->route('calendar.index')), 'icon' => 'fa-calendar'],
+            ['title' => 'التقارير و KPI', 'url' => route($scope->route('reports.index')), 'icon' => 'fa-chart-line'],
+            ['title' => 'الحملات', 'url' => route($scope->route('campaigns.index')), 'icon' => 'fa-bullhorn'],
+            ['title' => 'الحسابات', 'url' => route($scope->route('accounts.index')), 'icon' => 'fa-building'],
+            ['title' => 'المحادثات', 'url' => route($scope->route('inbox.index')), 'icon' => 'fa-comments'],
         ], fn ($c) => ! empty($c['url'])));
 
         return $this->crmView($scope, 'admin', 'admin.index', compact('cards'));
@@ -685,24 +710,12 @@ class CrmModuleController extends Controller
     /** @return list<array{title: string, url: string, desc: string}> */
     private function reportLinks(CrmScope $scope): array
     {
-        $has = fn (string $r) => \Illuminate\Support\Facades\Route::has($r);
-
-        return array_values(array_filter([
+        return [
             ['title' => 'KPI والأداء', 'url' => route($scope->route('reports.kpi')), 'desc' => 'أهداف يومية ونسب الإنجاز'],
-            ['title' => 'التقارير اليومية', 'url' => route($scope->route('reports.daily')), 'desc' => 'تقرير الاتصال اليومي'],
-            $scope->isManager() && $has('employee.sales-manager.scorecard.index')
-                ? ['title' => 'Scorecard الفريق', 'url' => route('employee.sales-manager.scorecard.index'), 'desc' => 'رقابة يومية على الفريق']
-                : null,
-            $scope->isManager() && $has('employee.sales-manager.campaign-reports.index')
-                ? ['title' => 'تقارير الكامبين', 'url' => route('employee.sales-manager.campaign-reports.index'), 'desc' => 'أداء الحملات']
-                : null,
-            $scope->isAdmin() && $has('admin.sales.reports.index')
-                ? ['title' => 'تقارير الإدارة', 'url' => route('admin.sales.reports.index'), 'desc' => 'تقارير شاملة']
-                : null,
-            $scope->isAdmin() && $has('admin.sales.insights.index')
-                ? ['title' => 'Insights', 'url' => route('admin.sales.insights.index'), 'desc' => 'تحليلات الموظفين']
-                : null,
+            ['title' => 'التقارير اليومية', 'url' => route($scope->route('reports.daily')), 'desc' => 'نشاط اليوم'],
+            ['title' => 'تقارير الحملات', 'url' => route($scope->route('reports.campaigns')), 'desc' => 'أداء الحملات'],
+            ['title' => 'الفرص', 'url' => route($scope->route('opportunities.index')), 'desc' => 'Pipeline والعمولات'],
             ['title' => 'الحملات', 'url' => route($scope->route('campaigns.index')), 'desc' => 'إدارة حملات CRM'],
-        ]));
+        ];
     }
 }

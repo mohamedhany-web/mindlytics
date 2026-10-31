@@ -132,7 +132,7 @@
         <div style="flex: 1 1 360px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
             @if($crm->isRep())
                 <section class="crm-card">
-                    <div class="crm-dashlet-head"><i class="fas fa-bullseye"></i><h2>هدفي النهارده</h2>@if(Route::has('employee.sales.kpi.index'))<a href="{{ route('employee.sales.kpi.index') }}" style="color: #fff; font-size: 12px">التفاصيل</a>@endif</div>
+                    <div class="crm-dashlet-head"><i class="fas fa-bullseye"></i><h2>هدفي النهارده</h2>@if(Route::has($crm->route('reports.kpi')))<a href="{{ route($crm->route('reports.kpi')) }}" style="color: #fff; font-size: 12px">التفاصيل</a>@endif</div>
                     <div style="padding: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; font-size: 13px">
                         @foreach($kpi['lines'] as $line)
                             <div style="display: flex; flex-direction: column; gap: 4px">
@@ -149,7 +149,7 @@
                     <div style="padding: 14px; display: flex; flex-direction: column; gap: 6px">
                         <b class="crm-good" style="font-size: 24px">{{ number_format($commission['earned'], 2) }} ج.م</b>
                         <span class="crm-muted" style="font-size: 13px">{{ $commission['count'] }} صفقة معتمدة · {{ $commission['pending'] }} بانتظار اعتماد الإدارة @if($commission['reversed'] > 0) · <span class="crm-bad">{{ number_format($commission['reversed'], 2) }} مسترجع</span>@endif</span>
-                        @if(Route::has('employee.sales.commissions.index'))<a class="crm-link" style="font-size: 13px" href="{{ route('employee.sales.commissions.index') }}">تفاصيل العمولات ←</a>@endif
+                        @if(Route::has($crm->route('opportunities.index')))<a class="crm-link" style="font-size: 13px" href="{{ route($crm->route('opportunities.index'), ['quick'=>'won_month']) }}">تفاصيل العمولات ←</a>@endif
                     </div>
                 </section>
             @else

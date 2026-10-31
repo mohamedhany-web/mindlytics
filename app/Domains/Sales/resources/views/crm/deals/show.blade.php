@@ -5,7 +5,7 @@
 @use('App\Domains\Sales\Models\SalesLead')
 @php
     $won = in_array($lead->stage, SalesLead::WON_LIKE_STAGES, true);
-    $approveUrl = $crm->isAdmin() && $lead->isPendingWinApproval() && Route::has('admin.sales.win-approvals.index') ? route('admin.sales.win-approvals.index') : null;
+    $approveUrl = $crm->isAdmin() && $lead->isPendingWinApproval() && Route::has($crm->route('win-approvals.index')) ? route($crm->route('win-approvals.index')) : null;
     $commission = (float) ($lead->commission_amount ?? 0);
     $reversed = (float) ($lead->commission_reversed_amount ?? 0);
     $commissionStatus = match (true) {

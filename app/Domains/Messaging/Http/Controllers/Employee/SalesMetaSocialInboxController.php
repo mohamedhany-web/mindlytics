@@ -56,7 +56,7 @@ class SalesMetaSocialInboxController extends Controller
 
     protected function metaInboxLayout(): string
     {
-        return 'layouts.employee';
+        return 'sales::crm.layout';
     }
 
     protected function metaInboxRoute(string $action, mixed ...$params): string

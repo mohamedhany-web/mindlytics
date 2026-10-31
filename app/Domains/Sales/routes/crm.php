@@ -10,9 +10,11 @@ use Illuminate\Support\Facades\Route;
  */
 Route::get('/', [SalesCrmController::class, 'home'])->name('home');
 
-// Leads / Opportunities (موجودة)
+// Leads / Opportunities
 Route::get('leads', [SalesCrmController::class, 'leads'])->name('leads.index');
+Route::get('leads/create', [SalesCrmController::class, 'leadCreate'])->name('leads.create');
 Route::post('leads/bulk', [SalesCrmController::class, 'bulk'])->name('leads.bulk');
+Route::get('leads/{lead}/edit', [SalesCrmController::class, 'leadEdit'])->whereNumber('lead')->name('leads.edit');
 Route::get('leads/{lead}', [SalesCrmController::class, 'lead'])->whereNumber('lead')->name('leads.show');
 Route::get('leads/{lead}/convert', [SalesCrmController::class, 'convertForm'])->whereNumber('lead')->name('leads.convert');
 Route::post('leads/{lead}/convert', [SalesCrmController::class, 'convert'])->whereNumber('lead')->name('leads.convert.store');
@@ -79,5 +81,9 @@ Route::get('reports', [CrmModuleController::class, 'reportsIndex'])->name('repor
 Route::get('reports/kpi', [CrmModuleController::class, 'reportsKpi'])->name('reports.kpi');
 Route::get('reports/daily', [CrmModuleController::class, 'reportsDaily'])->name('reports.daily');
 Route::get('reports/campaigns', [CrmModuleController::class, 'reportsCampaigns'])->name('reports.campaigns');
+
+Route::get('inbox', [CrmModuleController::class, 'inboxIndex'])->name('inbox.index');
+
+Route::get('win-approvals', [CrmModuleController::class, 'winApprovalsIndex'])->name('win-approvals.index');
 
 Route::get('admin', [CrmModuleController::class, 'adminIndex'])->name('admin.index');

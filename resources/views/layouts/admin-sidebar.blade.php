@@ -198,67 +198,7 @@
                             <span>CRM المبيعات</span>
                         </a>
                     </li>
-                    <li>
-                        <a href="{{ route('admin.crm.admin.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.crm.admin.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-gear w-4"></i>
-                            <span>إدارة CRM</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.crm.leads.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.crm.leads.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-user-plus w-4"></i>
-                            <span>العملاء المحتملون</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.crm.reports.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.crm.reports.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-chart-line w-4"></i>
-                            <span>تقارير CRM</span>
-                        </a>
-                    </li>
                     @endif
-                    <li>
-                        <a href="{{ route('admin.crm.opportunities.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.crm.opportunities.*') || request()->routeIs('admin.crm.deals.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-project-diagram w-4"></i>
-                            <span>الفرص / الصفقات</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.crm.accounts.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.crm.accounts.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-building w-4"></i>
-                            <span>الحسابات</span>
-                        </a>
-                    </li>
-                    <li>
-                        @php $pendingWinApprovals = \App\Domains\Sales\Models\SalesLead::pendingWinApproval()->count(); @endphp
-                        <a href="{{ route('admin.sales.win-approvals.index') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.win-approvals.*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-trophy w-4"></i>
-                            <span class="flex-1">موافقة صفقات Win</span>
-                            @if($pendingWinApprovals > 0)
-                                <span class="text-[10px] font-black bg-amber-500 text-white px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">{{ $pendingWinApprovals }}</span>
-                            @endif
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('admin.sales.leads.import') }}"
-                           @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }"
-                           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg hover:bg-slate-700/50 transition-all duration-300 text-slate-300 hover:text-white {{ request()->routeIs('admin.sales.leads.import*') ? 'bg-emerald-600/30 text-white font-semibold border-r-2 border-emerald-400' : '' }}">
-                            <i class="fas fa-file-upload w-4"></i>
-                            <span>استيراد عملاء</span>
-                        </a>
-                    </li>
                 </ul>
             </li>
 

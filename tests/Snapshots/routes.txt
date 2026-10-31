@@ -346,7 +346,7 @@ GET|HEAD employee/sales/groups [employee.sales.groups.index] {web,auth,prevent-c
 GET|HEAD employee/sales/groups/create [employee.sales.groups.create] {web,auth,prevent-concurrent,auth,employee.work,sales.employee}
 POST employee/sales/groups [employee.sales.groups.store] {web,auth,prevent-concurrent,auth,employee.work,sales.employee}
 GET|HEAD employee/sales/groups/{group} [employee.sales.groups.show] {web,auth,prevent-concurrent,auth,employee.work,sales.employee}
-PUT|PATCH employee/sales/groups/{group} [employee.sales.groups.update] {web,auth,prevent-concurrent,auth,employee.work,sales.employee}
+PUT employee/sales/groups/{group} [employee.sales.groups.update] {web,auth,prevent-concurrent,auth,employee.work,sales.employee}
 DELETE employee/sales/groups/{group} [employee.sales.groups.destroy] {web,auth,prevent-concurrent,auth,employee.work,sales.employee}
 POST employee/sales/groups/{group}/whatsapp-bulk [employee.sales.groups.whatsapp.store] {web,auth,prevent-concurrent,auth,employee.work,sales.employee}
 GET|HEAD employee/sales/groups/{group}/whatsapp-batches/{batch} [employee.sales.groups.whatsapp-batches.show] {web,auth,prevent-concurrent,auth,employee.work,sales.employee}
@@ -389,7 +389,9 @@ GET|HEAD employee/sales/course-board [employee.sales.course-board.index] {web,au
 GET|HEAD employee/sales/policy [employee.sales.policy.index] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 GET|HEAD employee/crm [employee.crm.home] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 GET|HEAD employee/crm/leads [employee.crm.leads.index] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
+GET|HEAD employee/crm/leads/create [employee.crm.leads.create] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 POST employee/crm/leads/bulk [employee.crm.leads.bulk] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
+GET|HEAD employee/crm/leads/{lead}/edit [employee.crm.leads.edit] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 GET|HEAD employee/crm/leads/{lead} [employee.crm.leads.show] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 GET|HEAD employee/crm/leads/{lead}/convert [employee.crm.leads.convert] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 POST employee/crm/leads/{lead}/convert [employee.crm.leads.convert.store] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
@@ -441,6 +443,8 @@ GET|HEAD employee/crm/reports [employee.crm.reports.index] {web,auth,prevent-con
 GET|HEAD employee/crm/reports/kpi [employee.crm.reports.kpi] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 GET|HEAD employee/crm/reports/daily [employee.crm.reports.daily] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 GET|HEAD employee/crm/reports/campaigns [employee.crm.reports.campaigns] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
+GET|HEAD employee/crm/inbox [employee.crm.inbox.index] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
+GET|HEAD employee/crm/win-approvals [employee.crm.win-approvals.index] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 GET|HEAD employee/crm/admin [employee.crm.admin.index] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 GET|HEAD employee/sales/meta-social/inbox [employee.sales.meta-social.inbox.index] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 GET|HEAD employee/sales/meta-social/inbox/poll [employee.sales.meta-social.inbox.poll] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
@@ -642,7 +646,7 @@ GET|HEAD admin/sales/sales-teams [admin.sales.sales-teams.index] {web,auth,preve
 GET|HEAD admin/sales/sales-teams/create [admin.sales.sales-teams.create] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/sales/sales-teams [admin.sales.sales-teams.store] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/sales/sales-teams/{sales_team}/edit [admin.sales.sales-teams.edit] {web,auth,prevent-concurrent,role:admin|super_admin}
-PUT|PATCH admin/sales/sales-teams/{sales_team} [admin.sales.sales-teams.update] {web,auth,prevent-concurrent,role:admin|super_admin}
+PUT admin/sales/sales-teams/{sales_team} [admin.sales.sales-teams.update] {web,auth,prevent-concurrent,role:admin|super_admin}
 DELETE admin/sales/sales-teams/{sales_team} [admin.sales.sales-teams.destroy] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/sales/interest-types [admin.sales.interest-types.index] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/sales/interest-types [admin.sales.interest-types.store] {web,auth,prevent-concurrent,role:admin|super_admin}
@@ -701,7 +705,7 @@ GET|HEAD admin/sales/groups [admin.sales.groups.index] {web,auth,prevent-concurr
 GET|HEAD admin/sales/groups/create [admin.sales.groups.create] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/sales/groups [admin.sales.groups.store] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/sales/groups/{group} [admin.sales.groups.show] {web,auth,prevent-concurrent,role:admin|super_admin}
-PUT|PATCH admin/sales/groups/{group} [admin.sales.groups.update] {web,auth,prevent-concurrent,role:admin|super_admin}
+PUT admin/sales/groups/{group} [admin.sales.groups.update] {web,auth,prevent-concurrent,role:admin|super_admin}
 DELETE admin/sales/groups/{group} [admin.sales.groups.destroy] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/sales/groups/{group}/whatsapp-bulk [admin.sales.groups.whatsapp.store] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/sales/groups/{group}/whatsapp-batches/{batch} [admin.sales.groups.whatsapp-batches.show] {web,auth,prevent-concurrent,role:admin|super_admin}
@@ -717,7 +721,8 @@ GET|HEAD admin/sales/leads/{lead} [admin.sales.leads.show] {web,auth,prevent-con
 GET|HEAD admin/sales/leads/create [admin.sales.leads.create] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/sales/leads [admin.sales.leads.store] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/sales/leads/{lead}/edit [admin.sales.leads.edit] {web,auth,prevent-concurrent,role:admin|super_admin}
-PUT|PATCH admin/sales/leads/{lead} [admin.sales.leads.update] {web,auth,prevent-concurrent,role:admin|super_admin}
+PUT admin/sales/leads/{lead} [admin.sales.leads.update] {web,auth,prevent-concurrent,role:admin|super_admin}
+PATCH admin/sales/leads/{lead} [admin.sales.] {web,auth,prevent-concurrent,role:admin|super_admin}
 DELETE admin/sales/leads/{lead} [admin.sales.leads.destroy] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/sales/categories [admin.sales.categories.index] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/sales/categories [admin.sales.categories.store] {web,auth,prevent-concurrent,role:admin|super_admin}
@@ -725,7 +730,9 @@ PUT admin/sales/categories/{category} [admin.sales.categories.update] {web,auth,
 DELETE admin/sales/categories/{category} [admin.sales.categories.destroy] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/crm [admin.crm.home] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/crm/leads [admin.crm.leads.index] {web,auth,prevent-concurrent,role:admin|super_admin}
+GET|HEAD admin/crm/leads/create [admin.crm.leads.create] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/crm/leads/bulk [admin.crm.leads.bulk] {web,auth,prevent-concurrent,role:admin|super_admin}
+GET|HEAD admin/crm/leads/{lead}/edit [admin.crm.leads.edit] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/crm/leads/{lead} [admin.crm.leads.show] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/crm/leads/{lead}/convert [admin.crm.leads.convert] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/crm/leads/{lead}/convert [admin.crm.leads.convert.store] {web,auth,prevent-concurrent,role:admin|super_admin}
@@ -777,6 +784,8 @@ GET|HEAD admin/crm/reports [admin.crm.reports.index] {web,auth,prevent-concurren
 GET|HEAD admin/crm/reports/kpi [admin.crm.reports.kpi] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/crm/reports/daily [admin.crm.reports.daily] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/crm/reports/campaigns [admin.crm.reports.campaigns] {web,auth,prevent-concurrent,role:admin|super_admin}
+GET|HEAD admin/crm/inbox [admin.crm.inbox.index] {web,auth,prevent-concurrent,role:admin|super_admin}
+GET|HEAD admin/crm/win-approvals [admin.crm.win-approvals.index] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/crm/admin [admin.crm.admin.index] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/hr/jobs [admin.hr.jobs.index] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/hr/jobs/create [admin.hr.jobs.create] {web,auth,prevent-concurrent,role:admin|super_admin}

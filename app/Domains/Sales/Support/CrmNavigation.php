@@ -5,7 +5,7 @@ namespace App\Domains\Sales\Support;
 use Illuminate\Support\Facades\Route;
 
 /**
- * شريط وحدات SuiteCRM داخل CRM المبيعات.
+ * شريط وحدات SuiteCRM — روابط CRM فقط (بدون واجهات قديمة).
  */
 final class CrmNavigation
 {
@@ -14,7 +14,7 @@ final class CrmNavigation
      */
     public static function tabs(CrmScope $scope): array
     {
-        $c = $scope->routePrefix; // employee.crm. | admin.crm.
+        $c = $scope->routePrefix;
 
         $tabs = [
             ['key' => 'home', 'label' => 'الرئيسية', 'route' => $c.'home', 'items' => []],
@@ -34,13 +34,10 @@ final class CrmNavigation
             ],
             [
                 'key' => 'leads', 'label' => 'العملاء المحتملون', 'route' => $c.'leads.index',
-                'items' => array_values(array_filter([
+                'items' => [
                     ['عرض العملاء المحتملين', $c.'leads.index'],
-                    $scope->isRep() ? ['＋ عميل محتمل', 'employee.sales.leads.create'] : null,
-                    $scope->isAdmin() ? ['＋ عميل محتمل', 'admin.sales.leads.create'] : null,
-                    $scope->isAdmin() ? ['استيراد', 'admin.sales.leads.import'] : null,
-                    $scope->isManager() ? ['توزيع الفريق', 'employee.sales-manager.distribution.index'] : null,
-                ])),
+                    ['＋ عميل محتمل', $c.'leads.create'],
+                ],
             ],
             [
                 'key' => 'opportunities', 'label' => 'الفرص', 'route' => $c.'opportunities.index',
@@ -63,9 +60,7 @@ final class CrmNavigation
             ],
             [
                 'key' => 'calendar', 'label' => 'التقويم', 'route' => $c.'calendar.index',
-                'items' => [
-                    ['تقويم CRM', $c.'calendar.index'],
-                ],
+                'items' => [['تقويم CRM', $c.'calendar.index']],
             ],
             [
                 'key' => 'campaigns', 'label' => 'الحملات', 'route' => $c.'campaigns.index',
@@ -90,9 +85,7 @@ final class CrmNavigation
             ],
             [
                 'key' => 'quotes', 'label' => 'عروض الأسعار', 'route' => $c.'quotes.index',
-                'items' => [
-                    ['الطلبات والعروض', $c.'quotes.index'],
-                ],
+                'items' => [['الطلبات والعروض', $c.'quotes.index']],
             ],
             [
                 'key' => 'reports', 'label' => 'التقارير', 'route' => $c.'reports.index',
@@ -104,23 +97,17 @@ final class CrmNavigation
                 ],
             ],
             [
-                'key' => 'inbox', 'label' => 'المحادثات',
-                'route' => $scope->isRep()
-                    ? 'employee.sales.whatsapp.inbox.index'
-                    : ($scope->isManager() ? 'employee.sales-manager.whatsapp.inbox.index' : 'admin.whatsapp.inbox'),
-                'items' => array_values(array_filter([
-                    $scope->isRep() ? ['واتساب', 'employee.sales.whatsapp.inbox.index'] : null,
-                    $scope->isRep() ? ['Messenger / Instagram', 'employee.sales.meta-social.inbox.index'] : null,
-                    $scope->isManager() ? ['واتساب الفريق', 'employee.sales-manager.whatsapp.inbox.index'] : null,
-                    $scope->isManager() ? ['طابور بلا موظف', 'employee.sales-manager.whatsapp.queue.index'] : null,
-                    $scope->isAdmin() ? ['صندوق الوارد', 'admin.whatsapp.inbox'] : null,
-                ])),
+                'key' => 'inbox', 'label' => 'المحادثات', 'route' => $c.'inbox.index',
+                'items' => [
+                    ['واتساب / Meta', $c.'inbox.index'],
+                ],
             ],
             [
                 'key' => 'admin', 'label' => 'الإدارة', 'route' => $c.'admin.index',
-                'items' => [
+                'items' => array_values(array_filter([
                     ['لوحة إدارة CRM', $c.'admin.index'],
-                ],
+                    $scope->isAdmin() ? ['اعتماد الفوز', $c.'win-approvals.index'] : null,
+                ])),
             ],
         ];
 
@@ -167,16 +154,15 @@ final class CrmNavigation
     public static function quickCreate(CrmScope $scope): array
     {
         $c = $scope->routePrefix;
-        $candidates = array_values(array_filter([
-            $scope->isRep() ? ['عميل محتمل', 'employee.sales.leads.create'] : null,
-            $scope->isAdmin() ? ['عميل محتمل', 'admin.sales.leads.create'] : null,
+        $candidates = [
+            ['عميل محتمل', $c.'leads.create'],
             ['حساب', $c.'accounts.create'],
             ['جهة اتصال', $c.'contacts.create'],
             ['نشاط', $c.'activities.create'],
             ['حملة', $c.'campaigns.create'],
             ['تذكرة', $c.'cases.create'],
             ['مستند', $c.'documents.create'],
-        ]));
+        ];
 
         $out = [];
         foreach ($candidates as [$label, $routeName]) {

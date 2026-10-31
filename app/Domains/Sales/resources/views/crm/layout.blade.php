@@ -1,5 +1,11 @@
 {{-- SuiteCRM-style Sales CRM shell — الواجهة الوحيدة للمبيعات --}}
 @php
+    if (! isset($crm)) {
+        $crm = \App\Domains\Sales\Support\CrmScope::for(auth()->user(), request()->is('admin/*') || str_starts_with((string) request()->route()?->getName(), 'admin.'));
+        $crmTabs = \App\Domains\Sales\Support\CrmNavigation::tabs($crm);
+        $crmQuickCreate = \App\Domains\Sales\Support\CrmNavigation::quickCreate($crm);
+        $crmModule = $crmModule ?? 'home';
+    }
     $crmUser = auth()->user();
     $crmIsAdmin = $crm->isAdmin();
     try {

@@ -24,6 +24,7 @@
     <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px">
         <h1 class="crm-title">العملاء المحتملون</h1>
         <div style="display: flex; gap: 6px">
+            @if(Route::has($crm->route('leads.create')))<a href="{{ route($crm->route('leads.create')) }}" class="crm-btn crm-btn-primary">＋ عميل</a>@endif
             <button type="button" class="crm-btn crm-btn-slate" @click="filter = ! filter" :aria-expanded="filter">فلتر</button>
             <button type="button" class="crm-btn crm-btn-dark" @click="toggleInsights()" :aria-pressed="insights"><i class="fas fa-chart-pie"></i> Insights</button>
         </div>

@@ -29,7 +29,8 @@ class SalesWhatsAppInboxController extends Controller
     protected function inboxExtraViewData(): array
     {
         return [
-            'waLayout' => 'layouts.employee',
+            'waLayout' => 'sales::crm.layout',
+            'crmModule' => 'inbox',
             'waPageTitle' => 'محادثات الواتساب - Mindlytics',
             'waPageHeader' => 'واتساب المبيعات',
             'waInboxTitle' => 'محادثاتي',
@@ -37,7 +38,7 @@ class SalesWhatsAppInboxController extends Controller
             'waHideWebhookBanner' => true,
             'waHideAdminFilters' => true,
             'waImmersiveInbox' => true,
-            'waEmployeeLeadsUrl' => route('employee.sales.leads.index'),
+            'waEmployeeLeadsUrl' => route('employee.crm.leads.index'),
             'waEmployeeSalesUrl' => route('employee.sales.dashboard'),
             'waBtnPrimary' => 'inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors shadow-sm',
             'waBtnSecondary' => 'inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors',

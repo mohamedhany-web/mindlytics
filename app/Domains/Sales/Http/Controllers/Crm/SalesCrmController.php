@@ -139,6 +139,43 @@ class SalesCrmController extends Controller
         return $this->view($scope, 'leads', 'leads.show', $this->recordData($request, $scope, $lead));
     }
 
+    public function leadCreate(Request $request): View
+    {
+        $scope = $this->scope($request);
+        abort_unless($scope->isRep() || $scope->isAdmin() || $scope->canManage(), 403);
+
+        return $this->view($scope, 'leads', 'leads.form', [
+            'lead' => new SalesLead([
+                'stage' => 'new_lead',
+                'source' => 'call',
+                'priority' => 'normal',
+                'follow_up_channel' => 'call',
+                'assigned_to' => $scope->user->id,
+            ]),
+            'interestTypes' => SalesInterestType::query()->orderBy('sort_order')->get(['id', 'name_ar']),
+            'members' => $scope->isRep() ? collect([$scope->user]) : $scope->members(),
+            'storeRoute' => $scope->isAdmin() && \Illuminate\Support\Facades\Route::has('admin.sales.leads.store')
+                ? route('admin.sales.leads.store')
+                : route('employee.sales.leads.store'),
+        ]);
+    }
+
+    public function leadEdit(Request $request, int $lead): View
+    {
+        $scope = $this->scope($request);
+        $lead = $this->findLead($scope, $lead);
+        abort_unless($scope->canWorkOn($lead) || $scope->canManage(), 403);
+
+        return $this->view($scope, 'leads', 'leads.form', [
+            'lead' => $lead,
+            'interestTypes' => SalesInterestType::query()->orderBy('sort_order')->get(['id', 'name_ar']),
+            'members' => $scope->isRep() ? collect([$scope->user]) : $scope->members(),
+            'storeRoute' => $scope->isAdmin() && \Illuminate\Support\Facades\Route::has('admin.sales.leads.update')
+                ? route('admin.sales.leads.update', $lead)
+                : route('employee.sales.leads.update', $lead),
+        ]);
+    }
+
     /** إجراءات جماعية: تصدير CSV للجميع، وتحويل لموظف للمدير والأدمن. */
     public function bulk(Request $request): RedirectResponse|StreamedResponse
     {

@@ -89,22 +89,8 @@
         @endif
 
         @if($hasSalesManagerPortal)
-        @php $waQueueCount = app(\App\Domains\Messaging\Services\WhatsAppQueueService::class)->pendingCount(); @endphp
         <div class="border-t border-slate-700/50 my-2 pt-2">
-            <p class="px-4 text-xs font-semibold text-amber-400/90 uppercase tracking-wider mb-1">واتساب — طلبات</p>
-            <a href="{{ route('employee.sales-manager.whatsapp.queue.index') }}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.whatsapp.queue.*') ? 'bg-amber-500 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
-               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fas fa-bell text-base"></i>
-                <span class="flex-1">طلبات جديدة</span>
-                <span id="wa-queue-badge" class="min-w-[1.25rem] h-5 px-1.5 rounded-full text-xs font-bold flex items-center justify-center {{ $waQueueCount > 0 ? 'bg-amber-500 text-white' : 'hidden' }}">{{ $waQueueCount }}</span>
-            </a>
-        </div>
-        @endif
-
-        @if(auth()->user()->isSalesEmployee())
-        <div class="border-t border-slate-700/50 my-2 pt-2">
-            <p class="px-4 text-xs font-semibold text-emerald-400/90 uppercase tracking-wider mb-1">المبيعات</p>
+            <p class="px-4 text-xs font-semibold text-teal-400/90 uppercase tracking-wider mb-1">{{ $isBusinessDeveloper ? 'Business Developer — المبيعات' : 'مدير المبيعات' }}</p>
             @if(Route::has('employee.crm.home'))
             <a href="{{ route('employee.crm.home') }}"
                class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.crm.*') ? 'bg-[#534D64] text-white shadow-lg' : 'text-slate-200 bg-slate-700/40 hover:bg-slate-700/70 hover:text-white' }}"
@@ -112,145 +98,7 @@
                 <i class="fas fa-table-cells-large text-base"></i>
                 <span>CRM المبيعات</span>
             </a>
-            <a href="{{ route('employee.crm.leads.index') }}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.crm.leads.*') ? 'bg-[#534D64] text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
-               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fas fa-user-plus text-base"></i>
-                <span>العملاء المحتملون</span>
-            </a>
-            <a href="{{ route('employee.crm.opportunities.index') }}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.crm.opportunities.*') || request()->routeIs('employee.crm.deals.*') ? 'bg-[#534D64] text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
-               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fas fa-handshake text-base"></i>
-                <span>الفرص</span>
-            </a>
-            <a href="{{ route('employee.crm.activities.index') }}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.crm.activities.*') || request()->routeIs('employee.crm.calls.*') ? 'bg-[#534D64] text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
-               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fas fa-phone text-base"></i>
-                <span>الأنشطة</span>
-            </a>
-            <a href="{{ route('employee.crm.calendar.index') }}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.crm.calendar.*') ? 'bg-[#534D64] text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
-               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fas fa-calendar-week text-base"></i>
-                <span>التقويم</span>
-            </a>
-            <a href="{{ route('employee.crm.reports.index') }}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.crm.reports.*') ? 'bg-[#534D64] text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
-               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fas fa-chart-bar text-base"></i>
-                <span>التقارير</span>
-            </a>
             @endif
-            @if(Route::has('employee.marketing-today.index'))
-            <a href="{{ route('employee.marketing-today.index') }}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.marketing-today.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
-               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fas fa-bullhorn text-base"></i>
-                <span>تسويق اليوم</span>
-            </a>
-            @endif
-            @if(Route::has('employee.sales.course-board.index'))
-            <a href="{{ route('employee.sales.course-board.index') }}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.course-board.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
-               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fas fa-book-open text-base"></i>
-                <span>معلومات الكورسات</span>
-            </a>
-            @endif
-            @if(Route::has('employee.sales.policy.index'))
-            <a href="{{ route('employee.sales.policy.index') }}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.policy.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
-               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fas fa-scale-balanced text-base"></i>
-                <span>قواعد المبيعات</span>
-            </a>
-            @endif
-            <a href="{{ route('employee.sales.whatsapp.inbox.index') }}"
-               title="محادثات الواتساب"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.whatsapp.inbox.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
-               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fab fa-whatsapp text-base"></i>
-                <span>محادثات الواتساب</span>
-            </a>
-            <a href="{{ route('employee.sales.meta-social.inbox.index') }}"
-               title="Messenger & Instagram"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.meta-social.inbox.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
-               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fab fa-facebook-messenger text-base"></i>
-                <span>Messenger & Instagram</span>
-            </a>
-            <a href="{{ route('employee.sales.groups.index') }}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.groups.*') ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
-               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fas fa-layer-group text-base"></i>
-                <span>مجموعات العملاء</span>
-            </a>
-        </div>
-        @endif
-
-        @if($hasSalesManagerPortal)
-        <div class="border-t border-slate-700/50 my-2 pt-2">
-            <p class="px-4 text-xs font-semibold text-teal-400/90 uppercase tracking-wider mb-1">{{ $isBusinessDeveloper ? 'Business Developer — المبيعات' : 'مدير المبيعات' }}</p>
-            @if(Route::has('employee.crm.home'))
-            <a href="{{ route('employee.crm.home') }}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.crm.home') ? 'bg-[#534D64] text-white shadow-lg' : 'text-slate-200 bg-slate-700/40 hover:bg-slate-700/70 hover:text-white' }}"
-               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fas fa-table-cells-large text-base"></i>
-                <span>CRM المبيعات</span>
-            </a>
-            <a href="{{ route('employee.crm.admin.index') }}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.crm.admin.*') ? 'bg-[#534D64] text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
-               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fas fa-users-cog text-base"></i>
-                <span>إدارة الفريق</span>
-            </a>
-            <a href="{{ route('employee.crm.leads.index') }}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.crm.leads.*') ? 'bg-[#534D64] text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
-               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fas fa-user-plus text-base"></i>
-                <span>العملاء المحتملون</span>
-            </a>
-            <a href="{{ route('employee.crm.opportunities.index') }}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.crm.opportunities.*') || request()->routeIs('employee.crm.deals.*') ? 'bg-[#534D64] text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
-               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fas fa-project-diagram text-base"></i>
-                <span>الفرص / Pipeline</span>
-            </a>
-            <a href="{{ route('employee.crm.calendar.index') }}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.crm.calendar.*') ? 'bg-[#534D64] text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
-               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fas fa-calendar-alt text-base"></i>
-                <span>التقويم</span>
-            </a>
-            <a href="{{ route('employee.crm.reports.index') }}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.crm.reports.*') ? 'bg-[#534D64] text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
-               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fas fa-chart-line text-base"></i>
-                <span>التقارير و KPI</span>
-            </a>
-            @endif
-            @if(Route::has('employee.sales.course-board.index'))
-            <a href="{{ route('employee.sales.course-board.index') }}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales.course-board.*') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
-               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fas fa-book-open text-base"></i>
-                <span>معلومات الكورسات</span>
-            </a>
-            @endif
-            <a href="{{ route('employee.sales-manager.whatsapp.inbox.index') }}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.whatsapp.inbox.*') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
-               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fab fa-whatsapp text-base"></i>
-                <span>محادثات الفريق</span>
-            </a>
-            <a href="{{ route('employee.sales-manager.attendance.index') }}"
-               class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 {{ request()->routeIs('employee.sales-manager.attendance.*') ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' }}"
-               @click="if (window.innerWidth < 1024) { $dispatch('close-sidebar'); }">
-                <i class="fas fa-clock text-base"></i>
-                <span>حضور الفريق</span>
-            </a>
         </div>
         @endif
 

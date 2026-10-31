@@ -6,17 +6,13 @@
 @use('App\Domains\Sales\Models\SalesActivity')
 @php
     $label = fn (array $map, $key) => $key === null || $key === '' ? '—' : ($map[$key] ?? $key);
-    $editUrl = $crm->isAdmin()
-        ? (Route::has('admin.sales.leads.edit') ? route('admin.sales.leads.edit', $lead) : null)
-        : ($crm->canWorkOn($lead) && Route::has('employee.sales.leads.edit') ? route('employee.sales.leads.edit', $lead) : null);
-    $classicUrl = match (true) {
-        $crm->isAdmin() => Route::has('admin.sales.leads.show') ? route('admin.sales.leads.show', $lead) : null,
-        $crm->isManager() => Route::has('employee.sales-manager.leads.show') ? route('employee.sales-manager.leads.show', $lead) : null,
-        default => Route::has('employee.sales.leads.show') ? route('employee.sales.leads.show', $lead) : null,
-    };
-    $transferAction = $crm->isAdmin()
-        ? (Route::has('admin.sales.distribution.assign') ? route('admin.sales.distribution.assign', $lead) : null)
-        : ($crm->isManager() && Route::has('employee.sales-manager.leads.transfer') ? route('employee.sales-manager.leads.transfer', $lead) : null);
+    $editUrl = ($crm->canWorkOn($lead) || $crm->canManage()) && Route::has($crm->route('leads.edit'))
+        ? route($crm->route('leads.edit'), $lead->id)
+        : null;
+    $classicUrl = null;
+    $transferAction = $crm->isManager() && Route::has('employee.sales-manager.leads.transfer')
+        ? route('employee.sales-manager.leads.transfer', $lead)
+        : ($crm->isAdmin() && Route::has('admin.sales.distribution.assign') ? route('admin.sales.distribution.assign', $lead) : null);
     $canRepAct = $crm->isRep() && $crm->canWorkOn($lead);
     $isLate = $lead->next_follow_up_at && $lead->next_follow_up_at->isPast() && $lead->isOpen();
     $dealLike = in_array($lead->stage, \App\Domains\Sales\Http\Controllers\Crm\SalesCrmController::DEAL_STAGES, true) || $order;
@@ -44,9 +40,7 @@
                     <a role="menuitem" href="{{ route($crm->route('leads.convert'), $lead->id) }}" style="display: block; padding: 8px 14px; color: #fff; font-size: 13px; font-weight: 700">تحويل لطالب (ربط بطلب)</a>
                     @if($transferAction)<button type="button" role="menuitem" @click="transfer = true; actions = false" style="display: block; width: 100%; text-align: start; padding: 8px 14px; color: #fff; font-size: 13px; background: transparent; border: 0; cursor: pointer">تحويل لموظف آخر</button>@endif
                 @endif
-                @if($canRepAct && $classicUrl)<a role="menuitem" href="{{ $classicUrl }}#pipeline" style="display: block; padding: 8px 14px; color: #fff; font-size: 13px">تحريك المرحلة (Pipeline)</a>@endif
-                @if($crm->isAdmin() && $lead->isPendingWinApproval() && Route::has('admin.sales.win-approvals.index'))<a role="menuitem" href="{{ route('admin.sales.win-approvals.index') }}" style="display: block; padding: 8px 14px; color: #fff; font-size: 13px">اعتماد الفوز والعمولة</a>@endif
-                @if($classicUrl)<a role="menuitem" href="{{ $classicUrl }}" style="display: block; padding: 8px 14px; color: #fff; font-size: 13px">فتح في الواجهة الكلاسيكية</a>@endif
+                @if($crm->isAdmin() && $lead->isPendingWinApproval() && Route::has($crm->route('win-approvals.index')))<a role="menuitem" href="{{ route($crm->route('win-approvals.index')) }}" style="display: block; padding: 8px 14px; color: #fff; font-size: 13px">اعتماد الفوز والعمولة</a>@endif
             </div>
         </div>
     </div>
@@ -148,7 +142,7 @@
                         <label class="crm-label" style="flex: 1 1 200px">ملاحظة<input class="crm-input" type="text" name="note" maxlength="500"></label>
                         <button type="submit" class="crm-btn crm-btn-primary">حفظ المتابعة</button>
                     </form>
-                    @if($classicUrl)<a class="crm-link" style="font-size: 13px" href="{{ $classicUrl }}#pipeline">تحريك المرحلة بالتفاصيل (عرض، دفع، خسارة…) ←</a>@endif
+                    
                 </section>
             @endif
 

@@ -78,12 +78,12 @@ class SalesLeadController extends Controller
         $warnings = $this->duplicateWarnings($request, Auth::id());
 
         if ($request->input('save_action') === 'another') {
-            return redirect()->route('employee.sales.leads.create')
+            return redirect()->route('employee.crm.leads.create')
                 ->with('success', 'تم إضافة «'.$lead->name.'» — سجّل العميل التالي')
                 ->with('sales_duplicate_warnings', $warnings);
         }
 
-        return redirect()->route('employee.sales.leads.show', $lead)
+        return redirect()->route('employee.crm.leads.show', $lead)
             ->with('success', 'تم إضافة العميل المحتمل')
             ->with('sales_duplicate_warnings', $warnings);
     }
@@ -202,7 +202,7 @@ class SalesLeadController extends Controller
             $successMessage = 'تم تسجيل Enrollment — في انتظار موافقة الإدارة لاعتماد الكوميشن.';
         }
 
-        return redirect()->route('employee.sales.leads.show', $lead)
+        return redirect()->route('employee.crm.leads.show', $lead)
             ->with('success', $successMessage)
             ->with('sales_duplicate_warnings', $warnings);
     }
@@ -223,7 +223,7 @@ class SalesLeadController extends Controller
             'حذف عميل محتمل: ' . $name
         );
 
-        return redirect()->route('employee.sales.leads.index')
+        return redirect()->route('employee.crm.leads.index')
             ->with('success', 'تم حذف السجل');
     }
 
@@ -338,7 +338,7 @@ class SalesLeadController extends Controller
             return redirect()->to($redirect)->with('success', 'تم التسجيل');
         }
 
-        return redirect()->route('employee.sales.leads.index', $request->except(['_token', 'type', 'body', 'outcome', 'apply_stage', 'redirect_to']))
+        return redirect()->route('employee.crm.leads.index', $request->except(['_token', 'type', 'body', 'outcome', 'apply_stage', 'redirect_to']))
             ->with('success', 'تم تسجيل «'.SalesActivity::typeLabel($activity->type).'» — '.$lead->name);
     }
 
