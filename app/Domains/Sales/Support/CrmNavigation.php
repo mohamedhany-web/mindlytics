@@ -160,6 +160,7 @@ final class CrmNavigation
                     $scope->isAdmin() ? ['قواعد السيلز', 'admin.sales.policy.index'] : null,
                     $scope->isAdmin() ? ['تدقيق CRM', 'admin.sales.crm-compliance.index'] : null,
                     $scope->isAdmin() ? ['سجل أنشطة', 'admin.sales.audit-log.index'] : null,
+                    $scope->isAdmin() ? ['صلاحيات CRM', $c.'access.index'] : null,
                     $scope->isManager() ? ['توزيع الاهتمام', 'employee.sales-manager.distribution.index'] : null,
                     $scope->isManager() ? ['اللوحة الحية', 'employee.sales-manager.live-board'] : null,
                     $scope->isManager() ? ['متابعة الفريق', 'employee.sales-manager.ops-board'] : null,
@@ -172,8 +173,25 @@ final class CrmNavigation
             ],
         ];
 
+        $access = app(\App\Domains\Sales\Services\CrmAccessService::class);
+
         $out = [];
         foreach ($tabs as $tab) {
+            if ($tab['key'] === 'home') {
+                $out[] = [
+                    'key' => $tab['key'],
+                    'label' => $tab['label'],
+                    'url' => Route::has($tab['route']) ? route($tab['route']) : '#',
+                    'items' => [],
+                ];
+
+                continue;
+            }
+
+            if (! $access->allowsTab($scope->user, $tab['key'], $scope)) {
+                continue;
+            }
+
             if ($tab['key'] === 'admin' && $scope->isRep()) {
                 // المندوب يرى السياسة فقط من قائمة الإدارة المبسّطة
                 $tab['items'] = array_values(array_filter($tab['items'], fn ($i) => ($i[1] ?? '') === 'employee.sales.policy.index'));
@@ -189,6 +207,9 @@ final class CrmNavigation
                 $routeName = $item[1];
                 $params = $item[2] ?? [];
                 if (! Route::has($routeName)) {
+                    continue;
+                }
+                if (! $access->allowsRouteHint($scope->user, $routeName, $scope)) {
                     continue;
                 }
                 $items[] = ['label' => $label, 'url' => route($routeName, $params)];

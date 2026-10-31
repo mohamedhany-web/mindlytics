@@ -517,3 +517,85 @@ button, input, select, textarea { font: inherit; }
   .crm-hide-sm { display: none !important; }
   .crm-record-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Bridge: صفحات الأدمن القديمة داخل CRM shell ── */
+body.crm-body .crm-page .rounded-2xl,
+body.crm-body .crm-page .rounded-xl {
+  border-radius: 6px !important;
+}
+body.crm-body .crm-page .shadow-lg,
+body.crm-body .crm-page .shadow,
+body.crm-body .crm-page .shadow-md {
+  box-shadow: 0 2px 8px rgba(32, 41, 54, .08) !important;
+}
+body.crm-body .crm-page .border-slate-200,
+body.crm-body .crm-page .border-slate-100 {
+  border-color: #E2E5EA !important;
+}
+body.crm-body .crm-page .bg-white {
+  background: #fff !important;
+}
+body.crm-body .crm-page .font-black {
+  font-weight: 700 !important;
+  letter-spacing: 0;
+}
+body.crm-body .crm-page .text-slate-900 {
+  color: var(--crm-ink) !important;
+}
+body.crm-body .crm-page .text-emerald-700,
+body.crm-body .crm-page .text-teal-700,
+body.crm-body .crm-page a.text-emerald-700 {
+  color: var(--crm-link) !important;
+}
+body.crm-body .crm-page .bg-emerald-600,
+body.crm-body .crm-page .bg-teal-600,
+body.crm-body .crm-page .bg-emerald-500,
+body.crm-body .crm-page button.bg-emerald-600,
+body.crm-body .crm-page a.bg-emerald-600 {
+  background: var(--crm-link) !important;
+  border-color: var(--crm-link) !important;
+}
+body.crm-body .crm-page .bg-slate-900,
+body.crm-body .crm-page .bg-slate-800,
+body.crm-body .crm-page button.bg-slate-900 {
+  background: var(--crm-nav) !important;
+}
+body.crm-body .crm-page .bg-gradient-to-br,
+body.crm-body .crm-page .bg-gradient-to-r,
+body.crm-body .crm-page .bg-gradient-to-l,
+body.crm-body .crm-page [class*="from-slate-900"],
+body.crm-body .crm-page [class*="from-emerald"],
+body.crm-body .crm-page [class*="via-emerald"] {
+  background: var(--crm-nav) !important;
+  background-image: none !important;
+  color: #fff !important;
+}
+body.crm-body .crm-page .bg-emerald-50,
+body.crm-body .crm-page .bg-teal-50,
+body.crm-body .crm-page .bg-violet-50,
+body.crm-body .crm-page .bg-amber-50,
+body.crm-body .crm-page .bg-sky-50,
+body.crm-body .crm-page .bg-blue-50 {
+  background: #F7F8FA !important;
+}
+body.crm-body .crm-page input,
+body.crm-body .crm-page select,
+body.crm-body .crm-page textarea {
+  border-radius: 3px !important;
+  border-color: #C9CDD2 !important;
+}
+body.crm-body .crm-page .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 16px;
+}
+body.crm-body .crm-page section.rounded-2xl > .px-4.py-3.border-b,
+body.crm-body .crm-page section.rounded-2xl > .border-b {
+  background: var(--crm-nav) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+body.crm-body .crm-page section.rounded-2xl > .border-b h2,
+body.crm-body .crm-page section.rounded-2xl > .border-b h3,
+body.crm-body .crm-page section.rounded-2xl > .border-b p,
+body.crm-body .crm-page section.rounded-2xl > .border-b span {
+  color: #fff !important;
+}

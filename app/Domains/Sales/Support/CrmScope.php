@@ -41,7 +41,11 @@ final class CrmScope
 
     public static function for(User $user, bool $adminArea = false): self
     {
-        if ($adminArea && ($user->isAdmin() || $user->isSuperAdmin())) {
+        $platformAdmin = $user->isAdmin()
+            || $user->isSuperAdmin()
+            || in_array((string) ($user->role ?? ''), ['admin', 'super_admin'], true);
+
+        if ($adminArea && $platformAdmin) {
             return new self($user, self::ROLE_ADMIN, null, 'admin.crm.');
         }
 

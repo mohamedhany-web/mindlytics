@@ -446,6 +446,9 @@ GET|HEAD employee/crm/reports/campaigns [employee.crm.reports.campaigns] {web,au
 GET|HEAD employee/crm/inbox [employee.crm.inbox.index] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 GET|HEAD employee/crm/win-approvals [employee.crm.win-approvals.index] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 GET|HEAD employee/crm/admin [employee.crm.admin.index] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
+GET|HEAD employee/crm/access [employee.crm.access.index] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
+GET|HEAD employee/crm/access/{user} [employee.crm.access.edit] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
+PUT employee/crm/access/{user} [employee.crm.access.update] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 GET|HEAD employee/sales/meta-social/inbox [employee.sales.meta-social.inbox.index] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 GET|HEAD employee/sales/meta-social/inbox/poll [employee.sales.meta-social.inbox.poll] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
 POST employee/sales/meta-social/inbox/{conversation}/reply [employee.sales.meta-social.inbox.reply] {web,auth,prevent-concurrent,auth,employee.work,sales.staff}
@@ -787,6 +790,9 @@ GET|HEAD admin/crm/reports/campaigns [admin.crm.reports.campaigns] {web,auth,pre
 GET|HEAD admin/crm/inbox [admin.crm.inbox.index] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/crm/win-approvals [admin.crm.win-approvals.index] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/crm/admin [admin.crm.admin.index] {web,auth,prevent-concurrent,role:admin|super_admin}
+GET|HEAD admin/crm/access [admin.crm.access.index] {web,auth,prevent-concurrent,role:admin|super_admin}
+GET|HEAD admin/crm/access/{user} [admin.crm.access.edit] {web,auth,prevent-concurrent,role:admin|super_admin}
+PUT admin/crm/access/{user} [admin.crm.access.update] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/hr/jobs [admin.hr.jobs.index] {web,auth,prevent-concurrent,role:admin|super_admin}
 GET|HEAD admin/hr/jobs/create [admin.hr.jobs.create] {web,auth,prevent-concurrent,role:admin|super_admin}
 POST admin/hr/jobs [admin.hr.jobs.store] {web,auth,prevent-concurrent,role:admin|super_admin}

@@ -1,5 +1,6 @@
 <?php
 
+use App\Domains\Sales\Http\Controllers\Crm\CrmAccessController;
 use App\Domains\Sales\Http\Controllers\Crm\CrmModuleController;
 use App\Domains\Sales\Http\Controllers\Crm\SalesCrmController;
 use Illuminate\Support\Facades\Route;
@@ -87,3 +88,7 @@ Route::get('inbox', [CrmModuleController::class, 'inboxIndex'])->name('inbox.ind
 Route::get('win-approvals', [CrmModuleController::class, 'winApprovalsIndex'])->name('win-approvals.index');
 
 Route::get('admin', [CrmModuleController::class, 'adminIndex'])->name('admin.index');
+
+Route::get('access', [CrmAccessController::class, 'index'])->name('access.index');
+Route::get('access/{user}', [CrmAccessController::class, 'edit'])->whereNumber('user')->name('access.edit');
+Route::put('access/{user}', [CrmAccessController::class, 'update'])->whereNumber('user')->name('access.update');

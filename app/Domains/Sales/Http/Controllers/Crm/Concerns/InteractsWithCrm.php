@@ -12,7 +12,11 @@ trait InteractsWithCrm
 {
     protected function scope(Request $request): CrmScope
     {
-        return CrmScope::for(Auth::user(), str_starts_with((string) $request->route()?->getName(), 'admin.'));
+        $user = Auth::user();
+        $adminArea = str_starts_with((string) $request->route()?->getName(), 'admin.')
+            || request()->is('admin/*');
+
+        return CrmScope::for($user, $adminArea);
     }
 
     protected function crmView(CrmScope $scope, string $module, string $view, array $data = []): View
