@@ -15,7 +15,7 @@ class SalesWinCommissionService
     /**
      * @return array{success: bool, transaction?: Transaction, commission?: float, bonus?: float, error?: string}
      */
-    public function approveAndPayCommission(SalesLead $lead, ?float $commissionAmount = null, ?string $notes = null): array
+    public function approveAndPayCommission(SalesLead $lead, ?float $commissionAmount = null, ?string $notes = null, ?string $overrideReason = null): array
     {
         $lead->loadMissing(['assignee', 'advancedCourse', 'offlineCourse', 'legacyCourse']);
 
@@ -27,6 +27,24 @@ class SalesWinCommissionService
         }
         if (! $lead->assignee || ! $lead->assignee->isSalesEmployee()) {
             return ['success' => false, 'error' => 'الموظف المسند ليس موظف مبيعات صالح.'];
+        }
+
+        // الفوز يُبنى على فلوس دخلت فعلاً: طلب معتمد مربوط بالـ Lead، أو سبب اعتماد يدوي مكتوب (docs/SALES_INTEGRITY.md)
+        $overrideReason = trim((string) $overrideReason);
+        $order = null;
+        if (SalesLeadOrderLinker::ready() && $lead->order_id) {
+            $order = \App\Domains\Accounting\Models\Order::query()->find($lead->order_id);
+            if (! $order || $order->status !== \App\Domains\Accounting\Models\Order::STATUS_APPROVED) {
+                return ['success' => false, 'error' => 'الطلب المرتبط #'.$lead->order_id.' غير معتمد.'];
+            }
+            $netPaid = app(SalesLeadOrderLinker::class)->netPaid($order);
+            if ($netPaid <= 0) {
+                return ['success' => false, 'error' => 'تم استرداد قيمة الطلب #'.$order->id.' بالكامل — لا عمولة على هذه الصفقة.'];
+            }
+            // العمولة على المبلغ المدفوع بعد أي استرداد، لا على القيمة التي كتبها الموظف
+            $lead->forceFill(['expected_value' => $netPaid])->save();
+        } elseif (SalesLeadOrderLinker::ready() && $overrideReason === '') {
+            return ['success' => false, 'error' => 'لا يوجد طلب مدفوع مرتبط بهذه الصفقة. اربطها برقم الطلب، أو اكتب سبب الاعتماد اليدوي (دفع خارج المنصة مثلاً).'];
         }
 
         $rep = $lead->assignee;
@@ -68,6 +86,8 @@ class SalesWinCommissionService
                 'course_type' => $quote['course_type'] ?? $lead->course_type,
                 'course_id' => $quote['course_id'] ?? $lead->linkedCourseId(),
                 'calc_mode' => $calcMode,
+                'order_id' => $order?->id,
+                'manual_override_reason' => $order ? null : ($overrideReason !== '' ? $overrideReason : null),
             ];
 
             if ($saleNumber !== null) {
@@ -145,7 +165,7 @@ class SalesWinCommissionService
                 'commission_amount' => round($commission + $bonus, 2),
                 'commission_transaction_id' => $txn->id,
                 'commission_notes' => $commissionNotes,
-            ])->save();
+            ] + (SalesLeadOrderLinker::ready() && ! $order ? ['won_override_reason' => $overrideReason] : []))->save();
 
             SalesAuditService::log(
                 'sales_lead_won_confirmed',

@@ -2,6 +2,7 @@
 
 namespace App\Domains\Accounting\Services;
 
+use App\Domains\Accounting\Events\PaymentRefunded;
 use App\Domains\Accounting\Models\Invoice;
 use App\Domains\Offline\Models\OfflineCourseEnrollment;
 use App\Domains\Accounting\Models\Order;
@@ -204,6 +205,11 @@ class TransactionRefundService
                     'refund_transaction_id' => $refundTransaction->id,
                 ]),
             ]);
+
+            // يُطلق بعد الـ commit فقط (المبيعات تسترجع العمولة المرتبطة)
+            if ($transaction->payment_id) {
+                PaymentRefunded::dispatch((int) $transaction->payment_id, $amount, (int) $refundTransaction->id);
+            }
 
             return [
                 'original' => $transaction->fresh(),

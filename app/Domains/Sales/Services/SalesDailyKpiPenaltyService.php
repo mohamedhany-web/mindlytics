@@ -195,7 +195,9 @@ class SalesDailyKpiPenaltyService
                 ? $this->settings()['penalty_type']
                 : 'penalty',
             'deduction_date' => $date->toDateString(),
-            'status' => 'applied',
+            'status' => in_array(($this->settings()['penalty_status'] ?? 'pending'), ['pending', 'applied'], true)
+                ? $this->settings()['penalty_status']
+                : 'pending',
             'notes' => 'KPI يومي مبيعات — '.$metricKey.' — '.$date->toDateString(),
             'created_by' => null,
         ]);

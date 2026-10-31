@@ -95,6 +95,11 @@ return [
         'penalty_effective_from' => '2026-08-09',
         'penalty_type' => 'penalty',
         /**
+         * حالة الخصم عند إنشائه: pending = خصم مقترح يعتمده المدير/الموارد البشرية من شاشة الخصومات قبل أن يدخل المرتب.
+         * applied = يُطبَّق مباشرة على المرتب (السلوك القديم). (docs/SALES_INTEGRITY.md)
+         */
+        'penalty_status' => env('SALES_KPI_PENALTY_STATUS', 'pending'),
+        /**
          * مؤشرات تُحاسب يوميًا (بدون اجتماعات).
          * amount بالجنيه لكل مؤشر لم يُحقَّق.
          */

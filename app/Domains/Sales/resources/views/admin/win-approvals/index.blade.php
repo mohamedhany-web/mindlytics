@@ -104,6 +104,7 @@
                             <td class="p-3">
                                 <form method="post" action="{{ route('admin.sales.win-approvals.approve', $lead) }}" class="space-y-2 mb-3 p-3 rounded-xl border border-emerald-200 bg-emerald-50/40">
                                     @csrf
+                                    @include('sales::admin.partials.win-order-fields', ['lead' => $lead, 'inputClass' => $inputClass])
                                     <div class="grid grid-cols-2 gap-2">
                                         <div>
                                             <label class="text-[10px] font-bold text-slate-600">مبلغ الكوميشن</label>

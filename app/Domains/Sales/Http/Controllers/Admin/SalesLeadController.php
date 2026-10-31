@@ -107,6 +107,7 @@ class SalesLeadController extends Controller
         $validated = $this->validatedLead($request, true);
         $this->assertSalesRep($validated['assigned_to']);
         app(SalesLeadMovementPolicy::class)->assertOpenLeadHasMovement($validated);
+        app(\App\Domains\Sales\Services\SalesLeadOwnership::class)->assertAvailableFor($validated['phone'] ?? null, (int) $validated['assigned_to']);
         $validated['created_by'] = auth()->id();
 
         $lead = SalesLead::create($validated);
@@ -278,6 +279,7 @@ class SalesLeadController extends Controller
         $validated = $this->validatedLead($request, true);
         $this->assertSalesRep($validated['assigned_to']);
         app(SalesLeadMovementPolicy::class)->assertOpenLeadHasMovement($validated, $lead);
+        app(\App\Domains\Sales\Services\SalesLeadOwnership::class)->assertAvailableFor($validated['phone'] ?? null, (int) $validated['assigned_to'], $lead->id);
         $before = $lead->only(array_merge(array_keys($validated), ['assigned_to']));
         $oldStage = $lead->stage;
         $oldAssignee = $lead->assigned_to;
@@ -401,7 +403,18 @@ class SalesLeadController extends Controller
         $validated = $request->validate([
             'commission_amount' => 'nullable|numeric|min:0',
             'commission_notes' => 'nullable|string|max:2000',
+            'order_id' => 'nullable|integer|exists:orders,id',
+            'override_reason' => 'nullable|string|max:2000',
         ]);
+
+        // ربط يدوي بطلب معتمد عند تعذّر المطابقة التلقائية (رقم هاتف مختلف مثلاً)
+        if (! empty($validated['order_id'])) {
+            $lead = app(\App\Domains\Sales\Services\SalesLeadOrderLinker::class)->linkManually(
+                $lead,
+                \App\Domains\Accounting\Models\Order::query()->findOrFail((int) $validated['order_id']),
+                $request->user(),
+            );
+        }
 
         $result = app(SalesWinCommissionService::class)->approveAndPayCommission(
             $lead,
@@ -409,6 +422,7 @@ class SalesLeadController extends Controller
                 ? (float) $validated['commission_amount']
                 : null,
             $validated['commission_notes'] ?? null,
+            $validated['override_reason'] ?? null,
         );
 
         if (! ($result['success'] ?? false)) {

@@ -247,6 +247,12 @@ class SalesLead extends Model
         'commission_settled_at',
         'commission_settled_by',
         'commission_settlement_id',
+        'order_id',
+        'student_user_id',
+        'order_linked_at',
+        'won_override_reason',
+        'commission_reversed_amount',
+        'commission_reversed_at',
         'lost_reason',
         'csat_rating',
         'csat_comment',
@@ -270,6 +276,9 @@ class SalesLead extends Model
             'closed_at' => 'datetime',
             'won_confirmed_at' => 'datetime',
             'commission_settled_at' => 'datetime',
+            'order_linked_at' => 'datetime',
+            'commission_reversed_amount' => 'decimal:2',
+            'commission_reversed_at' => 'datetime',
             'stage_entered_at' => 'datetime',
             'csat_recorded_at' => 'datetime',
             'can_pay' => 'boolean',
@@ -282,6 +291,18 @@ class SalesLead extends Model
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    /** الطلب المدفوع الذي حوّل هذا الـ Lead لعميل (مصدر الحقيقة للفوز والعمولة). */
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(\App\Domains\Accounting\Models\Order::class, 'order_id');
+    }
+
+    /** حساب الطالب على المنصة بعد الشراء. */
+    public function student(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'student_user_id');
     }
 
     public function creator(): BelongsTo

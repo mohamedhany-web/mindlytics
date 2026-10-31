@@ -19,7 +19,7 @@ class SalesWinApprovalController extends Controller
     {
         $query = SalesLead::query()
             ->pendingWinApproval()
-            ->with(['assignee', 'category'])
+            ->with(\App\Domains\Sales\Services\SalesLeadOrderLinker::ready() ? ['assignee', 'category', 'order.payment'] : ['assignee', 'category'])
             ->orderByDesc('closed_at')
             ->orderByDesc('updated_at');
 
@@ -55,7 +55,18 @@ class SalesWinApprovalController extends Controller
         $validated = $request->validate([
             'commission_amount' => 'nullable|numeric|min:0',
             'commission_notes' => 'nullable|string|max:2000',
+            'order_id' => 'nullable|integer|exists:orders,id',
+            'override_reason' => 'nullable|string|max:2000',
         ]);
+
+        // ربط يدوي بطلب معتمد عند تعذّر المطابقة التلقائية (رقم هاتف مختلف مثلاً)
+        if (! empty($validated['order_id'])) {
+            $lead = app(\App\Domains\Sales\Services\SalesLeadOrderLinker::class)->linkManually(
+                $lead,
+                \App\Domains\Accounting\Models\Order::query()->findOrFail((int) $validated['order_id']),
+                $request->user(),
+            );
+        }
 
         $result = $this->winCommission->approveAndPayCommission(
             $lead,
@@ -63,6 +74,7 @@ class SalesWinApprovalController extends Controller
                 ? (float) $validated['commission_amount']
                 : null,
             $validated['commission_notes'] ?? null,
+            $validated['override_reason'] ?? null,
         );
 
         if (! ($result['success'] ?? false)) {

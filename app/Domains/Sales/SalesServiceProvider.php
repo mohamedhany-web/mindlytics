@@ -8,7 +8,13 @@ use App\Domains\Sales\Console\Commands\EnforceSalesImportContact;
 use App\Domains\Sales\Console\Commands\EvaluateSalesEnforcement;
 use App\Domains\Sales\Console\Commands\RemindSalesDailyReport;
 use App\Domains\Sales\Console\Commands\SendSalesFollowupReminders;
+use App\Domains\Accounting\Events\PaymentRefunded;
+use App\Domains\Accounting\Models\Order;
+use App\Domains\Sales\Services\SalesCommissionReversalService;
+use App\Domains\Sales\Services\SalesLeadOrderLinker;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -46,5 +52,15 @@ class SalesServiceProvider extends ServiceProvider
             $schedule->command('sales:apply-daily-kpi-penalties')->dailyAt('01:45');
             $schedule->command('sales:enforce-import-contact')->dailyAt('10:00');
         });
+
+        // ربط الـ Lead بالطلب المدفوع عند اعتماده من أي مسار (يدوي، كاشير، فواتيرك، أوفلاين) — docs/SALES_INTEGRITY.md
+        Order::saved(function (Order $order): void {
+            if ($order->status === Order::STATUS_APPROVED && ($order->wasRecentlyCreated || $order->wasChanged('status'))) {
+                DB::afterCommit(fn () => app(SalesLeadOrderLinker::class)->handleApprovedOrder($order));
+            }
+        });
+
+        // استرجاع العمولة عند استرداد قيمة الطلب
+        Event::listen(PaymentRefunded::class, [SalesCommissionReversalService::class, 'handle']);
     }
 }

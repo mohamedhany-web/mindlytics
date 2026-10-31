@@ -2,6 +2,7 @@
 
 namespace App\Domains\Accounting\Http\Controllers\Admin;
 
+use App\Domains\Accounting\Events\PaymentRefunded;
 use App\Http\Controllers\Controller;
 use App\Domains\Accounting\Models\Payment;
 use App\Domains\Accounting\Models\Invoice;
@@ -308,6 +309,7 @@ class PaymentController extends Controller
             ])->withInput();
         }
 
+        $wasRefunded = $payment->status === 'refunded';
         $payment->update([
             'invoice_id' => $invoice->id,
             'user_id' => $paymentUserId,
@@ -320,6 +322,10 @@ class PaymentController extends Controller
         $invoice->refresh();
         if ($invoice->remaining_amount <= 0 && !$invoice->isPaid()) {
             $invoice->markAsPaid();
+        }
+
+        if (! $wasRefunded && $payment->status === 'refunded') {
+            PaymentRefunded::dispatch((int) $payment->id, (float) $payment->amount);
         }
 
         return redirect()->route('admin.payments.index')

@@ -30,6 +30,7 @@ class SalesCommissionSettlementService
             ->whereNotNull('won_confirmed_at')
             ->whereNull('commission_settled_at')
             ->where('commission_amount', '>', 0)
+            ->when(SalesLeadOrderLinker::ready(), fn ($q) => $q->whereRaw('commission_amount - COALESCE(commission_reversed_amount, 0) > 0'))
             ->orderBy('won_confirmed_at')
             ->orderBy('id')
             ->get();
@@ -56,7 +57,8 @@ class SalesCommissionSettlementService
             ->where('stage', SalesLead::WON_STAGE)
             ->whereNotNull('won_confirmed_at')
             ->whereNull('commission_settled_at')
-            ->where('commission_amount', '>', 0);
+            ->where('commission_amount', '>', 0)
+            ->when(SalesLeadOrderLinker::ready(), fn ($q) => $q->whereRaw('commission_amount - COALESCE(commission_reversed_amount, 0) > 0'));
 
         if ($leadIds !== null) {
             $ids = array_values(array_unique(array_map('intval', $leadIds)));
@@ -72,7 +74,8 @@ class SalesCommissionSettlementService
         }
 
         $settledBy = $settledBy ?: (int) Auth::id();
-        $amount = round((float) $leads->sum('commission_amount'), 2);
+        // الصافي بعد استرجاع العمولة عن الطلبات المستردة (docs/SALES_INTEGRITY.md)
+        $amount = round((float) $leads->sum(fn (SalesLead $l) => (float) $l->commission_amount - (float) ($l->commission_reversed_amount ?? 0)), 2);
 
         try {
             $settlement = DB::transaction(function () use ($rep, $leads, $notes, $settledBy, $amount) {

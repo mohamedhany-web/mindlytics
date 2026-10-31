@@ -57,6 +57,7 @@ class SalesLeadController extends Controller
     {
         $validated = $this->validatedLead($request);
         app(SalesLeadMovementPolicy::class)->assertOpenLeadHasMovement($validated);
+        app(\App\Domains\Sales\Services\SalesLeadOwnership::class)->assertAvailableFor($validated['phone'] ?? null, (int) Auth::id());
 
         $validated['assigned_to'] = Auth::id();
         $validated['created_by'] = Auth::id();
@@ -149,6 +150,7 @@ class SalesLeadController extends Controller
         $this->authorizeOwn($lead);
 
         $validated = $this->validatedLead($request);
+        app(\App\Domains\Sales\Services\SalesLeadOwnership::class)->assertAvailableFor($validated['phone'] ?? null, (int) $lead->assigned_to, $lead->id);
         $before = $lead->only(array_keys($validated));
 
         $oldStage = $lead->stage;
@@ -681,7 +683,8 @@ class SalesLeadController extends Controller
         }
 
         if ($phone !== '') {
-            if ((clone $base)->where('phone', $phone)->exists()) {
+            $tail = \App\Domains\Sales\Support\PhoneKey::likeTail($phone);
+            if ($tail && (clone $base)->where('phone', 'like', $tail)->get(['phone'])->contains(fn ($l) => \App\Domains\Sales\Support\PhoneKey::same($l->phone, $phone))) {
                 $warnings[] = 'تنبيه: يوجد عميل آخر لديك بنفس رقم الهاتف — راجع القائمة لتفادي التكرار.';
             }
         }

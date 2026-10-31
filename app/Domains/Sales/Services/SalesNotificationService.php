@@ -203,7 +203,8 @@ class SalesNotificationService
     {
         $title = 'غرامة KPI يومي — '.$metricLabel;
         $message = 'لم يُحقَّق هدف «'.$metricLabel.'» بتاريخ '.$dateLabel
-            .'. خصم '.number_format((float) $deduction->amount, 2).' ج.م. راجع نشاطك في الـ CRM.';
+            .'. '.($deduction->status === 'pending' ? 'خصم مقترح ' : 'خصم ').number_format((float) $deduction->amount, 2).' ج.م'
+            .($deduction->status === 'pending' ? ' بانتظار اعتماد الإدارة' : '').'. راجع نشاطك في الـ CRM.';
 
         $this->sendOnceToday(
             (int) $rep->id,

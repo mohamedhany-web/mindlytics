@@ -169,6 +169,11 @@ class SalesLeadsImportService
 
     private function isDuplicatePhone(string $phone, ?int $assignedTo): bool
     {
+        // رقم مسجّل كعميل نشط عند أي موظف (بأي صيغة) يُتخطّى: مالك واحد لكل رقم
+        if (app(SalesLeadOwnership::class)->activeLeadWithPhone($phone) !== null) {
+            return true;
+        }
+
         $query = SalesLead::query()->where('phone', $phone);
 
         if ($assignedTo !== null) {
