@@ -204,16 +204,19 @@ class SalesCrmSmokeTest extends SmokeTestCase
 
         $this->actingAs($this->admin);
         $this->get('/admin/sales/leads')->assertRedirect('/admin/crm/leads');
-        $this->get('/admin/sales/kpi')->assertRedirect('/admin/crm/reports/kpi');
-        $this->get('/admin/sales/policy')->assertRedirect('/admin/crm/admin');
         $this->get('/admin/sales/leads/'.$this->outsiderLead->id)->assertRedirect('/admin/crm/leads/'.$this->outsiderLead->id);
         $this->actingAs($this->rep);
         $this->get('/employee/sales/leads/create')->assertRedirect('/employee/crm/leads/create');
-        $this->get('/employee/sales/kpi')->assertRedirect('/employee/crm/reports/kpi');
-        $this->get('/employee/sales/policy')->assertRedirect('/employee/crm/home');
+        $this->get('/employee/sales')->assertRedirect('/employee/crm');
+        $this->page('/employee/sales/kpi');
+        $this->page('/employee/sales/policy');
+        $this->page('/employee/sales/groups');
         $this->actingAs($this->manager);
-        $this->get('/employee/sales-manager/scorecard')->assertRedirect('/employee/crm/reports');
-        $this->get('/employee/sales-manager/attendance')->assertRedirect('/employee/crm/admin');
+        $this->get('/employee/sales-manager')->assertRedirect('/employee/crm');
+        $this->page('/employee/sales-manager/scorecard');
+        $this->page('/employee/sales-manager/attendance');
+        $this->page('/employee/sales-manager/distribution');
+        $this->page('/employee/sales-manager/whatsapp/queue');
     }
 
     /** يفتح كل روابط الشريط العلوي (قوائم الوحدات و«+») للدور الحالي: ممنوع 403 أو 404 أو 500. */

@@ -1,4 +1,4 @@
-@extends('layouts.employee')
+@extends('sales::crm.layout')
 
 @section('title', 'Pipeline الفريق')
 @section('header', 'Academy Pipeline — لوحة المدير')

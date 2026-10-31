@@ -1,4 +1,4 @@
-@extends('layouts.employee')
+@extends('sales::crm.layout')
 
 @section('title', 'مؤشرات أداء الفريق')
 @section('header', 'مؤشرات أداء الفريق (KPIs)')

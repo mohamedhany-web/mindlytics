@@ -120,7 +120,7 @@
                 </div>
             </section>
 
-            @if($canRepAct)
+            @if($canRepAct || ($crm->canManage() && $crm->canWorkOn($lead)))
                 <section class="crm-card" style="padding: 14px; display: flex; flex-direction: column; gap: 12px">
                     <h2 style="margin: 0; font-size: 14px; font-weight: 700">تسجيل سريع</h2>
                     <form method="post" action="{{ route('employee.sales.leads.quick-activity', $lead) }}" style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center">
@@ -142,7 +142,26 @@
                         <label class="crm-label" style="flex: 1 1 200px">ملاحظة<input class="crm-input" type="text" name="note" maxlength="500"></label>
                         <button type="submit" class="crm-btn crm-btn-primary">حفظ المتابعة</button>
                     </form>
-                    
+                    <form method="post" action="{{ route('employee.sales.leads.pipeline', $lead) }}" style="display:grid;gap:10px;padding-top:8px;border-top:1px solid #E5E7EB">
+                        @csrf
+                        <input type="hidden" name="redirect_to" value="{{ url()->current() }}">
+                        <h3 style="margin:0;font-size:13px;font-weight:700">تحريك المرحلة (Pipeline)</h3>
+                        <div style="display:grid;gap:10px;grid-template-columns:1fr 1fr">
+                            <label class="crm-label">المرحلة الجديدة
+                                <select class="crm-select" name="stage" required>
+                                    @foreach(SalesLead::STAGES as $k => $v)
+                                        <option value="{{ $k }}" @selected($lead->stage === $k)>{{ $v }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+                            <label class="crm-label">ملاحظات الانتقال * (8 أحرف على الأقل)
+                                <input class="crm-input" type="text" name="notes" required minlength="8" placeholder="اكتب ماذا حصل في التواصل…">
+                            </label>
+                        </div>
+                        <div style="display:flex;justify-content:flex-end">
+                            <button type="submit" class="crm-btn crm-btn-dark">حفظ المرحلة</button>
+                        </div>
+                    </form>
                 </section>
             @endif
 

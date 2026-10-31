@@ -346,7 +346,7 @@ GET|HEAD employee/sales/groups [employee.sales.groups.index] {web,auth,prevent-c
 GET|HEAD employee/sales/groups/create [employee.sales.groups.create] {web,auth,prevent-concurrent,auth,employee.work,sales.employee}
 POST employee/sales/groups [employee.sales.groups.store] {web,auth,prevent-concurrent,auth,employee.work,sales.employee}
 GET|HEAD employee/sales/groups/{group} [employee.sales.groups.show] {web,auth,prevent-concurrent,auth,employee.work,sales.employee}
-PUT employee/sales/groups/{group} [employee.sales.groups.update] {web,auth,prevent-concurrent,auth,employee.work,sales.employee}
+PUT|PATCH employee/sales/groups/{group} [employee.sales.groups.update] {web,auth,prevent-concurrent,auth,employee.work,sales.employee}
 DELETE employee/sales/groups/{group} [employee.sales.groups.destroy] {web,auth,prevent-concurrent,auth,employee.work,sales.employee}
 POST employee/sales/groups/{group}/whatsapp-bulk [employee.sales.groups.whatsapp.store] {web,auth,prevent-concurrent,auth,employee.work,sales.employee}
 GET|HEAD employee/sales/groups/{group}/whatsapp-batches/{batch} [employee.sales.groups.whatsapp-batches.show] {web,auth,prevent-concurrent,auth,employee.work,sales.employee}

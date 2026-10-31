@@ -1,4 +1,4 @@
-@extends('layouts.employee')
+@extends('sales::crm.layout')
 
 @section('title', 'تأكيد حضور المقر')
 @section('header', 'تأكيد حضور المقر من الشيفتات')

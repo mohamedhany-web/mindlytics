@@ -1,4 +1,4 @@
-@extends('layouts.employee')
+@extends('sales::crm.layout')
 
 @section('title', 'مراجعة أداء — '.$employee->name)
 @section('header', 'تفاصيل الرقابة اليومية')

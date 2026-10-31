@@ -5,7 +5,7 @@ namespace App\Domains\Sales\Support;
 use Illuminate\Support\Facades\Route;
 
 /**
- * شريط وحدات SuiteCRM — روابط CRM فقط (بدون واجهات قديمة).
+ * شريط وحدات SuiteCRM + أدوات التشغيل (كلها داخل CRM layout).
  */
 final class CrmNavigation
 {
@@ -34,10 +34,11 @@ final class CrmNavigation
             ],
             [
                 'key' => 'leads', 'label' => 'العملاء المحتملون', 'route' => $c.'leads.index',
-                'items' => [
+                'items' => array_values(array_filter([
                     ['عرض العملاء المحتملين', $c.'leads.index'],
                     ['＋ عميل محتمل', $c.'leads.create'],
-                ],
+                    $scope->isRep() ? ['مجموعات العملاء', 'employee.sales.groups.index'] : null,
+                ])),
             ],
             [
                 'key' => 'opportunities', 'label' => 'الفرص', 'route' => $c.'opportunities.index',
@@ -60,7 +61,13 @@ final class CrmNavigation
             ],
             [
                 'key' => 'calendar', 'label' => 'التقويم', 'route' => $c.'calendar.index',
-                'items' => [['تقويم CRM', $c.'calendar.index']],
+                'items' => array_values(array_filter([
+                    ['تقويم CRM', $c.'calendar.index'],
+                    $scope->isRep() ? ['شيفتاتي', 'employee.sales.shifts.index'] : null,
+                    $scope->isManager() ? ['تقويم الفريق', 'employee.sales-manager.schedule-calendar.index'] : null,
+                    $scope->isManager() ? ['شيفتات الفريق', 'employee.sales-manager.shifts.index'] : null,
+                    $scope->isManager() ? ['تبديل الشيفتات', 'employee.sales-manager.shift-swaps.index'] : null,
+                ])),
             ],
             [
                 'key' => 'campaigns', 'label' => 'الحملات', 'route' => $c.'campaigns.index',
@@ -85,28 +92,50 @@ final class CrmNavigation
             ],
             [
                 'key' => 'quotes', 'label' => 'عروض الأسعار', 'route' => $c.'quotes.index',
-                'items' => [['الطلبات والعروض', $c.'quotes.index']],
+                'items' => array_values(array_filter([
+                    ['الطلبات والعروض', $c.'quotes.index'],
+                    ['معلومات الكورسات', 'employee.sales.course-board.index'],
+                ])),
             ],
             [
                 'key' => 'reports', 'label' => 'التقارير', 'route' => $c.'reports.index',
-                'items' => [
+                'items' => array_values(array_filter([
                     ['مركز التقارير', $c.'reports.index'],
-                    ['KPI والأداء', $c.'reports.kpi'],
-                    ['التقارير اليومية', $c.'reports.daily'],
-                    ['الكامبينات', $c.'reports.campaigns'],
-                ],
+                    ['KPI CRM', $c.'reports.kpi'],
+                    $scope->isRep() ? ['KPI التفصيلي', 'employee.sales.kpi.index'] : null,
+                    $scope->isManager() ? ['KPI الفريق', 'employee.sales-manager.kpi.index'] : null,
+                    $scope->isManager() ? ['Scorecard', 'employee.sales-manager.scorecard.index'] : null,
+                    $scope->isManager() ? ['تقارير الكامبين', 'employee.sales-manager.campaign-reports.index'] : null,
+                    $scope->isRep() ? ['التقرير اليومي', 'employee.sales.daily-reports.index'] : null,
+                    $scope->isManager() ? ['تقارير يومية', 'employee.sales-manager.daily-reports.index'] : null,
+                    $scope->isRep() ? ['العمولات', 'employee.sales.commissions.index'] : null,
+                    $scope->isManager() ? ['عمولات الفريق', 'employee.sales-manager.commissions.index'] : null,
+                ])),
             ],
             [
                 'key' => 'inbox', 'label' => 'المحادثات', 'route' => $c.'inbox.index',
-                'items' => [
-                    ['واتساب / Meta', $c.'inbox.index'],
-                ],
+                'items' => array_values(array_filter([
+                    ['مركز المحادثات', $c.'inbox.index'],
+                    $scope->isRep() ? ['واتساب', 'employee.sales.whatsapp.inbox.index'] : null,
+                    $scope->isRep() ? ['Messenger / Instagram', 'employee.sales.meta-social.inbox.index'] : null,
+                    $scope->isManager() ? ['واتساب الفريق', 'employee.sales-manager.whatsapp.inbox.index'] : null,
+                    $scope->isManager() ? ['طابور بلا موظف', 'employee.sales-manager.whatsapp.queue.index'] : null,
+                    $scope->isAdmin() ? ['واتساب الأدمن', 'admin.whatsapp.inbox'] : null,
+                ])),
             ],
             [
                 'key' => 'admin', 'label' => 'الإدارة', 'route' => $c.'admin.index',
                 'items' => array_values(array_filter([
                     ['لوحة إدارة CRM', $c.'admin.index'],
                     $scope->isAdmin() ? ['اعتماد الفوز', $c.'win-approvals.index'] : null,
+                    $scope->isManager() ? ['توزيع الاهتمام', 'employee.sales-manager.distribution.index'] : null,
+                    $scope->isManager() ? ['اللوحة الحية', 'employee.sales-manager.live-board'] : null,
+                    $scope->isManager() ? ['متابعة الفريق', 'employee.sales-manager.ops-board'] : null,
+                    $scope->isManager() ? ['هيكل الفريق', 'employee.sales-manager.org-chart.index'] : null,
+                    $scope->isManager() ? ['حضور الفريق', 'employee.sales-manager.attendance.index'] : null,
+                    $scope->isManager() ? ['مراقبة التواجد', 'employee.sales-manager.presence.index'] : null,
+                    $scope->isManager() ? ['تحويل Leads', 'employee.sales-manager.transfer.index'] : null,
+                    ['قواعد المبيعات', 'employee.sales.policy.index'],
                 ])),
             ],
         ];
@@ -114,7 +143,12 @@ final class CrmNavigation
         $out = [];
         foreach ($tabs as $tab) {
             if ($tab['key'] === 'admin' && $scope->isRep()) {
-                continue;
+                // المندوب يرى السياسة فقط من قائمة الإدارة المبسّطة
+                $tab['items'] = array_values(array_filter($tab['items'], fn ($i) => ($i[1] ?? '') === 'employee.sales.policy.index'));
+                if ($tab['items'] === []) {
+                    continue;
+                }
+                $tab['route'] = 'employee.sales.policy.index';
             }
 
             $items = [];

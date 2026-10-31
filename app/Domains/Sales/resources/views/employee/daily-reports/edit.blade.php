@@ -1,4 +1,4 @@
-@extends('layouts.employee')
+@extends('sales::crm.layout')
 
 @section('title', 'تعبئة التقرير اليومي')
 @section('header', 'تعبئة التقرير اليومي — '.$date->format('Y-m-d'))

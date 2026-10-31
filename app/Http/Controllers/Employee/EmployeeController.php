@@ -21,6 +21,10 @@ class EmployeeController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
+        if ($user->isSalesStaff() && \Illuminate\Support\Facades\Route::has('employee.crm.home')) {
+            return redirect()->route('employee.crm.home');
+        }
+
         $tasks = $user->employeeTasks()
             ->with(['assigner', 'deliverables'])
             ->latest()

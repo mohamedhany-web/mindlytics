@@ -86,7 +86,11 @@ class GoogleAuthController extends Controller
         $intended = session('url.intended');
 
         if ($user->isEmployee()) {
-            return redirect()->intended(route('employee.dashboard'));
+            return redirect()->intended(
+                (auth()->user()?->isSalesStaff() ?? false) && \Illuminate\Support\Facades\Route::has('employee.crm.home')
+                    ? route('employee.crm.home')
+                    : route('employee.dashboard')
+            );
         }
         if ($user->role === 'super_admin' || $user->role === 'admin') {
             return redirect()->intended(route('admin.dashboard'));

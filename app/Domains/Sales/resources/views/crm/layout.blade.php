@@ -95,7 +95,8 @@
                 <span style="display: block; padding: 8px 16px 4px; color: #D9D5E2; font-size: 12px">{{ $crmUser->name }} · {{ $crm->isAdmin() ? 'أدمن' : ($crm->isManager() ? 'مدير مبيعات' : 'مبيعات') }}</span>
                 @if($crmProfileUrl)<a role="menuitem" href="{{ $crmProfileUrl }}">الملف الشخصي</a>@endif
                 @if($crmIsAdmin && Route::has('admin.dashboard'))<a role="menuitem" href="{{ route('admin.dashboard') }}">لوحة الإدارة</a>@endif
-                @if(! $crmIsAdmin && Route::has('employee.dashboard'))<a role="menuitem" href="{{ route('employee.dashboard') }}">لوحة الموظف</a>@endif
+                @if(! $crmIsAdmin && Route::has('employee.crm.home'))<a role="menuitem" href="{{ route('employee.crm.home') }}">الرئيسية</a>@endif
+                @if(! $crmIsAdmin && Route::has('employee.leaves.index'))<a role="menuitem" href="{{ route('employee.leaves.index') }}">الإجازات</a>@endif
                 @if(Route::has('logout'))
                     <form method="post" action="{{ route('logout') }}">@csrf<button type="submit" style="display: block; width: 100%; text-align: start; padding: 8px 16px; color: #fff; font-size: 13px; background: transparent; border: 0; cursor: pointer">تسجيل الخروج</button></form>
                 @endif

@@ -1,4 +1,4 @@
-@extends('layouts.employee')
+@extends('sales::crm.layout')
 
 @section('title', 'متابعة واتساب — '.$group->name)
 @section('header', 'متابعة إرسال واتساب')

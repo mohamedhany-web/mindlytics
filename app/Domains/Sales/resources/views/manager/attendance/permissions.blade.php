@@ -1,4 +1,4 @@
-@extends('layouts.employee')
+@extends('sales::crm.layout')
 
 @section('title', 'أذونات الغياب والانصراف')
 @section('header', 'إذن غياب يوم / انصراف مبكر — الأوفلاين')

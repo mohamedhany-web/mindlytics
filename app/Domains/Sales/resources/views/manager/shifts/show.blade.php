@@ -1,4 +1,4 @@
-@extends('layouts.employee')
+@extends('sales::crm.layout')
 
 @section('title', 'شيفت — ' . $employee->name)
 @section('header', 'شيفت الموظف')

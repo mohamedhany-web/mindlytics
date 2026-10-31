@@ -258,7 +258,11 @@ class AuthController extends Controller
 
             try {
                 if ($user->isEmployee()) {
-                    return redirect()->intended(route('employee.dashboard'));
+                    return redirect()->intended(
+                        (auth()->user()?->isSalesStaff() ?? false) && \Illuminate\Support\Facades\Route::has('employee.crm.home')
+                            ? route('employee.crm.home')
+                            : route('employee.dashboard')
+                    );
                 }
 
                 if (in_array($user->role, ['super_admin', 'admin'], true)) {
@@ -436,7 +440,11 @@ class AuthController extends Controller
         // بعد إنشاء الحساب نوجّه مباشرة للداشبورد (بدون استخدام intended لتجنب التوجيه لرابط API أو صفحة قديمة)
         session()->forget('url.intended');
         if ($user->isEmployee()) {
-            return redirect()->route('employee.dashboard');
+            return redirect()->route(
+            (auth()->user()?->isSalesStaff() ?? false) && \Illuminate\Support\Facades\Route::has('employee.crm.home')
+                ? 'employee.crm.home'
+                : 'employee.dashboard'
+        );
         }
         if ($user->isAdmin()) {
             return redirect()->route('admin.dashboard');

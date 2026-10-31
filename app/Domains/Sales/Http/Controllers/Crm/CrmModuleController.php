@@ -583,7 +583,7 @@ class CrmModuleController extends Controller
             : ($scope->isManager() && \Illuminate\Support\Facades\Route::has('employee.sales-manager.whatsapp.inbox.index')
                 ? route('employee.sales-manager.whatsapp.inbox.index')
                 : (\Illuminate\Support\Facades\Route::has('admin.whatsapp.inbox') ? route('admin.whatsapp.inbox') : null));
-        $metaRoute = $scope->isRep() && \Illuminate\Support\Facades\Route::has('employee.sales.meta-social.inbox.index')
+        $metaRoute = \Illuminate\Support\Facades\Route::has('employee.sales.meta-social.inbox.index')
             ? route('employee.sales.meta-social.inbox.index')
             : null;
 
@@ -612,14 +612,19 @@ class CrmModuleController extends Controller
         $scope = $this->scope($request);
         abort_unless($scope->canManage(), 403);
 
+        $has = fn (string $r) => \Illuminate\Support\Facades\Route::has($r);
         $cards = array_values(array_filter([
             $scope->isAdmin() ? ['title' => 'اعتماد صفقات الفوز', 'url' => route($scope->route('win-approvals.index')), 'icon' => 'fa-trophy'] : null,
             ['title' => 'الفرص بانتظار الاعتماد', 'url' => route($scope->route('opportunities.index'), ['quick' => 'won_pending']), 'icon' => 'fa-handshake'],
-            ['title' => 'العملاء المحتملون', 'url' => route($scope->route('leads.index')), 'icon' => 'fa-user-plus'],
-            ['title' => 'التقويم والشيفت', 'url' => route($scope->route('calendar.index')), 'icon' => 'fa-calendar'],
-            ['title' => 'التقارير و KPI', 'url' => route($scope->route('reports.index')), 'icon' => 'fa-chart-line'],
-            ['title' => 'الحملات', 'url' => route($scope->route('campaigns.index')), 'icon' => 'fa-bullhorn'],
-            ['title' => 'الحسابات', 'url' => route($scope->route('accounts.index')), 'icon' => 'fa-building'],
+            $has('employee.sales-manager.distribution.index') ? ['title' => 'توزيع الاهتمام', 'url' => route('employee.sales-manager.distribution.index'), 'icon' => 'fa-share-nodes'] : null,
+            $has('employee.sales-manager.scorecard.index') ? ['title' => 'Scorecard', 'url' => route('employee.sales-manager.scorecard.index'), 'icon' => 'fa-shield-halved'] : null,
+            $has('employee.sales-manager.attendance.index') ? ['title' => 'حضور الفريق', 'url' => route('employee.sales-manager.attendance.index'), 'icon' => 'fa-clock'] : null,
+            $has('employee.sales-manager.live-board') ? ['title' => 'اللوحة الحية', 'url' => route('employee.sales-manager.live-board'), 'icon' => 'fa-tv'] : null,
+            $has('employee.sales-manager.ops-board') ? ['title' => 'متابعة الفريق', 'url' => route('employee.sales-manager.ops-board'), 'icon' => 'fa-broadcast-tower'] : null,
+            $has('employee.sales-manager.org-chart.index') ? ['title' => 'هيكل الفريق', 'url' => route('employee.sales-manager.org-chart.index'), 'icon' => 'fa-sitemap'] : null,
+            $has('employee.sales-manager.whatsapp.queue.index') ? ['title' => 'طابور واتساب', 'url' => route('employee.sales-manager.whatsapp.queue.index'), 'icon' => 'fa-bell'] : null,
+            ['title' => 'التقويم', 'url' => route($scope->route('calendar.index')), 'icon' => 'fa-calendar'],
+            ['title' => 'التقارير', 'url' => route($scope->route('reports.index')), 'icon' => 'fa-chart-line'],
             ['title' => 'المحادثات', 'url' => route($scope->route('inbox.index')), 'icon' => 'fa-comments'],
         ], fn ($c) => ! empty($c['url'])));
 
