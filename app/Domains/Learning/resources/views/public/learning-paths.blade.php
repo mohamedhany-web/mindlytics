@@ -683,7 +683,7 @@
       x-data="{
           mobileMenu: false,
           searchQuery: '',
-          allPaths: @json($pathsForSearch ?? []),
+          allPaths: {{ \Illuminate\Support\Js::from($pathsForSearch ?? []) }},
           init() {
               // Debug: Log المسارات
               console.log('All Paths:', this.allPaths);

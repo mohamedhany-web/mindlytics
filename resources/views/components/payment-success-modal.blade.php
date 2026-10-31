@@ -17,7 +17,7 @@
     x-data="{
         open: true,
         seconds: {{ $psSeconds }},
-        redirectUrl: @json($psRedirect),
+        redirectUrl: {{ \Illuminate\Support\Js::from($psRedirect) }},
         _timer: null,
         init() {
             this._timer = setInterval(() => {

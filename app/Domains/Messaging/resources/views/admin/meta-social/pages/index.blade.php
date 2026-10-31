@@ -88,7 +88,7 @@
                 <tr>
                     <th class="p-3 w-10">
                         <input type="checkbox" class="rounded border-slate-300"
-                               @change="selected = $event.target.checked ? @json($pages->pluck('id')) : []">
+                               @change="selected = $event.target.checked ? {{ \Illuminate\Support\Js::from($pages->pluck('id')) }} : []">
                     </th>
                     <th class="text-right p-3 font-bold text-slate-600">الصفحة</th>
                     <th class="text-right p-3 font-bold text-slate-600">حساب Meta</th>

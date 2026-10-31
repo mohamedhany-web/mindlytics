@@ -78,10 +78,10 @@
 
 <div class="space-y-6"
      x-data="placeDailyForm({
-        usageType: @json($defaultUsageType),
-        hours: @json(old('hours', '')),
+        usageType: {{ \Illuminate\Support\Js::from($defaultUsageType) }},
+        hours: {{ \Illuminate\Support\Js::from(old('hours', '')) }},
         hourlyRate: {{ $hourlyRate }},
-        expenses: @json($oldExpenses)
+        expenses: {{ \Illuminate\Support\Js::from($oldExpenses) }}
      })">
 
     {{-- هيدر الصفحة --}}
