@@ -20,4 +20,5 @@ Route::middleware('sales.staff')->prefix('sales/meta-social/inbox')->name('sales
     Route::post('/{conversation}/enrich', [SalesMetaSocialInboxController::class, 'enrich'])->name('enrich');
     Route::post('/{conversation}/request-phone', [SalesMetaSocialInboxController::class, 'requestPhone'])->name('request-phone');
     Route::post('/{conversation}/sync-messages', [SalesMetaSocialInboxController::class, 'syncMessages'])->name('sync-messages');
+    Route::post('/{conversation}/lead-stage', [SalesMetaSocialInboxController::class, 'updateLeadStage'])->name('lead-stage');
 });

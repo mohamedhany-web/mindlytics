@@ -98,6 +98,11 @@ class MetaSocialInboxController extends Controller
         return $this->metaInboxRequestPhone($conversation);
     }
 
+    public function updateLeadStage(Request $request, MetaSocialConversation $conversation): JsonResponse
+    {
+        return $this->metaInboxUpdateLeadStage($request, $conversation);
+    }
+
     public function poll(Request $request): JsonResponse
     {
         return $this->metaInboxPoll($request);

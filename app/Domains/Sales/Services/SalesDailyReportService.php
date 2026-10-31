@@ -4,6 +4,8 @@ namespace App\Domains\Sales\Services;
 
 use App\Domains\Hr\Models\EmployeeAgreement;
 use App\Domains\Hr\Models\EmployeeSalaryDeduction;
+use App\Domains\Messaging\Models\MetaSocialMessage;
+use App\Domains\Messaging\Models\WhatsAppConversationMessage;
 use App\Domains\Sales\Models\SalesActivity;
 use App\Domains\Sales\Models\SalesDailyReport;
 use App\Domains\Sales\Models\SalesDailyReportContact;
@@ -13,6 +15,7 @@ use App\Support\PenaltyWindow;
 use App\Domains\Sales\Support\SalesDailyReportSettings;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 class SalesDailyReportService
@@ -278,7 +281,7 @@ class SalesDailyReportService
         );
 
         $followUps = $activities->where('type', 'follow_up');
-        $messages = $activities->whereIn('type', ['whatsapp', 'email']);
+        $messages = $activities->whereIn('type', ['whatsapp', 'messenger', 'email']);
 
         $stageChanges = $activities->where('type', 'stage_change');
         $qualified = (int) ($sos['qualified_conversations_daily'] ?? 0);
@@ -290,8 +293,17 @@ class SalesDailyReportService
 
         $numbersWorked = (int) ($sos['people_worked_daily'] ?? 0);
 
+        // عدّاد تلقائي من رسائل الإنبوكس الفعلية (واتساب + ماسنجر/إنستجرام)
+        $channelReplies = $this->outboundReplyCountsForUserOnDate($user, $date);
+        $messagesReplied = max(
+            $messages->count(),
+            (int) $channelReplies['whatsapp'] + (int) $channelReplies['messenger']
+        );
+
         $metrics = [
-            'messages_replied' => $messages->count(),
+            'messages_replied' => $messagesReplied,
+            'whatsapp_replies' => (int) $channelReplies['whatsapp'],
+            'messenger_replies' => (int) $channelReplies['messenger'],
             'leads_qualified' => $qualified,
             'bookings_from_leads' => $bookings,
             'numbers_worked' => $numbersWorked,
@@ -779,5 +791,42 @@ class SalesDailyReportService
         }
 
         return $q->get();
+    }
+
+    /**
+     * عدد الردود الصادرة من الموظف في اليوم من جداول الإنبوكس.
+     *
+     * @return array{whatsapp: int, messenger: int}
+     */
+    public function outboundReplyCountsForUserOnDate(User $user, Carbon $date): array
+    {
+        $start = $date->copy()->startOfDay();
+        $end = $date->copy()->endOfDay();
+        $uid = (int) $user->id;
+
+        $whatsapp = 0;
+        if (Schema::hasTable('whatsapp_conversation_messages')
+            && Schema::hasColumn('whatsapp_conversation_messages', 'sent_by_user_id')) {
+            $whatsapp = (int) WhatsAppConversationMessage::query()
+                ->where('sent_by_user_id', $uid)
+                ->where('direction', 'outbound')
+                ->whereBetween('created_at', [$start, $end])
+                ->count();
+        }
+
+        $messenger = 0;
+        if (Schema::hasTable('meta_social_messages')
+            && Schema::hasColumn('meta_social_messages', 'sent_by_user_id')) {
+            $messenger = (int) MetaSocialMessage::query()
+                ->where('sent_by_user_id', $uid)
+                ->where('direction', 'outbound')
+                ->whereBetween('created_at', [$start, $end])
+                ->count();
+        }
+
+        return [
+            'whatsapp' => $whatsapp,
+            'messenger' => $messenger,
+        ];
     }
 }

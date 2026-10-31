@@ -14,6 +14,7 @@ class SalesActivity extends Model
         'meeting' => 'اجتماع / ديمو',
         'follow_up' => 'متابعة',
         'whatsapp' => 'واتساب',
+        'messenger' => 'ماسنجر / إنستجرام',
         'email' => 'بريد',
         'stage_change' => 'تغيير مرحلة',
         'other' => 'أخرى',

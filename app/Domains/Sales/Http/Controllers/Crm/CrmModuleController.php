@@ -641,6 +641,8 @@ class CrmModuleController extends Controller
             $scope->isAdmin() && $ok('ops.course_board') && $has('admin.sales-course-board.index') ? ['title' => 'معلومات الكورسات', 'url' => route('admin.sales-course-board.index'), 'icon' => 'fa-table'] : null,
             $scope->isAdmin() && $ok('ops.course_board') && $has('admin.sales-diploma-board.index') ? ['title' => 'توصيف الدبلومات', 'url' => route('admin.sales-diploma-board.index'), 'icon' => 'fa-graduation-cap'] : null,
             $scope->isAdmin() && $ok('ops.whatsapp') && $has('admin.whatsapp.inbox') ? ['title' => 'واتساب', 'url' => route('admin.whatsapp.inbox'), 'icon' => 'fa-comment-dots'] : null,
+            $scope->isAdmin() && $ok('ops.meta_agents') && $has('admin.meta-social.agents.index') ? ['title' => 'ربط موظفي Meta', 'url' => route('admin.meta-social.agents.index'), 'icon' => 'fa-link'] : null,
+            $ok('ops.social_report') && $has($scope->route('reports.social')) ? ['title' => 'تقرير ماسنجر وواتساب', 'url' => route($scope->route('reports.social')), 'icon' => 'fa-chart-bar'] : null,
             $ok('ops.distribution') && $has('employee.sales-manager.distribution.index') ? ['title' => 'توزيع الاهتمام', 'url' => route('employee.sales-manager.distribution.index'), 'icon' => 'fa-share-nodes'] : null,
             $ok('ops.scorecard') && $has('employee.sales-manager.scorecard.index') ? ['title' => 'Scorecard', 'url' => route('employee.sales-manager.scorecard.index'), 'icon' => 'fa-shield-halved'] : null,
             $ok('ops.attendance') && $has('employee.sales-manager.attendance.index') ? ['title' => 'حضور الفريق', 'url' => route('employee.sales-manager.attendance.index'), 'icon' => 'fa-clock'] : null,

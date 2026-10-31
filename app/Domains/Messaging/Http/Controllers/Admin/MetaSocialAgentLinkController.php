@@ -25,7 +25,14 @@ class MetaSocialAgentLinkController extends Controller
             ? MetaSocialPage::query()->where('is_active', true)->orderBy('page_name')->get(['id', 'page_name'])
             : collect();
 
-        return view('messaging::admin.meta-social.agents', compact('ready', 'links', 'employees', 'pages'));
+        return view('messaging::admin.meta-social.agents', [
+            'ready' => $ready,
+            'links' => $links,
+            'employees' => $employees,
+            'pages' => $pages,
+            'msLayout' => 'sales::crm.layout',
+            'crmModule' => 'inbox',
+        ]);
     }
 
     public function sync(Request $request): RedirectResponse

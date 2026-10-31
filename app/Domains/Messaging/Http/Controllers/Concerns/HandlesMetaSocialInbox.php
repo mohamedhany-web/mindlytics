@@ -10,6 +10,7 @@ use App\Domains\Messaging\Services\MetaSocialContactCaptureService;
 use App\Domains\Messaging\Services\MetaSocialCrmService;
 use App\Domains\Messaging\Services\MetaSocialGraphService;
 use App\Domains\Messaging\Services\MetaSocialInboxService;
+use App\Domains\Messaging\Services\MetaSocialLeadCenterService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -49,6 +50,7 @@ trait HandlesMetaSocialInbox
             'enrich' => route($prefix.'enrich', $params[0]),
             'request-phone' => route($prefix.'request-phone', $params[0]),
             'sync-messages' => route($prefix.'sync-messages', $params[0]),
+            'lead-stage' => route($prefix.'lead-stage', $params[0]),
             'messages.update' => route($prefix.'messages.update', [$params[0], $params[1]]),
             'messages.destroy' => route($prefix.'messages.destroy', [$params[0], $params[1]]),
             default => route($prefix.'index'),
@@ -220,6 +222,7 @@ trait HandlesMetaSocialInbox
                 'enrich' => $this->metaInboxRoute('enrich', $convId),
                 'requestPhone' => $this->metaInboxRoute('request-phone', $convId),
                 'syncMessages' => $this->metaInboxRoute('sync-messages', $convId),
+                'leadStage' => $this->metaInboxRoute('lead-stage', $convId),
                 'messageUpdateBase' => url($messagesBasePath),
             ];
         }
@@ -442,6 +445,29 @@ trait HandlesMetaSocialInbox
         return response()->json([
             'success' => true,
             'crm' => $this->metaCrmService()->serializeCrm($conversation, $this->metaInboxAudience()),
+        ]);
+    }
+
+    protected function metaInboxUpdateLeadStage(Request $request, MetaSocialConversation $conversation): JsonResponse
+    {
+        if (! $this->metaCrmService()->crmReady()) {
+            return response()->json(['success' => false, 'error' => 'شغّل migrate أولاً'], 503);
+        }
+
+        $validated = $request->validate([
+            'stage' => ['required', 'string', Rule::in(array_keys(MetaSocialConversation::LEAD_STAGES))],
+        ]);
+
+        $this->metaInboxClaim($conversation);
+        $updated = app(MetaSocialLeadCenterService::class)->updateStage(
+            $conversation->fresh(),
+            $validated['stage'],
+            auth()->id()
+        );
+
+        return response()->json([
+            'success' => true,
+            'crm' => $this->metaCrmService()->serializeCrm($updated, $this->metaInboxAudience()),
         ]);
     }
 

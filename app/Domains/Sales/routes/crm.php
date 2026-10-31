@@ -2,6 +2,7 @@
 
 use App\Domains\Sales\Http\Controllers\Crm\CrmAccessController;
 use App\Domains\Sales\Http\Controllers\Crm\CrmModuleController;
+use App\Domains\Sales\Http\Controllers\Crm\CrmSocialReportController;
 use App\Domains\Sales\Http\Controllers\Crm\SalesCrmController;
 use Illuminate\Support\Facades\Route;
 
@@ -82,6 +83,7 @@ Route::get('reports', [CrmModuleController::class, 'reportsIndex'])->name('repor
 Route::get('reports/kpi', [CrmModuleController::class, 'reportsKpi'])->name('reports.kpi');
 Route::get('reports/daily', [CrmModuleController::class, 'reportsDaily'])->name('reports.daily');
 Route::get('reports/campaigns', [CrmModuleController::class, 'reportsCampaigns'])->name('reports.campaigns');
+Route::get('reports/social', [CrmSocialReportController::class, 'index'])->name('reports.social');
 
 Route::get('inbox', [CrmModuleController::class, 'inboxIndex'])->name('inbox.index');
 

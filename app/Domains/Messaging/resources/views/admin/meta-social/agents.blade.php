@@ -1,6 +1,6 @@
-@extends('layouts.admin')
+@extends($msLayout ?? 'sales::crm.layout')
 
-@section('title', 'ربط يوزرز Meta Business Suite')
+@section('title', 'ربط موظفي Meta')
 @section('header', 'ربط موظفي Meta')
 
 @section('content')

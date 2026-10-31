@@ -112,11 +112,24 @@
             </section>
 
             <section class="space-y-2 border-t border-[#e4e6eb] pt-3">
+                <h3 class="text-[11px] font-black uppercase tracking-wide text-[#65676b]">مرحلة العميل</h3>
+                <select x-model="leadStage" class="w-full text-xs rounded-xl border border-[#e4e6eb] px-3 py-2 bg-white">
+                    @foreach(\App\Domains\Messaging\Models\MetaSocialConversation::LEAD_STAGES as $stageKey => $stageLabel)
+                        <option value="{{ $stageKey }}">{{ $stageLabel }}</option>
+                    @endforeach
+                </select>
+                <button type="button" x-on:click="updateLeadStage()" class="w-full text-xs font-bold py-2.5 rounded-xl bg-[#534D64] text-white hover:opacity-90" :disabled="crmSaving || !crmUrls.leadStage">
+                    حفظ المرحلة (يسجّل في CRM)
+                </button>
+                <p class="text-[10px] text-[#65676b]">التغيير بيربط المرحلة في ماسنجر وLead المبيعات معًا.</p>
+            </section>
+
+            <section class="space-y-2 border-t border-[#e4e6eb] pt-3">
                 <h3 class="text-[11px] font-black uppercase tracking-wide text-[#65676b]">CRM Lead</h3>
                 <template x-if="crm?.sales_lead_id">
                     <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs space-y-1">
                         <p class="font-black text-emerald-900" x-text="crm.sales_lead_name"></p>
-                        <p class="text-emerald-800" x-text="crm.sales_lead_stage_label"></p>
+                        <p class="text-emerald-800" x-text="crm.sales_lead_stage_label || crm.lead_stage_label"></p>
                         <a :href="crm.sales_lead_url" class="inline-flex items-center gap-1 font-bold text-emerald-700 underline" target="_blank">
                             فتح في CRM المبيعات
                         </a>

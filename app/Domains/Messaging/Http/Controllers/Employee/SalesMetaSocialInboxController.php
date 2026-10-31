@@ -74,6 +74,7 @@ class SalesMetaSocialInboxController extends Controller
             'enrich' => route($prefix.'enrich', $params[0]),
             'request-phone' => route($prefix.'request-phone', $params[0]),
             'sync-messages' => route($prefix.'sync-messages', $params[0]),
+            'lead-stage' => route($prefix.'lead-stage', $params[0]),
             'messages.update' => route($prefix.'messages.update', [$params[0], $params[1]]),
             'messages.destroy' => route($prefix.'messages.destroy', [$params[0], $params[1]]),
             default => route($prefix.'index'),
@@ -149,6 +150,11 @@ class SalesMetaSocialInboxController extends Controller
     public function requestPhone(MetaSocialConversation $conversation): JsonResponse
     {
         return $this->metaInboxRequestPhone($conversation);
+    }
+
+    public function updateLeadStage(Request $request, MetaSocialConversation $conversation): JsonResponse
+    {
+        return $this->metaInboxUpdateLeadStage($request, $conversation);
     }
 
     public function poll(Request $request): JsonResponse

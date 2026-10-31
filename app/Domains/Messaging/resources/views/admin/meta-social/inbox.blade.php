@@ -23,6 +23,7 @@
         'enrich' => route('admin.meta-social.inbox.enrich', $convId),
         'requestPhone' => route('admin.meta-social.inbox.request-phone', $convId),
         'syncMessages' => route('admin.meta-social.inbox.sync-messages', $convId),
+        'leadStage' => route('admin.meta-social.inbox.lead-stage', $convId),
         'messageUpdateBase' => url('/admin/meta-social/inbox/'.$convId.'/messages'),
     ] : []);
     $navBase = array_filter([
@@ -543,6 +544,7 @@ function metaSocialInbox() {
         contactEmail: @json($crmPayload['email'] ?? $activeConversation?->email ?? ''),
         contactNotes: @json($crmPayload['notes'] ?? $activeConversation?->notes ?? ''),
         assigneeId: @json(!empty($crmPayload['assigned_to']) ? (string) $crmPayload['assigned_to'] : ''),
+        leadStage: @json($crmPayload['lead_stage'] ?? 'intake'),
         linkLeadId: '',
         crmSaving: false,
         crmError: '',
@@ -572,6 +574,7 @@ function metaSocialInbox() {
             this.contactEmail = crm.email || '';
             this.contactNotes = crm.notes || '';
             this.assigneeId = crm.assigned_to ? String(crm.assigned_to) : '';
+            this.leadStage = crm.lead_stage || 'intake';
         },
         escapeHtml(s) {
             return String(s ?? '').replace(/[&<>"']/g, (c) => ({
@@ -776,6 +779,11 @@ function metaSocialInbox() {
                 assigned_to: (this.msCanAssignOthers && this.assigneeId) ? Number(this.assigneeId) : null,
             });
             if (data?.lead_id) this.crmOk = 'تم إنشاء Lead #' + data.lead_id;
+        },
+        async updateLeadStage() {
+            if (!this.crmUrls.leadStage || !this.leadStage) return;
+            const data = await this.postJson(this.crmUrls.leadStage, { stage: this.leadStage });
+            if (data?.success) this.crmOk = 'تم تحديث مرحلة العميل';
         },
         async linkLead() {
             if (!this.crmUrls.linkLead || !this.linkLeadId) return;

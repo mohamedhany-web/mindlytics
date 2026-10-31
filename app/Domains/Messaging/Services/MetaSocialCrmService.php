@@ -311,12 +311,13 @@ class MetaSocialCrmService
         SalesActivity::query()->create([
             'sales_lead_id' => $conversation->sales_lead_id,
             'user_id' => $userId ?? auth()->id(),
-            'type' => 'note',
-            'title' => 'رد من Inbox السوشيال',
+            'type' => 'messenger',
+            'title' => 'رد من '.(($conversation->platform === 'instagram') ? 'Instagram' : 'Messenger'),
             'body' => mb_substr($preview, 0, 500),
             'meta' => [
                 'meta_social_conversation_id' => $conversation->id,
                 'platform' => $conversation->platform,
+                'channel' => 'meta_social',
             ],
         ]);
 
@@ -336,11 +337,18 @@ class MetaSocialCrmService
         $salesLeadUrl = null;
         if ($lead) {
             $salesLeadUrl = match ($audience) {
-                'employee' => route('employee.sales.leads.show', $lead),
-                'sales_manager' => route('employee.sales-manager.leads.show', $lead),
-                default => route('admin.sales.leads.show', $lead),
+                'employee', 'sales_manager' => \Illuminate\Support\Facades\Route::has('employee.crm.leads.show')
+                    ? route('employee.crm.leads.show', $lead)
+                    : route('employee.sales.leads.show', $lead),
+                default => \Illuminate\Support\Facades\Route::has('admin.crm.leads.show')
+                    ? route('admin.crm.leads.show', $lead)
+                    : route('admin.sales.leads.show', $lead),
             };
         }
+
+        $leadStage = Schema::hasColumn('meta_social_conversations', 'lead_stage')
+            ? (string) ($conversation->lead_stage ?: 'intake')
+            : 'intake';
 
         return [
             'conversation_id' => $conversation->id,
@@ -357,6 +365,9 @@ class MetaSocialCrmService
             'status' => $conversation->status,
             'assigned_to' => $conversation->assigned_to,
             'assignee_name' => $conversation->assignee?->name,
+            'lead_stage' => $leadStage,
+            'lead_stage_label' => MetaSocialConversation::LEAD_STAGES[$leadStage] ?? $leadStage,
+            'lead_stages' => MetaSocialConversation::LEAD_STAGES,
             'sales_lead_id' => $conversation->sales_lead_id,
             'sales_lead_name' => $lead?->name,
             'sales_lead_stage' => $lead?->stage,

@@ -47,6 +47,7 @@ Route::prefix('meta-social')->name('meta-social.')->group(function () {
     Route::post('/inbox/{conversation}/enrich', [MetaSocialInboxController::class, 'enrich'])->name('inbox.enrich');
     Route::post('/inbox/{conversation}/request-phone', [MetaSocialInboxController::class, 'requestPhone'])->name('inbox.request-phone');
     Route::post('/inbox/{conversation}/sync-messages', [MetaSocialInboxController::class, 'syncMessages'])->name('inbox.sync-messages');
+    Route::post('/inbox/{conversation}/lead-stage', [MetaSocialInboxController::class, 'updateLeadStage'])->name('inbox.lead-stage');
 
     Route::get('/leads', [MetaSocialLeadCenterController::class, 'index'])->name('leads.index');
     Route::get('/leads/poll', [MetaSocialLeadCenterController::class, 'poll'])->name('leads.poll');

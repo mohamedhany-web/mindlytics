@@ -122,6 +122,7 @@ final class CrmNavigation
                     $scope->isManager() ? ['تقارير يومية', 'employee.sales-manager.daily-reports.index'] : null,
                     $scope->isRep() ? ['العمولات', 'employee.sales.commissions.index'] : null,
                     $scope->isManager() ? ['عمولات الفريق', 'employee.sales-manager.commissions.index'] : null,
+                    ['تقرير ماسنجر وواتساب', $c.'reports.social'],
                     $scope->isAdmin() ? ['تقارير المبيعات', 'admin.sales.reports.index'] : null,
                     $scope->isAdmin() ? ['التقارير اليومية', 'admin.sales.daily-reports.index'] : null,
                     $scope->isAdmin() ? ['إعداد التقرير اليومي', 'admin.sales.daily-reports.settings'] : null,
@@ -143,7 +144,9 @@ final class CrmNavigation
                     $scope->isAdmin() ? ['واتساب', 'admin.whatsapp.inbox'] : null,
                     $scope->isAdmin() ? ['Messenger / Instagram', 'admin.meta-social.inbox.index'] : null,
                     $scope->isAdmin() ? ['مركز ليدات Meta', 'admin.meta-social.leads.index'] : null,
+                    $scope->isAdmin() ? ['ربط موظفي Meta', 'admin.meta-social.agents.index'] : null,
                     $scope->isAdmin() ? ['إعدادات واتساب', 'admin.whatsapp.settings'] : null,
+                    ['تقرير ماسنجر وواتساب', $c.'reports.social'],
                 ])),
             ],
             [
